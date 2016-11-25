@@ -46,11 +46,9 @@ namespace Raven.Server.Alerts
            
         }
 
-        public unsafe void AddAlert(Alert alert)
+        public void AddAlert(Alert alert)
         {
-
             //TODO: send notification
-
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Saving alert '{alert.Id}'.");
 
@@ -58,47 +56,52 @@ namespace Raven.Server.Alerts
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenWriteTransaction())
             {
-                _store?.TrackChange(context, "AlertRaised", alert.Key);
-
-                var table = tx.InnerTransaction.OpenTable(_alertsSchema, AlertsSchema.AlertsTree);
-
-                var alertId = alert.Id;
-
-                var alertAsJson = alert.ToJson();
-
-                // if previous alert has dismissed until value pass this value to newly saved alert
-                Slice slice;
-                using (Slice.From(tx.InnerTransaction.Allocator, alertId, out slice))
-                {
-                    var existingTvr = table.ReadByKey(slice);
-                    if (existingTvr != null)
-                    {
-                        var existingAlert = Read(context, existingTvr);
-
-                        object dismissedUntilValue;
-                        existingAlert.TryGetMember(nameof(alert.DismissedUntil), out dismissedUntilValue);
-                        if (dismissedUntilValue != null)
-                        {
-                            var dismissedUntil = (LazyStringValue)dismissedUntilValue;
-                            alertAsJson[nameof(alert.DismissedUntil)] = dismissedUntil;
-                        }
-                    }
-                }
-                
-
-                using (var id = context.GetLazyString(alertId))
-                using (var json = context.ReadObject(alertAsJson, "Alert", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
-                {
-                    var tvb = new TableValueBuilder
-                    {
-                        { id.Buffer, id.Size },
-                        { json.BasePointer, json.Size }
-                    };
-
-                    table.Set(tvb);
-                }
+                AddAlert(alert, context, tx);
 
                 tx.Commit();
+            }
+        }
+
+        public unsafe void AddAlert(Alert alert, TransactionOperationContext context, RavenTransaction tx)
+        {
+            _store?.TrackChange(context, "AlertRaised", alert.Key);
+
+            var table = tx.InnerTransaction.OpenTable(_alertsSchema, AlertsSchema.AlertsTree);
+
+            var alertId = alert.Id;
+
+            var alertAsJson = alert.ToJson();
+
+            // if previous alert has dismissed until value pass this value to newly saved alert
+            Slice slice;
+            using (Slice.From(tx.InnerTransaction.Allocator, alertId, out slice))
+            {
+                var existingTvr = table.ReadByKey(slice);
+                if (existingTvr != null)
+                {
+                    var existingAlert = Read(context, existingTvr);
+
+                    object dismissedUntilValue;
+                    existingAlert.TryGetMember(nameof(alert.DismissedUntil), out dismissedUntilValue);
+                    if (dismissedUntilValue != null)
+                    {
+                        var dismissedUntil = (LazyStringValue) dismissedUntilValue;
+                        alertAsJson[nameof(alert.DismissedUntil)] = dismissedUntil;
+                    }
+                }
+            }
+
+
+            using (var id = context.GetLazyString(alertId))
+            using (var json = context.ReadObject(alertAsJson, "Alert", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+            {
+                var tvb = new TableValueBuilder
+                {
+                    {id.Buffer, id.Size},
+                    {json.BasePointer, json.Size}
+                };
+
+                table.Set(tvb);
             }
         }
 

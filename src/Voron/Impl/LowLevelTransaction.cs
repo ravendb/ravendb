@@ -267,7 +267,10 @@ namespace Voron.Impl
             _env.AssertNoCatastrophicFailure();
 
             // Check if we can hit the lowest level locality cache.
-            Page currentPage = GetPage(num);
+            Page currentPage = GetPage(num);            
+
+            if (_dirtyPages == null) //precaution, should not happen
+                throw new InvalidOperationException("Cannot modify page. Are you trying to do a write in a read-only transaction?");
 
             if (_dirtyPages.Contains(num))
                 return currentPage;

@@ -7,10 +7,12 @@ using System.Threading.Tasks;
 using FastTests.Server.Documents.Replication;
 using Raven.Abstractions.Connection;
 using Raven.Client.Indexes;
+using Raven.Client.Replication.Messages;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Xunit;
 
 namespace FastTests.Server.Replication
@@ -116,6 +118,156 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
+        public void DeleteConflictsFor_should_delete_all_conflict_records()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var userByAge = new UserByAgeIndex();
+                userByAge.Execute(store);
+                
+                var databaseStoreTask =
+                    Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
+                databaseStoreTask.Wait();
+                var databaseStore = databaseStoreTask.Result;
+
+                var definitionJson = new DynamicJsonValue
+                {
+                    ["Foo"] = "Bar"
+                };
+
+                var definitionJson2 = new DynamicJsonValue
+                {
+                    ["Foo"] = "Bar"
+                };
+
+                TransactionOperationContext context;
+                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
+                using (var tx = context.OpenWriteTransaction())
+                using (var definintion = context.ReadObject(definitionJson, string.Empty))
+                using (var definintion2 = context.ReadObject(definitionJson2, string.Empty))
+                {
+                    databaseStore.IndexMetadataPersistence.AddConflict(
+                        context,
+                        tx.InnerTransaction,
+                        userByAge.IndexName,
+                        IndexEntryType.Index,
+                        new ChangeVectorEntry[0], definintion);
+
+                    databaseStore.IndexMetadataPersistence.AddConflict(
+                        context,
+                        tx.InnerTransaction,
+                        userByAge.IndexName,
+                        IndexEntryType.Index,
+                        new ChangeVectorEntry[0], definintion2);
+
+                    tx.Commit();
+                }
+
+
+                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    var changeVectors = databaseStore.IndexMetadataPersistence.DeleteConflictsFor(tx.InnerTransaction,context, userByAge.IndexName);
+                    tx.Commit();
+
+                    Assert.Equal(2,changeVectors.Count);
+                }
+
+                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
+                using (var tx = context.OpenReadTransaction())
+                {
+                    Assert.Empty(databaseStore.IndexMetadataPersistence.GetConflictsFor(tx.InnerTransaction, context, userByAge.IndexName, 0, 1024));
+                }
+
+            }
+        }
+
+        [Fact]
+        public void Adding_conflict_should_set_the_original_metadata_as_conflicted()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var userByAge = new UserByAgeIndex();
+                userByAge.Execute(store);
+
+                var databaseStoreTask = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
+                databaseStoreTask.Wait();
+                var databaseStore = databaseStoreTask.Result;
+
+                IndexesEtagsStorage.IndexEntryMetadata metadata;
+                TransactionOperationContext context;
+                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
+                using (var tx = context.OpenReadTransaction())
+                    metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByAge.IndexName);
+
+                Assert.False(metadata.IsConflicted);
+
+                var definitionJson = new DynamicJsonValue
+                {
+                    ["Foo"] = "Bar"
+                };
+
+                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
+                using (var tx = context.OpenWriteTransaction())
+                using (var definintion = context.ReadObject(definitionJson, string.Empty))
+                {
+                    databaseStore.IndexMetadataPersistence.AddConflict(
+                        context,
+                        tx.InnerTransaction,
+                        userByAge.IndexName,
+                        IndexEntryType.Index,
+                        new ChangeVectorEntry[0], definintion);
+
+                    tx.Commit();
+                }
+
+                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
+                using (var tx = context.OpenReadTransaction())
+                    metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByAge.IndexName);
+
+                Assert.True(metadata.IsConflicted);
+            }
+        }
+
+        [Fact]
+        public async Task Setting_conflicted_should_work()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var userByAge = new UserByAgeIndex();
+                userByAge.Execute(store);
+
+                var databaseStore =
+                    await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
+
+                IndexesEtagsStorage.IndexEntryMetadata metadata;
+                TransactionOperationContext context;
+                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
+                using (var tx = context.OpenReadTransaction())
+                    metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByAge.IndexName);
+
+                Assert.NotNull(metadata); //sanity check
+                Assert.False(metadata.IsConflicted);
+
+                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    Assert.True(databaseStore.IndexMetadataPersistence.TrySetConflictedByName(context,
+                        tx.InnerTransaction,
+                        userByAge.IndexName));
+
+                    tx.Commit();
+                }
+
+                using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
+                using (var tx = context.OpenReadTransaction())
+                    metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByAge.IndexName);
+
+                Assert.True(metadata.IsConflicted);
+            }
+        }
+
+        [Fact]
         public async Task Deleting_indexes_should_delete_relevant_metadata()
         {
             using (var store = GetDocumentStore())
@@ -145,6 +297,23 @@ namespace FastTests.Server.Replication
                 using (var tx = context.OpenReadTransaction())
                     metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByAge.IndexName);
                 Assert.Null(metadata);
+
+            }
+        }
+
+        [Fact]
+        public void Conflicting_indexes_should_record_conflicts_in_metadata()
+        {
+            using (var nodeA = GetDocumentStore())
+            using (var nodeB = GetDocumentStore())
+            {
+                var userByAge = new UserByAgeIndex();
+                var userByName = new UserByNameIndex(userByAge.IndexName);
+                userByAge.Execute(nodeA);
+
+                SetupReplication(nodeA, nodeB);
+
+                userByName.Execute(nodeA);
 
             }
         }

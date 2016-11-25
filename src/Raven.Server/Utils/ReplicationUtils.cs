@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Lucene.Net.Support;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Documents;
 using Raven.Server.Extensions;
@@ -176,6 +178,56 @@ namespace Raven.Server.Utils
                 };
             }
             return merged;
+        }
+
+        public static ChangeVectorEntry[] MergeVectors(IReadOnlyList<ChangeVectorEntry[]> changeVectors)
+        {
+            var mergedVector = new Dictionary<Guid,long>();
+
+            foreach (var vector in changeVectors)
+            {
+                foreach (var entry in vector)
+                {
+                    if (mergedVector.ContainsKey(entry.DbId))
+                        continue;
+
+                    long maxEtag = 0;
+                    var hasFoundAny = false;
+                    foreach (var searchVector in changeVectors)
+                    {
+                        if(searchVector == vector)
+                            continue;
+                        long etag;
+                        if (searchVector.TryFindEtagByDbId(entry.DbId, out etag) && etag > maxEtag)
+                        {
+                            hasFoundAny = true;
+                            maxEtag = etag;
+                        }
+                    }
+
+                    if(hasFoundAny)
+                        mergedVector.Add(entry.DbId, maxEtag);
+                }
+            }
+
+            return mergedVector.Select(kvp => new ChangeVectorEntry
+                                        {
+                                            DbId = kvp.Key,
+                                            Etag = kvp.Value
+                                        }).ToArray();
+        }
+
+        private static bool TryFindEtagByDbId(this ChangeVectorEntry[] changeVector, Guid dbId, out long etag)
+        {
+            etag = 0;
+            for(int i = 0; i < changeVector.Length; i++)
+                if (changeVector[i].DbId == dbId)
+                {
+                    etag = changeVector[i].Etag;
+                    return true;
+                }
+
+            return false;
         }
 
         public static DynamicJsonValue GetJsonForConflicts(string docId, IEnumerable<DocumentConflict> conflicts)

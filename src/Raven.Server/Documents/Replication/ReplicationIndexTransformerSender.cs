@@ -40,8 +40,8 @@ namespace Raven.Server.Documents.Replication
             {
                 var sp = Stopwatch.StartNew();
                 var timeout = Debugger.IsAttached ? 60 * 1000 : 1000;
-                var context = _parent._configurationContext;
-                using (context.OpenReadTransaction())
+                var configurationContext = _parent._configurationContext;
+                using (configurationContext.OpenReadTransaction())
                 {
                     while (sp.ElapsedMilliseconds < timeout)
                     {
@@ -50,8 +50,8 @@ namespace Raven.Server.Documents.Replication
                         _parent.CancellationToken.ThrowIfCancellationRequested();
 
                         var indexAndTransformerMetadata = _parent._database.IndexMetadataPersistence.GetAfter(
-                            context.Transaction.InnerTransaction,
-                            context, LastEtag + 1, 0, 1024);
+                            configurationContext.Transaction.InnerTransaction,
+                            configurationContext, LastEtag + 1, 0, 1024);
 
                         using (var stream = new MemoryStream())
                         {
@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Replication
                             {
                                 _parent.CancellationToken.ThrowIfCancellationRequested();
                                 stream.Position = 0;
-                                using (var writer = new BlittableJsonTextWriter(context, stream))
+                                using (var writer = new BlittableJsonTextWriter(configurationContext, stream))
                                 {
                                     switch (item.Type)
                                     {
@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Replication
 
                                             try
                                             {
-                                                IndexProcessor.Export(writer, index, context, false);
+                                                IndexProcessor.Export(writer, index, configurationContext, false);
                                             }
                                             catch (InvalidOperationException e)
                                             {
@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.Replication
                                             try
                                             {
                                                 TransformerProcessor.Export(writer, transformer,
-                                                    context);
+                                                    configurationContext);
                                             }
                                             catch (InvalidOperationException e)
                                             {
@@ -115,7 +115,7 @@ namespace Raven.Server.Documents.Replication
                                         Etag = item.Etag,
                                         Type = (int) item.Type,
                                         Definition =
-                                            context.ReadForMemory(stream,
+                                            configurationContext.ReadForMemory(stream,
                                                 "Index/Transformer Replication - Reading definition into memory")
                                     };
 
@@ -127,7 +127,7 @@ namespace Raven.Server.Documents.Replication
                         // if we are at the end, we are done
                         if (LastEtag <=
                             _parent._database.IndexMetadataPersistence.ReadLastEtag(
-                                context.Transaction.InnerTransaction))
+                                configurationContext.Transaction.InnerTransaction))
                         {
                             break;
                         }
@@ -144,8 +144,7 @@ namespace Raven.Server.Documents.Replication
 
                     try
                     {
-                        using (_parent._documentsContext.OpenReadTransaction())
-                            SendIndexTransformerBatch();
+                        SendIndexTransformerBatch();
                     }
                     catch (Exception e)
                     {
@@ -183,6 +182,11 @@ namespace Raven.Server.Documents.Replication
 
         private void SendIndexTransformerBatch()
         {
+            //if we have empty documents batch we send a heartbeat;
+            //for indexes/transformers we don't do this, hence this condition
+            if (_orderedReplicaItems.Count == 0)
+                return;
+
             if (_log.IsInfoEnabled)
                 _log.Info(
                     $"Starting sending replication batch ({_parent._database.Name}) with {_orderedReplicaItems.Count:#,#;;0} indexes/transformers, and last etag {LastEtag}");
@@ -210,7 +214,10 @@ namespace Raven.Server.Documents.Replication
                     $"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents in {sw.ElapsedMilliseconds:#,#;;0} ms. Last sent etag = {LastEtag}");
 
             _parent._lastIndexOrTransformerSentTime = DateTime.UtcNow;
-            _parent.HandleServerResponse();
+
+            using (_parent._documentsContext.OpenReadTransaction())
+            using (_parent._configurationContext.OpenReadTransaction())
+                _parent.HandleServerResponse();
         }
 
         private unsafe void WriteMetadataToServer(ReplicationBatchIndexItem item)
