@@ -32,8 +32,8 @@ $version = "4.0.0-$buildType-$buildNumber"
 
 $PROJECT_DIR = Get-ScriptDirectory
 $RELEASE_DIR = [io.path]::combine($PROJECT_DIR, "artifacts")
-$OUT_DIR = [io.path]::combine($PROJECT_DIR, "out")
-$BUILD_DIR = [io.path]::combine($PROJECT_DIR, "build")
+$OUT_DIR = [io.path]::combine($PROJECT_DIR, "artifacts")
+$BUILD_DIR = [io.path]::combine($PROJECT_DIR, "artifacts", "build")
 $BUILD_TOOLS_DIR = [io.path]::combine($PROJECT_DIR, "build", "tools");
 $SERVER_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Server")
 $CLIENT_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Client")
@@ -43,11 +43,10 @@ $STUDIO_BUILD_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Studio", "bui
 $TEMP_DIR = [io.path]::combine($PROJECT_DIR, "temp")
 $RUNTIMES = @(
     "win10-x64",
-    "ubuntu.14.04-x64"
-    #"ubuntu.16.04-x64"
+    "ubuntu.16.04-x64"
 );
 
-CleanBuildDirectories $RELEASE_DIR $OUT_DIR $BUILD_DIR
+CleanBuildDirectories $RELEASE_DIR
 
 DownloadDependencies
 
@@ -56,8 +55,8 @@ BuildStudio $STUDIO_SRC_DIR $PROJECT_DIR $version
 
 Foreach ($runtime in $RUNTIMES) {
     $runtimeOutDir = [io.path]::combine($OUT_DIR, $runtime)
-    BuildServer $SERVER_SRC_DIR $runtimeOutDir $BUILD_DIR $runtime
-    BuildClient $CLIENT_SRC_DIR $runtimeOutDir $BUILD_DIR $runtime
+    BuildServer $SERVER_SRC_DIR $runtimeOutDir $runtime
+    BuildClient $CLIENT_SRC_DIR $runtimeOutDir $runtime
     CopyStudioPackage $STUDIO_BUILD_DIR $runtimeOutDir
     CopyLicenseFile $runtimeOutDir
     CopyAckFile $runtimeOutDir
