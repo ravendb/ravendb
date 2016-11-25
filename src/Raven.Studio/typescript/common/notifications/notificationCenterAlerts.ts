@@ -77,7 +77,23 @@ class notificationCenterAlerts {
     }
 
     private consolidateAlerts(alerts: alert[]) {
-        const currentAlertKeys = new Set(this.alerts().map(x => x.key));
+        const currentAlerts = this.alerts();
+        const currentAlertKeys = new Set(currentAlerts.map(x => x.key));
+
+        const alertsToUpdateDict = alerts.filter(a => currentAlertKeys.has(a.key))
+            .reduce((result: { [key: string] : alert }, item: alert) => {
+                result[item.key] = item;
+                return result;
+            }, {} as { [key: string] : alert });
+
+        currentAlerts.forEach(alert => {
+            const update = alertsToUpdateDict[alert.key];
+            if (update) {
+                alert.severity(update.severity());
+                alert.message(update.message())
+            }
+        })
+        
         const newAlerts = alerts.filter(a => !currentAlertKeys.has(a.key));
         this.alerts.push(...newAlerts);
     }

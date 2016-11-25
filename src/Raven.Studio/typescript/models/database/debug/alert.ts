@@ -4,9 +4,9 @@ class alert {
 
     id: string;
     key: string;
-    message: string;
+    message: KnockoutObservable<string>;
     read: boolean;
-    severity: Raven.Server.Alerts.AlertSeverity;
+    severity: KnockoutObservable<Raven.Server.Alerts.AlertSeverity>;
     type: Raven.Server.Alerts.AlertType;
     createdAt: string;
     dismissedUntil: string;
@@ -14,18 +14,18 @@ class alert {
 
     global: boolean;
 
-    isError: boolean;
-    isWarning: boolean;
-    isInfo: boolean;
+    isError: KnockoutObservable<boolean>;
+    isWarning: KnockoutObservable<boolean>;
+    isInfo: KnockoutObservable<boolean>;
 
     isOpen = ko.observable<boolean>(false);
 
     constructor(dto: Raven.Server.Alerts.Alert) {
         this.id = dto.Id;
         this.key = dto.Key;
-        this.message = dto.Message;
+        this.message = ko.observable(dto.Message);
         this.read = dto.Read;
-        this.severity = dto.Severity;
+        this.severity = ko.observable(dto.Severity);
         this.type = dto.Type;
         this.createdAt = dto.CreatedAt;
         this.dismissedUntil = dto.DismissedUntil;
@@ -35,9 +35,12 @@ class alert {
     }
 
     private initStatus() {
-        this.isError = this.severity === ("Error" as Raven.Server.Alerts.AlertSeverity);
-        this.isWarning = this.severity === ("Warning" as Raven.Server.Alerts.AlertSeverity);
-        this.isInfo = this.severity === ("Info" as Raven.Server.Alerts.AlertSeverity);
+        this.isError = ko.pureComputed(() =>
+            this.severity() === ("Error" as Raven.Server.Alerts.AlertSeverity));
+        this.isWarning = ko.pureComputed(() =>
+            this.severity() === ("Warning" as Raven.Server.Alerts.AlertSeverity));
+        this.isInfo = ko.pureComputed(() =>
+            this.severity() === ("Info" as Raven.Server.Alerts.AlertSeverity));
     }
 
     hasDetails() {
