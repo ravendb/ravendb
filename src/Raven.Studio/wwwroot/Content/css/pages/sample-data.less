@@ -1,0 +1,46 @@
+﻿.sample-data-main {
+    background-image: url('../img/sample-data.png');
+    background-position:center;
+    height: 381px;
+
+    .center {
+        padding-top:60px;
+        width:320px;
+        margin:auto;
+        text-align:center;
+
+        .btn-lg {
+            font-size:30px;
+            padding:7px 54px;
+
+            .btn-spinner:before {
+                width:22px;
+                height:22px;
+            }
+        }
+    }
+
+    .button-wrapper {
+        display:inline-block;
+        margin:45px 0 25px;
+    }
+
+    h1 {
+        font-size:48px;
+        margin-bottom:0;
+        font-weight:500;
+        color:@gray-lighter;
+    }
+
+    .csharplink {    
+        display:inline-block;    
+        font-size:20px;
+        color: @gray-lighter;
+        &:after {
+            margin-top:-8px;
+            content:'';
+            border-bottom:1px solid;
+            display:block;
+        }
+    }
+}

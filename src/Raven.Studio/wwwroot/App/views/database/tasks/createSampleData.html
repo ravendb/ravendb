@@ -1,23 +1,27 @@
 <div class="sampleData">
-    <h1>Create sample data</h1>
+
+    <div class="sample-data-main">
+        <div class="center">
+            <h1>Sample Data</h1>
+            <div class="button-wrapper">
+                <button class="btn btn-primary btn-lg btn-spinner sampleData-createBtn" data-bind="click: generateSampleData, css: { 'btn-spinner': isBusy() }">
+                    <span>
+                        Create
+                    </span>
+                </button>
+                <div class="padding padding-xs bg-danger">
+                    <small>
+                        requires an empty database
+                    </small>
+                </div>
+            </div>
+            <br />
+            <a href="#" class="csharplink">View <strong class="text-success">C#</strong> classes</a>
+        </div>
+    </div>
 
     <div class="panel panel-default">
         <div class="panel-body">
-            <p>
-                <button class="btn btn-primary sampleData-createBtn" data-bind="click: generateSampleData, css: { 'btn-spinner': isBusy() }">
-                    <i class="icon-magic-wand"></i>
-                    <span>
-                        Create sample data
-                    </span>
-                </button>
-            </p>
-
-            <p class="bg-info padding padding-sm">
-                <i class="icon-info"></i>
-                <span>
-                    Creating sample data requires an empty database.
-                </span>
-            </p>
 
             <div class="clearfix">
                 <h3 class="pull-left">Sample data C# code</h3>

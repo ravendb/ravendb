@@ -23,6 +23,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             css: 'icon-index-batch-size',
             dynamicHash: appUrls.indexPerformance
         }),
+        /*
         new leafMenuItem({
             route: 'databases/status/indexing/stats',
             moduleId: 'viewmodels/database/status/indexing/indexStats', //TODO: move viewmodel/view to proper directory
@@ -31,7 +32,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-index-stats',
             dynamicHash: appUrls.indexStats
-        }),
+        }),*/
         /* TODO
         new leafMenuItem({
             title: "Merge suggestions",
