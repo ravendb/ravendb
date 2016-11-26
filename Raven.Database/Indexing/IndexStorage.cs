@@ -364,9 +364,6 @@ namespace Raven.Database.Indexing
                 {
                     reset();
                 }
-
-                var suggestionsForIndex = Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName);
-                IOExtensions.DeleteDirectory(suggestionsForIndex);
             }
             catch (Exception exception)
             {
@@ -1022,6 +1019,19 @@ namespace Raven.Database.Indexing
         {
             var dirOnDisk = Path.Combine(path, id.ToString(CultureInfo.InvariantCulture));
             IOExtensions.DeleteDirectory(dirOnDisk);
+        }
+
+        public void DeleteSuggestionsData(string indexName)
+        {
+            try
+            {
+                var suggestionsForIndex = Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName);
+                IOExtensions.DeleteDirectory(suggestionsForIndex);
+            }
+            catch (Exception e)
+            {
+                log.WarnException($"Could not delete suggestions folder for index {indexName}", e);
+            }
         }
 
         public Index ReopenCorruptedIndex(Index index)
