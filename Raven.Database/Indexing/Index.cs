@@ -383,7 +383,7 @@ namespace Raven.Database.Indexing
                     {
                         try
                         {
-                            indexWriter.Commit(highestETag, considerLastCommitedTime);
+                            indexWriter.Commit(highestETag, considerLastCommitedTime: considerLastCommitedTime);
                         }
                         catch (Exception e)
                         {
