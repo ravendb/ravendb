@@ -365,12 +365,8 @@ namespace Raven.Database.Indexing
                     reset();
                 }
 
-                var indexFullPath = Path.Combine(path, indexDefinition.IndexId.ToString(CultureInfo.InvariantCulture));
-                IOExtensions.DeleteDirectory(indexFullPath);
-
                 var suggestionsForIndex = Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName);
                 IOExtensions.DeleteDirectory(suggestionsForIndex);
-
             }
             catch (Exception exception)
             {
