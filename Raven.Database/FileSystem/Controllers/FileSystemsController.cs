@@ -132,7 +132,7 @@ namespace Raven.Database.FileSystem.Controllers
             var start = GetStart();
             var nextPageStart = start; // will trigger rapid pagination
             var fileSystemsDocuments = Database.Documents.GetDocumentsWithIdStartingWith(Constants.FileSystem.Prefix, null, null, start,
-                GetPageSize(Database.Configuration.MaxPageSize), CancellationToken.None, ref nextPageStart);
+                int.MaxValue, CancellationToken.None, ref nextPageStart);
 
             return fileSystemsDocuments;
         }
