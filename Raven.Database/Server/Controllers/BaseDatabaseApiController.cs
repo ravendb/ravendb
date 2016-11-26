@@ -535,7 +535,7 @@ namespace Raven.Database.Server.Controllers
             var start = GetStart();
             var nextPageStart = start; // will trigger rapid pagination
             var resourcesDocuments = Resource.Documents.GetDocumentsWithIdStartingWith(resourcePrefix, null, null, start,
-                GetPageSize(Resource.Configuration.MaxPageSize), CancellationToken.None, ref nextPageStart);
+                int.MaxValue, CancellationToken.None, ref nextPageStart);
 
             return resourcesDocuments;
         }

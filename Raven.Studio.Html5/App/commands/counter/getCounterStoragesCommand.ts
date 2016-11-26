@@ -4,8 +4,6 @@ import commandBase = require("commands/commandBase");
 class getCounterStoragesCommand extends commandBase {
     execute(): JQueryPromise<counterStorage[]> {
         var args = {
-            skip: 0,
-            take: 1024,
             getAdditionalData: true
         };
         var url = "/cs";
