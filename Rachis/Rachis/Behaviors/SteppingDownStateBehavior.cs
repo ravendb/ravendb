@@ -89,6 +89,9 @@ namespace Rachis.Behaviors
 
         public override void Dispose()
         {
+            if (_log.IsDebugEnabled)
+                _log.Debug("Disposing of SteppingDownStateBehavior");
+
             base.Dispose();
             Engine.FinishSteppingDown();
         }
