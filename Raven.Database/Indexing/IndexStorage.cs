@@ -364,13 +364,6 @@ namespace Raven.Database.Indexing
                 {
                     reset();
                 }
-
-                var indexFullPath = Path.Combine(path, indexDefinition.IndexId.ToString(CultureInfo.InvariantCulture));
-                IOExtensions.DeleteDirectory(indexFullPath);
-
-                var suggestionsForIndex = Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName);
-                IOExtensions.DeleteDirectory(suggestionsForIndex);
-
             }
             catch (Exception exception)
             {
@@ -1028,6 +1021,19 @@ namespace Raven.Database.Indexing
             IOExtensions.DeleteDirectory(dirOnDisk);
         }
 
+        public void DeleteSuggestionsData(string indexName)
+        {
+            try
+            {
+                var suggestionsForIndex = Path.Combine(configuration.IndexStoragePath, "Raven-Suggestions", indexName);
+                IOExtensions.DeleteDirectory(suggestionsForIndex);
+            }
+            catch (Exception e)
+            {
+                log.WarnException($"Could not delete suggestions folder for index {indexName}", e);
+            }
+        }
+
         public Index ReopenCorruptedIndex(Index index)
         {
             if (index.Priority != IndexingPriority.Error)
@@ -1067,7 +1073,7 @@ namespace Raven.Database.Indexing
             {
                 try
                 {
-                    addedIndex.EnsureIndexWriter(useWriteLock: true);
+                    addedIndex.EnsureIndexWriter();
                     addedIndex.Flush(Etag.Empty);
                 }
                 catch (ObjectDisposedException)
@@ -1709,7 +1715,7 @@ namespace Raven.Database.Indexing
         {
             var index = GetIndexByName(indexName);
             index.ForceWriteToDisk();
-            index.WriteInMemoryIndexToDiskIfNecessary(Etag.Empty, useWriteLock: true);
+            index.WriteInMemoryIndexToDiskIfNecessary(Etag.Empty);
         }
 
         internal bool TryReplaceIndex(string indexName, string indexToReplaceName)
