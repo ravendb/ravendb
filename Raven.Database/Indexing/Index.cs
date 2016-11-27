@@ -270,15 +270,29 @@ namespace Raven.Database.Indexing
 
                 foreach (var indexExtension in indexExtensions)
                 {
-                    indexExtension.Value.Dispose();
+                    try
+                    {
+                        indexExtension.Value.Dispose();
+                    }
+                    catch (Exception e)
+                    {
+                        logIndexing.WarnException($"Failed to dispose index extension '{indexExtension.Key}'", e);
+                    }
                 }
 
                 if (currentIndexSearcherHolder != null)
                 {
-                    var item = currentIndexSearcherHolder.SetIndexSearcher(null, PublicName, wait: true);
-                    if (item.WaitOne(TimeSpan.FromSeconds(5)) == false)
+                    try
                     {
-                        logIndexing.Warn("After closing the index searching, we waited for 5 seconds for the searching to be done, but it wasn't. Continuing with normal shutdown anyway.");
+                        var item = currentIndexSearcherHolder.SetIndexSearcher(null, PublicName, wait: true);
+                        if (item.WaitOne(TimeSpan.FromSeconds(5)) == false)
+                        {
+                            logIndexing.Warn("After closing the index searching, we waited for 5 seconds for the searching to be done, but it wasn't. Continuing with normal shutdown anyway.");
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        logIndexing.WarnException("Failed to wait for the index searching to be done", e);
                     }
                 }
 
