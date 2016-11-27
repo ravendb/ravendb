@@ -1073,7 +1073,7 @@ namespace Raven.Database.Indexing
             {
                 try
                 {
-                    addedIndex.EnsureIndexWriter(useWriteLock: true);
+                    addedIndex.EnsureIndexWriter();
                     addedIndex.Flush(Etag.Empty);
                 }
                 catch (ObjectDisposedException)
@@ -1715,7 +1715,7 @@ namespace Raven.Database.Indexing
         {
             var index = GetIndexByName(indexName);
             index.ForceWriteToDisk();
-            index.WriteInMemoryIndexToDiskIfNecessary(Etag.Empty, useWriteLock: true);
+            index.WriteInMemoryIndexToDiskIfNecessary(Etag.Empty);
         }
 
         internal bool TryReplaceIndex(string indexName, string indexToReplaceName)
