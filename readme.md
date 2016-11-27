@@ -35,8 +35,10 @@ How to build?
 Requirements:
 
 - .NET 4.5+
-- TypeScript 1.5
-- WiX Toolset 3.7 or higher
+- [TypeScript 1.5.4](http://go.microsoft.com/fwlink/?LinkID=619584)
+- [Node.js](https://nodejs.org/en/download/)
+- [Gulp](https://github.com/gulpjs/gulp/blob/master/docs/getting-started.md)
+- [WiX Toolset 3.7 or higher](http://wixtoolset.org/releases/)
 
 The easiest way to build is to execute `build.cmd` or `quick.ps1`. Just ensure that you can execute PowerShell scripts, if you can't then you might want to execute `Set-ExecutionPolicy Unrestricted` in PowerShell as an Administrator.
 
