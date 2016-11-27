@@ -46,7 +46,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
-        [Fact(Skip = "Field is null in ConvertToEntity")]
+        [Fact(Skip = "NotImplementedException")]
         public async Task CanSaveAndLoadDynamicDocuments()
         {
             using (var store = GetDocumentStore())

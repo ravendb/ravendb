@@ -86,7 +86,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact(Skip = "Field is null in ConvertToEntity")]
+        [Fact]
         public void Can_Include_By_Primary_String_Property()
         {
             using (var store = GetDocumentStore())
@@ -113,7 +113,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact(Skip = "Field is null in ConvertToEntity")]
+        [Fact]
         public void Can_Include_By_Primary_Valuetype_Property()
         {
             using (var store = GetDocumentStore())
@@ -140,7 +140,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact(Skip = "Field is null in ConvertToEntity")]
+        [Fact]
         public void Can_Include_By_Primary_Valuetype_String_Property()
         {
             using (var store = GetDocumentStore())
@@ -278,7 +278,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact(Skip = "Field is null in ConvertToEntity")]
+        [Fact]
         public void Can_Include_By_Primary_List_Of_Valuetypes()
         {
             using (var store = GetDocumentStore())
@@ -342,7 +342,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact(Skip = "Field is null in ConvertToEntity")]
+        [Fact]
         public void Can_Include_By_Secondary_Valuetype_Property()
         {
             using (var store = GetDocumentStore())
@@ -410,7 +410,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact(Skip = "Field is null in ConvertToEntity")]
+        [Fact]
         public void Can_Include_By_List_Of_Secondary_Valuetype_Property()
         {
             using (var store = GetDocumentStore())
@@ -454,7 +454,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact(Skip = "Field is null in ConvertToEntity")]
+        [Fact]
         public void Can_Include_By_Denormalized_Property()
         {
             using (var store = GetDocumentStore())

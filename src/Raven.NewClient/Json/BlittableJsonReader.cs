@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq.Expressions;
 using System.Reflection;
 using Newtonsoft.Json;
+using Raven.NewClient.Json.Utilities;
 using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Json
@@ -23,23 +24,8 @@ namespace Raven.NewClient.Client.Json
             public BlittableJsonReaderObject.PropertyDetails PropertyDetails;
         }
 
-        private readonly Action<JsonReader, State> _setState = CreateFieldSetter<JsonReader, State>("_currentState");
-        private readonly Action<JsonReader, JsonToken> _setToken = CreateFieldSetter<JsonReader, JsonToken>("_tokenType");
-
-        public static Action<TClass, TField> CreateFieldSetter<TClass, TField>(string fieldName)
-        {
-            FieldInfo field = typeof(TClass).GetField(fieldName);
-            ParameterExpression targetExp = Expression.Parameter(typeof(TField), "target");
-            ParameterExpression valueExp = Expression.Parameter(typeof(TField), "value");
-
-            MemberExpression fieldExp = Expression.Field(targetExp, field);
-            BinaryExpression assignExp = Expression.Assign(fieldExp, valueExp);
-
-            var setter = Expression.Lambda<Action<TClass, TField>>
-                (assignExp, targetExp, valueExp).Compile();
-
-            return setter;
-        }
+        private readonly Action<JsonReader, State> _setState = ExpressionHelpers.CreateFieldSetter<JsonReader, State>("_currentState");
+        private readonly Action<JsonReader, JsonToken> _setToken = ExpressionHelpers.CreateFieldSetter<JsonReader, JsonToken>("_tokenType");
 
         public void Init(BlittableJsonReaderObject root)
         {

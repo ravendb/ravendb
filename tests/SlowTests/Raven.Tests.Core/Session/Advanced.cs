@@ -57,7 +57,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
-        [Fact(Skip = "Field is null in ConvertToEntity")]
+        [Fact]
         public void CanUseEvict()
         {
             using (var store = GetDocumentStore())
@@ -125,7 +125,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
-        [Fact(Skip = "Field is null in ConvertToEntity")]
+        [Fact]
         public void CanUseIsLoaded()
         {
             using (var store = GetDocumentStore())
@@ -154,7 +154,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
-        [Fact(Skip = "Field is null in ConvertToEntity")]
+        [Fact]
         public void CanUseRefresh()
         {
             using (var store = GetDocumentStore())
@@ -194,7 +194,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
-        [Fact(Skip = "Field is null in ConvertToEntity")]
+        [Fact]
         public void CanUseOptmisticConcurrency()
         {
             const string entityId = "users/1";
@@ -356,7 +356,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
-        [Fact(Skip = "Field is null in ConvertToEntity")]
+        [Fact]
         public void CanGetEtagFor()
         {
             using (var store = GetDocumentStore())
@@ -448,7 +448,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             }*/
         }
 
-        [Fact(Skip = "Field is null in ConvertToEntity")]
+        [Fact]
         public void CanUseDefer()
         {
             using (var store = GetDocumentStore())
