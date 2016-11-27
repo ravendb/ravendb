@@ -2309,22 +2309,22 @@ namespace Raven.Database.Indexing
 
         public LowMemoryHandlerStatistics HandleLowMemory()
         {
-            if (disposed)
-            {
-                return new LowMemoryHandlerStatistics
-                {
-                    Name = $"Index: {PublicName}",
-                    DatabaseName = context.DatabaseName,
-                    Summary = "Index is already disposed. Nothing to free.",
-                    EstimatedUsedMemory = 0
-                };
-            }
-
-            bool tryEnter = false;
+            var tryEnter = false;
             var res = new LowMemoryHandlerStatistics();
             try
             {
                 tryEnter = Monitor.TryEnter(writeLock);
+
+                if (disposed)
+                {
+                    return new LowMemoryHandlerStatistics
+                    {
+                        Name = $"Index: {PublicName}",
+                        DatabaseName = context.DatabaseName,
+                        Summary = "Index is already disposed. Nothing to free.",
+                        EstimatedUsedMemory = 0
+                    };
+                }
 
                 if (tryEnter == false)
                     return res;
