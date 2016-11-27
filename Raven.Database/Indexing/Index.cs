@@ -561,6 +561,9 @@ namespace Raven.Database.Indexing
 
             lock (writeLock)
             {
+                if (disposed)
+                    throw new ObjectDisposedException("Index " + PublicName + " has been disposed");
+
                 bool shouldRecreateSearcher;
                 var toDispose = new List<Action>();
                 Analyzer searchAnalyzer = null;
@@ -818,6 +821,9 @@ namespace Raven.Database.Indexing
         {
             if (context.Configuration.RunInMemory ||
                 context.IndexDefinitionStorage == null) // may happen during index startup
+                return;
+
+            if (indexWriter == null)
                 return;
 
             var dir = indexWriter.Directory as RAMDirectory;
