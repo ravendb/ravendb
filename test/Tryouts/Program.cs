@@ -16,9 +16,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var store = new FastTests.Server.Replication.ReplicationIndexesAndTransformers())
+                using (var store = new FastTests.Server.OAuth.CanAuthenticate())
                 {
-                    store.Can_replicate_multiple_transformers();
+                    store.CanStoreAndDeleteApiKeys();
                 }
             }
             //);
