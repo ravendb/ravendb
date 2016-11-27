@@ -293,6 +293,75 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
+        [RavenAction("/databases/*/smuggler/import/async", "POST")]
+        public async Task PostImportAsync()
+        {
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                if (HttpContext.Request.Form.Files.Count > 0)
+                {
+                    var operationId = GetLongQueryString("operationId", required: false);
+                    var token = CreateOperationToken();
+
+                    if (operationId.HasValue)
+                    {
+                        await Database.Operations.AddOperation("Import to: " + Database.Name,
+                            DatabaseOperations.PendingOperationType.DatabaseImport,
+                            onProgress =>
+                            {
+                                return Task.Run(async () =>
+                                {
+                                    var result = new ImportResult();
+                                    foreach (var file in HttpContext.Request.Form.Files)
+                                    {
+                                        using (var fileStream = file?.OpenReadStream())
+                                        {
+                                            var stream = new GZipStream(fileStream, CompressionMode.Decompress);
+                                            var fileImport = await DoImportInternal(context, stream, onProgress).ConfigureAwait(false);
+                                            result.DocumentsCount += fileImport.DocumentsCount;
+                                            result.Warnings.AddRange(fileImport.Warnings);
+                                            result.IdentitiesCount += fileImport.IdentitiesCount;
+                                            result.Message = fileImport.Message;
+                                            result.RevisionDocumentsCount += fileImport.RevisionDocumentsCount;
+                                            result.IndexesCount += fileImport.IndexesCount;
+                                            result.TransformersCount += fileImport.TransformersCount;
+                                        }
+                                    }
+
+                                    return (IOperationResult)result;
+                                });
+
+                            }, operationId.Value, token).ConfigureAwait(false);
+
+                        using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                        {
+                            writer.WriteOperationId(context, operationId.Value);
+                        }
+                    }
+                }
+            }
+        }
+
+        private async Task<ImportResult> DoImportInternal(DocumentsOperationContext context, Stream stream,
+            Action<IOperationProgress> onProgress = null)
+        {
+            try
+            {
+                var importOptionsStream = TryGetRequestFormStream("importOptions") ?? RequestBodyStream();
+                var blittableJson = await context.ReadForMemoryAsync(importOptionsStream, "importOptions");
+                var options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
+                var importer = new SmugglerImporter(Database, options);
+
+                return await importer.Import(context, stream, onProgress);
+            }
+            finally
+            {
+                stream.Dispose();
+
+            }
+
+        }
 
         private async Task<Tuple<Stream, IDisposable>> GetImportStream()
         {

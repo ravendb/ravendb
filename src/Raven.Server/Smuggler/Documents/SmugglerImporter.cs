@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Client.Data;
 using Raven.Client.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
@@ -14,6 +15,7 @@ using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Smuggler.Documents
 {
@@ -34,7 +36,7 @@ namespace Raven.Server.Smuggler.Documents
         private MergedBatchPutCommand _prevCommand;
         private Task _prevCommandTask;
 
-        public async Task<ImportResult> Import(DocumentsOperationContext context, Stream stream)
+        public async Task<ImportResult> Import(DocumentsOperationContext context, Stream stream, Action<IOperationProgress> onProgress = null)
         {
             var result = new ImportResult();
 
@@ -129,7 +131,7 @@ namespace Raven.Server.Smuggler.Documents
                                     _batchPutCommand.Add(document.Data);
                                 }
                                 
-                                await HandleBatchOfDocuments(context, parser, buildVersion);
+                                await HandleBatchOfDocuments(context, parser, buildVersion).ConfigureAwait(false);
                             }
                             else if (operateOnType == "RevisionDocuments" &&
                                      Options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments))
@@ -140,7 +142,7 @@ namespace Raven.Server.Smuggler.Documents
                                 result.RevisionDocumentsCount++;
                                 using (var reader = builder.CreateReader())
                                     _batchPutCommand.Add(reader);
-                                await HandleBatchOfDocuments(context, parser, buildVersion);
+                                await HandleBatchOfDocuments(context, parser, buildVersion).ConfigureAwait(false); ;
                             }
                             else
                             {
