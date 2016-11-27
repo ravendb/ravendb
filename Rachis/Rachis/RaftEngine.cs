@@ -205,9 +205,18 @@ namespace Rachis
                             _log.Debug("Cancellation request from event loop");
                         break;
                     }
-
+                    //The behavior may have changed while we were waiting for messages (this happens when forcing leadership).
+                    var hasStateChagned = behavior != StateBehavior;
+                    var oldBehavior = behavior;
+                    behavior = StateBehavior;
                     if (hasMessage == false)
                     {
+                        if (hasStateChagned)
+                        {
+                            if(_log.IsDebugEnabled)
+                                _log.Debug("State {0} timeout but the behavior has changed to {2} so we will skeep timeout handling ({1:#,#;;0} ms).", oldBehavior.State, oldBehavior.Timeout,behavior.State);
+                            continue;
+                        }
                         if (State != RaftEngineState.Leader && _log.IsDebugEnabled)
                             _log.Debug("State {0} timeout ({1:#,#;;0} ms).", State, behavior.Timeout);
                         EngineStatistics.TimeOuts.LimitedSizeEnqueue(

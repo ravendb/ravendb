@@ -57,5 +57,12 @@ namespace Rachis.Behaviors
 
             Engine.SetState(RaftEngineState.Candidate);
         }
+
+        public override void Dispose()
+        {
+            if (_log.IsDebugEnabled)
+                _log.Debug("Disposing of FollowerStateBehavior");
+            base.Dispose();
+        }
     }
 }

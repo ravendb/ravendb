@@ -163,5 +163,12 @@ namespace Rachis.Behaviors
             _log.Info("Received timeout during installation of a snapshot. Doing nothing, since the node should finish receiving snapshot before it could change into candidate");
             //do nothing during timeout --> this behavior will go on until the snapshot installation is finished
         }
+
+        public override void Dispose()
+        {
+            if (_log.IsDebugEnabled)
+                _log.Debug("Disposing of SnapshotInstallationStateBehavior");
+            base.Dispose();
+        }
     }
 }
