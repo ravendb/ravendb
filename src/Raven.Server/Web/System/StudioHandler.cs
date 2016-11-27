@@ -25,6 +25,50 @@ namespace Raven.Server.Web.System
             {"json", "application/javascript"}
         };
 
+        private static DateTime _lastFileNamesUpdate = DateTime.MinValue;
+        private static Dictionary<string, string> _fileNamesCaseInsensitive =
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        public static string[] LookupPaths = new[]
+        {
+            "~/../../Raven.Studio/wwwroot",
+            "~/../src/Raven.Studio/wwwroot",
+
+        };
+
+        private static string TryGetFileName(string filename)
+        {
+            // this is expected to run concurrently
+            string value;
+            if (_fileNamesCaseInsensitive.TryGetValue(filename, out value))
+                return value;
+
+            if ((DateTime.UtcNow - _lastFileNamesUpdate).TotalSeconds < 3)
+                return null;
+
+            var files = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var lookupPath in LookupPaths)
+            {
+                if (Directory.Exists(lookupPath) == false)
+                    continue;
+
+                foreach (var file in Directory.GetFiles(lookupPath,"*",SearchOption.AllDirectories))
+                {
+                    files[file.Substring(lookupPath.Length+1).Replace("\\","/")] = file;
+                }
+            }
+            _lastFileNamesUpdate = DateTime.UtcNow;
+            if (files.TryGetValue(filename, out value))
+            {
+                // only replace the value if there is a point to it, note that concurrent threads
+                // may create it multiple times, until it is settled
+                _fileNamesCaseInsensitive = files;
+                return value;
+            }
+            return null;
+
+        }
+
         //TODO: write better impl for this! - it is temporary solution to make studio work properly
         private string FindMimeType(string filePath)
         {
@@ -41,6 +85,10 @@ namespace Raven.Server.Web.System
 
         public async Task WriteFile(string filePath)
         {
+#if DEBUG
+            HttpContext.Response.Headers["File-Path"] = Path.GetFullPath(filePath);
+#endif
+
             var etagValue = HttpContext.Request.Headers["If-None-Match"];
 
             var fileEtag = '"' + File.GetLastWriteTimeUtc(filePath).ToString("G") + '"';
@@ -52,6 +100,7 @@ namespace Raven.Server.Web.System
 
             HttpContext.Response.ContentType = FindMimeType(filePath);
             HttpContext.Response.Headers["ETag"] = fileEtag;
+
             using (var data = File.OpenRead(filePath))
             {
                 await data.CopyToAsync(HttpContext.Response.Body, 16*1024);
@@ -66,55 +115,15 @@ namespace Raven.Server.Web.System
                 RouteMatch.MatchLength,
                 RouteMatch.Url.Length - RouteMatch.MatchLength);
 
-            var ravenPath = Path.GetFullPath($"~/../../Raven.Studio/wwwroot/{filename}");
-            if (!File.Exists(ravenPath))
+            var file = TryGetFileName(filename);
+
+            if (file != null)
             {
-                ravenPath = Path.GetFullPath($"~/../src/Raven.Studio/wwwroot/{filename}");
-            }
-            if (!File.Exists(ravenPath))
-            {
-                ravenPath =
-                    ravenPath
-                        .Replace($"{Path.DirectorySeparatorChar}test{Path.DirectorySeparatorChar}",
-                            $"{Path.DirectorySeparatorChar}src{Path.DirectorySeparatorChar}");
-            }
-            if (File.Exists(ravenPath))
-            {
-                await WriteFile(ravenPath);
+                await WriteFile(file);
                 return;
             }
 
             HttpContext.Response.StatusCode = 404;
-            return;
-
-            //filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "../Raven.Studio/", docPath);
-            //if (File.Exists(filePath))
-            //    return WriteFile(filePath);
-
-            //filePath = Path.Combine(this.SystemConfiguration.EmbeddedFilesDirectory, docPath);
-            //if (File.Exists(filePath))
-            //    return WriteFile(filePath);
-
-            //filePath = Path.Combine("~/../../../../Raven.Studio.Html5", docPath);
-            //if (File.Exists(filePath))
-            //    return WriteFile(filePath);
-
-            //if (string.IsNullOrEmpty(zipPath) == false)
-            //{
-            //    var fullZipPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, zipPath + ".zip");
-
-            //    if (File.Exists(fullZipPath) == false)
-            //        fullZipPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bin", zipPath + ".zip");
-
-            //    if (File.Exists(fullZipPath) == false)
-            //        fullZipPath = Path.Combine(this.SystemConfiguration.EmbeddedFilesDirectory, zipPath + ".zip");
-
-            //    if (File.Exists(fullZipPath))
-            //    {
-            //        return WriteFileFromZip(fullZipPath, docPath);
-            //    }
-            //}
-            //await WriteFile(filepath);
         }
 
         [RavenAction("/", "GET")]
