@@ -908,7 +908,7 @@ namespace Raven.Database.Indexing
                                     // it's also limited to flushing for every 10 minutes if don't have any results
                                     actions.BeforeStorageCommit += () =>
                                     {
-                                        batchForIndex.Index.EnsureIndexWriter(useWriteLock: true);
+                                        batchForIndex.Index.EnsureIndexWriter();
                                         // we don't to flush to disk too often
                                         batchForIndex.Index.Flush(lastEtag, considerLastCommitedTime: true);
                                     };
@@ -916,7 +916,13 @@ namespace Raven.Database.Indexing
                             }
                             catch (IndexDoesNotExistsException)
                             {
-                                //we can ignore this, no need to retry
+                                // we can ignore this, no need to retry
+                                break;
+                            }
+                            catch (ObjectDisposedException)
+                            {
+                                // the index was disposed during database shutdown
+                                break;
                             }
                             catch (Exception e)
                             {
@@ -1074,7 +1080,7 @@ namespace Raven.Database.Indexing
                                 accessor.Indexing.UpdateLastIndexed(indexToWorkOn.Index.indexId, lastEtag, lastModified);
                                 accessor.BeforeStorageCommit += () =>
                                 {
-                                    indexToWorkOn.Index.EnsureIndexWriter(useWriteLock: true);
+                                    indexToWorkOn.Index.EnsureIndexWriter();
                                     indexToWorkOn.Index.Flush(lastEtag);
                                 };
                             }, indexToWorkOn));
@@ -1127,6 +1133,7 @@ namespace Raven.Database.Indexing
                     catch (IndexDoesNotExistsException)
                     {
                         // we can ignore this, no need to retry
+                        break;
                     }
                     catch (ObjectDisposedException)
                     {

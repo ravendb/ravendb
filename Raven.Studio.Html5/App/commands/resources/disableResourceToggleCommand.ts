@@ -51,8 +51,8 @@ class disableResourceToggleCommand extends commandBase {
         var url = disableOneResourcePath + resourceName + this.urlEncodeArgs(args);
         var toggleTask = this.post(url, null, null, { dataType: undefined });
         
-        toggleTask.done(() => this.reportSuccess("Successfully " + action + "d " + name));
-        toggleTask.fail((response: JQueryXHR) => this.reportError("Failed to " + action + " " + name, response.responseText, response.statusText));
+        toggleTask.done(() => this.reportSuccess("Successfully " + action + "d " + resource.name));
+        toggleTask.fail((response: JQueryXHR) => this.reportError("Failed to " + action + " " + resource.name, response.responseText, response.statusText));
         
         return toggleTask;
     }
