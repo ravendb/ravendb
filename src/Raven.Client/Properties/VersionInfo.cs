@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Reflection;
 
-[assembly: Raven.Client.RavenVersion(Build = "{build}", CommitHash = "{commit}", Version = "4.0", FullVersionTemplate = "4.0.0-alpha-{build}")]
+[assembly: Raven.Client.RavenVersion(Build = "{build}", CommitHash = "{commit}", Version = "4.0", FullVersionTemplate = "4.0.0-{buildType}-{build}")]
 
 namespace Raven.Client
 {

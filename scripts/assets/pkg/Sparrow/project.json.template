@@ -1,0 +1,11 @@
+﻿{
+  "version": "4.0.0",
+  "frameworks": {
+    "netstandard1.6": {
+      "bin": {
+        "assembly": "netstandard1.6\\Sparrow.dll",
+        "pdb": "netstandard1.6\\Sparrow.pdb"
+      }
+    }
+  }
+}

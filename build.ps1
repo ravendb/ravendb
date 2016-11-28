@@ -2,33 +2,23 @@ $ErrorActionPreference = "Stop"
 
 $DEV_BUILD_NUMBER = 40
 
-$buildNumber = -1;
-$buildType = ""
-$version = ""
-
-if ($env:BUILD_NUMBER) {
-    $buildNumber = $env:BUILD_NUMBER
-} else {
-    $buildNumber = $DEV_BUILD_NUMBER
-}
-
-if ($env:BUILD_TYPE) {
-    $buildType = $env:BUILD_TYPE
-} else {
-    $buildType = "custom";
-}
-
-# TODO @gregolsky create a function for this - stable does not have label
-$version = "4.0.0-$buildType-$buildNumber"
-
 . '.\scripts\checkLastExitCode.ps1'
 . '.\scripts\restore.ps1'
 . '.\scripts\clean.ps1'
-. '.\scripts\zipFiles.ps1'
+. '.\scripts\package.ps1'
 . '.\scripts\buildProjects.ps1'
 . '.\scripts\getScriptDirectory.ps1'
 . '.\scripts\copyStudioPkg.ps1'
 . '.\scripts\copyLicense.ps1'
+. '.\scripts\teamcity.ps1'
+. '.\scripts\git.ps1'
+. '.\scripts\updateSourceWithBuildInfo.ps1'
+
+$buildNumber = GetBuildNumber
+$buildType = GetBuildType
+
+# TODO @gregolsky create a function for this - stable does not have label
+$version = "4.0.0-$buildType-$buildNumber"
 
 $PROJECT_DIR = Get-ScriptDirectory
 $RELEASE_DIR = [io.path]::combine($PROJECT_DIR, "artifacts")
@@ -40,7 +30,7 @@ $CLIENT_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Client")
 $STUDIO_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Studio")
 $TYPINGS_GENERATOR_SRC_DIR = [io.path]::combine($PROJECT_DIR, "tools", "TypingsGenerator")
 $STUDIO_BUILD_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Studio", "build");
-$TEMP_DIR = [io.path]::combine($PROJECT_DIR, "temp")
+
 $RUNTIMES = @(
     "win10-x64",
     "ubuntu.14.04-x64",
@@ -59,11 +49,7 @@ Foreach ($runtime in $RUNTIMES) {
     BuildServer $SERVER_SRC_DIR $runtimeOutDir $runtime
     BuildClient $CLIENT_SRC_DIR $runtimeOutDir $BUILD_DIR $runtime
     CopyStudioPackage $STUDIO_BUILD_DIR $runtimeOutDir
-    CopyLicenseFile $runtimeOutDir
-    CopyAckFile $runtimeOutDir
-
-    $releaseZipFile = "RavenDB-$version-$runtime.zip"
-    $runtimeOutDir = [io.path]::combine($OUT_DIR, $runtime)
-    $releaseZipPath = [io.path]::combine($RELEASE_DIR, $releaseZipFile)
-    ZipFilesFromDir $releaseZipPath $runtimeOutDir
+    CreateRavenPackage $PROJECT_DIR $RELEASE_DIR $runtimeOutDir $version $runtime
 }
+
+write-host "Done creating packages."

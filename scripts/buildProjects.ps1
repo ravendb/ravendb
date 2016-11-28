@@ -9,13 +9,14 @@ function BuildServer ( $srcDir, $outDir, $platform ) {
     CheckLastExitCode
 }
 
-function BuildClient ( $srcDir, $outDir, $platform ) {
+function BuildClient ( $srcDir, $outDir ) {
     write-host "Building Client for $platform..."
     # build client
     $output = [io.path]::combine($outDir, "Client");
     $build = [io.path]::combine($buildDir, $platform)
-    & dotnet publish --output $output `
-                --runtime $platform `
+    & dotnet build --output $output `
+                --no-incremental `
+                --framework "netstandard1.6" `
                 --configuration "Release" $srcDir;
     CheckLastExitCode
 }
