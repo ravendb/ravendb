@@ -240,14 +240,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             dynamicHash: appUrls.alerts
         }),
-        new leafMenuItem({
-            route: 'databases/status/indexErrors',
-            moduleId: 'viewmodels/database/status/indexErrors',
-            title: 'Index Errors',
-            nav: true,
-            css: 'icon-index-errors',
-            dynamicHash: appUrls.indexErrors
-        }),*/
+        ,*/
         new leafMenuItem({
             route: 'databases/status/replicationStats',
             moduleId: 'viewmodels/database/status/replicationStats',
@@ -272,14 +265,6 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             dynamicHash: appUrls.userInfo
         }),*/
-        new leafMenuItem({
-            route: 'databases/status/visualizer',
-            moduleId: 'viewmodels/database/status/visualizer',
-            title: 'Map/Reduce Visualizer',
-            nav: true,
-            css: 'icon-map-reduce-visualizer',
-            dynamicHash: appUrls.visualizer
-        }),
         new leafMenuItem({
             route: 'databases/status/debug*details',
             moduleId: 'viewmodels/database/status/debug/statusDebug',

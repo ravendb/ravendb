@@ -67,7 +67,6 @@ define(['durandal/system', 'jquery'], function (system: any, $: JQueryStatic) {
     var skippedModuleIds = [
         "viewmodels/indexing",
         "viewmodels/indexPerformance",
-        "viewmodels/indexStats",
         "viewmodels/indexBatchSize",
         "viewmodels/indexPrefetches",
         "viewmodels/requests",
