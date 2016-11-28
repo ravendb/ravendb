@@ -199,7 +199,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             tooltip: "Displays requests counts over time",
             nav: true,
             dynamicHash: appUrls.requestsCount
-        }),*/
+        }),
         new leafMenuItem({
             route: 'databases/status/requests/tracing',
             moduleId: 'viewmodels/database/status/requests/requestTracing',
@@ -207,7 +207,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             tooltip: "Displays recent requests with their status and execution times",
             nav: accessHelper.canExposeConfigOverTheWire(),
             dynamicHash: appUrls.requestsTracing
-        }),
+        }),*/
         new leafMenuItem({
             route: 'databases/status',
             moduleId: 'viewmodels/database/status/statistics',
@@ -239,7 +239,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             title: 'Alerts',
             nav: true,
             dynamicHash: appUrls.alerts
-        }),*/
+        }),
         new leafMenuItem({
             route: 'databases/status/indexErrors',
             moduleId: 'viewmodels/database/status/indexErrors',
@@ -247,7 +247,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-index-errors',
             dynamicHash: appUrls.indexErrors
-        }),
+        }),*/
         new leafMenuItem({
             route: 'databases/status/replicationStats',
             moduleId: 'viewmodels/database/status/replicationStats',
