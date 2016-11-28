@@ -6,7 +6,7 @@ namespace NewClientTests.NewClient
 {
     public class Events : RavenTestBase
     {
-        [Fact(Skip = "Field is null in ConvertToEntity")]
+        [Fact]
         public void Before_Store_Listerner()
         {
             using (var store = GetDocumentStore())

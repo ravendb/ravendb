@@ -16,7 +16,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
         }
 #endif
 
-        [Fact(Skip = "Field is null in ConvertToEntity")]
+        [Fact]
         public void BasicInclude()
         {
             using (var store = GetDocumentStore())

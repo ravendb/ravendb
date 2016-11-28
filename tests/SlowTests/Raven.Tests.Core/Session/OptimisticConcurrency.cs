@@ -17,7 +17,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Sessiont
 
         }
 #endif
-        [Fact(Skip = "Field is null in ConvertToEntity")]
+        [Fact]
         public void CanUseOptmisticConcurrency()
         {
             const string entityId = "users/1";
@@ -49,7 +49,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Sessiont
             }
         }
 
-        [Fact(Skip = "Field is null in ConvertToEntity")]
+        [Fact]
         public void CanBypassOptmisticConcurrencyCheckByExplicitlyProvidingAnEtagOfNull()
         {
             const string entityId = "users/1";
@@ -79,7 +79,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Sessiont
             }
         }
 
-        [Fact(Skip = "Field is null in ConvertToEntity")]
+        [Fact]
         public void CanBypassOptmisticConcurrencyCheckByExplicitlyProvidingAnEtagOfNullToStore()
         {
             const string entityId = "users/1";
@@ -109,7 +109,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Sessiont
             }
         }
 
-        [Fact(Skip = "Field is null in ConvertToEntity")]
+        [Fact]
         public void CanBypassOptmisticConcurrencyCheckByExplicitlyProvidingAnEtagAndAnIdOfNullToStore()
         {
             const string entityId = "users/1";
@@ -139,7 +139,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Sessiont
             }
         }
 
-        [Fact(Skip = "Field is null in ConvertToEntity")]
+        [Fact]
         public async Task CanBypassOptmisticConcurrencyCheckByExplicitlyProvidingAnEtagOfNullToStoreAsync()
         {
             const string entityId = "users/1";
@@ -169,7 +169,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Sessiont
             }
         }
 
-        [Fact(Skip = "Field is null in ConvertToEntity")]
+        [Fact]
         public async Task CanBypassOptmisticConcurrencyCheckByExplicitlyProvidingAnEtagAndAnIdOfNullToStoreAsync()
         {
             const string entityId = "users/1";
