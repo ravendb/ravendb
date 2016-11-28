@@ -11,7 +11,9 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Debugging;
+using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries;
@@ -153,6 +155,28 @@ namespace Raven.Server.Documents.Handlers
                     {
                         writer.WriteArrayOfResultsAndCount(ids);
                     }
+
+                    return Task.CompletedTask;
+                }
+
+                if (string.Equals(operation, "entries-fields", StringComparison.OrdinalIgnoreCase))
+                {
+                    var fields = index.GetEntriesFields();
+
+                    var first = true;
+                    writer.WriteStartArray();
+
+                    foreach (var field in fields)
+                    {
+                        if (first == false)
+                            writer.WriteComma();
+
+                        first = false;
+
+                        writer.WriteString(field);
+                    }
+
+                    writer.WriteEndArray();
 
                     return Task.CompletedTask;
                 }

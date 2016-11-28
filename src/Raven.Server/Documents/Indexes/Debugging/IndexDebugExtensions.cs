@@ -5,9 +5,11 @@ using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Data.Indexes;
+using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.ServerWide;
@@ -340,6 +342,24 @@ namespace Raven.Server.Documents.Indexes.Debugging
                     throw new InvalidOperationException("Cannot have multiple reduce results for a single reduce key");
 
                 return result[0].Data;
+            }
+        }
+
+        public static string[] GetEntriesFields(this Index self)
+        {
+            switch (self.Type)
+            {
+                case IndexType.Map:
+                    return ((MapIndex)self)._compiled.OutputFields;
+                case IndexType.MapReduce:
+                    return ((MapReduceIndex)self)._compiled.OutputFields;
+                case IndexType.AutoMap:
+                    return ((AutoMapIndex)self).Definition.MapFields.Keys.ToArray();
+                case IndexType.AutoMapReduce:
+                    return ((AutoMapReduceIndex)self).Definition.GroupByFields.Keys.ToArray();
+
+                default: 
+                    throw new ArgumentException("Unknown index type");
             }
         }
     }
