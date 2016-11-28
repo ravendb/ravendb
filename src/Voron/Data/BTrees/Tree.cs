@@ -350,9 +350,6 @@ namespace Voron.Data.BTrees
             var newPage = GetWriteableTreePage(pageNumber);
             newPage.Dirty = true;
             _recentlyFoundPages.Reset(pageNumber);
-           
-            if (IsLeafCompressionSupported)
-                InvalidateDecompressionReadCache(pageNumber);
 
             PageModified?.Invoke(pageNumber);
 
@@ -470,7 +467,7 @@ namespace Voron.Data.BTrees
             if (TryUseRecentTransactionPage(key, out cursor, out p, out node))
             {
                 if (allowCompressed == false && p.IsCompressed)
-                    throw new InvalidOperationException($"Page {p.PageNumber} is compressed. You need to decompress it to be able to access its content.");
+                    ThrowOnCompressedPage(p);
 
                 return p;
             }
@@ -538,7 +535,7 @@ namespace Voron.Data.BTrees
                 VoronUnrecoverableErrorException.Raise(_llt.Environment, "Index points to a non leaf page " + p.PageNumber);
 
             if (p.IsCompressed)
-                throw new InvalidOperationException($"Page {p.PageNumber} is compressed. You need to decompress it to be able to access its content.");
+                ThrowOnCompressedPage(p);
 
             node = p.Search(_llt, key); // will set the LastSearchPosition
 
@@ -608,7 +605,7 @@ namespace Voron.Data.BTrees
                 VoronUnrecoverableErrorException.Raise(_llt.Environment, "Index points to a non leaf page");
 
             if (allowCompressed == false && p.IsCompressed)
-                throw new InvalidOperationException($"Page {p.PageNumber} is compressed. You need to decompress it to be able to access its content.");
+                ThrowOnCompressedPage(p);
 
             node = p.Search(_llt, key); // will set the LastSearchPosition
 
@@ -616,6 +613,11 @@ namespace Voron.Data.BTrees
                 AddToRecentlyFoundPages(cursor, p, leftmostPage, rightmostPage);
 
             return p;
+        }
+
+        private static void ThrowOnCompressedPage(TreePage p)
+        {
+            throw new InvalidOperationException($"Page {p.PageNumber} is compressed. You need to decompress it to be able to access its content.");
         }
 
         private void AddToRecentlyFoundPages(List<long> c, TreePage p, bool leftmostPage, bool rightmostPage)
@@ -941,7 +943,7 @@ namespace Voron.Data.BTrees
                 if (p.LastMatch != 0)
                 {
                     if (p.IsCompressed == false)
-                        throw new InvalidOperationException("Could not find the exact match on a page that we retrieved a key from");
+                        ThrowOnCompressedPage(p);
 #if DEBUG
                     using (var decompressed = DecompressPage(p, skipCache: true))
                     {
