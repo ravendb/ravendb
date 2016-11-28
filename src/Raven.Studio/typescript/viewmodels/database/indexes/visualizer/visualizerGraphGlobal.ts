@@ -7,16 +7,18 @@ import rbush = require("rbush");
 class pageItem {
     static readonly pageWidth = 20;
     static readonly pageHeight = 20;
-    
+
     x: number;
     y: number;
     aggregation?: pageItem;
     pageNumber: number;
     parent: reduceTreeItem;
+    incomingLinesCount: number;
 
     constructor(pageNumber: number, parent: reduceTreeItem) {
         this.pageNumber = pageNumber;
         this.parent = parent;
+        this.incomingLinesCount = 0;
     }
 
     getSourceConnectionPoint(): [number, number] {
@@ -32,6 +34,18 @@ class pageItem {
         return [localConnectionPoint[0] + this.parent.x, localConnectionPoint[1] + this.parent.y];
     }
 
+    // Return the X offset from where to start drawing the first incoming line to the pageItem
+    getGlobalTargetConnectionPointXOffset(): number {
+        if (this.incomingLinesCount === 1)
+            return 0;
+
+        const segmentSize = 4;
+        let xOffset = Math.floor(this.incomingLinesCount / 2) * segmentSize;
+        if (this.incomingLinesCount % 2 === 0) {
+            xOffset -= 2;
+        }
+        return xOffset;
+    }
 }
 
 class reduceTreeItem {
@@ -117,6 +131,7 @@ class reduceTreeItem {
                 const uniqueSources = new Set<string>(node.Entries.filter(x => x.Source).map(x => x.Source));
                 uniqueSources.forEach(source => {
                     const matchingDoc = documents.find(d => d.name === source);
+                    item.incomingLinesCount++;
                     matchingDoc.connectedPages.push(item);
                 });
             }
@@ -286,6 +301,11 @@ class hitTest {
             maxY: y
         });
     }
+}
+
+interface avgXVals {
+    docIndex: number;
+    avgXVal: number;
 }
 
 class visualizerGraphGlobal {
@@ -476,7 +496,7 @@ class visualizerGraphGlobal {
         let currentX = visualizerGraphGlobal.margins.globalMargin;
         for (let i = 0; i < this.reduceTrees.length; i++) {
             const tree = this.reduceTrees[i];
-            
+
             tree.x = currentX;
             tree.y = visualizerGraphGlobal.margins.globalMargin + (maxTreeHeight - tree.height);
 
@@ -523,17 +543,35 @@ class visualizerGraphGlobal {
 
         if (totalWidth > this.dataWidth) {
             //TODO: handle me!
-        } else {
-            extraItemPadding = (this.dataWidth - totalWidth) / (this.documents.length + 1);
         }
 
-        let currentX = documentItem.margins.minMarginBetweenDocumentNames + extraItemPadding;
+        let avgXValues: avgXVals[] = [];
 
-        for (let i = 0; i < this.documents.length; i++) {
-            const doc = this.documents[i];
-            doc.x = currentX;
+        for (let currentDoc = 0; currentDoc < this.documents.length; currentDoc++) {
+            const doc = this.documents[currentDoc];
 
-            currentX += doc.width + documentItem.margins.minMarginBetweenDocumentNames + extraItemPadding;
+            // Calc document x value as average of connectedPages
+            const totalXValuesOfConnectedPages = doc.connectedPages.reduce((a, b) => a + b.parent.x, 0);
+            doc.x = totalXValuesOfConnectedPages / doc.connectedPages.length;
+
+            avgXValues.push({ docIndex: currentDoc, avgXVal: doc.x });
+        }
+
+        // Sort the avg x values 
+        avgXValues.sort((a1, a2) => a1.avgXVal - a2.avgXVal);
+
+        // Order documents according to the sort values
+        const xPadding = 20;
+        for (let i = 1; i < avgXValues.length; i++) {
+            const doc = this.documents[avgXValues[i].docIndex];
+
+            // Check for collisions..
+            let previousX = avgXValues[i - 1].avgXVal;
+            if ((doc.x >= previousX) && (doc.x <= previousX + doc.width) ||
+                (doc.x + doc.width >= previousX) && (doc.x + doc.width <= previousX + doc.width)) {
+                doc.x = previousX + doc.width + xPadding;
+                avgXValues[i].avgXVal = doc.x;
+            }
         }
     }
 
@@ -595,7 +633,9 @@ class visualizerGraphGlobal {
                 const items = tree.itemsCountAtDepth[i];
                 ctx.font = "18px Lato";
                 ctx.textAlign = "right";
-                ctx.fillText(items.toString(), reduceTreeItem.margins.treeMargin + visualizerGraphGlobal.totalEntriesWidth(items), totalEntiresY + 18 /* font size */);
+                ctx.fillText(items.toString(),
+                    reduceTreeItem.margins.treeMargin + visualizerGraphGlobal.totalEntriesWidth(items),
+                    totalEntiresY + 18 /* font size */);
 
                 //TODO: draw vertical line
             }
@@ -627,17 +667,66 @@ class visualizerGraphGlobal {
 
     private drawDocumentConnections(ctx: CanvasRenderingContext2D) {
         ctx.lineWidth = 2;
+        let straightLine = 8;
+        let targetXValuesDrawnOnScreen: number[] = [];
+
         for (let i = 0; i < this.documents.length; i++) {
             const doc = this.documents[i];
-
             ctx.strokeStyle = doc.color;
+            straightLine += 5;
 
             for (let j = 0; j < doc.connectedPages.length; j++) {
                 const page = doc.connectedPages[j];
 
-                graphHelper.drawBezierDiagonal(ctx, doc.getSourceConnectionPoint(), page.getGlobalTargetConnectionPoint(), true);
+                let targetXY: [number, number] = page.getGlobalTargetConnectionPoint();
+                let targetXOffset = targetXY[0] - page.getGlobalTargetConnectionPointXOffset();
+
+                while (targetXValuesDrawnOnScreen.contains(targetXOffset)) {
+                    targetXOffset += 4;
+                }
+                targetXY[0] = targetXOffset;
+
+                let sourceXY: [number, number] = doc.getSourceConnectionPoint();
+
+                if (straightLine > 60) {
+                    straightLine = 11;
+                }
+
+                this.drawStraightLines(ctx, sourceXY, targetXY, straightLine);
+
+                // Save x value of target to avoid collisions
+                targetXValuesDrawnOnScreen.push(targetXY[0]);
             }
         }
+    }
+
+    private drawStraightLines(ctx: CanvasRenderingContext2D, source: [number, number], target: [number, number], straightLine: number) {
+        ctx.beginPath();
+
+        const m = (source[1] + target[1]) / 2;
+
+        if (source[1] < target[1]) {
+            ctx.moveTo(source[0], source[1]);
+            ctx.lineTo(source[0], source[1] + straightLine);
+            ctx.lineTo(target[0], source[1] + straightLine);
+            ctx.lineTo(target[0], target[1]);
+            ctx.stroke();
+        } else {
+            ctx.moveTo(source[0], source[1]);
+            ctx.lineTo(source[0], source[1] - straightLine);
+            ctx.lineTo(target[0], source[1] - straightLine);
+            ctx.lineTo(target[0], target[1]);
+            ctx.stroke();
+        }
+
+        // Draw arrow
+        const halfWidth = 6;
+        const height = 8;
+        ctx.beginPath();
+        ctx.moveTo(target[0] - halfWidth, target[1] + height);
+        ctx.lineTo(target[0], target[1]);
+        ctx.lineTo(target[0] + halfWidth, target[1] + height);
+        ctx.stroke();
     }
 
     /* TODO striped curves
@@ -664,10 +753,10 @@ ctx.bezierCurveTo(20,100,200,100,200,20);
 ctx.stroke();*/
 
     private drawDocument(ctx: CanvasRenderingContext2D, docItem: documentItem) {
-        ctx.fillStyle = docItem.color; 
+        ctx.fillStyle = docItem.color;
         ctx.fillRect(docItem.x, docItem.y, docItem.width, docItem.height);
         ctx.textAlign = "center";
-        ctx.textBaseline = "middle"; 
+        ctx.textBaseline = "middle";
         ctx.font = "18px Lato";
         ctx.fillStyle = "black";
         ctx.fillText(docItem.name, docItem.x + docItem.width / 2, docItem.y + docItem.height / 2);
