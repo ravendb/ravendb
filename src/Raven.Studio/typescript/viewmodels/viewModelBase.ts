@@ -103,6 +103,12 @@ class viewModelBase {
         this.updateHelpLink(null); // clean link
     }
 
+    getPageHostDimenensions(): [number, number] {
+        const $pageHostRoot = $("#page-host-root");
+
+        return [$pageHostRoot.width(), $pageHostRoot.height()];
+    }
+
     attached() {
         window.addEventListener("beforeunload", this.beforeUnloadListener, false);
         this.isAttached = true;

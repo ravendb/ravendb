@@ -103,15 +103,20 @@ class metrics extends viewModelBase {
     static readonly brushSectionHeight = 40;
     static readonly trackHeight = 16; // height used for callstack item
     static readonly stackPadding = 1; // space between call stacks
-    static readonly trackPadding = 3; // top / bottom padding between different tracks
-    static readonly axisHeight = 20; 
+    static readonly closedTrackBottomMargin = 2;
+    static readonly closedTrackPadding = 2;
+    static readonly openedTrackBottomMargin = 10;
+    static readonly openedTrackPadding = 4;
+    static readonly axisHeight = 35; 
+
+    static readonly maxRecursion = 4;
 
     private data: Raven.Client.Data.Indexes.IndexPerformanceStats[] = [];
     private timeRange: [Date, Date];
-    private totalWidth = 1500; //TODO: use dynamic value + bind on window resize
-    private totalHeight = 700; //TODO: use dynamic value + bind on windows resize
+    private totalWidth: number;
+    private totalHeight: number;
 
-    private indexNamesAndRecursion: Map<string, number>;
+    private indexNames: Set<string>;
     private expandedTracks = new Set<string>();
 
     private isoParser = d3.time.format.iso;
@@ -130,8 +135,23 @@ class metrics extends viewModelBase {
     private color = d3.scale.category20c();
     private dialogVisible = false;
 
-    activate(args: any): JQueryPromise<any> {
+    private static readonly openedTrackHeight = metrics.openedTrackPadding
+        + (metrics.maxRecursion + 1) * metrics.trackHeight
+        + metrics.maxRecursion * metrics.stackPadding
+        + metrics.openedTrackPadding;
+
+    private static readonly closedTrackHeight = metrics.closedTrackPadding
+        + metrics.trackHeight
+        + metrics.closedTrackPadding;
+
+    activate(args: { indexName: string, database: string}): JQueryPromise<any> {
         super.activate(args);
+
+        if (args.indexName) {
+            this.expandedTracks.add(args.indexName);
+        }
+
+        [this.totalWidth, this.totalHeight] = this.getPageHostDimenensions();
 
         return new getIndexesPerformance(this.activeDatabase())
             .execute()
@@ -166,7 +186,7 @@ class metrics extends viewModelBase {
             .attr("height", this.totalHeight);
 
         this.xBrushNumericScale = d3.scale.linear<number>()
-            .range([0, this.totalWidth])
+            .range([0, this.totalWidth - 1]) // substract 1px to avoid issue with missing right stroke
             .domain([0, this.totalWidth]);
 
         this.xNumericScale = d3.scale.linear<number>()
@@ -244,7 +264,10 @@ class metrics extends viewModelBase {
             .range([0, this.totalWidth])
             .domain(this.timeRange);
 
-        this.drawXaxis(context, xBrushScale);
+        this.drawXaxis(context, xBrushScale, metrics.brushSectionHeight);
+
+        context.strokeStyle = "#3a4242";
+        context.strokeRect(0, 0, this.totalWidth, metrics.brushSectionHeight);
 
         context.fillStyle = "#e2ebfe";
         context.strokeStyle = "#6e9cf8";
@@ -272,31 +295,30 @@ class metrics extends viewModelBase {
             this.brushContainer
                 .call(this.brush)
                 .selectAll("rect")
-                .attr("y", 1)
-                .attr("height", metrics.brushSectionHeight - 2);
+                .attr("y", 0)
+                .attr("height", metrics.brushSectionHeight - 1);
         }
     }
 
     private prepareMainSection() {
-        this.indexNamesAndRecursion = this.findIndexNamesAndMaxRecursionLevel();
+        this.indexNames = this.findIndexNames();
     }
 
     private constructYScale() {
-        let currentOffset = metrics.trackPadding + metrics.axisHeight;
+        let currentOffset = metrics.axisHeight;
         let domain = [] as Array<string>;
         let range = [] as Array<number>;
 
-        const indexesInfo = this.indexNamesAndRecursion;
+        const indexesInfo = this.indexNames;
 
         indexesInfo.forEach((recursion, indexName) => {
             domain.push(indexName);
             range.push(currentOffset);
 
-            currentOffset += metrics.trackHeight + 2 * metrics.trackPadding;
+            const itemHeight = this.expandedTracks.has(indexName) ? metrics.openedTrackHeight : metrics.closedTrackHeight;
+            const itemMarginBottom = this.expandedTracks.has(indexName) ? metrics.openedTrackBottomMargin : metrics.closedTrackBottomMargin;
 
-            if (this.expandedTracks.has(indexName)) {
-                currentOffset += recursion * (metrics.trackHeight + metrics.stackPadding);
-            }
+            currentOffset += itemHeight + itemMarginBottom;
         });
 
         this.yScale = d3.scale.ordinal<string, number>()
@@ -304,51 +326,46 @@ class metrics extends viewModelBase {
             .range(range);
     }
 
-    private findIndexNamesAndMaxRecursionLevel(): Map<string, number> {
-        const result = new Map<string, number>();
+    private getTrackHeight(indexName: string) {
+        if (this.expandedTracks.has(indexName)) {
+            return ;
+        }
+        return
+           
+    }
+
+    private findIndexNames(): Set<string> {
+        const result = new Set<string>();
 
         this.data.forEach(perfItem => {
-            const recursionLevels = perfItem.Performance.map(x => this.findMaxRecursionLevel(x.Details));
-            const maxRecursion = d3.max(recursionLevels);
-            result.set(perfItem.IndexName, maxRecursion); //TODO: do we need this calc this - maybe it is constant value?
+            result.add(perfItem.IndexName);
         });
 
         return result;
     }
 
-    private findMaxRecursionLevel(node: Raven.Client.Data.Indexes.IndexingPerformanceOperation): number {
-        if (node.Operations.length === 0) {
-            return 1;
-        }
-
-        return 1 + d3.max(node.Operations.map(x => this.findMaxRecursionLevel(x)));
-    }
-
-    private drawXaxis(context: CanvasRenderingContext2D, scale: d3.time.Scale<number, number>) { //TODO: extract this to utils? 
+    private drawXaxis(context: CanvasRenderingContext2D, scale: d3.time.Scale<number, number>, height: number) {
         context.save();
         const tickCount = Math.floor(this.totalWidth / 300);
-        const tickSize = 6;
         const ticks = scale.ticks(tickCount);
         const tickFormat = scale.tickFormat(tickCount);
 
         context.beginPath();
-        context.moveTo(0, tickSize);
-        context.lineTo(0, 0);
-        context.lineTo(this.totalWidth - 1, 0);
-        context.lineTo(this.totalWidth - 1, tickSize);
+        context.strokeStyle = "#3a4242";
+        context.fillStyle = "#3a4242";
+        context.setLineDash([4, 2]);
 
         ticks.forEach(x => {
-            context.moveTo(scale(x), 0);
-            context.lineTo(scale(x), tickSize);
+            context.moveTo(Math.floor(scale(x)), 0);
+            context.lineTo(Math.floor(scale(x)), height);
         });
-        context.strokeStyle = "white";
         context.stroke();
 
-        context.textAlign = "center";
+        context.textAlign = "left";
         context.textBaseline = "top";
-        context.fillStyle = "white";
         ticks.forEach(x => {
-            context.fillText(tickFormat(x), scale(x), tickSize);
+            // draw text with 5px left padding
+            context.fillText(tickFormat(x), scale(x) + 5, 5);
         });
         context.restore();
     }
@@ -420,13 +437,30 @@ class metrics extends viewModelBase {
             context.rect(0, 0, this.totalWidth, this.totalHeight - metrics.brushSectionHeight); 
             context.clip();
 
-            this.drawXaxis(context, xScale);
+            this.drawTracksBackground(context, xScale);
+            this.drawXaxis(context, xScale, this.totalHeight);
             this.drawTracks(context, xScale);
             this.drawIndexNames(context);
 
         } finally {
             context.restore();
         }
+    }
+
+    private drawTracksBackground(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
+        const extentFunc = graphHelper.extentGenerator(xScale);
+
+        this.data.forEach(perfStat => {
+            const yStart = this.yScale(perfStat.IndexName);
+
+            perfStat.Performance.forEach(perf => {
+                const isOpened = this.expandedTracks.has(perfStat.IndexName);
+
+                context.fillStyle = "#2b3232";
+                context.fillRect(0, yStart, this.totalWidth, isOpened ? metrics.openedTrackHeight : metrics.closedTrackHeight);
+            });
+
+        });
     }
 
     private drawTracks(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
@@ -437,13 +471,13 @@ class metrics extends viewModelBase {
         const extentFunc = graphHelper.extentGenerator(xScale);
 
         this.data.forEach(perfStat => {
-            const yStart = this.yScale(perfStat.IndexName);
+            const isOpened = this.expandedTracks.has(perfStat.IndexName);
+            let yStart = this.yScale(perfStat.IndexName);
+            yStart += isOpened ? metrics.openedTrackPadding : metrics.closedTrackPadding;
 
-            context.fillStyle = "red";
             perfStat.Performance.forEach(perf => {
                 const startDate = this.isoParser.parse(perf.Started); //TODO: create cache for this to avoid parsing dates
                 const x1 = xScale(startDate);
-                const isOpened = this.expandedTracks.has(perfStat.IndexName);
 
                 const yOffset = isOpened ? metrics.trackHeight + metrics.stackPadding : 0;
 
@@ -487,19 +521,19 @@ class metrics extends viewModelBase {
 
     private drawIndexNames(context: CanvasRenderingContext2D) {
         const yScale = this.yScale;
-        const textShift = 12;
+        const textShift = 13;
         const textStart = 3 + 8 + 4;
 
-        this.indexNamesAndRecursion.forEach((r, indexName) => {
+        this.indexNames.forEach((indexName) => {
             const rectWidth = context.measureText(indexName).width + 2 * 3 /* left right padding */ + 8 /* arrow space */ + 4; /* padding between arrow and text */ 
 
-            context.fillStyle = "rgba(255, 255, 255, 0.2)";
-            context.fillRect(2, yScale(indexName), rectWidth, metrics.trackHeight);
+            context.fillStyle = "rgba(43, 50, 50, 0.3)";
+            context.fillRect(2, yScale(indexName) + metrics.closedTrackPadding, rectWidth, metrics.trackHeight);
             this.hitTest.registerIndexToggle(2, yScale(indexName), rectWidth, metrics.
                 trackHeight, indexName);
-            context.fillStyle = "black";
+            context.fillStyle = "#a8acac";
             context.fillText(indexName, textStart, yScale(indexName) + textShift);
-            graphHelper.drawArrow(context, 5, yScale(indexName) + 4, !this.expandedTracks.has(indexName));
+            graphHelper.drawArrow(context, 5, yScale(indexName) + 6, !this.expandedTracks.has(indexName));
         });
     }
 
@@ -561,7 +595,7 @@ class metrics extends viewModelBase {
         this.hideTooltip();
     }
 
-    fileSelected() { //TODO:
+    fileSelected() { 
         const fileInput = <HTMLInputElement>document.querySelector("#importFilePicker");
         const self = this;
         if (fileInput.files.length === 0) {
