@@ -23,7 +23,6 @@ interface computedAppUrls {
     tasks: KnockoutComputed<string>;
     status: KnockoutComputed<string>;
     indexPerformance: KnockoutComputed<string>;
-    indexStats: KnockoutComputed<string>;
     indexBatchSize: KnockoutComputed<string>;
     indexPrefetches: KnockoutComputed<string>;
     replicationPerfStats: KnockoutComputed<string>;

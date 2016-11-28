@@ -60,7 +60,6 @@ class appUrl {
         requestsCount: ko.computed(() => appUrl.forRequestsCount(appUrl.currentDatabase())),
         requestsTracing: ko.computed(() => appUrl.forRequestsTracing(appUrl.currentDatabase())),
         indexPerformance: ko.computed(() => appUrl.forIndexPerformance(appUrl.currentDatabase())),
-        indexStats: ko.computed(() => appUrl.forIndexStats(appUrl.currentDatabase())),
         indexBatchSize: ko.computed(() => appUrl.forIndexBatchSize(appUrl.currentDatabase())),
         indexPrefetches: ko.computed(() => appUrl.forIndexPrefetches(appUrl.currentDatabase())),
 
@@ -421,11 +420,7 @@ class appUrl {
     }
 
     static forIndexPerformance(db: database, indexName?: string): string {
-        return `#databases/status/indexing?${(appUrl.getEncodedDbPart(db))}&${appUrl.getEncodedIndexNamePart(indexName)}`;
-    }
-
-    static forIndexStats(db: database): string {
-        return "#databases/status/indexing/stats?" + appUrl.getEncodedDbPart(db);
+        return `#databases/indexes/performance?${(appUrl.getEncodedDbPart(db))}&${appUrl.getEncodedIndexNamePart(indexName)}`;
     }
 
     static forIndexBatchSize(db: database): string {
@@ -537,7 +532,7 @@ class appUrl {
     }
 
     static forIndexErrors(db: database): string {
-        return "#databases/status/indexErrors?" + appUrl.getEncodedDbPart(db);
+        return "#databases/indexes/indexErrors?" + appUrl.getEncodedDbPart(db);
     }
 
     static forReplicationStats(db: database): string {
@@ -549,7 +544,7 @@ class appUrl {
     }
 
     static forVisualizer(db: database, index: string = null): string {
-        var url = "#databases/status/visualizer?" + appUrl.getEncodedDbPart(db);
+        var url = "#databases/indexes/visualizer?" + appUrl.getEncodedDbPart(db);
         if (index) { 
             url += "&index=" + index;
         }

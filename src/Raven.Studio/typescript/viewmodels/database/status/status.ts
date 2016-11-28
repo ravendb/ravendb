@@ -30,11 +30,9 @@ class status extends viewModelBase {
                 { route: 'databases/status/logs', moduleId: 'viewmodels/database/status/logs', title: 'Logs', nav: true, hash: appUrl.forCurrentDatabase().logs },
                 { route: 'databases/status/runningTasks', moduleId: 'viewmodels/database/status/runningTasks', title: 'Running Tasks', nav: true, hash: appUrl.forCurrentDatabase().runningTasks },
                 { route: 'databases/status/alerts', moduleId: 'viewmodels/database/status/alerts', title: 'Alerts', nav: true, hash: appUrl.forCurrentDatabase().alerts },
-                { route: 'databases/status/indexErrors', moduleId: 'viewmodels/database/status/indexErrors', title: 'Index Errors', nav: true, hash: appUrl.forCurrentDatabase().indexErrors },
                 { route: 'databases/status/replicationStats', moduleId: 'viewmodels/database/status/replicationStats', title: 'Replication Stats', nav: true, hash: appUrl.forCurrentDatabase().replicationStats },
                 { route: 'databases/status/sqlReplicationPerfStats', moduleId: 'viewmodels/database/status/sqlReplicationPerfStats', title: 'SQL Replication Stats', nav: true, hash: appUrl.forCurrentDatabase().sqlReplicationPerfStats },
                 { route: 'databases/status/userInfo', moduleId: 'viewmodels/database/status/userInfo', title: 'User Info', nav: true, hash: appUrl.forCurrentDatabase().userInfo },
-                { route: 'databases/status/visualizer', moduleId: 'viewmodels/database/status/visualizer', title: 'Map/Reduce Visualizer', nav: true, hash: appUrl.forCurrentDatabase().visualizer },
                 { route: 'databases/status/debug*details', moduleId: 'viewmodels/database/status/debug/statusDebug', title: 'Debug', nav: true, hash: appUrl.forCurrentDatabase().statusDebug },
                 { route: 'databases/status/storage*details', moduleId: 'viewmodels/database/status/storage/statusStorage', title: 'Storage', nav: true, hash: appUrl.forCurrentDatabase().statusStorageOnDisk },
                 { route: 'databases/status/infoPackage', moduleId: 'viewmodels/manage/infoPackage', title: 'Gather Debug Info', nav: accessHelper.canExposeConfigOverTheWire(), hash: appUrl.forCurrentDatabase().infoPackage }
