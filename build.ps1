@@ -10,8 +10,7 @@ $DEV_BUILD_NUMBER = 40
 . '.\scripts\getScriptDirectory.ps1'
 . '.\scripts\copyStudioPkg.ps1'
 . '.\scripts\copyLicense.ps1'
-. '.\scripts\teamcity.ps1'
-. '.\scripts\git.ps1'
+. '.\scripts\env.ps1'
 . '.\scripts\updateSourceWithBuildInfo.ps1'
 
 $buildNumber = GetBuildNumber
@@ -38,11 +37,10 @@ $RUNTIMES = @(
 );
 
 CleanBuildDirectories $RELEASE_DIR
-
 DownloadDependencies
-
 BuildTypingsGenerator $TYPINGS_GENERATOR_SRC_DIR
 BuildStudio $STUDIO_SRC_DIR $PROJECT_DIR $version
+UpdateSourceWithBuildInfo $PROJECT_DIR $buildNumber $version
 
 Foreach ($runtime in $RUNTIMES) {
     $runtimeOutDir = [io.path]::combine($OUT_DIR, $runtime)

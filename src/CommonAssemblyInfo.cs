@@ -9,8 +9,8 @@ using System.Runtime.InteropServices;
 [assembly: CLSCompliant(false)]
 
 [assembly: AssemblyVersion("4.0.0")]
-[assembly: AssemblyFileVersion("4.0.40.0")]
-[assembly: AssemblyInformationalVersion("4.0.0 / cdc39ac / ")]
+[assembly: AssemblyFileVersion("4.0.0.40")]
+[assembly: AssemblyInformationalVersion("4.0.0-custom-40")]
 
 #if DEBUG
 [assembly: AssemblyConfiguration("Debug")]
