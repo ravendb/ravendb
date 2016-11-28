@@ -199,7 +199,7 @@ class cluster extends viewModelBase {
                 new updateRaftClusterCommand(appUrl.getSystemDatabase(), nci.toDto())
                     .execute()
                     .done(() => setTimeout(() => this.refresh(), 500));
-            });
+            }).always(()=>this.refresh());
 
         app.showDialog(dialog);
     }

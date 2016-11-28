@@ -278,12 +278,17 @@ namespace Raven.Database.Raft.Controllers
         {
             var nodeConnectionInfo = await ReadJsonObjectAsync<NodeConnectionInfo>().ConfigureAwait(false);
             //if i'm the leader and i was just requested to stop been a voter than i should step down
+            //this is a diffrent behavior than update because this is needed for HotSpare.
             if (nodeConnectionInfo == ClusterManager.Engine.Options.SelfConnection && !isVoting)
                 await ClusterManager.Engine.StepDownAsync().ConfigureAwait(false);
-            if (ClusterManager.Engine.State != RaftEngineState.Leader)
-                throw new NotLeadingException($"Node {ClusterManager.Engine.Name} Got a request to change voting state of node " +
-                                              $"{nodeConnectionInfo.Name} to {isVoting}, but it is not currently the leader.");
-            await ClusterManager.Engine.ModifyNodeVotingModeAsync(nodeConnectionInfo, isVoting).ConfigureAwait(false);
+            if (ClusterManager.Engine.State == RaftEngineState.Leader)
+            {
+                await ClusterManager.Engine.ModifyNodeVotingModeAsync(nodeConnectionInfo, isVoting).ConfigureAwait(false);
+            }
+            else
+            {
+                await ClusterManager.Client.SendVotingModeChangeRequestAsync(nodeConnectionInfo, isVoting).ConfigureAwait(false);
+            }            
             return GetEmptyMessage();
         }
     }
