@@ -15,7 +15,7 @@ namespace Voron.Data.Compression
             _cacheSize = cacheSize;
         }
 
-        public bool TryGet(long pageNumber, out DecompressedLeafPage decompressed)
+        public bool TryGet(long pageNumber, ushort version, out DecompressedLeafPage decompressed)
         {
             int position = _current;
 
@@ -31,7 +31,7 @@ namespace Voron.Data.Compression
                     continue;
                 }
 
-                if (page.PageNumber == pageNumber)
+                if (page.PageNumber == pageNumber && page.Version == version)
                 {
                     Debug.Assert(page.Cached);
                     
@@ -67,7 +67,7 @@ namespace Voron.Data.Compression
                     return;
                 }
 
-                if (old.PageNumber == decompressed.PageNumber)
+                if (old.PageNumber == decompressed.PageNumber && old.Version == decompressed.Version)
                 {
                     Debug.Assert(old != decompressed);
 
@@ -97,12 +97,12 @@ namespace Voron.Data.Compression
             _cache[_current] = decompressed;
         }
 
-        public void Invalidate(long pageNumber)
+        public void Invalidate(long pageNumber, ushort version)
         {
             for (int i = 0; i < _cache.Length; i++)
             {
                 var cached = _cache[i];
-                if (cached != null && cached.PageNumber == pageNumber)
+                if (cached != null && cached.PageNumber == pageNumber && cached.Version == version)
                 {
                     cached.Cached = false;
                     cached.Dispose();

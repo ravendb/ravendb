@@ -67,10 +67,14 @@ namespace Voron.Impl
             if (header != null)
             {
                 if (header->RootObjectType != type)
-                    throw new InvalidOperationException($"Tried to opened {treeName} as a {type}, but it is actually a " + header->RootObjectType);
+                    throw new InvalidOperationException($"Tried to open {treeName} as a {type}, but it is actually a " + header->RootObjectType);
 
                 tree = Tree.Open(_lowLevelTransaction, this, header, type, pageLocator);
                 tree.Name = treeName;
+
+                if ((tree.State.Flags & TreeFlags.LeafsCompressed) == TreeFlags.LeafsCompressed)
+                    tree.InitializeCompression();
+
                 _trees.Add(treeName, tree);
                 
                 return tree;

@@ -11,8 +11,12 @@ namespace Voron.Data.BTrees
 {
     public unsafe partial class Tree
     {
-        private readonly DecompressedPagesCache _writeDecompressions = new DecompressedPagesCache(); // TODO arek - initialize only if tree has compression flag set
-        private readonly DecompressedPagesCache _readDecompressions = new DecompressedPagesCache();
+        internal DecompressedPagesCache DecompressionsCache;
+
+        public void InitializeCompression()
+        {
+            DecompressionsCache = new DecompressedPagesCache();
+        }
 
         private bool TryCompressPageNodes(Slice key, int len, TreePage page)
         {
@@ -22,45 +26,54 @@ namespace Voron.Data.BTrees
                 return false;
 
             var pageToCompress = page;
+            ushort version = 0;
 
             if (alreadyCompressed)
-                pageToCompress = DecompressPage(page, usage: DecompresionUsage.Write); // no need to dispose, it's going to be cached anyway
+            {
+                version = (ushort)(page.CompressionHeader->Version + 1);
+                pageToCompress = DecompressPage(page); // no need to dispose, it's going to be cached anyway
+            }
 
             CompressionResult result;
-            using (LeafPageCompressor.TryGetCompressedTempPage(_llt, pageToCompress, out result, defrag: alreadyCompressed == false))
+            using (LeafPageCompressor.TryGetCompressedTempPage(_llt, pageToCompress, version, out result, defrag: alreadyCompressed == false))
             {
-                if (result == null)
+                if (result == null || result.CompressedPage.GetRequiredSpace(key, len) > result.CompressedPage.SizeLeft)
+                {
+                    // need to check if the compressed page has space for entry that we want to insert
+                    // we don't use HasSpaceFor here intentionally because underneath CalcSizeUsed could be called
+                    // since we put compressed entries at the beginning of that page (temporarily) then props like NumberOfEntries and KeysOffsets
+                    // return incorrect values and AccessViolationException could be thrown
+                    // instead we can explicitly check SizeLeft because the page isn't fragmented
+
+                    if (alreadyCompressed)
+                    {
+                        // we've just put a decompressed page to the cache however we aren't going to compress it
+                        // need to invalidate it from the cache
+                        DecompressionsCache.Invalidate(page.PageNumber, (ushort) (version - 1));
+                    }
+
                     return false;
-
-                // need to check if the compressed page has space for entry that we want to insert
-                // we don't use HasSpaceFor here intentionally because underneath CalcSizeUsed could be called
-                // since we put compressed entries at the beginning of that page (temporarily) then props like NumberOfEntries and KeysOffsets
-                // return incorrect values and AccessViolationException could be thrown
-                // instead we can explicitly check SizeLeft because the page isn't fragmented
-
-                if (result.CompressedPage.GetRequiredSpace(key, len) > result.CompressedPage.SizeLeft)
-                    return false;
-
+                }
+                
                 LeafPageCompressor.CopyToPage(result, page);
 
                 return true;
             }
         }
 
-        public DecompressedLeafPage DecompressPage(TreePage p, DecompresionUsage usage = DecompresionUsage.Read, bool skipCache = false)
+        public DecompressedLeafPage DecompressPage(TreePage p, bool skipCache = false)
         {
-            DecompressedLeafPage cached = null;
-            if (usage == DecompresionUsage.Read && skipCache == false && _readDecompressions.TryGet(p.PageNumber, out cached))
-                return cached;
-
             var input = new DecompressionInput(p.CompressionHeader, p);
 
             DecompressedLeafPage decompressedPage;
+            DecompressedLeafPage cached = null;
 
-            if (usage == DecompresionUsage.Write && skipCache == false && _writeDecompressions.TryGet(p.PageNumber, out cached))
-                decompressedPage = ReuseCachedPage(cached, input);
+            if (skipCache == false && DecompressionsCache.TryGet(p.PageNumber, p.CompressionHeader->Version, out cached))
+                decompressedPage = ReuseCachedPage(cached, ref input);
             else
-                decompressedPage = DecompressFromBuffer(input);
+            {
+                decompressedPage = DecompressFromBuffer(ref input);
+            }
 
             Debug.Assert(decompressedPage.NumberOfEntries > 0);
 
@@ -72,16 +85,18 @@ namespace Voron.Data.BTrees
 
             AppendUncompressedNodes(decompressedPage, p);
 
-            if (decompressedPage != cached)
-                UpdateDecompressedPagesCache(decompressedPage, usage);
+            decompressedPage.Version++;
+            
+            if (skipCache == false && decompressedPage != cached)
+                DecompressionsCache.Add(decompressedPage);
 
             decompressedPage.DebugValidate(this, State.RootPageNumber);
             return decompressedPage;
         }
 
-        private DecompressedLeafPage DecompressFromBuffer(DecompressionInput input)
+        private DecompressedLeafPage DecompressFromBuffer(ref DecompressionInput input)
         {
-            var result = _llt.Environment.DecompressionBuffers.GetPage(_llt, input.DecompressedPageSize, input.Page);
+            var result = _llt.Environment.DecompressionBuffers.GetPage(_llt, input.DecompressedPageSize, input.Page.CompressionHeader->Version, input.Page);
 
             var decompressedNodesOffset = (ushort)(result.PageSize - input.DecompressedSize); // TODO arek - aligntment
 
@@ -101,34 +116,30 @@ namespace Voron.Data.BTrees
             return result;
         }
 
-        private DecompressedLeafPage ReuseCachedPage(DecompressedLeafPage cached, DecompressionInput input)
+        private DecompressedLeafPage ReuseCachedPage(DecompressedLeafPage cached, ref DecompressionInput input)
         {
             DecompressedLeafPage result;
 
             var sizeDiff = input.DecompressedPageSize - cached.PageSize;
             if (sizeDiff > 0)
             {
-                result = _llt.Environment.DecompressionBuffers.GetPage(_llt, input.DecompressedPageSize, input.Page);
+                result = _llt.Environment.DecompressionBuffers.GetPage(_llt, input.DecompressedPageSize,
+                    input.Page.CompressionHeader->Version, input.Page);
 
                 Memory.Copy(result.Base, cached.Base, cached.Lower);
                 Memory.Copy(result.Base + cached.Upper + sizeDiff,
                     cached.Base + cached.Upper,
                     cached.PageSize - cached.Upper);
 
-                result.Upper += (ushort)sizeDiff;
+                result.Upper += (ushort) sizeDiff;
 
                 for (var i = 0; i < result.NumberOfEntries; i++)
                 {
-                    result.KeysOffsets[i] += (ushort)sizeDiff;
+                    result.KeysOffsets[i] += (ushort) sizeDiff;
                 }
-
-                _writeDecompressions.Invalidate(cached.PageNumber);
             }
             else
-            {
                 result = cached;
-                result.Original = input.Page;
-            }
 
             return result;
         }
@@ -196,33 +207,7 @@ namespace Voron.Data.BTrees
                     }
                 }
             }
-        }
-
-        private void UpdateDecompressedPagesCache(DecompressedLeafPage decompressedPage, DecompresionUsage usage)
-        {
-            switch (usage)
-            {
-                case DecompresionUsage.Read:
-                    _readDecompressions.Add(decompressedPage);
-                    break;
-                case DecompresionUsage.Write:
-                    _writeDecompressions.Add(decompressedPage);
-                    break;
-                default:
-                    throw new ArgumentException($"Invalid decompression usage: {usage}");
-            }
-        }
-
-        public void InvalidateDecompressionCaches(long pageNumber)
-        {
-            _writeDecompressions.Invalidate(pageNumber);
-            _readDecompressions.Invalidate(pageNumber);
-        }
-
-        public void InvalidateDecompressionReadCache(long pageNumber) // TODO arek - there is no usage of this at this point, test it
-        {
-            _readDecompressions.Invalidate(pageNumber);
-        }
+        }        
 
         public struct DecompressionInput
         {

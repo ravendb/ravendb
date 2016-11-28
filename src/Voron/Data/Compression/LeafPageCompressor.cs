@@ -10,14 +10,14 @@ namespace Voron.Data.Compression
 {
     public unsafe class LeafPageCompressor
     {
-        public static IDisposable TryGetCompressedTempPage(LowLevelTransaction tx, TreePage page, out CompressionResult result, bool defrag = true)
+        public static IDisposable TryGetCompressedTempPage(LowLevelTransaction tx, TreePage page, ushort version, out CompressionResult result, bool defrag = true)
         {
             if (defrag)
             {
                 if (page.CalcSizeUsed() == page.SizeUsed - Constants.TreePageHeaderSize) // check if the page relly requires defrag
                     page.Defrag(tx);
             }
-            
+
             var valuesSize = page.PageSize - page.Upper;
 
             TemporaryPage temp;
@@ -45,19 +45,19 @@ namespace Voron.Data.Compression
                 return returnTempPage;
             }
 
-            var compressedOffsets = (ushort*) compressionResult;
+            var compressedOffsets = (ushort*)compressionResult;
             var offsets = page.KeysOffsets;
 
             for (var i = 0; i < page.NumberOfEntries; i++)
             {
-                compressedOffsets[i] = (ushort) (offsets[i] - page.Upper);
+                compressedOffsets[i] = (ushort)(offsets[i] - page.Upper);
             }
-            
+
             Memory.Copy(tempPage.Base, page.Base, Constants.TreePageHeaderSize);
 
             tempPage.Lower = (ushort)(Constants.TreePageHeaderSize + Constants.Compression.HeaderSize + compressedSize + offsetsSize);
             tempPage.Upper = (ushort)tempPage.PageSize;
-            
+
             var decompressedPageSize = page.SizeUsed + // header, node offsets, existing entries
                                        (tx.Environment.Options.PageSize - (Constants.TreePageHeaderSize + compressedSize + Constants.Compression.HeaderSize + offsetsSize)); // space that can be still used to insert next uncompressed entries
 
@@ -75,8 +75,9 @@ namespace Voron.Data.Compression
                 CompressionOutputPtr = compressionResult,
                 Header = new CompressedNodesHeader
                 {
-                    CompressedSize = (ushort) compressedSize,
-                    UncompressedSize = (ushort) valuesSize,
+                    Version = version,
+                    CompressedSize = (ushort)compressedSize,
+                    UncompressedSize = (ushort)valuesSize,
                     NumberOfCompressedEntries = page.NumberOfEntries,
                 }
             };

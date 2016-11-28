@@ -108,6 +108,9 @@ namespace Voron.Data.BTrees
                 }
             };
 
+            if ((flags & TreeFlags.LeafsCompressed) == TreeFlags.LeafsCompressed)
+                tree.InitializeCompression();
+
             tree.State.RecordNewPage(newRootPage, 1);
             return tree;
         }

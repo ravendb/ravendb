@@ -6,12 +6,15 @@ namespace Voron.Data.Compression
     public struct CompressedNodesHeader
     {
         [FieldOffset(0)]
-        public ushort CompressedSize;
+        public ushort Version;
 
         [FieldOffset(2)]
-        public ushort UncompressedSize;
+        public ushort CompressedSize;
 
         [FieldOffset(4)]
+        public ushort UncompressedSize;
+
+        [FieldOffset(6)]
         public ushort NumberOfCompressedEntries;
     }
 }

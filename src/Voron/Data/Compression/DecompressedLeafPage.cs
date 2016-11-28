@@ -12,8 +12,9 @@ namespace Voron.Data.Compression
 
         private bool _disposed;
 
-        public DecompressedLeafPage(byte* basePtr, int pageSize, TreePage original, TemporaryPage tempPage) : base(basePtr, pageSize)
+        public DecompressedLeafPage(byte* basePtr, int pageSize, ushort version, TreePage original, TemporaryPage tempPage) : base(basePtr, pageSize)
         {
+            Version = version;
             Original = original;
             _tempPage = tempPage;
 
@@ -21,6 +22,8 @@ namespace Voron.Data.Compression
             TreeFlags = Original.TreeFlags;
             Flags = Original.Flags & ~PageFlags.Compressed;
         }
+
+        public ushort Version;
 
         public TreePage Original;
 
@@ -59,7 +62,7 @@ namespace Voron.Data.Compression
             else
             {
                 CompressionResult compressed;
-                using (LeafPageCompressor.TryGetCompressedTempPage(tx, this, out compressed, defrag: defragRequired))
+                using (LeafPageCompressor.TryGetCompressedTempPage(tx, this, Version, out compressed, defrag: defragRequired))
                 {
                     if (compressed == null)
                         throw new InvalidOperationException("Could not compress a page which was already compressed. Should never happen");
