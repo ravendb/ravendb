@@ -14,7 +14,7 @@ namespace Voron.Data.Compression
         {
             if (defrag)
             {
-                if (page.SizeUsed == page.SizeUsed - Constants.TreePageHeaderSize) // check if the page relly requires defrag
+                if (page.CalcSizeUsed() == page.SizeUsed - Constants.TreePageHeaderSize) // check if the page relly requires defrag
                     page.Defrag(tx);
             }
             
@@ -37,9 +37,9 @@ namespace Voron.Data.Compression
                 valuesSize,
                 tempPage.PageSize - (Constants.TreePageHeaderSize + Constants.Compression.HeaderSize) - offsetsSize);
 
-            if (compressedSize == 0)
+            if (compressedSize == 0 || compressedSize > valuesSize)
             {
-                // output buffer size not enough
+                // output buffer size not enough or compressed output size is greater that uncompressed input
 
                 result = null;
                 return returnTempPage;
