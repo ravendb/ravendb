@@ -43,7 +43,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Sessiont
                     var user = session.Load<User>("users/1");
                     user.Name = "Name";
                     session.Store(user);
-                    //TODO
+                    //TODO : after conflict resolution
                     //var e = Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
                 }
             }

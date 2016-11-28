@@ -229,7 +229,6 @@ namespace Raven.NewClient.Client.Document
             }
         }
 
-        //TODO - Efrat
         public RequestExecuter GetRequestExecuter(string databaseName)
         {
             Lazy<RequestExecuter> lazy;

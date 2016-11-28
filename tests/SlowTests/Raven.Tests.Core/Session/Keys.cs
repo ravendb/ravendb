@@ -73,7 +73,6 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
-        //[Fact(Skip = "TODO: use IDatabaseCommands")]
         [Fact]
         public void KeyGenerationOnLoad()
         {

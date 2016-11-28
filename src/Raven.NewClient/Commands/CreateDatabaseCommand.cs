@@ -13,7 +13,6 @@ namespace Raven.NewClient.Client.Commands
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            //TODO -EFRAT - WIP
             url = $"{node.Url}/admin/databases/{node.Database}";
             IsReadRequest = false;
 
@@ -31,11 +30,7 @@ namespace Raven.NewClient.Client.Commands
 
         public override void SetResponse(BlittableJsonReaderObject response)
         {
-            if (response == null)
-            {
-                Result = null;
-                return;
-            }
+
         }
     }
 }

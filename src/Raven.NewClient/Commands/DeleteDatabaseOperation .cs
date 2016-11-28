@@ -7,7 +7,7 @@ namespace Raven.NewClient.Client.Commands
     {
         private static readonly Logger _logger = LoggingSource.Instance.GetLogger<DeleteDatabaseOperation>("Raven.NewClient.Client");
 
-        public InMemoryDocumentSessionOperations.SaveChangesData Data;
+        private string _databaseName;
 
         public DeleteDatabaseOperation()
         {
@@ -16,14 +16,12 @@ namespace Raven.NewClient.Client.Commands
         protected void LogBatch()
         {
             if (_logger.IsInfoEnabled)
-            {
-               //TODO - Efrat
-            }
+                _logger.Info($"Database '{_databaseName}' deleted");
         }
 
-        public DeleteDatabaseCommand CreateRequest(bool hardDelete)
+        public DeleteDatabaseCommand CreateRequest(string name, bool hardDelete)
         {
-            //TODO -EFRAT - WIP
+            _databaseName = name;
             var databaseCommand = new DeleteDatabaseCommand(); 
 
             if (hardDelete)
