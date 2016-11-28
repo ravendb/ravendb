@@ -15,23 +15,38 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.indexes
         }),
         new leafMenuItem({
-            route: 'databases/status/indexing',
-            moduleId: 'viewmodels/database/status/indexing/indexPerformance',  //TODO: move viewmodel/view to proper directory
+            route: ['', 'databases/query/index(/:indexNameOrRecentQueryIndex)'],
+            moduleId: 'viewmodels/database/query/query',
+            title: 'Query',
+            nav: true,
+            css: 'icon-query',
+            dynamicHash: appUrls.query('')
+        }),
+        new leafMenuItem({
+            route: 'databases/indexes/performance',
+            moduleId: 'viewmodels/database/indexes/indexPerformance',
             title: 'Indexing performance',
             tooltip: "Shows details about indexing peformance",
             nav: true,
             css: 'icon-index-batch-size',
             dynamicHash: appUrls.indexPerformance
         }),
-        /*
         new leafMenuItem({
-            route: 'databases/status/indexing/stats',
-            moduleId: 'viewmodels/database/status/indexing/indexStats', //TODO: move viewmodel/view to proper directory
-            title: 'Index stats',
-            tooltip: "Show details about indexing in/out counts",
+            route: 'databases/indexes/visualizer',
+            moduleId: 'viewmodels/database/indexes/visualizer/visualizer',
+            title: 'Map/Reduce Visualizer',
             nav: true,
-            css: 'icon-index-stats',
-            dynamicHash: appUrls.indexStats
+            css: 'icon-map-reduce-visualizer',
+            dynamicHash: appUrls.visualizer
+        }),
+        /* TODO
+        new leafMenuItem({
+            route: 'databases/indexes/indexErrors',
+            moduleId: 'viewmodels/database/indexes/indexErrors',
+            title: 'Index Errors',
+            nav: true,
+            css: 'icon-index-errors',
+            dynamicHash: appUrls.indexErrors
         }),*/
         /* TODO
         new leafMenuItem({

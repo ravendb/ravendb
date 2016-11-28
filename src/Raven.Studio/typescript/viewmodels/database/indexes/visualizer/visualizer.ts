@@ -4,8 +4,8 @@ import viewModelBase = require("viewmodels/viewModelBase");
 
 import d3 = require('d3');
 
-import visualizerGraphGlobal = require("viewmodels/database/status/visualizerGraphGlobal");
-import visualizerGraphDetails = require("viewmodels/database/status/visualizerGraphDetails");
+import visualizerGraphGlobal = require("viewmodels/database/indexes/visualizer/visualizerGraphGlobal");
+import visualizerGraphDetails = require("viewmodels/database/indexes/visualizer/visualizerGraphDetails");
 
 import getIndexesStatsCommand = require("commands/database/index/getIndexesStatsCommand");
 import getIndexMapReduceTreeCommand = require("commands/database/index/getIndexMapReduceTreeCommand");
