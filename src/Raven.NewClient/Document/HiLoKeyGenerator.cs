@@ -70,7 +70,9 @@ namespace Raven.NewClient.Client.Document
 
         private RangeValue GetNextRange()
         {
-            throw new NotImplementedException();
+            //TODO - Temporary just to make the tests work
+            return new RangeValue(Range.Max + 1, Range.Max + 32);
+            //throw new NotImplementedException();
             /*using (databaseCommands.ForceReadFromMaster())
             {
                 ModifyCapacityIfRequired();

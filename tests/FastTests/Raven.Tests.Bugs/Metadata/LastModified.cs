@@ -13,7 +13,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Metadata
 {
     public class LastModified : RavenTestBase
     {
-        [Fact(Skip = "GetNextRange Not Implemented")]
+        [Fact]
         public void CanAccessLastModifiedAsMetadata()
         {
             using (var store = GetDocumentStore())
@@ -40,7 +40,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Metadata
                     //Assert.Equal(DateTimeKind.Utc, lastModified.Kind);
                 }
 
-                WaitForUserToContinueTheTest(store);
+                //WaitForUserToContinueTheTest(store);
             }
         }
     }

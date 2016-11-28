@@ -326,7 +326,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
-        [Fact(Skip = "GetNextRange Not Implemented")]
+        [Fact]
         public void CanUseMaxNumberOfRequestsPerSession()
         {
             using (var store = GetDocumentStore())

@@ -26,7 +26,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
             public bool Active { get; set; }
         }
 
-        [Fact(Skip = "GetNextRange Not Implemented")]
+        [Fact]
         public void Can_cache_document_with_includes()
         {
             using (var store = GetDocumentStore())
@@ -55,7 +55,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
             }
         }
 
-        [Fact(Skip = "GetNextRange Not Implemented")]
+        [Fact]
         public async Task Can_avoid_using_server_for_load_with_include_if_everything_is_in_session_cacheAsync()
         {
             using (var store = GetDocumentStore())
@@ -110,7 +110,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
             }
         }
 
-        [Fact(Skip = "GetNextRange Not Implemented")]
+        [Fact]
         public void Can_avoid_using_server_for_load_with_include_if_everything_is_in_session_cache()
         {
             using (var store = GetDocumentStore())
@@ -137,7 +137,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
             }
         }
 
-        [Fact(Skip = "GetNextRange Not Implemented")]
+        [Fact]
         public void Can_avoid_using_server_for_multiload_with_include_if_everything_is_in_session_cache()
         {
             using (var store = GetDocumentStore())
@@ -177,7 +177,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
             }
         }
 
-        [Fact(Skip = "GetNextRange Not Implemented")]
+        [Fact]
         public void Will_refresh_result_when_main_document_changes()
         {
             using (var store = GetDocumentStore())
@@ -214,7 +214,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
             }
         }
 
-        [Fact(Skip = "GetNextRange Not Implemented")]
+        [Fact]
         public void New_query_returns_correct_value_when_cache_is_enabled_and_data_changes()
         {
             using (var store = GetDocumentStore())
@@ -282,7 +282,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
             }
         }
 
-        [Fact(Skip = "GetNextRange Not Implemented")]
+        [Fact]
         public void Will_refresh_result_when_included_document_changes()
         {
             using (var store = GetDocumentStore())
