@@ -204,7 +204,7 @@ namespace Raven.Client.Document
         /// </remarks>
         public Task<TResult> LoadAsync<TResult>(ValueType id)
         {
-            var documentKey = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
+            var documentKey = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(TResult), false);
             return LoadAsync<TResult>(documentKey);
         }
 
