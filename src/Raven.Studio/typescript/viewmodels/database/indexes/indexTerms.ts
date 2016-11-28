@@ -1,6 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import getIndexTermsCommand = require("commands/database/index/getIndexTermsCommand");
-import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
+import getIndexEntriesFieldsCommand = require("commands/database/index/getIndexEntriesFieldsCommand");
 
 type termsForField = {
     name: string;
@@ -19,18 +19,18 @@ class indexTerms extends viewModelBase {
 
     static readonly termsPageLimit = 100; //TODO: consider higher value?
 
-    activate(indexName: string): JQueryPromise<Raven.Client.Indexing.IndexDefinition> {
+    activate(indexName: string): JQueryPromise<string[]> {
         super.activate(indexName);
 
         this.indexName = indexName;
         this.indexPageUrl = this.appUrls.editIndex(this.indexName);
-        return this.fetchIndexDefinition(indexName);
+        return this.fetchIndexEntriesFields(indexName);
     }
 
-    fetchIndexDefinition(indexName: string) {
-        return new getIndexDefinitionCommand(indexName, this.activeDatabase())
+    fetchIndexEntriesFields(indexName: string) {
+        return new getIndexEntriesFieldsCommand(indexName, this.activeDatabase())
             .execute()
-            .done((indexDefinitionDto: Raven.Client.Indexing.IndexDefinition) => this.processIndex(indexDefinitionDto));
+            .done((fields: string[]) => this.processFields(fields));
     }
 
     static createTermsForField(fieldName: string): termsForField {
@@ -43,13 +43,11 @@ class indexTerms extends viewModelBase {
         }
     }
 
-    private processIndex(indexDefinitionDto: Raven.Client.Indexing.IndexDefinition) {
-        const fieldsNames = Object.keys(indexDefinitionDto.Fields);
-
-        this.fields(fieldsNames.map(fieldName => indexTerms.createTermsForField(fieldName)));
+    private processFields(fields: string[]) {
+        this.fields(fields.map(fieldName => indexTerms.createTermsForField(fieldName)));
 
         this.fields()
-            .forEach(field => this.loadTerms(indexDefinitionDto.Name, field));
+            .forEach(field => this.loadTerms(this.indexName, field));
     }
 
     private loadTerms(indexName: string, termsForField: termsForField): JQueryPromise<string[]> {  // fetch one more to find out if we have more
