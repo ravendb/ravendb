@@ -144,7 +144,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
             }
         }
 
-        [Fact(Skip = "NotImplementedException")]
+        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
         public void CanUseResultsTransformerOnDynamicQuery()
         {
             using (var store = GetDocumentStore())

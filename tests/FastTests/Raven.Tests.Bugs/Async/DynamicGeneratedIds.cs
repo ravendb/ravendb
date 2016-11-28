@@ -5,7 +5,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Async
 {
     public class DynamicGeneratedIds : RavenTestBase
     {
-        [Fact(Skip = "NotImplementedException")]
+        [Fact(Skip = "GetNextMaxAsyncInner Not Implemented")]
         public void AsyncMatchesSyncGeneratedIdForDynamicBehavior()
         {
             using (var store = GetDocumentStore())
@@ -22,7 +22,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Async
             }
         }
 
-        [Fact(Skip = "NotImplementedException")]
+        [Fact(Skip = "GetNextMaxAsyncInner Not Implemented")]
         public void GeneratedIdForDynamicTagNameAsync()
         {
             using (var store = GetDocumentStore())

@@ -26,7 +26,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
             public bool Active { get; set; }
         }
 
-        [Fact(Skip = "TODO : NumberOfCachedRequests Not Implemented")]
+        [Fact(Skip = "GetNextRange Not Implemented")]
         public void Can_cache_document_with_includes()
         {
             using (var store = GetDocumentStore())
@@ -45,6 +45,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
                     s.SaveChanges();
                 }
 
+                //TODO 
                 /*using (var s = store.OpenSession())
                 {
                     s.Include<User>(x => x.PartnerId)
@@ -54,7 +55,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
             }
         }
 
-        [Fact(Skip = "NotImplementedException")]
+        [Fact(Skip = "GetNextRange Not Implemented")]
         public async Task Can_avoid_using_server_for_load_with_include_if_everything_is_in_session_cacheAsync()
         {
             using (var store = GetDocumentStore())
@@ -109,7 +110,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
             }
         }
 
-        [Fact(Skip = "NotImplementedException")]
+        [Fact(Skip = "GetNextRange Not Implemented")]
         public void Can_avoid_using_server_for_load_with_include_if_everything_is_in_session_cache()
         {
             using (var store = GetDocumentStore())
@@ -136,7 +137,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
             }
         }
 
-        [Fact(Skip = "NotImplementedException")]
+        [Fact(Skip = "GetNextRange Not Implemented")]
         public void Can_avoid_using_server_for_multiload_with_include_if_everything_is_in_session_cache()
         {
             using (var store = GetDocumentStore())
@@ -176,7 +177,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
             }
         }
 
-        [Fact(Skip = "TODO : NumberOfCachedRequests Not Implemented")]
+        [Fact(Skip = "GetNextRange Not Implemented")]
         public void Will_refresh_result_when_main_document_changes()
         {
             using (var store = GetDocumentStore())
@@ -195,6 +196,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
                     s.SaveChanges();
                 }
 
+                //TODO
                 /*using (var s = store.OpenSession())
                 {
                     var user = s.Include<User>(x => x.PartnerId)
@@ -203,8 +205,6 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
                     user.Name = "Foo";
                     s.SaveChanges();
                 }
-
-
                 using (var s = store.OpenSession())
                 {
                     s.Include<User>(x => x.PartnerId)
@@ -214,7 +214,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
             }
         }
 
-        [Fact(Skip = "TODO : DatabaseCommands.PutIndex Not Implemented")]
+        [Fact(Skip = "GetNextRange Not Implemented")]
         public void New_query_returns_correct_value_when_cache_is_enabled_and_data_changes()
         {
             using (var store = GetDocumentStore())
@@ -222,6 +222,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
                 using (var s = store.OpenSession())
                 {
                     s.Store(new User { Name = "Ayende", Email = "same.email@example.com" });
+                    //TODO - Put index
                    /* store.DatabaseCommands.PutIndex("index",
                                                          new IndexDefinition()
                                                          {
@@ -235,6 +236,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
 
                 using (var s = store.OpenSession())
                 {
+                    //TODO
                    /* var results = s.Query<User>("index")
                         .Customize(q => q.WaitForNonStaleResultsAsOf(firstTime))
                         .Where(u => u.Email == "same.email@example.com")
@@ -262,6 +264,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
 
                 using (var s = store.OpenSession())
                 {
+                    //TODO
                     /*var results = s.Query<User>("index")
                         .Customize(q => q.WaitForNonStaleResultsAsOf(secondTime))
                         .Where(u => u.Email == "same.email@example.com")
@@ -279,7 +282,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
             }
         }
 
-        [Fact(Skip = "TODO : NumberOfCachedRequests Not Implemented")]
+        [Fact(Skip = "GetNextRange Not Implemented")]
         public void Will_refresh_result_when_included_document_changes()
         {
             using (var store = GetDocumentStore())
@@ -306,7 +309,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
                     s.SaveChanges();
                 }
 
-
+                //TODO
                 /*using (var s = store.OpenSession())
                 {
                     s.Include<User>(x => x.PartnerId)

@@ -9,7 +9,8 @@ namespace NewClientTests.NewClient
 {
     public class Query : RavenTestBase
     {
-        [Fact(Skip = "ClearSortHints not implemented")]
+        //[Fact(Skip = "ClearSortHints not implemented")]
+        [Fact]
         public void Query_Simple()
         {
             using (var store = GetDocumentStore())
@@ -29,7 +30,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact(Skip = "ClearSortHints not implemented")]
+        [Fact]
         public void Query_With_Where_Clause()
         {
             using (var store = GetDocumentStore())
@@ -104,7 +105,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact(Skip = "ClearSortHints not implemented")]
+        [Fact]
         public void Query_Long_Request()
         {
             using (var store = GetDocumentStore())

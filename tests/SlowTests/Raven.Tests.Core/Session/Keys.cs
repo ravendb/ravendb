@@ -19,7 +19,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
         }
 #endif
 
-        [Fact(Skip = "TODO: use IDatabaseCommands")]
+        [Fact(Skip = "GetNextRange Not Implemented")]
         public void GetDocumentId()
         {
             using (var store = GetDocumentStore())
@@ -41,7 +41,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
-        [Fact(Skip = "TODO: use IDatabaseCommands")]
+        [Fact(Skip = "GetNextRange Not Implemented")]
         public async Task KeyGeneration()
         {
             using (var store = GetDocumentStore())
@@ -73,7 +73,8 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
-        [Fact(Skip = "TODO: use IDatabaseCommands")]
+        //[Fact(Skip = "TODO: use IDatabaseCommands")]
+        [Fact]
         public void KeyGenerationOnLoad()
         {
             using (var store = GetDocumentStore())

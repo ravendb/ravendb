@@ -19,8 +19,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
 
         }
 #endif
-
-        [Fact(Skip = "NotImplementedException")]
+        [Fact(Skip = "GetNextMaxAsyncInner Not Implemented")]
         public async Task CanSaveAndLoad()
         {
             using (var store = GetDocumentStore())
@@ -46,7 +45,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
-        [Fact(Skip = "NotImplementedException")]
+        [Fact (Skip = "Assert.Equal fail")]
         public async Task CanSaveAndLoadDynamicDocuments()
         {
             using (var store = GetDocumentStore())
@@ -102,7 +101,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             return new CompletedTask();
         }
 
-        [Fact(Skip = "NotImplementedException")]
+        [Fact(Skip = "GetNextMaxAsyncInner Not Implemented")]
         public async Task CanDelete()
         {
             using (var store = GetDocumentStore())
@@ -132,7 +131,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
-        [Fact(Skip = "NotImplementedException")]
+        [Fact(Skip = "GetNextMaxAsyncInner Not Implemented")]
         public async Task CanLoadWithInclude()
         {
             using (var store = GetDocumentStore())

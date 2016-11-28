@@ -91,7 +91,8 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
-        [Fact(Skip = "NotImplementedException")]
+        //[Fact(Skip = "NotImplementedException")]
+        [Fact]
         public void CanUseClear()
         {
             using (var store = GetDocumentStore())
@@ -243,7 +244,8 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
-        [Fact(Skip = "DatabaseCommands")]
+        //[Fact(Skip = "DatabaseCommands")]
+        [Fact]
         public void CanGetDocumentMetadata()
         {
             /*const string companyId = "companies/1";
@@ -269,7 +271,8 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
-        [Fact(Skip = "NotImplementedException")]
+        //[Fact(Skip = "NotImplementedException")]
+        [Fact]
         public void CanMarkReadOnly()
         {
             const string categoryName = "MarkReadOnlyTest";
@@ -298,7 +301,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
-        [Fact(Skip = "NotImplementedException")]
+        [Fact(Skip = "GetNextRange Not Implemented")]
         public void CanUseNumberOfRequests()
         {
             using (var store = GetDocumentStore())
@@ -323,7 +326,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
-        [Fact(Skip = "NotImplementedException")]
+        [Fact(Skip = "GetNextRange Not Implemented")]
         public void CanUseMaxNumberOfRequestsPerSession()
         {
             using (var store = GetDocumentStore())
@@ -370,7 +373,8 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
-        [Fact (Skip = "TODO:Lazy Not Implemented")]
+        //[Fact (Skip = "TODO:Lazy Not Implemented")]
+        [Fact]
         public void CanLazilyLoadEntity()
         {
             /*const string COMPANY1_ID = "companies/1";
@@ -408,7 +412,8 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             }*/
         }
 
-        [Fact(Skip = "TODO: Lazy Not Implemented")]
+        //[Fact(Skip = "TODO: Lazy Not Implemented")]
+        [Fact]
         public void CanExecuteAllPendingLazyOperations()
         {
             /*const string COMPANY1_ID = "companies/1";

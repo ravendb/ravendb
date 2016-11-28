@@ -83,7 +83,6 @@ namespace NewClientTests.NewClient.ResultsTransformer
 
         }
 
-
         [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
         public void CanUseResultsTransformerWithQueryOnLoadWithRemoteClient()
         {
@@ -105,7 +104,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
 
         }
 
-        [Fact(Skip = "NotImplementedException")]
+        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
         public void CanUseResultsTransformerWithQueryWithRemoteDatabase()
         {
             using (var store = GetDocumentStore())
@@ -130,7 +129,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
             }
         }
 
-        [Fact(Skip = "NotImplementedException")]
+        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
         public void CanUseResultTransformerToLoadValueOnNonStoreFieldUsingQuery()
         {
             using (var store = GetDocumentStore())
@@ -155,7 +154,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
             }
         }
 
-        [Fact(Skip = "NotImplementedException")]
+        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
         public void CanUseResultsTransformerWithQuery()
         {
             using (var store = GetDocumentStore())
@@ -180,7 +179,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
             }
         }
 
-        [Fact(Skip = "NotImplementedException")]
+        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
         public void CanUseResultsTransformerWithInclude()
         {
             using (var store = GetDocumentStore())

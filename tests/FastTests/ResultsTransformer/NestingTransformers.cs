@@ -89,7 +89,6 @@ namespace NewClientTests.NewClient.ResultsTransformer
             }
         }
 
-
         [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
         public void CanCallMultipleTransformers()
         {

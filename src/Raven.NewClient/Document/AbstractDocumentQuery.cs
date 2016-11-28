@@ -626,7 +626,8 @@ namespace Raven.NewClient.Client.Document
         {
             if (queryOperation != null)
                 return;
-            ClearSortHints();
+            //TODO - We need this??
+            //ClearSortHints();
 
             var beforeQueryExecutedEventArgs = new BeforeQueryExecutedEventArgs(theSession, this);
             theSession.OnBeforeQueryExecutedInvoke(beforeQueryExecutedEventArgs);
@@ -749,7 +750,8 @@ namespace Raven.NewClient.Client.Document
         {
             if (queryOperation != null)
                 return queryOperation;
-            ClearSortHints();
+            //TODO - We need this??
+            //ClearSortHints();
 
             var beforeQueryExecutedEventArgs = new BeforeQueryExecutedEventArgs(theSession, this);
             theSession.OnBeforeQueryExecutedInvoke(beforeQueryExecutedEventArgs);

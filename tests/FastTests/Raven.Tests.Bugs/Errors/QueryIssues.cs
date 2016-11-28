@@ -6,7 +6,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Errors
 {
     public class QueryIssues : RavenTestBase
     {
-        [Fact(Skip = "TODO: LoadStartingWith is not implemented")]
+        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
         public void PrestonThinksLoadStartingWithShouldBeCaseInsensitive()
         {
             using (var store = GetDocumentStore())

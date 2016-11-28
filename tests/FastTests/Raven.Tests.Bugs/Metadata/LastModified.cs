@@ -13,8 +13,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Metadata
 {
     public class LastModified : RavenTestBase
     {
-        //TODO : Efrat - lastModified.Kind
-        [Fact(Skip = "NotImplementedException")]
+        [Fact(Skip = "GetNextRange Not Implemented")]
         public void CanAccessLastModifiedAsMetadata()
         {
             using (var store = GetDocumentStore())
@@ -37,6 +36,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Metadata
                     var lastModified = DateTimeOffset.Parse(session.Advanced.GetMetadataFor(user)["Raven-Last-Modified"]).UtcDateTime;
                     Assert.NotNull(lastModified);
                     Assert.InRange(lastModified, before, after);
+                    //TODO
                     //Assert.Equal(DateTimeKind.Utc, lastModified.Kind);
                 }
 

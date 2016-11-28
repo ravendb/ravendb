@@ -9,7 +9,7 @@ namespace NewClientTests.NewClient
 {
     public class QueryAsync : RavenTestBase
     {
-        [Fact(Skip = "ClearSortHints not implemented")]
+        [Fact]
         public async void QueryAsync_Simple()
         {
             using (var store = GetDocumentStore())
@@ -29,7 +29,8 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact(Skip = "ClearSortHints not implemented")]
+        //[Fact(Skip = "ClearSortHints not implemented")]
+        [Fact]
         public async void QueryAsync_With_Where_Clause()
         {
             using (var store = GetDocumentStore())

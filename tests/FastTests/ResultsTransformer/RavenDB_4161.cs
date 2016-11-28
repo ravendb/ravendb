@@ -16,7 +16,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
 {
     public class RavenDB_4161 : RavenTestBase
     {
-        [Fact(Skip = "Iftah - currently failing")]
+        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
         public void CanUseTransfromer()
         {
             using (var store = GetDocumentStore())
@@ -59,7 +59,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
             }
         }
     
-        [Fact(Skip = "Iftah - currently failing")]
+        [Fact(Skip = "ExecuteAsync in AbstractTransformerCreationTask not implemented")]
         public async Task CanUseTransfromerAsync()
         {
             using (var store = GetDocumentStore())
