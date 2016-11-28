@@ -5,7 +5,6 @@ class getFileSystemsCommand extends commandBase {
 
     execute(): JQueryPromise<filesystem[]> {
         var args = {
-            pageSize: 1024,
             getAdditionalData: true
         };
         var url = "/fs";

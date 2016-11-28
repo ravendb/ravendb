@@ -4,7 +4,6 @@ import commandBase = require("commands/commandBase");
 class getTimeSeriesCommand extends commandBase {
     execute(): JQueryPromise<timeSeries[]> {
         var args = {
-            pageSize: 1024,
             getAdditionalData: true
         };
         var url = "/ts";

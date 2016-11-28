@@ -26,7 +26,7 @@ namespace Raven.Tests.Web.Tests
         {
             client = new HttpClient
                      {
-                         Timeout = TimeSpan.FromSeconds(20)
+                         Timeout = TimeSpan.FromSeconds(120)
                      };
         }
 

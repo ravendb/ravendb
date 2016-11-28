@@ -1,4 +1,6 @@
-﻿namespace Raven.Abstractions.Util.MiniMetrics
+﻿using Raven.Imports.Newtonsoft.Json;
+
+namespace Raven.Abstractions.Util.MiniMetrics
 {
     /// <summary>
     /// The value reported by a Meter Tickable
@@ -12,6 +14,7 @@
         public readonly double FifteenMinuteRate;
         
 
+        [JsonConstructor]
         public MeterValue(long count, double meanRate, double oneMinuteRate, double fiveMinuteRate, double fifteenMinuteRate)
         {
             this.Count = count;

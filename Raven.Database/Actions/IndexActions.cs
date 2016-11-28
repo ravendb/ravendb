@@ -973,6 +973,8 @@ namespace Raven.Database.Actions
                     Database.Documents.Delete(Constants.IndexReplacePrefix + instance.Name, null, null);
                 }
 
+                Database.IndexStorage.DeleteSuggestionsData(instance.Name);
+
                 //remove the header information in a sync process
                 TransactionalStorage.Batch(actions => actions.Indexing.PrepareIndexForDeletion(instance.IndexId));
                 //and delete the data in the background

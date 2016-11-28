@@ -142,6 +142,7 @@
       <Link>Properties\TestAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="LoadAsyncValueTypeWithIncludes.cs" />
+    <Compile Include="LoadAsyncWithHierarchicalIncludesTest.cs" />
     <Compile Include="PatchingWithNaNAndIsFinite.cs" />
     <Compile Include="PeterBalzli.cs" />
     <Compile Include="AaronSt.cs" />

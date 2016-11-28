@@ -172,5 +172,11 @@ namespace Rachis.Behaviors
             _log.Info("Selected as leader, term = {0}", resp.CurrentTerm);
         }
 
+        public override void Dispose()
+        {
+            if (_log.IsDebugEnabled)
+                _log.Debug("Disposing of CandidateStateBehavior");
+            base.Dispose();
+        }
     }
 }

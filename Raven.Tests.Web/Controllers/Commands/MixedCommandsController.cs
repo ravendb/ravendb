@@ -270,6 +270,7 @@ namespace Raven.Tests.Web.Controllers.Commands
         public Task<HttpResponseMessage> MoreLikeThis()
         {
             var key = Guid.NewGuid().ToString();
+            DocumentStore.DatabaseCommands.GetStatistics();
             DocumentStore.DatabaseCommands.Put(key, null, new RavenJObject(), new RavenJObject());
 
             SpinWait.SpinUntil(() => DocumentStore.DatabaseCommands.GetStatistics().StaleIndexes.Length == 0);

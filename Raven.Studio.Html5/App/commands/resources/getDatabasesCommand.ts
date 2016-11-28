@@ -5,7 +5,6 @@ class getDatabasesCommand extends commandBase {
     
     execute(): JQueryPromise<database[]> {
         var args = {
-            pageSize: 1024,
             getAdditionalData: true
         };
         var url = "/databases";
