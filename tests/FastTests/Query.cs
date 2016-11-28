@@ -9,7 +9,7 @@ namespace NewClientTests.NewClient
 {
     public class Query : RavenTestBase
     {
-        //[Fact(Skip = "ClearSortHints not implemented")]
+
         [Fact]
         public void Query_Simple()
         {

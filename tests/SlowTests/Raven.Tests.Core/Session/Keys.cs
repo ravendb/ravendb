@@ -41,7 +41,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
-        [Fact(Skip = "GetNextRange Not Implemented")]
+        [Fact(Skip = "GetNextRangeAsync Not Implemented")]
         public async Task KeyGeneration()
         {
             using (var store = GetDocumentStore())
