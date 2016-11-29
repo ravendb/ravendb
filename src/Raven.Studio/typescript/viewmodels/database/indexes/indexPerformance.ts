@@ -103,9 +103,8 @@ class metrics extends viewModelBase {
     static readonly brushSectionHeight = 40;
     static readonly trackHeight = 16; // height used for callstack item
     static readonly stackPadding = 1; // space between call stacks
-    static readonly closedTrackBottomMargin = 2;
+    static readonly trackMargin = 4;
     static readonly closedTrackPadding = 2;
-    static readonly openedTrackBottomMargin = 10;
     static readonly openedTrackPadding = 4;
     static readonly axisHeight = 35; 
 
@@ -116,8 +115,8 @@ class metrics extends viewModelBase {
     private totalWidth: number;
     private totalHeight: number;
 
-    private indexNames: Set<string>;
-    private expandedTracks = new Set<string>();
+    private indexNames = ko.observableArray<string>();
+    private expandedTracks = ko.observableArray<string>();
 
     private isoParser = d3.time.format.iso;
     private canvas: d3.Selection<any>;
@@ -129,11 +128,14 @@ class metrics extends viewModelBase {
     private brushContainer: d3.Selection<any>;
     private zoom: d3.behavior.Zoom<any>;
     private yScale: d3.scale.Ordinal<string, number>;
+    private currentYOffset = 0;
+    private maxYOffset = 0;
     private hitTest = new hitTest();
     private tooltip: d3.Selection<Raven.Client.Data.Indexes.IndexingPerformanceOperation>;
 
     private color = d3.scale.category20c();
     private dialogVisible = false;
+    private canExpandAll: KnockoutComputed<boolean>;
 
     private static readonly openedTrackHeight = metrics.openedTrackPadding
         + (metrics.maxRecursion + 1) * metrics.trackHeight
@@ -144,14 +146,27 @@ class metrics extends viewModelBase {
         + metrics.trackHeight
         + metrics.closedTrackPadding;
 
+    constructor() {
+        super();
+
+        this.canExpandAll = ko.pureComputed(() => {
+            const indexNames = this.indexNames();
+            const expandedTracks = this.expandedTracks();
+
+            return indexNames.length && indexNames.length !== expandedTracks.length;
+        });
+    }
+
     activate(args: { indexName: string, database: string}): JQueryPromise<any> {
         super.activate(args);
 
         if (args.indexName) {
-            this.expandedTracks.add(args.indexName);
+            this.expandedTracks.push(args.indexName);
         }
 
         [this.totalWidth, this.totalHeight] = this.getPageHostDimenensions();
+
+        this.totalHeight -= 50; // substract toolbar height
 
         return new getIndexesPerformance(this.activeDatabase())
             .execute()
@@ -227,6 +242,24 @@ class metrics extends viewModelBase {
             .on("mousedown.tip", () => selection.on("mousemove.tip", null))
             .on("mouseup.tip", () => selection.on("mousemove.tip", onMove));
 
+        selection
+            .on("mousedown.yShift", () => {
+                const node = selection.node();
+                const initialClickLocation = d3.mouse(node);
+                const initialOffset = this.currentYOffset;
+
+                selection.on("mousemove.yShift", () => {
+                    const currentMouseLocation = d3.mouse(node);
+                    const yDiff = currentMouseLocation[1] - initialClickLocation[1];
+
+                    const newYOffset = initialOffset - yDiff;
+
+                    this.currentYOffset = Math.min(Math.max(0, newYOffset), this.maxYOffset);
+                });
+
+                selection.on("mouseup.yShift", () => selection.on("mousemove.yShift", null));
+            });
+
         selection.on("dblclick.zoom", null);
     }
 
@@ -301,47 +334,48 @@ class metrics extends viewModelBase {
     }
 
     private prepareMainSection() {
-        this.indexNames = this.findIndexNames();
+        this.indexNames(this.findIndexNames());
     }
 
     private constructYScale() {
-        let currentOffset = metrics.axisHeight;
+        let currentOffset = metrics.axisHeight - this.currentYOffset;
         let domain = [] as Array<string>;
         let range = [] as Array<number>;
 
-        const indexesInfo = this.indexNames;
+        const indexesInfo = this.indexNames();
 
-        indexesInfo.forEach((recursion, indexName) => {
+        for (let i = 0; i < indexesInfo.length; i++) {
+            const indexName = indexesInfo[i];
+
             domain.push(indexName);
             range.push(currentOffset);
 
-            const itemHeight = this.expandedTracks.has(indexName) ? metrics.openedTrackHeight : metrics.closedTrackHeight;
-            const itemMarginBottom = this.expandedTracks.has(indexName) ? metrics.openedTrackBottomMargin : metrics.closedTrackBottomMargin;
+            const isOpened = this.expandedTracks.contains(indexName);
 
-            currentOffset += itemHeight + itemMarginBottom;
-        });
+            const itemHeight = isOpened ? metrics.openedTrackHeight : metrics.closedTrackHeight;
+
+            currentOffset += itemHeight + metrics.trackMargin;
+        }
 
         this.yScale = d3.scale.ordinal<string, number>()
             .domain(domain)
             .range(range);
+
+        const availableHeightForTracks = this.totalHeight - metrics.brushSectionHeight;
+
+        const extraBottomMargin = 100;
+
+        this.maxYOffset = Math.max(currentOffset + this.currentYOffset + extraBottomMargin - availableHeightForTracks, 0);
     }
 
-    private getTrackHeight(indexName: string) {
-        if (this.expandedTracks.has(indexName)) {
-            return ;
-        }
-        return
-           
-    }
-
-    private findIndexNames(): Set<string> {
+    private findIndexNames(): string[] {
         const result = new Set<string>();
 
         this.data.forEach(perfItem => {
             result.add(perfItem.IndexName);
         });
 
-        return result;
+        return Array.from(result);
     }
 
     private drawXaxis(context: CanvasRenderingContext2D, scale: d3.time.Scale<number, number>, height: number) {
@@ -454,7 +488,7 @@ class metrics extends viewModelBase {
             const yStart = this.yScale(perfStat.IndexName);
 
             perfStat.Performance.forEach(perf => {
-                const isOpened = this.expandedTracks.has(perfStat.IndexName);
+                const isOpened = this.expandedTracks.contains(perfStat.IndexName);
 
                 context.fillStyle = "#2b3232";
                 context.fillRect(0, yStart, this.totalWidth, isOpened ? metrics.openedTrackHeight : metrics.closedTrackHeight);
@@ -471,7 +505,7 @@ class metrics extends viewModelBase {
         const extentFunc = graphHelper.extentGenerator(xScale);
 
         this.data.forEach(perfStat => {
-            const isOpened = this.expandedTracks.has(perfStat.IndexName);
+            const isOpened = this.expandedTracks.contains(perfStat.IndexName);
             let yStart = this.yScale(perfStat.IndexName);
             yStart += isOpened ? metrics.openedTrackPadding : metrics.closedTrackPadding;
 
@@ -524,7 +558,7 @@ class metrics extends viewModelBase {
         const textShift = 13;
         const textStart = 3 + 8 + 4;
 
-        this.indexNames.forEach((indexName) => {
+        this.indexNames().forEach((indexName) => {
             const rectWidth = context.measureText(indexName).width + 2 * 3 /* left right padding */ + 8 /* arrow space */ + 4; /* padding between arrow and text */ 
 
             context.fillStyle = "rgba(43, 50, 50, 0.3)";
@@ -533,17 +567,27 @@ class metrics extends viewModelBase {
                 trackHeight, indexName);
             context.fillStyle = "#a8acac";
             context.fillText(indexName, textStart, yScale(indexName) + textShift);
-            graphHelper.drawArrow(context, 5, yScale(indexName) + 6, !this.expandedTracks.has(indexName));
+            graphHelper.drawArrow(context, 5, yScale(indexName) + 6, !this.expandedTracks.contains(indexName));
         });
     }
 
     private onToggleIndex(indexName: string) {
-        if (this.expandedTracks.has(indexName)) {
-            this.expandedTracks.delete(indexName);
+        if (this.expandedTracks.contains(indexName)) {
+            this.expandedTracks.remove(indexName);
         } else {
-            this.expandedTracks.add(indexName);
+            this.expandedTracks.push(indexName);
         }
 
+        this.drawMainSection();
+    }
+
+    expandAll() {
+        this.expandedTracks(this.indexNames().slice());
+        this.drawMainSection();
+    }
+
+    collapseAll() {
+        this.expandedTracks([]);
         this.drawMainSection();
     }
 
@@ -623,6 +667,7 @@ class metrics extends viewModelBase {
     exportAsJson() {
         fileDownloader.downloadAsJson(this.data, "perf.json", "perf");
     }
+
 }
 
 export = metrics; 
