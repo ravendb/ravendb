@@ -266,7 +266,8 @@ class metrics extends viewModelBase {
 
                     const newYOffset = initialOffset - yDiff;
 
-                    this.currentYOffset = Math.min(Math.max(0, newYOffset), this.maxYOffset);
+                    this.currentYOffset = newYOffset;
+                    this.fixCurrentOffset();
                 });
 
                 selection.on("mouseup.yShift", () => selection.on("mousemove.yShift", null));
@@ -349,6 +350,10 @@ class metrics extends viewModelBase {
         this.indexNames(this.findIndexNames());
     }
 
+    private fixCurrentOffset() {
+        this.currentYOffset = Math.min(Math.max(0, this.currentYOffset), this.maxYOffset);
+    }
+
     private constructYScale() {
         let currentOffset = metrics.axisHeight - this.currentYOffset;
         let domain = [] as Array<string>;
@@ -372,12 +377,22 @@ class metrics extends viewModelBase {
         this.yScale = d3.scale.ordinal<string, number>()
             .domain(domain)
             .range(range);
+    }
+
+    private calcMaxYOffset() {
+        const expandedTracksCount = this.expandedTracks().length;
+        const closedTracksCount = this.indexNames().length - expandedTracksCount;
+
+        const offset = metrics.axisHeight
+            + this.indexNames().length * metrics.trackMargin
+            + expandedTracksCount * metrics.openedTrackHeight
+            + closedTracksCount * metrics.closedTrackHeight;
 
         const availableHeightForTracks = this.totalHeight - metrics.brushSectionHeight;
 
         const extraBottomMargin = 100;
 
-        this.maxYOffset = Math.max(currentOffset + this.currentYOffset + extraBottomMargin - availableHeightForTracks, 0);
+        this.maxYOffset = Math.max(offset + extraBottomMargin - availableHeightForTracks, 0);
     }
 
     private findIndexNames(): string[] {
@@ -461,6 +476,8 @@ class metrics extends viewModelBase {
 
     private drawMainSection() {
         this.hitTest.reset();
+        this.calcMaxYOffset();
+        this.fixCurrentOffset();
         this.constructYScale();
 
         const xScale = d3.time.scale<number>() //TODO: put this as instance ?, use another scale to compute inversion and current time frame
@@ -479,14 +496,20 @@ class metrics extends viewModelBase {
             context.translate(0, metrics.brushSectionHeight);
             context.clearRect(0, 0, this.totalWidth, this.totalHeight - metrics.brushSectionHeight);
 
-            context.beginPath();
-            context.rect(0, 0, this.totalWidth, this.totalHeight - metrics.brushSectionHeight); 
-            context.clip();
-
             this.drawTracksBackground(context, xScale);
             this.drawXaxis(context, xScale, this.totalHeight);
+
+
+            context.save();
+
+            context.beginPath();
+            context.rect(0, metrics.axisHeight, this.totalWidth, this.totalHeight - metrics.brushSectionHeight);
+            context.clip();
+
             this.drawTracks(context, xScale);
             this.drawIndexNames(context);
+
+            context.restore();
 
         } finally {
             context.restore();
@@ -495,6 +518,12 @@ class metrics extends viewModelBase {
 
     private drawTracksBackground(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
         const extentFunc = graphHelper.extentGenerator(xScale);
+
+        context.save();
+
+        context.beginPath();
+        context.rect(0, metrics.axisHeight, this.totalWidth, this.totalHeight - metrics.brushSectionHeight);
+        context.clip();
 
         this.data.forEach(perfStat => {
             const yStart = this.yScale(perfStat.IndexName);
@@ -507,6 +536,8 @@ class metrics extends viewModelBase {
             });
 
         });
+
+        context.restore();
     }
 
     private drawTracks(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
@@ -567,7 +598,7 @@ class metrics extends viewModelBase {
 
     private drawIndexNames(context: CanvasRenderingContext2D) {
         const yScale = this.yScale;
-        const textShift = 13;
+        const textShift = 13.5;
         const textStart = 3 + 8 + 4;
 
         this.indexNames().forEach((indexName) => {
@@ -578,7 +609,7 @@ class metrics extends viewModelBase {
             this.hitTest.registerIndexToggle(2, yScale(indexName), rectWidth, metrics.
                 trackHeight, indexName);
             context.fillStyle = metrics.colors.trackNameFg;
-            context.fillText(indexName, textStart, yScale(indexName) + textShift);
+            context.fillText(indexName, textStart + 0.5, yScale(indexName) + textShift);
 
             const isOpened = this.expandedTracks.contains(indexName);
             context.fillStyle = isOpened ? metrics.colors.openedTrackArrow : metrics.colors.closedTrackArrow;
