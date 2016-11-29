@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Handlers
                 return Math.Max(lastSize / 2, 32);
             }
 
-            return lastSize;
+            return Math.Max(32,lastSize);
         }
 
         [RavenAction("/databases/*/hilo/next", "GET",
@@ -98,8 +98,6 @@ namespace Raven.Server.Documents.Handlers
             public override void Execute(DocumentsOperationContext context, RavenTransaction tx)
             {
 
-                //const string ravenKeyGeneratorsHilo = "Raven/Hilo/";
-                //const string ravenKeyServerPrefix = "Raven/ServerPrefixForHilo";
                 var hiLoDocumentKey = ravenKeyGeneratorsHilo + Key;
                 string prefix = Key + "/";
 
@@ -136,7 +134,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/hilo/return", "GET",
-            "/databases/{databaseName:string}/hilo/return?tag={collectionName:string}end={lastGivenHigh:string}&last={lastIdUsed:string}")]
+            "/databases/{databaseName:string}/hilo/return?tag={collectionName:string}&end={lastGivenHigh:string}&last={lastIdUsed:string}")]
         public async Task HiLoReturn()
         {            
             DocumentsOperationContext context;
@@ -168,8 +166,7 @@ namespace Raven.Server.Documents.Handlers
             public long Last;
 
             public override void Execute(DocumentsOperationContext context, RavenTransaction tx)
-            {
-                //const string ravenKeyGeneratorsHilo = "Raven/Hilo/";
+            {                
                 var hiLoDocumentKey = ravenKeyGeneratorsHilo + Key;
 
                 var document = Database.DocumentsStorage.Get(context, hiLoDocumentKey);
