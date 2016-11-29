@@ -135,6 +135,7 @@ class metrics extends viewModelBase {
     private svg: d3.Selection<any>; // spans to canvas size (to provide brush + zoom/pan features)
     private brush: d3.svg.Brush<number>;
     private xBrushNumericScale: d3.scale.Linear<number, number>;
+    private xBrushTimeScale: d3.time.Scale<number, number>;
     private xNumericScale: d3.scale.Linear<number, number>;
     private brushSection: HTMLCanvasElement; // virtual canvas for brush section
     private brushContainer: d3.Selection<any>;
@@ -187,6 +188,8 @@ class metrics extends viewModelBase {
 
     attached() {
         super.attached();
+
+        this.tooltip = d3.select(".tooltip");
 
         this.initCanvas();
         this.hitTest.init(this.svg,
@@ -290,8 +293,6 @@ class metrics extends viewModelBase {
         context.drawImage(this.brushSection, 0, 0);
 
         this.drawMainSection();
-
-        this.tooltip = d3.select(".tooltip");
     }
 
     private prepareBrushSection() {
@@ -306,11 +307,11 @@ class metrics extends viewModelBase {
 
         const context = this.brushSection.getContext("2d");
 
-        const xBrushScale = d3.time.scale<number>()
+        this.xBrushTimeScale = d3.time.scale<number>()
             .range([0, this.totalWidth])
             .domain(this.timeRange);
 
-        this.drawXaxis(context, xBrushScale, metrics.brushSectionHeight);
+        this.drawXaxis(context, this.xBrushTimeScale, metrics.brushSectionHeight);
 
         context.strokeStyle = metrics.colors.axis;
         context.strokeRect(0.5, 0.5, this.totalWidth - 1, metrics.brushSectionHeight - 1);
@@ -321,8 +322,8 @@ class metrics extends viewModelBase {
 
         for (var i = 0; i < collapsedTimeRanges.length; i++) {
             const currentRange = collapsedTimeRanges[i];
-            const x1 = xBrushScale(currentRange[0]);
-            const x2 = xBrushScale(currentRange[1]);
+            const x1 = this.xBrushTimeScale(currentRange[0]);
+            const x2 = this.xBrushTimeScale(currentRange[1]);
             context.fillRect(x1, 18, x2 - x1, 10);
             context.strokeRect(x1, 18, x2 - x1, 10);
         }
@@ -479,14 +480,12 @@ class metrics extends viewModelBase {
         this.calcMaxYOffset();
         this.fixCurrentOffset();
         this.constructYScale();
+       
+        const visibleTimeFrame = this.xNumericScale.domain().map(x => this.xBrushTimeScale.invert(x)) as [Date, Date];
 
-        const xScale = d3.time.scale<number>() //TODO: put this as instance ?, use another scale to compute inversion and current time frame
+        const xScale = d3.time.scale<number>()
             .range([0, this.totalWidth])
-            .domain(this.timeRange);
-
-        const visibleTimeFrame = this.xNumericScale.domain().map(x => xScale.invert(x)) as [Date, Date];
-
-        xScale.domain(visibleTimeFrame);
+            .domain(visibleTimeFrame);
 
         const canvas = this.canvas.node() as HTMLCanvasElement;
         const context = canvas.getContext("2d");
