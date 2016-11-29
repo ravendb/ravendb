@@ -6,6 +6,7 @@ import fileDownloader = require("common/fileDownloader");
 import graphHelper = require("common/helpers/graph/graphHelper");
 import d3 = require("d3");
 import rbush = require("rbush");
+import gapFinder = require("common/helpers/graph/gapFinder");
 
 type rTreeLeaf = {
     minX: number;
@@ -121,9 +122,9 @@ class metrics extends viewModelBase {
     static readonly axisHeight = 35; 
 
     static readonly maxRecursion = 4;
+    static readonly minGapSize = 10 * 1000; // 10 seconds
 
     private data: Raven.Client.Data.Indexes.IndexPerformanceStats[] = [];
-    private timeRange: [Date, Date];
     private totalWidth: number;
     private totalHeight: number;
 
@@ -131,6 +132,7 @@ class metrics extends viewModelBase {
     private expandedTracks = ko.observableArray<string>();
 
     private isoParser = d3.time.format.iso;
+    private xTickFormat = d3.time.format("%H:%M:%S");
     private canvas: d3.Selection<any>;
     private svg: d3.Selection<any>; // spans to canvas size (to provide brush + zoom/pan features)
     private brush: d3.svg.Brush<number>;
@@ -145,6 +147,8 @@ class metrics extends viewModelBase {
     private maxYOffset = 0;
     private hitTest = new hitTest();
     private tooltip: d3.Selection<Raven.Client.Data.Indexes.IndexingPerformanceOperation>;
+
+    private gapFinder: gapFinder;
 
     private color = d3.scale.category20c(); //TODO: use custom colors
     private dialogVisible = false;
@@ -297,9 +301,11 @@ class metrics extends viewModelBase {
 
     private prepareBrushSection() {
         const timeRanges = this.extractTimeRanges();
+
+        this.gapFinder = new gapFinder(timeRanges, metrics.minGapSize);
+
         const collapsedTimeRanges = graphHelper.collapseTimeRanges(timeRanges);
         //TODO: maybe instead of collaping time range we should graph area chart with # currently indexing as y-axis
-        this.timeRange = graphHelper.timeRangeFromSortedRanges(collapsedTimeRanges);
 
         this.brushSection = document.createElement("canvas");
         this.brushSection.width = this.totalWidth;
@@ -307,9 +313,7 @@ class metrics extends viewModelBase {
 
         const context = this.brushSection.getContext("2d");
 
-        this.xBrushTimeScale = d3.time.scale<number>()
-            .range([0, this.totalWidth])
-            .domain(this.timeRange);
+        this.xBrushTimeScale = this.gapFinder.createScale(this.totalWidth, 20);
 
         this.drawXaxis(context, this.xBrushTimeScale, metrics.brushSectionHeight);
 
@@ -408,26 +412,29 @@ class metrics extends viewModelBase {
 
     private drawXaxis(context: CanvasRenderingContext2D, scale: d3.time.Scale<number, number>, height: number) {
         context.save();
-        const tickCount = Math.floor(this.totalWidth / 300);
-        const ticks = scale.ticks(tickCount);
-        const tickFormat = scale.tickFormat(tickCount);
+
+        const step = 200;
+        const initialOffset = 100;
+
+        const ticks = d3.range(initialOffset, this.totalWidth - step, step)
+            .map(y => scale.invert(y));
 
         context.beginPath();
         context.strokeStyle = metrics.colors.axis;
         context.fillStyle = metrics.colors.axis;
         context.setLineDash([4, 2]);
 
-        ticks.forEach(x => {
-            context.moveTo(Math.floor(scale(x)) + 0.5, 0);
-            context.lineTo(Math.floor(scale(x)) + 0.5, height);
+        ticks.forEach((x, i) => {
+            context.moveTo(initialOffset + (i * step) + 0.5, 0);
+            context.lineTo(initialOffset + (i * step) + 0.5, height);
         });
         context.stroke();
 
         context.textAlign = "left";
         context.textBaseline = "top";
-        ticks.forEach(x => {
+        ticks.forEach((x, i) => {
             // draw text with 5px left padding
-            context.fillText(tickFormat(x), scale(x) + 5, 5);
+            context.fillText(this.xTickFormat(x), initialOffset + (i * step) + 5, 5);
         });
         context.restore();
     }
@@ -483,9 +490,7 @@ class metrics extends viewModelBase {
        
         const visibleTimeFrame = this.xNumericScale.domain().map(x => this.xBrushTimeScale.invert(x)) as [Date, Date];
 
-        const xScale = d3.time.scale<number>()
-            .range([0, this.totalWidth])
-            .domain(visibleTimeFrame);
+        const xScale = this.gapFinder.trimmedScale(visibleTimeFrame, this.totalWidth, 20);
 
         const canvas = this.canvas.node() as HTMLCanvasElement;
         const context = canvas.getContext("2d");
@@ -495,9 +500,11 @@ class metrics extends viewModelBase {
             context.translate(0, metrics.brushSectionHeight);
             context.clearRect(0, 0, this.totalWidth, this.totalHeight - metrics.brushSectionHeight);
 
-            this.drawTracksBackground(context, xScale);
-            this.drawXaxis(context, xScale, this.totalHeight);
+            this.drawTracksBackground(context);
 
+            if (xScale.domain().length) {
+                this.drawXaxis(context, xScale, this.totalHeight);
+            }
 
             context.save();
 
@@ -509,15 +516,12 @@ class metrics extends viewModelBase {
             this.drawIndexNames(context);
 
             context.restore();
-
         } finally {
             context.restore();
         }
     }
 
-    private drawTracksBackground(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
-        const extentFunc = graphHelper.extentGenerator(xScale);
-
+    private drawTracksBackground(context: CanvasRenderingContext2D) {
         context.save();
 
         context.beginPath();
@@ -543,6 +547,10 @@ class metrics extends viewModelBase {
         //TODO: include quadTree, don't draw when index is offscreen, include vertical scroll, don't draw section if off screen
         //TODO: support not completed items
         //TODO: put hit area cache (use quadtree as well)
+
+        if (xScale.domain().length === 0) {
+            return;
+        }
 
         const extentFunc = graphHelper.extentGenerator(xScale);
 

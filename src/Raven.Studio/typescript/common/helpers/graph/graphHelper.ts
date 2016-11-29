@@ -61,9 +61,7 @@ class graphHelper {
         const domain = scale.domain();
         const range = scale.range();
 
-        if (range.length !== 2) {
-            throw new Error("extractPixelsPerSecond only supports range with 2 elements");
-        }
+        // please note we now support, domains with more than 2 element, but assuming it has constant pixels / second rate. 
 
         const domainExtent = domain[1].getTime() - domain[0].getTime();
         const rangeExtent = range[1] - range[0];
@@ -126,8 +124,6 @@ class graphHelper {
             ctx.stroke();
         }
 
-        
-
         if (withArrow) {
             ctx.beginPath();
             ctx.moveTo(target[0] - graphHelper.arrowConfig.halfWidth, target[1] + graphHelper.arrowConfig.height);
@@ -136,8 +132,6 @@ class graphHelper {
             ctx.stroke();
         }
     }
-
-
 }
 
 export = graphHelper;
