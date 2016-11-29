@@ -6,6 +6,7 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using Raven.Abstractions.Data;
+using Raven.Client.Data;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Exceptions;
 using Raven.Server.Extensions;
