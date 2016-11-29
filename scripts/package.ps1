@@ -37,6 +37,7 @@ function CreatePackageLayout ( $outDir, $packageDir, $projectDir ) {
     CopyAckFile $packageDir
     CreatePackageServerLayout $outDir $packageDir
     CreatePackageClientLayout $outDir $packageDir $projectDir
+    CopyClientReadMe $(Join-Path $packageDir -ChildPath 'Client')
 }
 
 function CreatePackageServerLayout ( $outDir, $packageDir ) {
