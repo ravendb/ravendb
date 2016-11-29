@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-namespace Raven.Client.Data
+namespace Raven.Abstractions.Data
 {
     /// <summary>
     /// The result of a NextHiLo operation
@@ -17,14 +17,9 @@ namespace Raven.Client.Data
             High = high;
             Prefix = prefix;
         }
-        /// <summary>
-        /// long of the low value.
-        /// </summary>
+
         public long Low { get; set; }
 
-        /// <summary>
-        /// long of the high value.
-        /// </summary>
         public long High { get; set; }
 
         /// <summary>

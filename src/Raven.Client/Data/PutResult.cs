@@ -4,7 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-namespace Raven.Client.Data
+namespace Raven.Abstractions.Data
 {
     /// <summary>
     /// The result of a PUT operation
