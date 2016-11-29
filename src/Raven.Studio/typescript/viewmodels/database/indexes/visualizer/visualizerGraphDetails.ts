@@ -67,10 +67,9 @@ class documentItem extends layoutableItem {
 
     connectedEntries = [] as entryItem[];
 
-    constructor(name: string, color: string, drawOffset: number) {
+    constructor(name: string, drawOffset: number) {
         super();
         this.name = name;
-        this.color = color;
         this.drawOffset = drawOffset;
     }
 
@@ -498,8 +497,8 @@ class visualizerGraphDetails {
             .call(d => this.setupEvents(d));
     }
 
-    addDocument(documentName: string, color: string) {
-        const document = new documentItem(documentName, color, this.currentLineOffset);
+    addDocument(documentName: string) {
+        const document = new documentItem(documentName, this.currentLineOffset);
         this.currentLineOffset += visualizerGraphDetails.margins.betweenLinesOffset;
         this.documents.push(document);
     }
@@ -507,6 +506,13 @@ class visualizerGraphDetails {
     reset() {
         this.restoreView();
         this.documents = [];
+    }
+
+    setDocumentsColors(documentsColorsSetup: Array<documentColorPair>) {
+        for (let i = 0; i < documentsColorsSetup.length; i++) {
+            let documentItem = this.documents.find((d) => d.name === documentsColorsSetup[i].docName);
+            documentItem.color = documentsColorsSetup[i].docColor;
+        }
     }
 
     private restoreView() {
