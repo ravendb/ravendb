@@ -100,6 +100,18 @@ class hitTest {
 
 class metrics extends viewModelBase { 
 
+    static readonly colors = {
+        axis: "#546175",
+        brushFill: "rgba(202, 28, 89, 0.25)",
+        brushStoke: "#ca1c59",
+        brushChartColor: "#008cc9",
+        trackBackground: "#2c343a",
+        trackNameBg: "rgba(57, 67, 79, 0.8)",
+        trackNameFg: "#98a7b7",
+        openedTrackArrow: "#ca1c59",
+        closedTrackArrow: "#98a7b7"
+    }
+
     static readonly brushSectionHeight = 40;
     static readonly trackHeight = 16; // height used for callstack item
     static readonly stackPadding = 1; // space between call stacks
@@ -133,7 +145,7 @@ class metrics extends viewModelBase {
     private hitTest = new hitTest();
     private tooltip: d3.Selection<Raven.Client.Data.Indexes.IndexingPerformanceOperation>;
 
-    private color = d3.scale.category20c();
+    private color = d3.scale.category20c(); //TODO: use custom colors
     private dialogVisible = false;
     private canExpandAll: KnockoutComputed<boolean>;
 
@@ -299,11 +311,11 @@ class metrics extends viewModelBase {
 
         this.drawXaxis(context, xBrushScale, metrics.brushSectionHeight);
 
-        context.strokeStyle = "#3a4242";
-        context.strokeRect(0, 0, this.totalWidth, metrics.brushSectionHeight);
+        context.strokeStyle = metrics.colors.axis;
+        context.strokeRect(0.5, 0.5, this.totalWidth - 1, metrics.brushSectionHeight - 1);
 
-        context.fillStyle = "#e2ebfe";
-        context.strokeStyle = "#6e9cf8";
+        context.fillStyle = metrics.colors.brushChartColor;
+        context.strokeStyle = metrics.colors.brushChartColor;
         context.lineWidth = 1;
 
         for (var i = 0; i < collapsedTimeRanges.length; i++) {
@@ -385,13 +397,13 @@ class metrics extends viewModelBase {
         const tickFormat = scale.tickFormat(tickCount);
 
         context.beginPath();
-        context.strokeStyle = "#3a4242";
-        context.fillStyle = "#3a4242";
+        context.strokeStyle = metrics.colors.axis;
+        context.fillStyle = metrics.colors.axis;
         context.setLineDash([4, 2]);
 
         ticks.forEach(x => {
-            context.moveTo(Math.floor(scale(x)), 0);
-            context.lineTo(Math.floor(scale(x)), height);
+            context.moveTo(Math.floor(scale(x)) + 0.5, 0);
+            context.lineTo(Math.floor(scale(x)) + 0.5, height);
         });
         context.stroke();
 
@@ -490,7 +502,7 @@ class metrics extends viewModelBase {
             perfStat.Performance.forEach(perf => {
                 const isOpened = this.expandedTracks.contains(perfStat.IndexName);
 
-                context.fillStyle = "#2b3232";
+                context.fillStyle = metrics.colors.trackBackground;
                 context.fillRect(0, yStart, this.totalWidth, isOpened ? metrics.openedTrackHeight : metrics.closedTrackHeight);
             });
 
@@ -527,7 +539,7 @@ class metrics extends viewModelBase {
         let currentX = xStart;
         for (let i = 0; i < operations.length; i++) {
             const op = operations[i];
-            context.fillStyle = this.color(op.Name);
+            context.fillStyle = this.color(op.Name); //TODO: use different colors
 
             const dx = extentFunc(op.DurationInMilliseconds);
 
@@ -536,7 +548,7 @@ class metrics extends viewModelBase {
             if (yOffset !== 0) { // track is opened
                 this.hitTest.registerTrackItem(currentX, yStart, dx, metrics.trackHeight, op);
                 if (op.Name.startsWith("Collection_")) {
-                    context.fillStyle = "black";
+                    context.fillStyle = "#2c343a"; //TODO: make constant
                     const text = op.Name.substr("Collection_".length);
                     const textWidth = context.measureText(text).width
                     const truncatedText = graphHelper.truncText(text, textWidth, dx - 4);
@@ -561,13 +573,16 @@ class metrics extends viewModelBase {
         this.indexNames().forEach((indexName) => {
             const rectWidth = context.measureText(indexName).width + 2 * 3 /* left right padding */ + 8 /* arrow space */ + 4; /* padding between arrow and text */ 
 
-            context.fillStyle = "rgba(43, 50, 50, 0.3)";
+            context.fillStyle = metrics.colors.trackNameBg;
             context.fillRect(2, yScale(indexName) + metrics.closedTrackPadding, rectWidth, metrics.trackHeight);
             this.hitTest.registerIndexToggle(2, yScale(indexName), rectWidth, metrics.
                 trackHeight, indexName);
-            context.fillStyle = "#a8acac";
+            context.fillStyle = metrics.colors.trackNameFg;
             context.fillText(indexName, textStart, yScale(indexName) + textShift);
-            graphHelper.drawArrow(context, 5, yScale(indexName) + 6, !this.expandedTracks.contains(indexName));
+
+            const isOpened = this.expandedTracks.contains(indexName);
+            context.fillStyle = isOpened ? metrics.colors.openedTrackArrow : metrics.colors.closedTrackArrow;
+            graphHelper.drawArrow(context, 5, yScale(indexName) + 6, !isOpened);
         });
     }
 
