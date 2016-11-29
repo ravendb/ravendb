@@ -48,8 +48,8 @@ namespace Raven.Server.Web.System
 
         public static string[] LookupPaths = new[]
         {
-            "~/../../Raven.Studio/wwwroot",
-            "~/../src/Raven.Studio/wwwroot",
+            "../../Raven.Studio/wwwroot",
+            "../src/Raven.Studio/wwwroot",
 
         };
 
@@ -64,8 +64,9 @@ namespace Raven.Server.Web.System
                 return null;
 
             var files = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var lookupPath in LookupPaths)
+            foreach (var lookupPathDir in LookupPaths)
             {
+                var lookupPath = Path.Combine(AppContext.BaseDirectory, lookupPathDir);
                 if (Directory.Exists(lookupPath) == false)
                     continue;
 
