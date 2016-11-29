@@ -173,7 +173,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact(Skip = "Racy - need to fix RavenDB-4734")]
+        [Fact]
         public async Task SubscribtionWithEtag_MultipleOpens()
         {
             using (var store = GetDocumentStore())

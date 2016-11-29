@@ -225,7 +225,6 @@ namespace NewClientTests
             {
                 store.GetRequestExecuter(name).Execute(command, context);
             }
-            //store.DatabaseCommands.GlobalAdmin.CreateDatabase(doc);
             store.AfterDispose += (sender, args) =>
             {
                 var databaseTask = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name);
@@ -233,12 +232,11 @@ namespace NewClientTests
                     databaseTask.Wait(); // if we are disposing store before database had chance to load then we need to wait
 
                 var deleteDatabaseOperation = new DeleteDatabaseOperation();
-                var delCommand = deleteDatabaseOperation.CreateRequest(hardDelete);
+                var delCommand = deleteDatabaseOperation.CreateRequest(name, hardDelete);
                 if (delCommand != null)
                 {
                    store.GetRequestExecuter(name).Execute(delCommand, context);
                 }
-                //store.DatabaseCommands.GlobalAdmin.DeleteDatabase(name, hardDelete: hardDelete);
                 CreatedStores.TryRemove(store);
             };
             CreatedStores.Add(store);

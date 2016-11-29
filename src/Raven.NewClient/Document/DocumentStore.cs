@@ -229,7 +229,6 @@ namespace Raven.NewClient.Client.Document
             }
         }
 
-        //TODO - Efrat
         public RequestExecuter GetRequestExecuter(string databaseName)
         {
             Lazy<RequestExecuter> lazy;
@@ -293,6 +292,12 @@ namespace Raven.NewClient.Client.Document
             }
 
             return this;
+        }
+
+        public Task<string> Generate(string dbName, DocumentConvention conventions,
+                                                     object entity)
+        {
+           throw new NotImplementedException();
         }
 
         public override void InitializeProfiling()
@@ -444,11 +449,13 @@ namespace Raven.NewClient.Client.Document
         /// </remarks>
         public override IDisposable DisableAggressiveCaching()
         {
-            throw new NotImplementedException();
+            //throw new NotImplementedException();
 
-            /*AssertInitialized();
+            AssertInitialized();
 
-            var old = jsonRequestFactory.AggressiveCacheDuration;
+            return null;
+            //TODO 
+            /*var old = jsonRequestFactory.AggressiveCacheDuration;
             jsonRequestFactory.AggressiveCacheDuration = null;
             return new DisposableAction(() => jsonRequestFactory.AggressiveCacheDuration = old);*/
         }

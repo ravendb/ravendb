@@ -266,7 +266,7 @@ namespace FastTests.Server.Documents.Replication
             }
         }
 
-        [Fact(Skip = "WIP, not ready to run yet")]
+        [Fact]
         public void Master_slave_replication_with_exceptions_should_work()
         {
             var dbName1 = DbName + "-1";

@@ -11,7 +11,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Metadata
 {
     public class EscapeQuotes : RavenTestBase
     {
-        [Fact(Skip = "GetNextRange Not Implemented")]
+        [Fact]
         public void CanProperlyEscapeQuotesInMetadata_Local_1()
         {
             using (var store = GetDocumentStore())
@@ -33,7 +33,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Metadata
             }
         }
 
-        [Fact(Skip = "GetNextRange Not Implemented")]
+        [Fact]
         public void CanProperlyEscapeQuotesInMetadata_Local_2()
         {
             using (var store = GetDocumentStore())
