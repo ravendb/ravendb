@@ -33,6 +33,9 @@
 </style>
 
 <div class="form-inline toolbar" role="form">
+    <button class="btn btn-default" data-bind="click: expandAll, visible: canExpandAll"><span>Expand all</span></button>
+    <button class="btn btn-default" data-bind="click: collapseAll, visible: !canExpandAll()"><span>Collapse all</span></button>
+
     <button class="btn btn-default" data-bind="click: exportAsJson"><i class="icon-export"></i> <span>Export</span></button>
 
     <div class="input-group file-input">
