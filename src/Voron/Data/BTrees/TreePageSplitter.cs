@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Text;
+using Voron.Data.Compression;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.FreeSpace;
@@ -14,11 +15,12 @@ namespace Voron.Data.BTrees
         private readonly Slice _newKey;
         private readonly TreeNodeFlags _nodeType;
         private readonly ushort _nodeVersion;
-        private readonly TreePage _page;
         private readonly long _pageNumber;
         private readonly LowLevelTransaction _tx;
         private readonly Tree _tree;
+        private TreePage _page;
         private TreePage _parentPage;
+        private DecompressedLeafPage _pageDecompressed;
 
         public TreePageSplitter(LowLevelTransaction tx,
             Tree tree,
@@ -83,55 +85,65 @@ namespace Voron.Data.BTrees
                     _tree.ClearPagesCache();
                 }
 
-                if (_page.LastSearchPosition >= _page.NumberOfEntries)
+                if (_page.IsCompressed)
                 {
-                    // when we get a split at the end of the page, we take that as a hint that the user is doing 
-                    // sequential inserts, at that point, we are going to keep the current page as is and create a new 
-                    // page, this will allow us to do minimal amount of work to get the best density
+                    _pageDecompressed = _tree.DecompressPage(_page, usage: DecompresionUsage.Read);
+                    _pageDecompressed.Search(_tx, _newKey);
+                    _page = _pageDecompressed;
+                }
 
-                    TreePage branchOfSeparator;
-
-                    byte* pos;
-                    if (_page.IsBranch)
+                using (_pageDecompressed)
+                {
+                    if (_page.LastSearchPosition >= _page.NumberOfEntries)
                     {
-                        if (_page.NumberOfEntries > 2)
+                        // when we get a split at the end of the page, we take that as a hint that the user is doing 
+                        // sequential inserts, at that point, we are going to keep the current page as is and create a new 
+                        // page, this will allow us to do minimal amount of work to get the best density
+
+                        TreePage branchOfSeparator;
+
+                        byte* pos;
+                        if (_page.IsBranch)
                         {
-                            // here we steal the last entry from the current page so we maintain the implicit null left entry
-
-                            TreeNodeHeader* node = _page.GetNode(_page.NumberOfEntries - 1);
-                            Debug.Assert(node->Flags == TreeNodeFlags.PageRef);
-                            rightPage.AddPageRefNode(0, Slices.BeforeAllKeys, node->PageNumber);
-                            pos = AddNodeToPage(rightPage, 1);
-
-                            Slice separatorKey;
-                            using (TreeNodeHeader.ToSlicePtr(_tx.Allocator, node, out separatorKey))
+                            if (_page.NumberOfEntries > 2)
                             {
-                                AddSeparatorToParentPage(rightPage.PageNumber, separatorKey, out branchOfSeparator);
-                            }
+                                // here we steal the last entry from the current page so we maintain the implicit null left entry
 
-                            _page.RemoveNode(_page.NumberOfEntries - 1);
+                                TreeNodeHeader* node = _page.GetNode(_page.NumberOfEntries - 1);
+                                Debug.Assert(node->Flags == TreeNodeFlags.PageRef);
+                                rightPage.AddPageRefNode(0, Slices.BeforeAllKeys, node->PageNumber);
+                                pos = AddNodeToPage(rightPage, 1);
+
+                                Slice separatorKey;
+                                using (TreeNodeHeader.ToSlicePtr(_tx.Allocator, node, out separatorKey))
+                                {
+                                    AddSeparatorToParentPage(rightPage.PageNumber, separatorKey, out branchOfSeparator);
+                                }
+
+                                _page.RemoveNode(_page.NumberOfEntries - 1);
+                            }
+                            else
+                            {
+                                _tree.FreePage(rightPage); // return the unnecessary right page
+                                pos = AddSeparatorToParentPage(_pageNumber, _newKey, out branchOfSeparator);
+
+                                if (_cursor.CurrentPage.PageNumber != branchOfSeparator.PageNumber)
+                                    _cursor.Push(branchOfSeparator);
+
+                                return pos;
+                            }
                         }
                         else
                         {
-                            _tree.FreePage(rightPage); // return the unnecessary right page
-                            pos = AddSeparatorToParentPage(_pageNumber, _newKey, out branchOfSeparator);
-
-                            if (_cursor.CurrentPage.PageNumber != branchOfSeparator.PageNumber)
-                                _cursor.Push(branchOfSeparator);
-
-                            return pos;
+                            AddSeparatorToParentPage(rightPage.PageNumber, _newKey, out branchOfSeparator);
+                            pos = AddNodeToPage(rightPage, 0);
                         }
+                        _cursor.Push(rightPage);
+                        return pos;
                     }
-                    else
-                    {
-                        AddSeparatorToParentPage(rightPage.PageNumber, _newKey, out branchOfSeparator);
-                        pos = AddNodeToPage(rightPage, 0);
-                    }
-                    _cursor.Push(rightPage);
-                    return pos;
-                }
 
-                return SplitPageInHalf(rightPage);
+                    return SplitPageInHalf(rightPage);
+                }
             }
         }
 
@@ -196,39 +208,64 @@ namespace Voron.Data.BTrees
                     seperatorKey = currentKey;
                 }
 
-                TreePage parentOfRight;
-                AddSeparatorToParentPage(rightPage.PageNumber, seperatorKey, out parentOfRight);
-
+                var addedAsImplicitRef = false;
                 var parentOfPage = _cursor.CurrentPage;
+                TreePage parentOfRight;
 
-                bool addedAsImplicitRef = false;
-                if (_page.IsBranch && toRight && SliceComparer.EqualsInline(seperatorKey, _newKey))
+                DecompressedLeafPage rightDecompressed = null;
+
+                if (_pageDecompressed != null)
                 {
-                    // _newKey needs to be inserted as first key (BeforeAllKeys) to the right page, so we need to add it before we move entries from the current page
-                    AddNodeToPage(rightPage, 0, Slices.BeforeAllKeys);
-                    addedAsImplicitRef = true;
+                    // splitting the decompressed page, let's allocate the page of the same size to ensure enough space
+                    rightDecompressed = _tx.Environment.DecompressionBuffers.GetPage(_tx, _pageDecompressed.PageSize, rightPage);
+                    rightPage = rightDecompressed;
                 }
 
-                // move the actual entries from page to right page
-                ushort nKeys = _page.NumberOfEntries;
-                for (int i = splitIndex; i < nKeys; i++)
+                using (rightDecompressed)
                 {
-                    TreeNodeHeader* node = _page.GetNode(i);
-                    if (_page.IsBranch && rightPage.NumberOfEntries == 0)
+                    AddSeparatorToParentPage(rightPage.PageNumber, seperatorKey, out parentOfRight);
+                    
+                    if (_page.IsBranch && toRight && SliceComparer.EqualsInline(seperatorKey, _newKey))
                     {
-                        rightPage.CopyNodeDataToEndOfPage(node, Slices.BeforeAllKeys);
+                        // _newKey needs to be inserted as first key (BeforeAllKeys) to the right page, so we need to add it before we move entries from the current page
+                        AddNodeToPage(rightPage, 0, Slices.BeforeAllKeys);
+                        addedAsImplicitRef = true;
                     }
-                    else
+
+                    // move the actual entries from page to right page
+                    ushort nKeys = _page.NumberOfEntries;
+                    for (int i = splitIndex; i < nKeys; i++)
                     {
-                        Slice instance;
-                        using (TreeNodeHeader.ToSlicePtr(_tx.Allocator, node, out instance))
+                        TreeNodeHeader* node = _page.GetNode(i);
+                        if (_page.IsBranch && rightPage.NumberOfEntries == 0)
                         {
-                            rightPage.CopyNodeDataToEndOfPage(node, instance);
+                            rightPage.CopyNodeDataToEndOfPage(node, Slices.BeforeAllKeys);
                         }
+                        else
+                        {
+                            Slice instance;
+                            using (TreeNodeHeader.ToSlicePtr(_tx.Allocator, node, out instance))
+                            {
+                                rightPage.CopyNodeDataToEndOfPage(node, instance);
+                            }
+                        }
+                    }
+
+                    if (rightDecompressed != null)
+                    {
+                        rightDecompressed.CopyToOriginal(_tx, defragRequired: false);
+                        rightPage = rightDecompressed.Original;
                     }
                 }
 
                 _page.Truncate(_tx, splitIndex);
+
+                if (_pageDecompressed != null)
+                {
+                    _tree.InvalidateDecompressionCaches(_pageDecompressed.PageNumber);
+                    _pageDecompressed.CopyToOriginal(_tx, defragRequired: false);
+                    _page = _pageDecompressed.Original;
+                }
 
                 byte* pos;
 
@@ -244,7 +281,7 @@ namespace Voron.Data.BTrees
                         }
 
                         // actually insert the new key
-                        pos = toRight ? InsertNewKey(rightPage) : InsertNewKey(_page);
+                        pos = InsertNewKey(toRight ? rightPage : _page);
                     }
                     catch (InvalidOperationException e)
                     {
@@ -354,7 +391,7 @@ namespace Voron.Data.BTrees
                     TreeNodeHeader* node = _page.GetNode(i);
                     pageSize += node->GetNodeSize();
                     pageSize += pageSize & 1;
-                    if (pageSize > _tx.DataPager.PageMaxSpace)
+                    if (pageSize > _page.PageMaxSpace)
                     {
                         if (i <= currentIndex)
                         {
@@ -373,7 +410,7 @@ namespace Voron.Data.BTrees
                     TreeNodeHeader* node = _page.GetNode(i);
                     pageSize += node->GetNodeSize();
                     pageSize += pageSize & 1;
-                    if (pageSize > _tx.DataPager.PageMaxSpace)
+                    if (pageSize > _page.PageMaxSpace)
                     {
                         if (i >= currentIndex)
                         {

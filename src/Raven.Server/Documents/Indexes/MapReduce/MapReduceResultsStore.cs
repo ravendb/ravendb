@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
+using Sparrow.Binary;
 using Sparrow.Json;
 using Voron;
 using Voron.Data.BTrees;
@@ -58,7 +59,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             //TODO: Need better way to handle tree names
 
             var treeName = ReduceTreePrefix + _reduceKeyHash;
-            Tree = create ? _tx.CreateTree(treeName, pageLocator: _pageLocator) : _tx.ReadTree(treeName, pageLocator: _pageLocator);
+            Tree = create ? _tx.CreateTree(treeName, flags: TreeFlags.LeafsCompressed, pageLocator: _pageLocator) : _tx.ReadTree(treeName, pageLocator: _pageLocator);
 
             ModifiedPages = new HashSet<long>();
             FreedPages = new HashSet<long>();
@@ -78,13 +79,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public void Delete(long id)
         {
-            var entryId = id;
+            id = Bits.SwapBytes(id);
 
             switch (Type)
             {
                 case MapResultsStorageType.Tree:
                     Slice entrySlice;
-                    using (Slice.External(_indexContext.Allocator, (byte*) &entryId, sizeof(long), out entrySlice))
+                    using (Slice.External(_indexContext.Allocator, (byte*) &id, sizeof(long), out entrySlice))
                         Tree.Delete(entrySlice);
                     break;
                 case MapResultsStorageType.Nested:
@@ -96,16 +97,17 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 default:
                     throw new ArgumentOutOfRangeException(Type.ToString());
             }
-            
-            _mapReduceContext.EntryDeleted(id);
         }
 
         public void Add(long id, BlittableJsonReaderObject result)
         {
+            id = Bits.SwapBytes(id);
+
             switch (Type)
             {
                 case MapResultsStorageType.Tree:
                     Slice entrySlice;
+                    
                     using (Slice.External(_indexContext.Allocator, (byte*) &id, sizeof(long), out entrySlice))
                     {
                         var pos = Tree.DirectAdd(entrySlice, result.Size);
@@ -120,7 +122,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     {
                         // would result in an overflow, that would be a space waste anyway, let's move to tree mode
                         MoveExistingResultsToTree(section);
-                        Add(id, result); // now re-add the value
+                        Add(Bits.SwapBytes(id), result); // now re-add the value
                     }
                     else
                     {
@@ -134,6 +136,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public PtrSize Get(long id)
         {
+            id = Bits.SwapBytes(id);
+
             switch (Type)
             {
                 case MapResultsStorageType.Tree:

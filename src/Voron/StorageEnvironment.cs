@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Sparrow.Logging;
 using Voron.Data;
 using Voron.Data.BTrees;
+using Voron.Data.Compression;
 using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Debugging;
@@ -63,6 +64,7 @@ namespace Voron
         private long _transactionsCounter;
         private readonly IFreeSpaceHandling _freeSpaceHandling;
         private readonly HeaderAccessor _headerAccessor;
+        private readonly DecompressionBuffersPool _decompressionBuffers;
 
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private readonly ScratchBufferPool _scratchBufferPool;
@@ -93,6 +95,7 @@ namespace Voron
 
                 _options.DeleteAllTempBuffers();
 
+                _decompressionBuffers = new DecompressionBuffersPool(options);
                 var isNew = _headerAccessor.Initialize();
 
                 _scratchBufferPool = new ScratchBufferPool(this);
@@ -264,6 +267,8 @@ namespace Voron
 
         public WriteAheadJournal Journal => _journal;
 
+        public DecompressionBuffersPool DecompressionBuffers => _decompressionBuffers;
+
         public void Dispose()
         {
             _cancellationTokenSource.Cancel();
@@ -310,6 +315,7 @@ namespace Voron
                     _headerAccessor,
                     _scratchBufferPool,
                     _journal,
+                    _decompressionBuffers,
                     _options.OwnsPagers ? _options : null
                 }.Concat(_tempPagesPool))
                 {
