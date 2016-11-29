@@ -18,15 +18,16 @@ function Get-UploadCategory ( $filename ) {
     $result
 }
 
-function UploadArtifact ( $uploader, $buildNumber, $filename, $log ) {
+function UploadArtifact ( $uploader, $buildNumber, $buildType, $filename, $log ) {
     $uploadCategory = Get-UploadCategory $filename
-    write-host "Executing: $uploader ""$uploadCategory"" ""$buildNumber"" $filename ""$log"""
+    $versionString = "$buildNumber-$((Get-Culture).textinfo.toTitleCase($buildType))"
 
+    write-host "Executing: $uploader ""$uploadCategory"" ""$versionString"" $filename ""$log"""
     $uploadTryCount = 0
     while ($uploadTryCount -lt 5) {
         $uploadTryCount += 1
 
-        & $uploader "$uploadCategory" "$buildNumber" $file "$log"
+        & $uploader "$uploadCategory" ""$versionString" $file "$log"
 
         if ($lastExitCode -ne 0) {
             write-host "Failed to upload to S3: $lastExitCode. UploadTryCount: $uploadTryCount"
@@ -42,7 +43,7 @@ function UploadArtifact ( $uploader, $buildNumber, $filename, $log ) {
     }
 }
 
-function Upload ( $uploader, $buildNumber, $artifacts ) {
+function Upload ( $uploader, $buildNumber, $buildType, $artifacts ) {
     Write-Host "Starting upload"
 
     if ($(Test-Path $uploader) -eq $False) {
@@ -54,6 +55,6 @@ function Upload ( $uploader, $buildNumber, $artifacts ) {
 
     foreach ($filename in $artifacts)
     {
-        UploadArtifact $uploader $buildNumber $filename $log
+        UploadArtifact $uploader $buildNumber $buildType $filename $log
     }
 }

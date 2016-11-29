@@ -9,7 +9,7 @@ $DEV_BUILD_NUMBER = 40
 . '.\scripts\buildProjects.ps1'
 . '.\scripts\getScriptDirectory.ps1'
 . '.\scripts\copyStudioPkg.ps1'
-. '.\scripts\copyLicense.ps1'
+. '.\scripts\copyDocs.ps1'
 . '.\scripts\env.ps1'
 . '.\scripts\updateSourceWithBuildInfo.ps1'
 

@@ -8,5 +8,6 @@ $ARTIFACTS = [io.path]::combine("artifacts", "*.zip")
 $projectDir = Get-ScriptDirectory
 $uploader = [io.path]::combine($projectDir, '..', 'Uploader', 'S3Uploader.exe')
 $buildNumber = GetBuildNumber
+$buildType = GetBuildType
 $files = Get-ChildItem $ARTIFACTS
-Upload $UPLOADER $buildNumber $files
+Upload $UPLOADER $buildNumber $buildType $files
