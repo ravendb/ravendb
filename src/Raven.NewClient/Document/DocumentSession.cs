@@ -75,13 +75,13 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         public void SaveChanges()
         {
-            var saveChangesOeration = new BatchOperation(this);
+            var saveChangesOpration = new BatchOperation(this);
 
-            var command = saveChangesOeration.CreateRequest();
+            var command = saveChangesOpration.CreateRequest();
             if (command != null)
             {
                 RequestExecuter.Execute(command, Context);
-                saveChangesOeration.SetResult(command.Result);
+                saveChangesOpration.SetResult(command.Result);
             }
         }
 
