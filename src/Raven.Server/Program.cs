@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Runtime.Loader;
+using System.Threading;
 using Microsoft.Extensions.Configuration;
 using Raven.Abstractions.Logging;
 using Raven.Server.Config;
@@ -36,6 +38,17 @@ namespace Raven.Server
                     var run = true;
                     while (run)
                     {
+                        if (configuration.Core.RunAsService)
+                        {
+                            ManualResetEvent mre = new ManualResetEvent(false);
+                            if (_logger.IsInfoEnabled)
+                                _logger.Info("Server is running as a service");
+                            Console.WriteLine("Running as Service");
+                            AssemblyLoadContext.Default.Unloading += (s) => mre.Set();
+                            mre.WaitOne();
+                            Console.WriteLine("SIGTERM Received. Exiting RavenDB...");
+                            break;
+                        }
                         switch (Console.ReadLine()?.ToLower())
                         {
                             case "q":

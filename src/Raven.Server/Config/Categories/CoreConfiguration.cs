@@ -64,6 +64,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Raven/ThrowIfAnyIndexOrTransformerCouldNotBeOpened")]
         public bool ThrowIfAnyIndexOrTransformerCouldNotBeOpened { get; set; }
 
+        [Description("Run as service")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("Raven/RunAsService")]
+        public bool RunAsService { get; set; }
+
         private static string CalculateWorkingDirectory(string workingDirectory)
         {
             if (string.IsNullOrEmpty(workingDirectory))
