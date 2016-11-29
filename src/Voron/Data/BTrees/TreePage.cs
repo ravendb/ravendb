@@ -674,7 +674,7 @@ namespace Voron.Data.BTrees
             }
 
             if (IsCompressed)
-                size += CompressionHeader->CompressedSize + Constants.Compression.HeaderSize + CompressionHeader->NumberOfCompressedEntries * Constants.NodeOffsetSize;
+                size += CompressionHeader->CompressedSize + (CompressionHeader->CompressedSize & 1) + Constants.Compression.HeaderSize + CompressionHeader->NumberOfCompressedEntries * Constants.NodeOffsetSize;
 
             Debug.Assert(size <= PageSize);
             Debug.Assert(SizeUsed >= size);

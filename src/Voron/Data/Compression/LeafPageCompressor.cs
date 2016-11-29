@@ -39,7 +39,7 @@ namespace Voron.Data.Compression
 
             if (compressedSize == 0 || compressedSize > valuesSize)
             {
-                // output buffer size not enough or compressed output size is greater that uncompressed input
+                // output buffer size not enough or compressed output size is greater than uncompressed input
 
                 result = null;
                 return returnTempPage;
@@ -55,11 +55,15 @@ namespace Voron.Data.Compression
 
             Memory.Copy(tempPage.Base, page.Base, Constants.TreePageHeaderSize);
 
-            tempPage.Lower = (ushort)(Constants.TreePageHeaderSize + Constants.Compression.HeaderSize + compressedSize + offsetsSize);
+            var alignment = compressedSize & 1;
+
+            var compressionDataSize = compressedSize + offsetsSize + alignment;  // ensure 2-byte alignment
+
+            tempPage.Lower = (ushort)(Constants.TreePageHeaderSize + Constants.Compression.HeaderSize + compressionDataSize);
             tempPage.Upper = (ushort)tempPage.PageSize;
 
             var decompressedPageSize = page.SizeUsed + // header, node offsets, existing entries
-                                       (tx.Environment.Options.PageSize - (Constants.TreePageHeaderSize + compressedSize + Constants.Compression.HeaderSize + offsetsSize)); // space that can be still used to insert next uncompressed entries
+                                       (tx.Environment.Options.PageSize - (Constants.TreePageHeaderSize + Constants.Compression.HeaderSize + compressionDataSize)); // space that can be still used to insert next uncompressed entries
 
 
             if (decompressedPageSize > Constants.Storage.MaxPageSize)
@@ -88,7 +92,7 @@ namespace Voron.Data.Compression
         public static void CopyToPage(CompressionResult compressed, TreePage dest)
         {
             // let us copy the compressed values at the end of the page
-            // so we will handle next writes as usual
+            // so we will handle additional, uncompressed values as usual
 
             var writePtr = dest.Base + dest.PageSize - Constants.Compression.HeaderSize;
 
@@ -97,13 +101,16 @@ namespace Voron.Data.Compression
 
             var offsetsSize = compressed.Header.NumberOfCompressedEntries * Constants.NodeOffsetSize;
 
-            writePtr -= compressed.Header.CompressedSize + offsetsSize;
+            var alignment = compressed.Header.CompressedSize & 1;
+            var compressionDataSize = compressed.Header.CompressedSize + offsetsSize;
 
-            Memory.Copy(writePtr, compressed.CompressionOutputPtr, compressed.Header.CompressedSize + offsetsSize);
+            writePtr -= compressionDataSize + alignment; // ensure 2-byte alignment
+
+            Memory.Copy(writePtr, compressed.CompressionOutputPtr, compressionDataSize);
 
             dest.Flags |= PageFlags.Compressed;
             dest.Lower = (ushort)Constants.TreePageHeaderSize;
-            dest.Upper = (ushort)(writePtr - dest.Base); // TODO arek - alignment
+            dest.Upper = (ushort)(writePtr - dest.Base);
         }
     }
 }

@@ -46,8 +46,6 @@ namespace Micro.Benchmark.Benchmarks.LZ4
             }
         }
 
-        private static Sparrow.Compression.LZ4 _lz4 = new Sparrow.Compression.LZ4();
-
         private const int NumberOfOperations = 10000;
 
         [Params(0)]
@@ -182,7 +180,7 @@ namespace Micro.Benchmark.Benchmarks.LZ4
                 // Calculate compression size and store the generated data
                 fixed (byte* bufferPtr = buffer)
                 {
-                    int compressedSize = _lz4.Encode64(bufferPtr, _lz4Buffer.Ptr, generatedDataLength, _lz4Buffer.Length);
+                    int compressedSize = Sparrow.Compression.LZ4.Encode64(bufferPtr, _lz4Buffer.Ptr, generatedDataLength, _lz4Buffer.Length);
 
                     ByteString unmanagedBuffer;
                     _allocator.From(_lz4Buffer.Ptr, compressedSize, ByteStringType.Immutable, out unmanagedBuffer);

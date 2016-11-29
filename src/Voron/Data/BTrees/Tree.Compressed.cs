@@ -98,7 +98,7 @@ namespace Voron.Data.BTrees
         {
             var result = _llt.Environment.DecompressionBuffers.GetPage(_llt, input.DecompressedPageSize, input.Page.CompressionHeader->Version, input.Page);
 
-            var decompressedNodesOffset = (ushort)(result.PageSize - input.DecompressedSize); // TODO arek - aligntment
+            var decompressedNodesOffset = (ushort)(result.PageSize - input.DecompressedSize);
 
             LZ4.Decode64LongBuffers(
                 input.Data,
@@ -214,15 +214,17 @@ namespace Voron.Data.BTrees
             public DecompressionInput(CompressedNodesHeader* header, TreePage p)
             {
                 Page = p;
-                Data = (byte*)header - header->CompressedSize;
-
-                KeysOffsetsSize = (ushort)(header->NumberOfCompressedEntries * Constants.NodeOffsetSize);
-                KeysOffsets = (short*)((byte*)header - header->CompressedSize - KeysOffsetsSize);
-
                 CompressedSize = header->CompressedSize;
                 DecompressedSize = header->UncompressedSize;
                 NumberOfEntries = header->NumberOfCompressedEntries;
 
+                var alignment = CompressedSize & 1;  // take into account 2-byte alignment
+
+                Data = (byte*)header - (CompressedSize + alignment);
+
+                KeysOffsetsSize = (ushort)(header->NumberOfCompressedEntries * Constants.NodeOffsetSize);
+                KeysOffsets = (short*)((byte*)header - (CompressedSize + alignment) - KeysOffsetsSize);
+                
                 var necessarySize = p.SizeUsed - CompressedSize - Constants.Compression.HeaderSize + DecompressedSize;
 
                 if (necessarySize > Constants.Storage.MaxPageSize)

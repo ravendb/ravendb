@@ -97,6 +97,8 @@ namespace FastTests.Voron.LeafsCompression
 
                 tx.Commit();
             }
+
+            AssertReads(ids, bytes);
         }
 
         private unsafe void AssertReads(HashSet<string> ids, byte[] bytes)
