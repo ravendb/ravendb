@@ -16,7 +16,7 @@ function CreateRavenPackage ( $projectDir, $releaseDir, $outDir, $version, $runt
     $releaseZipFile = GetRavenZipFileName $version $runtime
     $releaseZipPath = [io.path]::combine($releaseDir, $releaseZipFile)
     $packageDir = [io.path]::combine($outDir, "package")
-    mkdir $packageDir
+    New-Item -ItemType Directory -Path $packageDir
 
     CreatePackageLayout $outDir $packageDir $projectDir
     ZipFilesFromDir $releaseZipPath $packageDir
@@ -54,11 +54,11 @@ function CreatePackageClientLayout ( $outDir, $packageDir, $projectDir ) {
 
     $ravenClientDir = [io.path]::combine($packageDir, 'Client', $NETSTANDARD16, 'Raven.Client')
     $ravenClientDllDir = [io.path]::combine($ravenClientDir, $NETSTANDARD16)
-    mkdir $ravenClientDllDir
+    New-Item -ItemType Directory -Path $ravenClientDllDir
 
     $sparrowDir = [io.path]::combine($packageDir, 'Client', $NETSTANDARD16, 'Sparrow')
     $sparrowDllDir = [io.path]::combine($packageDir, 'Client', $NETSTANDARD16, 'Sparrow', $NETSTANDARD16)
-    mkdir $sparrowDllDir
+    New-Item -ItemType Directory -Path $sparrowDllDir
 
     cp $(Join-Path $clientOutDir -ChildPath "Raven.Client.dll") $ravenClientDllDir
     cp $(Join-Path $clientOutDir -ChildPath "Raven.Client.pdb") $ravenClientDllDir
