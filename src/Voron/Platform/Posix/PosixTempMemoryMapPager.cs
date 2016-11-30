@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Runtime.InteropServices;
 using Sparrow.Utils;
 using Voron.Impl;
@@ -111,7 +112,7 @@ namespace Voron.Platform.Posix
             if (startingBaseAddressPtr.ToInt64() == -1) //system didn't succeed in mapping the address where we wanted
             {
                 var err = Marshal.GetLastWin32Error();
-                PosixHelper.ThrowLastError(err);
+                PosixHelper.ThrowLastError(err, "mmap on " + FileName);
             }
             NativeMemory.RegisterFileMapping(FileName, startingBaseAddressPtr, _totalAllocationSize);
             var allocationInfo = new PagerState.AllocationInfo

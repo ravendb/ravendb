@@ -531,8 +531,22 @@ namespace Voron.Impl.Journal
                     {
                         ApplyPagesToDataFileFromScratch(pagesToWrite, transaction, alreadyInWriteTx);
                     }
+                    catch(OutOfMemoryException e)
+                    {
+                        if (_waj._logger.IsOperationsEnabled)
+                        {
+                            _waj._logger.Operations("Could not allocate enough space to apply pages to data file", e);
+                        }
+                        // on 32 bits systems, we likely run out of address space, nothing that we can do, this should
+                        // be handled by the 32 bits pager.
+                        return;
+                    }
                     catch (DiskFullException diskFullEx)
                     {
+                        if (_waj._logger.IsOperationsEnabled)
+                        {
+                            _waj._logger.Operations("The disk is full!", diskFullEx);
+                        }
                         _waj._env.HandleDataDiskFullException(diskFullEx);
                         return;
                     }
