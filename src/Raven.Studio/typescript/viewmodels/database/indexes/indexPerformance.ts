@@ -99,11 +99,11 @@ class hitTest {
     }
 }
 
-class metrics extends viewModelBase { 
+class metrics extends viewModelBase {
 
     static readonly colors = {
         axis: "#546175",
-        gaps: "#546175",
+        gaps: "#ca1c59",
         brushFill: "rgba(202, 28, 89, 0.25)",
         brushStoke: "#ca1c59",
         brushChartColor: "#008cc9",
@@ -121,7 +121,6 @@ class metrics extends viewModelBase {
     static readonly closedTrackPadding = 2;
     static readonly openedTrackPadding = 4;
     static readonly axisHeight = 35; 
-    static readonly brushGapWidth = 20;
 
     static readonly maxRecursion = 4;
     static readonly minGapSize = 10 * 1000; // 10 seconds
@@ -315,7 +314,7 @@ class metrics extends viewModelBase {
 
         const context = this.brushSection.getContext("2d");
 
-        this.xBrushTimeScale = this.gapFinder.createScale(this.totalWidth, metrics.brushGapWidth);
+        this.xBrushTimeScale = this.gapFinder.createScale(this.totalWidth, 0);
 
         this.drawBrushGaps(context);
         this.drawXaxis(context, this.xBrushTimeScale, metrics.brushSectionHeight);
@@ -344,8 +343,9 @@ class metrics extends viewModelBase {
 
             context.strokeStyle = metrics.colors.gaps;
 
-            context.moveTo(this.xBrushTimeScale(gap.start) + 8, 1);
-            graphHelper.zigZag(context, [this.xBrushTimeScale(gap.start) + 8, 1], 4, 8, metrics.brushSectionHeight - 2);
+            const gapX = this.xBrushTimeScale(gap.start);
+            context.moveTo(gapX, 1);
+            context.lineTo(gapX, metrics.brushSectionHeight - 2);
             context.stroke();
         }
     }
@@ -505,7 +505,7 @@ class metrics extends viewModelBase {
        
         const visibleTimeFrame = this.xNumericScale.domain().map(x => this.xBrushTimeScale.invert(x)) as [Date, Date];
 
-        const xScale = this.gapFinder.trimmedScale(visibleTimeFrame, this.totalWidth, 20);
+        const xScale = this.gapFinder.trimmedScale(visibleTimeFrame, this.totalWidth, 0);
 
         const canvas = this.canvas.node() as HTMLCanvasElement;
         const context = canvas.getContext("2d");
@@ -529,6 +529,7 @@ class metrics extends viewModelBase {
 
             this.drawTracks(context, xScale);
             this.drawIndexNames(context);
+            this.drawGaps(context, xScale);
 
             context.restore();
         } finally {
@@ -546,26 +547,12 @@ class metrics extends viewModelBase {
         this.data.forEach(perfStat => {
             const yStart = this.yScale(perfStat.IndexName);
 
-            context.fillStyle = metrics.colors.trackBackground;
-
             perfStat.Performance.forEach(perf => {
                 const isOpened = this.expandedTracks.contains(perfStat.IndexName);
-                const range = xScale.range();
 
-                const trackHeight = isOpened ? metrics.openedTrackHeight : metrics.closedTrackHeight;
-                const yEnd = trackHeight + yStart;
-
-                for (let i = 0; i < range.length / 2; i++) {
-                    const xStart = range[2 * i];
-                    const xEnd = range[2 * i + 1];
-
-                    const leftZigZag = xStart !== 0;
-                    const rightZigZag = xEnd !== this.totalWidth;
-
-                    graphHelper.zigZagRect(context, xStart, yStart, xEnd - xStart, yEnd - yStart, 4, 6, leftZigZag, rightZigZag);
-                }
+                context.fillStyle = metrics.colors.trackBackground;
+                context.fillRect(0, yStart, this.totalWidth, isOpened ? metrics.openedTrackHeight : metrics.closedTrackHeight);
             });
-
         });
 
         context.restore();
@@ -650,6 +637,20 @@ class metrics extends viewModelBase {
             context.fillStyle = isOpened ? metrics.colors.openedTrackArrow : metrics.colors.closedTrackArrow;
             graphHelper.drawArrow(context, 5, yScale(indexName) + 6, !isOpened);
         });
+    }
+
+    private drawGaps(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
+
+        const range = xScale.range();
+        context.strokeStyle = metrics.colors.gaps;
+        for (let i = 1; i < range.length; i += 2) {
+            const gapX = Math.floor(range[i]) + 0.5;
+
+            context.beginPath();
+            context.moveTo(gapX, metrics.axisHeight);
+            context.lineTo(gapX, this.totalHeight);
+            context.stroke();
+        }
     }
 
     private onToggleIndex(indexName: string) {

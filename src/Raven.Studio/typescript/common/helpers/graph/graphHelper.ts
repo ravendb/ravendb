@@ -83,37 +83,6 @@ class graphHelper {
         };
     }
 
-    static zigZag(context: CanvasRenderingContext2D, startPoint: [number, number], dx: number, dy: number, height: number) {
-        let currentHeight = 0;
-
-        let odd = true;
-
-        const steps = Math.floor(height / dy);
-        const lastStep = height / dy;
-
-        for (let i = 0; i < steps; i++) {
-            currentHeight += dy;
-
-            context.lineTo(odd ? startPoint[0] + dx : startPoint[0], startPoint[1] + currentHeight);
-            odd = !odd;
-        }
-
-        if (dy > 0 && lastStep) {
-            let xDiff = dx * lastStep / dy;
-            context.lineTo(odd ? (startPoint[0] + xDiff) : startPoint[0] + dx - xDiff, startPoint[1] + height)
-        }
-    }
-
-    static zigZagRect(context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, dx: number, dy: number, leftZigZag: boolean, rightZigZag: boolean) {
-        context.beginPath();
-        context.moveTo(x, y);
-        context.lineTo(x + width, y);
-        context.lineTo(x + width, y + height);
-        context.lineTo(x, y + height);
-        context.lineTo(x, y);
-        context.fill();
-    }
-
     private static readonly arrowConfig = {
         halfWidth: 6,
         height: 8,
