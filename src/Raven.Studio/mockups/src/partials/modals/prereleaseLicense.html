@@ -8,52 +8,64 @@
             </div>
             <img src="content/img/prerelease-license.png" class="img-responsive" />
             <div class="modal-body">
-                <p class="lead text-center">
-                    To obtain your <span class="font-normal text-primary">free prerelease license</span> <span class="nobr">please fill out the form below.</span>
-                </p>
-                <form class="form-horizontal">
-                    <div class="form-group">
-                        <label for="inputName" class="col-sm-3 control-label">Name</label>
-                        <div class="col-sm-8">
-                            <input type="text" class="form-control" id="inputName">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="inputEmail" class="col-sm-3 control-label">Email</label>
-                        <div class="col-sm-8">
-                            <input type="email" class="form-control" id="inputEmail">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="inputCompany" class="col-sm-3 control-label">Company</label>
-                        <div class="col-sm-8">
-                            <input type="text" class="form-control" id="inputCompany">
-                        </div>
-                    </div>
 
-                    <hr/>
-                    <p class="text-center">
-                        Already got a license? Enter your license key.
+                <section id="licenseRequestForm">
+                    <p class="lead text-center">
+                        To obtain your <span class="font-normal text-primary">free prerelease license</span> <span class="nobr">please fill out the form below.</span>
+                    </p>
+                    <form class="form-horizontal">
+                        <div class="form-group">
+                            <label for="inputName" class="col-sm-3 control-label">Name</label>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" id="inputName">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="inputEmail" class="col-sm-3 control-label">Email</label>
+                            <div class="col-sm-8">
+                                <input type="email" class="form-control" id="inputEmail">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="inputCompany" class="col-sm-3 control-label">Company</label>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" id="inputCompany">
+                            </div>
+                        </div>
+                    </form>
+                </section>
+
+                <hr/>
+
+                <section id="enterLicenseKey" class="form-horizontal">
+                    <p class="lead text-center">
+                        Already got a license? <br/> Please paste your license key below.
                     </p>
                     <div class="form-group">
                         <label for="inputLicenseKey" class="col-sm-3 control-label">License key</label>
                         <div class="col-sm-8">
-                            <input type="text" class="form-control" id="inputLicenseKey">
+                            <textarea rows="5" class="form-control" id="inputLicenseKey" placeholder='{
+                                "LicenseId": "asdb"
+                            }'></textarea>
                         </div>
                     </div>
+                </section>
+
             </div>
-            </form>
             <div class="modal-footer">
                 <button type="button" class="btn" data-dismiss="modal">
-              <i class="icon-recent"></i>
-              <span>Dismiss for now<span>
-          </button>
-                <button type="button" class="btn btn-primary">Submit</button>
+                    <i class="icon-recent"></i>
+                    <span>Dismiss for now<span>
+                    </button>
+                    <button type="button" class="btn btn-default" data-target="">
+                        Enter license key
+                    </button>
+                    <button type="button" class="btn btn-primary">Submit</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<script>
+    <script>
     $('#licenseModal').modal('show')
-</script>
+    </script>
