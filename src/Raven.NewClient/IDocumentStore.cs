@@ -13,6 +13,7 @@ using Raven.NewClient.Client.Connection;
 
 using Raven.NewClient.Client.Connection.Profiling;
 using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Indexes;
 
 namespace Raven.NewClient.Client
@@ -209,5 +210,10 @@ namespace Raven.NewClient.Client
 
         ProfilingInformation GetProfilingInformationFor(Guid id);
 
+        string DefaultDatabase { get; set; }
+
+        RequestExecuter GetRequestExecuter(string databaseName);
+
+        RequestExecuter GetRequestExecuterForDefaultDatabase();
     }
 }
