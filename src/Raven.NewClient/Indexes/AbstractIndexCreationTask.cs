@@ -20,9 +20,12 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Data.Indexes;
+using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Indexes
 {
@@ -281,28 +284,46 @@ namespace Raven.NewClient.Client.Indexes
         /// <summary>
         /// Executes the index creation against the specified document database using the specified conventions
         /// </summary>
-        public virtual void Execute( DocumentConvention documentConvention)
+        public virtual void Execute(IDocumentStore store, DocumentConvention documentConvention)
         {
-            throw new NotImplementedException();
-            /*Conventions = documentConvention;
+            var documentStore = (DocumentStore)store;
+            Conventions = documentConvention;
             var indexDefinition = CreateIndexDefinition();
+
+            var requestExecuter = documentStore.GetRequestExecuter(documentStore.DefaultDatabase);
+            JsonOperationContext jsonOperationContext;
+            requestExecuter.ContextPool.AllocateOperationContext(out jsonOperationContext);
+
 
             if (documentConvention.PrettifyGeneratedLinqExpressions)
             {
-                var serverDef = databaseCommands.GetIndex(IndexName);
-                if (serverDef != null && CurrentOrLegacyIndexDefinitionEquals(documentConvention, serverDef, indexDefinition))
+                var getIndexOperation = new GetIndexOperation(jsonOperationContext);
+
+                var getCommand = getIndexOperation.CreateRequest(IndexName);
+                if (getCommand != null)
                 {
-                    AfterExecute(databaseCommands, documentConvention);
+                    requestExecuter.Execute(getCommand, jsonOperationContext);
+                    getIndexOperation.SetResult(getCommand.Result);
+                }
+                var serverIndexDefinition = getIndexOperation.IndexDefinitionResult;
+
+                if (serverIndexDefinition != null) //TODO iftah && CurrentOrLegacyIndexDefinitionEquals(documentConvention, serverIndexDefinition, indexDefinition))
+                {
+                    //AfterExecute(databaseCommands, documentConvention);
                     return;
                 }
             }
 
-            // This code take advantage on the fact that RavenDB will turn an index PUT
-            // to a noop of the index already exists and the stored definition matches
-            // the new definition.
-            databaseCommands.PutIndex(IndexName, indexDefinition, true);
+            var putIndexOperation = new PutIndexOperation(jsonOperationContext);
 
-            if (Priority != null)
+            var putCommand = putIndexOperation.CreateRequest(documentConvention, IndexName, indexDefinition);
+            if (putCommand != null)
+            {
+                requestExecuter.Execute(putCommand, jsonOperationContext);
+                putIndexOperation.SetResult(putCommand.Result);
+            }
+
+            /*if (Priority != null)
                 databaseCommands.SetIndexPriority(IndexName, Priority.Value);
 
             AfterExecute(databaseCommands, documentConvention);*/

@@ -16,7 +16,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
 {
     public class RavenDB_4161 : RavenTestBase
     {
-        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
+        [Fact(Skip = "WaitForIndexing not implemented")]
         public void CanUseTransfromer()
         {
             using (var store = GetDocumentStore())
@@ -59,7 +59,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
             }
         }
     
-        [Fact(Skip = "ExecuteAsync in AbstractTransformerCreationTask not implemented")]
+        [Fact(Skip = "LoadStartingWith not implemented")]
         public async Task CanUseTransfromerAsync()
         {
             using (var store = GetDocumentStore())
