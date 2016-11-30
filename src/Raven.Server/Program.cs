@@ -6,6 +6,7 @@ using Raven.Abstractions.Logging;
 using Raven.Server.Config;
 using Raven.Server.Utils;
 using Sparrow.Logging;
+
 namespace Raven.Server
 {
     public class Program
@@ -26,54 +27,74 @@ namespace Raven.Server
             }
             configuration.Initialize();
 
-            using (var server = new RavenServer(configuration))
+            try
             {
-                try
+                using (var server = new RavenServer(configuration))
                 {
-                    server.Initialize();
-                    Console.WriteLine($"Listening to: {string.Join(", ", configuration.Core.ServerUrl)}");
-                    Console.WriteLine("Server started, listening to requests...");
-
-                    //TODO: Move the command line options to here
-                    var run = true;
-                    while (run)
+                    try
                     {
+                        server.Initialize();
+                        Console.WriteLine($"Listening to: {string.Join(", ", configuration.Core.ServerUrl)}");
+                        Console.WriteLine("Server started, listening to requests...");
+
                         if (configuration.Core.RunAsService)
                         {
-                            ManualResetEvent mre = new ManualResetEvent(false);
-                            if (_logger.IsInfoEnabled)
-                                _logger.Info("Server is running as a service");
-                            Console.WriteLine("Running as Service");
-                            AssemblyLoadContext.Default.Unloading += (s) => mre.Set();
-                            mre.WaitOne();
-                            Console.WriteLine("SIGTERM Received. Exiting RavenDB...");
-                            break;
+                            RunAsService();
                         }
-                        switch (Console.ReadLine()?.ToLower())
+                        else
                         {
-                            case "q":
-                                run = false;
-                                break;
-                            case "cls":
-                                Console.Clear();
-                                break;
+                            RunInteractive();
                         }
-                        // Console.ForegroundColor++;
+                        Console.WriteLine("Starting shut down...");
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info("Server is shutting down");
                     }
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Server is shutting down");
-                    return 0;
+                    catch (Exception e)
+                    {
+                        if (_logger.IsOperationsEnabled)
+                            _logger.Operations("Failed to initialize the server", e);
+                        Console.WriteLine(e);
+                        return -1;
+                    }
                 }
-                catch (Exception e)
+                Console.WriteLine("Shutdown completed");
+                return 0;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Error during shutdown");
+                Console.WriteLine(e);
+                return -2;
+            }
+        }
+
+        private static void RunAsService()
+        {
+            ManualResetEvent mre = new ManualResetEvent(false);
+            if (_logger.IsInfoEnabled)
+                _logger.Info("Server is running as a service");
+            Console.WriteLine("Running as Service");
+            AssemblyLoadContext.Default.Unloading += (s) =>
+            {
+                Console.WriteLine("Received graceful exit request...");
+                mre.Set();
+            };
+            mre.WaitOne();
+        }
+
+        private static void RunInteractive()
+        {
+            while (true)
+            {
+                //TODO: Move the command line options to here
+                switch (Console.ReadLine()?.ToLower())
                 {
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations("Failed to initialize the server", e);
-                    Console.WriteLine(e);
-                    return -1;
-                }
-                finally
-                {
-                    Console.WriteLine("Bye, bye...");
+                    case "q":
+
+                        return;
+                    case "cls":
+                        Console.Clear();
+                        break;
                 }
             }
         }
