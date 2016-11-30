@@ -772,6 +772,18 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     builder.WritePropertyName("FloatMax");
                     builder.WriteValue(float.MaxValue);
 
+                    builder.WritePropertyName("UshortMin");
+                    builder.WriteValue(ushort.MinValue);
+
+                    builder.WritePropertyName("UshortMax");
+                    builder.WriteValue(ushort.MaxValue);
+
+                    builder.WritePropertyName("UintMin");
+                    builder.WriteValue(uint.MinValue);
+
+                    builder.WritePropertyName("UintMax");
+                    builder.WriteValue(uint.MaxValue);
+
                     builder.WritePropertyName("DoubleMin");
                     builder.WriteValue(double.MinValue);
 
@@ -820,9 +832,13 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     builder.FinalizeDocument();
 
                     var reader = builder.CreateReader();
-                    Assert.Equal(13, reader.Count);
+                    Assert.Equal(17, reader.Count);
                     Assert.Equal(float.MinValue, float.Parse(reader["FloatMin"].ToString(),CultureInfo.InvariantCulture));
                     Assert.Equal(float.MaxValue, float.Parse(reader["FloatMax"].ToString(), CultureInfo.InvariantCulture));
+                    Assert.Equal(ushort.MinValue, ushort.Parse(reader["UshortMin"].ToString(), CultureInfo.InvariantCulture));
+                    Assert.Equal(ushort.MaxValue, ushort.Parse(reader["UshortMax"].ToString(), CultureInfo.InvariantCulture));
+                    Assert.Equal(uint.MinValue, uint.Parse(reader["UintMin"].ToString(), CultureInfo.InvariantCulture));
+                    Assert.Equal(uint.MaxValue, uint.Parse(reader["UintMax"].ToString(), CultureInfo.InvariantCulture));
                     Assert.Equal(double.MinValue, double.Parse(reader["DoubleMin"].ToString(), CultureInfo.InvariantCulture));
                     Assert.Equal(double.MaxValue, double.Parse(reader["DoubleMax"].ToString(), CultureInfo.InvariantCulture));
                     Assert.Equal(long.MinValue, long.Parse(reader["LongMin"].ToString(), CultureInfo.InvariantCulture));

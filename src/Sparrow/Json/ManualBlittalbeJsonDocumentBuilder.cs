@@ -252,6 +252,40 @@ namespace Sparrow.Json
             }
         }
 
+        public void WriteValueNull()
+        {
+            var currentState = _continuationState.Pop();
+            var valuePos = 1;
+            _writeToken = new WriteToken //todo: figure out if we really need those WriteTokens
+            {
+                ValuePos = valuePos,
+                WrittenToken = BlittableJsonToken.Null
+            };
+
+            if (currentState.FirstWrite == -1)
+                currentState.FirstWrite = valuePos;
+
+            currentState = FinishWritingScalarValue(currentState);
+            _continuationState.Push(currentState);
+        }
+
+        public void WriteValue(bool value)
+        {
+            var currentState = _continuationState.Pop();
+            var valuePos = 1;
+            _writeToken = new WriteToken //todo: figure out if we really need those WriteTokens
+            {
+                ValuePos = valuePos,
+                WrittenToken = BlittableJsonToken.Boolean
+            };
+
+            if (currentState.FirstWrite == -1)
+                currentState.FirstWrite = valuePos;
+
+            currentState = FinishWritingScalarValue(currentState);
+            _continuationState.Push(currentState);
+        }
+
         public void WriteValue(long value)
         {
             var currentState = _continuationState.Pop();

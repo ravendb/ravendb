@@ -116,7 +116,7 @@ namespace Raven.NewClient.Client.Blittable
                     {
                         var changed = CompareBlittable(id, oldProp.Value as BlittableJsonReaderObject,
                             newProp.Value as BlittableJsonReaderObject, changes, docChanges);
-                        if (changes == null)
+                        if ( (changes == null) && (changed))
                             return changed;
                         break;
                     }

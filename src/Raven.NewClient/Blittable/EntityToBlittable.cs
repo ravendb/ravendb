@@ -5,6 +5,7 @@ using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Util;
 using Sparrow.Json;
 using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Json;
 
 namespace Raven.NewClient.Client.Blittable
 {
@@ -30,10 +31,13 @@ namespace Raven.NewClient.Client.Blittable
         
         public BlittableJsonReaderObject ConvertEntityToBlittable(object entity, DocumentInfo documentInfo)
         {
-            _stream.Position = 0;
-            _session.Conventions.SerializeEntityToJsonStream(entity, _streamWriter);
-            InsertMetadataToStream(documentInfo);
-            return _session.Context.ReadForMemory(_stream, "convention.Serialize");
+            var writer = new BlittableJsonWriter(_session.Context, documentInfo);
+            var serializer = _session.Conventions.CreateSerializer();
+
+            serializer.Serialize(writer, entity);
+            writer.FinalizeDocument();
+            var reader = writer.CreateReader();
+            return reader;
         }
 
         public BlittableJsonReaderObject ConvertEntityToBlittable(object entity, DocumentConvention documentConvention, JsonOperationContext jsonOperationContext)
