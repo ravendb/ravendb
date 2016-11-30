@@ -48,9 +48,11 @@ namespace Raven.Server.Web.System
 
         public static string[] LookupPaths = new[]
         {
+            "src/Raven.Studio/wwwroot",
+             "wwwroot",
             "../../Raven.Studio/wwwroot",
             "../src/Raven.Studio/wwwroot",
-
+            
         };
 
         private static string TryGetFileName(string filename)
@@ -68,7 +70,11 @@ namespace Raven.Server.Web.System
             {
                 var lookupPath = Path.Combine(AppContext.BaseDirectory, lookupPathDir);
                 if (Directory.Exists(lookupPath) == false)
-                    continue;
+                {
+                    lookupPath = Path.Combine(Directory.GetCurrentDirectory(), lookupPathDir);
+                    if (Directory.Exists(lookupPath) == false)
+                        continue;
+                }
 
                 foreach (var file in Directory.GetFiles(lookupPath,"*",SearchOption.AllDirectories))
                 {
