@@ -17,46 +17,7 @@
 </style>
 
 <section id="visualizerSection">
-    <div class="toolbar clearfix form-inline">
-        <div class="btn-group" data-bind="visible: !detailsGraph.viewActive()">
-            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                <span data-bind="text: currentIndexUi"></span>
-                <span class="caret"></span>
-            </button>
-            <ul class="dropdown-menu" role="menu">
-                <!-- ko foreach: indexes -->
-                <li data-bind="click: $root.setSelectedIndex.bind($root, $data)"><a href="#" data-bind="text: $data"></a></li>
-                <!-- /ko -->
-                <!-- ko if: indexes().length === 0 -->
-                <li data-bind="click: function() { }"><a href="#">No indexes available</a></li>
-                <!-- /ko -->
-            </ul>
-        </div>
-
-        <div class="form-group form-group-dropdown" data-bind="visible: hasIndexSelected() && !detailsGraph.viewActive()">
-            <div class="input-group">
-                <input id="docKey" type="text" data-bind="textInput: documents.docKey, hasFocus: documents.hasFocusDocKey" class="form-control" placeholder="Document Id" autocomplete="off">
-                <span class="input-group-btn" style="width: auto">
-                    <button data-bind="click: addDocKey.bind($root, documents.docKey()), enable: !!documents.docKey() && !documents.loadingDocKeySearchResults()" class="btn btn-default" type="button">
-                        <i data-bind="visible: !documents.loadingDocKeySearchResults()" class="icon-plus"></i>
-                    </button>
-                </span>
-            </div>
-            <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#docKey', foreach: documents.docKeysSearchResults">
-                <li role="presentation" data-bind="click: $root.selectDocKey.bind($root, $data)">
-                    <a role="menuitem" tabindex="-1" href="#">
-                        <span data-bind="text: $data"></span>
-                    </a>
-                </li>
-            </ul>
-        </div>
-        <button class="btn btn-default" type="button"><i class="icon-fullscreen"></i></button>
-        <button class="btn btn-default" type="button"><i class="icon-import"></i></button>
-        <button class="btn btn-default" type="button"><i class="icon-export"></i></button>
-        <button class="btn btn-default" type="button"><i class="icon-key"></i></button>
-    </div>
-
-    <div class="form-inline" role="form">
+    <div class="form-inline clearfix toolbar" role="form">
         <div class="btn-group" data-bind="visible: !detailsGraph.viewActive()">
             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                 <span data-bind="text: currentIndexUi"></span>
@@ -72,7 +33,7 @@
             </ul>
         </div>
        
-        <div class="form-group" data-bind="visible: hasIndexSelected() && !detailsGraph.viewActive()">
+        <div class="form-group form-group-dropdown" data-bind="visible: hasIndexSelected() && !detailsGraph.viewActive()">
             <div class="input-group">
                 <input id="docKey" type="text" data-bind="textInput: documents.docKey, hasFocus: documents.hasFocusDocKey" class="form-control" placeholder="Document Id" autocomplete="off">
                 <span class="input-group-btn" style="width: auto">
@@ -90,8 +51,17 @@
                 </li>
             </ul>
         </div>
+        
+        <!--  TODO:
+        <button class="btn btn-default" type="button"><i class="icon-fullscreen"></i></button>
+        <button class="btn btn-default" type="button"><i class="icon-import"></i></button>
+        <button class="btn btn-default" type="button"><i class="icon-export"></i></button>
+        <button class="btn btn-default" type="button"><i class="icon-key"></i></button>
+            -->
 
         <button data-bind="click: detailsGraph.goToMasterView.bind(detailsGraph), visible: detailsGraph.viewActive" class="btn btn-default">&lt; Back</button>
+        
+
     </div>
 
     <div id="visualizerContainer">
