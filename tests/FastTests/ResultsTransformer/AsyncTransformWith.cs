@@ -15,7 +15,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
 {
     public class AsyncTransformWith : RavenTestBase
     {
-        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
+        [Fact(Skip = "RavenQueryInspector.ToString() not implemented")]
         public void CanRunTransformerOnSession()
         {
             using (var store = GetDocumentStore())
@@ -46,7 +46,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
             }
         }
 
-        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
+        [Fact(Skip = "RavenQueryInspector.ToString() not implemented")]
         public async Task CanRunTransformerOnAsyncSession()
         {
             using (var store = GetDocumentStore())

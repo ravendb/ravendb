@@ -62,7 +62,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
             }
         }
 
-        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
+        [Fact]
         public void CanUseResultsTransformerWithQueryOnLoad()
         {
             using (var store = GetDocumentStore())
@@ -83,7 +83,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
 
         }
 
-        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
+        [Fact]
         public void CanUseResultsTransformerWithQueryOnLoadWithRemoteClient()
         {
             using (var store = GetDocumentStore())
@@ -104,7 +104,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
 
         }
 
-        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
+        [Fact]
         public void CanUseResultsTransformerWithQueryWithRemoteDatabase()
         {
             using (var store = GetDocumentStore())
@@ -129,7 +129,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
             }
         }
 
-        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
+        [Fact]
         public void CanUseResultTransformerToLoadValueOnNonStoreFieldUsingQuery()
         {
             using (var store = GetDocumentStore())
@@ -154,7 +154,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
             }
         }
 
-        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
+        [Fact]
         public void CanUseResultsTransformerWithQuery()
         {
             using (var store = GetDocumentStore())
@@ -179,7 +179,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
             }
         }
 
-        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
+        [Fact]
         public void CanUseResultsTransformerWithInclude()
         {
             using (var store = GetDocumentStore())
@@ -206,7 +206,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
             }
         }
 
-        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
+        [Fact]
         public void CanCastTransformerParameter()
         {
             using (var store = GetDocumentStore())

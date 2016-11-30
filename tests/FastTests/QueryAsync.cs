@@ -2,6 +2,7 @@
 using System.Linq;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Indexes;
+using Raven.Server.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -56,7 +57,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
+        [Fact(Skip = "WaitForIndexing not implemented")]
         public async void QueryAsync_By_Index()
         {
             using (var store = GetDocumentStore())

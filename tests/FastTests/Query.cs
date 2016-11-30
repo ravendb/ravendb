@@ -56,7 +56,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
+        [Fact]
         public void Query_With_Customize()
         {
             using (var store = GetDocumentStore())
@@ -125,7 +125,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
+        [Fact(Skip = "WaitForIndexing is not implemented")]
         public void Query_By_Index()
         {
             using (var store = GetDocumentStore())

@@ -79,7 +79,7 @@ namespace Raven.NewClient.Client
         /// </summary>
         public virtual void ExecuteIndex(AbstractIndexCreationTask indexCreationTask)
         {
-            indexCreationTask.Execute(Conventions);
+            indexCreationTask.Execute(this, Conventions);
         }
 
         /// <summary>
@@ -111,7 +111,7 @@ namespace Raven.NewClient.Client
         /// </summary>
         public virtual void ExecuteTransformer(AbstractTransformerCreationTask transformerCreationTask)
         {
-            transformerCreationTask.Execute( Conventions);
+            transformerCreationTask.Execute(this, Conventions);
         }
 
         /// <summary>
