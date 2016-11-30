@@ -18,6 +18,7 @@ using Raven.NewClient.Client.Document;
 
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
+using Raven.NewClient.Client.Document.Async;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Spatial;
 
@@ -184,10 +185,9 @@ namespace Raven.NewClient.Client.Linq
         /// </returns>
         public override string ToString()
         {
-            throw new NotImplementedException();
-            /*RavenQueryProviderProcessor<T> ravenQueryProvider = GetRavenQueryProvider();
+            RavenQueryProviderProcessor<T> ravenQueryProvider = GetRavenQueryProvider();
             string query;
-            if (asyncDatabaseCommands != null)
+            if ((session as AsyncDocumentSession) != null)
             {
                 var asyncDocumentQuery = ravenQueryProvider.GetAsyncDocumentQueryFor(expression);
                 query = asyncDocumentQuery.GetIndexQuery(true).ToString();
@@ -201,7 +201,7 @@ namespace Raven.NewClient.Client.Linq
             string fields = "";
             if (ravenQueryProvider.FieldsToFetch.Count > 0)
                 fields = "<" + string.Join(", ", ravenQueryProvider.FieldsToFetch.ToArray()) + ">: ";
-            return fields + query;*/
+            return fields + query;
         }
  
         public IndexQuery GetIndexQuery(bool isAsync = true)

@@ -151,8 +151,9 @@ namespace Raven.NewClient.Client.Linq
 
         public Lazy<FacetedQueryResult> ToListLazy()
         {
-            var facetsLazy = queryable.ToFacetsLazy(AggregationQuery<T>.GetFacets(facets));
-            return new Lazy<FacetedQueryResult>(() => HandlRenames(facetsLazy.Value));
+            throw new NotImplementedException();
+           /* var facetsLazy = queryable.ToFacetsLazy(AggregationQuery<T>.GetFacets(facets));
+            return new Lazy<FacetedQueryResult>(() => HandlRenames(facetsLazy.Value));*/
         }
 
         public async Task<FacetedQueryResult> ToListAsync()
