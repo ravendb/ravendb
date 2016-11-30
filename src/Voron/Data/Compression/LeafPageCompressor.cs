@@ -14,7 +14,7 @@ namespace Voron.Data.Compression
         {
             if (defrag)
             {
-                if (page.CalcSizeUsed() == page.SizeUsed - Constants.TreePageHeaderSize) // check if the page relly requires defrag
+                if (page.CalcSizeUsed() != page.SizeUsed - Constants.TreePageHeaderSize) // check if the page relly requires defrag
                     page.Defrag(tx);
             }
 
