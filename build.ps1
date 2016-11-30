@@ -1,20 +1,9 @@
 $ErrorActionPreference = "Stop"
 
-if ($(Get-Command "npm" -ErrorAction SilentlyContinue) -eq $null) {
-    throw "NPM not found in path."
-}
-
-if ($(Get-Command "git" -ErrorAction SilentlyContinue) -eq $null) {
-    throw "git not found in path."
-}
-
-if ($(Get-Command "dotnet" -ErrorAction SilentlyContinue) -eq $null) {
-    throw "dotnet not found in path."
-}
-
 $DEV_BUILD_NUMBER = 40
 
 . '.\scripts\checkLastExitCode.ps1'
+. '.\scripts\checkPrerequisites'
 . '.\scripts\restore.ps1'
 . '.\scripts\clean.ps1'
 . '.\scripts\package.ps1'
@@ -24,6 +13,8 @@ $DEV_BUILD_NUMBER = 40
 . '.\scripts\copyDocs.ps1'
 . '.\scripts\env.ps1'
 . '.\scripts\updateSourceWithBuildInfo.ps1'
+
+CheckPrerequisites
 
 $buildNumber = GetBuildNumber
 $buildType = GetBuildType
