@@ -5,14 +5,19 @@ import importDatabaseModel = require("models/database/tasks/importDatabaseModel"
 
 class importDatabaseCommand extends commandBase {
 
-    constructor(private file: File, private model: importDatabaseModel, private db: database) {
+    constructor(private db: database, private operationId: number, private token: singleAuthToken, private file: File, private model: importDatabaseModel) {
         super();
     }
 
     execute(): JQueryPromise<operationIdDto> {
         this.reportInfo("Importing data...");
 
-        const url = endpoints.databases.smuggler.smugglerImport;
+        const urlArgs = {
+            operationId: this.operationId,
+            singleUseAuthToken: this.token.Token
+        };
+
+        const url = endpoints.databases.smuggler.smugglerImportAsync + this.urlEncodeArgs(urlArgs);
         const ajaxOptions: JQueryAjaxSettings = {
             processData: false, // Prevents JQuery from automatically transforming the data into a query string. http://api.jquery.com/jQuery.ajax/
             contentType: false

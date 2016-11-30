@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Client.Data;
 using Raven.Client.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
@@ -14,6 +15,7 @@ using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Smuggler.Documents
 {
@@ -34,10 +36,10 @@ namespace Raven.Server.Smuggler.Documents
         private MergedBatchPutCommand _prevCommand;
         private Task _prevCommandTask;
 
-        public async Task<ImportResult> Import(DocumentsOperationContext context, Stream stream)
+        public async Task<ImportResult> Import(DocumentsOperationContext context, Stream stream, Action<IOperationProgress> onProgress = null)
         {
             var result = new ImportResult();
-
+            var progress = new IndeterminateProgress();
             var state = new JsonParserState();
 
             JsonOperationContext.ManagedPinnedBuffer buffer;
@@ -101,7 +103,8 @@ namespace Raven.Server.Smuggler.Documents
 
                             if (operateOnType == "Docs" && Options.OperateOnTypes.HasFlag(DatabaseItemType.Documents))
                             {
-
+                                progress.Progress = "Importing Documents";
+                                onProgress?.Invoke(progress);
                                 PatchDocument patch = null;
                                 PatchRequest patchRequest = null;
                                 if (string.IsNullOrWhiteSpace(Options.TransformScript) == false)
@@ -128,8 +131,14 @@ namespace Raven.Server.Smuggler.Documents
 
                                     _batchPutCommand.Add(document.Data);
                                 }
-                                
-                                await HandleBatchOfDocuments(context, parser, buildVersion);
+
+                                if (result.DocumentsCount % 1000 == 0)
+                                {
+                                    progress.Progress = $"Imported {result.DocumentsCount} documents";
+                                    onProgress?.Invoke(progress);
+                                }
+
+                                await HandleBatchOfDocuments(context, parser, buildVersion).ConfigureAwait(false);
                             }
                             else if (operateOnType == "RevisionDocuments" &&
                                      Options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments))
@@ -140,7 +149,7 @@ namespace Raven.Server.Smuggler.Documents
                                 result.RevisionDocumentsCount++;
                                 using (var reader = builder.CreateReader())
                                     _batchPutCommand.Add(reader);
-                                await HandleBatchOfDocuments(context, parser, buildVersion);
+                                await HandleBatchOfDocuments(context, parser, buildVersion).ConfigureAwait(false); ;
                             }
                             else
                             {
@@ -156,6 +165,8 @@ namespace Raven.Server.Smuggler.Documents
                                                 continue;
 
                                             result.IndexesCount++;
+                                            progress.Progress = "importing Indexes";
+                                            onProgress?.Invoke(progress);
                                             try
                                             {
                                                 IndexProcessor.Import(builder, _database, buildVersion, Options.RemoveAnalyzers);
@@ -171,7 +182,9 @@ namespace Raven.Server.Smuggler.Documents
                                                 continue;
 
                                             result.TransformersCount++;
-
+                                            progress.Progress = "Importing Transformers";
+                                            onProgress?.Invoke(progress);
+                                            
                                             try
                                             {
                                                 TransformerProcessor.Import(builder, _database, buildVersion);
@@ -185,6 +198,8 @@ namespace Raven.Server.Smuggler.Documents
                                             if (Options.OperateOnTypes.HasFlag(DatabaseItemType.Identities))
                                             {
                                                 result.IdentitiesCount++;
+                                                progress.Progress = "Importing Identities";
+                                                onProgress?.Invoke(progress);
 
                                                 using (var reader = builder.CreateReader())
                                                 {

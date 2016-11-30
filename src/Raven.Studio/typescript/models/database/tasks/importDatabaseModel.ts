@@ -2,11 +2,13 @@
     includeDocuments = ko.observable(true);
     includeIndexes = ko.observable(true);
     includeTransformers = ko.observable(true);
+	includeIdentities = ko.observable(true);
     removeAnalyzers = ko.observable(false);
 
     includeRevisionDocuments = ko.observable(true);
     includeExpiredDocuments = ko.observable(true);
     shouldDisableVersioningBundle = ko.observable(false);
+	
     transformScript = ko.observable<string>();
 
     toDto(): Raven.Client.Smuggler.DatabaseSmugglerOptions {
@@ -23,6 +25,9 @@
         if (this.includeRevisionDocuments()) {
             operateOnTypes.push("RevisionDocuments");
         }
+		if (this.includeIdentities()){
+			operateOnTypes.push("Identities");
+		}
 
         return {
             IncludeExpired: this.includeExpiredDocuments(),
