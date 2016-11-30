@@ -3,13 +3,12 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 
 namespace Raven.Abstractions.Data
 {
     /// <summary>
     /// The result of a PUT operation
-    /// </summary>
+    /// </summary>   
     public class PutResult
     {
         /// <summary>
