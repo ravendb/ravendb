@@ -117,6 +117,7 @@ namespace Raven.Server
                     .CaptureStartupErrors(captureStartupErrors: true)
                     .UseKestrel(options =>
                     {
+                        options.ShutdownTimeout = TimeSpan.FromSeconds(1);
                     })
                     .UseUrls(Configuration.Core.ServerUrl)
                     .UseStartup<RavenServerStartup>()
