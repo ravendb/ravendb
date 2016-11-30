@@ -1,5 +1,17 @@
 $ErrorActionPreference = "Stop"
 
+if ($(Get-Command "npm" -ErrorAction SilentlyContinue) -eq $null) {
+    throw "NPM not found in path."
+}
+
+if ($(Get-Command "git" -ErrorAction SilentlyContinue) -eq $null) {
+    throw "git not found in path."
+}
+
+if ($(Get-Command "dotnet" -ErrorAction SilentlyContinue) -eq $null) {
+    throw "dotnet not found in path."
+}
+
 $DEV_BUILD_NUMBER = 40
 
 . '.\scripts\checkLastExitCode.ps1'
