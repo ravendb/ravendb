@@ -150,9 +150,8 @@ namespace Raven.NewClient.Client.Indexes
         /// <summary>
         /// Executes the index creation against the specified document database using the specified conventions
         /// </summary>
-        public virtual void Execute(IDocumentStore store, DocumentConvention documentConvention)
+        public virtual void Execute(IDocumentStore documentStore, DocumentConvention documentConvention)
         {
-            var documentStore = (DocumentStore) store;
             Conventions = documentConvention;
             var prettify = documentConvention.PrettifyGeneratedLinqExpressions;
             var transformerDefinition = CreateTransformerDefinition(prettify);

@@ -57,7 +57,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact(Skip = "WaitForIndexing not implemented")]
+        [Fact]
         public async void QueryAsync_By_Index()
         {
             using (var store = GetDocumentStore())

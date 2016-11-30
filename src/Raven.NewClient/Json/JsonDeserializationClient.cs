@@ -1,6 +1,7 @@
 ﻿using System;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Commands;
+using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Http;
@@ -33,5 +34,7 @@ namespace Raven.NewClient.Client.Json
         public static readonly Func<BlittableJsonReaderObject, GetIndexResult> GetIndexResult = GenerateJsonDeserializationRoutine<GetIndexResult>();
 
         public static readonly Func<BlittableJsonReaderObject, PutTransformerResult> PutTransformerResult = GenerateJsonDeserializationRoutine<PutTransformerResult>();
+
+        public static readonly Func<BlittableJsonReaderObject, DatabaseStatistics> GetStatisticsResult = GenerateJsonDeserializationRoutine<DatabaseStatistics>();
     }
 }

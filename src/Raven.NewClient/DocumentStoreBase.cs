@@ -13,6 +13,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Util.Encryptors;
 using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Http;
 using Raven.NewClient.Data.Indexes;
 
 namespace Raven.NewClient.Client
@@ -264,6 +265,12 @@ namespace Raven.NewClient.Client
         {
             return profilingContext.TryGet(id);
         }
+
+        public abstract string DefaultDatabase { get; set; }
+
+        public abstract RequestExecuter GetRequestExecuter(string databaseName);
+
+        public abstract RequestExecuter GetRequestExecuterForDefaultDatabase();
 
         /// <summary>
         /// Setup the context for aggressive caching.

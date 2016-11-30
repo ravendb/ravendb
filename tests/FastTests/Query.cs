@@ -125,7 +125,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact(Skip = "WaitForIndexing is not implemented")]
+        [Fact]
         public void Query_By_Index()
         {
             using (var store = GetDocumentStore())
