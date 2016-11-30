@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using Voron.Exceptions;
 using Voron.Impl.FileHeaders;
@@ -30,6 +31,15 @@ namespace Voron.Platform.Posix
                     throw new IOException(
                         "Tried too many times to call posix_fallocate, but always got EINTR, cannot retry again");
             }
+            if (result == (int) Errno.ENOSPC)
+            {
+                foreach (var drive in DriveInfo.GetDrives())
+                {
+                    if (file.StartsWith(drive.RootDirectory.Name))
+                        throw new DiskFullException(drive, file, (long)size);
+                }
+                // shouldn't happen, and we can throw normally here
+            }
             if (result != 0)
                 ThrowLastError(result, $"posix_fallocate(\"{file}\", {size})");
         }
@@ -43,9 +53,6 @@ namespace Voron.Platform.Posix
             {
                 case Errno.ENOMEM:
                     throw new OutOfMemoryException("ENOMEM on " + msg);
-                case Errno.ENOSPC:
-                    throw new DiskFullException("ENOSPC on " + msg);
-
                 default:
                     throw new InvalidOperationException(error + " " + msg);
             }
