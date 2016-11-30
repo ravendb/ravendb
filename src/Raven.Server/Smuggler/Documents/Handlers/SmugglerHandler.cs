@@ -299,47 +299,52 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                if (HttpContext.Request.Form.Files.Count > 0)
+                if (HttpContext.Request.HasFormContentType == false)
                 {
-                    var operationId = GetLongQueryString("operationId", required: false);
-                    var token = CreateOperationToken();
-
-                    if (operationId.HasValue)
+                    HttpContext.Response.StatusCode = 400; // Bad request
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
-                        await Database.Operations.AddOperation("Import to: " + Database.Name,
-                            DatabaseOperations.PendingOperationType.DatabaseImport,
-                            onProgress =>
-                            {
-                                return Task.Run(async () =>
-                                {
-                                    var result = new ImportResult();
-                                    foreach (var file in HttpContext.Request.Form.Files)
-                                    {
-                                        using (var fileStream = file?.OpenReadStream())
-                                        {
-                                            var stream = new GZipStream(fileStream, CompressionMode.Decompress);
-                                            var fileImport = await DoImportInternal(context, stream, onProgress).ConfigureAwait(false);
-                                            result.DocumentsCount += fileImport.DocumentsCount;
-                                            result.Warnings.AddRange(fileImport.Warnings);
-                                            result.IdentitiesCount += fileImport.IdentitiesCount;
-                                            result.Message = fileImport.Message;
-                                            result.RevisionDocumentsCount += fileImport.RevisionDocumentsCount;
-                                            result.IndexesCount += fileImport.IndexesCount;
-                                            result.TransformersCount += fileImport.TransformersCount;
-                                        }
-                                    }
-
-                                    return (IOperationResult)result;
-                                });
-
-                            }, operationId.Value, token).ConfigureAwait(false);
-
-                        using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                        context.Write(writer, new DynamicJsonValue
                         {
-                            writer.WriteOperationId(context, operationId.Value);
-                        }
+                            ["Type"] = "Error",
+                            ["Error"] = "This endpoint requires form content type"
+                        });
+                        return;
                     }
                 }
+
+                var operationId = GetLongQueryString("operationId", required: true) ?? -1;
+                var token = CreateOperationToken();
+                var sp = Stopwatch.StartNew();
+                var result = new ImportResult();
+                await Database.Operations.AddOperation("Import to: " + Database.Name,
+                    DatabaseOperations.PendingOperationType.DatabaseImport,
+                    onProgress =>
+                    {
+                        return Task.Run(async () =>
+                        {
+                            foreach (var file in HttpContext.Request.Form.Files)
+                            {
+                                using (var fileStream = file.OpenReadStream())
+                                {
+                                    var stream = new GZipStream(fileStream, CompressionMode.Decompress);
+                                    var fileImport =
+                                        await DoImportInternal(context, stream, onProgress).ConfigureAwait(false);
+                                    result.DocumentsCount += fileImport.DocumentsCount;
+                                    result.Warnings.AddRange(fileImport.Warnings);
+                                    result.IdentitiesCount += fileImport.IdentitiesCount;
+                                    result.Message = fileImport.Message;
+                                    result.RevisionDocumentsCount += fileImport.RevisionDocumentsCount;
+                                    result.IndexesCount += fileImport.IndexesCount;
+                                    result.TransformersCount += fileImport.TransformersCount;
+                                }
+                            }
+
+                            return (IOperationResult) result;
+                        });
+                    }, operationId, token).ConfigureAwait(false);
+
+                WriteImportResult(context, sp, result, ResponseBodyStream());
             }
         }
 
@@ -386,18 +391,10 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         {
             using (var writer = new BlittableJsonTextWriter(context, stream))
             {
-                context.Write(writer, new DynamicJsonValue
-                {
-                    ["ElapsedMilliseconds"] = sp.ElapsedMilliseconds,
-                    ["Elapsed"] = sp.Elapsed.ToString(),
-                    ["DocumentsCount"] = result.DocumentsCount,
-                    ["RevisionDocumentsCount"] = result.RevisionDocumentsCount,
-                    ["IndexesCount"] = result.IndexesCount,
-                    ["IdentitiesCount"] = result.IdentitiesCount,
-                    ["TransformersCount"] = result.TransformersCount,
-                    ["Warnings"] = new DynamicJsonArray(result.Warnings),
-                    ["OperationId"] = Database.Operations.GetNextOperationId()
-                });
+                var json = result.ToJson();
+                json["ElapsedMilliseconds"] = sp.ElapsedMilliseconds;
+                json["Elapsed"] = sp.Elapsed.ToString();
+                context.Write(writer, json);
             }
         }
     }
