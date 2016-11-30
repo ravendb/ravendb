@@ -1,6 +1,9 @@
 {
   "version": "1.0.0",
   "name": "Raven.Studio",
+  "scripts": {
+      "gulp": "gulp"
+  },
   "private": true,
   "devDependencies": {
     "del": "^2.2.0",

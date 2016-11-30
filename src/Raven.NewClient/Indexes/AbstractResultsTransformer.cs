@@ -13,7 +13,9 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data.Transformers;
+using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Indexes
 {
@@ -148,18 +150,27 @@ namespace Raven.NewClient.Client.Indexes
         /// <summary>
         /// Executes the index creation against the specified document database using the specified conventions
         /// </summary>
-        public virtual void Execute(DocumentConvention documentConvention)
+        public virtual void Execute(IDocumentStore store, DocumentConvention documentConvention)
         {
-            throw new NotImplementedException("databaseCommands");
-            /*Conventions = documentConvention;
+            var documentStore = (DocumentStore) store;
+            Conventions = documentConvention;
             var prettify = documentConvention.PrettifyGeneratedLinqExpressions;
             var transformerDefinition = CreateTransformerDefinition(prettify);
-            // This code take advantage on the fact that RavenDB will turn an index PUT
-            // to a noop of the index already exists and the stored definition matches
-            // the new definition.
-            databaseCommands.PutTransformer(TransformerName, transformerDefinition);
 
-            if (documentConvention.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Transformers))
+            var requestExecuter = documentStore.GetRequestExecuter(documentStore.DefaultDatabase);
+            JsonOperationContext jsonOperationContext;
+            requestExecuter.ContextPool.AllocateOperationContext(out jsonOperationContext);
+
+            var putTransformerOperation = new PutTransformerOperation(jsonOperationContext);
+
+            var putTransformerCommand = putTransformerOperation.CreateRequest(documentConvention, TransformerName, transformerDefinition);
+            if (putTransformerCommand != null)
+            {
+                requestExecuter.Execute(putTransformerCommand, jsonOperationContext);
+                putTransformerOperation.SetResult(putTransformerCommand.Result);
+            }
+
+            /*if (documentConvention.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Transformers))
                 ReplicateTransformerIfNeeded(databaseCommands);*/
         }
 

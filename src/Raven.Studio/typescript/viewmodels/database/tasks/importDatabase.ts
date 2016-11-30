@@ -7,6 +7,8 @@ import importDatabaseModel = require("models/database/tasks/importDatabaseModel"
 import notificationCenter = require("common/notifications/notificationCenter");
 import eventsCollector = require("common/eventsCollector");
 import copyToClipboard = require("common/copyToClipboard");
+import getNextOperationId = require("commands/database/studio/getNextOperationId");
+import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 
 class importDatabase extends viewModelBase {
 
@@ -92,18 +94,37 @@ class importDatabase extends viewModelBase {
         this.isUploading(true);
         
         const fileInput = document.querySelector(importDatabase.filePickerTag) as HTMLInputElement;
+        const db = this.activeDatabase();
 
-        new importDatabaseCommand(fileInput.files[0], this.model, this.activeDatabase())
-            .execute()
-            .done((result: operationIdDto) => {
-                const operationId = result.OperationId;
-                notificationCenter.instance.monitorOperation(this.activeDatabase(), operationId);
-            })
-            .always(() => this.isUploading(false));
+        $.when<any>(this.getNextOperationId(db), this.getAuthToken(db))
+            .then(([operationId]: [number], [token]: [singleAuthToken]) => {
+                new importDatabaseCommand(db, operationId, token, fileInput.files[0], this.model)
+                    .execute()
+                    .done(() => {
+                        notificationCenter.instance.monitorOperation(db, operationId);
+                    })
+                    .always(() => this.isUploading(false));
+            });
     }
 
     copyCommandToClipboard() {
         copyToClipboard.copy(this.importCommand(), "Command was copied to clipboard.");
+    }
+
+    private getNextOperationId(db: database): JQueryPromise<number> {
+        return new getNextOperationId(db).execute()
+            .fail((qXHR, textStatus, errorThrown) => {
+                messagePublisher.reportError("Could not get next task id.", errorThrown);
+                this.isUploading(false);
+            });
+    }
+
+    private getAuthToken(db: database): JQueryPromise<singleAuthToken> {
+        return new getSingleAuthTokenCommand(db).execute()
+            .fail((qXHR, textStatus, errorThrown) => {
+                messagePublisher.reportError("Could not get single auth token.", errorThrown);
+                this.isUploading(false);
+            });
     }
 
 }

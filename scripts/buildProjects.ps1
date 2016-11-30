@@ -30,7 +30,6 @@ function BuildTypingsGenerator ( $srcDir ) {
 function BuildStudio ( $srcDir, $projectDir, $version ) {
     # build studio
     write-host "Building Studio..."
-    & npm install -g gulp-cli
     cd $srcDir
 
     & npm install
@@ -41,7 +40,7 @@ function BuildStudio ( $srcDir, $projectDir, $version ) {
     "{ ""Version"": ""$version"" }" | Out-File $versionJsonPath -Encoding UTF8
 
 
-    & gulp alpha-release
+    & npm run gulp alpha-release
     CheckLastExitCode
 
     cd $projectDir

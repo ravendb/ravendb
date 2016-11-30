@@ -1,0 +1,66 @@
+#!/bin/bash
+
+NODE_CMD=$(which node)
+DOTNET_CMD=$(which dotnet)
+POWERSHELL_CMD=$(which powershell)
+UBUNTU_CODENAME=$(lsb_release -c | cut -d ":" -f2 | sed 's/\t//g')
+UBUNTU_VERSION=$(lsb_release -r | cut -d ":" -f2 | sed 's/\t//g')
+
+if [[ ! "$UBUNTU_VERSION" =~ ^1[46]\.04$ ]] ; then
+    echo "Unsupported Ubuntu version: $UBUNTU_VERSION $UBUNTU_CODENAME. Must be 16.04 or 14.04."
+    exit -1
+fi
+
+
+if [[ $UID != 0 ]]; then
+    echo "Please run this script with sudo:"
+    echo "sudo $0 $*"
+    exit 1
+fi
+
+if [ -z "$DOTNET_CMD" ] ; then
+    echo ".NETcore not found. Installing.."
+    sudo echo "deb [arch=amd64] https://apt-mo.trafficmanager.net/repos/dotnet-release/ $UBUNTU_CODENAME main" > /etc/apt/sources.list.d/dotnetdev.list
+    sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 417A0893
+    sudo apt-get update
+    sudo apt-get install -y dotnet-dev-1.0.0-preview2.1-003177
+else
+    echo ".NETcore is installed."
+fi
+
+if [ -z "$POWERSHELL_CMD" ] ; then
+
+    echo "Powershell not found. Installing.."
+
+    if [ "$UBUNTU_VERSION" = "16.04" ] ; then
+        POWERSHELL_URL="https://github.com/PowerShell/PowerShell/releases/download/v6.0.0-alpha.13/powershell_6.0.0-alpha.13-1ubuntu1.16.04.1_amd64.deb"
+    elif [ "$UBUNTU_VERSION" = "14.04" ] ; then
+        POWERSHELL_URL="https://github.com/PowerShell/PowerShell/releases/download/v6.0.0-alpha.13/powershell_6.0.0-alpha.13-1ubuntu1.14.04.1_amd64.deb"
+    fi
+
+    POWERSHELL_FILE="powershell.deb"
+
+    wget "$POWERSHELL_URL" -O "$POWERSHELL_FILE"
+    sudo dpkg -i "$POWERSHELL_FILE"
+    sudo apt-get install -f
+    rm "$POWERSHELL_FILE"
+else
+    echo "Powershell is installed."
+fi
+
+if [ -z "$NODE_CMD" ] ; then
+    echo "Node not found. Installing.."
+    curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
+    sudo apt-get install -y nodejs
+else
+    NODE_VERSION="$($NODE_CMD --version)"
+
+    if [[ ! "$NODE_VERSION" =~ ^v?[67] ]] ; then
+        echo "Incompatible version of NodeJS found: $NODE_VERSION. NodeJS 6.x or later is required."
+        exit 1
+    else
+    echo "Node $NODE_VERSION is installed."
+    fi
+fi
+
+echo "To build RavenDB run: powershell ./build.ps1"

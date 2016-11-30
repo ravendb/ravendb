@@ -143,3 +143,8 @@ interface arrayOfResultsAndCountDto<T> {
     Results: T[];
     Count: number;
 }
+
+interface documentColorPair {
+    docName: string;
+    docColor: string;
+}

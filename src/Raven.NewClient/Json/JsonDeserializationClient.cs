@@ -28,6 +28,10 @@ namespace Raven.NewClient.Client.Json
 
         public static readonly Func<BlittableJsonReaderObject, CreateDatabaseResult> CreateDatabaseResult = GenerateJsonDeserializationRoutine<CreateDatabaseResult>();
 
-        public static readonly Func<BlittableJsonReaderObject, DeleteDatabaseResult> DeleteDatabaseResult = GenerateJsonDeserializationRoutine<DeleteDatabaseResult>();
+        public static readonly Func<BlittableJsonReaderObject, PutIndexResult> PutIndexResult = GenerateJsonDeserializationRoutine<PutIndexResult>();
+
+        public static readonly Func<BlittableJsonReaderObject, GetIndexResult> GetIndexResult = GenerateJsonDeserializationRoutine<GetIndexResult>();
+
+        public static readonly Func<BlittableJsonReaderObject, PutTransformerResult> PutTransformerResult = GenerateJsonDeserializationRoutine<PutTransformerResult>();
     }
 }

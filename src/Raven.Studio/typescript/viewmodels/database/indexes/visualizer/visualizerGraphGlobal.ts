@@ -240,9 +240,8 @@ class documentItem {
 
     connectedPages = [] as Array<pageItem>;
 
-    constructor(name: string, color: string) {
+    constructor(name: string) {
         this.name = name;
-        this.color = color;
     }
 
     getSourceConnectionPoint(): [number, number] {
@@ -309,6 +308,9 @@ interface avgXVals {
 }
 
 class visualizerGraphGlobal {
+    
+    static readonly documentColors = ["#2196f5", "#ef6c5a", "#80ced0", "#9ccd64", "#f06292", "#7f45e6", "#fea724", "#01acc0"];
+    private nextColorIndex = 0;
 
     static margins = {
         betweenPagesWidth: 30,
@@ -341,8 +343,8 @@ class visualizerGraphGlobal {
 
     private goToDetailsCallback: (treeName: string) => void;
 
-    addDocument(documentName: string, color: string) {
-        const document = new documentItem(documentName, color);
+    addDocument(documentName: string) {
+        const document = new documentItem(documentName);
         this.documents.push(document);
     }
 
@@ -420,6 +422,16 @@ class visualizerGraphGlobal {
             .call(d => this.setupEvents(d));
 
         this.hitTest.init(item => this.onPageClicked(item));
+    }
+
+    getDocumentsColors(): Array<documentColorPair> {
+        let documentsColorsSetup: Array<documentColorPair> = [];
+
+        for (let i = 0; i < this.documents.length; i++) {
+            const doc = this.documents[i];
+            documentsColorsSetup.push( { docName: doc.name, docColor: doc.color} );
+        }
+        return documentsColorsSetup;
     }
 
     private setupEvents(selection: d3.Selection<void>) {
@@ -560,7 +572,11 @@ class visualizerGraphGlobal {
         // Sort the avg x values 
         avgXValues.sort((a1, a2) => a1.avgXVal - a2.avgXVal);
 
-        // Order documents according to the sort values
+        // set color of 1'st document
+        this.nextColorIndex = 0;
+        this.documents[0].color = this.getNextColor();
+
+        // Order documents according to the sorted values and set documents colors 
         const xPadding = 20;
         for (let i = 1; i < avgXValues.length; i++) {
             const doc = this.documents[avgXValues[i].docIndex];
@@ -572,6 +588,7 @@ class visualizerGraphGlobal {
                 doc.x = previousX + doc.width + xPadding;
                 avgXValues[i].avgXVal = doc.x;
             }
+            doc.color = this.getNextColor();
         }
     }
 
@@ -769,6 +786,12 @@ ctx.stroke();*/
 
     static totalEntriesWidth(entries: number) {
         return Math.ceil(Math.log10(entries)) * 10;
+    }
+
+    private getNextColor() {
+        const color = visualizerGraphGlobal.documentColors[this.nextColorIndex % visualizerGraphGlobal.documentColors.length];
+        this.nextColorIndex++;
+        return color;
     }
 }
 

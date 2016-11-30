@@ -15,13 +15,9 @@ class visualizer extends viewModelBase {
 
     static readonly noIndexSelected = "Select an index";
 
-    static readonly documentColors = ["#7cb82f", "#1a858e", "#ef6c5a"];
-
     indexes = ko.observableArray<string>();
     indexName = ko.observable<string>();
-
-    private nextColorIndex = 0;
-
+    
     private currentIndex = ko.observable<string>();
 
     private currentIndexUi: KnockoutComputed<string>;
@@ -91,8 +87,7 @@ class visualizer extends viewModelBase {
         this.documents.docKeys([]);
         this.documents.docKey("");
         this.documents.docKeysSearchResults([]);
-        this.nextColorIndex = 0;
-
+        
         this.globalGraph.reset();
         this.detailsGraph.reset();
     }
@@ -121,11 +116,9 @@ class visualizer extends viewModelBase {
         }
     }
 
-    private addDocument(docName: string) {
-        const documentColor = this.getNextColor();
-
-        this.globalGraph.addDocument(docName, documentColor);
-        this.detailsGraph.addDocument(docName, documentColor);
+    private addDocument(docName: string) {       
+        this.globalGraph.addDocument(docName);
+        this.detailsGraph.addDocument(docName);
     }
 
     private addTrees(result: Raven.Server.Documents.Indexes.Debugging.ReduceTree[]) {
@@ -146,6 +139,7 @@ class visualizer extends viewModelBase {
         }
 
         this.globalGraph.addTrees(treesToAdd);
+        this.detailsGraph.setDocumentsColors(this.globalGraph.getDocumentsColors());
     }
 
     private mergeTrees(incoming: Raven.Server.Documents.Indexes.Debugging.ReduceTree, mergeOnto: Raven.Server.Documents.Indexes.Debugging.ReduceTree) {
@@ -192,12 +186,6 @@ class visualizer extends viewModelBase {
         this.addDocKey(value);
         this.documents.docKey("");
         this.documents.docKeysSearchResults.removeAll();
-    }
-
-    private getNextColor() {
-        const color = visualizer.documentColors[this.nextColorIndex % visualizer.documentColors.length];
-        this.nextColorIndex++;
-        return color;
     }
 
     private fetchDocKeySearchResults(query: string) {

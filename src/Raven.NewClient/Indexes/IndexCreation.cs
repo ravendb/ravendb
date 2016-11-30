@@ -126,7 +126,6 @@ namespace Raven.NewClient.Client.Indexes
             var indexCompilationExceptions = new List<IndexCompilationException>();
             try
             {
-              
                 documentStore.ExecuteIndexes(indexes);
             }
             // For old servers that don't have the new endpoint for executing multiple indexes
@@ -415,11 +414,11 @@ namespace Raven.NewClient.Client.Indexes
             }
         }
 
-        private static void CreateTransformers(IEnumerable<AbstractTransformerCreationTask> transformers,  DocumentConvention conventions)
+        private static void CreateTransformers(IEnumerable<AbstractTransformerCreationTask> transformers, IDocumentStore documentStore,  DocumentConvention conventions)
         {
             foreach (var task in transformers)
             {
-                task.Execute(conventions);
+                task.Execute(documentStore, conventions);
             }
         }
 

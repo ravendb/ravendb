@@ -89,7 +89,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
             }
         }
 
-        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
+        [Fact]
         public void CanCallMultipleTransformers()
         {
             using (var store = GetDocumentStore())
@@ -111,7 +111,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
             }
         }
 
-        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
+        [Fact]
         public void CanCallTransformerPerItem()
         {
             using (var store = GetDocumentStore())
@@ -133,7 +133,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
 
         }
 
-        [Fact(Skip = "Execute in AbstractIndexCreationTask not implemented")]
+        [Fact]
         public void CanCallTransformerAllItem()
         {
             using (var store = GetDocumentStore())
