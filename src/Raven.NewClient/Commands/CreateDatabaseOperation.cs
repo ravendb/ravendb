@@ -32,13 +32,9 @@ namespace Raven.NewClient.Client.Commands
                 throw new InvalidOperationException("The Raven/DataDir setting is mandatory");
             MultiDatabase.AssertValidName(databaseDocument.Id);
 
-            JsonOperationContext jsonOperationContext;
-            documentStore.GetRequestExecuter(databaseDocument.Id)
-                .ContextPool.AllocateOperationContext(out jsonOperationContext);
-
             var entityToBlittable = new EntityToBlittable(null);
             var databaseDocumentAsBlittable = entityToBlittable.ConvertEntityToBlittable(databaseDocument,
-                documentStore.Conventions, jsonOperationContext);
+                documentStore.Conventions, _context);
             return new CreateDatabaseCommand()
             {
                 DatabaseDocument = databaseDocumentAsBlittable,

@@ -76,6 +76,11 @@ namespace Sparrow.Json
             return WriteValue(s,out token);
         }
 
+        public int WriteValue(decimal value)
+        {
+            return WriteValue((double)value);
+        }
+
         public int WriteValue(float value)
         {
             return WriteValue((double)value);
@@ -333,10 +338,12 @@ namespace Sparrow.Json
         }
 
         [ThreadStatic]
-        private static List<int> _intBuffer = new List<int>();
+        private static List<int> _intBuffer;
 
         public unsafe int WriteValue(string str, out BlittableJsonToken token, UsageMode mode = UsageMode.None)
         {
+            if (_intBuffer == null)
+                _intBuffer = new List<int>();
             int size = Encoding.UTF8.GetMaxByteCount(str.Length);
             FillBufferWithEscapePositions(str, _intBuffer);
             size += JsonParserState.GetEscapePositionsSize(_intBuffer);
