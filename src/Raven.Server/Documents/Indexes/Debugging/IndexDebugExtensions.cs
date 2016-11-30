@@ -139,34 +139,40 @@ namespace Raven.Server.Documents.Indexes.Debugging
         private static IEnumerable<ReduceTree> IterateTrees(Index self, FixedSizeTree mapEntries,
             Tree reducePhaseTree, FixedSizeTree typePerHash, TransactionOperationContext indexContext)
         {
-            var rendered = new HashSet<ulong>();
+            var entriesPerReduceKeyHash = new Dictionary<ulong, List<MapEntry>>();
 
             foreach (var mapEntry in MapReduceIndexBase<MapReduceIndexDefinition>.GetMapEntries(mapEntries))
             {
-                if (rendered.Add(mapEntry.ReduceKeyHash) == false)
-                    continue;
+                List<MapEntry> entries;
+                if (entriesPerReduceKeyHash.TryGetValue(mapEntry.ReduceKeyHash, out entries) == false)
+                    entriesPerReduceKeyHash[mapEntry.ReduceKeyHash] = entries = new List<MapEntry>();
 
+                entries.Add(mapEntry);
+            }
+
+            foreach (var item in entriesPerReduceKeyHash)
+            {
                 MapReduceResultsStore store;
 
                 var mapReduceIndex = self as MapReduceIndex;
 
                 if (mapReduceIndex != null)
                     store = mapReduceIndex.CreateResultsStore(typePerHash,
-                        mapEntry.ReduceKeyHash, indexContext, false);
+                        item.Key, indexContext, false);
                 else
                     store = ((AutoMapReduceIndex) self).CreateResultsStore(typePerHash,
-                        mapEntry.ReduceKeyHash, indexContext, false);
+                        item.Key, indexContext, false);
 
                 using (store)
                 {
                     switch (store.Type)
                     {
                         case MapResultsStorageType.Tree:
-                            yield return RenderTree(store.Tree, mapEntry, mapEntries.Name.ToString(), self, indexContext);
+                            yield return RenderTree(store.Tree, item.Value, mapEntries.Name.ToString(), self, indexContext);
                             break;
                         case MapResultsStorageType.Nested:
                             yield return
-                                RenderNestedSection(store.GetNestedResultsSection(reducePhaseTree), mapEntry, mapEntries.Name.ToString(), self,
+                                RenderNestedSection(store.GetNestedResultsSection(reducePhaseTree), item.Value, mapEntries.Name.ToString(), self,
                                     indexContext);
                             break;
                         default:
@@ -176,14 +182,14 @@ namespace Raven.Server.Documents.Indexes.Debugging
             }
         }
 
-        private static unsafe ReduceTree RenderTree(Tree tree, MapEntry mapEntry, string sourceDocId, Index index, TransactionOperationContext context)
+        private static unsafe ReduceTree RenderTree(Tree tree, List<MapEntry> mapEntries, string sourceDocId, Index index, TransactionOperationContext context)
         {
             var stack = new Stack<ReduceTreePage>();
             var rootPage = tree.GetReadOnlyTreePage(tree.State.RootPageNumber);
 
             var root = new ReduceTreePage(rootPage);
 
-            root.AggregationResult = GetReduceResult(mapEntry.ReduceKeyHash, index, context);
+            root.AggregationResult = GetReduceResult(mapEntries[0].ReduceKeyHash, index, context);
             
             stack.Push(root);
 
@@ -224,9 +230,14 @@ namespace Raven.Server.Documents.Indexes.Debugging
                         using (page.GetNodeKey(tx, i, out s))
                         {
                             var mapEntryId = *(long*) s.Content.Ptr;
-                            if (mapEntryId == mapEntry.Id)
+
+                            foreach (var mapEntry in mapEntries)
                             {
-                                entry.Source = sourceDocId;
+                                if (mapEntryId == mapEntry.Id)
+                                {
+                                    entry.Source = sourceDocId;
+                                    break;
+                                }
                             }
                         }
                         
@@ -290,13 +301,13 @@ namespace Raven.Server.Documents.Indexes.Debugging
             }
         }
 
-        private static ReduceTree RenderNestedSection(NestedMapResultsSection section, MapEntry mapEntry, string sourceDocId, Index index, TransactionOperationContext context)
+        private static ReduceTree RenderNestedSection(NestedMapResultsSection section, List<MapEntry> mapEntries, string sourceDocId, Index index, TransactionOperationContext context)
         {
             var entries = new Dictionary<long, BlittableJsonReaderObject>();
 
             var root = new ReduceTreePage(section.RelevantPage);
 
-            root.AggregationResult = GetReduceResult(mapEntry.ReduceKeyHash, index, context);
+            root.AggregationResult = GetReduceResult(mapEntries[0].ReduceKeyHash, index, context);
 
             section.GetResultsForDebug(context, entries);
 
@@ -307,8 +318,14 @@ namespace Raven.Server.Documents.Indexes.Debugging
                     Data = item.Value
                 };
 
-                if (item.Key == mapEntry.Id)
-                    entry.Source = sourceDocId;
+                foreach (var mapEntry in mapEntries)
+                {
+                    if (item.Key == mapEntry.Id)
+                    {
+                        entry.Source = sourceDocId;
+                        break;
+                    }
+                }
 
                 root.Entries.Add(entry);
             }
