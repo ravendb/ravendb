@@ -11,7 +11,7 @@ class disableResourceToggleConfirm extends confirmViewModelBase<confirmDialogRes
         super(null);
 
         this.deletionText = disable ? "You're disabling" : "You're enabling";
-        this.confirmDeletionText = disable ? "Yep, disable" : "Yep, enable";
+        this.confirmDeletionText = disable ? "Disable" : "Enable";
     }
 }
 
