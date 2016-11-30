@@ -46,6 +46,7 @@ namespace FastTests.Server.Documents.Versioning
         [Fact]
         public async Task GetRevisionsOfNotExistKey()
         {
+
             using (var store = GetDocumentStore())
             {
                 await VersioningHelper.SetupVersioning(store);
@@ -90,6 +91,40 @@ namespace FastTests.Server.Documents.Versioning
                     Assert.Empty(await session.Advanced.GetRevisionsForAsync<Comment>(comment.Id));
                     var users = await session.Advanced.GetRevisionsForAsync<User>(user.Id);
                     Assert.Equal(1, users.Length);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ServerSaveBundlesAfterRestart()
+        {
+            var path = NewDataPath();
+            var company = new Company { Name = "Company Name" };
+            using (var store = GetDocumentStore(path: path))
+            {
+                await VersioningHelper.SetupVersioning(store);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(company);
+                    await session.SaveChangesAsync();
+                }
+                using (var session = store.OpenAsyncSession())
+                {
+                    var company3 = await session.LoadAsync<Company>(company.Id);
+                    company3.Name = "Hibernating Rhinos";
+                    await session.SaveChangesAsync();
+                }
+
+            }
+
+            using (var store = GetDocumentStore(path: path))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    var companiesRevisions = await session.Advanced.GetRevisionsForAsync<Company>(company.Id);
+                    Assert.Equal(2, companiesRevisions.Length);
+                    Assert.Equal("Company Name", companiesRevisions[0].Name);
+                    Assert.Equal("Hibernating Rhinos", companiesRevisions[1].Name);
                 }
             }
         }
