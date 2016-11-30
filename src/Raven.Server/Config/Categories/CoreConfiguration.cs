@@ -20,6 +20,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Raven/MaxPageSize")]
         public int MaxPageSize { get; set; }
 
+        [Description("The directory into which RavenDB will search the studio files, defaults to the base directory")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Raven/StudioDirectory")]
+        public string StudioDirectory { get; set; }
+
         [Description("The directory into which RavenDB will write the logs, for relative path, the applciation base directory is used")]
         [DefaultValue("Logs")]
         [ConfigurationEntry("Raven/LogsDirectory")]
@@ -54,7 +59,7 @@ namespace Raven.Server.Config.Categories
         }
 
         [Description("The directory for the RavenDB database. You can use the ~\\ prefix to refer to RavenDB's base directory.")]
-        [DefaultValue(@"~\Databases\System")]
+        [DefaultValue(@"~/Databases")]
         [ConfigurationEntry("Raven/DataDir")]
         public string DataDirectory
         {

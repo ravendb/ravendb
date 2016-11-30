@@ -155,9 +155,10 @@ namespace Raven.Server.Documents
             {
                 config.SetSetting(securedSetting.Key, securedSetting.Value);
             }
+            var dbsBaseDir = ServerStore.Configuration.Core.DataDirectory;
 
-            config.SetSetting(folderPropName, config.GetSetting(folderPropName).ToFullPath(ServerStore.Configuration.Core.DataDirectory));
-            config.SetSetting(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath), config.GetSetting(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)).ToFullPath(ServerStore.Configuration.Core.DataDirectory));
+            config.SetSetting(folderPropName, config.GetSetting(folderPropName).ToFullPath(dbsBaseDir));
+            config.SetSetting(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath), config.GetSetting(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)).ToFullPath(dbsBaseDir));
 
             config.DatabaseName = databaseName.ToString();
 
