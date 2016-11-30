@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Index;
@@ -662,14 +663,17 @@ This edge-case has a very slim chance of happening, but still we should not igno
             var query = new BooleanQuery();
             //Here the Occur.MUST is ignored we will use the default occur in children nodes
             Node.AddQueryToBooleanQuery(query, configuration, Occur.MUST,true); 
-            query.Boost = Boost == null ? 1 : float.Parse(Boost);
+            query.Boost = GetBoost();
             return query;
         }
 
         public override Query ToGroupFieldQuery(LuceneASTQueryConfiguration configuration)
         {
-            return Node.ToQuery(configuration);
+            var query = Node.ToQuery(configuration);
+            query.Boost = GetBoost();
+            return query;
         }
+
         public LuceneASTNodeBase Node { get; set; }
         public string Boost { get; set; }
         public override string ToString()
@@ -678,6 +682,13 @@ This edge-case has a very slim chance of happening, but still we should not igno
             sb.Append('(').Append(Node).Append(')').Append(string.IsNullOrEmpty(Boost)?string.Empty:string.Format("^{0}",Boost));
             return sb.ToString();
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public float GetBoost()
+        {
+            return  Boost == null ? 1 : float.Parse(Boost);;
+        }
+
     }
     public class PostfixModifiers
     {
