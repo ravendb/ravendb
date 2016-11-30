@@ -20,6 +20,16 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Raven/MaxPageSize")]
         public int MaxPageSize { get; set; }
 
+        [Description("The directory into which RavenDB will write the logs, for relative path, the applciation base directory is used")]
+        [DefaultValue("Logs")]
+        [ConfigurationEntry("Raven/LogsDirectory")]
+        public string LogsDirectory { get; set; }
+
+        [Description("The logs level which RavenDB will use (None, Information, Operations)")]
+        [DefaultValue("Operations")]
+        [ConfigurationEntry("Raven/LogsLevel")]
+        public string LogLevel { get; set; }
+
         [Description("The URLs which the server should listen to. By default we listen to localhost:8080")]
         [DefaultValue("http://localhost:8080")]
         [ConfigurationEntry("Raven/ServerUrl")]

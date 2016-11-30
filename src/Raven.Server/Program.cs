@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.IO;
 using System.Runtime.Loader;
 using System.Threading;
 using Microsoft.Extensions.Configuration;
@@ -15,9 +16,6 @@ namespace Raven.Server
 
         public static int Main(string[] args)
         {
-            LoggingSource.Instance.SetupLogMode(LogMode.Operations, "Logs");
-            _logger = LoggingSource.Instance.GetLogger<Program>("Raven/Server");
-
             WelcomeMessage.Print();
 
             var configuration = new RavenConfiguration();
@@ -26,6 +24,13 @@ namespace Raven.Server
                 configuration.AddCommandLine(args);
             }
             configuration.Initialize();
+        
+            LogMode mode;
+            if(Enum.TryParse(configuration.Core.LogLevel, out mode) == false)
+                mode = LogMode.Operations;
+
+            LoggingSource.Instance.SetupLogMode(mode, Path.Combine(AppContext.BaseDirectory, configuration.Core.LogsDirectory));
+            _logger = LoggingSource.Instance.GetLogger<Program>("Raven/Server");
 
             try
             {
