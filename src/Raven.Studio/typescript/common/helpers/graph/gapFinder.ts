@@ -23,6 +23,16 @@ class gapFinder {
         return gapFinder.createScaleInternal(totalWidth, paddingBetweenGaps, trimmedDomain);
     }
 
+    /**
+    *  Returns helper function which translates milliseconds to pixels in scale with gaps
+    */
+    static extentGeneratorForScaleWithGaps(scale: d3.time.Scale<number, number>): (millis: number) => number {
+        const totalTime = gapFinder.calculateTotalTime(scale.domain());
+        const totalRangeWidth = gapFinder.calculateRangeWidthExceptGaps(scale.range());
+
+        return (millis: number) => millis * totalRangeWidth / totalTime;
+    }
+
     private sortDateRanges(dateRanges: Array<[Date, Date]>) {
         dateRanges.sort((a, b) => d3.ascending(a[0].getTime(), b[0].getTime()));
     }
@@ -57,17 +67,19 @@ class gapFinder {
     }
 
     private pushRegion(region: [Date, Date]) {
-        this.domain.push(region[0]);
-        this.domain.push(region[1]);
+        if (this.domain.length > 0) {
+            // since domain is not empty push gap
 
-        if (this.domain.length > 2) {
-            const lastEnd = this.domain[this.domain.length - 3].getTime();
+            const lastEnd = this.domain.last();
             const gapStart = region[0];
             this.gapsPositions.push({
-                start: gapStart,
-                durationInMillis: gapStart.getTime() - lastEnd
+                start: lastEnd,
+                durationInMillis: gapStart.getTime() - lastEnd.getTime()
             });
         }
+
+        this.domain.push(region[0]);
+        this.domain.push(new Date(region[1].getTime() + 1)); // add 1 extra millisecond to avoid issues with rounding time
     }
 
     private static calculateTotalTime(domain: Date[]) {
@@ -82,6 +94,20 @@ class gapFinder {
         }
 
         return totalTime;
+    }
+
+    private static calculateRangeWidthExceptGaps(input: number[]) {
+        let width = 0;
+
+        for (let i = 0; i < input.length / 2; i++) {
+            const s = input[2 * i];
+            const e = input[2 * i + 1];
+            const periodDuration = e - s;
+
+            width += periodDuration;
+        }
+
+        return width;
 
     }
 

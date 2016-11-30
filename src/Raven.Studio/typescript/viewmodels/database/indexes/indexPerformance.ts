@@ -103,6 +103,7 @@ class metrics extends viewModelBase {
 
     static readonly colors = {
         axis: "#546175",
+        gaps: "#546175",
         brushFill: "rgba(202, 28, 89, 0.25)",
         brushStoke: "#ca1c59",
         brushChartColor: "#008cc9",
@@ -120,6 +121,7 @@ class metrics extends viewModelBase {
     static readonly closedTrackPadding = 2;
     static readonly openedTrackPadding = 4;
     static readonly axisHeight = 35; 
+    static readonly brushGapWidth = 20;
 
     static readonly maxRecursion = 4;
     static readonly minGapSize = 10 * 1000; // 10 seconds
@@ -313,8 +315,9 @@ class metrics extends viewModelBase {
 
         const context = this.brushSection.getContext("2d");
 
-        this.xBrushTimeScale = this.gapFinder.createScale(this.totalWidth, 20);
+        this.xBrushTimeScale = this.gapFinder.createScale(this.totalWidth, metrics.brushGapWidth);
 
+        this.drawBrushGaps(context);
         this.drawXaxis(context, this.xBrushTimeScale, metrics.brushSectionHeight);
 
         context.strokeStyle = metrics.colors.axis;
@@ -333,6 +336,18 @@ class metrics extends viewModelBase {
         }
 
         this.prepareBrush();
+    }
+
+    private drawBrushGaps(context: CanvasRenderingContext2D) {
+        for (let i = 0; i < this.gapFinder.gapsPositions.length; i++) {
+            const gap = this.gapFinder.gapsPositions[i];
+
+            context.strokeStyle = metrics.colors.gaps;
+
+            context.moveTo(this.xBrushTimeScale(gap.start) + 8, 1);
+            graphHelper.zigZag(context, [this.xBrushTimeScale(gap.start) + 8, 1], 4, 8, metrics.brushSectionHeight - 2);
+            context.stroke();
+        }
     }
 
     private prepareBrush() {
@@ -500,7 +515,7 @@ class metrics extends viewModelBase {
             context.translate(0, metrics.brushSectionHeight);
             context.clearRect(0, 0, this.totalWidth, this.totalHeight - metrics.brushSectionHeight);
 
-            this.drawTracksBackground(context);
+            this.drawTracksBackground(context, xScale);
 
             if (xScale.domain().length) {
                 this.drawXaxis(context, xScale, this.totalHeight);
@@ -521,7 +536,7 @@ class metrics extends viewModelBase {
         }
     }
 
-    private drawTracksBackground(context: CanvasRenderingContext2D) {
+    private drawTracksBackground(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
         context.save();
 
         context.beginPath();
@@ -531,11 +546,24 @@ class metrics extends viewModelBase {
         this.data.forEach(perfStat => {
             const yStart = this.yScale(perfStat.IndexName);
 
+            context.fillStyle = metrics.colors.trackBackground;
+
             perfStat.Performance.forEach(perf => {
                 const isOpened = this.expandedTracks.contains(perfStat.IndexName);
+                const range = xScale.range();
 
-                context.fillStyle = metrics.colors.trackBackground;
-                context.fillRect(0, yStart, this.totalWidth, isOpened ? metrics.openedTrackHeight : metrics.closedTrackHeight);
+                const trackHeight = isOpened ? metrics.openedTrackHeight : metrics.closedTrackHeight;
+                const yEnd = trackHeight + yStart;
+
+                for (let i = 0; i < range.length / 2; i++) {
+                    const xStart = range[2 * i];
+                    const xEnd = range[2 * i + 1];
+
+                    const leftZigZag = xStart !== 0;
+                    const rightZigZag = xEnd !== this.totalWidth;
+
+                    graphHelper.zigZagRect(context, xStart, yStart, xEnd - xStart, yEnd - yStart, 4, 6, leftZigZag, rightZigZag);
+                }
             });
 
         });
@@ -552,7 +580,7 @@ class metrics extends viewModelBase {
             return;
         }
 
-        const extentFunc = graphHelper.extentGenerator(xScale);
+        const extentFunc = gapFinder.extentGeneratorForScaleWithGaps(xScale);
 
         this.data.forEach(perfStat => {
             const isOpened = this.expandedTracks.contains(perfStat.IndexName);
