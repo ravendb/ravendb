@@ -50,9 +50,9 @@ namespace Raven.Server.Web.System
         {
             "src/Raven.Studio/wwwroot",
              "wwwroot",
-            "../../Raven.Studio/wwwroot",
-            "../src/Raven.Studio/wwwroot",
-            
+           "~/../../Raven.Studio/wwwroot",
+            "~/../src/Raven.Studio/wwwroot",
+
         };
 
         private static string TryGetFileName(string filename)
