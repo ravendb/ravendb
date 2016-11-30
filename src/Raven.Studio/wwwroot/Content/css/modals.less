@@ -157,8 +157,64 @@
     }
 }
 
-#licenseModal .modal-header {
-    position: absolute;
-    width: 100%;
-    border-bottom: none;
+#licenseModal {
+    .modal-header {
+        position: absolute;
+        width: 100%;
+        border-bottom: none;
+    }
+
+    .modal-body {
+        overflow: hidden;
+    }
+
+    .form-container {
+        width: 200%;
+        overflow: hidden;
+        -webkit-transition: all .3s ease-in-out;
+        -moz-transition: all .3s ease-in-out;
+        -ms-transition: all .3s ease-in-out;
+        -o-transition: all .3s ease-in-out;
+        transition: all .3s ease-in-out;
+
+        -moz-transform: translateX(0);
+        -webkit-transform: translateX(0);
+        -o-transform: translateX(0);
+        -ms-transform: translateX(0);
+        transform: translateX(0);
+
+        #licenseRequestForm {
+            opacity: 1;
+            -webkit-transition: opacity .15s .15s ease-in-out;
+            -moz-transition: opacity .15s .15s ease-in-out;
+            -ms-transition: opacity .2s .15s ease-in-out;
+            -o-transition: opacity .15s .15s ease-in-out;
+            transition: opacity .15s .15s ease-in-out;
+        }
+
+        #enterLicenseKey {
+            opacity: 0;
+            -webkit-transition: opacity .15s .15s ease-in-out;
+            -moz-transition: opacity .15s .15s ease-in-out;
+            -ms-transition: opacity .2s .15s ease-in-out;
+            -o-transition: opacity .15s .15s ease-in-out;
+            transition: opacity .15s .15s ease-in-out;
+        }
+
+        &.enterKey {
+            -moz-transform: translateX(-50%);
+            -webkit-transform: translateX(-50%);
+            -o-transform: translateX(-50%);
+            -ms-transform: translateX(-50%);
+            transform: translateX(-50%);
+
+            #licenseRequestForm {
+                opacity: 0;
+            }
+
+            #enterLicenseKey {
+                opacity: 1;
+            }
+        }
+    }
 }
