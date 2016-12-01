@@ -1,4 +1,3 @@
-
 <div class="studio-alerts" data-bind="with: notificationCenter.recentErrors">
     <div data-bind="with: currentAlert">
         <div class="alert alert-dismissable fade in"
@@ -16,6 +15,11 @@
 </div>
 
 <div id="notification-center" data-bind="css: { 'show-notifications': notificationCenter.showNotifications() }, with: notificationCenter">
+    
+    <div class="padding" data-bind="visible: noNewNotifications">
+        <i class="icon-xl icon-empty-set text-muted"></i>
+        <h2 class="text-center">No new notifications</h2>
+    </div>
 
     <div data-bind="foreach: operations.watchedOperations()">
         <div data-bind="if: visible()">
