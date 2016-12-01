@@ -13,16 +13,17 @@ class statistics {
     // The observable indexes array, ordered by type
     indexesByType = ko.observableArray<indexesWithType>(); 
     
-    constructor(dto: Raven.Client.Data.DatabaseStatistics) {
-        this.dataBaseId = dto.DatabaseId; 
-        this.lastDocEtag = dto.LastDocEtag;
-        this.countOfIndexes = dto.CountOfIndexes.toLocaleString();
-        this.countOfDocuments = dto.CountOfDocuments.toLocaleString();
-        this.countOfTransformers = dto.CountOfTransformers.toLocaleString();
-        this.is64Bit = dto.Is64Bit;
+    constructor(dbStats: Raven.Client.Data.DatabaseStatistics, indexStats: Raven.Client.Data.Indexes.IndexStats[]) {
+        this.dataBaseId = dbStats.DatabaseId; 
+        this.lastDocEtag = dbStats.LastDocEtag;
+        this.countOfIndexes = dbStats.CountOfIndexes.toLocaleString();
+        this.countOfDocuments = dbStats.CountOfDocuments.toLocaleString();
+        this.countOfTransformers = dbStats.CountOfTransformers.toLocaleString();
+        this.is64Bit = dbStats.Is64Bit;
         
-        // 1. The array with all indexes from endpint
-        const allIndexes = dto.Indexes.map(x => new indexStatistics(x)); 
+        // 1. The array with all indexes from endpoint
+        //TODO: use index stats
+        const allIndexes = dbStats.Indexes.map(x => new indexStatistics(x)); 
 
         // 2. Create an array where indexes are ordered by type
         let indexesByTypeTemp = Array<indexesWithType>();

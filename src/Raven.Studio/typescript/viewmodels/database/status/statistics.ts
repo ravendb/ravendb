@@ -1,5 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
+import getIndexesStatsCommand = require("commands/database/index/getIndexesStatsCommand");
 import shell = require("viewmodels/shell");
 import changesContext = require("common/changesContext");
 import changeSubscription = require('common/changeSubscription');
@@ -32,10 +33,17 @@ class statistics extends viewModelBase {
    
     fetchStats(): JQueryPromise<Raven.Client.Data.DatabaseStatistics> {
         var db = this.activeDatabase();
-        return new getDatabaseStatsCommand(db)
-            .execute()
-            .done((result: Raven.Client.Data.DatabaseStatistics) => this.processStatsResults(result));
 
+        const dbStatsTask = new getDatabaseStatsCommand(db)
+            .execute();
+
+        const indexesStatsTask = new getIndexesStatsCommand(db)
+            .execute();
+
+        return $.when<any>(dbStatsTask, indexesStatsTask)
+            .done(([dbStats]: [Raven.Client.Data.DatabaseStatistics], [indexesStats]: [Raven.Client.Data.Indexes.IndexStats[]]) => {
+                this.processStatsResults(dbStats, indexesStats);
+                });
     }
 
     createNotifications(): Array<changeSubscription> {
@@ -46,8 +54,8 @@ class statistics extends viewModelBase {
         ];
     }
 
-    processStatsResults(results: Raven.Client.Data.DatabaseStatistics) {
-        this.stats(new statsModel(results));
+    processStatsResults(dbStats: Raven.Client.Data.DatabaseStatistics, indexesStats: Raven.Client.Data.Indexes.IndexStats[]) {
+        this.stats(new statsModel(dbStats, indexesStats));
     }
     
     urlForIndexPerformance(indexName: string) {
