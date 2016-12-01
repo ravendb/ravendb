@@ -19,6 +19,8 @@ using Raven.Client.Connection;
 using Raven.Client.Extensions;
 using Raven.Client.Replication.Messages;
 using Raven.Json.Linq;
+using Raven.Server.Alerts;
+using Raven.Server.Exceptions;
 using Raven.Server.Extensions;
 
 namespace Raven.Server.Documents.Replication
@@ -147,14 +149,59 @@ namespace Raven.Server.Documents.Replication
                             {
                                 using (_configurationContext.OpenReadTransaction())
                                 using (_documentsContext.OpenReadTransaction())
-                                    HandleServerResponse();
+                                {
+                                    var response = HandleServerResponse();
+                                    if (response.Item1 == ReplicationMessageReply.ReplyType.Error &&
+                                        response.Item2.Contains("DatabaseDoesNotExistsException"))
+                                    {
+                                        throw new DatabaseDoesNotExistsException();
+                                    }
+                                }
+                            }
+                            catch (DatabaseDoesNotExistsException e)
+                            {
+                                var msg = $"Failed to parse initial server replication response, because there is no database named {_database.Name} on the other end. " +
+                                          "In order for the replication to work, a database with the same name needs to be created at the destination";
+                                if (_log.IsInfoEnabled)
+                                {
+                                    _log.Info(msg,e);
+                                }
+
+                                using (var txw = _configurationContext.OpenWriteTransaction())
+                                {
+                                    _database.Alerts.AddAlert(new Alert
+                                    {
+                                        Key = FromToString,
+                                        Type = AlertType.Replication,
+                                        Message = msg,
+                                        CreatedAt = DateTime.UtcNow,
+                                        Severity = AlertSeverity.Warning
+                                    }, _configurationContext, txw);
+                                    txw.Commit();
+                                }
+
+                                throw;
                             }
                             catch (Exception e)
                             {
+                                var msg =
+                                    $"Failed to parse initial server response. This is definitely not supposed to happen. Exception thrown: {e}";
                                 if (_log.IsInfoEnabled)
-                                    _log.Info(
-                                        "Failed to parse initial server response. This is definitely not supposed to happen.",
-                                        e);
+                                    _log.Info(msg,e);
+
+                                using (var txw = _configurationContext.OpenWriteTransaction())
+                                {
+                                    _database.Alerts.AddAlert(new Alert
+                                    {
+                                        Key = FromToString,
+                                        Type = AlertType.Replication,
+                                        Message = msg,
+                                        CreatedAt = DateTime.UtcNow,
+                                        Severity = AlertSeverity.Error
+                                    }, _configurationContext, txw);
+                                    txw.Commit();
+                                }
+
                                 throw;
                             }
 
@@ -276,15 +323,12 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            //using (_configurationContext.OpenReadTransaction())
+            if (
+                _database.IndexMetadataPersistence.ReadLastEtag(_configurationContext.Transaction.InnerTransaction) !=
+                replicationBatchReply.LastIndexTransformerEtagAccepted)
             {
-                if (
-                    _database.IndexMetadataPersistence.ReadLastEtag(_configurationContext.Transaction.InnerTransaction) !=
-                    replicationBatchReply.LastIndexTransformerEtagAccepted)
-                {
-                    if (DateTime.UtcNow - _lastIndexOrTransformerSentTime > _minimalHeartbeatInterval)
-                        _waitForChanges.Set();
-                }
+                if (DateTime.UtcNow - _lastIndexOrTransformerSentTime > _minimalHeartbeatInterval)
+                    _waitForChanges.Set();
             }
         }
 
@@ -324,7 +368,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        internal void HandleServerResponse()
+        internal Tuple<ReplicationMessageReply.ReplyType,string> HandleServerResponse()
         {
             bool hasSucceededParsingResponse = false;
             try
@@ -359,6 +403,10 @@ namespace Raven.Server.Documents.Replication
                                     replicationBatchReply.Type);
                         }
                     }
+
+                    return Tuple.Create(replicationBatchReply.Type, 
+                        replicationBatchReply.Type == ReplicationMessageReply.ReplyType.Error ? 
+                        replicationBatchReply.Exception : String.Empty);
                 }
             }
             catch (Exception e)
