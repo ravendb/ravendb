@@ -49,7 +49,7 @@ namespace Voron.Data.BTrees
                     {
                         // we've just put a decompressed page to the cache however we aren't going to compress it
                         // need to invalidate it from the cache
-                        DecompressionsCache.Invalidate(page.PageNumber, (ushort) (version - 1));
+                        DecompressionsCache.Invalidate(page.PageNumber, version);
                     }
 
                     return false;
