@@ -1,29 +1,21 @@
 using System;
 using System.Diagnostics;
-using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml;
 using AsyncFriendlyStackTrace;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
-using Microsoft.AspNetCore.Server.Kestrel.Internal.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using NLog.Config;
 using Raven.Abstractions.Data;
 using Raven.Client.Exceptions;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
 using Raven.Server.Exceptions;
 using Raven.Server.Routing;
 using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using LogManager = NLog.LogManager;
 
 namespace Raven.Server
 {

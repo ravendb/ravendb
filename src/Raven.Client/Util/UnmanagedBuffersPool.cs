@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Runtime.InteropServices;
-using NLog;
 using Sparrow.Binary;
 using Sparrow.Json;
+using Sparrow.Logging;
 using Sparrow.Utils;
 
 namespace Raven.Client.Util
@@ -14,12 +13,12 @@ namespace Raven.Client.Util
 
         protected readonly string _databaseName;
 
-        private static readonly Logger _log = LogManager.GetLogger(nameof(UnmanagedBuffersPool));
+        private static readonly Logger _log = LoggingSource.Instance.GetLogger<UnmanagedBuffersPool>("Client");
 
         private readonly ConcurrentStack<AllocatedMemoryData>[] _freeSegments;
 
         private bool _isDisposed;
-        
+
         public UnmanagedBuffersPool(string debugTag, string databaseName = null)
         {
             _debugTag = debugTag;
@@ -73,7 +72,10 @@ namespace Raven.Client.Util
         ~UnmanagedBuffersPool()
         {
             if (_isDisposed == false)
-                _log.Warn($"UnmanagedBuffersPool for {_debugTag} wasn't properly disposed");
+            {
+                if (_log.IsOperationsEnabled)
+                    _log.Operations($"UnmanagedBuffersPool for {_debugTag} wasn't properly disposed");
+            }
 
             Dispose();
         }
@@ -96,7 +98,7 @@ namespace Raven.Client.Util
 
             var index = GetIndexFromSize(actualSize);
 
-                NativeMemory.ThreadStats stats;
+            NativeMemory.ThreadStats stats;
             if (index == -1)
             {
                 return new AllocatedMemoryData
@@ -116,7 +118,7 @@ namespace Raven.Client.Util
             return new AllocatedMemoryData
             {
                 SizeInBytes = actualSize,
-                Address = NativeMemory.AllocateMemory(size,out stats),
+                Address = NativeMemory.AllocateMemory(size, out stats),
                 AllocatingThread = stats
             };
         }
@@ -142,7 +144,7 @@ namespace Raven.Client.Util
 
         public static int GetIndexFromSize(int size)
         {
-            if (size > 1024*1024)
+            if (size > 1024 * 1024)
                 return -1;
 
             var c = 0;

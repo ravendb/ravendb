@@ -32,6 +32,7 @@
     "System.Collections.Specialized": "4.3.0",
     "System.Diagnostics.Process": "4.3.0",
     "System.Linq.Queryable": "4.3.0",
+    "System.Net.Requests": "4.3.0",
     "System.Net.NameResolution": "4.3.0",
     "System.Net.WebSockets.Client": "4.3.0",
     "System.Reflection.TypeExtensions": "4.3.0",

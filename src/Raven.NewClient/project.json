@@ -29,6 +29,7 @@
     "NETStandard.Library": "1.6.1",
     "Newtonsoft.Json": "9.0.1",
     "Sparrow": "4.0.0-*",
+    "System.Net.Requests": "4.3.0",
     "System.Collections.Specialized": "4.3.0",
     "System.Diagnostics.Process": "4.3.0",
     "System.Linq.Queryable": "4.3.0",
