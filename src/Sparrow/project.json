@@ -19,6 +19,7 @@
     "Microsoft.AspNetCore.WebSockets.Server": "0.1.0",
     "Microsoft.CSharp": "4.3.0",
     "NETStandard.Library": "1.6.1",
+    "NLog": "5.0.0-beta03",
     "System.Diagnostics.Contracts": "4.3.0",
     "System.Numerics.Vectors": "4.3.0",
     "System.Reflection": "4.3.0",
