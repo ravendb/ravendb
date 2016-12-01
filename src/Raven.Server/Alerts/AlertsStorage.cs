@@ -157,6 +157,17 @@ namespace Raven.Server.Alerts
             }
         }
 
+        public long GetAlertCount()
+        {
+            TransactionOperationContext context;
+            using (_contextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenReadTransaction())
+            {
+                var table = tx.InnerTransaction.OpenTable(_alertsSchema, AlertsSchema.AlertsTree);
+                return table.NumberOfEntries;
+            }
+        }
+
         private unsafe BlittableJsonReaderObject Read(JsonOperationContext context, TableValueReader reader)
         {
             int size;
