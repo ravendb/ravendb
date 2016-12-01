@@ -13,20 +13,14 @@ namespace Raven.NewClient.Client.Blittable
     {
         private readonly InMemoryDocumentSessionOperations _session;
 
-        private MemoryStream _stream;
-
-        public StreamWriter _streamWriter;
-
         /// <summary>
         /// All the listeners for this session
         /// </summary>
         public EntityToBlittable(InMemoryDocumentSessionOperations session)
         {
             _session = session;
-            _stream = new MemoryStream();
-            _streamWriter = new StreamWriter(_stream, StreamWriter.Null.Encoding, 1024, true);
-
         }
+
         public readonly Dictionary<object, Dictionary<string, object>> MissingDictionary = new Dictionary<object, Dictionary<string, object>>(ObjectReferenceEqualityComparer<object>.Default);
         
         public BlittableJsonReaderObject ConvertEntityToBlittable(object entity, DocumentInfo documentInfo)
@@ -42,31 +36,13 @@ namespace Raven.NewClient.Client.Blittable
 
         public BlittableJsonReaderObject ConvertEntityToBlittable(object entity, DocumentConvention documentConvention, JsonOperationContext jsonOperationContext)
         {
-            _stream.Position = 0;
-            documentConvention.SerializeEntityToJsonStream(entity, _streamWriter);
-            _stream.Position = 0;
-            return jsonOperationContext.ReadForMemory(_stream, "convention.Serialize");
-        }
+            var writer = new BlittableJsonWriter(jsonOperationContext);
+            var serializer = documentConvention.CreateSerializer();
 
-        private void InsertMetadataToStream(DocumentInfo documentInfo)
-        {
-            _stream.Position--;
-            var writer = new BlittableJsonTextWriter(_session.Context, _stream);
-            writer.WriteComma();
-            writer.WritePropertyName(Constants.Metadata.Key);
-            if ((documentInfo.Metadata.Modifications != null) &&
-                (documentInfo.Metadata.Modifications.Properties.Count > 0))
-            {
-                writer.WriteObject(_session.Context.ReadObject(documentInfo.Metadata.Modifications, documentInfo.Id));
-                documentInfo.Metadata.Modifications = null;
-            }
-            else
-            {
-                writer.WriteObject(documentInfo.Metadata);
-            }
-            writer.WriteEndObject();
-            writer.Flush();
-            _stream.Position = 0;
+            serializer.Serialize(writer, entity);
+            writer.FinalizeDocument();
+            var reader = writer.CreateReader();
+            return reader;
         }
 
         /// <summary>
