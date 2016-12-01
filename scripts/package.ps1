@@ -28,7 +28,7 @@ function TarGzFilesFromDir ( $targetFilename, $sourceDir ) {
     $glob = [io.path]::combine($sourceDir, '*')
     if ($(Get-Command "tar" -ErrorAction SilentlyContinue))
     {
-        & tar -cvzf "$targetFilename.tar.gz" $glob
+        & tar -C $sourceDir -cvzf "$targetFilename.tar.gz" .
         CheckLastExitCode
     }
     else
