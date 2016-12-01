@@ -12,16 +12,16 @@ namespace Tryouts
         {
             //LoggingSource.Instance.SetupLogMode(LogMode.Information, "E:\\Work");
 
-            //Parallel.For(0, 100, i =>
-            for (int i = 0; i < 100; i++)
+            Parallel.For(0, 100, i =>
+            //for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var store = new FastTests.Client.BulkInsert.BulkInserts())
+                using (var store = new FastTests.Server.Documents.Replication.ReplicationTombstoneTests())
                 {
-                    store.SimpleBulkInsertShouldWork().Wait();
+                    store.Two_tombstones_should_replicate_in_master_master().Wait();
                 }
             }
-            //);
+            ); 
         }
     }
 
