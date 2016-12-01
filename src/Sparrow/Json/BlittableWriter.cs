@@ -68,6 +68,13 @@ namespace Sparrow.Json
             return startPos;
         }
 
+        public int WriteValue(bool value)
+        {
+            var startPos = _position;
+            _position += WriteVariableSizeInt(value ? 1 : 0);
+            return startPos;
+        }
+
         public int WriteValue(double value)
         {
             // todo: write something more performant here..
