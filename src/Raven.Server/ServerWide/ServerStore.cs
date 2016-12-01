@@ -211,7 +211,7 @@ namespace Raven.Server.ServerWide
 
         public void Delete(TransactionOperationContext ctx, string id)
         {
-            TrackChange(ctx, "Delete", id);
+            TrackChangeAfterTransactionCommit(ctx, "Delete", id);
 
             var items = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
             Slice key;
@@ -261,7 +261,7 @@ namespace Raven.Server.ServerWide
 
         public long Write(TransactionOperationContext ctx, string id, BlittableJsonReaderObject doc, long? expectedEtag = null)
         {
-            TrackChange(ctx, "Write", id);
+            TrackChangeAfterTransactionCommit(ctx, "Write", id);
             var newEtag = _lastEtag + 1;
 
             Slice idAsSlice;
@@ -422,7 +422,23 @@ namespace Raven.Server.ServerWide
             return new DisposableAction(() => _changes.TryRemove(asyncQueue));
         }
 
-        public void TrackChange(TransactionOperationContext ctx, string operation, string id)
+        public void TrackChange(string operation, string id)
+        {
+            if (_changes.Count == 0)
+                return;
+
+            var djv = new GlobalAlertNotification
+            {
+                Operation = operation,
+                Id = id
+            };
+            foreach (var asyncQueue in _changes)
+            {
+                asyncQueue.Enqueue(djv);
+            }
+        }
+
+        public void TrackChangeAfterTransactionCommit(TransactionOperationContext ctx, string operation, string id)
         {
             if (_changes.Count == 0)
                 return;
