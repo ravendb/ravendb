@@ -47,12 +47,12 @@
                 </div>
             </div>
             <div class="flex-window-scroll">
-                <div class="panel-body objects-list-container">
-                    <!--<ul class="objects-list" data-bind="foreach: filteredResultSet">
+                <div class="panel-body "> <!-- TODO restore: objects-list-container class -->
+                    <ul class="objects-list" data-bind="foreach: filteredResultSet">
                         <li><a href="#" class="document" data-bind="text: id, attr: { href: href }"></a></li>
-                    </ul>-->
+                    </ul>
 
-                    <virtual-grid params="fetcher: fetchChunk.bind($data), showColumns: false, showRowSelectionCheckbox: false, columns: columns"></virtual-grid>
+                    <!--<virtual-grid params="fetcher: fetchChunk.bind($data), showColumns: false, showRowSelectionCheckbox: false, columns: columns"></virtual-grid>-->
 
                 </div>
             </div>
