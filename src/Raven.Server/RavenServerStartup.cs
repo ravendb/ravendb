@@ -16,6 +16,7 @@ using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 
 namespace Raven.Server
 {
@@ -24,6 +25,7 @@ namespace Raven.Server
         private RequestRouter _router;
         private RavenServer _server;
         private int _requestId;
+        private readonly Logger _logger = LoggingSource.Instance.GetLogger<RavenServerStartup>("Server");
 
         public void Configure(IApplicationBuilder app, ILoggerFactory loggerfactory)
         {
@@ -49,6 +51,11 @@ namespace Raven.Server
                 var sp = Stopwatch.StartNew();
                 var tenant = await _router.HandlePath(context, context.Request.Method, context.Request.Path.Value);
                 sp.Stop();
+
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info($"{context.Request.Method} {context.Request.Path.Value}?{context.Request.QueryString.Value} - {context.Response.StatusCode} - {sp.ElapsedMilliseconds:#,#;;0} ms");
+                }
 
                 if (TrafficWatchManager.HasRegisteredClients)
                 {
