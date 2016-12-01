@@ -896,8 +896,8 @@ namespace Raven.Database.Prefetching
 
             var numberOfSplitTasks = Math.Max(2, Environment.ProcessorCount / 2);
             var actualFutureIndexBatchesCount = GetActualFutureIndexBatchesCount(numberOfSplitTasks);
-            // no need to load more than 5 future batches
-            if (actualFutureIndexBatchesCount > 5)
+            // no need to load more than 10 future batches
+            if (actualFutureIndexBatchesCount > 10)
                 return;
 
             // ensure that we don't use too much memory
@@ -1105,7 +1105,7 @@ namespace Raven.Database.Prefetching
                     if (lastEtagInBatch == null || lastEtagInBatch == nextEtag)
                         break;
 
-                    if (AddFutureBatch(nextEtag, lastEtagInBatch, FutureBatchType.Splitted, count) == false)
+                    if (AddFutureBatch(nextEtag, lastEtagInBatch, FutureBatchType.Splitted) == false)
                     {
                         if (log.IsDebugEnabled)
                         {
@@ -1174,7 +1174,7 @@ namespace Raven.Database.Prefetching
             }
         }
 
-        private bool AddFutureBatch(Etag nextEtag, Etag untilEtag, FutureBatchType batchType, int? docsCount = null)
+        private bool AddFutureBatch(Etag nextEtag, Etag untilEtag, FutureBatchType batchType)
         {
             var futureBatchStat = new FutureBatchStats
             {
@@ -1241,9 +1241,8 @@ namespace Raven.Database.Prefetching
                         }
 
                         linkedToken.Token.ThrowIfCancellationRequested();
-                        var docsLeft = docsCount - jsonDocuments.Count;
-                        if (docsLeft > 0 && lastEtag.CompareTo(untilEtag) <= 0)
-                            AddFutureBatch(lastEtag, untilEtag, FutureBatchType.EarlyExit, docsLeft);
+                        if (lastEtag.CompareTo(untilEtag) <= 0)
+                            AddFutureBatch(lastEtag, untilEtag, FutureBatchType.EarlyExit);
                     }
                     else
                     {
