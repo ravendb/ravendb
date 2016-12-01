@@ -11,6 +11,7 @@ class createSampleData extends viewModelBase {
 
     classData = ko.observable<string>();
     canCreateSampleData = ko.observable<boolean>(false);
+    justCreatedSampleData = ko.observable<boolean>(false);
     classesVisible = ko.observable<boolean>(false);
 
     constructor() {
@@ -21,10 +22,13 @@ class createSampleData extends viewModelBase {
     generateSampleData() {
         eventsCollector.default.reportEvent("sample-data", "create");
         this.isBusy(true);
-        
+
         new createSampleDataCommand(this.activeDatabase())
             .execute()
-            .done(() => this.canCreateSampleData(false))
+            .done(() => {
+                this.canCreateSampleData(false);
+                this.justCreatedSampleData(true);
+            })
             .always(() => this.isBusy(false));
     }
 

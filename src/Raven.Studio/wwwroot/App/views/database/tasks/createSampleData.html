@@ -9,7 +9,7 @@
                         Create
                     </span>
                 </button>
-                <div class="padding padding-xs bg-danger" data-bind="visible: !canCreateSampleData()">
+                <div class="padding padding-xs bg-danger" data-bind="visible: !canCreateSampleData() && !justCreatedSampleData()">
                     <small>
                         requires an empty database
                     </small>
