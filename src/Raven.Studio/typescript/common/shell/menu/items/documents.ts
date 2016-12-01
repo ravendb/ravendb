@@ -38,5 +38,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
         })
     ];
 
-    return new intermediateMenuItem("Documents", documentsChildren, "icon-documents");
+    return new intermediateMenuItem("Documents", documentsChildren, "icon-documents", {
+        dynamicHash: appUrls.documents
+    });
 }

@@ -82,6 +82,10 @@ class menu {
         $event.stopPropagation();
         item.open();
         this.deepestOpenItem(item);
+
+        if (item.path()) {
+            router.navigate(item.path());
+        }
     }
 
     navigate($data: menuItem, $event: JQueryEventObject) {
