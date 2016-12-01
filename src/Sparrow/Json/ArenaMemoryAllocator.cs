@@ -83,8 +83,6 @@ namespace Sparrow.Json
             _ptrCurrent += size;
             _used += size;
 
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"ArenaMemoryAllocator allocated {size:#,#;;0} bytes");
             return allocation;
         }
 
