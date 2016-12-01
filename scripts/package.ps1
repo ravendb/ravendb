@@ -1,35 +1,70 @@
-$RELEASE_ZIP_RUNTIME_MAP = @{
-    "win10-x64" = "windows-x64"
+$RELEASE_PKG_RUNTIME_MAP = @{
+    "win10-x64" = @{ "Name" = "windows-x64"; "Type" = "zip" };
+    "ubuntu.14.04-x64" = @{ "Name" = "ubuntu.14.04-x64"; "Type" = "tar" };
+    "ubuntu.16.04-x64" = @{ "Name" = "ubuntu.16.04-x64"; "Type" = "tar" };
 }
 
 $NETSTANDARD16 = 'netstandard1.6'
 
-function ZipFilesFromDir( $targetZipFilename, $sourcedir )
+function CreateArchiveFromDir ( $targetFilename, $dir, $runtime ) {
+    $spec = GetPkgSpec $runtime
+    if ($spec.Type -eq "zip") {
+        ZipFilesFromDir $targetFilename $dir
+    } elseif ($spec.Type -eq "tar") {
+        TarGzFilesFromDir $targetFilename $dir
+    } else {
+        throw "Unknown archive method for $targetFilename"
+    }
+}
+
+function ZipFilesFromDir( $targetFilename, $sourceDir )
 {
     $toZipGlob = [io.path]::combine($sourceDir, '*')
-    Compress-Archive -Path $toZipGlob -DestinationPath $targetZipFilename
+    $zipFile = "$targetFilename.zip"
+    Compress-Archive -Path "$toZipGlob" -DestinationPath "$zipFile"
+}
+
+function TarGzFilesFromDir ( $targetFilename, $sourceDir ) {
+    $glob = [io.path]::combine($sourceDir, '*')
+    if ($(Get-Command "tar" -ErrorAction SilentlyContinue))
+    {
+        & tar -cvzf "$targetFilename.tar.gz" $glob
+        CheckLastExitCode
+    }
+    else
+    {
+        $7za = [io.path]::combine("scripts", "assets", "bin", "7za.exe")
+        & "$7za" a -ttar "$targetFilename.tar" $glob
+        CheckLastExitCode
+        & "$7za" a -tgzip "$targetFilename.tar.gz" "$targetFilename.tar"
+        CheckLastExitCode
+        rm "$targetFilename.tar"
+    }
 }
 
 function CreateRavenPackage ( $projectDir, $releaseDir, $outDir, $version, $runtime ) {
-    write-host "Create ZIP package..."
+    write-host "Create package for $runtime..."
 
-    $releaseZipFile = GetRavenZipFileName $version $runtime
-    $releaseZipPath = [io.path]::combine($releaseDir, $releaseZipFile)
+    $releaseArchiveFile = GetRavenArchiveFileName $version $runtime
+    $releaseArchivePath = [io.path]::combine($releaseDir, $releaseArchiveFile)
     $packageDir = [io.path]::combine($outDir, "package")
     New-Item -ItemType Directory -Path $packageDir
 
     CreatePackageLayout $outDir $packageDir $projectDir
-    ZipFilesFromDir $releaseZipPath $packageDir
+    CreateArchiveFromDir $releaseArchivePath $packageDir $runtime
 }
 
-function GetRavenZipFileName ( $version, $runtime ) {
-    if ($RELEASE_ZIP_RUNTIME_MAP.ContainsKey($runtime)) {
-        $runtimeText = $RELEASE_ZIP_RUNTIME_MAP.Get_Item($runtime)
-    } else {
-        $runtimeText = $runtime
+function GetRavenArchiveFileName ( $version, $runtime ) {
+    $pkgSpec = GetPkgSpec $runtime
+    "RavenDB-$version-$($pkgSpec.Name)"
+}
+
+function GetPkgSpec ($runtime) {
+    if ($RELEASE_PKG_RUNTIME_MAP.ContainsKey($runtime) -eq $False) {
+        throw "Do not have pkg spec for $runtime."
     }
 
-    "RavenDB-$version-$runtimeText.zip"
+    $RELEASE_PKG_RUNTIME_MAP.Get_Item($runtime)
 }
 
 function CreatePackageLayout ( $outDir, $packageDir, $projectDir ) {
