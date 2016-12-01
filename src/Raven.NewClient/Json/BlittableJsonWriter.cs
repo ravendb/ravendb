@@ -13,7 +13,7 @@ namespace Raven.NewClient.Client.Json
         private bool _first;
         private readonly DocumentInfo _documentInfo;
 
-        public BlittableJsonWriter(JsonOperationContext context, DocumentInfo documentInfo, 
+        public BlittableJsonWriter(JsonOperationContext context, DocumentInfo documentInfo = null, 
             BlittableJsonDocumentBuilder.UsageMode? mode = null, BlittableWriter writer = null)
         {
             _manualBlittalbeJsonDocumentBuilder = new ManualBlittalbeJsonDocumentBuilder(context, mode, writer);
@@ -33,6 +33,7 @@ namespace Raven.NewClient.Client.Json
 
         private void WriteMetadata()
         {
+            if (_documentInfo == null) return;
             if (_documentInfo.Metadata?.Modifications != null && (_documentInfo.Metadata.Modifications.Properties.Count > 0))
             {
                 _manualBlittalbeJsonDocumentBuilder.WritePropertyName(Constants.Metadata.Key);
