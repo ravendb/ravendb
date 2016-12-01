@@ -57,12 +57,12 @@
             </div>
         </div>
         <div class="pull-right" id="toggleIndexing">
-            <button class="btn btn-default btn-toggle disable-indexing"
+            <button class="btn btn-default btn-toggle disable-indexing" title="Pause indexing process for ALL indexes until restart"
                     data-bind="click: stopIndexing, visible: indexingEnabled(), enable: !spinners.globalStartStop(), css: { 'btn-spinner': spinners.globalStartStop() }">
                 <i class="icon-pause"></i>
                 <span>Pause indexing until restart</span>
             </button>
-            <button class="btn btn-success btn-toggle enable-indexing"
+            <button class="btn btn-success btn-toggle enable-indexing" title="Enable indexing process"
                     data-bind="click: startIndexing, visible: !indexingEnabled(), enable: !spinners.globalStartStop(), css: { 'btn-spinner': spinners.globalStartStop() }">
                 <i class="icon-play"></i>
                 <span>Enable indexing</span>
