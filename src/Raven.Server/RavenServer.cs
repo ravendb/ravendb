@@ -20,6 +20,7 @@ using Raven.Database.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Exceptions;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -336,7 +337,7 @@ namespace Raven.Server
                         tcp.Operation = header.Operation;
                         var databaseLoadingTask = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(header.DatabaseName);
                         if (databaseLoadingTask == null)
-                            throw new InvalidOperationException("There is no database named " + header.DatabaseName);
+                            throw new DatabaseDoesNotExistsException("There is no database named " + header.DatabaseName);
 
                         if (await Task.WhenAny(databaseLoadingTask, Task.Delay(5000)) != databaseLoadingTask)
                             throw new InvalidOperationException(
