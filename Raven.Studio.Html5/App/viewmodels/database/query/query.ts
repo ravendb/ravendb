@@ -448,7 +448,7 @@ class query extends viewModelBase {
                                     this.getIndexSuggestions(selectedIndex, queryFields[i]);
                                     if (queryFields[i].FieldValue == 'null') {
                                         this.isWarning(true);
-                                        this.warningText(<any>("The Query contains '" + queryFields[i].FieldName + ": null', this will check if the field contains the string 'null', is this what you meant?"));
+                                        this.warningText(<any>("The query contains '" + queryFields[i].FieldName + ": null', this will check if the field contains the string 'null'. Did you mean '" + queryFields[i].FieldName + ": [[NULL_VALUE]]'?"));
                                 }
                             }
                         }
@@ -456,7 +456,7 @@ class query extends viewModelBase {
                                 for (var i = 0; i < queryFields.length; i++) {;
                                     if (queryFields[i].FieldValue == 'null') {
                                         this.isWarning(true);
-                                        this.warningText(<any>("The Query contains '" + queryFields[i].FieldName + ": null', this will check if the field contains the string 'null', is this what you meant?"));
+                                        this.warningText(<any>("The query contains '" + queryFields[i].FieldName + ": null', this will check if the field contains the string 'null'. Did you mean '" + queryFields[i].FieldName + ": [[NULL_VALUE]]'?"));
                                     }
                                 }
                             }
