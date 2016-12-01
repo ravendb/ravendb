@@ -3,7 +3,7 @@ $ErrorActionPreference = "Stop"
 $DEV_BUILD_NUMBER = 40
 
 . '.\scripts\checkLastExitCode.ps1'
-. '.\scripts\checkPrerequisites'
+. '.\scripts\checkPrerequisites.ps1'
 . '.\scripts\restore.ps1'
 . '.\scripts\clean.ps1'
 . '.\scripts\package.ps1'
