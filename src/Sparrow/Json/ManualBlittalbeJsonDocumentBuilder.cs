@@ -272,7 +272,7 @@ namespace Sparrow.Json
         public void WriteValue(bool value)
         {
             var currentState = _continuationState.Pop();
-            var valuePos = 1;
+            var valuePos = _writer.WriteValue(value);
             _writeToken = new WriteToken //todo: figure out if we really need those WriteTokens
             {
                 ValuePos = valuePos,
