@@ -1243,7 +1243,7 @@ namespace Raven.Database.Prefetching
                         linkedToken.Token.ThrowIfCancellationRequested();
                         var docsLeft = docsCount - jsonDocuments.Count;
                         if (docsLeft > 0 && lastEtag.CompareTo(untilEtag) <= 0)
-                            AddFutureBatch(lastEtag, untilEtag, FutureBatchType.EarlyExit, entityNames, docsLeft);
+                            AddFutureBatch(lastEtag, untilEtag, FutureBatchType.EarlyExit, docsLeft);
                     }
                     else
                     {
