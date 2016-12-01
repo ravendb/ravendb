@@ -1700,9 +1700,10 @@ namespace Raven.Server.Documents
             if (table == null)
                 return;
 
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Deleting tombstones earlier than {etag} in {collection}");
-            table.DeleteBackwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], etag, long.MaxValue);
+            var deleteCount = table.DeleteBackwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], etag, long.MaxValue);
+            if (_logger.IsInfoEnabled && deleteCount > 0)
+                _logger.Info($"Deleted {deleteCount:#,#;;0} tombstones earlier than {etag} in {collection}");
+
         }
 
         public IEnumerable<string> GetTombstoneCollections(Transaction transaction)

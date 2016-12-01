@@ -787,20 +787,20 @@ namespace Voron.Data.Tables
             return Insert(builder);
         }
 
-        public void DeleteBackwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long value, long numberOfEntriesToDelete)
+        public int DeleteBackwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long value, long numberOfEntriesToDelete)
         {
             if (numberOfEntriesToDelete < 0)
                 throw new ArgumentOutOfRangeException(nameof(numberOfEntriesToDelete), "Number of entries should not be negative");
 
             if (numberOfEntriesToDelete == 0)
-                return;
+                return 0;
 
             var toDelete = new List<long>();
             var fst = GetFixedSizeTree(index);
             using (var it = fst.Iterate())
             {
                 if (it.Seek(value) == false && it.SeekToLast() == false)
-                    return;
+                    return 0;
 
                 do
                 {
@@ -811,6 +811,9 @@ namespace Voron.Data.Tables
 
             foreach (var id in toDelete)
                 Delete(id);
+
+
+            return toDelete.Count;
         }
 
         public long DeleteForwardFrom(TableSchema.SchemaIndexDef index, Slice value, long numberOfEntriesToDelete)
