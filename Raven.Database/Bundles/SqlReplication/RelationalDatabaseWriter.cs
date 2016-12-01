@@ -359,7 +359,6 @@ namespace Raven.Database.Bundles.SqlReplication
             var sp = new Stopwatch();
             using (var cmd = connection.CreateCommand())
             {
-                sp.Restart();
                 cmd.Transaction = tx;
 
                 if (cfg.CommandTimeout.HasValue)
@@ -370,6 +369,7 @@ namespace Raven.Database.Bundles.SqlReplication
                 database.WorkContext.CancellationToken.ThrowIfCancellationRequested();
                 for (int i = 0; i < identifiers.Count; i += maxParams)
                 {
+                    sp.Restart();
                     cmd.Parameters.Clear();
                     var sb = new StringBuilder("DELETE FROM ")
                         .Append(GetTableNameString(tableName))
