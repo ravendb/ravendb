@@ -23,7 +23,12 @@ namespace Raven.Database.Prefetching
             MemoryStatistics.RegisterLowMemoryHandler(this);
         }
 
-        public PrefetchingBehavior CreatePrefetchingBehavior(PrefetchingUser user, BaseBatchSizeAutoTuner autoTuner, string prefetchingUserDescription, bool isDefault = false)
+        public PrefetchingBehavior CreatePrefetchingBehavior(
+            PrefetchingUser user, 
+            BaseBatchSizeAutoTuner autoTuner, 
+            string prefetchingUserDescription,
+            HashSet<string> entityNames = null,
+            bool isDefault = false)
         {
             lock (this)
             {
@@ -32,6 +37,7 @@ namespace Raven.Database.Prefetching
                                             workContext,
                                             autoTuner ?? new IndependentBatchSizeAutoTuner(workContext, user),
                                             prefetchingUserDescription,
+                                            entityNames,
                                             isDefault,
                                             GetPrefetchintBehavioursCount,
                                             GetPrefetchingBehaviourSummary);
