@@ -28,7 +28,7 @@ function TarGzFilesFromDir ( $targetFilename, $sourceDir ) {
     $glob = [io.path]::combine($sourceDir, '*')
     if ($(Get-Command "tar" -ErrorAction SilentlyContinue))
     {
-        & tar -C $sourceDir -cvzf "$targetFilename.tar.gz" .
+        & tar -C $sourceDir -cjvf "$targetFilename.tar.bz2" .
         CheckLastExitCode
     }
     else
@@ -36,7 +36,7 @@ function TarGzFilesFromDir ( $targetFilename, $sourceDir ) {
         $7za = [io.path]::combine("scripts", "assets", "bin", "7za.exe")
         & "$7za" a -ttar "$targetFilename.tar" $glob
         CheckLastExitCode
-        & "$7za" a -tgzip "$targetFilename.tar.gz" "$targetFilename.tar"
+        & "$7za" a -tbzip2 "$targetFilename.tar.bz2" "$targetFilename.tar"
         CheckLastExitCode
         rm "$targetFilename.tar"
     }
