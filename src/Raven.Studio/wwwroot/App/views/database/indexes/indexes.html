@@ -21,7 +21,7 @@
                 <div class="btn-group">
                     <button type="button" class="btn btn-default dropdown-toggle" title="Set lock mode for selected indexes"
                             data-bind="enable: selectedIndexesName().length && !spinners.globalLockChanges(), css: { 'btn-spinner': spinners.globalLockChanges() }" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        <i class="icon-lock"></i><span>Lock mode</span>
+                        <i class="icon-lock"></i><span>Lock selected</span>
                         <span class="caret"></span>
                         <span class="sr-only">Toggle Dropdown</span>
                     </button>
@@ -53,16 +53,16 @@
                         </li>
                     </ul>
                 </div>
-                <button class="btn btn-danger" data-bind="click: deleteSelectedIndexes, enable: selectedIndexesName().length"><i class="icon-trash"></i><span>Delete</span></button>
+                <button class="btn btn-danger" data-bind="click: deleteSelectedIndexes, enable: selectedIndexesName().length"><i class="icon-trash"></i><span>Delete selected</span></button>
             </div>
         </div>
         <div class="pull-right" id="toggleIndexing">
-            <button class="btn btn-default btn-toggle disable-indexing"
+            <button class="btn btn-default btn-toggle disable-indexing" title="Pause indexing process for ALL indexes until restart"
                     data-bind="click: stopIndexing, visible: indexingEnabled(), enable: !spinners.globalStartStop(), css: { 'btn-spinner': spinners.globalStartStop() }">
                 <i class="icon-pause"></i>
                 <span>Pause indexing until restart</span>
             </button>
-            <button class="btn btn-success btn-toggle enable-indexing"
+            <button class="btn btn-success btn-toggle enable-indexing" title="Enable indexing process"
                     data-bind="click: startIndexing, visible: !indexingEnabled(), enable: !spinners.globalStartStop(), css: { 'btn-spinner': spinners.globalStartStop() }">
                 <i class="icon-play"></i>
                 <span>Enable indexing</span>

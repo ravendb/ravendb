@@ -16,8 +16,8 @@ class disableIndexCommand extends commandBase {
         const url = endpoints.databases.adminIndex.adminIndexesDisable + this.urlEncodeArgs(args);
         return this.post(url, null, this.db, { dataType: undefined })
             .done(() => {
-                this.reportSuccess("Disabled " + this.indexName + ".");
-            })
+                this.reportSuccess(`${this.indexName} was Disabled`);
+             })
             .fail((response: JQueryXHR) => this.reportError("Failed to disable index", response.responseText));
     }
 }
