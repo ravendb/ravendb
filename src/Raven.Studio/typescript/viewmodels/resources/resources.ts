@@ -88,6 +88,14 @@ class resources extends viewModelBase {
         ];
     }
 
+    createNotifications() {
+        //TODO: for now we simply fetch resources one more time, in future, we can do data merge
+        return [
+            this.changesContext.globalChangesApi().watchItemsStartingWith("db/", e => this.fetchResources())
+        ];
+    }
+    
+
     // Override canActivate: we can always load this page, regardless of any system db prompt.
     canActivate(args: any): any {
         return true;
