@@ -218,14 +218,14 @@ namespace Voron.Data.BTrees
                 DecompressedSize = header->UncompressedSize;
                 NumberOfEntries = header->NumberOfCompressedEntries;
 
-                var alignment = CompressedSize & 1;  // take into account 2-byte alignment
-
-                Data = (byte*)header - (CompressedSize + alignment);
+                var compressionSectionSize = header->SectionSize;
 
                 KeysOffsetsSize = (ushort)(header->NumberOfCompressedEntries * Constants.NodeOffsetSize);
-                KeysOffsets = (short*)((byte*)header - (CompressedSize + alignment) - KeysOffsetsSize);
-                
-                var necessarySize = p.SizeUsed - CompressedSize - Constants.Compression.HeaderSize + DecompressedSize;
+                KeysOffsets = (short*)((byte*)header - compressionSectionSize);
+
+                Data = (byte*)header - compressionSectionSize + KeysOffsetsSize;
+
+                var necessarySize = p.SizeUsed - compressionSectionSize - Constants.Compression.HeaderSize + DecompressedSize + KeysOffsetsSize;
 
                 if (necessarySize > Constants.Storage.MaxPageSize)
                     DecompressedPageSize = Constants.Storage.MaxPageSize; // we are guranteed that after decompression a page won't exceed max size

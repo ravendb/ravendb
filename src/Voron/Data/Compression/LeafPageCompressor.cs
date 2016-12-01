@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using Sparrow;
 using Sparrow.Compression;
 using Voron.Data.BTrees;
@@ -52,26 +53,33 @@ namespace Voron.Data.Compression
             {
                 compressedOffsets[i] = (ushort)(offsets[i] - page.Upper);
             }
+            
+            var compressionSectionSize = compressedSize + offsetsSize;  
+
+            var sizeLeftInDecomressedPage = Constants.Storage.MaxPageSize - page.SizeUsed;
+            var sizeLeftForUncompressedEntries = tx.PageSize - (Constants.TreePageHeaderSize + Constants.Compression.HeaderSize + compressionSectionSize);
+
+            if (sizeLeftForUncompressedEntries > sizeLeftInDecomressedPage)
+            {
+                // expand compression section to prevent from adding next uncompressed entries what would result in
+                // exceeding MaxPageSize after the decompression
+
+                compressionSectionSize += sizeLeftForUncompressedEntries - sizeLeftInDecomressedPage;
+            }
+            
+            compressionSectionSize += compressionSectionSize & 1; // ensure 2-byte alignment
+
+            // check that after decompression we won't exceed MaxPageSize
+            Debug.Assert(page.SizeUsed + // page header, node offsets, existing entries
+                         (tx.PageSize - // space that can be still used to insert next uncompressed entries
+                          (Constants.TreePageHeaderSize + Constants.Compression.HeaderSize + compressionSectionSize)) 
+                         <= Constants.Storage.MaxPageSize);
 
             Memory.Copy(tempPage.Base, page.Base, Constants.TreePageHeaderSize);
-
-            var alignment = compressedSize & 1;
-
-            var compressionDataSize = compressedSize + offsetsSize + alignment;  // ensure 2-byte alignment
-
-            tempPage.Lower = (ushort)(Constants.TreePageHeaderSize + Constants.Compression.HeaderSize + compressionDataSize);
+            tempPage.Lower = (ushort)(Constants.TreePageHeaderSize + Constants.Compression.HeaderSize + compressionSectionSize);
             tempPage.Upper = (ushort)tempPage.PageSize;
 
-            var decompressedPageSize = page.SizeUsed + // header, node offsets, existing entries
-                                       (tx.Environment.Options.PageSize - (Constants.TreePageHeaderSize + Constants.Compression.HeaderSize + compressionDataSize)); // space that can be still used to insert next uncompressed entries
-
-
-            if (decompressedPageSize > Constants.Storage.MaxPageSize)
-            {
-                // if we decompressed such page then it would exceed the maximum page size
-                result = null;
-                return returnTempPage;
-            }
+            Debug.Assert(tempPage.Lower <= tempPage.Upper);
 
             result = new CompressionResult
             {
@@ -80,6 +88,7 @@ namespace Voron.Data.Compression
                 Header = new CompressedNodesHeader
                 {
                     Version = version,
+                    SectionSize = (ushort)compressionSectionSize,
                     CompressedSize = (ushort)compressedSize,
                     UncompressedSize = (ushort)valuesSize,
                     NumberOfCompressedEntries = page.NumberOfEntries,
@@ -99,18 +108,15 @@ namespace Voron.Data.Compression
             var header = (CompressedNodesHeader*)writePtr;
             *header = compressed.Header;
 
-            var offsetsSize = compressed.Header.NumberOfCompressedEntries * Constants.NodeOffsetSize;
+            writePtr -= header->SectionSize;
 
-            var alignment = compressed.Header.CompressedSize & 1;
-            var compressionDataSize = compressed.Header.CompressedSize + offsetsSize;
-
-            writePtr -= compressionDataSize + alignment; // ensure 2-byte alignment
-
-            Memory.Copy(writePtr, compressed.CompressionOutputPtr, compressionDataSize);
+            Memory.Copy(writePtr, compressed.CompressionOutputPtr, compressed.Header.CompressedSize + header->NumberOfCompressedEntries * Constants.NodeOffsetSize);
 
             dest.Flags |= PageFlags.Compressed;
             dest.Lower = (ushort)Constants.TreePageHeaderSize;
             dest.Upper = (ushort)(writePtr - dest.Base);
+
+            Debug.Assert((dest.Upper & 1) == 0);
         }
     }
 }

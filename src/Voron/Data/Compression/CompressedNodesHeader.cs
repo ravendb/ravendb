@@ -9,12 +9,15 @@ namespace Voron.Data.Compression
         public ushort Version;
 
         [FieldOffset(2)]
-        public ushort CompressedSize;
+        public ushort SectionSize;
 
         [FieldOffset(4)]
-        public ushort UncompressedSize;
+        public ushort CompressedSize;
 
         [FieldOffset(6)]
+        public ushort UncompressedSize;
+
+        [FieldOffset(8)]
         public ushort NumberOfCompressedEntries;
     }
 }
