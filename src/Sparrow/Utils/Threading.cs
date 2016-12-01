@@ -28,7 +28,7 @@ namespace Sparrow.Utils
         {
             if (Platform.RunningOnPosix)
             {
-                ulong threadId = PosixThreadsMethods.pthread_self();
+                IntPtr threadId = PosixThreadsMethods.pthread_self();
                 sched_param param = new sched_param
                 {
                     sched_priority = (int)priority
@@ -83,7 +83,7 @@ namespace Sparrow.Utils
             {
                 int policy = 0;
                 sched_param param = new sched_param();
-                ulong threadId = PosixThreadsMethods.pthread_self();
+                IntPtr threadId = PosixThreadsMethods.pthread_self();
                 var success = PosixThreadsMethods.pthread_getschedparam(threadId, &policy, &param);
                 if (success != 0)
                 {
