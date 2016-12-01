@@ -41,8 +41,10 @@ namespace Raven.SlowTests.Issues
             config.PostInit();
             ravenDbServer = new RavenDbServer(config)
             {
-                UseEmbeddedHttpServer = true
+                UseEmbeddedHttpServer = true,
             };
+            ravenDbServer.Configuration.MaxSecondsForTaskToWaitForDatabaseToLoad = 30;
+
             ravenDbServer.Initialize();
             documentStore = new DocumentStore
             {
