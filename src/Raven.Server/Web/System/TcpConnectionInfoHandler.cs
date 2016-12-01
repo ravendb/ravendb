@@ -15,11 +15,10 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                var port = await Server.GetTcpServerPortAsync();
+                var url = await Server.GetTcpServerPortAsync();
                 var output = new DynamicJsonValue
                 {
-                    ["Port"] = port,
-                    ["Url"] = Server.Configuration.Core.TcpServerUrl
+                    ["Url"] = url
                 };
 
                 context.Write(writer, output);

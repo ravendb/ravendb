@@ -88,7 +88,8 @@ namespace Raven.Client.Document
         {
             var connectionInfo = await asyncServerClient.GetTcpInfoAsync().ConfigureAwait(false);
             _url = asyncServerClient.Url;
-            await _tcpClient.ConnectAsync(new Uri(_url).Host, connectionInfo.Port).ConfigureAwait(false);
+            var uri = new Uri(_url);
+            await _tcpClient.ConnectAsync(uri.Host, uri.Port).ConfigureAwait(false);
 
             _tcpClient.NoDelay = true;
             _tcpClient.SendBufferSize = 32 * 1024;

@@ -190,7 +190,8 @@ namespace Raven.Client.Document
         private async Task<Stream> ConnectToServer()
         {
             var connectionInfo = await _commands.GetTcpInfoAsync();
-            await _tcpClient.ConnectAsync(new Uri(connectionInfo.Url).Host, connectionInfo.Port);
+            var uri = new Uri(connectionInfo.Url);
+            await _tcpClient.ConnectAsync(uri.Host, uri.Port);
 
             _tcpClient.NoDelay = true;
             _tcpClient.SendBufferSize = 32 * 1024;

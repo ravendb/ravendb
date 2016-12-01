@@ -98,7 +98,7 @@ namespace Raven.Server.Documents.Replication
                 var tcpConnectionInfo = convention.CreateSerializer().Deserialize<TcpConnectionInfo>(new RavenJTokenReader(result));
                 if (_log.IsInfoEnabled)
                 {
-                    _log.Info($"Will replicate to {_destination.Database} @ {_destination.Url} via tcp://{tcpConnectionInfo.Url}:{tcpConnectionInfo.Port}");
+                    _log.Info($"Will replicate to {_destination.Database} @ {_destination.Url} via {tcpConnectionInfo.Url}");
                 }
                 return tcpConnectionInfo;
             }
@@ -109,6 +109,7 @@ namespace Raven.Server.Documents.Replication
             try
             {
                 var connectionInfo = GetTcpInfo();
+
                 using (_tcpClient = new TcpClient())
                 {
                     ConnectSocket(connectionInfo, _tcpClient);
@@ -380,21 +381,23 @@ namespace Raven.Server.Documents.Replication
 
         private void ConnectSocket(TcpConnectionInfo connection, TcpClient tcpClient)
         {
-            var host = new Uri(connection.Url).Host;
+            var uri = new Uri(connection.Url);
+            var host = uri.Host;
+            var port = uri.Port;
             try
             {
-                tcpClient.ConnectAsync(host, connection.Port).Wait(CancellationToken);
+                tcpClient.ConnectAsync(host, port).Wait(CancellationToken);
             }
             catch (SocketException e)
             {
                 if (_log.IsInfoEnabled)
-                    _log.Info($"Failed to connect to remote replication destination {host}:{connection.Port}. Socket Error Code = {e.SocketErrorCode}", e);
+                    _log.Info($"Failed to connect to remote replication destination {connection.Url}. Socket Error Code = {e.SocketErrorCode}", e);
                 throw;
             }
             catch (Exception e)
             {
                 if (_log.IsInfoEnabled)
-                    _log.Info($"Failed to connect to remote replication destination {host}:{connection.Port}", e);
+                    _log.Info($"Failed to connect to remote replication destination {connection.Url}", e);
                 throw;
             }
         }
