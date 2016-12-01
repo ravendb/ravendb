@@ -8,6 +8,7 @@ import resource = require("models/resources/resource");
 import database = require("models/resources/database");
 
 import deleteResourceConfirm = require("viewmodels/resources/deleteResourceConfirm");
+import createDatabase = require("viewmodels/resources/createDatabase");
 import disableResourceToggleConfirm = require("viewmodels/resources/disableResourceToggleConfirm");
 import toggleRejectDatabaseClients = require("commands/maintenance/toggleRejectDatabaseClients");
 import disableResourceToggleCommand = require("commands/resources/disableResourceToggleCommand");
@@ -308,6 +309,11 @@ class resources extends viewModelBase {
                     //TODO: progress (this.spinners.toggleRejectMode), command, update db object, etc
                 }
             });
+    }
+
+    newDatabase() {
+        const createDbView = new createDatabase();
+        app.showBootstrapDialog(createDbView);
     }
 
 

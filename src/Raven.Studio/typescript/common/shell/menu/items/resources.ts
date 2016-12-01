@@ -13,15 +13,6 @@ function getResourcesMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-dashboard',
             dynamicHash: appUrls.resourcesManagement
-        }),
-        new separatorMenuItem(),
-        new leafMenuItem({
-            route: [""],
-            title: "New database",
-            moduleId: "viewmodels/resources/createDatabase",
-            nav: true,
-            css: 'icon-database',
-            openAsDialog: true
         })
         //TODO: new fs, new cs, new ts
        
