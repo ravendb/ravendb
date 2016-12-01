@@ -40,7 +40,9 @@ namespace Raven.SlowTests.Issues
             {
                 UseEmbeddedHttpServer = true
             };
+            ravenDbServer.Configuration.MaxSecondsForTaskToWaitForDatabaseToLoad = 30;
             ravenDbServer.Initialize();
+
             documentStore = new DocumentStore
             {
                 Url = "http://localhost:8079"
