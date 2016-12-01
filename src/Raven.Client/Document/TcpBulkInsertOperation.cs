@@ -41,7 +41,6 @@ namespace Raven.Client.Document
         private bool _isThrottling;
         private readonly long _maxDiffSizeBeforeThrottling = 20L * 1024 * 1024; // each buffer is 4M. We allow the use of 5-6 buffers out of 8 possible
         private TcpClient _tcpClient;
-        private string _url;
 
 
         ~TcpBulkInsertOperation()
@@ -68,7 +67,6 @@ namespace Raven.Client.Document
             {
                 _buffers.Add(new MemoryStream());
             }
-
             var connectToServerTask = ConnectToServer(asyncServerClient);
 
             _sentAccumulator = 0;
@@ -79,7 +77,7 @@ namespace Raven.Client.Document
 
             _writeToServerTask = connectToServerTask.ContinueWith(task =>
             {
-                WriteToServer(task.Result);
+                WriteToServer(asyncServerClient.Url, task.Result);
             });
 
         }
@@ -87,8 +85,7 @@ namespace Raven.Client.Document
         private async Task<Stream> ConnectToServer(AsyncServerClient asyncServerClient)
         {
             var connectionInfo = await asyncServerClient.GetTcpInfoAsync().ConfigureAwait(false);
-            _url = asyncServerClient.Url;
-            var uri = new Uri(_url);
+            var uri = new Uri(connectionInfo.Url);
             await _tcpClient.ConnectAsync(uri.Host, uri.Port).ConfigureAwait(false);
 
             _tcpClient.NoDelay = true;
@@ -99,7 +96,7 @@ namespace Raven.Client.Document
             return networkStream;
         }
 
-        private void WriteToServer(Stream serverStream)
+        private void WriteToServer(string url, Stream serverStream)
         {
             const string debugTag = "bulk/insert/document";
             var jsonParserState = new JsonParserState();
@@ -107,7 +104,7 @@ namespace Raven.Client.Document
             var writeToStreamBuffer = new byte[32*1024];
             var header = Encoding.UTF8.GetBytes(RavenJObject.FromObject(new TcpConnectionHeaderMessage
             {
-                DatabaseName = MultiDatabase.GetDatabaseName(_url),
+                DatabaseName = MultiDatabase.GetDatabaseName(url),
                 Operation = TcpConnectionHeaderMessage.OperationTypes.BulkInsert
             }).ToString());
             streamNetworkBuffer.Write(header, 0, header.Length);

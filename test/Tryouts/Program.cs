@@ -16,9 +16,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var store = new FastTests.Server.OAuth.CanAuthenticate())
+                using (var store = new FastTests.Client.BulkInsert.BulkInserts())
                 {
-                    store.CanStoreAndDeleteApiKeys();
+                    store.SimpleBulkInsertShouldWork().Wait();
                 }
             }
             //);
