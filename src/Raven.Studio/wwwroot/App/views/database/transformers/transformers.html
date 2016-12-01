@@ -20,7 +20,7 @@
                     <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Set lock mode to selected transformers"
                             data-bind="enable: selectedTransformersName().length && !globalLockChangesInProgress(), css: { 'btn-spinner': globalLockChangesInProgress() }">
                         <i class="icon-lock"></i>
-                        <span>Lock</span>&nbsp;&nbsp;
+                        <span>Lock selected</span>&nbsp;&nbsp;
                         <span class="caret"></span>
                         <span class="sr-only">Toggle Dropdown</span>
                     </button>
@@ -40,7 +40,7 @@
                     </ul>
                 </div>
                 <button class="btn btn-danger" data-bind="click: deleteSelectedTransformers, enable: selectedTransformersName().length">
-                    <i class="icon-trash"></i><span>Delete</span>
+                    <i class="icon-trash"></i><span>Delete selected</span>
                 </button>
             </div>
         </div>
