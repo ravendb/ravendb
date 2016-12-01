@@ -18,5 +18,7 @@ function getResourcesMenuItem(appUrls: computedAppUrls) {
        
     ];
 
-    return new intermediateMenuItem("Resources", items, "icon-resources");
+    return new intermediateMenuItem("Resources", items, "icon-resources", {
+        dynamicHash: appUrls.resourcesManagement
+    });
 }
