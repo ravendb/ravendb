@@ -41,11 +41,11 @@ namespace Sparrow.Utils
                 var success = PosixThreadsMethods.pthread_setschedparam(threadId, policy, &param);
                 if (success != 0)
                 {
-                    int lastWin32ErrorCode = Marshal.GetLastWin32Error();
+                    int lastError = Marshal.GetLastWin32Error();
                     if (_log.IsInfoEnabled)
-                        _log.Info($"SetThreadPriority failed to set thread priority. threadId:{threadId}, error code {lastWin32ErrorCode}");
+                        _log.Info($"SetThreadPriority failed to set thread priority. threadId:{threadId.ToInt64()}, error code {lastError}");
 
-                    throw new Win32Exception(lastWin32ErrorCode, "Failed to set priority to thread " + threadId);
+                    throw new InvalidOperationException("Failed to set priority to thread " + threadId.ToInt64() + " with " + (Errno)lastError);
                 }
             }
             else
