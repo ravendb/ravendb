@@ -151,11 +151,13 @@ namespace Raven.Server.Documents.Replication
                                 using (_documentsContext.OpenReadTransaction())
                                 {
                                     var response = HandleServerResponse();
-                                    if (response.Item1 == ReplicationMessageReply.ReplyType.Error &&
-                                        response.Item2.Contains("DatabaseDoesNotExistsException"))
+                                    if (response.Item1 == ReplicationMessageReply.ReplyType.Error)
                                     {
-                                        throw new DatabaseDoesNotExistsException();
-                                    }
+                                        if(response.Item2.Contains("DatabaseDoesNotExistsException"))
+                                            throw new DatabaseDoesNotExistsException();
+
+                                        throw new InvalidOperationException(response.Item2);
+                                    }                                    
                                 }
                             }
                             catch (DatabaseDoesNotExistsException e)
