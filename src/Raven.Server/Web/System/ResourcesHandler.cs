@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
@@ -55,55 +57,56 @@ namespace Raven.Server.Web.System
 
                     writer.WriteStartArray();
                     var first = true;
-                    foreach (var db in ServerStore.StartingWith(context, "db/", GetStart(), GetPageSize()))
+                    foreach (var dbDoc in ServerStore.StartingWith(context, "db/", GetStart(), GetPageSize()))
                     {
                         if (first == false)
                             writer.WriteComma();
                         first = false;
-
-                        // TODO: Actually handle this properly - we use fake values for now!
-                        // TODO: ugly and temporary starts here:
+                        //TODO: Implement a persistent cache that will be refreshed everytime this endpoint is invoked and the resource is laoded.
+                        //TODO: This will allow us to display the last known state of the resouce (With an indication in the studio that the data is taken from the cache).
                         {
                             var disabled = false;
                             object disabledValue;
-                            if (db.Data.TryGetMember("Disabled", out disabledValue))
+                            if (dbDoc.Data.TryGetMember("Disabled", out disabledValue))
                             {
                                 disabled = (bool)disabledValue;
                             }
-                            var dbName = db.Key.Substring("db/".Length);
+                            var dbName = dbDoc.Key.Substring("db/".Length);
                             Task<DocumentDatabase> dbTask;
-                            var online = ServerStore.DatabasesLandlord.ResourcesStoresCache.TryGetValue(dbName, out dbTask);
-                            var indexingStatus = dbTask != null && dbTask.IsCompleted ? dbTask.Result.IndexStore.Status.ToString() : null; //TODO: should/can we get this info when database is offline?
-
+                            var online = ServerStore.DatabasesLandlord.ResourcesStoresCache.TryGetValue(dbName, out dbTask) && dbTask != null && dbTask.IsCompleted;
+                            var db = online ? dbTask.Result : null;
+                            var indexingStatus = dbTask != null && dbTask.IsCompleted ? dbTask.Result.IndexStore.Status.ToString() : null;
+                            var size = new Size(GetTotalSize(db));
                             var doc = new DynamicJsonValue
                             {
-                                [nameof(ResourceInfo.Bundles)] = new DynamicJsonArray(),
+                                [nameof(ResourceInfo.Bundles)] = new DynamicJsonArray(GetBundles(db)),
                                 [nameof(ResourceInfo.IsAdmin)] = true,
                                 [nameof(ResourceInfo.Name)] = dbName,
                                 [nameof(ResourceInfo.Disabled)] = disabled,
                                 [nameof(ResourceInfo.TotalSize)] = new DynamicJsonValue
                                 {
-                                    [nameof(Size.HumaneSize)] = "80.4 GBytes",
-                                    [nameof(Size.SizeInBytes)] = 80.4 * 1024 * 1024 * 1024
+                                    [nameof(Size.HumaneSize)] = size.HumaneSize,
+                                    [nameof(Size.SizeInBytes)] = size.SizeInBytes
                                 },
-                                [nameof(ResourceInfo.Errors)] = 5,
-                                [nameof(ResourceInfo.Alerts)] = 7,
-                                [nameof(ResourceInfo.UpTime)] = online ? TimeSpan.FromDays(2.4).ToString() : null,
+                                [nameof(ResourceInfo.Errors)] = online ? db.IndexStore.GetIndexes().Sum(index => index.GetErrors().Count) : 0,
+                                [nameof(ResourceInfo.Alerts)] = online ? db.Alerts.GetAlertCount() : 0,
+                                [nameof(ResourceInfo.UpTime)] = online ? GetUptime(db).ToString() : "UnKnown",
                                 [nameof(ResourceInfo.BackupInfo)] = new DynamicJsonValue
                                 {
-                                    [nameof(BackupInfo.BackupInterval)] = TimeSpan.FromDays(7).ToString(),
-                                    [nameof(BackupInfo.LastBackup)] = TimeSpan.FromDays(10).ToString()
+                                    [nameof(BackupInfo.IncrementalBackupInterval)] = online ? db.BundleLoader.PeriodicExportRunner?.IncrementalInterval.ToString() : "UnKnown",
+                                    [nameof(BackupInfo.FullBackupInterval)] = online ? db.BundleLoader.PeriodicExportRunner?.FullExportInterval.ToString() : "UnKnown",
+                                    [nameof(BackupInfo.LastIncrementalBackup)] = online ? db.BundleLoader.PeriodicExportRunner?.ExportTime.ToString() : "UnKnown",
+                                    [nameof(BackupInfo.LastFullBackup)] = online ? db.BundleLoader.PeriodicExportRunner?.FullExportTime.ToString() : "UnKnown",
                                 },
-                                [nameof(DatabaseInfo.DocumentsCount)] = 10234,
-                                [nameof(DatabaseInfo.IndexesCount)] = 30,
-                                [nameof(DatabaseInfo.RejectClients)] = true,
+                                [nameof(DatabaseInfo.DocumentsCount)] = online ? GetNumberOfDocuments(db) : 0,
+                                [nameof(DatabaseInfo.IndexesCount)] = online ? db.IndexStore.GetIndexes().Count() : 0,
+                                [nameof(DatabaseInfo.RejectClients)] = false,
                                 [nameof(DatabaseInfo.IndexingStatus)] = indexingStatus
                             };
 
                             context.Write(writer, doc);
-                        } //TODO: end of ugly and temporary code!
-                        
-                        
+                        }
+
                     }
                     writer.WriteEndArray();
 
@@ -113,6 +116,37 @@ namespace Raven.Server.Web.System
                 }
             }
             return Task.CompletedTask;
+        }
+
+        private TimeSpan GetUptime(DocumentDatabase db)
+        {
+            return DateTime.UtcNow - db.StartTime;
+        }
+
+        private long GetNumberOfDocuments(DocumentDatabase db)
+        {
+            DocumentsOperationContext context;
+            using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenReadTransaction())
+                return db.DocumentsStorage.GetNumberOfDocuments(context);
+        }
+
+
+
+        private long GetTotalSize(DocumentDatabase db)
+        {
+            if (db == null)
+                return -1;
+            return
+                db.GetAllStoragesEnvironment()
+                    .Sum(env => env.Environment.Stats().AllocatedDataFileSizeInBytes);
+        }
+
+        private List<string> GetBundles(DocumentDatabase db)
+        {
+            if (db != null)
+                return db.BundleLoader.GetActiveBundles();
+            return new List<string>();
         }
 
         private Task ReturnResources(string prefix)
@@ -150,5 +184,4 @@ namespace Raven.Server.Web.System
         }
     }
 }
- 
- 
+

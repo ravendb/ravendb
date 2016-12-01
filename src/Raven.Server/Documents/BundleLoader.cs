@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Server.Documents.Expiration;
@@ -94,6 +95,25 @@ namespace Raven.Server.Documents
                     _logger.Info($"PeriodicExport configuration was {(PeriodicExportRunner != null ? "enabled" : "disabled")}");
             }
         }
+
+        public List<string> GetActiveBundles()
+        {
+            var res = new List<string>();
+            if (ExpiredDocumentsCleaner != null)
+                res.Add(BundleTypeToName[ExpiredDocumentsCleaner.GetType()]);
+            if (VersioningStorage != null)
+                res.Add(BundleTypeToName[VersioningStorage.GetType()]);
+            if (PeriodicExportRunner != null)
+                res.Add(BundleTypeToName[PeriodicExportRunner.GetType()]);
+            return res;
+        }
+
+        private static readonly Dictionary<Type, string> BundleTypeToName = new Dictionary<Type, string>
+        {
+            {typeof(VersioningStorage), "Versioning"},
+            {typeof(ExpiredDocumentsCleaner), "Expiration"},
+            {typeof(PeriodicExportRunner), "PeriodicExport"}
+        };
 
         public void Dispose()
         {
