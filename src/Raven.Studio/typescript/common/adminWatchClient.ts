@@ -49,6 +49,7 @@ class adminWatchClient extends abstractWebSocketClient {
         switch (eventOperation) {
             case "Write":
             case "Delete":
+            case "Load":
                 this.fireEvents<globalAlertNotification>(this.allItemsHandlers(), eventDto, () => true);
 
                 this.watchedItems.forEach((callbacks, key) => {
@@ -65,7 +66,7 @@ class adminWatchClient extends abstractWebSocketClient {
                 this.fireEvents<globalAlertNotification>(this.allAlertsHandlers(), eventDto, () => true);
                 break;
             default:
-                console.log("Unhandled Changes API notification type: " + eventDto.Id);
+                console.error("Unhandled Changes API notification type: " + eventDto.Id);
         }
     }
 

@@ -64,7 +64,7 @@ namespace Raven.Server.Alerts
 
         public unsafe void AddAlert(Alert alert, TransactionOperationContext context, RavenTransaction tx)
         {
-            _store?.TrackChange(context, "AlertRaised", alert.Key);
+            _store?.TrackChangeAfterTransactionCommit(context, "AlertRaised", alert.Key);
 
             var table = tx.InnerTransaction.OpenTable(_alertsSchema, AlertsSchema.AlertsTree);
 
@@ -141,7 +141,7 @@ namespace Raven.Server.Alerts
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenWriteTransaction())
             {
-                _store?.TrackChange(context, "AlertDeleted", key);
+                _store?.TrackChangeAfterTransactionCommit(context, "AlertDeleted", key);
 
                 var table = tx.InnerTransaction.OpenTable(_alertsSchema, AlertsSchema.AlertsTree);
 

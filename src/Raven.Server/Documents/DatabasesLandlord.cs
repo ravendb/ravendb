@@ -83,6 +83,8 @@ namespace Raven.Server.Documents
                     }
                 }
 
+                ServerStore.TrackChange("Load", Constants.Database.Prefix + databaseName);
+
                 return database;
             }
             finally

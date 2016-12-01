@@ -77,25 +77,6 @@ class resources extends viewModelBase {
         });
     }
 
-    createPostboxSubscriptions(): KnockoutSubscription[] {
-        return [
-            //TODO: bind on resource deleted
-            ko.postbox.subscribe(EVENTS.Resource.Created,
-                (value: resourceCreatedEventArgs) => {
-                    //TODO: we are assuming it is database for now. 
-                    this.fetchResources();
-                })
-        ];
-    }
-
-    createNotifications() {
-        //TODO: for now we simply fetch resources one more time, in future, we can do data merge
-        return [
-            this.changesContext.globalChangesApi().watchItemsStartingWith("db/", e => this.fetchResources())
-        ];
-    }
-    
-
     // Override canActivate: we can always load this page, regardless of any system db prompt.
     canActivate(args: any): any {
         return true;
@@ -103,6 +84,11 @@ class resources extends viewModelBase {
 
     activate(args: any): JQueryPromise<resourcesInfo> {
         super.activate(args);
+
+        // we can't use createNotifications here, as it is called after *resource changes API* is connected, but user
+        // can enter this view and never select resource
+        this.addNotification(this.changesContext.globalChangesApi().watchItemsStartingWith("db/", e => this.fetchResources()));
+
         return this.fetchResources();
     }
 
