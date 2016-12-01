@@ -16,6 +16,7 @@ class notificationCenter {
 
     totalItemsCount: KnockoutComputed<number>;
     alertCountAnimation = ko.observable<boolean>();
+    noNewNotifications: KnockoutComputed<boolean>;
 
     constructor() {
         this.initializeObservables();
@@ -35,6 +36,9 @@ class notificationCenter {
             } else {
                 this.alertCountAnimation(false);
             }
+        });
+        this.noNewNotifications = ko.pureComputed(() => {
+            return this.totalItemsCount() === 0;
         });
     }
 
