@@ -22,6 +22,7 @@ namespace Raven.Server.Documents
         public float? IndexScore;
         public ChangeVectorEntry[] ChangeVector;
         public DateTime LastModified;
+        public DocumentFlags Flags;
 
         public unsafe ulong DataHash
         {

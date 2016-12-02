@@ -44,6 +44,26 @@ namespace FastTests.Server.Documents.Versioning
         }
 
         [Fact]
+        public async Task CanCheckIfDocumentIsVersioned()
+        {
+            var company = new Company { Name = "Company Name" };
+            using (var store = GetDocumentStore())
+            {
+                await VersioningHelper.SetupVersioning(store);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(company);
+                    await session.SaveChangesAsync();
+                }
+                using (var session = store.OpenAsyncSession())
+                {
+                    var company3 = await session.LoadAsync<Company>(company.Id);
+                    Assert.Equal("Versioned", session.Advanced.GetMetadataFor(company3).Value<string>("@flags"));
+                }
+            }
+        }
+
+        [Fact]
         public async Task GetRevisionsOfNotExistKey()
         {
 

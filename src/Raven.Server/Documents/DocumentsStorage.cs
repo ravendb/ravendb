@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading;
 using Raven.Abstractions.Data;
-using Raven.Client.Data;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Exceptions;
 using Raven.Server.Extensions;
@@ -98,7 +95,7 @@ namespace Raven.Server.Documents
             });
 
             // The documents schema is as follows
-            // 5 fields (lowered key, etag, lazy string key, document, change vector)
+            // fields (lowered key, etag, lazy string key, document, change vector, last modified, optional flags)
             // format of lazy string key is detailed in GetLowerKeySliceAndStorageKey
             DocsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
@@ -735,6 +732,11 @@ namespace Raven.Server.Documents
             result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(tvr, 4);
 
             result.LastModified = new DateTime(*(long*) tvr.Read(5, out size));
+
+            if (tvr.Count > 6)
+            {
+                result.Flags = (DocumentFlags) (*(int*) tvr.Read(6, out size));
+            }
      
             return result;
         }
@@ -1319,8 +1321,10 @@ namespace Raven.Server.Documents
             ChangeVectorEntry[] changeVector = null)
         {
             if (context.Transaction == null)
-                throw new ArgumentException("Context must be set with a valid transaction before calling Put",
-                    nameof(context));
+            {
+                ThrowPutRequiresTransaction();
+                return null;// never reached
+            }
 
             var collectionName = ExtractCollectionName(context, key, document);
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
@@ -1373,7 +1377,19 @@ namespace Raven.Server.Documents
                         {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length}, //4
                         lastModifiedTicks // 5
                     };
-                    
+
+                    if (collectionName.IsSystem == false)
+                    {
+                        bool hasVersion =
+                            _documentDatabase.BundleLoader.VersioningStorage?.PutFromDocument(context, collectionName,
+                                key, newEtagBigEndian, document) ?? false;
+                        if (hasVersion)
+                        {
+                            int flags = (int)DocumentFlags.Versioned;
+                            tbv.Add((byte*) &flags, sizeof(int));
+                        }
+                    }
+
                     if (oldValue == null)
                     {
                         if (expectedEtag != null && expectedEtag != 0)
@@ -1414,8 +1430,7 @@ namespace Raven.Server.Documents
 
                 if (collectionName.IsSystem == false)
                 {
-                    _documentDatabase.BundleLoader.VersioningStorage?.PutFromDocument(context, collectionName, key,
-                        newEtagBigEndian, document);
+                    
                     _documentDatabase.BundleLoader.ExpiredDocumentsCleaner?.Put(context,
                         keySlice, document);
                 }
@@ -1437,6 +1452,12 @@ namespace Raven.Server.Documents
                 ETag = newEtag,
                 Key = key
             };
+        }
+
+        private static void ThrowPutRequiresTransaction()
+        {
+            // ReSharper disable once NotResolvedInText
+            throw new ArgumentException("Context must be set with a valid transaction before calling Put", "context");
         }
 
         private static void DeleteTombstoneIfNeeded(DocumentsOperationContext context, CollectionName collectionName, byte* lowerKey, int lowerSize)

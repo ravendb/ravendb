@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using FastTests.Server.Basic;
 using FastTests.Server.Documents.Patching;
 using FastTests.Server.Documents.Replication;
 using Sparrow.Logging;
@@ -12,16 +13,16 @@ namespace Tryouts
         {
             //LoggingSource.Instance.SetupLogMode(LogMode.Information, "E:\\Work");
 
-            Parallel.For(0, 100, i =>
-            //for (int i = 0; i < 100; i++)
+            //Parallel.For(0, 1000, i =>
+            for (int i = 0; i < 1000; i++)
             {
-                Console.WriteLine(i);
-                using (var store = new FastTests.Server.Documents.Replication.ReplicationTombstoneTests())
+                Console.WriteLine(i); 
+                using (var store = new RavenDB5743())
                 {
-                    store.Two_tombstones_should_replicate_in_master_master().Wait();
+                    store.WillFilterMetadataPropertiesStartingWithAt().Wait();
                 }
             }
-            ); 
+            //); 
         }
     }
 
