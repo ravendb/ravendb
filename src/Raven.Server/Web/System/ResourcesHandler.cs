@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents;
+using Raven.Server.Documents.PeriodicExport;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -77,10 +78,12 @@ namespace Raven.Server.Web.System
                             var db = online ? dbTask.Result : null;
                             var indexingStatus = dbTask != null && dbTask.IsCompleted ? dbTask.Result.IndexStore.Status.ToString() : null;
                             var size = new Size(GetTotalSize(db));
+                            var backupInfo = GetBackupInfo(db);
+
                             var doc = new DynamicJsonValue
                             {
                                 [nameof(ResourceInfo.Bundles)] = new DynamicJsonArray(GetBundles(db)),
-                                [nameof(ResourceInfo.IsAdmin)] = true,
+                                [nameof(ResourceInfo.IsAdmin)] = true, //TODO: implement me!
                                 [nameof(ResourceInfo.Name)] = dbName,
                                 [nameof(ResourceInfo.Disabled)] = disabled,
                                 [nameof(ResourceInfo.TotalSize)] = new DynamicJsonValue
@@ -90,17 +93,11 @@ namespace Raven.Server.Web.System
                                 },
                                 [nameof(ResourceInfo.Errors)] = online ? db.IndexStore.GetIndexes().Sum(index => index.GetErrors().Count) : 0,
                                 [nameof(ResourceInfo.Alerts)] = online ? db.Alerts.GetAlertCount() : 0,
-                                [nameof(ResourceInfo.UpTime)] = online ? GetUptime(db).ToString() : "UnKnown",
-                                [nameof(ResourceInfo.BackupInfo)] = new DynamicJsonValue
-                                {
-                                    [nameof(BackupInfo.IncrementalBackupInterval)] = online ? db.BundleLoader.PeriodicExportRunner?.IncrementalInterval.ToString() : "UnKnown",
-                                    [nameof(BackupInfo.FullBackupInterval)] = online ? db.BundleLoader.PeriodicExportRunner?.FullExportInterval.ToString() : "UnKnown",
-                                    [nameof(BackupInfo.LastIncrementalBackup)] = online ? db.BundleLoader.PeriodicExportRunner?.ExportTime.ToString() : "UnKnown",
-                                    [nameof(BackupInfo.LastFullBackup)] = online ? db.BundleLoader.PeriodicExportRunner?.FullExportTime.ToString() : "UnKnown",
-                                },
+                                [nameof(ResourceInfo.UpTime)] = online ? GetUptime(db).ToString() : null,
+                                [nameof(ResourceInfo.BackupInfo)] = backupInfo,
                                 [nameof(DatabaseInfo.DocumentsCount)] = online ? GetNumberOfDocuments(db) : 0,
                                 [nameof(DatabaseInfo.IndexesCount)] = online ? db.IndexStore.GetIndexes().Count() : 0,
-                                [nameof(DatabaseInfo.RejectClients)] = false,
+                                [nameof(DatabaseInfo.RejectClients)] = false, //TODO: implement me!
                                 [nameof(DatabaseInfo.IndexingStatus)] = indexingStatus
                             };
 
@@ -116,6 +113,24 @@ namespace Raven.Server.Web.System
                 }
             }
             return Task.CompletedTask;
+        }
+
+        private DynamicJsonValue GetBackupInfo(DocumentDatabase db)
+        {
+            var periodicExportRunner = db?.BundleLoader.PeriodicExportRunner;
+
+            if (periodicExportRunner == null)
+            {
+                return null;
+            }
+
+            return new DynamicJsonValue
+            {
+                [nameof(BackupInfo.IncrementalBackupInterval)] = periodicExportRunner.IncrementalInterval,
+                [nameof(BackupInfo.FullBackupInterval)] = periodicExportRunner.FullExportInterval,
+                [nameof(BackupInfo.LastIncrementalBackup)] = periodicExportRunner.ExportTime,
+                [nameof(BackupInfo.LastFullBackup)] = periodicExportRunner.FullExportTime
+            };
         }
 
         private TimeSpan GetUptime(DocumentDatabase db)
