@@ -70,15 +70,6 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/indexes/indexTerms',
             css: 'icon-terms',
             nav: false
-        }),
-        new separatorMenuItem(),
-        new leafMenuItem({
-            title: 'Add Index',
-            route: 'databases/indexes/add',
-            moduleId: 'viewmodels/database/indexes/editIndex',
-            css: 'icon-plus',
-            nav: true,
-            dynamicHash: appUrls.newIndex
         })
     ];
 

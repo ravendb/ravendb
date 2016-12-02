@@ -12,6 +12,7 @@
                             <h3>NAME</h3>
                             <input type="text" id="resourceName" data-bind="textInput: resourceModel.name" autofocus class="form-control">
                         </div>
+                        
                         <h3>BUNDLES</h3>
                         <div class="settings-group" data-bind="foreach: getAvailableBundles()">
                             <div class="checkbox settings-item" data-bind="css: { 'active': $root.advancedBundleConfigurationVisible() === name }">
