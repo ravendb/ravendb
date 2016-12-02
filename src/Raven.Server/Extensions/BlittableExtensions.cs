@@ -41,6 +41,15 @@ namespace Raven.Server
             if (doc.TryGet(Constants.Metadata.Key, out metadata))
             {
                 metadata.Modifications = mutableMetadata = new DynamicJsonValue(metadata);
+                var props = new BlittableJsonReaderObject.PropertyDetails();
+                for (int i = 0; i < metadata.Count; i++)
+                {
+                    metadata.GetPropertyByIndex(i, ref props);
+                    if (props.Name[0] == (byte) '@')
+                    {
+                        metadata.Modifications.Remove(props.Name);
+                    }
+                }
             }
             else
             {
