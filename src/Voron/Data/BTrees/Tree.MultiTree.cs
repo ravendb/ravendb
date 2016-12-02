@@ -6,6 +6,7 @@ using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
 using Sparrow.Binary;
+using Voron.Exceptions;
 
 namespace Voron.Data.BTrees
 {
@@ -280,7 +281,7 @@ namespace Voron.Data.BTrees
             {
                 if (SliceComparer.Equals(fetchedNodeKey, key) == false)
                 {
-                    throw new InvalidDataException("Was unable to retrieve the correct node. Data corruption possible");
+                    VoronUnrecoverableErrorException.Raise(_llt.Environment, "Was unable to retrieve the correct node. Data corruption possible");
                 }
             }
 
@@ -310,7 +311,7 @@ namespace Voron.Data.BTrees
             {
                 if (SliceComparer.Equals(fetchedNodeKey, key) == false)
                 {
-                    throw new InvalidDataException("Was unable to retrieve the correct node. Data corruption possible");
+                    VoronUnrecoverableErrorException.Raise(_llt.Environment, "Was unable to retrieve the correct node. Data corruption possible");
                 }
             }
 
