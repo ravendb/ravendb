@@ -378,6 +378,15 @@ namespace Sparrow.Json.Parsing
                     _state.CurrentTokenType = JsonParserToken.String;
                     return;
                 }
+                if (current is TimeSpan)
+                {
+                    var timeSpan = (TimeSpan)current;
+                    var s = timeSpan.ToString();
+
+                    SetStringBuffer(s);
+                    _state.CurrentTokenType = JsonParserToken.String;
+                    return;
+                }
                 if (current is decimal)
                 {
                     var d = (decimal)current;

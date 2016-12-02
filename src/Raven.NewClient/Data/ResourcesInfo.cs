@@ -39,9 +39,13 @@ namespace Raven.NewClient.Client.Data
 
     public class BackupInfo
     {
-        public TimeSpan? LastBackup { get; set; }
+        public DateTime LastIncrementalBackup { get; set; }
 
-        public TimeSpan BackupInterval { get; set; }
+        public DateTime LastFullBackup { get; set; }
+
+        public TimeSpan IncrementalBackupInterval { get; set; }
+
+        public TimeSpan FullBackupInterval { get; set; }
     }
 
     public class DatabaseInfo : ResourceInfo
