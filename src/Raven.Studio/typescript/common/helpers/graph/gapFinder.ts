@@ -144,38 +144,75 @@ class gapFinder {
     private static trimDomain(domain: Date[], start: Date, end: Date): Date[] {
         const result = [] as Array<Date>;
 
+        // requested: |------|
+        // items:              |----|  |-----|
+        // result:    |------|
+        if (end.getTime() < domain[0].getTime()) {
+            result.push(start);
+            result.push(end);
+            return result;
+        }
+
+        // requested:                |------|
+        // items:    |----|  |-----|
+        // result:                   |------|
+        if (start.getTime() > domain.last().getTime()) {
+            result.push(start);
+            result.push(end);
+            return result;
+        }
+
+        let canSnapToLeft = true;
+
         for (let i = 0; i < domain.length / 2; i++) {
             const s = domain[2 * i];
             const e = domain[2 * i + 1];
 
+            // item ends before requested start 
+            // skip it
             if (e.getTime() < start.getTime()) {
                 continue;
             }
 
+            // item starts after requested end
+            // skip it
             if (s.getTime() > end.getTime()) {
                 continue;
             }
 
+            // requested range falls into item range
+            // show only requested range
+            // requested:      |----|
+            // item:       |------------|
+            // result:         |----|
             if (s.getTime() < start.getTime() && e.getTime() > end.getTime()) {
                 result.push(start);
                 result.push(end);
                 continue;
             }
 
-            if (s.getTime() < start.getTime()) {
-                result.push(start);
-                result.push(e);
-                continue;
+            let effectiveStart = s;
+            let effectiveEnd = e;
+
+            if (canSnapToLeft && start.getTime() < s.getTime()) {
+                effectiveStart = start;
+            } else if (start.getTime() > s.getTime()) {
+                effectiveStart = start;
             }
 
-            if (e.getTime() > end.getTime()) {
-                result.push(s);
-                result.push(end);
-                continue;
+            // if last item or next item starts after requested end
+            const isLastMatchingItem = e.getTime() === domain.last().getTime() || end.getTime() < domain[2 * i + 2].getTime();
+
+            if (end.getTime() < e.getTime()) {
+                effectiveEnd = end;
+            } else if (end.getTime() > e.getTime() && isLastMatchingItem) {
+                effectiveEnd = end;
             }
 
-            result.push(s);
-            result.push(e);
+            result.push(effectiveStart);
+            result.push(effectiveEnd);
+
+            canSnapToLeft = false;
         }
 
         return result;
