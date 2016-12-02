@@ -7,6 +7,7 @@ import graphHelper = require("common/helpers/graph/graphHelper");
 import d3 = require("d3");
 import rbush = require("rbush");
 import gapFinder = require("common/helpers/graph/gapFinder");
+import generalUtils = require("common/generalUtils");
 
 type rTreeLeaf = {
     minX: number;
@@ -686,7 +687,7 @@ class metrics extends viewModelBase {
                     .duration(200)
                     .style("opacity", 1);
                 let html = element.Name;
-                html += "<br />Duration: " + element.DurationInMilliseconds + " ms"; //TODO: format time time to avoid 2000230434 ms
+                html += "<br />Duration: " + generalUtils.formatMillis(element.DurationInMilliseconds);
 
                 this.tooltip.html(html);
                 this.tooltip.datum(element);

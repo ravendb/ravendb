@@ -27,11 +27,11 @@ abstract class reduceValuesFormatter {
             return "null";
         }
 
-        if (value instanceof Number) {
-            return value.toString();
+        if (typeof(value) === "number") {
+            return value.toLocaleString();
         }
 
-        if (value instanceof String) {
+        if (typeof(value) === "string") {
             return value as string;
         }
 

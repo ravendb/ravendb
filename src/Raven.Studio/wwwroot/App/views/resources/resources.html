@@ -164,7 +164,7 @@
         <div class="properties-value value-only">
             <div class="set-size">
                 <i class="icon-document-group"></i>
-                <span data-bind="text: $root.pluralize(documentsCount(), 'document', 'documents')"></span>
+                <span data-bind="text: $root.pluralize(documentsCount().toLocaleString(), 'document', 'documents')"></span>
             </div>
         </div>
     </div>
@@ -173,7 +173,7 @@
         <div class="properties-value value-only">
             <div class="set-size">
                 <i class="icon-index"></i>
-                <span data-bind="text: $root.pluralize(indexesCount(), 'index', 'indexes')"></span>
+                <span data-bind="text: $root.pluralize(indexesCount().toLocaleString(), 'index', 'indexes')"></span>
             </div>
         </div>
     </div>
@@ -182,7 +182,7 @@
         <div class="properties-value value-only">
             <div class="set-size">
                 <i class="icon-filesystem"></i>
-                <span data-bind="text: $root.pluralize(filesCount(), 'file', 'files')"></span>
+                <span data-bind="text: $root.pluralize(filesCount().toLocaleString(), 'file', 'files')"></span>
             </div>
         </div>
     </div>
@@ -191,7 +191,7 @@
         <div class="properties-value value-only text-danger">
             <div class="set-size">
                 <i class="icon-exclamation"></i>
-                <span data-bind="text: $root.pluralize(errors(), 'error', 'errors')"></span>
+                <span data-bind="text: $root.pluralize(errors().toLocaleString(), 'error', 'errors')"></span>
             </div>
         </div>
     </div>
@@ -200,7 +200,7 @@
         <div class="properties-value value-only text-warning">
             <div class="set-size">
                 <i class="icon-warning"></i>
-                <span data-bind="text: $root.pluralize(alerts(), 'alert', 'alerts')"></span>
+                <span data-bind="text: $root.pluralize(alerts().toLocaleString(), 'alert', 'alerts')"></span>
             </div>
         </div>
     </div>
