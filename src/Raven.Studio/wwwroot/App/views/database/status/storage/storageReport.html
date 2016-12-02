@@ -35,8 +35,8 @@
                     <a href="#" data-bind="text: name, click: $root.onClick.bind($root, $data), visible: hasChildren()"></a>
                     <span href="#" data-bind="text: name, visible: !hasChildren()"></span>
                 </td>
-                <td data-bind="visible: $root.showPagesColumn(), text: pageCount"></td>
-                <td data-bind="visible: $root.showEntriesColumn(), text: numberOfEntries"></td>
+                <td data-bind="visible: $root.showPagesColumn(), text: pageCount ? pageCount.toLocaleString() : 0"></td>
+                <td data-bind="visible: $root.showEntriesColumn(), text: numberOfEntries ? numberOfEntries.toLocaleString() : 0"></td>
                 <td data-bind="text: formatSize()"></td>
                 <td data-bind="text: formatPercentage($parent.node().size)"></td>
             </tr>
