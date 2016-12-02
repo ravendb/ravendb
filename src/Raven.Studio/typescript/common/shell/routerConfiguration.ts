@@ -72,7 +72,7 @@ function generateAllMenuItems() {
             title: 'About',
             tooltip: "About",
             nav: true,
-            css: 'fa fa-question-mark',
+            css: 'icon-info',
             dynamicHash: appUrl.forAbout
         })
     ];

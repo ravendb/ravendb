@@ -20,15 +20,6 @@ function getTransformersMenuItem(appUrls: computedAppUrls) {
             title: 'Edit Transformer',
             css: 'icon-edit',
             nav: false
-        }),
-        new separatorMenuItem(),
-        new leafMenuItem({
-            title: 'Add Transformer',
-            route: 'databases/transformers/add',
-            moduleId: 'viewmodels/database/transformers/editTransformer',
-            css: 'icon-plus',
-            nav: true,
-            dynamicHash: appUrls.newTransformer
         })
     ];
 
