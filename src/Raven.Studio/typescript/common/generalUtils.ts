@@ -85,5 +85,11 @@ class genUtils {
         }
         return output;
     }
+
+    // Return the inputNumber as a string with separating commas rounded to 'n' decimal digits
+    // (e.g. for n==2: 2046430.45756 => "2,046,430.46")
+    static formatNumberToStringFixed(inputNumber: number, n: number) :string {
+        return inputNumber.toLocaleString(undefined, { minimumFractionDigits: n, maximumFractionDigits: n });
+    }; 
 } 
 export = genUtils;
