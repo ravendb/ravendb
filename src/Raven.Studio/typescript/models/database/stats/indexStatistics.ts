@@ -22,8 +22,8 @@ class indexStatistics {
     reducedPerSecondRate: number;
     reducedPerSecondRateStr: string;   
 
-    isMapIndex: boolean;
     isReduceIndex: boolean;
+    isFaultyIndex: boolean;
     
     constructor(dto: Raven.Client.Data.Indexes.IndexStats) {
         this.indexName = dto.Name;
@@ -48,8 +48,8 @@ class indexStatistics {
         this.reducedPerSecondRate = dto.ReducedPerSecondRate;
         this.reducedPerSecondRateStr = dto.ReducedPerSecondRate > 1 ? genUtils.formatNumberToStringFixed(dto.ReducedPerSecondRate, 2) : "";
 
-        this.isMapIndex = this.indexType.contains("Map");
-        this.isReduceIndex = this.indexType.contains("Reduce");
+        this.isReduceIndex = this.indexType === "AutoMapReduce" || this.indexType === "MapReduce";
+        this.isFaultyIndex = this.indexType === "Faulty";
     }
 }
 
