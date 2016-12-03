@@ -5,7 +5,7 @@
     <div class="row" data-bind="with: stats">
 
         <div class="col-xs-12 visible-sm visible-xs">
-            <table class="table table-condensed table-striped table-responsive bg-info">
+            <table class="table table-condensed table-responsive">
                 <tbody>
                     <tr>
                         <td>Database Id</td>
@@ -36,7 +36,7 @@
         </div>
 
         <div class="col-lg-7 visible-md visible-lg">
-            <table class="table table-condensed table-striped table-responsive table-bordered bg-info">
+            <table class="table table-condensed table-responsive table-bordered">
                 <tbody>
                     <tr>
                         <td class="row"><span class="col-md-6">Documents Count</span><span class="col-md-3" data-bind="text: countOfDocuments" style="float: right"></span></td>
@@ -91,7 +91,7 @@
                                         <td>Index Id:</td>
                                         <td data-bind="text: indexId"></td>
                                     </tr>
-                                    <tr>
+                                    <tr data-bind="if: !isFaultyIndex">
                                         <td>Entries Count:</td>
                                         <td data-bind="text: entriesCount"></td>
                                     </tr>
@@ -99,19 +99,19 @@
                                         <td>Errors Count:</td>
                                         <td data-bind="text: errorsCount"></td>
                                     </tr>
-                                    <tr data-bind="if: isMapIndex">
+                                    <tr data-bind="if: !isFaultyIndex">
                                         <td>Map Attempts:</td>
                                         <td data-bind="text: mapAttempts"></td>
                                     </tr>
-                                    <tr data-bind="if: isMapIndex">
+                                    <tr data-bind="if: !isFaultyIndex">
                                         <td>Map Successes:</td>
                                         <td data-bind="text: mapSuccesses"></td>
                                     </tr>
-                                    <tr data-bind="if: isMapIndex && mapErrors > 0">
+                                    <tr data-bind="if: mapErrors > 0">
                                         <td>Map Errors:</td>
                                         <td data-bind="text: mapErrors"></td>
                                     </tr>
-                                    <tr data-bind="if: isMapIndex && (mappedPerSecondRate > 1)">
+                                    <tr data-bind="if: mappedPerSecondRate > 1">
                                         <td>Mapped Per Second Rate:</td>
                                         <td data-bind="text: mappedPerSecondRateStr"></td>
                                     </tr>
