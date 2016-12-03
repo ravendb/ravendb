@@ -21,17 +21,16 @@ class statistics {
         this.countOfTransformers = dbStats.CountOfTransformers.toLocaleString();
         this.is64Bit = dbStats.Is64Bit;
         
-        // 1. The array with all indexes from endpoint
-        //TODO: use index stats
-        const allIndexes = dbStats.Indexes.map(x => new indexStatistics(x)); 
+        // 1. Create the array with all indexes that we got from the endpoint
+        const allIndexes = indexStats.map(x => new indexStatistics(x));
 
         // 2. Create an array where indexes are ordered by type
         let indexesByTypeTemp = Array<indexesWithType>();
         allIndexes.forEach(index => {
-            let existingEntry = indexesByTypeTemp.find(x => x.indexType === index.type);
+            let existingEntry = indexesByTypeTemp.find(x => x.indexType === index.indexType);
             if (!existingEntry) {
                 // A new type encountered
-                const newType = new indexesWithType(index.type);
+                const newType = new indexesWithType(index.indexType);
                 newType.add(index);
                 indexesByTypeTemp.push(newType);
             }
@@ -42,7 +41,7 @@ class statistics {
         });
 
         // 3. Sort by index name & type
-        indexesByTypeTemp.forEach(x => { x.indexes.sort((a, b) => a.name > b.name ? 1 : -1); });
+        indexesByTypeTemp.forEach(x => { x.indexes.sort((a, b) => a.indexName > b.indexName ? 1 : -1); });
         indexesByTypeTemp.sort((a, b) => a.indexType > b.indexType ? 1 : -1);
 
         // 4. Update the observable array 
