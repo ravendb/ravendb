@@ -75,6 +75,11 @@ namespace Sparrow.Json
             return startPos;
         }
 
+        public int WriteNull()
+        {
+            return _position;
+        }
+
         public int WriteValue(double value)
         {
             // todo: write something more performant here..
