@@ -1249,10 +1249,31 @@ namespace Raven.Database
                     //We catch any exception so not to cause the server to crash
                     catch (Exception e)
                     {
-                        Log.FatalException($"An error was thrown from executing a startup task of type, {task.GetType().FullName}, preventing its functionality from running.",e);
+                        LogErrorAndAddAlertOnStartupTaskException(task.GetType().FullName, e);
                     }
                 }
             }
+        }
+
+        internal void LogErrorAndAddAlertOnStartupTaskException(string taskTypeName, Exception e)
+        {
+            var msg = $"An error was thrown from executing a startup task of type, {taskTypeName}, preventing its functionality from running.";
+            var exceptionMessage = $"Message:{e.Message}{Environment.NewLine}StackTrace:{e.StackTrace}";
+            var uniqueKey = $"{Name} startup task {taskTypeName} fatal error";
+            if (e.InnerException != null && !(e is AggregateException))
+            {
+                exceptionMessage += $"{Environment.NewLine}Inner exception Message:{e.InnerException.Message}{Environment.NewLine}StackTrace:{e.InnerException.StackTrace}";
+            }
+            else if (e is AggregateException)
+            {
+                var ae = e as AggregateException;
+                foreach (var a in ae.InnerExceptions)
+                {
+                    exceptionMessage += $"{Environment.NewLine}Aggregate exception Message:{a.Message}{Environment.NewLine}StackTrace:{a.StackTrace}";
+                }
+            }
+            Log.FatalException(msg, e);
+            this.AddAlert(new Alert { AlertLevel = AlertLevel.Error, CreatedAt = DateTime.UtcNow, Message = msg + Environment.NewLine, Exception = exceptionMessage, Title = "Fatal error in startup task", UniqueKey = uniqueKey });
         }
 
         private void InitializeIndexCodecTriggers()
