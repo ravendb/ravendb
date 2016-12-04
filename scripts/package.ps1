@@ -92,6 +92,9 @@ function CreatePackageServerLayout ( $outDir, $packageDir ) {
 
     $serverOutDir = [io.path]::combine($outDir, "Server")
     cp -r $serverOutDir $packageDir
+
+    del $serverOutDir/*.so
+    del $serverOutDir/*.ni.*
 }
 
 function CreatePackageClientLayout ( $outDir, $packageDir, $projectDir ) {
