@@ -125,22 +125,18 @@ namespace Raven.Database.Indexing
                                  { "Marker", CommitMarker.ToString(CultureInfo.InvariantCulture) }
                              };
 
-            var commitDataStored = false;
+            var commitedInTheLast10Mintures = SystemTime.UtcNow - lastCommitDataStoreTime <= TimeSpan.FromMinutes(10);
+            if (forceCommit == false && commitedInTheLast10Mintures &&
+                (changesSinceCommit == 0 || considerLastCommitedTime))
+            {
+                // don't commit the changes too often
+                return;
+            }
 
-            if (forceCommit ||
-                (changesSinceCommit == 0 && SystemTime.UtcNow - lastCommitDataStoreTime > TimeSpan.FromMinutes(10)))
+            if (changesSinceCommit == 0)
             {
                 ForceCommitDataStore();
-                commitDataStored = true;
             }
-            else if (changesSinceCommit > 0)
-            {
-                if (considerLastCommitedTime && SystemTime.UtcNow - lastCommitDataStoreTime <= TimeSpan.FromMinutes(10))
-                    return;
-
-                commitDataStored = true;
-            }
-                
 
             if (lastEtag != null)
                 commitData.Add("LastEtag", lastEtag);
@@ -149,8 +145,7 @@ namespace Raven.Database.Indexing
             {
                 indexWriter.Commit(commitData);
 
-                if (commitDataStored)
-                    lastCommitDataStoreTime = SystemTime.UtcNow;
+                lastCommitDataStoreTime = SystemTime.UtcNow;
 
                 changesSinceCommit = 0;
             }
