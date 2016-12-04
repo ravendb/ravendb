@@ -1242,8 +1242,15 @@ namespace Raven.Database
                     {
                         toDispose.Add(disposable);
                     }
-
-                    task.Value.Execute(this);
+                    try
+                    {
+                        task.Value.Execute(this);
+                    }
+                    //We catch any exception so not to cause the server to crash
+                    catch (Exception e)
+                    {
+                        Log.FatalException($"An error was thrown from executing a startup task of type, {task.GetType().FullName}, preventing its functionality from running.",e);
+                    }
                 }
             }
         }
