@@ -157,7 +157,7 @@ namespace Raven.NewClient.Client.Http
                         return;
                     }
 
-                    request.Headers.IfNoneMatch.Add(new EntityTagHeaderValue(cachedEtag.ToString()));
+                    request.Headers.TryAddWithoutValidation("If-None-Match", cachedEtag.ToString());
                 }
 
                 var sp = Stopwatch.StartNew();
@@ -205,10 +205,10 @@ namespace Raven.NewClient.Client.Http
                         // we intentionally don't dispose the reader here, we'll be using it
                         // in the command, any associated memory will be released on context reset
                         var blittableJsonReaderObject = await context.ReadForMemoryAsync(stream, "PutResult");
-                        if (response.Headers.ETag != null)
+                        if (response.Headers.Contains("Etag"))
                         {
                             long etag;
-                            if (long.TryParse(response.Headers.ETag.Tag, out etag))
+                            if (long.TryParse(response.Headers.GetValues("Etag").FirstOrDefault(), out etag))
                             {
                                 _cache.Set(url, etag, blittableJsonReaderObject);
                             }
