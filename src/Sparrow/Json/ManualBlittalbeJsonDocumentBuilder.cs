@@ -255,7 +255,7 @@ namespace Sparrow.Json
         public void WriteValueNull()
         {
             var currentState = _continuationState.Pop();
-            var valuePos = 1;
+            var valuePos = _writer.WriteNull();
             _writeToken = new WriteToken //todo: figure out if we really need those WriteTokens
             {
                 ValuePos = valuePos,
