@@ -27,7 +27,7 @@
 
   "dependencies": {
     "NETStandard.Library": "1.6.1",
-    "Newtonsoft.Json": "9.0.1",
+    "Newtonsoft.Json": "9.0.2-beta1",
     "Sparrow": "4.0.0-*",
     "System.Net.Requests": "4.3.0",
     "System.Collections.Specialized": "4.3.0",
