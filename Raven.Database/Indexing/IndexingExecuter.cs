@@ -915,11 +915,11 @@ namespace Raven.Database.Indexing
                                     // (if we discover that the last indexed etag is different from the last commited one)
                                     // we already flush the last indexed etag when we pass a certain size in ram,
                                     // however we don't do that if we only have a few of them
-                                    // it's also limited to flushing for every 10 minutes if don't have any results
+                                    // it's also limited to flushing for every 10 minutes if we don't have any results
                                     actions.BeforeStorageCommit += () =>
                                     {
                                         batchForIndex.Index.EnsureIndexWriter();
-                                        // we don't to flush to disk too often
+                                        // we don't want to flush to disk too often
                                         batchForIndex.Index.Flush(lastEtag, considerLastCommitedTime: true);
                                     };
                                 });

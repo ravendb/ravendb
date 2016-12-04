@@ -373,7 +373,7 @@ namespace Raven.Database.Indexing
             }
         }
 
-        public void Flush(Etag highestETag, bool considerLastCommitedTime = false)
+        public void Flush(Etag highestETag, bool forceFlush = false, bool considerLastCommitedTime = false)
         {
             try
             {
@@ -391,7 +391,9 @@ namespace Raven.Database.Indexing
                     {
                         try
                         {
-                            indexWriter.Commit(highestETag, considerLastCommitedTime: considerLastCommitedTime);
+                            indexWriter.Commit(highestETag, 
+                                forceCommit: forceFlush, 
+                                considerLastCommitedTime: considerLastCommitedTime);
                         }
                         catch (Exception e)
                         {
@@ -661,7 +663,7 @@ namespace Raven.Database.Indexing
 
                                 if (indexWriter != null && indexWriter.RamSizeInBytes() >= flushSize)
                                 {
-                                    Flush(itemsInfo.HighestETag); // just make sure changes are flushed to disk
+                                    Flush(itemsInfo.HighestETag, forceFlush: true); // just make sure changes are flushed to disk
                                     flushed = true;
                                 }
                             }
