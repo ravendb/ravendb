@@ -9,7 +9,7 @@ using Xunit;
 
 namespace FastTests.Blittable.BlittableJsonWriterTests
 {
-    public class ManualBuilderTests
+    public class ManualBuilderTests : NoDisposalNeeded
     {
         [Fact]
         public void BasicObject()

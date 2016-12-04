@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using FastTests.Server.Basic;
+using FastTests.Server.Documents.Alerts;
 using FastTests.Server.Documents.Patching;
 using FastTests.Server.Documents.Replication;
 using Sparrow.Logging;
@@ -17,9 +18,9 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i); 
-                using (var store = new RavenDB5743())
+                using (var store = new FastTests.Blittable.BlittableJsonWriterTests.ManualBuilderTests())
                 {
-                    store.WillFilterMetadataPropertiesStartingWithAt().Wait();
+                    store.FlatObjectWithArrayOfEmptyObjects();
                 }
             }
             //); 

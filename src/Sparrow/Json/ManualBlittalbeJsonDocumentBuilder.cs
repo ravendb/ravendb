@@ -432,7 +432,7 @@ namespace Sparrow.Json
         public void Reset(UsageMode mode)
         {
             _mode = mode;
-            _writer.Reset();
+            _writer.Renew();
         }
 
 
