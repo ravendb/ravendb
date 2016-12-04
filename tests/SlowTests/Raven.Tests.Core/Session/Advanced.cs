@@ -226,7 +226,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
-        [Fact( Skip = "GetDocumentUrl Not Implemented")]
+        [Fact]
         public void CanGetDocumentUrl()
         {
             using (var store = GetDocumentStore())

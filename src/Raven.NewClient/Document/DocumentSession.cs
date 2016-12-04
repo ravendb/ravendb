@@ -113,7 +113,11 @@ namespace Raven.NewClient.Client.Document
         /// <returns></returns>
         public string GetDocumentUrl(object entity)
         {
-            throw new NotImplementedException();
+            DocumentInfo document;
+            if (DocumentsByEntity.TryGetValue(entity, out document) == false)
+                throw new InvalidOperationException("Could not figure out identifier for transient instance");
+
+            return RequestExecuter.UrlFor(document.Id);
         }
          
         public FacetedQueryResult[] MultiFacetedSearch(params FacetQuery[] queries)
