@@ -381,6 +381,12 @@ namespace Raven.NewClient.Client.Http
             await ExecuteAsync(failoverNode, context, command);
         }
 
+        public string UrlFor(string documentKey)
+        {
+            var node = _topology.LeaderNode;
+            return $"{node.Url}/databases/{node.Database}/docs/{documentKey}";
+        }
+
         public class ChoosenNode
         {
             public ServerNode Node;
