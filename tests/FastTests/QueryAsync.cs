@@ -57,7 +57,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact(Skip = "Assert fails")]
+        [Fact]
         public async void QueryAsync_By_Index()
         {
             using (var store = GetDocumentStore())

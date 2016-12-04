@@ -5,7 +5,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Async
 {
     public class Querying : RavenTestBase
     {
-        [Fact(Skip = "Assert.Equal fail")]
+        [Fact]
         public async Task Can_query_using_async_session()
         {
             using (var store = GetDocumentStore())
@@ -18,12 +18,11 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Async
 
                 using (var s = store.OpenAsyncSession())
                 {
-                    var queryResultAsync = await s.Advanced.AsyncDocumentQuery<dynamic>()
+                    var result = await s.Advanced.AsyncDocumentQuery<dynamic>()
                         .WhereEquals("Name", "Ayende")
                         .ToListAsync();
 
-                    var result = queryResultAsync;
-                    Assert.Equal("Ayende", result[0].Name);
+                    Assert.Equal("Ayende", result[0].Name.ToString());
                 }
             }
         }
