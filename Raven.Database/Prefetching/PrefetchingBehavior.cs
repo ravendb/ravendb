@@ -895,9 +895,10 @@ namespace Raven.Database.Prefetching
                 return;
 
             var numberOfSplitTasks = Math.Max(2, Environment.ProcessorCount / 2);
-            var actualFutureIndexBatchesCount = GetActualFutureIndexBatchesCount(numberOfSplitTasks);
-            // no need to load more than 10 future batches
-            if (actualFutureIndexBatchesCount > 10)
+            int active;
+            var actualFutureIndexBatchesCount = GetActualFutureIndexBatchesCount(numberOfSplitTasks, out active);
+            // no need to load more than 10 future batches or too much concurrent prefetching tasks
+            if (actualFutureIndexBatchesCount >= 10 || active > numberOfSplitTasks)
                 return;
 
             // ensure that we don't use too much memory
@@ -976,12 +977,16 @@ namespace Raven.Database.Prefetching
             return true;
         }
 
-        private int GetActualFutureIndexBatchesCount(int numberOfSplitTasks)
+        private int GetActualFutureIndexBatchesCount(int numberOfSplitTasks, out int active)
         {
+            active = 0;
             var actualFutureIndexBatchesCount = 0;
             var splittedFutureIndexBatchesCount = 0;
             foreach (var futureIndexBatch in futureIndexBatches.Values)
             {
+                if (futureIndexBatch.Task.IsCompleted == false)
+                    active++;
+
                 if (futureIndexBatch.Type == FutureBatchType.EarlyExit)
                 {
                     // we don't count the early exit future batches,
