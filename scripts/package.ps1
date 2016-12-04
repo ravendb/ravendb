@@ -70,10 +70,22 @@ function GetPkgSpec ($runtime) {
 function CreatePackageLayout ( $outDir, $packageDir, $projectDir ) {
     CopyLicenseFile $packageDir
     CopyAckFile $packageDir
+    CopyDaemonScripts $projectDir $packageDir
     CreatePackageServerLayout $outDir $packageDir
     CreatePackageClientLayout $outDir $packageDir $projectDir
     CopyClientReadMe $(Join-Path $packageDir -ChildPath 'Client')
 }
+
+
+function CopyDaemonScripts ( $projectDir, $packageDir ) {
+    write-host "Copy daemon files..."
+
+    $daemonScriptsDir = [io.path]::combine([io.path]::combine($projectDir, "scripts"), "raspberry-pi")
+
+    cp -r $daemonScriptsDir/ravendbd $packageDir
+    cp -r $daemonScriptsDir/ravendb.watchdog.sh $packageDir
+}
+
 
 function CreatePackageServerLayout ( $outDir, $packageDir ) {
     write-host "Create package server directory layout..."
