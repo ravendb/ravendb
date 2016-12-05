@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
@@ -42,7 +43,7 @@ namespace Raven.Server.Documents.Handlers
                 if (document == null)
                     HttpContext.Response.StatusCode = 404;
                 else
-                    HttpContext.Response.Headers[Constants.MetadataEtagField] = document.Etag.ToString();
+                    HttpContext.Response.Headers[Constants.MetadataEtagField] = "\"" + document.Etag + "\"";
 
                 return Task.CompletedTask;
             }
@@ -107,7 +108,7 @@ namespace Raven.Server.Documents.Handlers
                 HttpContext.Response.StatusCode = 304;
                 return;
             }
-            HttpContext.Response.Headers["ETag"] = actualEtag.ToString();
+            HttpContext.Response.Headers["ETag"] = "\"" + actualEtag + "\"";
 
             var etag = GetLongQueryString("etag", false);
             IEnumerable<Document> documents;
@@ -193,7 +194,8 @@ namespace Raven.Server.Documents.Handlers
             }
 
             HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
-            HttpContext.Response.Headers[Constants.MetadataEtagField] = actualEtag.ToString();
+            HttpContext.Response.Headers[Constants.MetadataEtagField] = "\"" + actualEtag + "\"";
+
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();

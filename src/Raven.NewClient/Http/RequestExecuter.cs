@@ -20,6 +20,7 @@ using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Exceptions;
 using Sparrow.Logging;
+using Raven.NewClient.Client.Connection;
 
 namespace Raven.NewClient.Client.Http
 {
@@ -157,7 +158,7 @@ namespace Raven.NewClient.Client.Http
                         return;
                     }
 
-                    request.Headers.IfNoneMatch.Add(new EntityTagHeaderValue(cachedEtag.ToString()));
+                    request.Headers.IfNoneMatch.Add(new EntityTagHeaderValue("\"" + cachedEtag + "\""));
                 }
 
                 var sp = Stopwatch.StartNew();
@@ -207,10 +208,10 @@ namespace Raven.NewClient.Client.Http
                         var blittableJsonReaderObject = await context.ReadForMemoryAsync(stream, "PutResult");
                         if (response.Headers.ETag != null)
                         {
-                            long etag;
-                            if (long.TryParse(response.Headers.ETag.Tag, out etag))
+                            long? etag = response.GetEtagHeader();
+                            if (etag != null)
                             {
-                                _cache.Set(url, etag, blittableJsonReaderObject);
+                                _cache.Set(url, (long)etag, blittableJsonReaderObject);
                             }
                         }
                         command.SetResponse(blittableJsonReaderObject);
