@@ -20,6 +20,7 @@ import environmentColor = require("models/resources/environmentColor");
 import changesContext = require("common/changesContext");
 import changesApi = require("common/changesApi");
 import allRoutes = require("common/shell/routes");
+import registration = require("viewmodels/shell/registration");
 
 import appUrl = require("common/appUrl");
 import uploadQueueHelper = require("common/uploadQueueHelper");
@@ -147,10 +148,11 @@ class shell extends viewModelBase {
         });
 
         $(window).resize(() => self.activeResource.valueHasMutated());
-        //TODO: return shell.fetchLicenseStatus();
 
         this.fetchClientBuildVersion();
         this.fetchServerBuildVersion();
+
+        return shell.fetchLicenseStatus();
     }
 
     private setupRouting() {
@@ -191,6 +193,11 @@ class shell extends viewModelBase {
         $("#body").removeClass('loading-active');
 
         this.initializeShellComponents();
+
+        //TODO: use constants
+        if (license.licenseStatus().LicenseType === "None" || license.licenseStatus().LicenseType === "Invalid") {
+            registration.showRegistrationDialog(license.licenseStatus());
+        }
     }
 
     private preLoadRecentErrorsView() {
