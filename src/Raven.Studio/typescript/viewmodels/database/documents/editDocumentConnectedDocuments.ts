@@ -28,20 +28,12 @@ class connectedDocuments {
         new hyperlinkColumn("id", "href", "", "100%")
     ];
     currentDocumentIsStarred = ko.observable<boolean>(false);
-    currentResultSet = ko.pureComputed<Array<connectedDocument>>(() => { //TODO: implement virtual paging
-        switch (connectedDocuments.currentTab()) {
-            case connectedDocuments.connectedDocsTabs.related:
-                return this.relatedDocumentHrefs();
-            case connectedDocuments.connectedDocsTabs.collection:
-                return this.collectionDocumentHrefs();
-            case connectedDocuments.connectedDocsTabs.recent:
-                return this.recentDocuments.getTopRecentDocuments(this.db(), this.document().getId());
-            case connectedDocuments.connectedDocsTabs.starred:
-                return this.starredDocumentsHrefs();
-            default:
-                return [];
-        }
-    });
+    currentTab = ko.observable<string>(connectedDocuments.connectedDocsTabs.related);
+    recentDocuments = new recentDocumentsCtr();
+    isRelatedActive = ko.pureComputed(() => this.currentTab() === connectedDocuments.connectedDocsTabs.related);
+    isCollectionActive = ko.pureComputed(() => this.currentTab() === connectedDocuments.connectedDocsTabs.collection);
+    isRecentActive = ko.pureComputed(() => this.currentTab() === connectedDocuments.connectedDocsTabs.recent);
+    isStarredActive = ko.pureComputed(() => this.currentTab() === connectedDocuments.connectedDocsTabs.starred);
 
     static connectedDocsTabs = {
         related: "related",
@@ -49,7 +41,6 @@ class connectedDocuments {
         recent: "recent",
         starred: "starred"
     };
-    static currentTab = ko.observable<string>(connectedDocuments.connectedDocsTabs.related);
 
     constructor(document: KnockoutObservable<document>, db: KnockoutObservable<database>, loadDocument: (docId: string) => void) {
         this.document = document;
@@ -58,65 +49,110 @@ class connectedDocuments {
         this.loadDocumentAction = loadDocument;
     }
 
-    fetchChunk(skip: number, take: number): JQueryPromise<pagedResult<connectedDocument>> {
+    fetchCurrentTabDocs(skip: number, take: number): JQueryPromise<pagedResult<connectedDocument>> {
+        switch (this.currentTab()) {
+            case connectedDocuments.connectedDocsTabs.related:
+                return this.fetchRelatedDocs(skip, take);
+            case connectedDocuments.connectedDocsTabs.collection:
+                return this.fetchCollectionDocs(skip, take);
+            case connectedDocuments.connectedDocsTabs.recent:
+                return this.fetchRecentDocs(skip, take);
+            case connectedDocuments.connectedDocsTabs.starred:
+                return this.fetchStarredDocs(skip, take);
+            default: return this.emptyDocResult();
+        }
+    }
+
+    fetchRelatedDocs(skip: number, take: number): JQueryPromise<pagedResult<connectedDocument>> {
         const deferred = $.Deferred<pagedResult<connectedDocument>>();
 
         const relatedDocumentsCandidates: string[] = documentHelpers.findRelatedDocumentsCandidates(this.document());
         const docIDsVerifyCommand = new verifyDocumentsIDsCommand(relatedDocumentsCandidates, this.db(), true, true);
         docIDsVerifyCommand.execute()
             .done((verifiedIDs: string[]) => {
-                var connectedDocs: connectedDocument[] = verifiedIDs.map(verified => {
-                    return {
-                        id: verified.toString(),
-                        href: appUrl.forEditDoc(verified.toString(), this.db())
-                    } as connectedDocument;
-                });
+                const connectedDocs: connectedDocument[] = verifiedIDs.map(id => this.docIdToConnectedDoc(id));
                 deferred.resolve({
                     items: connectedDocs,
-                    skip: skip,
-                    take: take,
-                    totalCount: connectedDocs.length
+                    totalResultCount: connectedDocs.length
                 });
             });
 
         return deferred.promise();
     }
 
-    filteredResultSet = ko.pureComputed<Array<connectedDocument>>(() => {
-        var itemsToFilter = this.currentResultSet();
-        var criteria = this.searchInput().toLowerCase();
+    fetchCollectionDocs(skip: number, take: number): JQueryPromise<pagedResult<connectedDocument>> {
+        // Make sure we've got a collection to work with.
+        const doc = this.document();
+        if (!doc) {
+            return this.emptyDocResult();
+        }
+        
+        // Fetch collection size.
+        // Why? Because calling collection.fetchDocuments returns a pagedResultSet with .totalResultCount = 0. :-(
+        const collectionName = doc.getEntityName();
+        const collectionSizeTask = new getCollectionsStatsCommand(this.db())
+            .execute()
+            .then((stats: collectionsStats) => stats.getCollectionCount(collectionName));
 
-        if (!criteria) {
-            return itemsToFilter;
+        // Fetch the chunk of documents.        
+        const newCollection = new collection(collectionName, this.db());
+        const fetchDocsTask = newCollection.fetchDocuments(skip, take)
+            .then((result: pagedResultSet<any>) => {
+                // Convert the items from document to connectedDocument.
+                result.items = result.items.map(doc => this.documentToConnectedDoc(doc));
+                return result;
+            });
+
+        return $.when<any>(collectionSizeTask, fetchDocsTask)
+            .then((collectionSize: number, docsResult: pagedResultSet<connectedDocument>) => {
+                docsResult.totalResultCount = collectionSize;
+                return docsResult;
+            });
+    }
+
+    fetchRecentDocs(skip: number, take: number): JQueryPromise<pagedResult<connectedDocument>> {
+        const doc = this.document();
+        if (!doc) {
+            return this.emptyDocResult();
         }
 
-        return itemsToFilter.filter(x => x.id.toLowerCase().contains(criteria));
-    });
+        const recentDocs = this.recentDocuments.getTopRecentDocuments(this.db(), doc.getId());
+        return $.Deferred<pagedResult<connectedDocument>>().resolve({
+            items: recentDocs,
+            totalResultCount: recentDocs.length
+        }).promise();
+    }
 
-    relatedDocumentHrefs = ko.observable<Array<connectedDocument>>();
-    collectionDocumentHrefs = ko.observable<Array<connectedDocument>>();
-    recentDocuments = new recentDocumentsCtr();
-    starredDocumentsHrefs = ko.observable<Array<connectedDocument>>();
+    fetchStarredDocs(skip: number, take: number): JQueryPromise<pagedResult<connectedDocument>> {        
+        const starredDocIds = starredDocumentsStorage.getStarredDocuments(this.db());
+        const starredDocs = starredDocIds.map(id => this.docIdToConnectedDoc(id));
+        return $.Deferred<pagedResult<connectedDocument>>().resolve({
+            items: starredDocs,
+            totalResultCount: starredDocs.length
+        }).promise();
+    }
 
-    isRelatedActive = ko.pureComputed(() => connectedDocuments.currentTab() === connectedDocuments.connectedDocsTabs.related);
-    isCollectionActive = ko.pureComputed(() => connectedDocuments.currentTab() === connectedDocuments.connectedDocsTabs.collection);
-    isRecentActive = ko.pureComputed(() => connectedDocuments.currentTab() === connectedDocuments.connectedDocsTabs.recent);
-    isStarredActive = ko.pureComputed(() => connectedDocuments.currentTab() === connectedDocuments.connectedDocsTabs.starred);
+    emptyDocResult(): JQueryPromise<pagedResult<connectedDocument>> {
+        return $.Deferred<pagedResult<connectedDocument>>().resolve({
+            items: [],
+            totalResultCount: 0
+        }).promise();
+    }
 
     activateRelated() {
-        connectedDocuments.currentTab(connectedDocuments.connectedDocsTabs.related);
+        this.currentTab(connectedDocuments.connectedDocsTabs.related);
     }
 
     activateCollection() {
-        connectedDocuments.currentTab(connectedDocuments.connectedDocsTabs.collection);
+        this.currentTab(connectedDocuments.connectedDocsTabs.collection);
     }
 
     activateRecent() {
-        connectedDocuments.currentTab(connectedDocuments.connectedDocsTabs.recent);
+        this.currentTab(connectedDocuments.connectedDocsTabs.recent);
     }
 
     activateStarred() {
-        connectedDocuments.currentTab(connectedDocuments.connectedDocsTabs.starred);
+        this.currentTab(connectedDocuments.connectedDocsTabs.starred);
     }
 
     onDocumentDeleted() {
@@ -132,62 +168,27 @@ class connectedDocuments {
 
     toggleStar() {
         starredDocumentsStorage.markDocument(this.db(), this.document().getId(), !this.currentDocumentIsStarred());
-        this.initStarred(this.document());
+        this.currentDocumentIsStarred(starredDocumentsStorage.isStarred(this.db(), this.document().getId()));
     }
 
     private onDocumentLoaded(document: document) {
         if (document) {
-
             this.recentDocuments.appendRecentDocument(this.db(), document.getId());
-            this.initRelatedDocuments(document);
-            this.initCollection(document);
-            this.initStarred(document);
         }
     }
 
-    private initRelatedDocuments(document: document): void {
-        const relatedDocumentsCandidates: string[] = documentHelpers.findRelatedDocumentsCandidates(document);
-        const docIDsVerifyCommand = new verifyDocumentsIDsCommand(relatedDocumentsCandidates, this.db(), true, true);
-        const response = docIDsVerifyCommand.execute();
-        response.done(verifiedIDs => {
-            this.relatedDocumentHrefs(verifiedIDs.map((verified: string) => {
-                return {
-                    id: verified.toString(),
-                    href: appUrl.forEditDoc(verified.toString(), this.db())
-                } as connectedDocument;
-            }));
-        });
+    private documentToConnectedDoc(doc: document): connectedDocument {
+        return {
+            id: doc.getId(),
+            href: appUrl.forEditDoc(doc.getId(), this.db())
+        };
     }
 
-    private initCollection(document: document): void { //TODO: this code should be evaulated in lazy fashion - and don't download all documents!
-        const entityName = document.getEntityName();
-
-        if (entityName) {
-            new getCollectionsStatsCommand(this.db())
-                .execute()
-                .done((stats: collectionsStats) => {
-                    const totalCount = stats.getCollectionCount(entityName);
-
-                    const newCollection = new collection(entityName, this.db());
-                    newCollection.fetchDocuments(0, totalCount)
-                        .then((result: pagedResultSet<any>) => {
-                            this.collectionDocumentHrefs(result.items.map(item => ({
-                                id: item.getId(),
-                                href: appUrl.forEditDoc(item.getId(), this.db())
-                            }) as connectedDocument));
-                        });
-                });
+    private docIdToConnectedDoc(docId: string): connectedDocument {
+        return {
+            id: docId,
+            href: appUrl.forEditDoc(docId, this.db())
         }
-    }
-
-    private initStarred(document: document) {
-        let starred = starredDocumentsStorage.getStarredDocuments(this.db());
-        this.starredDocumentsHrefs(starred.map(x => ({
-            id: x,
-            href: appUrl.forEditDoc(x, this.db())
-        }) as connectedDocument));
-
-        this.currentDocumentIsStarred(starredDocumentsStorage.isStarred(this.db(), document.getId()));
     }
 }
 

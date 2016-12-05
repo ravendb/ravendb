@@ -39,6 +39,9 @@ class virtualGrid<T> {
         $.extend(this.settings, params);
         this.initializeColumns();
         this.isSelectAllChecked.subscribe(allSelected => this.selectAllChanged(allSelected));
+        if (params.resetItems) {
+            params.resetItems.subscribe(() => this.resetItems());
+        }
         this.fetchItems(0, 100);
     }
 
@@ -134,7 +137,7 @@ class virtualGrid<T> {
 
             if (safeTake > 0) {
                 this.settings.fetcher(safeSkip, safeTake)
-                    .then((results: pagedResult<T>) => this.chunkFetched(results))
+                    .then((results: pagedResult<T>) => this.chunkFetched(results, safeSkip, safeTake))
                     .fail(error => this.chunkFetchFailed(error, skip, safeTake))
                     .always(() => {
                         // When we're done loading, run the next queued fetch as necessary.
@@ -296,18 +299,18 @@ class virtualGrid<T> {
         failedRows.forEach(r => r.dataLoadError(error));
     }
 
-    private chunkFetched(results: pagedResult<T>) {
+    private chunkFetched(results: pagedResult<T>, skip: number, take: number) {
         if (!this.columns() || this.columns().length === 0) {
             this.assignColumnFromItems(results.items);
         }
 
         // Add these results to the .items array as necessary.
-        this.items.length = results.totalCount;
-        this.totalItemCount = results.totalCount;
-        this.virtualHeight(results.totalCount * virtualRow.height);
-        const endIndex = results.skip + results.items.length;
+        this.items.length = results.totalResultCount;
+        this.totalItemCount = results.totalResultCount;
+        this.virtualHeight(results.totalResultCount * virtualRow.height);
+        const endIndex = skip + results.items.length;
         for (let i = 0; i < results.items.length; i++) {
-            const rowIndex = i + results.skip;
+            const rowIndex = i + skip;
             this.items[rowIndex] = results.items[i];
         }
 
@@ -360,6 +363,18 @@ class virtualGrid<T> {
         return this.virtualRows
             .filter(r => r.element.find(cellElement).length > 0)
             .map(r => r.index)[0];
+    }
+
+    /**
+     * Clears the items from the grid and refetches the first chunk of items.
+     */
+    private resetItems() {
+        this.items.length = 0;
+        this.totalItemCount = null;
+        this.queuedFetch = null;
+        this.isLoading(false);
+        this.virtualRows.forEach(r => r.reset());
+        this.fetchItems(0, 100);
     }
 
     private toggleRowSelected(rowIndex: number) {

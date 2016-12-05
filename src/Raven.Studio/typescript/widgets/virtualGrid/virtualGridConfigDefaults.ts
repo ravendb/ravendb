@@ -23,6 +23,11 @@ class virtualGridConfigDefaults<T> implements virtualGridConfig<T> {
      * The function that fetches a chunk of items. This function will be invoked by the grid as the user scrolls and loads more items.
      */
     fetcher: (skip: number, take: number) => JQueryPromise<pagedResult<T>>;
+
+    /**
+     * Observable that, when changed, causes the grid to clear the current items and refetch.
+     */
+    resetItems: KnockoutObservable<any> = null;
 }
 
 export = virtualGridConfigDefaults;
