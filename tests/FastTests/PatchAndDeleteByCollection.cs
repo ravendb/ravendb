@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Threading;
 using NewClientTests;
 using Raven.NewClient.Client.Commands;
+using Raven.NewClient.Client.Data;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
@@ -52,7 +53,7 @@ namespace NewClientTests.NewClient.FastTests.Patching
             }
         }
 
-        /*[Fact]
+        [Fact]
         public void CanPatchCollection()
         {
             using (var store = GetDocumentStore())
@@ -65,25 +66,37 @@ namespace NewClientTests.NewClient.FastTests.Patching
                     }
                     x.SaveChanges();
                 }
-                var httpJsonRequest = store.DatabaseCommands.CreateRequest("/collections/docs?name=users", new HttpMethod("PATCH"));
-                httpJsonRequest.WriteAsync(@"
-{
-    'Script': 'this.Name = __document_id'
-}
-").Wait();
-                httpJsonRequest.ExecuteRequest();
+
+                JsonOperationContext context;
+                store.GetRequestExecuter(store.DefaultDatabase).ContextPool.AllocateOperationContext(out context);
+
+                var patchByCollectionOperation = new PatchByCollectionOperation(context);
+                var patchCommand = patchByCollectionOperation.CreateRequest("users", 
+                    new PatchRequest { Script = " this.Name = __document_id;" }, store);
+                if (patchCommand != null)
+                    store.GetRequestExecuter(store.DefaultDatabase).Execute(patchCommand, context);
+
                 var sp = Stopwatch.StartNew();
 
                 var timeout = Debugger.IsAttached ? 60 * 10000 : 10000;
 
+                GetStatisticsCommand getStatsCommand;
+                DatabaseStatistics databaseStatistics;
                 while (sp.ElapsedMilliseconds < timeout)
                 {
-                    var databaseStatistics = store.DatabaseCommands.GetStatistics();
+                    getStatsCommand = new GetStatisticsCommand();
+                    store.GetRequestExecuter(store.DefaultDatabase).Execute(getStatsCommand, context);
+                    databaseStatistics = getStatsCommand.Result;
                     if (databaseStatistics.LastDocEtag >= 200)
                         break;
                     Thread.Sleep(25);
                 }
-                Assert.Equal(100, store.DatabaseCommands.GetStatistics().CountOfDocuments);
+
+                getStatsCommand = new GetStatisticsCommand();
+                store.GetRequestExecuter(store.DefaultDatabase).Execute(getStatsCommand, context);
+                databaseStatistics = getStatsCommand.Result;
+
+                Assert.Equal(100, databaseStatistics.CountOfDocuments);
                 using (var x = store.OpenSession())
                 {
                     var users = x.Load<User>(Enumerable.Range(1, 100).Select(i => "users/" + i));
@@ -95,6 +108,6 @@ namespace NewClientTests.NewClient.FastTests.Patching
                     }
                 }
             }
-        }*/
+        }
     }
 }
