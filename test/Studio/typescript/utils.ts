@@ -18,6 +18,7 @@ type dbCreator = (db: new (name: string, isAdminCurrentTenant?: boolean, isDisab
 type viewmodelTestOpts<T> = {
     initViewmodel?: (vm: T) => void;
     afterAttach?: (vm: T) => void;
+    afterCtr?: (vm: T) => void;
     afterComposition?: (vm: T) => void;
     assertions?: (vm: T, $container: JQuery) => void;
 };
@@ -54,6 +55,8 @@ class Utils {
                 .mock('knockout', ko)
                 .mock('jquery', jQuery)
                 .mock('commands/commandBase', commandBaseMock);
+
+            Utils.mockCommand('commands/auth/getSingleAuthTokenCommand', () => ({ Token: "Fake Token" }));
 
             return this.aceEditorFacade(Utils.injector)
                 .then(() => new Promise<void>((resolve, reject) => {
@@ -113,6 +116,10 @@ class Utils {
             Utils.injector.
                 require([Utils.viewModelPrefix + viewModelName], (viewModelCtr: new () => T) => {
                     var vm = new viewModelCtr();
+
+                    if (opts.afterCtr) {
+                        opts.afterCtr(vm);
+                    }
 
                     activatorInstance.activateItem(vm).then((result: boolean) => {
                         if (!result) {

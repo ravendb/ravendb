@@ -10,11 +10,13 @@ var require = {
         'ace': studioWwwrootPrefix + 'Content/ace',
 
         'endpoints': studioWwwrootPrefix + 'App/endpoints',
+        'configuration': studioWwwrootPrefix + 'App/configuration',
         'text': studioWwwrootPrefix + 'lib/requirejs-text/text',
         'viewmodels': studioWwwrootPrefix + 'App/viewmodels/',
         'models': studioWwwrootPrefix + 'App/models/',
         'common': studioWwwrootPrefix + 'App/common/',
         'commands': studioWwwrootPrefix + 'App/commands/',
+        'widgets': studioWwwrootPrefix + 'App/widgets/',
         'durandal': studioWwwrootPrefix + 'lib/Durandal/js',
         'plugins': studioWwwrootPrefix + 'lib/Durandal/js/plugins/',
         'src/Raven.Studio/typescript': studioWwwrootPrefix + "App/",

@@ -10,63 +10,50 @@ describe(viewUnderTest, () => {
     it('should bind', () => {
         utils.mockCommand('commands/resources/getDatabaseStatsCommand', getTestData);
 
-        return utils.runViewmodelTest(viewUnderTest, {
-            afterAttach: () => {
-                chai.expect($("#indexStatsAccordion").children().length).to.equal(1);
-            }
-        });
+        return utils.runViewmodelTest(viewUnderTest, {});
     });
 });
 
 
-function getTestData(): databaseStatisticsDto {
-    var stats: any = {
-        "LastDocEtag": "01000000-0000-0001-0000-000000000423",
-        "CountOfIndexes": 4,
-        "StorageEngine": "voron",
-        "CountOfIndexesExcludingDisabledAndAbandoned": 4,
-        "InMemoryIndexingQueueSizes": [0],
-        "ApproximateTaskCount": 0,
+function getTestData(): Raven.Client.Data.DatabaseStatistics {
+    return {
+        StaleIndexes: [],
+        "CountOfIndexes": 3,
         "CountOfDocuments": 1059,
-        "StaleIndexes": [],
-        "CountOfStaleIndexesExcludingDisabledAndAbandoned": 0,
-        "CurrentNumberOfItemsToIndexInSingleBatch": 512,
-        "CurrentNumberOfItemsToReduceInSingleBatch": 256,
-        "DatabaseTransactionVersionSizeInMB": 0.00,
-        "Indexes": <any>[
+        "CountOfTransformers": 1,
+        "DatabaseId": "0acab7bf-e569-463d-845f-3514902788ed",
+        "Is64Bit": true,
+        "LastDocEtag": 1059,
+        "LastIndexingTime": "2016-12-03T19:55:22.1995331Z",
+        "Indexes": [
             {
-                "Name": "Raven/DocumentsByEntityName",
-                "IndexingAttempts": 1051,
-                "IndexingSuccesses": 1051,
-                "IndexingErrors": 0,
-                "LastIndexedEtag": "01000000-0000-0001-0000-000000000423",
-                "LastIndexedTimestamp": "2016-07-29T13:31:14.2351502Z",
-                "LastQueryTimestamp": "2016-07-29T13:31:13.7195258Z",
-                "TouchCount": 0,
-                "Priority": "Normal",
-                "ReduceIndexingAttempts": null,
-                "ReduceIndexingSuccesses": null,
-                "ReduceIndexingErrors": null,
-                "LastReducedEtag": null,
-                "LastReducedTimestamp": null,
-                "CreatedTimestamp": "2016-07-29T13:31:09.4538982Z",
-                "LastIndexingTime": "2016-07-29T13:31:15.3289009Z",
-                "IsOnRam": "false",
-                "LockMode": "LockedIgnore",
-                "IsMapReduce": false,
-                "ForEntityName": [],
-                "DocsCount": 1051,
-                "IsTestIndex": false,
-                "IsInvalidIndex": false
+                "IsStale": false,
+                "Name": "Orders/ByCompany",
+                "IndexId": 1,
+                "LockMode": "Unlock",
+                "State": "Normal",
+                "Type": "MapReduce",
+                "LastIndexingTime": "2016-12-03T19:55:22.1925141Z"
+            },
+            {
+                "IsStale": false,
+                "Name": "Orders/Totals",
+                "IndexId": 2,
+                "LockMode": "Unlock",
+                "State": "Normal",
+                "Type": "Map",
+                "LastIndexingTime": "2016-12-03T19:55:22.1864985Z"
+            },
+            {
+                "IsStale": false,
+                "Name": "Product/Sales",
+                "IndexId": 3,
+                "LockMode": "Unlock",
+                "State": "Normal",
+                "Type": "MapReduce",
+                "LastIndexingTime": "2016-12-03T19:55:22.1995331Z"
             }
-        ],
-        "Errors": [],
-        "Prefetches": [],
-        "DatabaseId": "fd1ea6f8-bf60-4eda-8a4a-16ac6cab0b43",
-        "SupportsDtc": true,
-        "Is64Bit": true
-    };
-
-    return stats;
+        ]
+    }
 
 }

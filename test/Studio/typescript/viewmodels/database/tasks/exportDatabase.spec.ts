@@ -19,6 +19,7 @@ describe(viewUnderTest, () => {
         const fakeDb = { name: "any" } as any;
 
         utils.mockCommand('commands/database/documents/getCollectionsStatsCommand', () => new collectionsStats(collectionStatsDto, fakeDb));
+        utils.mockCommand('commands/alerts/getGlobalAlertsCommand', () => []);
 
         return utils.mockActiveDatabase(dbCtr => new dbCtr("default"))
             .then(() => utils.runViewmodelTest(viewUnderTest, {}));
