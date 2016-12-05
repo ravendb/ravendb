@@ -152,3 +152,9 @@ interface documentColorPair {
     docName: string;
     docColor: string;
 }
+
+interface aggregatedRange {
+    start: number;
+    end: number;
+    value: number;
+}
