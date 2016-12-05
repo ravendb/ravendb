@@ -237,8 +237,6 @@ namespace Voron.Impl
 
             _allocatedPagesInTransaction = 0;
             _overflowPagesInTransaction = 0;
-
-            _scratchPagesTable.Clear();
         }
 
         internal PageFromScratchBuffer GetTransactionHeaderPage()
@@ -498,11 +496,14 @@ namespace Voron.Impl
 
             if (!Committed && !RolledBack && Flags == TransactionFlags.ReadWrite)
                 Rollback();
-
-
+            
             _disposed = true;
 
+            if (Flags == TransactionFlags.ReadWrite)
+                _env.WriteTransactionPool.Reset();
+
             _env.TransactionCompleted(this);
+
             foreach (var pagerState in _pagerStates)
             {
                 pagerState.Release();
@@ -513,14 +514,8 @@ namespace Voron.Impl
 
             if (_disposeAllocator)
                 _allocator.Dispose();
-
-
+            
             OnDispose?.Invoke(this);
-
-            if (Flags == TransactionFlags.ReadWrite)
-            {
-                _env.WriteTransactionPool.Reset();
-            }
         }
 
         internal void FreePageOnCommit(long pageNumber)
