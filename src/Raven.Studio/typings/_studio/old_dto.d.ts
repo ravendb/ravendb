@@ -228,6 +228,8 @@ interface clientBuildVersionDto {
 }
 
 interface licenseStatusDto {
+    LicenseType: string;
+
     Message: string;
     Status: string;
     Error: boolean;

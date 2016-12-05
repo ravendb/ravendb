@@ -34,6 +34,12 @@ dialog.addContext('bootstrapModal', {
             var theDialog = dialog.getDialog(context.model);
             var options: ModalOptions = {};
             options.show = true;
+
+            if ($(child).hasClass('prevent-close')) {
+                options.backdrop = 'static';
+                options.keyboard = false;
+            }
+
             $('#bootstrapModal').modal(options);
             $('#bootstrapModal').on('hidden.bs.modal', (e) => {
                 if (!closeCalled) {
