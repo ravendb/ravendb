@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using FastTests.Server.Documents.Versioning;
@@ -6,8 +7,13 @@ using Raven.Client.Smuggler;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using System.Linq;
+using System.Threading;
+using FastTests.Server.Documents.Expiration;
+using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
+using Raven.Json.Linq;
 
 namespace FastTests.Smuggler
 {
@@ -103,6 +109,51 @@ namespace FastTests.Smuggler
                 }
             }
             finally
+            {
+                File.Delete(file);
+            }
+        }
+
+        [Fact]
+        public async Task SkipExpiredDocumentWhenExport()
+        {
+            var file = Path.GetTempFileName();
+            try
+            {
+                using (var exportStore = GetDocumentStore(dbSuffixIdentifier: "exportStore"))
+                {
+                    using (var session = exportStore.OpenAsyncSession())
+                    {
+                        await Expiration.SetupExpiration(exportStore);
+                        var person1 = new Person {Name = "Name1"};
+                        await session.StoreAsync(person1).ConfigureAwait(false);
+                        var metadata = session.Advanced.GetMetadataFor(person1);
+                        metadata[Constants.Expiration.RavenExpirationDate] =
+                            new RavenJValue(DateTime.UtcNow.AddSeconds(10)
+                                .ToString(Default.DateTimeOffsetFormatsToWrite));
+
+                        await session.SaveChangesAsync().ConfigureAwait(false);
+                    }
+
+                    var date = DateTime.UtcNow;
+
+                    SpinWait.SpinUntil(()=> date.AddSeconds(10) < date , TimeSpan.FromSeconds(10));
+                    await exportStore.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), file).ConfigureAwait(false);
+                    
+                }
+
+                using (var importStore = GetDocumentStore(dbSuffixIdentifier: "importStore"))
+                {
+                    await importStore.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), file);
+                    using (var session = importStore.OpenAsyncSession())
+                    {
+                        var person = await session.LoadAsync<Person>("people/1").ConfigureAwait(false);
+                        Assert.Null(person);
+                    }
+                    
+                }
+            }
+            finally 
             {
                 File.Delete(file);
             }
