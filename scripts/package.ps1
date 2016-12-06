@@ -1,16 +1,9 @@
-$RELEASE_PKG_RUNTIME_MAP = @{
-    "win10-x64" = @{ "Name" = "windows-x64"; "Type" = "zip" };
-    "ubuntu.14.04-x64" = @{ "Name" = "ubuntu.14.04-x64"; "Type" = "tar" };
-    "ubuntu.16.04-x64" = @{ "Name" = "ubuntu.16.04-x64"; "Type" = "tar" };
-}
-
 $NETSTANDARD16 = 'netstandard1.6'
 
-function CreateArchiveFromDir ( $targetFilename, $dir, $runtime ) {
-    $spec = GetPkgSpec $runtime
-    if ($spec.Type -eq "zip") {
+function CreateArchiveFromDir ( $targetFilename, $dir, $spec ) {
+    if ($spec.PkgType -eq "zip") {
         ZipFilesFromDir $targetFilename $dir
-    } elseif ($spec.Type -eq "tar") {
+    } elseif ($spec.PkgType -eq "tar") {
         TarGzFilesFromDir $targetFilename $dir
     } else {
         throw "Unknown archive method for $targetFilename"
@@ -42,91 +35,166 @@ function TarGzFilesFromDir ( $targetFilename, $sourceDir ) {
     }
 }
 
-function CreateRavenPackage ( $projectDir, $releaseDir, $outDir, $version, $runtime ) {
+function CreateRavenPackage ( $projectDir, $releaseDir, $outDir, $version, $spec ) {
     write-host "Create package for $runtime..."
-
-    $releaseArchiveFile = GetRavenArchiveFileName $version $runtime
+    $runtime = $spec.Runtime
+    $releaseArchiveFile = GetRavenArchiveFileName $version $spec
     $releaseArchivePath = [io.path]::combine($releaseDir, $releaseArchiveFile)
     $packageDir = [io.path]::combine($outDir, "package")
     New-Item -ItemType Directory -Path $packageDir
 
-    CreatePackageLayout $outDir $packageDir $projectDir
-    CreateArchiveFromDir $releaseArchivePath $packageDir $runtime
+    CreatePackageLayout $outDir $packageDir $projectDir $spec
+    CreateArchiveFromDir $releaseArchivePath $packageDir $spec
 }
 
-function GetRavenArchiveFileName ( $version, $runtime ) {
-    $pkgSpec = GetPkgSpec $runtime
-    "RavenDB-$version-$($pkgSpec.Name)"
+function GetRavenArchiveFileName ( $version, $spec ) {
+    "RavenDB-$version-$($spec.Name)"
 }
 
-function GetPkgSpec ($runtime) {
-    if ($RELEASE_PKG_RUNTIME_MAP.ContainsKey($runtime) -eq $False) {
-        throw "Do not have pkg spec for $runtime."
-    }
-
-    $RELEASE_PKG_RUNTIME_MAP.Get_Item($runtime)
-}
-
-function CreatePackageLayout ( $outDir, $packageDir, $projectDir ) {
+function CreatePackageLayout ( $outDir, $packageDir, $projectDir, $spec ) {
     CopyLicenseFile $packageDir
     CopyAckFile $packageDir
-    CopyDaemonScripts $projectDir $packageDir
-    CreatePackageServerLayout $outDir $packageDir
+    CreatePackageServerLayout $outDir $packageDir $projectDir $spec
     CreatePackageClientLayout $outDir $packageDir $projectDir
     CopyClientReadMe $(Join-Path $packageDir -ChildPath 'Client')
+
+    if ($spec.IsUnix) {
+        CopyDaemonScripts $projectDir $packageDir
+        CopyLinuxScripts $projectDir $packageDir
+    }
 }
 
+function CopyLinuxScripts ( $projectDir, $packageDir ) {
+    write-host "Copy Linux scripts..."
+
+    $scriptsDir = [io.path]::combine($projectDir, "scripts", "raspberry-pi")
+    $scriptsList = @( "start.sh", "setup.sh")
+
+    Foreach ($scriptName in $scriptsList) {
+        $scriptPath = Join-Path $scriptsDir -ChildPath $scriptName
+
+        cp $scriptPath $packageDir
+        CheckLastExitCode
+
+        if ($(Get-Command "chmod" -ErrorAction SilentlyContinue)) {
+            $scriptInPkgPath = Join-Path $packageDir -ChildPath $scriptName
+            & "chmod" a+x $scriptInPkgPath
+            CheckLastExitCode
+        }
+    }
+}
 
 function CopyDaemonScripts ( $projectDir, $packageDir ) {
     write-host "Copy daemon files..."
 
-    $daemonScriptsDir = [io.path]::combine([io.path]::combine($projectDir, "scripts"), "raspberry-pi")
+    $scriptsDir = [io.path]::combine($projectDir, "scripts", "raspberry-pi")
+    $scriptsList = @( "ravendbd", "ravendb.watchdog.sh" )
 
-    cp -r $daemonScriptsDir/ravendbd $packageDir
-    cp -r $daemonScriptsDir/ravendb.watchdog.sh $packageDir
+    Foreach ($scriptName in $scriptsList) {
+        $scriptPath = Join-Path $scriptsDir -ChildPath $scriptName
+        cp $scriptPath $packageDir
+        CheckLastExitCode
+    }
 }
 
-
-function CreatePackageServerLayout ( $outDir, $packageDir ) {
+function CreatePackageServerLayout ( $outDir, $packageDir, $projectDir, $spec ) {
     write-host "Create package server directory layout..."
 
     $serverOutDir = [io.path]::combine($outDir, "Server")
-    cp -r $serverOutDir $packageDir
 
-    del $serverOutDir/*.so
-    del $serverOutDir/*.ni.*
+    if ($spec.Name -eq "raspberry-pi") {
+        del $([io.path]::combine($serverOutDir, "*.so"))
+        del $([io.path]::combine($serverOutDir, "*.ni.*"))
+    }
+
+    cp -r $serverOutDir $packageDir
 }
 
-function CreatePackageClientLayout ( $outDir, $packageDir, $projectDir ) {
+function CreatePackageClientLayout ( $outDir, $packageDir, $projectDir, $spec ) {
+    if ($spec.Name -eq "raspberry-pi") {
+        CreateRaspberryPiClientLayout $outDir $packageDir $projectDir
+    } else {
+        CreateRegularPackageClientLayout $outDir $packageDir $projectDir
+    }
+}
+
+function CreateRaspberryPiClientLayout ( $outDir, $packageDir, $projectDir ) {
+    $clientOutDir = [io.path]::combine($outDir, "Client")
+    $clientPkgDir = [io.path]::combine($outDir, "Client")
+    New-Item -ItemType Directory -Path $clientPkgDir
+
+    cp $(Join-Path $clientOutDir -ChildPath "Raven.Client.dll") $clientPkgDir
+    cp $(Join-Path $clientOutDir -ChildPath "Raven.Client.pdb") $clientPkgDir
+    cp $(Join-Path $clientOutDir -ChildPath "Sparrow.dll") $clientPkgDir
+    cp $(Join-Path $clientOutDir -ChildPath "Sparrow.pdb") $clientPkgDir
+
+    $newClientOutDir = [io.path]::combine($outDir, "NewClient")
+    cp $(Join-Path $newClientOutDir -ChildPath "Raven.NewClient.dll") $clientPkgDir
+    cp $(Join-Path $newClientOutDir -ChildPath "Raven.NewClient.pdb") $clientPkgDir
+}
+
+function CreateRegularPackageClientLayout( $outDir, $packageDir, $projectDir ) {
     write-host "Create package client directory layout..."
 
     $clientOutDir = [io.path]::combine($outDir, "Client")
+    $assetsDir = [io.path]::combine($projectDir, "scripts", "assets", "pkg")
 
+    CopyClient $clientOutDir $packageDir $assetsDir
+    CopySparrow $clientOutDir $packageDir $assetsDir
+
+    $newClientOutDir = [io.path]::combine($outDir, "NewClient")
+    CopyNewClient $newClientOutDir $packageDir $assetsDir
+}
+
+function CopyClient ( $clientOutDir, $packageDir, $assetsDir) {
+    # layout client dir structure
+    $ravenClientAssetsDir = [io.path]::combine($assetsDir, "Raven.Client")
     $ravenClientDir = [io.path]::combine($packageDir, 'Client', $NETSTANDARD16, 'Raven.Client')
     $ravenClientDllDir = [io.path]::combine($ravenClientDir, $NETSTANDARD16)
     New-Item -ItemType Directory -Path $ravenClientDllDir
 
-    $sparrowDir = [io.path]::combine($packageDir, 'Client', $NETSTANDARD16, 'Sparrow')
-    $sparrowDllDir = [io.path]::combine($packageDir, 'Client', $NETSTANDARD16, 'Sparrow', $NETSTANDARD16)
-    New-Item -ItemType Directory -Path $sparrowDllDir
-
     cp $(Join-Path $clientOutDir -ChildPath "Raven.Client.dll") $ravenClientDllDir
     cp $(Join-Path $clientOutDir -ChildPath "Raven.Client.pdb") $ravenClientDllDir
-    cp $(Join-Path $clientOutDir -ChildPath "Sparrow.dll") $sparrowDllDir
-    cp $(Join-Path $clientOutDir -ChildPath "Sparrow.pdb") $sparrowDllDir
-
-    $assetsDir = [io.path]::combine($projectDir, "scripts", "assets", "pkg")
-    $ravenClientAssetsDir = [io.path]::combine($assetsDir, "Raven.Client")
-    $sparrowAssetsDir = [io.path]::combine($assetsDir, "Sparrow")
 
     $ravenClientProjectTemplate = Get-Content -Raw -Path $(Join-Path $ravenClientAssetsDir "project.json.template") | ConvertFrom-Json
     $ravenClientProjectOrig = Get-Content -Raw -Path $([io.path]::combine($projectDir, "src", "Raven.Client",  "project.json")) | ConvertFrom-Json
     $ravenClientProjectTemplate.dependencies = $ravenClientProjectOrig.dependencies
     $ravenClientProjectTemplate `
-        | ConvertTo-Json -Depth 100 `
-        | Out-File $(Join-Path $ravenClientDir -ChildPath "project.json") -Encoding UTF8
+    | ConvertTo-Json -Depth 100 `
+    | Out-File $(Join-Path $ravenClientDir -ChildPath "project.json") -Encoding UTF8
 
-    cp $(Join-Path $ravenClientAssetsDir -ChildPath "Raven.Client.xproj.template") $(Join-Path $ravenClientDir -ChildPath  "Raven.Client.xproj")
-    cp $(Join-Path $sparrowAssetsDir -ChildPath "Sparrow.xproj.template") $(Join-Path $sparrowDir -ChildPath "Sparrow.xproj")
+    cp $([io.path]::combine($projectDir, "src", "Raven.Client",  "Raven.Client.xproj")) $(Join-Path $ravenClientDir -ChildPath  "Raven.Client.xproj")
+}
+
+function CopyNewClient ( $clientOutDir, $packageDir, $assetsDir ) {
+    # layout client dir structure
+    $ravenClientAssetsDir = [io.path]::combine($assetsDir, "Raven.NewClient")
+    $ravenClientDir = [io.path]::combine($packageDir, 'Client', $NETSTANDARD16, 'Raven.NewClient')
+    $ravenClientDllDir = [io.path]::combine($ravenClientDir, $NETSTANDARD16)
+    New-Item -ItemType Directory -Path $ravenClientDllDir
+
+    cp $(Join-Path $clientOutDir -ChildPath "Raven.NewClient.dll") $ravenClientDllDir
+    cp $(Join-Path $clientOutDir -ChildPath "Raven.NewClient.pdb") $ravenClientDllDir
+
+    $ravenClientProjectTemplate = Get-Content -Raw -Path $(Join-Path $ravenClientAssetsDir "project.json.template") | ConvertFrom-Json
+    $ravenClientProjectOrig = Get-Content -Raw -Path $([io.path]::combine($projectDir, "src", "Raven.NewClient",  "project.json")) | ConvertFrom-Json
+    $ravenClientProjectTemplate.dependencies = $ravenClientProjectOrig.dependencies
+    $ravenClientProjectTemplate `
+    | ConvertTo-Json -Depth 100 `
+    | Out-File $(Join-Path $ravenClientDir -ChildPath "project.json") -Encoding UTF8
+
+    cp $([io.path]::combine($projectDir, "src", "Raven.NewClient", "Raven.NewClient.xproj")) $(Join-Path $ravenClientDir -ChildPath  "Raven.NewClient.xproj")
+}
+
+function CopySparrow ( $clientOutDir, $packageDir, $assetsDir ) {
+    $sparrowAssetsDir = [io.path]::combine($assetsDir, "Sparrow")
+    # layout sparrow dir structure
+    $sparrowDir = [io.path]::combine($packageDir, 'Client', $NETSTANDARD16, 'Sparrow')
+    $sparrowDllDir = [io.path]::combine($packageDir, 'Client', $NETSTANDARD16, 'Sparrow', $NETSTANDARD16)
+    New-Item -ItemType Directory -Path $sparrowDllDir
+
+    cp $(Join-Path $clientOutDir -ChildPath "Sparrow.dll") $sparrowDllDir
+    cp $(Join-Path $clientOutDir -ChildPath "Sparrow.pdb") $sparrowDllDir
+    cp $([io.path]::combine($projectDir, "src", "Sparrow", "Sparrow.xproj")) $(Join-Path $sparrowDir -ChildPath  "Sparrow.xproj")
     cp $(Join-Path $sparrowAssetsDir -ChildPath "project.json.template") $(Join-Path $sparrowDir -ChildPath "project.json")
 }
