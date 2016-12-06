@@ -137,7 +137,7 @@ namespace FastTests.Smuggler
 
                     var date = DateTime.UtcNow;
 
-                    SpinWait.SpinUntil(()=> date.AddSeconds(10) < date , TimeSpan.FromSeconds(10));
+                    await Task.Delay(10000);
                     await exportStore.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), file).ConfigureAwait(false);
                     
                 }
