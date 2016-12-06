@@ -13,6 +13,7 @@ $DEV_BUILD_NUMBER = 40
 . '.\scripts\copyDocs.ps1'
 . '.\scripts\env.ps1'
 . '.\scripts\updateSourceWithBuildInfo.ps1'
+. '.\scripts\nuget.ps1'
 
 CheckPrerequisites
 
@@ -20,7 +21,8 @@ $buildNumber = GetBuildNumber
 $buildType = GetBuildType
 
 # TODO @gregolsky create a function for this - stable does not have label
-$version = "4.0.0-$buildType-$buildNumber"
+$versionSuffix = "$buildType-$buildNumber"
+$version = "4.0.0-$versionSuffix"
 
 $PROJECT_DIR = Get-ScriptDirectory
 $RELEASE_DIR = [io.path]::combine($PROJECT_DIR, "artifacts")
@@ -76,5 +78,9 @@ Foreach ($spec in $SPECS) {
     CopyStudioPackage $STUDIO_BUILD_DIR $specOutDir
     CreateRavenPackage $PROJECT_DIR $RELEASE_DIR $specOutDir $version $spec
 }
+
+CreateNugetPackage $CLIENT_SRC_DIR $RELEASE_DIR $versionSuffix
+CreateNugetPackage $NEW_CLIENT_SRC_DIR $RELEASE_DIR $versionSuffix
+CreateNugetPackage $NEW_CLIENT_SRC_DIR $RELEASE_DIR $versionSuffix
 
 write-host "Done creating packages."
