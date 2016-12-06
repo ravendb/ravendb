@@ -22,8 +22,9 @@ namespace Raven.Server.Documents.Indexes.Static
             switch (enumerationType)
             {
                 case EnumerationType.Index:
-                    _resultsOfCurrentDocument = new TimeCountingEnumerable(func(new DynamicIteratonOfCurrentDocumentWrapper(this)), stats, IndexingOperation.Map.Linq);
-                    CurrentIndexingScope.Current.SetSourceCollection(collection, stats);
+                    var linqStats = stats?.For(IndexingOperation.Map.Linq, start: false);
+                    _resultsOfCurrentDocument = new TimeCountingEnumerable(func(new DynamicIteratonOfCurrentDocumentWrapper(this)), linqStats);
+                    CurrentIndexingScope.Current.SetSourceCollection(collection, linqStats);
                     break;
                 case EnumerationType.Transformer:
                     _resultsOfCurrentDocument = func(new DynamicIteratonOfCurrentDocumentWrapper(this));

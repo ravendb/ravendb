@@ -123,7 +123,7 @@ class metrics extends viewModelBase {
     static readonly openedTrackPadding = 4;
     static readonly axisHeight = 35; 
 
-    static readonly maxRecursion = 4;
+    static readonly maxRecursion = 5;
     static readonly minGapSize = 10 * 1000; // 10 seconds
 
     private data: Raven.Client.Data.Indexes.IndexPerformanceStats[] = [];
