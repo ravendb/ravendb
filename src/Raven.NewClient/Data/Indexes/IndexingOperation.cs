@@ -40,7 +40,6 @@ namespace Raven.NewClient.Data.Indexes
             public const string LeafAggregation = "Aggregation/Leafs";
             public const string BranchAggregation = "Aggregation/Branches";
             public const string StoringReduceResult = "Storage/ReduceResults";
-            public const string StoringNestedValues = "Storage/Values";
             public const string NestedValuesAggregation = "Aggregation/NestedValues";
             public const string NestedValuesRead = "Storage/Read";
             public const string BlittableJsonAggregation = "Aggregation/BlittableJson";

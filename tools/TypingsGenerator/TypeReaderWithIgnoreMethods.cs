@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Raven.Imports.Newtonsoft.Json;
@@ -20,7 +22,16 @@ namespace TypingsGenerator
 
         public override IEnumerable<PropertyInfo> GetProperties(TypeInfo type)
         {
-            return base.GetProperties(type).Where(p => p.GetCustomAttribute<JsonIgnoreAttribute>() == null && p.GetCustomAttribute<Sparrow.Json.JsonIgnoreAttribute>() == null);
+            return base.GetProperties(type).Where(p =>
+                p.GetCustomAttribute<JsonIgnoreAttribute>() == null
+                && p.GetCustomAttribute<Sparrow.Json.JsonIgnoreAttribute>() == null
+                && !IsDictionaryIndexer(p));
+        }
+
+        private bool IsDictionaryIndexer(PropertyInfo propertyInfo)
+        {
+            var isDict = typeof(IDictionary).IsAssignableFrom(propertyInfo.DeclaringType);
+            return isDict && propertyInfo.Name == "Item";
         }
     }
 }
