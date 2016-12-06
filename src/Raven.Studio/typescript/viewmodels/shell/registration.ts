@@ -5,6 +5,8 @@ import dialog = require("plugins/dialog");
 import licenseRegistrationCommand = require("commands/licensing/licenseRegistrationCommand");
 import licenseActivateCommand = require("commands/licensing/licenseActivateCommand");
 
+import moment = require("moment");
+
 
 class registrationModel {
     name = ko.observable<string>();
@@ -50,8 +52,31 @@ class licenseKeyModel {
     }
 }
 
+class registrationDismissStorage {
+
+    private static readonly storageKey = "registrationDismiss";
+
+    static getDismissedUntil(): Date {
+        const storedValue = localStorage.getObject(registrationDismissStorage.storageKey);
+        if (storedValue) {
+            return new Date(storedValue);
+        }
+
+        return null;
+    }
+
+    static dismissFor(days: number) {
+        localStorage.setObject(registrationDismissStorage.storageKey, moment().add(5, "days").toDate().getTime());
+    }
+
+    static clearDismissStatus() {
+        localStorage.removeItem(registrationDismissStorage.storageKey);
+    }
+}
+
 class registration extends dialogViewModelBase {
 
+    isBusy = ko.observable<boolean>(false);
     licenseKeySectionActive = ko.observable<boolean>(false);
     justRegistered = ko.observable<boolean>(false);
     dismissVisible = ko.observable<boolean>(true);
@@ -62,25 +87,34 @@ class registration extends dialogViewModelBase {
 
     private hasInvalidLicense = ko.observable<boolean>(false);
 
-    constructor(license: licenseStatusDto) {
+    constructor(license: licenseStatusDto, canBeDismissed: boolean) {
         super();
         this.license = license;
 
-        this.dismissVisible(license.LicenseType !== "Invalid"); //TODO: use type
+        this.dismissVisible(canBeDismissed);
     }
 
-    static showRegistrationDialog(license: licenseStatusDto) {
-        const vm = new registration(license);
+    static showRegistrationDialogIfNeeded(license: licenseStatusDto) {
+        if (license.LicenseType === "Invalid") {
+            const vm = new registration(license, false);
+            app.showBootstrapDialog(vm);
+            return;
+        }
 
+        if (license.LicenseType === "None") {
+            const dismissedUntil = registrationDismissStorage.getDismissedUntil();
 
-
-        //TODO: only show when not dismissed 
-
-        app.showBootstrapDialog(vm);
+            if (!dismissedUntil || dismissedUntil.getTime() < new Date().getTime()) {
+                const vm = new registration(license, true);
+                app.showBootstrapDialog(vm);
+                return;
+            }
+        }
     }
 
-    dismiss() {
-        //TODO: impolement me!
+    dismiss(days: number) {
+        registrationDismissStorage.dismissFor(days);
+        app.closeDialog(this);
     }
 
     goToEnterLicense() {
@@ -104,18 +138,23 @@ class registration extends dialogViewModelBase {
             return;
         }
 
+        this.isBusy(true);
+
         new licenseRegistrationCommand(this.registrationModel().toDto())
             .execute()
             .done(() => {
                 this.justRegistered(true);
                 this.licenseKeySectionActive(true);
-            });
+            })
+            .always(() => this.isBusy(false));
     }
 
     private submitLicenseKey() {
         if (!this.isValid(this.licenseKeyModel)) {
             return;
         }
+
+        this.isBusy(true);
 
         new licenseActivateCommand(this.licenseKeyModel().key())
             .execute()
@@ -124,7 +163,8 @@ class registration extends dialogViewModelBase {
                 // TODO: fetch license status?
 
                 dialog.close(this);
-            });
+            })
+            .always(() => this.isBusy(false));
     }
 }
 
