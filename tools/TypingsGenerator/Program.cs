@@ -64,6 +64,7 @@ namespace TypingsGenerator
         {
             var ignoredTypes = new HashSet<Type>
             {
+                typeof(IEquatable<>)
             };
 
 
