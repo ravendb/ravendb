@@ -1,19 +1,29 @@
-function BuildServer ( $srcDir, $outDir, $platform ) {
-    write-host "Building Server for $platform..."
+function BuildServer ( $srcDir, $outDir, $runtime, $specName ) {
+    write-host "Building Server for $specName..."
     #build server
     $output = [io.path]::combine($outDir, "Server");
-    $build = [io.path]::combine($buildDir, $platform)
+    $build = [io.path]::combine($buildDir, $runtime)
     & dotnet publish --output $output `
-                 --runtime $platform `
+                 --runtime $runtime `
                  --configuration "Release" $srcDir;
     CheckLastExitCode
 }
 
-function BuildClient ( $srcDir, $outDir ) {
-    write-host "Building Client for $platform..."
-    # build client
+function BuildClient ( $srcDir, $outDir, $specName ) {
+    write-host "Building Client for $specName..."
+
     $output = [io.path]::combine($outDir, "Client");
-    $build = [io.path]::combine($buildDir, $platform)
+    & dotnet build --output $output `
+                --no-incremental `
+                --framework "netstandard1.6" `
+                --configuration "Release" $srcDir;
+    CheckLastExitCode
+}
+
+function BuildNewClient ( $srcDir, $outDir, $specName ) {
+    write-host "Building NewClient for $specName..."
+
+    $output = [io.path]::combine($outDir, "NewClient");
     & dotnet build --output $output `
                 --no-incremental `
                 --framework "netstandard1.6" `
