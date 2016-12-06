@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Microsoft.AspNetCore.Http;
 
@@ -18,6 +19,8 @@ namespace Raven.Server.Web.TEMP_REMOVE_ME
         {
             HttpContext.Response.StatusCode = 200;
 
+            Thread.Sleep(2000);
+
             return Task.CompletedTask;
         }
 
@@ -25,6 +28,8 @@ namespace Raven.Server.Web.TEMP_REMOVE_ME
         public Task FakeResponseForLicenseActivation()
         {
             HttpContext.Response.StatusCode = 200;
+
+            Thread.Sleep(2000);
 
             return Task.CompletedTask;
         }
@@ -34,7 +39,7 @@ namespace Raven.Server.Web.TEMP_REMOVE_ME
         {
             HttpContext.Response.ContentType = "application/json";
 
-            return HttpContext.Response.WriteAsync("{\"Status\":\"AGPL\",\"Error\":false,\"Attributes\":{}, \"Message\": \"Hi there\", \"LicenseType\":\"None\"}");
+            return HttpContext.Response.WriteAsync("{\"Status\":\"AGPL\",\"Error\":false,\"Attributes\":{}, \"Message\": \"Hi there\", \"LicenseType\":\"Prerelease\"}");
         }
     }
 }

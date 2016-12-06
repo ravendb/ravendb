@@ -3,7 +3,7 @@
     <form class="form-horizontal" autocomplete="off" data-bind="submit: submit">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <button type="button" data-bind="visible: dismissVisible" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 <h1 class="modal-title" id="myModalLabel">License request</h1>
             </div>
             <img src="Content/img/prerelease-license.png" class="img-responsive" />
@@ -55,18 +55,32 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn" data-dismiss="modal" data-bind="visible: dismissVisible, click: dismiss">
-                    <i class="icon-recent"></i>
-                    <span>Dismiss for 1 day</span>
-                    <i class="caret"></i>
-                </button>
+                
+                <div class="btn-group" data-bind="visible: dismissVisible">
+                    <button class="btn btn-default" data-bind="click: $root.dismiss.bind($root, 1)">
+                        <i class="icon-recent"></i>
+                        <span>Dismiss for 1 day</span>
+                    </button>
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <span class="caret"></span>
+                        <span class="sr-only">Toggle Dropdown</span>
+                    </button>
+                    <ul class="dropdown-menu" data-bind="foreach: [2, 7]">
+                        <li>
+                            <a href="#" data-bind="click: $root.dismiss.bind($root, $data)">
+                                <i class="icon-recent"></i> <span data-bind="text: 'Dismiss for ' + $data + ' days'"></span> 
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
                 <button type="button" class="btn btn-default" data-bind="click: goToEnterLicense, visible: !licenseKeySectionActive()">
                     Enter license key
                 </button>
                 <button type="button" class="btn btn-default" data-bind="click: goToRegistration, visible: licenseKeySectionActive() && !justRegistered()">
                     Back to registration
                 </button>
-                <button type="submit" class="btn btn-primary">Submit</button>
+                <button type="submit" data-bind="css: { 'btn-spinner': isBusy }, enable: !isBusy()" class="btn btn-primary">Submit</button>
             </div>
         </div>
     </form>

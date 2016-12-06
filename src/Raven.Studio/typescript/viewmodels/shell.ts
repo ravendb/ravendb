@@ -195,9 +195,7 @@ class shell extends viewModelBase {
         this.initializeShellComponents();
 
         //TODO: use constants
-        if (license.licenseStatus().LicenseType === "None" || license.licenseStatus().LicenseType === "Invalid") {
-            registration.showRegistrationDialog(license.licenseStatus());
-        }
+        registration.showRegistrationDialogIfNeeded(license.licenseStatus());
     }
 
     private preLoadRecentErrorsView() {
