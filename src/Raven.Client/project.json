@@ -5,7 +5,22 @@
 
 
   "packOptions": {
-    "tags": [ "database", "nosql", "doc db" ],
+    "summary": "This package includes the client API of RavenDB. RavenDB is a document database for the .NET platform, offering a flexible data model design to fit the needs of real world systems.",
+    "licenseUrl": "http://www.ravendb.net/licensing",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/ravendb/ravendb"
+    },
+    "requireLicenseAcceptance": true,
+    "iconUrl": "http://static.ravendb.net/logo-for-nuget.png",
+    "owners": [ "Hibernating Rhinos" ],
+    "tags": [
+      "ravendb",
+      "client",
+      "database",
+      "nosql",
+      "doc db"
+    ],
     "projectUrl": "https://ravendb.net"
   },
 
