@@ -703,6 +703,7 @@ namespace Raven.Server.Documents.Replication
             var merged = ReplicationUtils.MergeVectors(conflictingVector, _tempReplicatedChangeVector);
             _documentsContext.DocumentDatabase.DocumentsStorage.DeleteConflictsFor(_documentsContext, doc.Id);
             _database.DocumentsStorage.Put(_documentsContext, doc.Id, null, json, merged);
+            Interlocked.Decrement(ref _database.DocumentsStorage._hasConflicts);
         }
 
         private void ResolveConflictToLocal(ReplicationDocumentsPositions doc, ChangeVectorEntry[] conflictingVector)
@@ -739,6 +740,7 @@ namespace Raven.Server.Documents.Replication
                         doc.Collection);
                 }
             }
+            Interlocked.Decrement(ref _database.DocumentsStorage._hasConflicts);
         }
 
         private void ReadChangeVector(ReplicationIndexOrTransformerPositions index, Dictionary<Guid, long> maxReceivedChangeVectorByDatabase)

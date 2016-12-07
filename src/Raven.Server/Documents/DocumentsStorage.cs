@@ -162,7 +162,7 @@ namespace Raven.Server.Documents
         public DocumentsContextPool ContextPool;
         private UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool;
 
-        private int _hasConflicts;
+        internal int _hasConflicts;
 
         public DocumentsStorage(DocumentDatabase documentDatabase)
         {
@@ -1344,7 +1344,7 @@ namespace Raven.Server.Documents
             DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
 
             if(_hasConflicts != 0)
-                ThrowDocumentConflictIfNeeded(context, key);
+                changeVector = MergeConflictChangeVectorIfNeededAndDeleteConflicts(changeVector, context, key);
 
             // delete a tombstone if it exists
             DeleteTombstoneIfNeeded(context, collectionName, lowerKey, lowerSize);
@@ -1452,6 +1452,35 @@ namespace Raven.Server.Documents
                 ETag = newEtag,
                 Key = key
             };
+        }
+
+        private ChangeVectorEntry[] MergeConflictChangeVectorIfNeededAndDeleteConflicts(ChangeVectorEntry[] documentChangeVector,DocumentsOperationContext context, string key)
+        {
+            ChangeVectorEntry[] mergedChangeVectorEntries = null;
+            bool firstTime = true;
+            int numOfConflicts = 0;
+            foreach (var conflict in GetConflictsFor(context, key))
+            {
+                numOfConflicts++;
+                if (firstTime)
+                {
+                    mergedChangeVectorEntries = conflict.ChangeVector;
+                    firstTime = false;
+                    continue;
+                }
+                mergedChangeVectorEntries = ReplicationUtils.MergeVectors(mergedChangeVectorEntries, conflict.ChangeVector);
+            }
+            //We had conflicts need to delete them
+            if (mergedChangeVectorEntries != null)
+            {
+                DeleteConflictsFor(context, key);
+                Interlocked.Add(ref _hasConflicts,-1*numOfConflicts);
+                if(documentChangeVector != null)
+                    return ReplicationUtils.MergeVectors(mergedChangeVectorEntries, documentChangeVector);
+
+                return mergedChangeVectorEntries;
+            }
+            return documentChangeVector; // this covers the null && null case too
         }
 
         private static void ThrowPutRequiresTransaction()
