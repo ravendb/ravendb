@@ -34,9 +34,19 @@ using System.Linq;
 
 namespace Raven.Imports.Newtonsoft.Json.Utilities
 {
+    public enum MemberTypes
+    {
+        Property = 0,
+        Field = 1,
+        Event = 2,
+        Method = 3,
+        Other = 4
+    }
     internal static class TypeExtensions
     {
 #if NETFX_CORE || PORTABLE
+        
+
         private static BindingFlags DefaultFlags = BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic;
 
         public static MethodInfo GetGetMethod(this PropertyInfo propertyInfo)
@@ -96,7 +106,7 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
             else if (memberInfo is MethodInfo)
                 return MemberTypes.Method;
             else
-                return MemberTypes.Custom;
+                return MemberTypes.Other;
 #endif
         }
 
@@ -386,15 +396,15 @@ namespace Raven.Imports.Newtonsoft.Json.Utilities
         {
             if (member is FieldInfo)
             {
-                return TestAccessibility((FieldInfo) member, bindingFlags);
+                return TestAccessibility((FieldInfo)member, bindingFlags);
             }
             else if (member is MethodBase)
             {
-                return TestAccessibility((MethodBase) member, bindingFlags);
+                return TestAccessibility((MethodBase)member, bindingFlags);
             }
             else if (member is PropertyInfo)
             {
-                return TestAccessibility((PropertyInfo) member, bindingFlags);
+                return TestAccessibility((PropertyInfo)member, bindingFlags);
             }
 
             throw new Exception("Unexpected member type.");

@@ -34,9 +34,10 @@ namespace Raven.NewClient.Client.Connection
         protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
         {
             using (var uncloseableStream = new UndisposableStream(stream))
-            using (var bufferedStream = new BufferedStream(uncloseableStream))
+            //using (var bufferedStream = new BufferedStream(uncloseableStream))
             {
-                Stream innerStream = bufferedStream;
+                //Stream innerStream = bufferedStream;
+                Stream innerStream = uncloseableStream;
                 try
                 {
 

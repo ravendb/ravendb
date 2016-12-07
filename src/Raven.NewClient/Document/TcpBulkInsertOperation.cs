@@ -163,7 +163,7 @@ namespace Raven.NewClient.Client.Document
                 streamNetworkBuffer.WriteByte(0); //done
                 streamNetworkBuffer.Flush();
             }
-        }*/
+        }
 
         private static unsafe void WriteToStream(BufferedStream networkBufferedStream, BlittableJsonDocumentBuilder builder,
             byte[] buffer)
@@ -183,7 +183,7 @@ namespace Raven.NewClient.Client.Document
                     }
                 }
             }
-        }
+        }*/
 
 
         public static void WriteVariableSizeInt(Stream stream, int value)
