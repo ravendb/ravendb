@@ -333,6 +333,10 @@ namespace Raven.Server
                         using (var headerJson = await tcp.MultiDocumentParser.ParseToMemoryAsync())
                         {
                             header = JsonDeserializationClient.TcpConnectionHeaderMessage(headerJson);
+                            if (_logger.IsInfoEnabled)
+                            {
+                                _logger.Info($"New {header.Operation} TCP connection to {header.DatabaseName} from {tcpClient.Client.RemoteEndPoint}");
+                            }
                         }
                         tcp.Operation = header.Operation;
                         var databaseLoadingTask = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(header.DatabaseName);
