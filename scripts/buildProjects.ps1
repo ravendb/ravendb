@@ -14,7 +14,7 @@ function BuildClient ( $srcDir, $outDir, $specName ) {
 
     & dotnet build --output $outDir `
                 --no-incremental `
-                --framework "netstandard1.6" `
+                --framework "netstandard1.3" `
                 --configuration "Release" $srcDir;
     CheckLastExitCode
 }
@@ -24,7 +24,7 @@ function BuildNewClient ( $srcDir, $outDir, $specName ) {
 
     & dotnet build --output $outDir `
                 --no-incremental `
-                --framework "netstandard1.6" `
+                --framework "netstandard1.3" `
                 --configuration "Release" $srcDir;
     CheckLastExitCode
 }
