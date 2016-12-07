@@ -31,7 +31,7 @@ function BuildNewClient ( $srcDir, $outDir, $specName ) {
 
 function BuildTypingsGenerator ( $srcDir ) {
     # build typings generator
-    & dotnet build --configuration "Debug" $srcDir;
+    & dotnet build --no-incremental --configuration "Release" $srcDir;
     CheckLastExitCode
 }
 

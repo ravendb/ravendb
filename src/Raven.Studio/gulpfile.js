@@ -15,7 +15,8 @@ var gulp = require('gulp'),
     findNewestFile = require('./gulp/findNewestFile'),
     checkAllFilesExist = require('./gulp/checkAllFilesExist'),
     gutil = require('gulp-util'),
-    autoPrefixer = require('gulp-autoprefixer');
+    autoPrefixer = require('gulp-autoprefixer'),
+    fileExists = require('file-exists');
 
 var PATHS = require('./gulp/paths');
 
@@ -55,12 +56,30 @@ gulp.task('less', function() {
         .pipe(gulp.dest(PATHS.lessTarget));
 });
 
-gulp.task('generate-typings', function(cb) {
-    exec('dotnet ../../tools/TypingsGenerator/bin/Debug/netcoreapp1.1/TypingsGenerator.dll', function (err, stdout, stderr) {
-        console.log(stdout);
-        console.log(stderr);
-        cb(err);
-    });
+gulp.task('generate-typings', function (cb) {
+    var debugPath = '../../tools/TypingsGenerator/bin/Debug/netcoreapp1.1/TypingsGenerator.dll';
+    var releasePath = '../../tools/TypingsGenerator/bin/Release/netcoreapp1.1/TypingsGenerator.dll';
+
+    if (fileExists(releasePath)) {
+        exec('dotnet ' + releasePath, function (err, stdout, stderr) {
+            console.log(stdout);
+            console.log(stderr);
+            cb(err);
+        });
+        return;
+    }
+
+    if (fileExists(debugPath)) {
+        exec('dotnet ' + debugPath, function (err, stdout, stderr) {
+            console.log(stdout);
+            console.log(stderr);
+            cb(err);
+        });
+        return;
+    }
+
+    console.log('Could not find TypingsGenerator');
+    cb('Could not find TypingsGenerator');
 });
 
 gulp.task('compile:test', ['generate-ts'], function() {
