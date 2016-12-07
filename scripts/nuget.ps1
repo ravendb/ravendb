@@ -3,4 +3,6 @@ function CreateNugetPackage ( $srcDir,  $targetFilename, $versionSuffix ) {
                 --configuration "Release" `
                 --version-suffix $versionSuffix `
                 $srcDir
+
+    CheckLastExitCode
 }

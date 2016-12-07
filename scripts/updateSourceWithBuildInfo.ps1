@@ -1,7 +1,12 @@
 function UpdateSourceWithBuildInfo ( $projectDir, $buildNumber, $version ) {
     $commit = Get-Git-Commit-Short
     UpdateCommonAssemblyInfo $projectDir $buildNumber $version $commit
-    UpdateRavenVersion $projectDir $buildNumber $version $commit
+
+    $versionInfoFile = [io.path]::combine($projectDir, "src", "Raven.Client", "Properties", "VersionInfo.cs")
+    UpdateRavenVersion $projectDir $buildNumber $version $commit $versionInfoFile
+
+    $versionInfoFile2 = [io.path]::combine($projectDir, "src", "Raven.NewClient", "Properties", "VersionInfo.cs")
+    UpdateRavenVersion $projectDir $buildNumber $version $commit $versionInfoFile2
 }
 
 function UpdateCommonAssemblyInfo ( $projectDir, $buildNumber, $version, $commit ) {
@@ -19,8 +24,7 @@ function UpdateCommonAssemblyInfo ( $projectDir, $buildNumber, $version, $commit
     Set-Content -Path $assemblyInfoFile -Value $content -Encoding UTF8
 }
 
-function UpdateRavenVersion ( $projectDir, $buildNumber, $version, $commit ) {
-    $versionInfoFile = [io.path]::combine($projectDir, "src", "Raven.Client", "Properties", "VersionInfo.cs")
+function UpdateRavenVersion ( $projectDir, $buildNumber, $version, $commit, $versionInfoFile ) {
     write-host "Set version in $versionInfoFile"
 
     $content = (Get-Content $versionInfoFile) |
