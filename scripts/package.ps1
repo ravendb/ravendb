@@ -35,15 +35,15 @@ function TarGzFilesFromDir ( $targetFilename, $sourceDir ) {
     }
 }
 
-function CreateRavenPackage ( $projectDir, $releaseDir, $outDir, $version, $spec ) {
-    write-host "Create package for $runtime..."
-    $runtime = $spec.Runtime
-    $releaseArchiveFile = GetRavenArchiveFileName $version $spec
-    $releaseArchivePath = [io.path]::combine($releaseDir, $releaseArchiveFile)
-    $packageDir = [io.path]::combine($outDir, "package")
+function CreateRavenPackage ( $projectDir, $releaseDir, $outDirs, $spec, $version ) {
+    write-host "Create package for $($spec.runtime)..."
+    $packageDir = [io.path]::combine($outDirs.Main, "package")
     New-Item -ItemType Directory -Path $packageDir
 
-    CreatePackageLayout $outDir $packageDir $projectDir $spec
+    CreatePackageLayout $packageDir $projectDir $outDirs $spec
+
+    $releaseArchiveFile = GetRavenArchiveFileName $version $spec
+    $releaseArchivePath = [io.path]::combine($releaseDir, $releaseArchiveFile)
     CreateArchiveFromDir $releaseArchivePath $packageDir $spec
 }
 
@@ -51,11 +51,11 @@ function GetRavenArchiveFileName ( $version, $spec ) {
     "RavenDB-$version-$($spec.Name)"
 }
 
-function CreatePackageLayout ( $outDir, $packageDir, $projectDir, $spec ) {
+function CreatePackageLayout ( $packageDir, $projectDir, $outDirs, $spec ) {
     CopyLicenseFile $packageDir
     CopyAckFile $packageDir
-    CreatePackageServerLayout $outDir $packageDir $projectDir $spec
-    CreatePackageClientLayout $outDir $packageDir $projectDir
+    CreatePackageServerLayout $($outDirs.Server) $packageDir $projectDir $spec
+    CreatePackageClientLayout $outDirs $packageDir $projectDir
     CopyClientReadMe $(Join-Path $packageDir -ChildPath 'Client')
 
     if ($spec.IsUnix) {
@@ -97,10 +97,8 @@ function CopyDaemonScripts ( $projectDir, $packageDir ) {
     }
 }
 
-function CreatePackageServerLayout ( $outDir, $packageDir, $projectDir, $spec ) {
+function CreatePackageServerLayout ( $serverOutDir, $packageDir, $projectDir ) {
     write-host "Create package server directory layout..."
-
-    $serverOutDir = [io.path]::combine($outDir, "Server")
 
     if ($spec.Name -eq "raspberry-pi") {
         del $([io.path]::combine($serverOutDir, "*.so"))
@@ -110,17 +108,17 @@ function CreatePackageServerLayout ( $outDir, $packageDir, $projectDir, $spec ) 
     cp -r $serverOutDir $packageDir
 }
 
-function CreatePackageClientLayout ( $outDir, $packageDir, $projectDir, $spec ) {
+function CreatePackageClientLayout ( $outDirs, $packageDir, $projectDir, $spec ) {
     if ($spec.Name -eq "raspberry-pi") {
-        CreateRaspberryPiClientLayout $outDir $packageDir $projectDir
+        CreateRaspberryPiClientLayout $outDirs $packageDir $projectDir
     } else {
-        CreateRegularPackageClientLayout $outDir $packageDir $projectDir
+        CreateRegularPackageClientLayout $outDirs $packageDir $projectDir
     }
 }
 
-function CreateRaspberryPiClientLayout ( $outDir, $packageDir, $projectDir ) {
-    $clientOutDir = [io.path]::combine($outDir, "Client")
-    $clientPkgDir = [io.path]::combine($outDir, "Client")
+function CreateRaspberryPiClientLayout ( $outDirs, $packageDir, $projectDir ) {
+    $clientOutDir = $outDirs.Client
+    $clientPkgDir = [io.path]::combine($packageDir, "Client")
     New-Item -ItemType Directory -Path $clientPkgDir
 
     cp $(Join-Path $clientOutDir -ChildPath "Raven.Client.dll") $clientPkgDir
@@ -128,22 +126,21 @@ function CreateRaspberryPiClientLayout ( $outDir, $packageDir, $projectDir ) {
     cp $(Join-Path $clientOutDir -ChildPath "Sparrow.dll") $clientPkgDir
     cp $(Join-Path $clientOutDir -ChildPath "Sparrow.pdb") $clientPkgDir
 
-    $newClientOutDir = [io.path]::combine($outDir, "NewClient")
+    $newClientOutDir = $outDirs.NewClient
     cp $(Join-Path $newClientOutDir -ChildPath "Raven.NewClient.dll") $clientPkgDir
     cp $(Join-Path $newClientOutDir -ChildPath "Raven.NewClient.pdb") $clientPkgDir
 }
 
-function CreateRegularPackageClientLayout( $outDir, $packageDir, $projectDir ) {
+function CreateRegularPackageClientLayout( $outDirs, $packageDir, $projectDir ) {
     write-host "Create package client directory layout..."
 
-    $clientOutDir = [io.path]::combine($outDir, "Client")
     $assetsDir = [io.path]::combine($projectDir, "scripts", "assets", "pkg")
 
-    CopyClient $clientOutDir $packageDir $assetsDir
-    CopySparrow $clientOutDir $packageDir $assetsDir
+    CopyClient $outDirs.Client $packageDir $assetsDir
+    CopySparrow $outDirs.Client $packageDir $assetsDir
 
     $newClientOutDir = [io.path]::combine($outDir, "NewClient")
-    CopyNewClient $newClientOutDir $packageDir $assetsDir
+    CopyNewClient $outDirs.NewClient $packageDir $assetsDir
 }
 
 function CopyClient ( $clientOutDir, $packageDir, $assetsDir) {
