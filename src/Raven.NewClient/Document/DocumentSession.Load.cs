@@ -236,14 +236,43 @@ namespace Raven.NewClient.Client.Document
         public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null,
            RavenPagingInformation pagingInformation = null, string skipAfter = null)
         {
-            throw new NotImplementedException();
+            IncrementRequestCount();
+
+            var loadStartingWithOperation = new LoadStartingWithOperation(this);
+            loadStartingWithOperation.WithStartWith(keyPrefix, matches, start, pageSize, exclude, pagingInformation, skipAfter: skipAfter);
+            
+            var command = loadStartingWithOperation.CreateRequest();
+            if (command != null)
+            {
+                RequestExecuter.Execute(command, Context);
+                loadStartingWithOperation.SetResult(command.Result);
+            }
+
+            return loadStartingWithOperation.GetDocuments<T>();
         }
 
         public TResult[] LoadStartingWith<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0,
             int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, Action<ILoadConfiguration> configure = null,
             string skipAfter = null) where TTransformer : AbstractTransformerCreationTask, new()
         {
-            throw new NotImplementedException();
+            IncrementRequestCount();
+            var transformer = new TTransformer().TransformerName;
+
+            var configuration = new RavenLoadConfiguration();
+            configure?.Invoke(configuration);
+
+            var loadStartingWithOperation = new LoadStartingWithOperation(this);
+            loadStartingWithOperation.WithStartWith(keyPrefix, matches, start, pageSize, exclude, pagingInformation, configure, skipAfter);
+            loadStartingWithOperation.WithTransformer(transformer, configuration.TransformerParameters);
+
+
+            var command = loadStartingWithOperation.CreateRequest();
+            if (command != null)
+            {
+                RequestExecuter.Execute(command, Context);
+            }
+
+            return loadStartingWithOperation.GetTransformedDocuments<TResult>(command?.Result);
         }
     }
 }

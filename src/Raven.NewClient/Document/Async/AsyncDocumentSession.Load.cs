@@ -229,21 +229,50 @@ namespace Raven.NewClient.Client.Document.Async
             return loadTransformerOeration.GetTransformedDocuments<T>(command?.Result);
         }
 
-        public Task<IEnumerable<TResult>> LoadStartingWithAsync<TTransformer, TResult>(string keyPrefix,
+        public async Task<IEnumerable<TResult>> LoadStartingWithAsync<TTransformer, TResult>(string keyPrefix,
             string matches = null, int start = 0,
             int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null,
             Action<ILoadConfiguration> configure = null,
             string skipAfter = null, CancellationToken token = new CancellationToken())
             where TTransformer : AbstractTransformerCreationTask, new()
         {
-            throw new NotImplementedException();
+            IncrementRequestCount();
+            var transformer = new TTransformer().TransformerName;
+
+            var configuration = new RavenLoadConfiguration();
+            configure?.Invoke(configuration);
+
+            var loadStartingWithOperation = new LoadStartingWithOperation(this);
+            loadStartingWithOperation.WithStartWith(keyPrefix, matches, start, pageSize, exclude, pagingInformation, configure, skipAfter);
+            loadStartingWithOperation.WithTransformer(transformer, configuration.TransformerParameters);
+
+
+            var command = loadStartingWithOperation.CreateRequest();
+            if (command != null)
+            {
+                await RequestExecuter.ExecuteAsync(command, Context, token);
+            }
+
+            return loadStartingWithOperation.GetTransformedDocuments<TResult>(command?.Result);
         }
 
-        public Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, string matches = null, int start = 0,
+        public async Task<IEnumerable<T>> LoadStartingWithAsync<T>(string keyPrefix, string matches = null, int start = 0,
             int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null,
             string skipAfter = null, CancellationToken token = default(CancellationToken))
         {
-            throw new NotImplementedException();
+            IncrementRequestCount();
+
+            var loadStartingWithOperation = new LoadStartingWithOperation(this);
+            loadStartingWithOperation.WithStartWith(keyPrefix, matches, start, pageSize, exclude, pagingInformation, skipAfter: skipAfter);
+
+            var command = loadStartingWithOperation.CreateRequest();
+            if (command != null)
+            {
+                await RequestExecuter.ExecuteAsync(command, Context, token);
+                loadStartingWithOperation.SetResult(command.Result);
+            }
+
+            return loadStartingWithOperation.GetDocuments<T>();
         }
     }
 }
