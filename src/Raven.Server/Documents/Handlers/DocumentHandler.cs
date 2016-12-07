@@ -119,7 +119,10 @@ namespace Raven.Server.Documents.Handlers
             }
             else if (HttpContext.Request.Query.ContainsKey("startsWith"))
             {
-                isLoadStartingWith = true;
+                // W.A. to distinguish between Lazily.LoadStartingWith of old client and LoadStartingWith of v4.0 new client
+                if (HttpContext.Request.Query.ContainsKey("ComingFromMultiGet") == false)
+                    isLoadStartingWith = true;
+
                 documents = Database.DocumentsStorage.GetDocumentsStartingWith(context,
                     HttpContext.Request.Query["startsWith"],
                     HttpContext.Request.Query["matches"],
