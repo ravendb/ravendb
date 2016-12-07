@@ -31,9 +31,9 @@
             "../Sparrow/bin/Release/netstandard1.3/Sparrow.dll"
           ]
         },
-        "lib/net462/": {
+        "lib/net46/": {
           "includeFiles": [
-            "../Sparrow/bin/Release/net462/Sparrow.dll"
+            "../Sparrow/bin/Release/net46/Sparrow.dll"
           ]
         }
       }
@@ -107,10 +107,10 @@
         "System.Threading.Timer": "4.3.0"
       }
     },
-    "net462": {
+    "net46": {
       "dependencies": {
         "Microsoft.Net.Http": "2.2.29",
-        "System.Runtime": "4.3.0",
+        "System.Runtime": "4.0.20",
         "System.Runtime.Serialization.Primitives": "4.3.0"
       }
     }
