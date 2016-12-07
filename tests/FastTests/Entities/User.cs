@@ -42,4 +42,10 @@ namespace Raven.Tests.Core.Utils.Entities
         public Address Address { get; set; }
     }
 
+    public class GeekPerson
+    {
+        public string Name { get; set; }
+        public int[] FavoritePrimes { get; set; }
+        public long[] FavoriteVeryLargePrimes { get; set; }
+    }
 }

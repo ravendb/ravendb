@@ -140,5 +140,31 @@ namespace NewClientTests.NewClient
                 }
             }
         }
+
+        [Fact]
+        public void Load_Document_With_Int_Array_And_Long_Array()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new GeekPerson { Name = "Bebop", FavoritePrimes = new[] { 13, 43, 443, 997 }, FavoriteVeryLargePrimes = new[] { 5000000029, 5000000039 } }, "geeks/1");
+                    session.Store(new GeekPerson { Name = "Rocksteady", FavoritePrimes = new[] { 2, 3, 5, 7 }, FavoriteVeryLargePrimes = new[] { 999999999989 } }, "geeks/2");
+                    session.SaveChanges();
+                }
+
+                using (var newSession = store.OpenSession())
+                {
+                    var geek1 = newSession.Load<GeekPerson>("geeks/1");
+                    var geek2 = newSession.Load<GeekPerson>("geeks/2");
+
+                    Assert.Equal(geek1.FavoritePrimes[1], 43);
+                    Assert.Equal(geek1.FavoriteVeryLargePrimes[1], 5000000039);
+
+                    Assert.Equal(geek2.FavoritePrimes[3], 7);
+                    Assert.Equal(geek2.FavoriteVeryLargePrimes[0], 999999999989);
+                }
+            }
+        }
     }
 }
