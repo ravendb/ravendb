@@ -69,7 +69,7 @@ class exportDatabase extends viewModelBase {
     private setupDefaultExportFilename(): void {
         const dbName = this.activeDatabase().name;
         const date = moment().format("YYYY-MM-DD HH-mm");
-        this.model.exportFileName(`Dump of ${dbName}, ${date}`);
+        this.model.exportFileName(`Dump of ${dbName} ${date}`);
     }
 
     private initializeObservables(): void {

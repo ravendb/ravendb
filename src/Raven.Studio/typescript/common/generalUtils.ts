@@ -20,38 +20,33 @@ class genUtils {
         return moment.duration("-" + input).humanize(withSuffix);
     }
 
-    static formatTimeSpan(input: string) {
-        var timeParts = input.split(":");
-        var miliPart: string[];
-        var sec = 0, milisec = 0;
-        if (timeParts.length == 3) {
-            miliPart = timeParts[2].split(".");
-            sec = parseInt(miliPart[0]);
-            var tmpMili: string;
-            if (miliPart[1][0] == '0') {
-                tmpMili = miliPart[1].substring(1, 3);
-            } else {
-                tmpMili = miliPart[1].substring(0, 3);
-            }
-            milisec = parseInt(tmpMili);
+    static formatDuration(duration: moment.Duration) {
+        let timeStr = "";
+        if (duration.asHours() > 0) {
+            timeStr = duration.asHours() + " h ";
         }
-        var hours = parseInt(timeParts[0]);
-        var min = parseInt(timeParts[1]);
+        if (duration.minutes() > 0) {
+            timeStr += duration.minutes() + " m ";
+        }
+        if (duration.seconds() > 0) {
+            timeStr += duration.seconds() + " s ";
+        }
+        if (duration.milliseconds() > 0) {
+            const millis = duration.milliseconds();
 
-        var timeStr = "";
-        if (hours > 0) {
-            timeStr = hours + " Hours ";
-        }
-        if (min > 0) {
-            timeStr += min + " Min ";
-        }
-        if (sec > 0) {
-            timeStr += sec + " Sec ";
-        }
-        if ((timeStr == "") && (milisec > 0)) {
-            timeStr = milisec + " Ms ";
+            timeStr = Math.floor(millis * 100) / 100 + " ms ";
         }
         return timeStr;
+    }
+
+    static formatMillis(input: number) {
+        return genUtils.formatDuration(moment.duration({
+            milliseconds: input
+        }));
+    }
+
+    static formatTimeSpan(input: string) {
+        return genUtils.formatDuration(moment.duration(input));
     }
 
     static formatBytesToSize(bytes: number) {
@@ -85,5 +80,11 @@ class genUtils {
         }
         return output;
     }
+
+    // Return the inputNumber as a string with separating commas rounded to 'n' decimal digits
+    // (e.g. for n==2: 2046430.45756 => "2,046,430.46")
+    static formatNumberToStringFixed(inputNumber: number, n: number) :string {
+        return inputNumber.toLocaleString(undefined, { minimumFractionDigits: n, maximumFractionDigits: n });
+    }; 
 } 
 export = genUtils;

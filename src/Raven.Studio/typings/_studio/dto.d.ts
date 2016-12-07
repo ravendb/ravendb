@@ -144,7 +144,17 @@ interface arrayOfResultsAndCountDto<T> {
     Count: number;
 }
 
+interface timeGapInfo {
+    durationInMillis: number;
+    start: Date;
+}
 interface documentColorPair {
     docName: string;
     docColor: string;
+}
+
+interface aggregatedRange {
+    start: number;
+    end: number;
+    value: number;
 }

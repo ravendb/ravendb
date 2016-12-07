@@ -26,20 +26,29 @@ namespace Voron.Impl
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetHashCode(PagePosition obj)
         {
-            int v = Hashing.Combine(obj.ScratchPos.GetHashCode(), obj.TransactionId.GetHashCode());
-            int w = Hashing.Combine(obj.JournalNumber.GetHashCode(), obj.ScratchNumber.GetHashCode());
-            return Hashing.Combine(obj.IsFreedPageMarker ? 1 : 0, Hashing.Combine(v, w));
+            long v = Hashing.Combine(obj.ScratchPos, obj.TransactionId);
+            long w = Hashing.Combine(obj.JournalNumber, (long) obj.ScratchNumber);
+            return (int) (v ^ w);
         }
     }
 
     public class PagePosition
     {
-        public long ScratchPos;
-        public long TransactionId;
-        public long JournalNumber;
-        public int ScratchNumber;
-        public bool IsFreedPageMarker;
+        public readonly long ScratchPos;
+        public readonly long TransactionId;
+        public readonly long JournalNumber;
+        public readonly int ScratchNumber;
+        public readonly bool IsFreedPageMarker;
         public bool UnusedInPTT;
+
+        public PagePosition(long scratchPos, long transactionId, long journalNumber, int scratchNumber, bool isFreedPageMarker = false)
+        {
+            this.ScratchPos = scratchPos;
+            this.TransactionId = transactionId;
+            this.JournalNumber = journalNumber;
+            this.ScratchNumber = scratchNumber;
+            this.IsFreedPageMarker = isFreedPageMarker;
+        }
 
         public override bool Equals(object obj)
         {
@@ -53,7 +62,7 @@ namespace Voron.Impl
 
         public override string ToString()
         {
-            return string.Format("ScratchPos: {0}, TransactionId: {1}, JournalNumber: {2}, ScratchNumber: {3}, IsFreedPageMarker: {4}", ScratchPos, TransactionId, JournalNumber, ScratchNumber, IsFreedPageMarker);
+            return $"ScratchPos: {ScratchPos}, TransactionId: {TransactionId}, JournalNumber: {JournalNumber}, ScratchNumber: {ScratchNumber}, IsFreedPageMarker: {IsFreedPageMarker}";
         }
     }
 }

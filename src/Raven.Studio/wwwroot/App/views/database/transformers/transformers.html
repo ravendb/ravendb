@@ -16,32 +16,39 @@
                     <label></label>
                 </div>
                 <input type="text" class="form-control" placeholder="Filter" title="Filter transformers (Alt+/)" data-bind="textInput: searchText"/>
-                <div class="btn-group">
-                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Set lock mode to selected transformers"
-                            data-bind="enable: selectedTransformersName().length && !globalLockChangesInProgress(), css: { 'btn-spinner': globalLockChangesInProgress() }">
-                        <i class="icon-lock"></i>
-                        <span>Lock</span>&nbsp;&nbsp;
-                        <span class="caret"></span>
-                        <span class="sr-only">Toggle Dropdown</span>
+
+                <div class="transformersToolbar-actions">
+                    <a class="btn btn-primary" data-bind="attr: { href: newTransformerUrl }">
+                        <i class="icon-plus"></i>
+                        <span>New transformer</span>
+                    </a>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Set lock mode to selected transformers"
+                                data-bind="enable: selectedTransformersName().length && !globalLockChangesInProgress(), css: { 'btn-spinner': globalLockChangesInProgress() }">
+                            <i class="icon-lock"></i>
+                            <span>Lock selected</span>&nbsp;&nbsp;
+                            <span class="caret"></span>
+                            <span class="sr-only">Toggle Dropdown</span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li data-bind="click: setLockModeSelectedTransformers.bind($root, 'Unlock', 'Unlock')">
+                                <a href="#" title="Unlock selected indexes">
+                                    <i class="icon-unlock"></i>
+                                    <span>Unlock</span>
+                                </a>
+                            </li>
+                            <li data-bind="click: setLockModeSelectedTransformers.bind($root, 'LockedIgnore', 'Lock')">
+                                <a href="#" title="Lock selected indexes">
+                                    <i class="icon-lock"></i>
+                                    <span>Lock</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    <button class="btn btn-danger" data-bind="click: deleteSelectedTransformers, enable: selectedTransformersName().length">
+                        <i class="icon-trash"></i><span>Delete selected</span>
                     </button>
-                    <ul class="dropdown-menu">
-                        <li data-bind="click: setLockModeSelectedTransformers.bind($root, 'Unlock', 'Unlock')">
-                            <a href="#" title="Unlock selected indexes">
-                                <i class="icon-unlock"></i>
-                                <span>Unlock</span>
-                            </a>
-                        </li>
-                        <li data-bind="click: setLockModeSelectedTransformers.bind($root, 'LockedIgnore', 'Lock')">
-                            <a href="#" title="Lock selected indexes">
-                                <i class="icon-lock"></i>
-                                <span>Lock</span>
-                            </a>
-                        </li>
-                    </ul>
                 </div>
-                <button class="btn btn-danger" data-bind="click: deleteSelectedTransformers, enable: selectedTransformersName().length">
-                    <i class="icon-trash"></i><span>Delete</span>
-                </button>
             </div>
         </div>
     </div>    

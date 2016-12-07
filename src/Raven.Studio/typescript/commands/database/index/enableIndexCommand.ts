@@ -16,8 +16,8 @@ class enableIndexCommand extends commandBase {
         const url = endpoints.databases.adminIndex.adminIndexesEnable + this.urlEncodeArgs(args);
         return this.post(url, null, this.db, { dataType: undefined })
             .done(() => {
-                this.reportSuccess("Enabled " + this.indexName + ".");
-            })
+                this.reportSuccess(`${this.indexName} was Enabled`);
+             })
             .fail((response: JQueryXHR) => this.reportError("Failed to enable index", response.responseText));
     }
 }

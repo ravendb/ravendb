@@ -52,12 +52,18 @@
     }
 </style>
 
-<button class="btn btn-default" data-bind="click: exportAsJson">Export</button>
+<div class="form-inline toolbar" role="form">
 
-<span style="margin-left: 30px">
-    Import: <input style="display: inline" id="importFilePicker" type="file" data-bind="event: { change: fileSelected }" />
-</span>
-
+    <button class="btn btn-default" data-bind="click: exportAsJson"><i class="icon-export"></i> <span>Export</span></button>
+    
+    <div class="input-group file-input">
+        <input required="" type="file" id="importFilePicker" data-bind="event: { change: fileSelected }" tabindex="-1">
+        <label for="importFilePicker" class="btn btn-default">
+            <i class="icon-import"></i>
+            <span>Import</span>
+        </label>
+    </div>
+</div>
 
 <section id="ioStats" style="position: relative">
     <section data-bind="dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">

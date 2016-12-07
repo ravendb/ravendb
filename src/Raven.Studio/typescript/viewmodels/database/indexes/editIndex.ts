@@ -527,6 +527,8 @@ class editIndex extends viewModelBase {
         eventsCollector.default.reportEvent("index", "save");
         var commands: Array<JQueryPromise<any>> = [];
 
+        index.Type = index.Reduce ? "MapReduce" : index.Type;
+
         commands.push(new saveIndexDefinitionCommand(index, this.activeDatabase()).execute());
         if (this.scriptedIndex() !== null) {
             commands.push(new saveScriptedIndexesCommand([this.scriptedIndex()], this.activeDatabase()).execute());

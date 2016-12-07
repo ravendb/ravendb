@@ -47,6 +47,7 @@ function getFaultyIndexStatus(): Raven.Client.Data.Indexes.IndexingStatus {
 function getFaultyIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
     return [
         {
+            State: "Normal",
             "IsStale": false,
             IsInvalidIndex: false,
             "Collections": null,
@@ -56,7 +57,7 @@ function getFaultyIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
             "LockMode": "Unlock",
             LastBatchStats: null as Raven.Client.Data.Indexes.IndexingPerformanceBasicStats,
             "Name": "Faulty/Indexes/8",
-            "Priority": "None",
+            "Priority": "Low",
             "Type": "Faulty",
             "CreatedTimestamp": "0001-01-01T00:00:00.0000000Z",
             "EntriesCount": 0,
@@ -99,7 +100,8 @@ function getSampleIndexStatus(): Raven.Client.Data.Indexes.IndexingStatus {
 function getSampleIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
     return [
         {
-            IsStale: false, 
+            State: "Normal",
+            IsStale: false,
             IsInvalidIndex: false,
             "Collections": {
                 "Orders": {
@@ -146,6 +148,7 @@ function getSampleIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
             Status: "Paused"
         },
         {
+            State: "Normal",
             IsStale: false,
             IsInvalidIndex: false, 
             "Collections": {
@@ -222,7 +225,7 @@ function getSampleIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
             "LastQueryingTime": "2016-09-29T10:44:56.1184944Z",
             "LockMode": "LockedIgnore",
             "Name": "Products/New",
-            "Priority": "Idle",
+            "Priority": "Normal",
             "Type": "Map",
             "CreatedTimestamp": "2016-09-28T13:39:35.9437489Z",
             "EntriesCount": 0,
@@ -237,7 +240,8 @@ function getSampleIndexStats(): Raven.Client.Data.Indexes.IndexStats[] {
             "ReduceSuccesses": null,
             "ErrorsCount": 0,
             "IsTestIndex": false,
-            Status: "Paused"
+            Status: "Paused",
+            State: "Normal"
         }
     ];
 }

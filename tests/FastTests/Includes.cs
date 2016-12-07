@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using System.Linq;
-using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 

@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Runtime.InteropServices;
-using NLog;
 using Sparrow.Binary;
 using Sparrow.Json;
+using Sparrow.Logging;
 using Sparrow.Utils;
 
 namespace Raven.NewClient.Client.Util
@@ -14,7 +13,7 @@ namespace Raven.NewClient.Client.Util
 
         protected readonly string _databaseName;
 
-        private static readonly Logger _log = LogManager.GetLogger(nameof(UnmanagedBuffersPool));
+        private static readonly Logger _log = LoggingSource.Instance.GetLogger<UnmanagedBuffersPool>("Client");
 
         private readonly ConcurrentStack<AllocatedMemoryData>[] _freeSegments;
 
@@ -73,7 +72,10 @@ namespace Raven.NewClient.Client.Util
         ~UnmanagedBuffersPool()
         {
             if (_isDisposed == false)
-                _log.Warn($"UnmanagedBuffersPool for {_debugTag} wasn't properly disposed");
+            {
+                if (_log.IsOperationsEnabled)
+                    _log.Operations($"UnmanagedBuffersPool for {_debugTag} wasn't properly disposed");
+            }
 
             Dispose();
         }

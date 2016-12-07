@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Sparrow.Compression;
 using Sparrow.Json.Parsing;
 
@@ -31,21 +32,29 @@ namespace Sparrow.Json
 
         public BlittableJsonDocumentBuilder(JsonOperationContext context, UsageMode mode, string debugTag, IJsonParser reader, JsonParserState state, BlittableWriter writer = null) : this(context, state, reader, writer)
         {
-            Reset(debugTag, mode);
+            Renew(debugTag, mode);
         }
 
         public BlittableJsonDocumentBuilder(JsonOperationContext context, JsonParserState state, UsageMode mode,  string debugTag, IJsonParser reader, BlittableWriter writer = null):this(context,state,reader,writer)
         {
-            Reset(debugTag, mode);
+            Renew(debugTag, mode);
         }
 
-        public void Reset(string debugTag, UsageMode mode)
+        public void Reset()
         {
-            _debugTag = debugTag;
-            _mode = mode;
-            _writer.Reset();
+            _debugTag = null;
+            _mode = UsageMode.None;
             _continuationState.Clear();
             _writeToken = default(WriteToken);
+            _writer.Reset();
+        }
+
+        public void Renew(string debugTag, UsageMode mode)
+        {
+            Reset();
+            _debugTag = debugTag;
+            _mode = mode;
+            _writer.Renew();
         }
 
         public virtual void ReadArrayDocument()

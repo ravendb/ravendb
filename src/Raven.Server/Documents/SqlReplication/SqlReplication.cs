@@ -158,6 +158,7 @@ namespace Raven.Server.Documents.SqlReplication
                 writer.Commit();
                 if (_logger.IsInfoEnabled)
                     _logger.Info("Replicated deletes of " + string.Join(", ", documentsKeys)  + " for config " + Configuration.Name);
+                
             }
             return true;
         }
@@ -201,6 +202,7 @@ namespace Raven.Server.Documents.SqlReplication
             {
                 if (_logger.IsInfoEnabled)
                     _logger.Info("Failure to replicate changes to relational database for: " + Configuration.Name, e);
+
                 DateTime newTime;
                 if (Statistics.LastErrorTime == null)
                 {

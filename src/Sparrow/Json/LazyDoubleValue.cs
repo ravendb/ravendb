@@ -48,6 +48,31 @@ namespace Sparrow.Json
             return val;
         }
 
+        public static decimal operator *(long x, LazyDoubleValue y)
+        {
+            return x * (decimal)y;
+        }
+
+        public static decimal operator /(long x, LazyDoubleValue y)
+        {
+            return x / (decimal)y;
+        }
+
+        public static decimal operator +(long x, LazyDoubleValue y)
+        {
+            return x + (decimal)y;
+        }
+
+        public static decimal operator -(long x, LazyDoubleValue y)
+        {
+            return x - (decimal)y;
+        }
+
+        public static decimal operator %(long x, LazyDoubleValue y)
+        {
+            return x % (decimal)y;
+        }
+
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj))

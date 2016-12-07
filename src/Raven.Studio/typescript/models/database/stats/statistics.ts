@@ -13,24 +13,24 @@ class statistics {
     // The observable indexes array, ordered by type
     indexesByType = ko.observableArray<indexesWithType>(); 
     
-    constructor(dto: Raven.Client.Data.DatabaseStatistics) {
-        this.dataBaseId = dto.DatabaseId; 
-        this.lastDocEtag = dto.LastDocEtag;
-        this.countOfIndexes = dto.CountOfIndexes.toLocaleString();
-        this.countOfDocuments = dto.CountOfDocuments.toLocaleString();
-        this.countOfTransformers = dto.CountOfTransformers.toLocaleString();
-        this.is64Bit = dto.Is64Bit;
+    constructor(dbStats: Raven.Client.Data.DatabaseStatistics, indexStats: Raven.Client.Data.Indexes.IndexStats[]) {
+        this.dataBaseId = dbStats.DatabaseId; 
+        this.lastDocEtag = dbStats.LastDocEtag;
+        this.countOfIndexes = dbStats.CountOfIndexes.toLocaleString();
+        this.countOfDocuments = dbStats.CountOfDocuments.toLocaleString();
+        this.countOfTransformers = dbStats.CountOfTransformers.toLocaleString();
+        this.is64Bit = dbStats.Is64Bit;
         
-        // 1. The array with all indexes from endpint
-        const allIndexes = dto.Indexes.map(x => new indexStatistics(x)); 
+        // 1. Create the array with all indexes that we got from the endpoint
+        const allIndexes = indexStats.map(x => new indexStatistics(x));
 
         // 2. Create an array where indexes are ordered by type
         let indexesByTypeTemp = Array<indexesWithType>();
         allIndexes.forEach(index => {
-            let existingEntry = indexesByTypeTemp.find(x => x.indexType === index.type);
+            let existingEntry = indexesByTypeTemp.find(x => x.indexType === index.indexType);
             if (!existingEntry) {
                 // A new type encountered
-                const newType = new indexesWithType(index.type);
+                const newType = new indexesWithType(index.indexType);
                 newType.add(index);
                 indexesByTypeTemp.push(newType);
             }
@@ -41,7 +41,7 @@ class statistics {
         });
 
         // 3. Sort by index name & type
-        indexesByTypeTemp.forEach(x => { x.indexes.sort((a, b) => a.name > b.name ? 1 : -1); });
+        indexesByTypeTemp.forEach(x => { x.indexes.sort((a, b) => a.indexName > b.indexName ? 1 : -1); });
         indexesByTypeTemp.sort((a, b) => a.indexType > b.indexType ? 1 : -1);
 
         // 4. Update the observable array 

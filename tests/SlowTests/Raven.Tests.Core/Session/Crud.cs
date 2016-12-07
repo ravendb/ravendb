@@ -19,7 +19,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
 
         }
 #endif
-        [Fact(Skip = "GetNextMaxAsyncInner Not Implemented")]
+        [Fact]
         public async Task CanSaveAndLoad()
         {
             using (var store = GetDocumentStore())
@@ -45,7 +45,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
-        [Fact (Skip = "Assert.Equal fail")]
+        [Fact]
         public async Task CanSaveAndLoadDynamicDocuments()
         {
             using (var store = GetDocumentStore())
@@ -66,7 +66,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
                     var user = await session.LoadAsync<dynamic>("users/1");
 
                     Assert.NotNull(user);
-                    Assert.Equal("Arek", user.Name);
+                    Assert.Equal("Arek", user.Name.ToString());
                 }
             }
         }
@@ -101,7 +101,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             return new CompletedTask();
         }
 
-        [Fact(Skip = "GetNextMaxAsyncInner Not Implemented")]
+        [Fact]
         public async Task CanDelete()
         {
             using (var store = GetDocumentStore())
@@ -131,7 +131,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
-        [Fact(Skip = "GetNextMaxAsyncInner Not Implemented")]
+        [Fact]
         public async Task CanLoadWithInclude()
         {
             using (var store = GetDocumentStore())

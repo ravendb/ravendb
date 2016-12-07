@@ -16,7 +16,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
 {
     public class RavenDB_4161 : RavenTestBase
     {
-        [Fact(Skip = "WaitForIndexing not implemented")]
+        [Fact(Skip = "LoadStartingWith not implemented")]
         public void CanUseTransfromer()
         {
             using (var store = GetDocumentStore())

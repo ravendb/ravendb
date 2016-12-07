@@ -40,7 +40,7 @@ class leafMenuItem implements menuItem {
         this.css = css;
         this.enabled = enabled;
         this.openAsDialog = openAsDialog;
-        this.path = ko.computed(() => {
+        this.path = ko.pureComputed(() => {
             if (this.hash) {
                 return this.hash;
             } else if (this.dynamicHash) {

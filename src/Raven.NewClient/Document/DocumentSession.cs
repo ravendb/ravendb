@@ -10,6 +10,7 @@ using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Document.Batches;
 using Raven.NewClient.Client.Http;
@@ -53,23 +54,33 @@ namespace Raven.NewClient.Client.Document
         
         #region DeleteByIndex
 
-        Operation ISyncAdvancedSessionOperation.DeleteByIndex<T>(string indexName, Expression<Func<T, bool>> expression)
-        {
-            return DeleteByIndex(indexName, expression);
-        }
-
         public Operation DeleteByIndex<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new()
         {
-            throw new NotImplementedException();
+            var indexCreator = new TIndexCreator();
+            return DeleteByIndex<T>(indexCreator.IndexName, expression);
         }
 
         public Operation DeleteByIndex<T>(string indexName, Expression<Func<T, bool>> expression)
         {
-            throw new NotImplementedException();
+            var query = Query<T>(indexName).Where(expression);
+            var indexQuery = new IndexQuery()
+            {
+                Query = query.ToString()
+            };
+
+            var deleteByIndexOperation = new DeleteByIndexOperation(Context);
+            var command = deleteByIndexOperation.CreateRequest(indexName, indexQuery,
+                new QueryOperationOptions(), (DocumentStore)this.DocumentStore);
+
+            if (command != null)
+            {
+                RequestExecuter.Execute(command, Context);
+                return new Operation(command.Result.OperationId);
+            }
+            return null;
         }
 
         #endregion
-
         /// <summary>
         /// Saves all the changes to the Raven server.
         /// </summary>
@@ -113,7 +124,11 @@ namespace Raven.NewClient.Client.Document
         /// <returns></returns>
         public string GetDocumentUrl(object entity)
         {
-            throw new NotImplementedException();
+            DocumentInfo document;
+            if (DocumentsByEntity.TryGetValue(entity, out document) == false)
+                throw new InvalidOperationException("Could not figure out identifier for transient instance");
+
+            return RequestExecuter.UrlFor(document.Id);
         }
          
         public FacetedQueryResult[] MultiFacetedSearch(params FacetQuery[] queries)

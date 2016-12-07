@@ -21,12 +21,12 @@
                         </a>
                     </li>
                     <li>
-                        <a href="#">
+                        <a href="#" class="btn-prerelease">
                             <i class="icon-filesystem"></i>
                             <span>
-                                Filesytems
+                                Filesystems
                             </span>
-                            <span class="badge">2</span>
+                            <span class="badge">0</span>
                         </a>
                     </li>
                 </ul>
@@ -51,8 +51,8 @@
             <!--</div>-->
             <input type="text" class="form-control" placeholder="Filter" accesskey="/"  title="Filter resources (Alt+/)" data-bind="textInput: filters.searchText">
             <div class="resourcesToolbar-actions">
-                <button class="btn btn-primary">
-                    <i class="icon-trash"></i>
+                <button class="btn btn-primary" data-bind="click: newDatabase">
+                    <i class="icon-plus"></i>
                     <span>New database</span>
                 </button>
                 <button class="btn btn-danger" data-bind="visible: isGlobalAdmin(), enable: selectedResources().length, click: deleteSelectedResources">
@@ -131,7 +131,8 @@
                                             </a>
                                         </li>
                                         <li>
-                                            <a href="#" class="btn-prerelease" data-bind="click: $root.toggleRejectDatabaseClients.bind($root, $data)">
+                                            <!--<a href="#" class="btn-prerelease" data-bind="click: $root.toggleRejectDatabaseClients.bind($root, $data)"> -->
+                                            <a href="#" class="btn-prerelease" data-bind="">
                                                 <i class="icon-umbrella"></i> Reject clients mode
                                             </a>
                                         </li>
@@ -160,20 +161,20 @@
         </div>
     </div>
 
-    <div class="properties-item" data-bind="visible: $data.qualifier === 'db' && documentsCount(), if: $data.qualifier === 'db'">
+    <div class="properties-item" data-bind="visible: $data.qualifier === 'db', if: $data.qualifier === 'db'">
         <div class="properties-value value-only">
             <div class="set-size">
                 <i class="icon-document-group"></i>
-                <span data-bind="text: $root.pluralize(documentsCount(), 'document', 'documents')"></span>
+                <span data-bind="text: $root.pluralize(documentsCount().toLocaleString(), 'document', 'documents')"></span>
             </div>
         </div>
     </div>
 
-    <div class="properties-item" data-bind="visible: $data.qualifier === 'db' && indexesCount(), if: $data.qualifier === 'db'">
+    <div class="properties-item" data-bind="visible: $data.qualifier === 'db', if: $data.qualifier === 'db'">
         <div class="properties-value value-only">
             <div class="set-size">
                 <i class="icon-index"></i>
-                <span data-bind="text: $root.pluralize(indexesCount(), 'index', 'indexes')"></span>
+                <span data-bind="text: $root.pluralize(indexesCount().toLocaleString(), 'index', 'indexes')"></span>
             </div>
         </div>
     </div>
@@ -182,7 +183,7 @@
         <div class="properties-value value-only">
             <div class="set-size">
                 <i class="icon-filesystem"></i>
-                <span data-bind="text: $root.pluralize(filesCount(), 'file', 'files')"></span>
+                <span data-bind="text: $root.pluralize(filesCount().toLocaleString(), 'file', 'files')"></span>
             </div>
         </div>
     </div>
@@ -191,7 +192,7 @@
         <div class="properties-value value-only text-danger">
             <div class="set-size">
                 <i class="icon-exclamation"></i>
-                <span data-bind="text: $root.pluralize(errors(), 'error', 'errors')"></span>
+                <span data-bind="text: $root.pluralize(errors().toLocaleString(), 'error', 'errors')"></span>
             </div>
         </div>
     </div>
@@ -200,7 +201,7 @@
         <div class="properties-value value-only text-warning">
             <div class="set-size">
                 <i class="icon-warning"></i>
-                <span data-bind="text: $root.pluralize(alerts(), 'alert', 'alerts')"></span>
+                <span data-bind="text: $root.pluralize(alerts().toLocaleString(), 'alert', 'alerts')"></span>
             </div>
         </div>
     </div>
@@ -209,10 +210,7 @@
         <div data-bind="attr: { class: 'properties-value value-only ' + backupStatus() }">
             <div class="set-size">
                 <i class="icon-backup"></i>
-                <span data-bind="text: 'Backed up ' + lastBackup(), visible: backupStatus() !== 'text-danger'"></span>
-                <span data-bind="visible: backupStatus() === 'text-danger'">
-                    Never backed up
-                </span>
+                <span data-bind="text: backupStatus() !== 'text-danger' ? 'Backed up ' + lastFullOrIncrementalBackup() : 'Never backed up'"></span>
             </div>
         </div>
     </div>

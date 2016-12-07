@@ -50,12 +50,12 @@ namespace Raven.Server.Web.System
         {
             "src/Raven.Studio/wwwroot",
              "wwwroot",
-            "../../Raven.Studio/wwwroot",
+            "../Raven.Studio/wwwroot",
             "../src/Raven.Studio/wwwroot",
             
         };
 
-        private static string TryGetFileName(string filename)
+        private static string TryGetFileName(string basePath, string filename)
         {
             // this is expected to run concurrently
             string value;
@@ -68,12 +68,13 @@ namespace Raven.Server.Web.System
             var files = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var lookupPathDir in LookupPaths)
             {
-                var lookupPath = Path.Combine(AppContext.BaseDirectory, lookupPathDir);
+                var lookupPath = Path.Combine(basePath, lookupPathDir);
                 if (Directory.Exists(lookupPath) == false)
                 {
                     lookupPath = Path.Combine(Directory.GetCurrentDirectory(), lookupPathDir);
                     if (Directory.Exists(lookupPath) == false)
                         continue;
+                
                 }
 
                 foreach (var file in Directory.GetFiles(lookupPath,"*",SearchOption.AllDirectories))
@@ -113,6 +114,7 @@ namespace Raven.Server.Web.System
             HttpContext.Response.Headers["File-Path"] = Path.GetFullPath(filePath);
 #endif
 
+
             var etagValue = HttpContext.Request.Headers["If-None-Match"];
 
             var fileEtag = '"' + File.GetLastWriteTimeUtc(filePath).ToString("G") + '"';
@@ -134,12 +136,17 @@ namespace Raven.Server.Web.System
         [RavenAction("/studio/$", "GET", NoAuthorizationRequired = true)]
         public async Task GetStudioFile()
         {
+            
             var filename = new StringSegment(
                 RouteMatch.Url,
                 RouteMatch.MatchLength,
                 RouteMatch.Url.Length - RouteMatch.MatchLength);
+            
+            var env = (IHostingEnvironment)HttpContext.RequestServices.GetService(typeof(IHostingEnvironment));
 
-            var file = TryGetFileName(filename);
+            var basePath = Server.Configuration.Core.StudioDirectory ?? env.ContentRootPath;
+
+            var file = TryGetFileName(basePath, filename);
 
             if (file != null)
             {
@@ -147,10 +154,9 @@ namespace Raven.Server.Web.System
                 return;
             }
 
-            var env = (IHostingEnvironment)HttpContext.RequestServices.GetService(typeof(IHostingEnvironment));
-            var basePath = env.ContentRootPath;
+       
             var zipFilePath = Path.Combine(basePath, "Raven.Studio.zip");
-
+            
             if (File.Exists(zipFilePath) == false)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;

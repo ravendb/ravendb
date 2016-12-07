@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client;
 using Raven.NewClient.Client.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
@@ -57,7 +57,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact(Skip = "WaitForIndexing not implemented")]
+        [Fact]
         public async void QueryAsync_By_Index()
         {
             using (var store = GetDocumentStore())

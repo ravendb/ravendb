@@ -6,6 +6,7 @@ using System.Text;
 using Sparrow;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
+using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.Paging;
 
@@ -157,7 +158,7 @@ namespace Voron.Data.RawData
                     var oldSize = (RawDataEntrySizes*)(tmp.TempPagePointer + pos);
 
                     if (oldSize->AllocatedSize <= 0)
-                        throw new InvalidDataException($"Allocated size cannot be zero or negative, but was {oldSize->AllocatedSize} in page {pageHeader->PageNumber}");
+                        VoronUnrecoverableErrorException.Raise(_tx.Environment, $"Allocated size cannot be zero or negative, but was {oldSize->AllocatedSize} in page {pageHeader->PageNumber}");
 
                     if (oldSize->UsedSize < 0)
                     {

@@ -1,20 +1,28 @@
-function BuildServer ( $srcDir, $outDir, $platform ) {
-    write-host "Building Server for $platform..."
+function BuildServer ( $srcDir, $outDir, $runtime, $specName ) {
+    write-host "Building Server for $specName..."
     #build server
     $output = [io.path]::combine($outDir, "Server");
-    $build = [io.path]::combine($buildDir, $platform)
+    $build = [io.path]::combine($buildDir, $runtime)
     & dotnet publish --output $output `
-                 --runtime $platform `
+                 --runtime $runtime `
                  --configuration "Release" $srcDir;
     CheckLastExitCode
 }
 
-function BuildClient ( $srcDir, $outDir ) {
-    write-host "Building Client for $platform..."
-    # build client
-    $output = [io.path]::combine($outDir, "Client");
-    $build = [io.path]::combine($buildDir, $platform)
-    & dotnet build --output $output `
+function BuildClient ( $srcDir, $outDir, $specName ) {
+    write-host "Building Client for $specName..."
+
+    & dotnet build --output $outDir `
+                --no-incremental `
+                --framework "netstandard1.6" `
+                --configuration "Release" $srcDir;
+    CheckLastExitCode
+}
+
+function BuildNewClient ( $srcDir, $outDir, $specName ) {
+    write-host "Building NewClient for $specName..."
+
+    & dotnet build --output $outDir `
                 --no-incremental `
                 --framework "netstandard1.6" `
                 --configuration "Release" $srcDir;
@@ -24,6 +32,12 @@ function BuildClient ( $srcDir, $outDir ) {
 function BuildTypingsGenerator ( $srcDir ) {
     # build typings generator
     & dotnet build --configuration "Debug" $srcDir;
+    CheckLastExitCode
+}
+
+function BuildSparrow ( $srcDir ) {
+    # build sparrow
+    & dotnet build --configuration "Release" $srcDir;
     CheckLastExitCode
 }
 

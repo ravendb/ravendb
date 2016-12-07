@@ -483,6 +483,10 @@ namespace Raven.Server.Documents.Indexes
             if (Directory.Exists(path) == false)
                 return;
 
+            if(_logger.IsInfoEnabled)
+                _logger.Info($"Starting to load indexes from {path}");
+
+            var indexes = new SortedList<int, Tuple<string,string>>();
             foreach (var indexDirectory in new DirectoryInfo(path).GetDirectories())
             {
                 if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
@@ -493,6 +497,18 @@ namespace Raven.Server.Documents.Indexes
                 if (IndexDefinitionBase.TryReadIdFromDirectory(indexDirectory, out indexId, out indexName) == false)
                     continue;
 
+                indexes[indexId] = Tuple.Create(indexDirectory.FullName, indexName);
+            }
+
+            foreach (var indexDirectory in indexes)
+            {
+                if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
+                    return;
+
+                int indexId = indexDirectory.Key;
+                string indexName = indexDirectory.Value.Item2;
+                var indexPath = indexDirectory.Value.Item1;
+
                 List<Exception> exceptions = null;
                 if (_documentDatabase.Configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)
                     exceptions = new List<Exception>();
@@ -500,7 +516,7 @@ namespace Raven.Server.Documents.Indexes
                 Index _;
                 if (_indexes.TryGetById(indexId, out _))
                 {
-                    var message = $"Could not open index with id {indexId} at '{indexDirectory.FullName}'. Index with the same id already exists.";
+                    var message = $"Could not open index with id {indexId} at '{indexPath}'. Index with the same id already exists.";
 
                     exceptions?.Add(new InvalidOperationException(message));
 
@@ -513,8 +529,11 @@ namespace Raven.Server.Documents.Indexes
 
                     try
                     {
-                        index = Index.Open(indexId, indexDirectory.FullName, _documentDatabase);
+                        index = Index.Open(indexId, indexPath, _documentDatabase);
                         index.Start();
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info($"Started {index.Name} from {indexPath}");
+
                         _indexes.Add(index);
                     }
                     catch (Exception e)
@@ -522,10 +541,10 @@ namespace Raven.Server.Documents.Indexes
                         index?.Dispose();
                         exceptions?.Add(e);
 
-                        var fakeIndex = new FaultyInMemoryIndex(e, indexId, IndexDefinitionBase.TryReadNameFromMetadataFile(indexDirectory) ?? indexName);
+                        var fakeIndex = new FaultyInMemoryIndex(e, indexId, IndexDefinitionBase.TryReadNameFromMetadataFile(indexPath) ?? indexName);
 
                         if (_logger.IsInfoEnabled)
-                            _logger.Info($"Could not open index with id {indexId} at '{indexDirectory.FullName}'. Created in-memory, fake instance: {fakeIndex.Name}", e);
+                            _logger.Info($"Could not open index with id {indexId} at '{indexPath}'. Created in-memory, fake instance: {fakeIndex.Name}", e);
                         // TODO arek: add alert
 
                         _indexes.Add(fakeIndex);

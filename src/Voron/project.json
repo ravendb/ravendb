@@ -40,6 +40,9 @@
     "System.Diagnostics.Process": "4.3.0",
     "System.IO.FileSystem.DriveInfo": "4.3.0",
     "System.IO.MemoryMappedFiles": "4.3.0",
-    "System.Threading.Overlapped": "4.3.0"
+    "System.Threading.Overlapped": "4.3.0",
+    "System.Threading.ThreadPool": "4.3.0",
+    "System.Xml.XmlDocument": "4.3.0",
+    "System.ComponentModel.Primitives":  "4.3.0" 
   }
 }

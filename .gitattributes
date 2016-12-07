@@ -34,6 +34,7 @@
 *.xml      text eol=crlf
 *.xunit    text eol=crlf
 *.java     text eol=lf
+*.sh       text eol=lf
 
 *.bmp binary
 *.gif binary
@@ -56,4 +57,3 @@
 *.java text eol=lf
 
 * -crlf
-

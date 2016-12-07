@@ -34,7 +34,7 @@ function aboutItem() {
         title: 'About',
         tooltip: "About",
         nav: true,
-        css: 'fa fa-question-mark',
+        css: 'icon-info',
         dynamicHash: appUrl.forAbout
     });
 }
@@ -42,9 +42,6 @@ function aboutItem() {
 function generateNoActiveResourceMenuItems() {
     let appUrls = appUrl.forCurrentDatabase();
     return [
-        new separatorMenuItem('Manage'),
-        getSettingsMenuItem(appUrls),
-        getStatsMenuItem(appUrls),
         new separatorMenuItem('Server'),
         getResourcesMenuItem(appUrls),
         getManageServerMenuItem(),

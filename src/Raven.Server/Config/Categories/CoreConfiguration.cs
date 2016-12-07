@@ -20,13 +20,28 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Raven/MaxPageSize")]
         public int MaxPageSize { get; set; }
 
+        [Description("The directory into which RavenDB will search the studio files, defaults to the base directory")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Raven/StudioDirectory")]
+        public string StudioDirectory { get; set; }
+
+        [Description("The directory into which RavenDB will write the logs, for relative path, the applciation base directory is used")]
+        [DefaultValue("Logs")]
+        [ConfigurationEntry("Raven/LogsDirectory")]
+        public string LogsDirectory { get; set; }
+
+        [Description("The logs level which RavenDB will use (None, Information, Operations)")]
+        [DefaultValue("Operations")]
+        [ConfigurationEntry("Raven/LogsLevel")]
+        public string LogLevel { get; set; }
+
         [Description("The URLs which the server should listen to. By default we listen to localhost:8080")]
         [DefaultValue("http://localhost:8080")]
         [ConfigurationEntry("Raven/ServerUrl")]
         public string ServerUrl { get; set; }
 
         [Description("The URLs which the server should listen to. By default we listen to localhost:8081")]
-        [DefaultValue("tcp://localhost:0")]
+        [DefaultValue(null)]
         [ConfigurationEntry("Raven/ServerUrl/TCP")]
         public string TcpServerUrl { get; set; }
 
@@ -44,7 +59,7 @@ namespace Raven.Server.Config.Categories
         }
 
         [Description("The directory for the RavenDB database. You can use the ~\\ prefix to refer to RavenDB's base directory.")]
-        [DefaultValue(@"~\Databases\System")]
+        [DefaultValue(@"~/Databases")]
         [ConfigurationEntry("Raven/DataDir")]
         public string DataDirectory
         {

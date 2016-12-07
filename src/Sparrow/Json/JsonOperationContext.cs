@@ -90,7 +90,7 @@ namespace Sparrow.Json
         internal int InUse;
         private readonly JsonParserState _jsonParserState;
         private readonly ObjectJsonParser _objectJsonParser;
-        private readonly BlittableJsonDocumentBuilder _writer;
+        private readonly BlittableJsonDocumentBuilder _documentBuilder;
 
         public static JsonOperationContext ShortTermSingleUse()
         {
@@ -108,7 +108,7 @@ namespace Sparrow.Json
 
             _jsonParserState = new JsonParserState();
             _objectJsonParser = new ObjectJsonParser(_jsonParserState, this);
-            _writer = new BlittableJsonDocumentBuilder(this, _jsonParserState, _objectJsonParser);
+            _documentBuilder = new BlittableJsonDocumentBuilder(this, _jsonParserState, _objectJsonParser);
         }
 
         public ReturnBuffer GetManagedBuffer(out ManagedPinnedBuffer buffer)
@@ -190,7 +190,7 @@ namespace Sparrow.Json
             Reset();
 
             _objectJsonParser.Dispose();
-            _writer.Dispose();
+            _documentBuilder.Dispose();
             _arenaAllocator.Dispose();
             _arenaAllocatorForLongLivedValues?.Dispose();
 
@@ -298,13 +298,13 @@ namespace Sparrow.Json
         {
             _jsonParserState.Reset();
             _objectJsonParser.Reset(builder);
-            _writer.Reset(documentId, mode);
+            _documentBuilder.Renew(documentId, mode);
             CachedProperties.NewDocument();
-            _writer.ReadObjectDocument();
-            if (_writer.Read() == false)
+            _documentBuilder.ReadObjectDocument();
+            if (_documentBuilder.Read() == false)
                 throw new InvalidOperationException("Partial content in object json parser shouldn't happen");
-            _writer.FinalizeDocument();
-            var reader = _writer.CreateReader();
+            _documentBuilder.FinalizeDocument();
+            var reader = _documentBuilder.CreateReader();
             RegisterLiveReader(reader);
             return reader;
         }
@@ -530,7 +530,7 @@ namespace Sparrow.Json
 
             public async Task<BlittableJsonReaderObject> ParseAsync(BlittableJsonDocumentBuilder.UsageMode mode, string debugTag)
             {
-                _writer.Reset(debugTag, mode);
+                _writer.Renew(debugTag, mode);
                 _parser.NewDocument();
                 _writer.ReadObjectDocument();
                 _context.CachedProperties.NewDocument();
@@ -556,7 +556,7 @@ namespace Sparrow.Json
 
             public BlittableJsonReaderObject Parse(BlittableJsonDocumentBuilder.UsageMode mode, string debugTag)
             {
-                _writer.Reset(debugTag, mode);
+                _writer.Renew(debugTag, mode);
                 _writer.ReadObjectDocument();
                 _context.CachedProperties.NewDocument();
                 while (true)
@@ -622,6 +622,8 @@ namespace Sparrow.Json
 
             _liveReaders.Clear();
             _arenaAllocator.ResetArena();
+
+            _documentBuilder.Reset();
 
             if (_tempBuffer != null)
                 GetNativeTempBuffer(_tempBuffer.SizeInBytes);

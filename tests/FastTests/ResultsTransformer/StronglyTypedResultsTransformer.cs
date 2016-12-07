@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Linq;
+using Raven.NewClient.Client;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Commands;
 using Xunit;
-
+using Raven.NewClient.Client.Linq;
 namespace NewClientTests.NewClient.ResultsTransformer
 {
     public class StronglyTypedResultsTransformer : RavenTestBase
@@ -153,8 +153,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
             }
         }
 
-        // TODO, iftah change DocumentStore to IDocumentStore once IDocumentStore implements the new session
-        private void PerformLoadingTestArrayWithSingleException(DocumentStore store)
+        private void PerformLoadingTestArrayWithSingleException(IDocumentStore store)
         {
             new OrderWithProductInformationMultipleReturns().Execute(store);
 
@@ -284,8 +283,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
 
             using (var session = store.OpenSession())
             {
-                //TODO - iftah
-               /* var customer = session.Query<Order>()
+                var customer = session.Query<Order>()
                     .Customize(x => x.WaitForNonStaleResults())
                     .Where(order => order.CustomerId == "customers/bob")
                     .TransformWith<OrderWithProductInformation, OrderWithProductInformation.Result>()
@@ -297,7 +295,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
                 Assert.Equal("products/milk", customer.Products[1].ProductId);
 
                 Assert.Equal("Bear", customer.Products[0].ProductName);
-                Assert.Equal("products/bear", customer.Products[0].ProductId);*/
+                Assert.Equal("products/bear", customer.Products[0].ProductId);
             }
         }
     }

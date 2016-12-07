@@ -211,9 +211,9 @@ namespace Raven.Server.Documents.Indexes
 
         protected abstract int ComputeRestOfHash(int hashCode);
 
-        public static string TryReadNameFromMetadataFile(DirectoryInfo directory)
+        public static string TryReadNameFromMetadataFile(string directory)
         {
-            var metadataFile = Path.Combine(directory.FullName, MetadataFileName);
+            var metadataFile = Path.Combine(directory, MetadataFileName);
             if (File.Exists(metadataFile) == false)
                 return null;
 

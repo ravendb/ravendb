@@ -77,6 +77,15 @@ class VirtualRow {
         }
     }
 
+    reset() {
+        this.item = null;
+        this.isItemSelected = false;
+        this.setElementTop(-9999);
+        this._index = -1;
+        this.even = true;
+        this.element.text("");
+    }
+
     private createCellsHtml(item: Object, columns: virtualColumn[], isSelected: boolean): string {
         const cellsHtml = columns
             .map(c => `<div class="cell ${c.cellClass}" style="width: ${c.width}">${c.renderCell(item, isSelected)}</div>`);

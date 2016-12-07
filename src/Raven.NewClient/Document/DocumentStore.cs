@@ -143,12 +143,11 @@ namespace Raven.NewClient.Client.Document
 
         }
 
-
         /// <summary>
         /// Gets or sets the default database name.
         /// </summary>
         /// <value>The default database name.</value>
-        public string DefaultDatabase { get; set; }
+        public override string DefaultDatabase { get; set; }
 
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
@@ -237,7 +236,7 @@ namespace Raven.NewClient.Client.Document
             }
         }
 
-        public RequestExecuter GetRequestExecuter(string databaseName)
+        public override RequestExecuter GetRequestExecuter(string databaseName)
         {
             Lazy<RequestExecuter> lazy;
             if (_requestExecuters.TryGetValue(databaseName, out lazy))
@@ -246,7 +245,12 @@ namespace Raven.NewClient.Client.Document
                 dbName => new Lazy<RequestExecuter>(() => new RequestExecuter(Url, dbName, ApiKey)));
             return lazy.Value;
         }
-        
+
+        public override RequestExecuter GetRequestExecuterForDefaultDatabase()
+        {
+            return GetRequestExecuter(DefaultDatabase);
+        }
+
         public override IDocumentStore Initialize()
         {
             return Initialize(true);

@@ -252,6 +252,40 @@ namespace Sparrow.Json
             }
         }
 
+        public void WriteValueNull()
+        {
+            var currentState = _continuationState.Pop();
+            var valuePos = _writer.WriteNull();
+            _writeToken = new WriteToken //todo: figure out if we really need those WriteTokens
+            {
+                ValuePos = valuePos,
+                WrittenToken = BlittableJsonToken.Null
+            };
+
+            if (currentState.FirstWrite == -1)
+                currentState.FirstWrite = valuePos;
+
+            currentState = FinishWritingScalarValue(currentState);
+            _continuationState.Push(currentState);
+        }
+
+        public void WriteValue(bool value)
+        {
+            var currentState = _continuationState.Pop();
+            var valuePos = _writer.WriteValue(value);
+            _writeToken = new WriteToken //todo: figure out if we really need those WriteTokens
+            {
+                ValuePos = valuePos,
+                WrittenToken = BlittableJsonToken.Boolean
+            };
+
+            if (currentState.FirstWrite == -1)
+                currentState.FirstWrite = valuePos;
+
+            currentState = FinishWritingScalarValue(currentState);
+            _continuationState.Push(currentState);
+        }
+
         public void WriteValue(long value)
         {
             var currentState = _continuationState.Pop();
@@ -398,7 +432,7 @@ namespace Sparrow.Json
         public void Reset(UsageMode mode)
         {
             _mode = mode;
-            _writer.Reset();
+            _writer.Renew();
         }
 
 

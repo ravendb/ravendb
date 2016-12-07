@@ -62,6 +62,8 @@ namespace Raven.Abstractions.Data
 
             public const string Etag = "@etag";
 
+            public const string Flags = "@flags";
+
             public const string IndexScore = "@index-score";
         }
 

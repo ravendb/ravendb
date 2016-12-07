@@ -1,58 +1,58 @@
 <section data-bind="if: stats">
 
     <h2>General Stats</h2>
-    
+
     <div class="row" data-bind="with: stats">
-        
+
         <div class="col-xs-12 visible-sm visible-xs">
-            <table class="table table-condensed table-striped table-responsive bg-info">
+            <table class="table table-condensed table-responsive">
                 <tbody>
-                <tr>
-                    <td>Database Id</td>
-                    <td data-bind="text: dataBaseId"></td>
-                </tr>
-                <tr>
-                    <td>Documents Count</td>
-                    <td data-bind="text: countOfDocuments"></td>
-                </tr>
-                <tr>
-                    <td>Indexes Count</td>
-                    <td data-bind="text: countOfIndexes"></td>
-                </tr>
-                <tr>
-                    <td>Transformers Count</td>
-                    <td data-bind="text: countOfTransformers"></td>
-                </tr>
-                <tr>
-                    <td>Last Document Etag</td>
-                    <td data-bind="text: lastDocEtag"></td>
-                </tr>
-                <tr>
-                    <td>64 Bit</td>
-                    <td data-bind="text: is64Bit"></td>
-                </tr>
+                    <tr>
+                        <td>Database Id</td>
+                        <td data-bind="text: dataBaseId"></td>
+                    </tr>
+                    <tr>
+                        <td>Documents Count</td>
+                        <td data-bind="text: countOfDocuments"></td>
+                    </tr>
+                    <tr>
+                        <td>Indexes Count</td>
+                        <td data-bind="text: countOfIndexes"></td>
+                    </tr>
+                    <tr>
+                        <td>Transformers Count</td>
+                        <td data-bind="text: countOfTransformers"></td>
+                    </tr>
+                    <tr>
+                        <td>Last Document Etag</td>
+                        <td data-bind="text: lastDocEtag"></td>
+                    </tr>
+                    <tr>
+                        <td>64 Bit</td>
+                        <td data-bind="text: is64Bit"></td>
+                    </tr>
                 </tbody>
             </table>
         </div>
 
         <div class="col-lg-7 visible-md visible-lg">
-            <table class="table table-condensed table-striped table-responsive table-bordered bg-info">
+            <table class="table table-condensed table-responsive table-bordered">
                 <tbody>
-                <tr>
-                    <td class="row"><span class="col-md-6">Documents Count</span><span class="col-md-3" data-bind="text: countOfDocuments" style="float: right"></span></td>
-                    <td class="row"><span class="col-md-6">Last Document Etag</span><span class="col-md-3" data-bind="text: lastDocEtag" style="float: right"></span></td>
-                </tr>
-                <tr>
-                    <td class="row"><span class="col-sm-6">Indexes Count</span><span class="col-sm-3" data-bind="text: countOfIndexes" style="float: right"></span></td>
-                    <td class="row"><span class="col-sm-6">Transformers Count</span><span class="col-sm-3" data-bind="text: countOfTransformers" style="float: right"></span></td>
-                </tr>
-                <tr>
-                    <td class="row"><span class="col-sm-6">64 Bit</span><span class="col-sm-3" data-bind="text: is64Bit" style="float: right"></span></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td colspan="2" class="row"><span class="col-sm-3">Database Id</span><span class="col-sm-8" data-bind="text: dataBaseId"></span></td>
-                </tr>
+                    <tr>
+                        <td class="row"><span class="col-md-6">Documents Count</span><span class="col-md-3" data-bind="text: countOfDocuments" style="float: right"></span></td>
+                        <td class="row"><span class="col-md-6">Last Document Etag</span><span class="col-md-3" data-bind="text: lastDocEtag" style="float: right"></span></td>
+                    </tr>
+                    <tr>
+                        <td class="row"><span class="col-sm-6">Indexes Count</span><span class="col-sm-3" data-bind="text: countOfIndexes" style="float: right"></span></td>
+                        <td class="row"><span class="col-sm-6">Transformers Count</span><span class="col-sm-3" data-bind="text: countOfTransformers" style="float: right"></span></td>
+                    </tr>
+                    <tr>
+                        <td class="row"><span class="col-sm-6">64 Bit</span><span class="col-sm-3" data-bind="text: is64Bit" style="float: right"></span></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" class="row"><span class="col-sm-3">Database Id</span><span class="col-sm-8" data-bind="text: dataBaseId"></span></td>
+                    </tr>
                 </tbody>
             </table>
         </div>
@@ -71,20 +71,73 @@
         <div class="row">
             <div data-bind="foreach: indexes">
                 <div class="col-sm-4">
-                    <div class="panel panel-success">
+                    <div class="panel panel-default">
                         <div class="panel-body">
-                            <a href="#" data-bind="attr: { href: $root.urlForIndexPerformance(name) } ">
-                                <span class="text" data-bind="text: name"></span>
-                            </a><br/>
-                            Id: <span data-bind="text: indexId"></span>
-                            <span class="badge badge-warning" data-bind="visible: isStale">Stale</span> <!-- TODO: How to move to the right side ? -->
+                            <table class="table table-condensed table-responsive">
+                                <thead>
+                                    <tr>
+                                        <th>
+                                            <a href="#" data-bind="attr: { href: $root.urlForIndexPerformance(indexName) } ">
+                                                <span class="text" data-bind="text: indexName"></span>
+                                            </a>
+                                        </th>
+                                        <th>
+                                            <span class="badge badge-warning" data-bind="visible: isStale">Stale</span>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Index Id:</td>
+                                        <td data-bind="text: indexId"></td>
+                                    </tr>
+                                    <tr data-bind="if: !isFaultyIndex">
+                                        <td>Entries Count:</td>
+                                        <td data-bind="text: entriesCount"></td>
+                                    </tr>
+                                    <tr data-bind="if: errorsCount > 0">
+                                        <td>Errors Count:</td>
+                                        <td data-bind="text: errorsCount"></td>
+                                    </tr>
+                                    <tr data-bind="if: !isFaultyIndex">
+                                        <td>Map Attempts:</td>
+                                        <td data-bind="text: mapAttempts"></td>
+                                    </tr>
+                                    <tr data-bind="if: !isFaultyIndex">
+                                        <td>Map Successes:</td>
+                                        <td data-bind="text: mapSuccesses"></td>
+                                    </tr>
+                                    <tr data-bind="if: mapErrors > 0">
+                                        <td>Map Errors:</td>
+                                        <td data-bind="text: mapErrors"></td>
+                                    </tr>
+                                    <tr data-bind="if: mappedPerSecondRate > 1">
+                                        <td>Mapped Per Second Rate:</td>
+                                        <td data-bind="text: mappedPerSecondRateStr"></td>
+                                    </tr>
+                                    <tr data-bind="if: isReduceIndex">
+                                        <td>Reduce Attempts:</td>
+                                        <td data-bind="text: reduceAttempts"></td>
+                                    </tr>
+                                    <tr data-bind="if: isReduceIndex">
+                                        <td>Reduce Successes:</td>
+                                        <td data-bind="text: reduceSuccesses"></td>
+                                    </tr>
+                                    <tr data-bind="if: isReduceIndex && reduceErrors > 0">
+                                        <td>Reduce Errors:</td>
+                                        <td data-bind="text: reduceErrors"></td>
+                                    </tr>
+                                    <tr data-bind="if: isReduceIndex && (reducedPerSecondRate > 1)">
+                                        <td>Reduced Per Second Rate:</td>
+                                        <td data-bind="text: reducedPerSecondRateStr"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
             </div>
-        </div> 
-
+        </div>
         <br />
     </div>
-
 </section>

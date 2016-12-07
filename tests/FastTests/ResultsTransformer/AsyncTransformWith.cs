@@ -7,7 +7,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client;
 using Raven.NewClient.Client.Indexes;
 using Xunit;
 
@@ -15,7 +15,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
 {
     public class AsyncTransformWith : RavenTestBase
     {
-        [Fact(Skip = "RavenQueryInspector.ToString() not implemented")]
+        [Fact]
         public void CanRunTransformerOnSession()
         {
             using (var store = GetDocumentStore())
@@ -46,7 +46,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
             }
         }
 
-        [Fact(Skip = "RavenQueryInspector.ToString() not implemented")]
+        [Fact]
         public async Task CanRunTransformerOnAsyncSession()
         {
             using (var store = GetDocumentStore())

@@ -103,9 +103,16 @@ namespace Raven.Server.Documents
                     catch (Exception e)
                     {
                         if (_logger.IsInfoEnabled)
-                            _logger.Info($"Could not delete tombstones for '{tombstone.Key}' collection and '{tombstone.Value}' etag.", e);
+                            _logger.Info(
+                                $"Could not delete tombstones for '{tombstone.Key}' collection and '{tombstone.Value}' etag.",
+                                e);
                     }
                 }
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Failed to execute tombstone cleanup on {_documentDatabase.Name}",e);
             }
             finally
             {

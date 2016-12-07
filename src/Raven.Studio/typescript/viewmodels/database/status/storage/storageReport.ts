@@ -306,7 +306,7 @@ class storageReport extends viewModelBase {
             html += "<br />Type: <strong>" + d.type.capitalizeFirstLetter() + "</strong>";
         }
         if (this.shouldDisplayNumberOfEntires(d)) {
-            html += "<br />Entries: <strong>" + d.numberOfEntries + "</strong>";
+            html += "<br />Entries: <strong>" + d.numberOfEntries.toLocaleString() + "</strong>";
         }
         html += " <br /> <span class='size'>Size: <strong>" + generalUtils.formatBytesToSize(d.size) + "</strong></span>";
 

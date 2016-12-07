@@ -2,15 +2,22 @@ import utils = require("utils");
 
 import resourcesInfo = require("src/Raven.Studio/typescript/models/resources/info/resourcesInfo");
 
+import resources = require("src/Raven.Studio/typescript/viewmodels/resources/resources");
+
 var viewUnderTest = 'resources/resources';
 
 describe(viewUnderTest, () => {
     utils.initTest();
 
-    it('should bind', () => {
+    it('should bind', (done) => {
         utils.mockCommand('commands/resources/getResourcesCommand', () => new resourcesInfo(getResourcesData()));
 
-        return utils.runViewmodelTest(viewUnderTest, {});
+        utils.injector.require(["common/changesContext"], (changesContext: any) => {
+            changesContext.default.connectGlobalChangesApi();
+
+            utils.runViewmodelTest(viewUnderTest, {})
+                .then(() => done());
+        });
     });
 });
 
@@ -30,8 +37,10 @@ function getResourcesData(): Raven.Client.Data.ResourcesInfo {
                 "Alerts": 7,
                 "UpTime": null,
                 "BackupInfo": {
-                    "BackupInterval": "7.00:00:00",
-                    "LastBackup": "10.00:00:00"
+                    FullBackupInterval: "7.00:00:00",
+                    IncrementalBackupInterval: null,
+                    LastFullBackup: null,
+                    LastIncrementalBackup: null
                 },
                 "DocumentsCount": 10234,
                 "IndexesCount": 30,

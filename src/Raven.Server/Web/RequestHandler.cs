@@ -109,11 +109,10 @@ namespace Raven.Server.Web
             if (etags.Count == 0)
                 return null;
 
-            long etag;
-            if (long.TryParse(etags[0], out etag) == false)
-                ThrowInvalidInteger(name, etags[0]);
+            if (etags[0][0] == '\"')
+                return long.Parse(etags[0].Substring(1, etags[0].Length - 2));
 
-            return etag;
+            return long.Parse(etags[0]);
         }
 
         private void ThrowInvalidInteger(string name, string etag)

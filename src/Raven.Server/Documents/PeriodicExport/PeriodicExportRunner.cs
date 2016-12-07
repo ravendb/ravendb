@@ -43,6 +43,9 @@ namespace Raven.Server.Documents.PeriodicExport
         public readonly TimeSpan FullExportInterval;
         public readonly TimeSpan IncrementalInterval;
 
+        public DateTime FullExportTime => _status.LastFullExportAt;
+        public DateTime ExportTime => _status.LastExportAt;
+
         private int? _exportLimit;
 
         //interval can be 2^32-2 milliseconds at most

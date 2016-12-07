@@ -259,29 +259,29 @@ class indexes extends viewModelBase {
 
     unlockIndex(i: index) {
         eventsCollector.default.reportEvent("indexes", "set-lock-mode", "Unlock");
-        this.updateIndexLockMode(i, "Unlock");
+        this.updateIndexLockMode(i, "Unlock", "Unlocked");
     }
 
     lockIndex(i: index) {
         eventsCollector.default.reportEvent("indexes", "set-lock-mode", "LockedIgnore");
-        this.updateIndexLockMode(i, "LockedIgnore");
+        this.updateIndexLockMode(i, "LockedIgnore", "Locked");
     }
 
     lockErrorIndex(i: index) {
         eventsCollector.default.reportEvent("indexes", "set-lock-mode", "LockedError");
-        this.updateIndexLockMode(i, "LockedError");
+        this.updateIndexLockMode(i, "LockedError","Locked (Error)");
     }
 
     lockSideBySide(i: index) {
         eventsCollector.default.reportEvent("indexes", "set-lock-mode", "SideBySide");
-        this.updateIndexLockMode(i, "SideBySide");
+        this.updateIndexLockMode(i, "SideBySide","Locked (Side by Side)");
     }
 
-    private updateIndexLockMode(i: index, newLockMode: Raven.Abstractions.Indexing.IndexLockMode) {
+    private updateIndexLockMode(i: index, newLockMode: Raven.Abstractions.Indexing.IndexLockMode, lockModeStrForTitle: string) {
         if (i.lockMode() !== newLockMode) {
             this.spinners.localLockChanges.push(i.name);
 
-            new saveIndexLockModeCommand([i], newLockMode, this.activeDatabase())
+            new saveIndexLockModeCommand([i], newLockMode, this.activeDatabase(), lockModeStrForTitle)
                 .execute()
                 .done(() => i.lockMode(newLockMode))
                 .always(() => this.spinners.localLockChanges.remove(i.name));
@@ -397,7 +397,7 @@ class indexes extends viewModelBase {
 
                     const indexes = this.getSelectedIndexes();
 
-                    new saveIndexLockModeCommand(indexes, lockModeString, this.activeDatabase())
+                    new saveIndexLockModeCommand(indexes, lockModeString, this.activeDatabase(),lockModeStrForTitle)
                         .execute()
                         .done(() => indexes.forEach(i => i.lockMode(lockModeString)))
                         .always(() => this.spinners.globalLockChanges(false));

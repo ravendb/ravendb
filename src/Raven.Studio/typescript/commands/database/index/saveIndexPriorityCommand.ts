@@ -13,11 +13,11 @@ class saveIndexPriorityCommand extends commandBase {
             name: this.indexName, 
             priority: this.priority
         }
-        this.reportInfo("Saving " + this.indexName + " priority ...");
+        this.reportInfo("Saving " + this.indexName + " Priority ...");
         const url = endpoints.databases.index.indexesSetPriority + this.urlEncodeArgs(args);
         return this.post(url, null, this.db, { dataType: undefined })
             .done(() => {
-                this.reportSuccess("Saved " + this.indexName + ".");
+                this.reportSuccess(`${this.indexName} Priority was set to ${args.priority}`);
             })
             .fail((response: JQueryXHR) => this.reportError("Failed to set index priority", response.responseText));
     }

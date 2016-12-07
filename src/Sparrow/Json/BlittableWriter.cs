@@ -68,12 +68,29 @@ namespace Sparrow.Json
             return startPos;
         }
 
+        public int WriteValue(bool value)
+        {
+            var startPos = _position;
+            _position += WriteVariableSizeInt(value ? 1 : 0);
+            return startPos;
+        }
+
+        public int WriteNull()
+        {
+            return _position;
+        }
+
         public int WriteValue(double value)
         {
             // todo: write something more performant here..
             var s = EnsureDecimalPlace(value, value.ToString("R", CultureInfo.InvariantCulture));
             BlittableJsonToken token;
             return WriteValue(s,out token);
+        }
+
+        public int WriteValue(decimal value)
+        {
+            return WriteValue((double)value);
         }
 
         public int WriteValue(float value)
@@ -105,6 +122,10 @@ namespace Sparrow.Json
         public void Reset()
         {
             _unmanagedWriteBuffer.Dispose();
+        }
+
+        public void Renew()
+        {
             _unmanagedWriteBuffer = _context.GetStream();
             _position = 0;
         }
@@ -333,10 +354,12 @@ namespace Sparrow.Json
         }
 
         [ThreadStatic]
-        private static List<int> _intBuffer = new List<int>();
+        private static List<int> _intBuffer;
 
         public unsafe int WriteValue(string str, out BlittableJsonToken token, UsageMode mode = UsageMode.None)
         {
+            if (_intBuffer == null)
+                _intBuffer = new List<int>();
             int size = Encoding.UTF8.GetMaxByteCount(str.Length);
             FillBufferWithEscapePositions(str, _intBuffer);
             size += JsonParserState.GetEscapePositionsSize(_intBuffer);

@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.Versioning
             return _emptyConfiguration;
         }
 
-        public void PutFromDocument(DocumentsOperationContext context, CollectionName collectionName, string key, long newEtagBigEndian, BlittableJsonReaderObject document)
+        public bool PutFromDocument(DocumentsOperationContext context, CollectionName collectionName, string key, long newEtagBigEndian, BlittableJsonReaderObject document)
         {
             var enableVersioning = false;
             BlittableJsonReaderObject metadata;
@@ -127,7 +127,7 @@ namespace Raven.Server.Documents.Versioning
                     metadata.Modifications = mutatedMetadata = new DynamicJsonValue(metadata);
                     mutatedMetadata.Remove(Constants.Versioning.RavenDisableVersioning);
                     if (disableVersioning)
-                        return;
+                        return false;
                 }
 
                 if (metadata.TryGet(Constants.Versioning.RavenEnableVersioning, out enableVersioning))
@@ -141,7 +141,7 @@ namespace Raven.Server.Documents.Versioning
 
             var configuration = GetVersioningConfiguration(collectionName);
             if (enableVersioning == false && configuration.Active == false)
-                return;
+                return false;
 
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocuments);
             Slice prefixSlice;
@@ -152,6 +152,8 @@ namespace Raven.Server.Documents.Versioning
 
                 PutInternal(context, key, newEtagBigEndian, document, table);
             }
+
+            return true;
         }
 
         public void PutDirect(DocumentsOperationContext context, string key, long etag, BlittableJsonReaderObject document)

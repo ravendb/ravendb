@@ -457,6 +457,9 @@ namespace Voron.Platform.Win32
 
         internal override void ProtectPageRange(byte* start, ulong size, bool force = false)
         {
+            if (size == 0)
+                return;
+
             if (UsePageProtection || force)
             {
                 Win32NativeMethods.MEMORY_BASIC_INFORMATION memoryInfo1 = new Win32NativeMethods.MEMORY_BASIC_INFORMATION();
@@ -479,6 +482,9 @@ namespace Voron.Platform.Win32
 
         internal override void UnprotectPageRange(byte* start, ulong size, bool force = false)
         {
+            if (size == 0)
+                return;
+
             if (UsePageProtection || force)
             {
                 Win32NativeMethods.MEMORY_BASIC_INFORMATION memoryInfo1 = new Win32NativeMethods.MEMORY_BASIC_INFORMATION();

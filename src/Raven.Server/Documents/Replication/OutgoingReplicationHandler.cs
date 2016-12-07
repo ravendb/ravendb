@@ -19,6 +19,8 @@ using Raven.Client.Connection;
 using Raven.Client.Extensions;
 using Raven.Client.Replication.Messages;
 using Raven.Json.Linq;
+using Raven.Server.Alerts;
+using Raven.Server.Exceptions;
 using Raven.Server.Extensions;
 
 namespace Raven.Server.Documents.Replication
@@ -98,7 +100,7 @@ namespace Raven.Server.Documents.Replication
                 var tcpConnectionInfo = convention.CreateSerializer().Deserialize<TcpConnectionInfo>(new RavenJTokenReader(result));
                 if (_log.IsInfoEnabled)
                 {
-                    _log.Info($"Will replicate to {_destination.Database} @ {_destination.Url} via tcp://{tcpConnectionInfo.Url}:{tcpConnectionInfo.Port}");
+                    _log.Info($"Will replicate to {_destination.Database} @ {_destination.Url} via {tcpConnectionInfo.Url}");
                 }
                 return tcpConnectionInfo;
             }
@@ -109,6 +111,7 @@ namespace Raven.Server.Documents.Replication
             try
             {
                 var connectionInfo = GetTcpInfo();
+
                 using (_tcpClient = new TcpClient())
                 {
                     ConnectSocket(connectionInfo, _tcpClient);
@@ -146,14 +149,61 @@ namespace Raven.Server.Documents.Replication
                             {
                                 using (_configurationContext.OpenReadTransaction())
                                 using (_documentsContext.OpenReadTransaction())
-                                    HandleServerResponse();
+                                {
+                                    var response = HandleServerResponse();
+                                    if (response.Item1 == ReplicationMessageReply.ReplyType.Error)
+                                    {
+                                        if(response.Item2.Contains("DatabaseDoesNotExistsException"))
+                                            throw new DatabaseDoesNotExistsException();
+
+                                        throw new InvalidOperationException(response.Item2);
+                                    }                                    
+                                }
+                            }
+                            catch (DatabaseDoesNotExistsException e)
+                            {
+                                var msg = $"Failed to parse initial server replication response, because there is no database named {_database.Name} on the other end. " +
+                                          "In order for the replication to work, a database with the same name needs to be created at the destination";
+                                if (_log.IsInfoEnabled)
+                                {
+                                    _log.Info(msg,e);
+                                }
+
+                                using (var txw = _configurationContext.OpenWriteTransaction())
+                                {
+                                    _database.Alerts.AddAlert(new Alert
+                                    {
+                                        Key = FromToString,
+                                        Type = AlertType.Replication,
+                                        Message = msg,
+                                        CreatedAt = DateTime.UtcNow,
+                                        Severity = AlertSeverity.Warning
+                                    }, _configurationContext, txw);
+                                    txw.Commit();
+                                }
+
+                                throw;
                             }
                             catch (Exception e)
                             {
+                                var msg =
+                                    $"Failed to parse initial server response. This is definitely not supposed to happen. Exception thrown: {e}";
                                 if (_log.IsInfoEnabled)
-                                    _log.Info(
-                                        "Failed to parse initial server response. This is definitely not supposed to happen.",
-                                        e);
+                                    _log.Info(msg,e);
+
+                                using (var txw = _configurationContext.OpenWriteTransaction())
+                                {
+                                    _database.Alerts.AddAlert(new Alert
+                                    {
+                                        Key = FromToString,
+                                        Type = AlertType.Replication,
+                                        Message = msg,
+                                        CreatedAt = DateTime.UtcNow,
+                                        Severity = AlertSeverity.Error
+                                    }, _configurationContext, txw);
+                                    txw.Commit();
+                                }
+
                                 throw;
                             }
 
@@ -275,15 +325,12 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            //using (_configurationContext.OpenReadTransaction())
+            if (
+                _database.IndexMetadataPersistence.ReadLastEtag(_configurationContext.Transaction.InnerTransaction) !=
+                replicationBatchReply.LastIndexTransformerEtagAccepted)
             {
-                if (
-                    _database.IndexMetadataPersistence.ReadLastEtag(_configurationContext.Transaction.InnerTransaction) !=
-                    replicationBatchReply.LastIndexTransformerEtagAccepted)
-                {
-                    if (DateTime.UtcNow - _lastIndexOrTransformerSentTime > _minimalHeartbeatInterval)
-                        _waitForChanges.Set();
-                }
+                if (DateTime.UtcNow - _lastIndexOrTransformerSentTime > _minimalHeartbeatInterval)
+                    _waitForChanges.Set();
             }
         }
 
@@ -323,7 +370,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        internal void HandleServerResponse()
+        internal Tuple<ReplicationMessageReply.ReplyType,string> HandleServerResponse()
         {
             bool hasSucceededParsingResponse = false;
             try
@@ -358,6 +405,10 @@ namespace Raven.Server.Documents.Replication
                                     replicationBatchReply.Type);
                         }
                     }
+
+                    return Tuple.Create(replicationBatchReply.Type, 
+                        replicationBatchReply.Type == ReplicationMessageReply.ReplyType.Error ? 
+                        replicationBatchReply.Exception : String.Empty);
                 }
             }
             catch (Exception e)
@@ -380,21 +431,23 @@ namespace Raven.Server.Documents.Replication
 
         private void ConnectSocket(TcpConnectionInfo connection, TcpClient tcpClient)
         {
-            var host = new Uri(connection.Url).Host;
+            var uri = new Uri(connection.Url);
+            var host = uri.Host;
+            var port = uri.Port;
             try
             {
-                tcpClient.ConnectAsync(host, connection.Port).Wait(CancellationToken);
+                tcpClient.ConnectAsync(host, port).Wait(CancellationToken);
             }
             catch (SocketException e)
             {
                 if (_log.IsInfoEnabled)
-                    _log.Info($"Failed to connect to remote replication destination {host}:{connection.Port}. Socket Error Code = {e.SocketErrorCode}", e);
+                    _log.Info($"Failed to connect to remote replication destination {connection.Url}. Socket Error Code = {e.SocketErrorCode}", e);
                 throw;
             }
             catch (Exception e)
             {
                 if (_log.IsInfoEnabled)
-                    _log.Info($"Failed to connect to remote replication destination {host}:{connection.Port}", e);
+                    _log.Info($"Failed to connect to remote replication destination {connection.Url}", e);
                 throw;
             }
         }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Raven.NewClient.Client.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -125,7 +126,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact(Skip = "WaitForIndexing is not implemented")]
+        [Fact]
         public void Query_By_Index()
         {
             using (var store = GetDocumentStore())
@@ -146,6 +147,7 @@ namespace NewClientTests.NewClient
 
                     WaitForIndexing(store);
                 }
+				
                 using (var newSession = store.OpenSession())
                 {
                     var queryResult = newSession.Query<DogsIndex.Result, DogsIndex>()

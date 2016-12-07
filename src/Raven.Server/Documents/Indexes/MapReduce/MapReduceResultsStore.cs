@@ -78,13 +78,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public void Delete(long id)
         {
-            var entryId = id;
-
             switch (Type)
             {
                 case MapResultsStorageType.Tree:
                     Slice entrySlice;
-                    using (Slice.External(_indexContext.Allocator, (byte*) &entryId, sizeof(long), out entrySlice))
+                    using (Slice.External(_indexContext.Allocator, (byte*) &id, sizeof(long), out entrySlice))
                         Tree.Delete(entrySlice);
                     break;
                 case MapResultsStorageType.Nested:

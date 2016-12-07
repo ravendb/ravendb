@@ -12,6 +12,7 @@ using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Impl;
 using Sparrow;
+using Sparrow.Binary;
 using Voron.Debugging;
 using Voron.Util;
 
@@ -163,7 +164,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         {
                             if (id == -1)
                             {
-                                id = MapReduceWorkContext.GetNextIdentifier();
+                                id = Bits.SwapBytes(MapReduceWorkContext.GetNextIdentifier());
 
                                 Slice val;
                                 using (Slice.External(indexContext.Allocator, (byte*)&reduceKeyHash, sizeof(ulong), out val))

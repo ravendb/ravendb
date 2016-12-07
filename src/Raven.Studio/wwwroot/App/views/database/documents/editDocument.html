@@ -52,8 +52,13 @@
                         <li><a href="#" class="document" data-bind="text: id, attr: { href: href }"></a></li>
                     </ul>-->
 
-                    <virtual-grid params="fetcher: fetchChunk.bind($data), showColumns: false, showRowSelectionCheckbox: false, columns: columns"></virtual-grid>
+                    <virtual-grid params="fetcher: fetchCurrentTabDocs.bind($data), 
+                                  showColumns: false, 
+                                  showRowSelectionCheckbox: false, 
+                                  columns: columns,
+                                  resetItems: currentTab">
 
+                    </virtual-grid>
                 </div>
             </div>
         </div>

@@ -256,13 +256,11 @@ namespace NewClientTests
             return url;
         }
 
-        public static void WaitForIndexing(IDocumentStore store, string database = null, TimeSpan? timeout = null)
+        public static void WaitForIndexing(IDocumentStore store, string dbName = null, TimeSpan? timeout = null)
         {
-            throw new NotImplementedException();
-            /*if (database != null)
-            {
-                databaseCommands = databaseCommands.ForDatabase(database);
-            }
+            JsonOperationContext jsonOperationContext;
+            var requestExecuter = store.GetRequestExecuter(dbName ?? store.DefaultDatabase);
+            requestExecuter.ContextPool.AllocateOperationContext(out jsonOperationContext);
 
             timeout = timeout ?? (Debugger.IsAttached
                           ? TimeSpan.FromMinutes(15)
@@ -272,7 +270,14 @@ namespace NewClientTests
             var sp = Stopwatch.StartNew();
             while (sp.Elapsed < timeout.Value)
             {
-                var databaseStatistics = databaseCommands.GetStatistics();
+                var getStatsCommand = new GetStatisticsCommand();
+                if (getStatsCommand != null)
+                {
+                    requestExecuter.Execute(getStatsCommand, jsonOperationContext);
+                }
+                var databaseStatistics = getStatsCommand.Result;
+
+
                 if (databaseStatistics.Indexes.All(x => x.IsStale == false))
                     return;
 
@@ -283,7 +288,8 @@ namespace NewClientTests
                 Thread.Sleep(32);
             }
 
-            var request = databaseCommands.CreateRequest("/indexes/performance", HttpMethod.Get);
+            // TODO iftah
+            /*var request = databaseCommands.CreateRequest("/indexes/performance", HttpMethod.Get);
             var perf = request.ReadResponseJson();
             request = databaseCommands.CreateRequest("/indexes/errors", HttpMethod.Get);
             var errors = request.ReadResponseJson();

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using Raven.Abstractions.Data;
 using Raven.Client.Replication.Messages;
 using Sparrow;
@@ -22,6 +23,7 @@ namespace Raven.Server.Documents
         public float? IndexScore;
         public ChangeVectorEntry[] ChangeVector;
         public DateTime LastModified;
+        public DocumentFlags Flags;
 
         public unsafe ulong DataHash
         {
@@ -90,8 +92,8 @@ namespace Raven.Server.Documents
             if (Data.TryGet(Constants.Metadata.Key, out metadata) &&
                 metadata.TryGet(Constants.Expiration.RavenExpirationDate, out expirationDate))
             {
-                DateTime expirationDateTime = DateTime.Parse(expirationDate);
-                if (expirationDateTime - DateTime.UtcNow < TimeSpan.Zero)
+                var expirationDateTime = DateTime.ParseExact(expirationDate, new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+                if (expirationDateTime < DateTime.UtcNow )
                     return true;
             }
             return false;

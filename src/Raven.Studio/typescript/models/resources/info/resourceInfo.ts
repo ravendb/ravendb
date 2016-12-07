@@ -22,7 +22,7 @@ abstract class resourceInfo {
     licensed = ko.observable<boolean>(true); //TODO: bind this value
 
     uptime = ko.observable<string>();
-    lastBackup = ko.observable<string>();
+    lastFullOrIncrementalBackup = ko.observable<string>();
     backupStatus = ko.observable<string>();
     backupEnabled = ko.observable<boolean>();
 
@@ -45,7 +45,8 @@ abstract class resourceInfo {
         this.uptime(generalUtils.timeSpanAsAgo(dto.UpTime, false));
         this.backupEnabled(!!dto.BackupInfo);
         if (this.backupEnabled()) {
-            this.lastBackup(generalUtils.timeSpanAsAgo(dto.BackupInfo.LastBackup, true));
+            const lastBackup = resourceInfo.findLastBackupDate(dto.BackupInfo);
+            this.lastFullOrIncrementalBackup(moment(new Date(lastBackup)).fromNow());
             this.backupStatus(this.computeBackupStatus(dto.BackupInfo));
         }
         this.initializeObservables();
@@ -59,16 +60,35 @@ abstract class resourceInfo {
         return this.qualifier + "/" + this.name;
     }
 
+    static findLastBackupDate(dto: Raven.Client.Data.BackupInfo) {
+        const lastFull = dto.LastFullBackup;
+        const lastIncrementalBackup = dto.LastIncrementalBackup;
+
+        if (lastFull && lastIncrementalBackup) {
+            return lastFull > lastIncrementalBackup ? lastFull : lastIncrementalBackup;
+        } else if (lastFull) {
+            return lastFull;
+        }
+        return lastIncrementalBackup;
+    }
+
     abstract asResource(): resource;
 
     private computeBackupStatus(dto: Raven.Client.Data.BackupInfo) {
-        if (!dto.LastBackup) {
+        if (!dto.LastFullBackup && !dto.LastIncrementalBackup) {
             return "text-danger";
         }
-        const interval = moment.duration(dto.BackupInterval).asSeconds();
-        const lastBackup = moment.duration(dto.LastBackup).asSeconds();
 
-        return (interval * 1.2 < lastBackup) ? "text-warning" : "text-success";
+        const fullBackupInterval = moment.duration(dto.FullBackupInterval).asSeconds();
+        const incrementalBackupInterval = moment.duration(dto.IncrementalBackupInterval).asSeconds();
+
+        const interval = (incrementalBackupInterval === 0) ? fullBackupInterval : Math.min(incrementalBackupInterval, fullBackupInterval);
+
+        const lastBackup = new Date(resourceInfo.findLastBackupDate(dto));
+
+        const secondsSinceLastBackup = moment.duration(moment().diff(moment(lastBackup))).asSeconds();
+
+        return (interval * 1.2 < secondsSinceLastBackup) ? "text-warning" : "text-success";
     }
 
     private initializeObservables() {

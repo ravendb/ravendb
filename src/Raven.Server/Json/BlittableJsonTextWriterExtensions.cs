@@ -1005,6 +1005,16 @@ namespace Raven.Server.Json
                     writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
                 }
             }
+            if (document.Flags != DocumentFlags.None)
+            {
+                if (first == false)
+                {
+                    writer.WriteComma();
+                }
+                first = false;
+                writer.WritePropertyName(Constants.Metadata.Flags);
+                writer.WriteString(document.Flags.ToString());
+            }
             if (document.Etag != 0)
             {
                 if (first == false)
