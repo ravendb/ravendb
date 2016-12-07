@@ -1,17 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Sparrow.Logging;
 using Raven.Abstractions.Util;
-using Raven.Client.Json;
 using Raven.Server.Alerts;
-using Raven.Server.Documents;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -104,6 +98,7 @@ namespace Raven.Server.ServerWide.BackgroundTasks
             }
             return severityInfo;
         }
+
         public void Dispose()
         {
             _latestVersionCheckTimer?.Dispose();
@@ -135,7 +130,5 @@ namespace Raven.Server.ServerWide.BackgroundTasks
             }
 
         }
-
-
     }
 }

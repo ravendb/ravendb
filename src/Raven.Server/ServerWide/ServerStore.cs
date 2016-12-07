@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
 using Raven.Server.Alerts;
+using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
@@ -44,6 +45,7 @@ namespace Raven.Server.ServerWide
         public readonly RavenConfiguration Configuration;
         public readonly IoMetrics IoMetrics;
         public readonly AlertsStorage Alerts;
+        public LicenseStorage LicenseStorage { get; }
 
         // this is only modified by write transactions under lock
         // no need to use thread safe ops
@@ -82,7 +84,8 @@ namespace Raven.Server.ServerWide
             _logger = LoggingSource.Instance.GetLogger<ServerStore>("ServerStore");
             DatabasesLandlord = new DatabasesLandlord(this);
 
-            Alerts = new AlertsStorage("Raven/Server",this);
+            Alerts = new AlertsStorage("Raven/Server", this);
+            LicenseStorage = new LicenseStorage();
         }
 
         public TransactionContextPool ContextPool;
@@ -141,6 +144,7 @@ namespace Raven.Server.ServerWide
             ContextPool = new TransactionContextPool(_env);
             _timer = new Timer(IdleOperations, null, _frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
             Alerts.Initialize(_env, ContextPool);
+            LicenseStorage.Initialize(_env, ContextPool);
         }
 
         public long ReadLastEtag(TransactionOperationContext ctx)
