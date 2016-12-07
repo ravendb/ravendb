@@ -407,8 +407,8 @@ namespace Raven.Server.Documents.Replication
                     }
 
                     return Tuple.Create(replicationBatchReply.Type, 
-                        replicationBatchReply.Type == ReplicationMessageReply.ReplyType.Error ? 
-                        replicationBatchReply.Exception : String.Empty);
+                        item2: replicationBatchReply.Type == ReplicationMessageReply.ReplyType.Error ? 
+                        replicationBatchReply.Exception : string.Empty);
                 }
             }
             catch (Exception e)
