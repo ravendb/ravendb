@@ -399,39 +399,6 @@ namespace FastTests.Server.Documents.Replication
         }
 
         [Fact]
-        public async Task Conflict_then_put_request_will_return_409_and_conflict_data()
-        {
-            using (var store1 = GetDocumentStore(dbSuffixIdentifier: "foo1"))
-            using (var store2 = GetDocumentStore(dbSuffixIdentifier: "foo2"))
-            {
-                using (var s1 = store1.OpenSession())
-                {
-                    s1.Store(new User(), "foo/bar");
-                    s1.SaveChanges();
-                }
-
-                using (var s2 = store2.OpenSession())
-                {
-                    s2.Store(new User(), "foo/bar");
-                    s2.SaveChanges();
-                }
-
-                SetupReplication(store1, store2);
-
-                await WaitUntilHasConflict(store2, "foo/bar");
-
-                //TODO: this needs to be replaced by ClientAPI Delete() when the ClientAPI is finished
-                var url = $"{store2.Url}/databases/{store2.DefaultDatabase}/docs?id=foo/bar";
-                using (var request = store2.JsonRequestFactory.CreateHttpJsonRequest(
-                    new CreateHttpJsonRequestParams(null, url, HttpMethod.Put, new OperationCredentials(null, CredentialCache.DefaultCredentials), new DocumentConvention())))
-                {
-                    var ex = Assert.Throws<AggregateException>(() => request.WriteWithObjectAsync(new User()).Wait());
-                    Assert409Response(ex.InnerException);
-                }
-            }
-        }
-
-        [Fact]
         public async Task Conflict_then_patch_request_will_return_409_and_conflict_data()
         {
             using (var store1 = GetDocumentStore(dbSuffixIdentifier: "foo1"))
