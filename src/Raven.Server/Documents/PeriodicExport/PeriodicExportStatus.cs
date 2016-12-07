@@ -8,5 +8,7 @@ namespace Raven.Server.Documents.PeriodicExport
         public DateTime LastFullExportAt { get; set; }
 
         public long? LastDocsEtag { get; set; }
+
+        public string LastFullExportFolder { get; set; }
     }
 }
