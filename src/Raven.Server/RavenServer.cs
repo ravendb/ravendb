@@ -7,27 +7,19 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Lucene.Net.Support;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Logging;
-using Raven.Abstractions.Util;
 using Raven.Client.Data;
 using Raven.Client.Json;
-using Raven.Database.Util;
+using Raven.Server.Commercial;
 using Raven.Server.Config;
-using Raven.Server.Config.Categories;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Exceptions;
-using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.BackgroundTasks;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -52,6 +44,7 @@ namespace Raven.Server
         private readonly Logger _tcpLogger;
 
         private readonly LatestVersionCheck _latestVersionCheck;
+        private readonly LicenseHandler _licenseHandler;
 
         public RavenServer(RavenConfiguration configuration)
         {
@@ -69,6 +62,7 @@ namespace Raven.Server
             _tcpLogger = LoggingSource.Instance.GetLogger<RavenServer>("<TcpServer>");
 
             _latestVersionCheck = new LatestVersionCheck(ServerStore);
+            _licenseHandler = new LicenseHandler(ServerStore);
         }
 
         public async Task<string> GetTcpServerPortAsync()
@@ -163,6 +157,16 @@ namespace Raven.Server
             {
                 if (_logger.IsInfoEnabled)
                     _logger.Info("Could not setup latest version check.", e);
+            }
+
+            try
+            {
+                _licenseHandler.Initialize();
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Could not setup license check.", e);
             }
         }
 
@@ -436,6 +440,7 @@ namespace Raven.Server
             ServerStore?.Dispose();
             ServerMaintenanceTimer?.Dispose();
             _latestVersionCheck?.Dispose();
+            _licenseHandler?.Dispose();
         }
 
         private void CloseTcpListeners(List<TcpListener> listeners)
