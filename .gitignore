@@ -109,3 +109,5 @@ test/Studio/js/
 /Logs
 
 release
+
+!scripts/assets/bin

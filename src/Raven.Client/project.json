@@ -1,23 +1,55 @@
 {
   "version": "4.0.0-*",
   "description": "Raven.Client is the client library for accessing RavenDB",
-  "authors": [ "Hibernating Rhinos" ],
-
-
+  "authors": [
+    "Hibernating Rhinos"
+  ],
   "packOptions": {
-    "tags": [ "database", "nosql", "doc db" ],
-    "projectUrl": "https://ravendb.net"
-  },
-
-  "buildOptions": {
-    "allowUnsafe": true,
-    "define": [ "PORTABLE" ],
-    "compile": {
-      "include": [ "**/*.cs", "../CommonAssemblyInfo.cs", "../../Imports/Newtonsoft.Json/Src/Newtonsoft.Json/**/*.cs" ],
-      "exclude": [ "../../Imports/Newtonsoft.Json/Src/Newtonsoft.Json/Properties/AssemblyInfo.cs" ]
+    "summary": "This package includes the client API of RavenDB. RavenDB is a document database for the .NET platform, offering a flexible data model design to fit the needs of real world systems.",
+    "licenseUrl": "http://www.ravendb.net/licensing",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/ravendb/ravendb"
+    },
+    "requireLicenseAcceptance": true,
+    "iconUrl": "http://static.ravendb.net/logo-for-nuget.png",
+    "owners": [
+      "Hibernating Rhinos"
+    ],
+    "tags": [
+      "ravendb",
+      "client",
+      "database",
+      "nosql",
+      "doc db"
+    ],
+    "projectUrl": "https://ravendb.net",
+    "files": {
+      "mappings": {
+        "lib/netstandard1.6/": {
+          "includeFiles": [
+            "../Sparrow/bin/Release/netstandard1.6/Sparrow.dll"
+          ]
+        }
+      }
     }
   },
-
+  "buildOptions": {
+    "allowUnsafe": true,
+    "define": [
+      "PORTABLE"
+    ],
+    "compile": {
+      "include": [
+        "**/*.cs",
+        "../CommonAssemblyInfo.cs",
+        "../../Imports/Newtonsoft.Json/Src/Newtonsoft.Json/**/*.cs"
+      ],
+      "exclude": [
+        "../../Imports/Newtonsoft.Json/Src/Newtonsoft.Json/Properties/AssemblyInfo.cs"
+      ]
+    }
+  },
   "configurations": {
     "Release": {
       "buildOptions": {
@@ -25,10 +57,13 @@
       }
     }
   },
-
   "dependencies": {
     "NETStandard.Library": "1.6.1",
-    "Sparrow": "4.0.0-*",
+    "Sparrow": {
+      "version": "4.0.0-*",
+      "type": "build",
+      "target": "project"
+    },
     "System.Collections.Specialized": "4.3.0",
     "System.Diagnostics.Process": "4.3.0",
     "System.Linq.Queryable": "4.3.0",
@@ -39,7 +74,6 @@
     "System.Security.Cryptography.Cng": "4.3.0",
     "System.ServiceModel.Primitives": "4.3.0"
   },
-
   "frameworks": {
     "netstandard1.6": {}
   }
