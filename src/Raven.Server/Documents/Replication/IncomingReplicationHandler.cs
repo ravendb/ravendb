@@ -1077,10 +1077,10 @@ namespace Raven.Server.Documents.Replication
             if (remoteHasLargerEntries && localHasLargerEntries)
                 return ConflictStatus.Conflict;
 
-            if (!remoteHasLargerEntries && localHasLargerEntries)
-                return ConflictStatus.AlreadyMerged;
+            if(remoteHasLargerEntries == false && localHasLargerEntries == false)
+                return ConflictStatus.AlreadyMerged; // change vectors identical
 
-            return ConflictStatus.Update;
+            return remoteHasLargerEntries ? ConflictStatus.Update : ConflictStatus.AlreadyMerged;
         }
     }
 }
