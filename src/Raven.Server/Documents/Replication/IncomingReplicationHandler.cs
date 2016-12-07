@@ -517,6 +517,11 @@ namespace Raven.Server.Documents.Replication
 
         private unsafe void ReceiveSingleDocumentsBatch(int replicatedDocsCount, long lastEtag)
         {
+            if (_log.IsInfoEnabled)
+            {
+                _log.Info($"Receiving replication batch with {replicatedDocsCount} documents starting with {lastEtag} from {ConnectionInfo}");
+            }
+
             var sw = Stopwatch.StartNew();
             var writeBuffer = _documentsContext.GetStream();
             try

@@ -58,6 +58,10 @@ namespace Raven.Server.Documents.Replication
             using (var readerObject = tcpConnectionOptions.MultiDocumentParser.ParseToMemory("IncomingReplication/get-last-etag-message read"))
             {
                 getLatestEtagMessage = JsonDeserializationServer.ReplicationLatestEtagRequest(readerObject);
+                if (_log.IsInfoEnabled)
+                {
+                    _log.Info($"GetLastEtag: {getLatestEtagMessage.SourceMachineName} / {getLatestEtagMessage.SourceDatabaseName} ({getLatestEtagMessage.SourceDatabaseId}) - {getLatestEtagMessage.SourceUrl}");
+                }
             }
 
             var connectionInfo = IncomingConnectionInfo.FromGetLatestEtag(getLatestEtagMessage);
@@ -106,11 +110,16 @@ namespace Raven.Server.Documents.Replication
                     });
                 }
 
+                var lastEtagFromSrc = _database.DocumentsStorage.GetLastReplicateEtagFrom(documentsOperationContext, getLatestEtagMessage.SourceDatabaseId);
+                if (_log.IsInfoEnabled)
+                {
+                    _log.Info($"GetLastEtag response, last etag: {lastEtagFromSrc}");
+                }
                 documentsOperationContext.Write(writer, new DynamicJsonValue
                 {
                     [nameof(ReplicationMessageReply.Type)] = "Ok",
                     [nameof(ReplicationMessageReply.MessageType)] = ReplicationMessageType.Heartbeat,
-                    [nameof(ReplicationMessageReply.LastEtagAccepted)] = _database.DocumentsStorage.GetLastReplicateEtagFrom(documentsOperationContext, getLatestEtagMessage.SourceDatabaseId),
+                    [nameof(ReplicationMessageReply.LastEtagAccepted)] = lastEtagFromSrc,
                     [nameof(ReplicationMessageReply.LastIndexTransformerEtagAccepted)] = _database.IndexMetadataPersistence.GetLastReplicateEtagFrom(configTx.InnerTransaction, getLatestEtagMessage.SourceDatabaseId),
                     [nameof(ReplicationMessageReply.DocumentsChangeVector)] = documentsChangeVector,
                     [nameof(ReplicationMessageReply.IndexTransformerChangeVector)] = indexesChangeVector
