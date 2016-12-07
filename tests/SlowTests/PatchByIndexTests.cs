@@ -2,25 +2,30 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Indexes;
 using Raven.Server.Config;
-using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Sparrow.Json;
 using Xunit;
-using static NewClientTests.NewClient.Raven.Tests.Bugs.Caching.CachingOfDocumentInclude;
 
 namespace NewClientTests.NewClient.FastTests.Patching
 {
     public class PatchByIndexTests : RavenTestBase
     {
-        class CustomType
+        private class User
+        {
+            public string Id { get; set; }
+
+            public string Name { get; set; }
+
+            public string LastName { get; set; }
+
+            public string FullName { get; set; }
+        }
+
+        private class CustomType
         {
             public string Id { get; set; }
             public string Owner { get; set; }
@@ -33,11 +38,11 @@ namespace NewClientTests.NewClient.FastTests.Patching
             Id = "someId",
             Owner = "bob",
             Value = 12143,
-            Comments = new List<string>(new[] {"one", "two", "seven"})
+            Comments = new List<string>(new[] { "one", "two", "seven" })
         };
 
         //splice(2, 1) will remove 1 elements from position 2 onwards (zero-based)
-        string sampleScript = @"
+        private string sampleScript = @"
     this.Comments.splice(2, 1);
     this.Id = 'Something new'; 
     this.Value++; 
@@ -46,7 +51,7 @@ namespace NewClientTests.NewClient.FastTests.Patching
         return (comment == ""one"") ? comment + "" test"" : comment;
     });";
 
-        
+
         [Fact]
         public async Task CanPerformAdvancedWithSetBasedUpdates()
         {
@@ -72,7 +77,7 @@ namespace NewClientTests.NewClient.FastTests.Patching
                     await session.StoreAsync(item1);
                     await session.StoreAsync(item2);
                     await session.SaveChangesAsync();
-                    
+
                 }
 
                 JsonOperationContext context;
@@ -81,7 +86,7 @@ namespace NewClientTests.NewClient.FastTests.Patching
                 var putIndexOperation = new PutIndexOperation(context);
                 var indexCommand = putIndexOperation.CreateRequest(store.Conventions, "TestIndex", new IndexDefinition
                 { Maps = { @"from doc in docs.CustomTypes 
-                                     select new { doc.Owner }" }});
+                                     select new { doc.Owner }" } });
                 if (indexCommand != null)
                     store.GetRequestExecuter(store.DefaultDatabase).Execute(indexCommand, context);
 
@@ -104,7 +109,7 @@ namespace NewClientTests.NewClient.FastTests.Patching
 
                 var results = getDocumentCommand.Result.Results;
                 Assert.Equal(1, results.Length);
-                var res = (BlittableJsonReaderObject) results[0];
+                var res = (BlittableJsonReaderObject)results[0];
                 object obj;
                 res.TryGetMember("Comments", out obj);
                 Assert.Equal(2, ((BlittableJsonReaderArray)obj).Length);
@@ -122,7 +127,7 @@ namespace NewClientTests.NewClient.FastTests.Patching
                 };
                 store.GetRequestExecuter(store.DefaultDatabase).Execute(getDocumentCommand, context);
 
-                 results = getDocumentCommand.Result.Results;
+                results = getDocumentCommand.Result.Results;
                 Assert.Equal(1, results.Length);
                 res = (BlittableJsonReaderObject)results[0];
                 res.TryGetMember("Comments", out obj);
@@ -132,7 +137,7 @@ namespace NewClientTests.NewClient.FastTests.Patching
                 Assert.Equal("seven", ((BlittableJsonReaderArray)obj).GetStringByIndex(2));
                 res.TryGetMember("Value", out obj);
                 Assert.Equal(9999, ((Int64)obj));
-                
+
             }
         }
 
@@ -166,7 +171,7 @@ namespace NewClientTests.NewClient.FastTests.Patching
                 if (indexCommand != null)
                     store.GetRequestExecuter(store.DefaultDatabase).Execute(indexCommand, context);
 
-                
+
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -184,7 +189,7 @@ namespace NewClientTests.NewClient.FastTests.Patching
 
                 var getDocumentCommand = new GetDocumentCommand
                 {
-                    Ids = new[] { "Item/1" , "Item/2" }
+                    Ids = new[] { "Item/1", "Item/2" }
                 };
                 store.GetRequestExecuter(store.DefaultDatabase).Execute(getDocumentCommand, context);
 
@@ -211,7 +216,7 @@ namespace NewClientTests.NewClient.FastTests.Patching
         {
             using (var store = GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"))
             {
-        
+
 
                 RavenQueryStatistics stats;
                 using (var session = store.OpenSession())
@@ -247,8 +252,6 @@ namespace NewClientTests.NewClient.FastTests.Patching
                 if (patchCommand != null)
                     await store.GetRequestExecuter(store.DefaultDatabase).ExecuteAsync(patchCommand, context);
 
-
-
                 using (var db = store.OpenAsyncSession())
                 {
                     var lastUser = await db.LoadAsync<User>("users/29");
@@ -256,6 +259,5 @@ namespace NewClientTests.NewClient.FastTests.Patching
                 }
             }
         }
-
     }
 }
