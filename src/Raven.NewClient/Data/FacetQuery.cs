@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
-#if !NET462
+#if !NET46
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 #endif
@@ -109,7 +109,7 @@ namespace Raven.NewClient.Client.Data
             return path.ToString();
         }
 
-#if !NET462
+#if !NET46
         public static FacetQuery Parse(IQueryCollection query, int start, int pageSize)
         {
             var result = new FacetQuery
