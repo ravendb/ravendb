@@ -6,7 +6,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Errors
 {
     public class QueryIssues : RavenTestBase
     {
-        [Fact(Skip = "LoadStartingWith is not implemented")]
+        [Fact]
         public void PrestonThinksLoadStartingWithShouldBeCaseInsensitive()
         {
             using (var store = GetDocumentStore())
@@ -27,8 +27,11 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Errors
 
                     var loadResult = session.Load<Company>("cOmPaNy/1");
                     var loadStartResults = session.Advanced.LoadStartingWith<Company>("cOmPaNy/1").ToList();
-                    Assert.Contains(loadResult, loadStartResults);
+
                     Assert.Equal(1, loadStartResults.Count);
+                    Assert.Equal(loadResult.Name, loadStartResults[0].Name);
+                    Assert.Equal(loadResult.Id, loadStartResults[0].Id);
+                    Assert.Equal(loadResult.HasParentCompany, loadStartResults[0].HasParentCompany);
                 }
             }
         }

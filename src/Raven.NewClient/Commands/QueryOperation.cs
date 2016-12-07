@@ -7,6 +7,7 @@ using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document;
+using Raven.NewClient.Json.Utilities;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -136,9 +137,8 @@ namespace Raven.NewClient.Client.Commands
                     if (document.TryGet("$values", out values) == false)
                         throw new InvalidOperationException("Transformed document must have a $values property");
 
-                    foreach (BlittableJsonReaderObject value in values)
-                        list.Add((T)_session.DeserializeFromTransformer(typeof(T), null, value));
-                    
+                    list.AddRange(TransformerHelpers.ParseValuesFromBlittableArray<T>(_session, values));
+
                     continue;
                 }
 

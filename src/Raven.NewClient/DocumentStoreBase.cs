@@ -120,7 +120,7 @@ namespace Raven.NewClient.Client
         /// </summary>
         public virtual Task ExecuteTransformerAsync(AbstractTransformerCreationTask transformerCreationTask)
         {
-            return transformerCreationTask.ExecuteAsync(Conventions);
+            return transformerCreationTask.ExecuteAsync(this, Conventions);
         }
 
         /// <summary>
