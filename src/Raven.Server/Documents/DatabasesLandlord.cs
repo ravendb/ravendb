@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -111,7 +112,7 @@ namespace Raven.Server.Documents
                 var sp = Stopwatch.StartNew();
                 var documentDatabase = new DocumentDatabase(config.DatabaseName, config, ServerStore);
                 documentDatabase.Initialize();
-
+                UpdateDatabaseInfoCache(documentDatabase, ServerStore);
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Started database {config.DatabaseName} in {sp.ElapsedMilliseconds:#,#;;0}ms");
 
@@ -127,6 +128,12 @@ namespace Raven.Server.Documents
                     Logger.Info($"Failed to start database {config.DatabaseName}", e);
                 throw;
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void UpdateDatabaseInfoCache(DocumentDatabase database, ServerStore serverStore)
+        {
+            serverStore.DatabaseInfoCache.InsertDatabaseInfo(database.GenerateDatabaseInfo(true));
         }
 
         public RavenConfiguration CreateDatabaseConfiguration(StringSegment databaseName, bool ignoreDisabledDatabase = false)
