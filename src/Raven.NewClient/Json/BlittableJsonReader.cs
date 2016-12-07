@@ -175,8 +175,14 @@ namespace Raven.NewClient.Client.Json
                 SetToken(JsonToken.None);
                 return null;
             }
+
             if (Value is int)
                 return (int)Value;
+
+            //This method will return null at the end of an array.
+            if (TokenType == JsonToken.EndArray)
+                return new int?();
+
             return (int)Convert.ChangeType(Value, typeof(int));
         }
 
