@@ -195,10 +195,12 @@ namespace Sparrow.Logging
                 throw new InvalidOperationException("Logging of ops level when ops is disabled");
 #endif
 
+            MemoryStream destination;
             var state = _localState.Value;
-            if (state.Free.Dequeue(out state.ForwardingStream.Destination))
+            if (state.Free.Dequeue(out destination))
             {
-                state.ForwardingStream.Destination.SetLength(0);
+                destination.SetLength(0);
+                state.ForwardingStream.Destination = destination;
             }
             else
             {

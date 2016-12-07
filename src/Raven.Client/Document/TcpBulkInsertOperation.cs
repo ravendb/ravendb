@@ -100,8 +100,9 @@ namespace Raven.Client.Document
         {
             const string debugTag = "bulk/insert/document";
             var jsonParserState = new JsonParserState();
-            var streamNetworkBuffer = new BufferedStream(serverStream, 32*1024);
-            var writeToStreamBuffer = new byte[32*1024];
+            //var streamNetworkBuffer = new BufferedStream(serverStream, 32 * 1024);
+            var streamNetworkBuffer = serverStream;
+            var writeToStreamBuffer = new byte[32 * 1024];
             var header = Encoding.UTF8.GetBytes(RavenJObject.FromObject(new TcpConnectionHeaderMessage
             {
                 DatabaseName = MultiDatabase.GetDatabaseName(url),
@@ -162,7 +163,7 @@ namespace Raven.Client.Document
             }
         }
 
-        private static unsafe void WriteToStream(BufferedStream networkBufferedStream, BlittableJsonDocumentBuilder builder,
+        private static unsafe void WriteToStream(Stream stream, BlittableJsonDocumentBuilder builder,
             byte[] buffer)
         {
             using (var reader = builder.CreateReader())
@@ -176,7 +177,7 @@ namespace Raven.Client.Document
                         var size = Math.Min(remainingSize, buffer.Length);
                         Memory.Copy(pBuffer, bytes + (reader.Size - remainingSize), size);
                         remainingSize -= size;
-                        networkBufferedStream.Write(buffer, 0, size);
+                        stream.Write(buffer, 0, size);
                     }
                 }
             }

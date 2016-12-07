@@ -26,9 +26,14 @@
     "projectUrl": "https://ravendb.net",
     "files": {
       "mappings": {
-        "lib/netstandard1.6/": {
+        "lib/netstandard1.3/": {
           "includeFiles": [
-            "../Sparrow/bin/Release/netstandard1.6/Sparrow.dll"
+            "../Sparrow/bin/Release/netstandard1.3/Sparrow.dll"
+          ]
+        },
+        "lib/net46/": {
+          "includeFiles": [
+            "../Sparrow/bin/Release/net46/Sparrow.dll"
           ]
         }
       }
@@ -53,25 +58,61 @@
       }
     }
   },
+
   "dependencies": {
-    "NETStandard.Library": "1.6.1",
-    "Newtonsoft.Json": "9.0.1",
     "Sparrow": {
       "version": "4.0.0-*",
       "type": "build",
       "target": "project"
     },
-    "System.Net.Requests": "4.3.0",
-    "System.Collections.Specialized": "4.3.0",
-    "System.Diagnostics.Process": "4.3.0",
-    "System.Linq.Queryable": "4.3.0",
-    "System.Net.NameResolution": "4.3.0",
-    "System.Net.WebSockets.Client": "4.3.0",
-    "System.Reflection.TypeExtensions": "4.3.0",
-    "System.Security.Cryptography.Cng": "4.3.0",
+    "Newtonsoft.Json": "9.0.1",
+    "System.Runtime.InteropServices.RuntimeInformation": "4.3.0",
     "System.ServiceModel.Primitives": "4.3.0"
   },
+
   "frameworks": {
-    "netstandard1.6": {}
+    "netstandard1.3": {
+      "dependencies": {
+        "Microsoft.AspNetCore.Http.Features": "1.1.0",
+        "Microsoft.CSharp": "4.3.0",
+        "Microsoft.Extensions.Primitives": "1.1.0",
+        "Microsoft.Win32.Primitives": "4.3.0",
+        "System.Collections": "4.3.0",
+        "System.Collections.Concurrent": "4.3.0",
+        "System.Collections.Specialized": "4.3.0",
+        "System.Console": "4.3.0",
+        "System.Diagnostics.Contracts": "4.3.0",
+        "System.Diagnostics.Debug": "4.3.0",
+        "System.Diagnostics.Process": "4.3.0",
+        "System.Diagnostics.Tracing": "4.3.0",
+        "System.IO.Compression": "4.3.0",
+        "System.IO.FileSystem": "4.3.0",
+        "System.Linq": "4.3.0",
+        "System.Linq.Queryable": "4.3.0",
+        "System.Net.Http": "4.3.0",
+        "System.Net.NameResolution": "4.3.0",
+        "System.Net.Requests": "4.3.0",
+        "System.Net.Sockets": "4.3.0",
+        "System.Net.WebSockets": "4.3.0",
+        "System.Net.WebSockets.Client": "4.3.0",
+        "System.Reflection.Extensions": "4.3.0",
+        "System.Reflection.TypeExtensions": "4.3.0",
+        "System.Resources.ResourceManager": "4.3.0",
+        "System.Runtime.Extensions": "4.3.0",
+        "System.Runtime.InteropServices": "4.3.0",
+        "System.Security.Cryptography.Cng": "4.3.0",
+        "System.Text.Encoding.Extensions": "4.3.0",
+        "System.Threading": "4.3.0",
+        "System.Threading.Thread": "4.3.0",
+        "System.Threading.Timer": "4.3.0"
+      }
+    },
+    "net46": {
+      "dependencies": {
+        "Microsoft.Net.Http": "2.2.29",
+        "System.Runtime": "4.0.20",
+        "System.Runtime.Serialization.Primitives": "4.3.0"
+      }
+    }
   }
 }
