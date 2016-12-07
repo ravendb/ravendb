@@ -55,8 +55,10 @@ function CreatePackageLayout ( $packageDir, $projectDir, $outDirs, $spec ) {
     CopyLicenseFile $packageDir
     CopyAckFile $packageDir
     CreatePackageServerLayout $($outDirs.Server) $packageDir $projectDir $spec
-    CreatePackageClientLayout $outDirs $packageDir $projectDir
-    CopyClientReadMe $(Join-Path $packageDir -ChildPath 'Client')
+    CreatePackageClientLayout $outDirs $packageDir $projectDir $spec
+    if ($spec.Name.Contains('raspberry-pi') -eq $False) {
+        CopyClientReadMe $(Join-Path $packageDir -ChildPath 'Client')
+    }
 
     if ($spec.IsUnix) {
         CopyDaemonScripts $projectDir $packageDir
@@ -109,7 +111,7 @@ function CreatePackageServerLayout ( $serverOutDir, $packageDir, $projectDir ) {
 }
 
 function CreatePackageClientLayout ( $outDirs, $packageDir, $projectDir, $spec ) {
-    if ($spec.Name -eq "raspberry-pi") {
+    if ($spec.Name.Contains("raspberry-pi")) {
         CreateRaspberryPiClientLayout $outDirs $packageDir $projectDir
     } else {
         CreateRegularPackageClientLayout $outDirs $packageDir $projectDir
