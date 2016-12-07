@@ -171,7 +171,7 @@ namespace Raven.Server.Documents.Replication
                                             [nameof(ReplicationMessageReply.MessageType)] = messageType,
                                             [nameof(ReplicationMessageReply.LastEtagAccepted)] = -1,
                                             [nameof(ReplicationMessageReply.LastIndexTransformerEtagAccepted)] = -1,
-                                            [nameof(ReplicationMessageReply.Error)] = e.ToString()
+                                            [nameof(ReplicationMessageReply.Exception)] = e.ToString()
                                         });
 
                                         exceptionLogged = true;
@@ -825,7 +825,7 @@ namespace Raven.Server.Documents.Replication
                 [nameof(ReplicationMessageReply.MessageType)] = handledMessageType,
                 [nameof(ReplicationMessageReply.LastEtagAccepted)] = lastDocumentEtag,
                 [nameof(ReplicationMessageReply.LastIndexTransformerEtagAccepted)] = lastIndexOrTransformerEtag,
-                [nameof(ReplicationMessageReply.Error)] = null,
+                [nameof(ReplicationMessageReply.Exception)] = null,
                 [nameof(ReplicationMessageReply.DocumentsChangeVector)] = documentChangeVectorAsDynamicJson,
                 [nameof(ReplicationMessageReply.IndexTransformerChangeVector)] = indexesChangeVectorAsDynamicJson
             });

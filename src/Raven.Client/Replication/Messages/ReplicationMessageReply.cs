@@ -17,8 +17,6 @@ namespace Raven.Client.Replication.Messages
 
         public long LastIndexTransformerEtagAccepted { get; set; }
 
-        public string Error { get; set; }
-
         public string Exception { get; set; }
 
         public string MessageType { get; set; }
