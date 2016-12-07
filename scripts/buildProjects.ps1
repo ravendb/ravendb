@@ -12,8 +12,7 @@ function BuildServer ( $srcDir, $outDir, $runtime, $specName ) {
 function BuildClient ( $srcDir, $outDir, $specName ) {
     write-host "Building Client for $specName..."
 
-    $output = [io.path]::combine($outDir, "Client");
-    & dotnet build --output $output `
+    & dotnet build --output $outDir `
                 --no-incremental `
                 --framework "netstandard1.6" `
                 --configuration "Release" $srcDir;
@@ -23,8 +22,7 @@ function BuildClient ( $srcDir, $outDir, $specName ) {
 function BuildNewClient ( $srcDir, $outDir, $specName ) {
     write-host "Building NewClient for $specName..."
 
-    $output = [io.path]::combine($outDir, "NewClient");
-    & dotnet build --output $output `
+    & dotnet build --output $outDir `
                 --no-incremental `
                 --framework "netstandard1.6" `
                 --configuration "Release" $srcDir;
@@ -34,6 +32,12 @@ function BuildNewClient ( $srcDir, $outDir, $specName ) {
 function BuildTypingsGenerator ( $srcDir ) {
     # build typings generator
     & dotnet build --configuration "Debug" $srcDir;
+    CheckLastExitCode
+}
+
+function BuildSparrow ( $srcDir ) {
+    # build sparrow
+    & dotnet build --configuration "Release" $srcDir;
     CheckLastExitCode
 }
 

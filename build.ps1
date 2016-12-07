@@ -27,11 +27,14 @@ $version = "4.0.0-$versionSuffix"
 $PROJECT_DIR = Get-ScriptDirectory
 $RELEASE_DIR = [io.path]::combine($PROJECT_DIR, "artifacts")
 $OUT_DIR = [io.path]::combine($PROJECT_DIR, "artifacts")
+$CLIENT_OUT_DIR = [io.path]::combine($RELEASE_DIR, "Client")
+$NEW_CLIENT_OUT_DIR = [io.path]::combine($RELEASE_DIR, "NewClient")
 $BUILD_DIR = [io.path]::combine($PROJECT_DIR, "artifacts", "build")
 $BUILD_TOOLS_DIR = [io.path]::combine($PROJECT_DIR, "build", "tools");
 $SERVER_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Server")
 $CLIENT_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Client")
 $NEW_CLIENT_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.NewClient")
+$SPARROW_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Sparrow")
 $STUDIO_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Studio")
 $TYPINGS_GENERATOR_SRC_DIR = [io.path]::combine($PROJECT_DIR, "tools", "TypingsGenerator")
 $STUDIO_BUILD_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Studio", "build");
@@ -42,45 +45,57 @@ $SPECS = @(
         "Runtime" = "win10-x64";
         "PkgType" = "zip";
         "IsUnix" = $False;
+    }
+    @{
+       "Name" = "ubuntu.14.04-x64";
+       "Runtime" = "ubuntu.14.04-x64";
+       "PkgType" = "tar";
+       "IsUnix" = $True;
     },
     @{
-        "Name" = "ubuntu.14.04-x64";
-        "Runtime" = "ubuntu.14.04-x64";
-        "PkgType" = "tar";
-        "IsUnix" = $True;
+       "Name" = "ubuntu.16.04-x64";
+       "Runtime" = "ubuntu.16.04-x64";
+       "PkgType" = "tar";
+       "IsUnix" = $True;
     },
     @{
-        "Name" = "ubuntu.16.04-x64";
-        "Runtime" = "ubuntu.16.04-x64";
-        "PkgType" = "tar";
-        "IsUnix" = $True;
-    },
-    @{
-        "Name" = "raspberry-pi";
-        "Runtime" = "ubuntu.16.04-x64";
-        "PkgType" = "tar";
-        "IsUnix" = $True;
+       "Name" = "raspberry-pi";
+       "Runtime" = "ubuntu.16.04-x64";
+       "PkgType" = "tar";
+       "IsUnix" = $True;
     }
 );
 
 CleanBuildDirectories $RELEASE_DIR
+
 DownloadDependencies
+
 BuildTypingsGenerator $TYPINGS_GENERATOR_SRC_DIR
 BuildStudio $STUDIO_SRC_DIR $PROJECT_DIR $version
+
 UpdateSourceWithBuildInfo $PROJECT_DIR $buildNumber $version
+
+BuildSparrow $SPARROW_SRC_DIR
+BuildClient $CLIENT_SRC_DIR $CLIENT_OUT_DIR $spec.Name
+BuildNewClient $NEW_CLIENT_SRC_DIR $NEW_CLIENT_OUT_DIR $spec.Name
+
+CreateNugetPackage $NEW_CLIENT_SRC_DIR $RELEASE_DIR $versionSuffix
+CreateNugetPackage $CLIENT_SRC_DIR $RELEASE_DIR $versionSuffix
 
 Foreach ($spec in $SPECS) {
     $runtime = $spec.Runtime
     $specOutDir = [io.path]::combine($OUT_DIR, $spec.Name)
     BuildServer $SERVER_SRC_DIR $specOutDir $runtime $spec.Name
-    BuildClient $CLIENT_SRC_DIR $specOutDir $BUILD_DIR $spec.Name
-    BuildNewClient $NEW_CLIENT_SRC_DIR $specOutDir $BUILD_DIR $spec.Name
     CopyStudioPackage $STUDIO_BUILD_DIR $specOutDir
-    CreateRavenPackage $PROJECT_DIR $RELEASE_DIR $specOutDir $version $spec
-}
 
-CreateNugetPackage $CLIENT_SRC_DIR $RELEASE_DIR $versionSuffix
-CreateNugetPackage $NEW_CLIENT_SRC_DIR $RELEASE_DIR $versionSuffix
-CreateNugetPackage $NEW_CLIENT_SRC_DIR $RELEASE_DIR $versionSuffix
+    $specOutDirs = @{
+        "Main" = $specOutDir;
+        "Client" = $CLIENT_OUT_DIR;
+        "NewClient" = $NEW_CLIENT_OUT_DIR;
+        "Server" = $([io.path]::combine($specOutDir, "Server"));
+    }
+
+    CreateRavenPackage $PROJECT_DIR $RELEASE_DIR $specOutDirs $spec $version
+}
 
 write-host "Done creating packages."
