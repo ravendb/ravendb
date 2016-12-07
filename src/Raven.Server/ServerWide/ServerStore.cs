@@ -83,7 +83,11 @@ namespace Raven.Server.ServerWide
             DatabasesLandlord = new DatabasesLandlord(this);
 
             Alerts = new AlertsStorage("Raven/Server",this);
+
+            DatabaseInfoCache = new DatabaseInfoCache();
         }
+
+        public DatabaseInfoCache DatabaseInfoCache { get; set; }
 
         public TransactionContextPool ContextPool;
 
@@ -141,6 +145,7 @@ namespace Raven.Server.ServerWide
             ContextPool = new TransactionContextPool(_env);
             _timer = new Timer(IdleOperations, null, _frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
             Alerts.Initialize(_env, ContextPool);
+            DatabaseInfoCache.Initialize(_env, ContextPool);
         }
 
         public long ReadLastEtag(TransactionOperationContext ctx)
@@ -218,6 +223,7 @@ namespace Raven.Server.ServerWide
             using (Slice.From(ctx.Allocator, id.ToLowerInvariant(), out key))
             {
                 items.DeleteByKey(key);
+                DatabaseInfoCache.Delete(ctx, key);
             }
         }
 

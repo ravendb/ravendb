@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
+using Raven.Client.Data;
 using Raven.Server.Alerts;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
@@ -12,10 +14,10 @@ using Raven.Server.Documents.SqlReplication;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Collections;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
 using Voron.Impl.Backup;
@@ -57,7 +59,10 @@ namespace Raven.Server.Documents
             HugeDocuments = new HugeDocuments(configuration.Databases.MaxCollectionSizeHugeDocuments,
                 configuration.Databases.MaxWarnSizeHugeDocuments);
             ConfigurationStorage = new ConfigurationStorage(this, serverStore);
+            DatabaseInfoCache = serverStore.DatabaseInfoCache;
         }
+
+        public DatabaseInfoCache DatabaseInfoCache { get; set; }
 
         public SystemTime Time = new SystemTime();
 
@@ -196,6 +201,10 @@ namespace Raven.Server.Documents
 
         public void Dispose()
         {
+            //before we dispose of the database we take its latest info to be displayed in the studio
+            var databaseInfo = GenerateDatabaseInfo(true);
+            DatabaseInfoCache.InsertDatabaseInfo(databaseInfo);
+
             _databaseShutdown.Cancel();
             // we'll wait for 1 minute to drain all the requests
             // from the database
@@ -288,6 +297,34 @@ namespace Raven.Server.Documents
             });
 
             exceptionAggregator.ThrowIfNeeded();
+        }
+
+        private static readonly string CachedDatabaseInfo = "CachedDatabaseInfo";
+        public DynamicJsonValue GenerateDatabaseInfo(bool forCache)
+        {
+            Size size = new Size(GetAllStoragesEnvironment().Sum(env => env.Environment.Stats().AllocatedDataFileSizeInBytes));
+            var databaseInfo = new DynamicJsonValue
+            {
+                [nameof(ResourceInfo.Bundles)] = new DynamicJsonArray(BundleLoader.GetActiveBundles()),
+                [nameof(ResourceInfo.IsAdmin)] = true, //TODO: implement me!
+                [nameof(ResourceInfo.Name)] = Name,
+                [nameof(ResourceInfo.Disabled)] = false, //TODO: this value should be overwritten by the studio since it is cached
+                [nameof(ResourceInfo.TotalSize)] = new DynamicJsonValue
+                {
+                    [nameof(Size.HumaneSize)] = size.HumaneSize,
+                    [nameof(Size.SizeInBytes)] = size.SizeInBytes
+                },
+                [nameof(ResourceInfo.Errors)] = IndexStore.GetIndexes().Sum(index => index.GetErrors().Count),
+                [nameof(ResourceInfo.Alerts)] = Alerts.GetAlertCount(),
+                [nameof(ResourceInfo.UpTime)] = null, //it is shutting down
+                [nameof(ResourceInfo.BackupInfo)] = BundleLoader.GetBackupInfo(),
+                [nameof(DatabaseInfo.DocumentsCount)] = DocumentsStorage.GetNumberOfDocuments(),
+                [nameof(DatabaseInfo.IndexesCount)] = IndexStore.GetIndexes().Count(),
+                [nameof(DatabaseInfo.RejectClients)] = false, //TODO: implement me!
+                [nameof(DatabaseInfo.IndexingStatus)] = IndexStore.Status.ToString(),
+                [CachedDatabaseInfo] = forCache
+            };
+            return databaseInfo;
         }
 
         public void RunIdleOperations()

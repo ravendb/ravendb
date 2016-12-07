@@ -2,11 +2,13 @@ using System;
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Client.Data;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.PeriodicExport;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents
@@ -131,6 +133,22 @@ namespace Raven.Server.Documents
                 PeriodicExportRunner = null;
             });
             exceptionAggregator.ThrowIfNeeded();
+        }
+
+        public DynamicJsonValue GetBackupInfo()
+        {
+            if (PeriodicExportRunner == null)
+            {
+                return null;
+            }
+
+            return new DynamicJsonValue
+            {
+                [nameof(BackupInfo.IncrementalBackupInterval)] = PeriodicExportRunner.IncrementalInterval,
+                [nameof(BackupInfo.FullBackupInterval)] = PeriodicExportRunner.FullExportInterval,
+                [nameof(BackupInfo.LastIncrementalBackup)] = PeriodicExportRunner.ExportTime,
+                [nameof(BackupInfo.LastFullBackup)] = PeriodicExportRunner.FullExportTime
+            };
         }
     }
 }
