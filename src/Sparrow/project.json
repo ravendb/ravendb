@@ -1,4 +1,5 @@
 {
+  "version": "4.0.0-*",
   "buildOptions": {
     "allowUnsafe": true,
     "warningsAsErrors": true,
@@ -16,19 +17,29 @@
   },
 
   "dependencies": {
-    "Microsoft.AspNetCore.WebSockets.Server": "0.1.0",
     "Microsoft.CSharp": "4.3.0",
-    "NETStandard.Library": "1.6.1",
+    "Microsoft.Win32.Primitives": "4.3.0",
+    "System.Collections": "4.3.0",
+    "System.Collections.Concurrent": "4.3.0",
+    "System.Console": "4.3.0",
     "System.Diagnostics.Contracts": "4.3.0",
-    "System.Numerics.Vectors": "4.3.0",
-    "System.Reflection": "4.3.0",
-
-    "System.Threading.Thread": "4.3.0"
+    "System.Diagnostics.Debug": "4.3.0",
+    "System.IO.FileSystem": "4.3.0",
+    "System.Linq": "4.3.0",
+    "System.Net.WebSockets": "4.3.0",
+    "System.Reflection.Extensions": "4.3.0",
+    "System.Reflection.TypeExtensions": "4.3.0",
+    "System.Resources.ResourceManager": "4.3.0",
+    "System.Runtime.Extensions": "4.3.0",
+    "System.Runtime.InteropServices": "4.3.0",
+    "System.Runtime.InteropServices.RuntimeInformation": "4.3.0",
+    "System.Text.Encoding.Extensions": "4.3.0",
+    "System.Threading": "4.3.0",
+    "System.Threading.Thread": "4.3.0",
+    "System.Threading.Timer": "4.3.0"
   },
 
   "frameworks": {
-    "netstandard1.6": {}
-  },
-
-  "version": "4.0.0-*"
+    "netstandard1.3": {}
+  }
 }
