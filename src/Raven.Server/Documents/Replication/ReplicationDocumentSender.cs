@@ -38,86 +38,84 @@ namespace Raven.Server.Documents.Replication
                 // we scan through the documents to send to the other side, we need to be careful about
                 // filtering a lot of documents, because we need to let the other side know about this, and 
                 // at the same time, we need to send a heartbeat to keep the tcp connection alive
-                var sp = Stopwatch.StartNew();
                 var timeout = Debugger.IsAttached ? 60*1000 : 1000;
-                while (sp.ElapsedMilliseconds < timeout)
+                long maxEtag;
+                maxEtag = _lastEtag = _parent._lastSentDocumentEtag;
+                _parent.CancellationToken.ThrowIfCancellationRequested();
+
+                var docs =
+                    _parent._database.DocumentsStorage.GetDocumentsFrom(_parent._documentsContext,
+                            _lastEtag + 1, 0, 1024)
+                        .ToList();
+                var tombstones =
+                    _parent._database.DocumentsStorage.GetTombstonesFrom(_parent._documentsContext,
+                            _lastEtag + 1, 0, 1024)
+                        .ToList();
+
+                   
+                if (docs.Count > 0)
                 {
-                    _lastEtag = _parent._lastSentDocumentEtag;
-
-                    _parent.CancellationToken.ThrowIfCancellationRequested();
-
-                    var docs =
-                        _parent._database.DocumentsStorage.GetDocumentsFrom(_parent._documentsContext,
-                                _lastEtag + 1, 0, 1024)
-                            .ToList();
-                    var tombstones =
-                        _parent._database.DocumentsStorage.GetTombstonesFrom(_parent._documentsContext,
-                                _lastEtag + 1, 0, 1024)
-                            .ToList();
-
-                    long maxEtag;
-                    maxEtag = _lastEtag;
-                    if (docs.Count > 0)
-                    {
-                        maxEtag = docs[docs.Count - 1].Etag;
-                    }
-
-                    if (tombstones.Count > 0)
-                    {
-                        maxEtag = Math.Max(maxEtag, tombstones[tombstones.Count - 1].Etag);
-                    }
-
-                    foreach (var doc in docs)
-                    {
-                        if (doc.Etag > maxEtag)
-                            break;
-
-                        AddReplicationItemToBatch(new ReplicationBatchDocumentItem
-                        {
-                            Etag = doc.Etag,
-                            ChangeVector = doc.ChangeVector,
-                            Data = doc.Data,
-                            Key = doc.Key
-                        });
-                    }
-
-                    foreach (var tombstone in tombstones)
-                    {
-                        if (tombstone.Etag > maxEtag)
-                            break;
-
-                        AddReplicationItemToBatch(new ReplicationBatchDocumentItem
-                        {
-                            Etag = tombstone.Etag,
-                            ChangeVector = tombstone.ChangeVector,
-                            Collection = tombstone.Collection,
-                            Key = tombstone.Key
-                        });
-                    }
-
-                    // if we are at the end, we are done
-                    if (_lastEtag <=
-                        DocumentsStorage.ReadLastEtag(_parent._documentsContext.Transaction.InnerTransaction))
-                    {
-                        break;
-                    }
+                    maxEtag = docs[docs.Count - 1].Etag;
                 }
+
+                if (tombstones.Count > 0)
+                {
+                    maxEtag = Math.Max(maxEtag, tombstones[tombstones.Count - 1].Etag);
+                }
+
+                foreach (var doc in docs)
+                {
+                    if (doc.Etag > maxEtag)
+                        break;
+
+                    AddReplicationItemToBatch(new ReplicationBatchDocumentItem
+                    {
+                        Etag = doc.Etag,
+                        ChangeVector = doc.ChangeVector,
+                        Data = doc.Data,
+                        Key = doc.Key
+                    });
+                }
+
+                foreach (var tombstone in tombstones)
+                {
+                    if (tombstone.Etag > maxEtag)
+                        break;
+
+                    AddReplicationItemToBatch(new ReplicationBatchDocumentItem
+                    {
+                        Etag = tombstone.Etag,
+                        ChangeVector = tombstone.ChangeVector,
+                        Collection = tombstone.Collection,
+                        Key = tombstone.Key
+                    });
+                }
+
+                 
                 if (_log.IsInfoEnabled)
                 {
-                    _log.Info(
-                        $"Found {_orderedReplicaItems.Count:#,#;;0} documents to replicate to {_parent.Destination.Database} @ {_parent.Destination.Url} in {sp.ElapsedMilliseconds:#,#;;0} ms.");
+                    _log.Info($"Found {_orderedReplicaItems.Count:#,#;;0} documents to replicate to {_parent.Destination.Database} @ {_parent.Destination.Url}");
                 }
 
                 if (_orderedReplicaItems.Count == 0)
                 {
                     var hasModification = _lastEtag != _parent._lastSentDocumentEtag;
-                    _parent._lastSentDocumentEtag = _lastEtag;
-
+                    if (hasModification == false)
+                    {
+                        _parent._lastSentDocumentEtag = maxEtag;
+                    }
+                    else
+                    {
+                        _parent._lastSentDocumentEtag = _lastEtag;
+                    }
                     // ensure that the other server is aware that we skipped 
                     // on (potentially a lot of) documents to send, and we update
                     // the last etag they have from us on the other side
                     using (_parent._configurationContext.OpenReadTransaction())
+                    {
+                        _parent._lastDocumentSentTime = DateTime.UtcNow;
                         _parent.SendHeartbeat();
+                    }
                     return hasModification;
                 }
 
