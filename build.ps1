@@ -70,9 +70,6 @@ CleanBuildDirectories $RELEASE_DIR
 
 DownloadDependencies
 
-BuildTypingsGenerator $TYPINGS_GENERATOR_SRC_DIR
-BuildStudio $STUDIO_SRC_DIR $PROJECT_DIR $version
-
 UpdateSourceWithBuildInfo $PROJECT_DIR $buildNumber $version
 
 BuildSparrow $SPARROW_SRC_DIR
@@ -81,6 +78,9 @@ BuildNewClient $NEW_CLIENT_SRC_DIR $NEW_CLIENT_OUT_DIR $spec.Name
 
 CreateNugetPackage $NEW_CLIENT_SRC_DIR $RELEASE_DIR $versionSuffix
 CreateNugetPackage $CLIENT_SRC_DIR $RELEASE_DIR $versionSuffix
+
+BuildTypingsGenerator $TYPINGS_GENERATOR_SRC_DIR
+BuildStudio $STUDIO_SRC_DIR $PROJECT_DIR $version
 
 Foreach ($spec in $SPECS) {
     $runtime = $spec.Runtime

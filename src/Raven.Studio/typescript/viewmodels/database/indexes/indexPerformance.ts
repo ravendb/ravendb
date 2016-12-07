@@ -112,7 +112,40 @@ class metrics extends viewModelBase {
         trackNameBg: "rgba(57, 67, 79, 0.8)",
         trackNameFg: "#98a7b7",
         openedTrackArrow: "#ca1c59",
-        closedTrackArrow: "#98a7b7"
+        closedTrackArrow: "#98a7b7",
+        collectionNameTextColor: "#2c343a",
+
+        tracks: {
+            "Collection": "#046293",
+            "Indexing": "#607d8b",
+            "Cleanup": "#1a858e",
+            "References": "#ac2258",
+            "Map": "#0b4971",
+            "Storage/DocumentRead": "#0077b5",
+            "Linq": "#008cc9",
+            "LoadDocument": "#008cc9",
+            "Bloom": "#34b3e4",
+            "Lucene/Delete": "#66418c",
+            "Lucene/AddDocument": "#8d6cab",
+            "Lucene/Convert": "#7b539d",
+            "CreateBlittableJson": "#66418c",
+            "Aggregation/BlittableJson": "#ec407a",
+            "GetMapEntriesTree": "#66418c",
+            "GetMapEntries": "#66418c",
+            "Storage/RemoveMapResult": "#ff7000",
+            "Storage/PutMapResult": "#fe8f01",
+            "Reduce": "#98041b",
+            "Tree": "#af1923",
+            "Aggregation/Leafs": "#890e4f",
+            "Aggregation/Branches": "#ad1457",
+            "Storage/ReduceResults": "#e65100",
+            "NestedValues": "#795549",
+            "Storage/Read": "#faa926",
+            "Aggregation/NestedValues": "#d81a60",
+            "Lucene/FlushToDisk": "#a487ba",
+            "Storage/Commit": "#5b912d",
+            "Lucene/RecreateSearcher": "#b79ec7"
+        }
     }
 
     static readonly brushSectionHeight = 40;
@@ -587,13 +620,25 @@ class metrics extends viewModelBase {
         });
     }
 
+    private getColorForOperation(operationName: string): string {
+        if (operationName.startsWith("Collection_")) {
+            return metrics.colors.tracks.Collection;
+        }
+
+        if (operationName in metrics.colors.tracks) {
+            return (metrics.colors.tracks as dictionary<string>)[operationName];
+        }
+
+        throw new Error("Unable to find color for: " + operationName);
+    }
+
     private drawStripes(context: CanvasRenderingContext2D, operations: Array<Raven.Client.Data.Indexes.IndexingPerformanceOperation>, xStart: number, yStart: number,
         yOffset: number, extentFunc: (duration: number) => number) {
 
         let currentX = xStart;
         for (let i = 0; i < operations.length; i++) {
             const op = operations[i];
-            context.fillStyle = this.color(op.Name); //TODO: use different colors
+            context.fillStyle = this.getColorForOperation(op.Name);
 
             const dx = extentFunc(op.DurationInMilliseconds);
 
@@ -602,7 +647,7 @@ class metrics extends viewModelBase {
             if (yOffset !== 0) { // track is opened
                 this.hitTest.registerTrackItem(currentX, yStart, dx, metrics.trackHeight, op);
                 if (op.Name.startsWith("Collection_")) {
-                    context.fillStyle = "#2c343a"; //TODO: make constant
+                    context.fillStyle = metrics.colors.collectionNameTextColor;
                     const text = op.Name.substr("Collection_".length);
                     const textWidth = context.measureText(text).width
                     const truncatedText = graphHelper.truncText(text, textWidth, dx - 4);
