@@ -222,14 +222,13 @@ namespace Raven.Server.Documents.Replication
                                     indexAndTransformerSender.ExecuteReplicationOnce();
                                 }
 
-                                if (documentSender.ExecuteReplicationOnce() == false)
+                                var sp = Stopwatch.StartNew();
+                                while (documentSender.ExecuteReplicationOnce())
                                 {
-                                    using (_documentsContext.OpenReadTransaction())
+                                    if (sp.ElapsedMilliseconds > 60 * 1000)
                                     {
-                                        currentEtag =
-                                            DocumentsStorage.ReadLastEtag(_documentsContext.Transaction.InnerTransaction);
-                                        if (currentEtag != _lastSentDocumentEtag)
-                                            continue;
+                                        _waitForChanges.Set();
+                                        break;
                                     }
                                 }
 
