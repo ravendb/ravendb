@@ -47,6 +47,10 @@ namespace Raven.NewClient.Client.Document
 
         private readonly ConcurrentDictionary<string, Lazy<RequestExecuter>> _requestExecuters = new ConcurrentDictionary<string, Lazy<RequestExecuter>>(StringComparer.OrdinalIgnoreCase);
 
+        private MultiDatabaseHiLoGenerator _multiDbHiLo;
+
+        private AsyncMultiDatabaseHiLoKeyGenerator _asyncMultiDbHiLo;
+
         /// <summary>
         /// The current session id - only used during construction
         /// </summary>
@@ -179,6 +183,10 @@ namespace Raven.NewClient.Client.Document
             Task.WaitAll(tasks.ToArray(), TimeSpan.FromSeconds(3));
             // if this is still going, we continue with disposal, it is for graceful shutdown only, anyway
 
+            //return unused hilo keys
+            _multiDbHiLo?.ReturnUnusedRange();
+            _asyncMultiDbHiLo?.ReturnUnusedRange().ConfigureAwait(false).GetAwaiter().GetResult();
+
             Subscriptions?.Dispose();
 
             AsyncSubscriptions?.Dispose();
@@ -271,14 +279,16 @@ namespace Raven.NewClient.Client.Document
 
                 if (Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
                 {
-                    var generator = new MultiDatabaseHiLoGenerator(32);
-                    Conventions.DocumentKeyGenerator = (dbName, entity) => generator.GenerateDocumentKey(dbName, Conventions, entity);
+                    var generator = new MultiDatabaseHiLoGenerator(this, Conventions);
+                    _multiDbHiLo = generator;
+                    Conventions.DocumentKeyGenerator = (dbName, entity) => generator.GenerateDocumentKey(dbName, entity);
                 }
 
                 if (Conventions.AsyncDocumentKeyGenerator == null )
                 {
-                    var generator = new AsyncMultiDatabaseHiLoKeyGenerator(32);
-                    Conventions.AsyncDocumentKeyGenerator = (dbName, entity) => generator.GenerateDocumentKeyAsync(dbName, Conventions, entity);
+                    var generator = new AsyncMultiDatabaseHiLoKeyGenerator(this, Conventions);
+                    _asyncMultiDbHiLo = generator;
+                    Conventions.AsyncDocumentKeyGenerator = (dbName, entity) => generator.GenerateDocumentKeyAsync(dbName, entity);
                 }
 
                 Smuggler = new DatabaseSmuggler(this);

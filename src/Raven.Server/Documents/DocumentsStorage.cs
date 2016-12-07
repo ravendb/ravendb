@@ -1087,7 +1087,7 @@ namespace Raven.Server.Documents
             DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
 
             Slice keySlice;
-            using (Slice.External(context.Allocator, lowerKey, keySize, out keySlice))
+            using (Slice.External(context.Allocator, lowerKey, lowerSize, out keySlice))
             {
                 DeleteConflictsFor(context, keySlice);
             }

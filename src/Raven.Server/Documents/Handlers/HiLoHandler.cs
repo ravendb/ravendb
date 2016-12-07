@@ -6,9 +6,10 @@
 
 using System;
 using System.Globalization;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Client.Data;
+using Raven.Server.Exceptions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -35,18 +36,19 @@ namespace Raven.Server.Documents.Handlers
 
             if (span.TotalSeconds < 30)
             {
-                return Math.Min(Math.Max(32,Math.Max(lastSize, lastSize * 2)), 1024 * 1024);
+                return Math.Min(Math.Max(32, Math.Max(lastSize, lastSize*2)), 1024*1024);
             }
             if (span.TotalSeconds > 60)
             {
-                return Math.Max(lastSize / 2, 32);
+                return Math.Max(lastSize/2, 32);
             }
 
-            return Math.Max(32,lastSize);
+            return Math.Max(32, lastSize);
         }
 
         [RavenAction("/databases/*/hilo/next", "GET",
-             "/databases/{databaseName:string}/hilo/next?tag={collectionName:string}&lastBatchSize={size:long|optional}&lastRangeAt={date:System.DateTime|optional}")]
+             "/databases/{databaseName:string}/hilo/next?tag={collectionName:string}&lastBatchSize={size:long|optional}&lastRangeAt={date:System.DateTime|optional}&identityPartsSeparator={separator:string|optional}&lastMax={max:long|optional} "
+         )]
 
         public async Task GetNextHiLo()
         {
@@ -57,14 +59,22 @@ namespace Raven.Server.Documents.Handlers
                 var tag = GetQueryStringValueAndAssertIfSingleAndNotEmpty("tag");
                 var lastSize = GetStringQueryString("lastBatchSize", false);
                 var lastRangeAt = GetStringQueryString("lastRangeAt", false);
+                var identityPartsSeparator = GetStringQueryString("identityPartsSeparator", false) ?? "/";
+                var lastMaxSt = GetStringQueryString("lastMax", false);
 
                 var capacity = CalculateCapacity(lastSize, lastRangeAt);
+
+                long lastMax;
+                if (long.TryParse(lastMaxSt, NumberStyles.Any, CultureInfo.InvariantCulture, out lastMax) == false)
+                    lastMax = 0;
 
                 var cmd = new MergedNextHiLoCommand
                 {
                     Database = Database,
                     Key = tag,
-                    Capacity = capacity
+                    Capacity = capacity,
+                    Separator = identityPartsSeparator,
+                    LastRangeMax = lastMax
                 };
 
                 await Database.TxMerger.Enqueue(cmd);
@@ -78,14 +88,12 @@ namespace Raven.Server.Documents.Handlers
                         ["Prefix"] = cmd.HiLoResults.Prefix,
                         ["Low"] = cmd.HiLoResults.Low,
                         ["High"] = cmd.HiLoResults.High,
-
-                        ["LastSize"] = capacity,
-                        ["LastRangeAt"] = DateTime.UtcNow.ToString("o")
+                        ["LastSize"] = cmd.HiLoResults.LastSize,
+                        ["LastRangeAt"] = cmd.HiLoResults.LastRangeAt.ToString("o")
                     });
                 }
 
             }
-
         }
 
         private class MergedNextHiLoCommand : TransactionOperationsMerger.MergedTransactionCommand
@@ -93,43 +101,76 @@ namespace Raven.Server.Documents.Handlers
             public string Key;
             public DocumentDatabase Database;
             public long Capacity;
-            public HiLoResults HiLoResults;
+            public HiLoResult HiLoResults;
+            public string Separator;
+            public long LastRangeMax;
 
             public override void Execute(DocumentsOperationContext context, RavenTransaction tx)
             {
-
                 var hiLoDocumentKey = ravenKeyGeneratorsHilo + Key;
-                string prefix = Key + "/";
+                var prefix = Key + Separator;
 
-                var document = Database.DocumentsStorage.Get(context, hiLoDocumentKey);
-                var serverPrefixDoc = Database.DocumentsStorage.Get(context, ravenKeyServerPrefix);
+                BlittableJsonReaderObject hiloDocReader = null, serverPrefixDocReader = null;
 
-                string serverPrefix;
-                if (serverPrefixDoc != null && serverPrefixDoc.Data.TryGet("ServerPrefix", out serverPrefix))
-                    prefix += serverPrefix;
-
-                long oldMax = 0;
-                var newDoc = new DynamicJsonValue();
-                if (document != null)
+                try
                 {
-                    document.Data.TryGet("Max", out oldMax);
-                    var prop = new BlittableJsonReaderObject.PropertyDetails();
-                    for (int i = 0; i < document.Data.Count; i++)
+                    serverPrefixDocReader = Database.DocumentsStorage.Get(context, ravenKeyServerPrefix)?.Data;
+                    hiloDocReader = Database.DocumentsStorage.Get(context, hiLoDocumentKey)?.Data;                    
+                }
+                catch (DocumentConflictException e)
+                {
+                    // resolving the conflict by selecting the document with the highest number
+                    var conflicts = e.Conflicts.Select(x => x.Doc).ToList();
+                    long highestMax = 0, tmpMax;
+                    
+                    foreach (var doc in conflicts)
                     {
-                        document.Data.GetPropertyByIndex(0, ref prop);
-                        if (prop.Name == "Max")
-                            continue;
-                        newDoc[prop.Name] = prop.Value;
+                        if (doc.TryGet("Max", out tmpMax) && tmpMax > highestMax)
+                        {                            
+                            highestMax = tmpMax;
+                            hiloDocReader = doc;                            
+                        }
                     }
+
+                    //temporary, until DocumentsStorage.Put will resolve confilcts by itself
+                    Database.DocumentsStorage.DeleteConflictsFor(context, hiLoDocumentKey); 
                 }
 
-                newDoc["Max"] = oldMax + Capacity;
-
-                using (var hiloReader = context.ReadObject(newDoc, hiLoDocumentKey, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                finally
                 {
-                    Database.DocumentsStorage.Put(context, hiLoDocumentKey, null, hiloReader);
+                    string serverPrefix;
+                    if (serverPrefixDocReader != null && serverPrefixDocReader.TryGet("ServerPrefix", out serverPrefix))
+                        prefix += serverPrefix;
+                    serverPrefixDocReader?.Dispose();
+
+                    long oldMax = 0;
+                    var newDoc = new DynamicJsonValue();
+                    if (hiloDocReader != null)
+                    {
+                        hiloDocReader.TryGet("Max", out oldMax);
+                        var prop = new BlittableJsonReaderObject.PropertyDetails();
+                        for (var i = 0; i < hiloDocReader.Count; i++)
+                        {
+                            hiloDocReader.GetPropertyByIndex(0, ref prop);
+                            if (prop.Name == "Max")
+                                continue;
+                            newDoc[prop.Name] = prop.Value;
+                        }
+                    }
+
+                    hiloDocReader?.Dispose();
+                    oldMax = Math.Max(oldMax, LastRangeMax);
+
+                    newDoc["Max"] = oldMax + Capacity;
+
+                    using (var freshHilo = context.ReadObject(newDoc, hiLoDocumentKey, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                    {
+                        Database.DocumentsStorage.Put(context, hiLoDocumentKey, null, freshHilo);
+                    }
+
+                    HiLoResults = new HiLoResult(oldMax + 1, oldMax + Capacity, prefix, Capacity, DateTime.UtcNow);
+
                 }
-                HiLoResults = new HiLoResults(oldMax + 1, oldMax + Capacity, prefix);
             }
         }
 
@@ -178,7 +219,7 @@ namespace Raven.Server.Documents.Handlers
 
                 document.Data.TryGet("Max", out oldMax);
 
-                if (oldMax != End || oldMax <= Last)
+                if (oldMax != End || Last > oldMax)
                     return;
 
                 document.Data.Modifications = new DynamicJsonValue()
@@ -186,9 +227,9 @@ namespace Raven.Server.Documents.Handlers
                     ["Max"] = Last,
                 };
 
-                using (var freshHiLo = context.ReadObject(document.Data, hiLoDocumentKey, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                using (var hiloReader = context.ReadObject(document.Data, hiLoDocumentKey, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    Database.DocumentsStorage.Put(context, hiLoDocumentKey, null, freshHiLo);
+                    Database.DocumentsStorage.Put(context, hiLoDocumentKey, null, hiloReader);
                 }
             }
         }

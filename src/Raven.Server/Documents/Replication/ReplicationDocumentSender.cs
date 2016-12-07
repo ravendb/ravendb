@@ -308,10 +308,10 @@ namespace Raven.Server.Documents.Replication
                 return true;
 
             // Now need to find if the next bits are 'hilo/'
-            if ((str.Buffer[6] == (byte)'H' || str.Buffer[0] == (byte)'h') &&
-                (str.Buffer[7] == (byte)'I' || str.Buffer[1] == (byte)'i') &&
-                (str.Buffer[8] == (byte)'L' || str.Buffer[2] == (byte)'l') &&
-                (str.Buffer[9] == (byte)'O' || str.Buffer[3] == (byte)'o') &&
+            if ((str.Buffer[6] == (byte)'H' || str.Buffer[6] == (byte)'h') &&
+                (str.Buffer[7] == (byte)'I' || str.Buffer[7] == (byte)'i') &&
+                (str.Buffer[8] == (byte)'L' || str.Buffer[8] == (byte)'l') &&
+                (str.Buffer[9] == (byte)'O' || str.Buffer[9] == (byte)'o') &&
                 str.Buffer[10] == (byte)'/')
                 return false;
 

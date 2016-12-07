@@ -3,18 +3,12 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Linq;
 using System.Threading;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Exceptions;
 using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Exceptions;
-
+using Raven.NewClient.Commands;
 using System.Threading.Tasks;
-
-using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Http;
+using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Document
 {
@@ -23,26 +17,22 @@ namespace Raven.NewClient.Client.Document
     /// </summary>
     public class AsyncHiLoKeyGenerator : HiLoKeyGeneratorBase
     {
-        private SpinLock generatorLock = new SpinLock(enableThreadOwnerTracking: false); // Using a spin lock rather than Monitor.Enter, because it's not reentrant
-
         /// <summary>
         /// Initializes a new instance of the <see cref="HiLoKeyGenerator"/> class.
         /// </summary>
-        public AsyncHiLoKeyGenerator(string tag, long capacity)
-            : base(tag, capacity)
+        public AsyncHiLoKeyGenerator(string tag, DocumentStore store, string dbName, string identityPartsSeparator)
+            : base(tag, store, dbName, identityPartsSeparator)
         {
         }
 
         /// <summary>
         /// Generates the document key.
         /// </summary>
-        /// <param name="databaseCommands">The commands.</param>
-        /// <param name="convention">The convention.</param>
         /// <param name="entity">The entity.</param>
         /// <returns></returns>
-        public Task<string> GenerateDocumentKeyAsync(DocumentConvention convention, object entity)
+        public Task<string> GenerateDocumentKeyAsync(object entity)
         {
-            return NextIdAsync().ContinueWith(task => GetDocumentKeyFromId(convention, task.Result));
+            return NextIdAsync().ContinueWith(task => GetDocumentKeyFromId(task.Result));
         }
 
         ///<summary>
@@ -50,6 +40,107 @@ namespace Raven.NewClient.Client.Document
         ///</summary>
         public Task<long> NextIdAsync()
         {
+            while (true)
+            {
+                var myRange = Range; // thread safe copy
+                var incrementedCurrent = Interlocked.Increment(ref myRange.Current);
+                if (incrementedCurrent <= myRange.Max)
+                {
+                    return CompletedTask.With(incrementedCurrent);
+                }
+
+                if (interlockedLock.TryEnter() == false)
+                {
+                    Interlocked.Increment(ref threadsWaitingForRangeUpdate);
+                    mre.WaitOne();
+                    Interlocked.Decrement(ref threadsWaitingForRangeUpdate);
+                    continue;
+                }
+
+                try
+                {
+                    mre.Reset();
+
+                    if (Range != myRange)
+                    {
+                        // Lock was contended, and the max has already been changed.
+                        mre.Set();
+                        interlockedLock.Exit();
+                        return NextIdAsync();
+                    }
+
+                    return GetNextRangeAsync().ContinueWith(task =>
+                    {
+                        try
+                        {
+                            Range = task.Result;
+                        }
+                        finally
+                        {
+                            mre.Set();
+                            interlockedLock.Exit();
+                        }
+
+                        return NextIdAsync();
+                    }).Unwrap();
+                }
+                catch
+                {
+                    // We only unlock in exceptional cases (and not in a finally clause) because non exceptional cases will either have already
+                    // unlocked or will have started a task that will unlock in the future.
+                    mre.Set();
+                    interlockedLock.Exit();
+                    throw;
+                }
+            }
+        }
+
+        private async Task<RangeValue> GetNextRangeAsync( )
+        {
+            var hiloCommand = new NextHiLoCommand
+            {
+                Tag = _tag,
+                LastBatchSize = _lastBatchSize,
+                LastRangeAt = _lastRequestedUtc1,
+                IdentityPartsSeparator = _identityPartsSeparator,
+                LastRangeMax = Range.Max
+            };
+
+            RequestExecuter re = _store.GetRequestExecuter(_dbName);
+            JsonOperationContext context;
+            using (re.ContextPool.AllocateOperationContext(out context))
+            {
+                await re.ExecuteAsync(hiloCommand, context).ConfigureAwait(false);
+            }
+
+            _prefix = hiloCommand.Result.Prefix;
+            _lastRequestedUtc1 = hiloCommand.Result.LastRangeAt;
+            _lastBatchSize = hiloCommand.Result.LastSize;
+            return new RangeValue(hiloCommand.Result.Low, hiloCommand.Result.High);
+        }
+
+        public async Task ReturnUnusedRangeAsync()
+        {
+            var returnCommand = new HiLoReturnCommand()
+            {
+                Tag = _tag,
+                End = Range.Max,
+                Last = Range.Current
+            };
+
+            RequestExecuter re = _store.GetRequestExecuter(_dbName);
+            JsonOperationContext context;
+            using (re.ContextPool.AllocateOperationContext(out context))
+            {
+                await re.ExecuteAsync(returnCommand, context).ConfigureAwait(false);
+            }
+        }
+
+        /*public Task<long> NextIdAsync2()
+        {
+            //in order to use this method, we need to add back to the class:
+            //private SpinLock _generatorLock = new SpinLock(enableThreadOwnerTracking: false); // Using a spin lock rather than Monitor.Enter, because it's not reentrant
+            
             var myRange = Range; // thread safe copy
             long incrementedCurrent = Interlocked.Increment(ref myRange.Current);
             if (incrementedCurrent <= myRange.Max)
@@ -60,11 +151,11 @@ namespace Raven.NewClient.Client.Document
             bool lockTaken = false;
             try
             {
-                generatorLock.Enter(ref lockTaken);
+                _generatorLock.Enter(ref lockTaken);
                 if (Range != myRange)
                 {
                     // Lock was contended, and the max has already been changed. Just get a new id as usual.
-                    generatorLock.Exit();
+                    _generatorLock.Exit();
                     return NextIdAsync();
                 }
                 // Get a new max, and use the current value.
@@ -77,7 +168,7 @@ namespace Raven.NewClient.Client.Document
                         }
                         finally
                         {
-                            generatorLock.Exit();
+                            _generatorLock.Exit();
                         }
 
                         return NextIdAsync();
@@ -88,127 +179,9 @@ namespace Raven.NewClient.Client.Document
                 // We only unlock in exceptional cases (and not in a finally clause) because non exceptional cases will either have already
                 // unlocked or will have started a task that will unlock in the future.
                 if (lockTaken)
-                    generatorLock.Exit();
+                    _generatorLock.Exit();
                 throw;
             }
-        }
-
-        private Task<RangeValue> GetNextRangeAsync()
-        {
-            ModifyCapacityIfRequired();
-
-            return GetNextMaxAsyncInner();
-        }
-
-        private async Task<RangeValue> GetNextMaxAsyncInner( )
-        {
-            throw new NotImplementedException();
-           /* var minNextMax = Range.Max;
-
-            using (databaseCommands.ForceReadFromMaster())
-                while (true)
-                {
-                    try
-                    {
-                        ConflictException ce = null;
-                        JsonDocument document;
-                        try
-                        {
-                            document = await GetDocumentAsync(databaseCommands).ConfigureAwait(false);
-                        }
-                        catch (ConflictException e)
-                        {
-                            ce = e;
-                            document = null;
-                        }
-                        if (ce != null)
-                            return await HandleConflictsAsync(databaseCommands, ce, minNextMax).ConfigureAwait(false);
-
-                        long min, max;
-                        if (document == null)
-                        {
-                            min = minNextMax + 1;
-                            max = minNextMax + capacity;
-                            document = new JsonDocument
-                            {
-                                Etag = 0,
-                                // sending empty etag means - ensure the that the document does NOT exists
-                                Metadata = new RavenJObject(),
-                                DataAsJson = RavenJObject.FromObject(new { Max = max }),
-                                Key = HiLoDocumentKey
-                            };
-                        }
-                        else
-                        {
-                            var oldMax = GetMaxFromDocument(document, minNextMax);
-                            min = oldMax + 1;
-                            max = oldMax + capacity;
-
-                            document.DataAsJson["Max"] = max;
-                        }
-
-                        await PutDocumentAsync(databaseCommands, document).ConfigureAwait(false);
-                        return new RangeValue(min, max);
-                    }
-                    catch (ConcurrencyException)
-                    {
-                        //expected & ignored, will retry this
-                    }
-                }*/
-        }
-
-        private async Task<RangeValue> HandleConflictsAsync(ConflictException e, long minNextMax)
-        {
-            throw new NotImplementedException();
-            /* // resolving the conflict by selecting the highest number
-             long highestMax = -1;
-             if (e.ConflictedVersionIds.Length == 0)
-                 throw new InvalidOperationException("Got conflict exception, but no conflicted versions", e);
-             foreach (var conflictedVersionId in e.ConflictedVersionIds)
-             {
-                 var doc = await databaseCommands.GetAsync(conflictedVersionId).ConfigureAwait(false);
-                 highestMax = Math.Max(highestMax, GetMaxFromDocument(doc, minNextMax));
-             }
-
-             await PutDocumentAsync(databaseCommands, new JsonDocument
-             {
-                 Etag = e.Etag,
-                 Metadata = new RavenJObject(),
-                 DataAsJson = RavenJObject.FromObject(new { Max = highestMax }),
-                 Key = HiLoDocumentKey
-             }).ConfigureAwait(false);
-             return await GetNextRangeAsync().ConfigureAwait(false);*/
-        }
-
-        /*private Task PutDocumentAsync(JsonDocument document)
-        {
-            throw new NotImplementedException();
-            /*return databaseCommands.PutAsync(HiLoDocumentKey, document.Etag,
-                                 document.DataAsJson,
-                                 document.Metadata);#1#
-        }
-
-        private async Task<JsonDocument> GetDocumentAsync()
-        {
-            throw new NotImplementedException();
-            /*var documents = await databaseCommands.GetAsync(new[] { HiLoDocumentKey, RavenKeyServerPrefix }, new string[0]).ConfigureAwait(false);
-            if (documents.Results.Count == 2 && documents.Results[1] != null)
-            {
-                lastServerPrefix = documents.Results[1].Value<string>("ServerPrefix");
-            }
-            else
-            {
-                lastServerPrefix = string.Empty;
-            }
-            if (documents.Results.Count == 0 || documents.Results[0] == null)
-                return null;
-
-            var jsonDocument = documents.Results[0].ToJsonDocument();
-            foreach (var key in jsonDocument.Metadata.Keys.Where(x => x.StartsWith("@")).ToArray())
-            {
-                jsonDocument.Metadata.Remove(key);
-            }
-            return jsonDocument;#1#
-        }*/
+        } */
     }
 }

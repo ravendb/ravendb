@@ -3,17 +3,10 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-
-using System;
-using System.Linq;
 using System.Threading;
-
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Exceptions;
-using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Exceptions;
-
+using Raven.NewClient.Client.Http;
+using Raven.NewClient.Commands;
+using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Document
 {
@@ -21,27 +14,23 @@ namespace Raven.NewClient.Client.Document
     /// Generate hilo numbers against a RavenDB document
     /// </summary>
     public class HiLoKeyGenerator : HiLoKeyGeneratorBase
-    {
-        private readonly object generatorLock = new object();
-
+    {        
         /// <summary>
         /// Initializes a new instance of the <see cref="HiLoKeyGenerator"/> class.
         /// </summary>
-        public HiLoKeyGenerator(string tag, long capacity)
-            : base(tag, capacity)
+        public HiLoKeyGenerator(string tag, DocumentStore store, string dbName, string identityPartsSeparator)
+            : base(tag, store, dbName, identityPartsSeparator)
         {
         }
 
         /// <summary>
         /// Generates the document key.
         /// </summary>
-        /// <param name="convention">The convention.</param>
         /// <param name="entity">The entity.</param>
-        /// <param name="databaseCommands">Low level database commands.</param>
         /// <returns></returns>
-        public string GenerateDocumentKey(DocumentConvention convention, object entity)
+        public string GenerateDocumentKey(object entity) //can lose convention?
         {
-            return GetDocumentKeyFromId(convention, NextId());
+            return GetDocumentKeyFromId(NextId());
         }
 
         ///<summary>
@@ -57,7 +46,49 @@ namespace Raven.NewClient.Client.Document
                 if (current <= myRange.Max)
                     return current;
 
-                lock (generatorLock)
+                if (interlockedLock.TryEnter() == false)
+                {
+                    Interlocked.Increment(ref threadsWaitingForRangeUpdate);
+                    mre.WaitOne();
+                    Interlocked.Decrement(ref threadsWaitingForRangeUpdate);
+                    continue;
+                }
+
+                try
+                {
+                    mre.Reset();
+
+                    if (Range != myRange)
+                        // Lock was contended, and the max has already been changed.
+                        continue;
+
+                    var waitingForRangeUpdate = Interlocked.Read(ref threadsWaitingForRangeUpdate);
+                    Range = waitingForRangeUpdate > 10 ? GetNextRangeDoubleBuffered() : GetNextRange();
+                    //Range = GetNextRange();
+
+                }
+                finally
+                {
+                    mre.Set();
+                    interlockedLock.Exit();
+                }
+            }
+        }
+
+        /*public long NextId2()
+        {
+            //in order to use this method, we need to add back to the class:
+            //private readonly object _generatorLock = new object();
+
+            while (true)
+            {
+                var myRange = Range; // thread safe copy
+
+                var current = Interlocked.Increment(ref myRange.Current);
+                if (current <= myRange.Max)
+                    return current;
+
+                lock (_generatorLock)
                 {
                     if (Range != myRange)
                         // Lock was contended, and the max has already been changed. Just get a new id as usual.
@@ -66,92 +97,54 @@ namespace Raven.NewClient.Client.Document
                     Range = GetNextRange();
                 }
             }
-        }
+        } */
 
         private RangeValue GetNextRange()
         {
-            //TODO - Temporary just to make the tests work
-            return new RangeValue(Range.Max + 1, Range.Max + 32);
-            //throw new NotImplementedException();
-            /*using (databaseCommands.ForceReadFromMaster())
+            var hiloCommand = new NextHiLoCommand
             {
-                ModifyCapacityIfRequired();
-                while (true)
-                {
-                    try
-                    {
-                        var minNextMax = Range.Max;
-                        JsonDocument document;
+                Tag = _tag,
+                LastBatchSize = _lastBatchSize,
+                LastRangeAt = _lastRequestedUtc1,
+                IdentityPartsSeparator = _identityPartsSeparator,
+                LastRangeMax = Range.Max
+            };
 
-                        try
-                        {
-                            document = GetDocument(databaseCommands);
-                        }
-                        catch (ConflictException e)
-                        {
-                            // resolving the conflict by selecting the highest number
-                            var highestMax = e.ConflictedVersionIds
-                                .Select(conflictedVersionId => GetMaxFromDocument(databaseCommands.Get(conflictedVersionId), minNextMax))
-                                .Max();
+            RequestExecuter re = _store.GetRequestExecuter(_dbName);
+            JsonOperationContext context;
+            using (re.ContextPool.AllocateOperationContext(out context))
+            {
+                re.Execute(hiloCommand, context);
+            }
+                                      
+            _prefix = hiloCommand.Result.Prefix;
+            _lastRequestedUtc1 = hiloCommand.Result.LastRangeAt;
+            _lastBatchSize = hiloCommand.Result.LastSize;
 
-                            PutDocument(databaseCommands, new JsonDocument
-                            {
-                                Etag = e.Etag,
-                                Metadata = new RavenJObject(),
-                                DataAsJson = RavenJObject.FromObject(new { Max = highestMax }),
-                                Key = HiLoDocumentKey
-                            });
+            return new RangeValue(hiloCommand.Result.Low, hiloCommand.Result.High);
 
-                            continue;
-                        }
-
-                        long min, max;
-                        if (document == null)
-                        {
-                            min = minNextMax + 1;
-                            max = minNextMax + capacity;
-                            document = new JsonDocument
-                            {
-                                Etag = 0,
-                                // sending empty etag means - ensure the that the document does NOT exists
-                                Metadata = new RavenJObject(),
-                                DataAsJson = RavenJObject.FromObject(new { Max = max }),
-                                Key = HiLoDocumentKey
-                            };
-                        }
-                        else
-                        {
-                            var oldMax = GetMaxFromDocument(document, minNextMax);
-                            min = oldMax + 1;
-                            max = oldMax + capacity;
-
-                            document.DataAsJson["Max"] = max;
-                        }
-                        PutDocument(databaseCommands, document);
-
-                        return new RangeValue(min, max);
-                    }
-                    catch (ConcurrencyException)
-                    {
-                        // expected, we need to retry
-                    }
-                }
-            }*/
         }
 
-        /*private void PutDocument( JsonDocument document)
+        public void ReturnUnusedRange()
         {
-            throw new NotImplementedException();
-            /*databaseCommands.Put(HiLoDocumentKey, document.Etag,
-                                 document.DataAsJson,
-                                 document.Metadata);#1#
+            var returnCommand = new HiLoReturnCommand()
+            {
+                Tag = _tag,
+                End = Range.Max,
+                Last = Range.Current
+            };
+
+            RequestExecuter re = _store.GetRequestExecuter(_dbName);
+            JsonOperationContext context;
+            using (re.ContextPool.AllocateOperationContext(out context))
+            {
+                re.Execute(returnCommand, context);
+            }
         }
 
-        private JsonDocument GetDocument()
+        private RangeValue GetNextRangeDoubleBuffered()
         {
-            throw new NotImplementedException();
-            /*var documents = databaseCommands.Get(new[] { HiLoDocumentKey, RavenKeyServerPrefix }, new string[0]);
-            return HandleGetDocumentResult(documents);#1#
-        }*/
+            return GetNextRange();
+        }
     }
 }

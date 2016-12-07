@@ -13,52 +13,59 @@ namespace Raven.NewClient.Client.Document
     /// </summary>
     public class MultiTypeHiLoKeyGenerator
     {
-        private readonly int capacity;
-        private readonly object generatorLock = new object();
-        private IDictionary<string, HiLoKeyGenerator> keyGeneratorsByTag = new Dictionary<string, HiLoKeyGenerator>();
-
+        private readonly object _generatorLock = new object();
+        private IDictionary<string, HiLoKeyGenerator> _keyGeneratorsByTag = new Dictionary<string, HiLoKeyGenerator>();
+        private readonly DocumentStore _store;
+        private readonly string _dbName;
+        private readonly DocumentConvention _conventions;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MultiTypeHiLoKeyGenerator"/> class.
         /// </summary>
-        public MultiTypeHiLoKeyGenerator(int capacity)
+        public MultiTypeHiLoKeyGenerator(DocumentStore store, string dbName, DocumentConvention conventions)
         {
-            this.capacity = capacity;
+            _store = store;
+            _dbName = dbName;
+            _conventions = conventions;
         }
-
-
 
         /// <summary>
         /// Generates the document key.
         /// </summary>
-        /// <param name="conventions">The conventions.</param>
         /// <param name="entity">The entity.</param>
-        /// <param name="databaseCommands">Low level database commands.</param>
         /// <returns></returns>
-        public string GenerateDocumentKey( DocumentConvention conventions, object entity)
+        public string GenerateDocumentKey(object entity)
         {
-         var typeTagName = conventions.GetDynamicTagName(entity);
+         var typeTagName = _conventions.GetDynamicTagName(entity);
             if (string.IsNullOrEmpty(typeTagName)) //ignore empty tags
                 return null;
-            var tag = conventions.TransformTypeTagNameToDocumentKeyPrefix(typeTagName);
+            var tag = _conventions.TransformTypeTagNameToDocumentKeyPrefix(typeTagName);
             HiLoKeyGenerator value;
-            if (keyGeneratorsByTag.TryGetValue(tag, out value))
-                return value.GenerateDocumentKey(conventions, entity);
+            if (_keyGeneratorsByTag.TryGetValue(tag, out value))
+                return value.GenerateDocumentKey(entity);
 
-            lock(generatorLock)
+            lock(_generatorLock)
             {
-                if (keyGeneratorsByTag.TryGetValue(tag, out value))
-                    return value.GenerateDocumentKey(conventions, entity);
+                if (_keyGeneratorsByTag.TryGetValue(tag, out value))
+                    return value.GenerateDocumentKey(entity);
 
-                value = new HiLoKeyGenerator(tag, capacity);
+                value = new HiLoKeyGenerator(tag, _store, _dbName, _conventions.IdentityPartsSeparator);
                 // doing it this way for thread safety
-                keyGeneratorsByTag = new Dictionary<string, HiLoKeyGenerator>(keyGeneratorsByTag)
+                _keyGeneratorsByTag = new Dictionary<string, HiLoKeyGenerator>(_keyGeneratorsByTag)
                 {
                     {tag, value}
                 };
             }
 
-            return value.GenerateDocumentKey(conventions, entity);
+            return value.GenerateDocumentKey(entity);
+        }
+
+        public void ReturnUnusedRange()
+        {
+            foreach (var generator in _keyGeneratorsByTag)
+            {
+                generator.Value.ReturnUnusedRange();
+            }
         }
     }
 }

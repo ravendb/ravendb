@@ -33,5 +33,8 @@ namespace Raven.NewClient.Client.Json
         public static readonly Func<BlittableJsonReaderObject, GetIndexResult> GetIndexResult = GenerateJsonDeserializationRoutine<GetIndexResult>();
 
         public static readonly Func<BlittableJsonReaderObject, PutTransformerResult> PutTransformerResult = GenerateJsonDeserializationRoutine<PutTransformerResult>();
+
+        public static readonly Func<BlittableJsonReaderObject, HiLoResult> HiLoResult = GenerateJsonDeserializationRoutine<HiLoResult>();
+
     }
 }
