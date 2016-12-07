@@ -345,7 +345,7 @@ namespace Raven.Server.Documents
                 {
                     var document = TableValueToDocument(context, result);
                     string documentKey = document.Key;
-                    if (documentKey.StartsWith(prefix) == false)
+                    if (documentKey.StartsWith(prefix, StringComparison.CurrentCultureIgnoreCase) == false)
                         break;
 
                     if (!WildcardMatcher.Matches(matches, documentKey) ||

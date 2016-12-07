@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.NewClient.Client;
@@ -16,7 +17,7 @@ namespace NewClientTests.NewClient.ResultsTransformer
 {
     public class RavenDB_4161 : RavenTestBase
     {
-        [Fact(Skip = "LoadStartingWith not implemented")]
+        [Fact]
         public void CanUseTransfromer()
         {
             using (var store = GetDocumentStore())
@@ -43,8 +44,6 @@ namespace NewClientTests.NewClient.ResultsTransformer
                     session.SaveChanges();
                     WaitForIndexing(store);
 
-                    //WaitForUserToContinueTheTest(store);
-
                     var fooTokens = session.Advanced.LoadStartingWith<Token_Id, string>("Token/foo").OrderBy(x => x).ToArray();
 
                     var fromQuery = session.Query<Token>().TransformWith<Token_Id, string>().ToArray().OrderBy(x => x).ToArray();
@@ -53,13 +52,14 @@ namespace NewClientTests.NewClient.ResultsTransformer
 
                     Assert.Equal(token2.Id, session.Load<Token_Id, string>(token2.Id));
 
-                    Assert.Equal(token.Id, session.Advanced.Lazily.Load<Token_Id, string>(token.Id).Value);
+                    // TODO enable when lazy is implemented
+                    //Assert.Equal(token.Id, session.Advanced.Lazily.Load<Token_Id, string>(token.Id).Value);
 
                 }
             }
         }
     
-        [Fact(Skip = "LoadStartingWith not implemented")]
+        [Fact]
         public async Task CanUseTransfromerAsync()
         {
             using (var store = GetDocumentStore())

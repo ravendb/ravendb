@@ -1,8 +1,9 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.NewClient.Client.Document;
-
+using Raven.NewClient.Json.Utilities;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -77,32 +78,13 @@ namespace Raven.NewClient.Client.Commands
         {
             if (result == null)
                 return null;
+
             if (typeof(T).IsArray)
             {
-                var arrayOfArrays = result.Results
-                    .Select(x =>
-                    {
-                        if (x == null)
-                            return null;
-                        
-                        BlittableJsonReaderArray values;
-                        if (((BlittableJsonReaderObject)x).TryGet("$values", out values) == false)
-                            throw new InvalidOperationException("Transformed document must have a $values property");
-
-                        var elementType = typeof(T).GetElementType();
-
-                        var array = values.Select(value => _session.DeserializeFromTransformer(elementType, null, value as BlittableJsonReaderObject)).ToArray();
-                        var newArray = Array.CreateInstance(elementType, array.Length);
-                        Array.Copy(array, newArray, array.Length);
-                        return newArray;
-                    })
-                    .Cast<T>()
-                    .ToArray();
-
-                return arrayOfArrays;
+                return TransformerHelpers.ParseResultsArray<T>(_session, result);
             }
 
-            var items = ParseResults<T>(result.Results).ToArray();
+            var items = TransformerHelpers.ParseResults<T>(_session, result).ToArray();
 
             if (items.Length > _ids.Length)
             {
@@ -128,27 +110,6 @@ namespace Raven.NewClient.Client.Commands
             if (_includes != null && _includes.Length > 0)
             {
                 _session.RegisterMissingIncludes(result.Results, _includes);
-            }
-        }
-        
-        private IEnumerable<T> ParseResults<T>(BlittableJsonReaderArray results)
-        {
-            foreach (BlittableJsonReaderObject result in results)
-            {
-                if (result == null)
-                {
-                    yield return default(T);
-                    continue;
-                }
-
-                BlittableJsonReaderArray values;
-                if (result.TryGet("$values", out values) == false)
-                    throw new InvalidOperationException("Transformed document must have a $values property");
-
-                foreach (BlittableJsonReaderObject value in values)
-                {
-                    yield return (T)_session.DeserializeFromTransformer(typeof(T), null, value);
-                }
             }
         }
     }
