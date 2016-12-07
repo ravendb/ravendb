@@ -58,6 +58,8 @@ namespace Raven.Server.Documents.Handlers
                             continue;
                         }
 
+                        query += "&ComingFromMultiGet=true";
+
                         if (request.TryGet(nameof(GetRequest.Method), out method) == false)
                             method = HttpMethod.Get.Method;
 
