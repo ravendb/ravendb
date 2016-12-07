@@ -99,7 +99,7 @@ namespace Raven.NewClient.Client.Helpers
         {
             get
             {
-                return Environment.MachineName;
+                return Environment.GetEnvironmentVariable("COMPUTERNAME");
             }
         }
     }
