@@ -946,7 +946,7 @@ namespace Raven.Server.Documents.Indexes
                                     // also we need this to be called when new read transaction are prevented in order to ensure
                                     // that queries won't get the searcher having 'old' state but see 'new' changes committed here
                                     // e.g. the old searcher could have a segment file in its in-memory state which has been removed in this tx
-                                    IndexPersistence.RecreateSearcher();
+                                    IndexPersistence.RecreateSearcher(tx.InnerTransaction);
                                 }
                             }
                         };

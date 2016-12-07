@@ -133,7 +133,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                     writeOperation.Value.Dispose();
 
-                    index.IndexPersistence.RecreateSearcher();
+                    index.IndexPersistence.RecreateSearcher(tx.InnerTransaction);
 
                     mapReduceContext.Dispose();
 
@@ -190,7 +190,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                     writeOperation.Value.Dispose();
 
-                    index.IndexPersistence.RecreateSearcher();
+                    index.IndexPersistence.RecreateSearcher(tx.InnerTransaction);
 
                     mapReduceContext.Dispose();
 
@@ -238,7 +238,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                     writeOperation.Value.Dispose();
 
-                    index.IndexPersistence.RecreateSearcher();
+                    index.IndexPersistence.RecreateSearcher(tx.InnerTransaction);
 
                     tx.Commit();
                 }
