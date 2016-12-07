@@ -26,9 +26,9 @@
     "projectUrl": "https://ravendb.net",
     "files": {
       "mappings": {
-        "lib/netstandard1.6/": {
+        "lib/netstandard1.3/": {
           "includeFiles": [
-            "../Sparrow/bin/Release/netstandard1.6/Sparrow.dll"
+            "../Sparrow/bin/Release/netstandard1.3/Sparrow.dll"
           ]
         }
       }
