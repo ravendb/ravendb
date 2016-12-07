@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _actualMaxIndexOutputsPerDocument = index.ActualMaxNumberOfIndexOutputs;
             _maxIndexOutputsPerDocument = index.MaxNumberOfIndexOutputs;
             _releaseReadTransaction = directory.SetTransaction(readTransaction);
-            _releaseSearcher = searcherHolder.GetSearcher(out _searcher, index._indexStorage.DocumentDatabase);
+            _releaseSearcher = searcherHolder.GetSearcher(readTransaction, out _searcher);
         }
 
         public int EntriesCount()
