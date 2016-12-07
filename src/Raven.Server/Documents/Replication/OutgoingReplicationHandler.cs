@@ -395,9 +395,9 @@ namespace Raven.Server.Documents.Replication
                                 break;
                             case ReplicationMessageReply.ReplyType.Error:
                                 _log.Info(
-                                    $"Received reply for replication batch from {_destination.Database} at {_destination.Url}. There has been a failure, error string received : {replicationBatchReply.Error}");
+                                    $"Received reply for replication batch from {_destination.Database} at {_destination.Url}. There has been a failure, error string received : {replicationBatchReply.Exception}");
                                 throw new InvalidOperationException(
-                                    $"Received failure reply for replication batch. Error string received = {replicationBatchReply.Error}");
+                                    $"Received failure reply for replication batch. Error string received = {replicationBatchReply.Exception}");
                             default:
                                 throw new ArgumentOutOfRangeException(nameof(replicationBatchReply),
                                     "Received reply for replication batch with unrecognized type... got " +
