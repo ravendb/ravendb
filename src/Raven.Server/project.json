@@ -20,7 +20,8 @@
       "include": [
         "Documents/Patch/*.js",
         "Web/Studio/EmbeddedData/*.ravendbdump",
-        "Web/Studio/EmbeddedData/*.cs"
+        "Web/Studio/EmbeddedData/*.cs",
+        "Commercial/RavenDB.public.json"
       ]
     }
   },
@@ -54,6 +55,7 @@
     "System.Data.SqlClient": "4.3.0",
     "System.Reflection.Emit.Lightweight": "4.3.0",
     "System.Runtime.Loader": "4.3.0",
+    "System.Security.Cryptography.Csp": "4.3.0",
     "System.Threading.Tasks.Parallel": "4.3.0",
     "Voron": "4.0.0-*"
   },

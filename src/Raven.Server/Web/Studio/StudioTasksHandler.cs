@@ -3,11 +3,11 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Raven.Abstractions.Data;
 using Raven.Server.Routing;
-using Microsoft.AspNetCore.Http;
 
-namespace Raven.Server.Web.Studo
+namespace Raven.Server.Web.Studio
 {
     public class StudioTasksHandler : RequestHandler
     {

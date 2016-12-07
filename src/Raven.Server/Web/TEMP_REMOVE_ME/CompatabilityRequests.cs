@@ -13,33 +13,5 @@ namespace Raven.Server.Web.TEMP_REMOVE_ME
             HttpContext.Response.StatusCode = 404;
             return Task.CompletedTask;
         }
-
-        [RavenAction("/license/registration", "POST")]
-        public Task FakeResponseForLicenseRegistration()
-        {
-            HttpContext.Response.StatusCode = 200;
-
-            Thread.Sleep(2000);
-
-            return Task.CompletedTask;
-        }
-
-        [RavenAction("/license/activate", "POST")]
-        public Task FakeResponseForLicenseActivation()
-        {
-            HttpContext.Response.StatusCode = 200;
-
-            Thread.Sleep(2000);
-
-            return Task.CompletedTask;
-        }
-
-        [RavenAction("/license/status", "GET")]
-        public Task FakeResponseForLicenseStatus()
-        {
-            HttpContext.Response.ContentType = "application/json";
-
-            return HttpContext.Response.WriteAsync("{\"Status\":\"AGPL\",\"Error\":false,\"Attributes\":{}, \"Message\": \"Hi there\", \"LicenseType\":\"Prerelease\"}");
-        }
     }
 }
