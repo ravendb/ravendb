@@ -72,7 +72,7 @@ $SPECS = @(
 
 CleanBuildDirectories $RELEASE_DIR
 
-#DownloadDependencies
+DownloadDependencies
 
 UpdateSourceWithBuildInfo $PROJECT_DIR $buildNumber $version
 
@@ -85,13 +85,12 @@ CreateNugetPackage $NEW_CLIENT_SRC_DIR $RELEASE_DIR $versionSuffix
 CreateNugetPackage $CLIENT_SRC_DIR $RELEASE_DIR $versionSuffix
 
 BuildTypingsGenerator $TYPINGS_GENERATOR_SRC_DIR
-#BuildStudio $STUDIO_SRC_DIR $PROJECT_DIR $version
+BuildStudio $STUDIO_SRC_DIR $PROJECT_DIR $version
 
 Foreach ($spec in $SPECS) {
     $runtime = $spec.Runtime
     $specOutDir = [io.path]::combine($OUT_DIR, $spec.Name)
     BuildServer $SERVER_SRC_DIR $specOutDir $runtime $spec.Name
-    
 
     $specOutDirs = @{
         "Main" = $specOutDir;
