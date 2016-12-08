@@ -18,9 +18,9 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i); 
-                using (var store = new FastTests.Server.Documents.Indexing.Auto.BasicAutoMapIndexing())
+                using (var store = new FastTests.Server.Documents.PeriodicExport.PeriodicExportTests())
                 {
-                    store.IndexLoadErrorCreatesFaultyInMemoryIndexFakeAndAddsAlert();
+                    store.CanExportToDirectory().Wait();
                 }
             }
             //); 

@@ -269,7 +269,7 @@ namespace Raven.Server.Documents.PeriodicExport
                                 var counter = 1;
                                 while (true)
                                 {
-                                    fileName = $"{now} - {counter}.ravendb-full-export";
+                                    fileName = $"{now} - {counter}.${Constants.PeriodicExport.FullExportExtension}";
                                     exportFilePath = Path.Combine(_status.LastFullExportDirectory, fileName);
 
                                     if (File.Exists(exportFilePath) == false)
@@ -281,14 +281,14 @@ namespace Raven.Server.Documents.PeriodicExport
                         else
                         {
                             // create filename for incremental export
-                            fileName = $"{now}-0.ravendb-incremental-export";
+                            fileName = $"{now}-0.${Constants.PeriodicExport.IncrementalExportExtension}";
                             exportFilePath = Path.Combine(_status.LastFullExportDirectory, fileName);
                             if (File.Exists(exportFilePath))
                             {
                                 var counter = 1;
                                 while (true)
                                 {
-                                    fileName = $"{now}-{counter}.ravendb-incremental-export";
+                                    fileName = $"{now}-{counter}.${Constants.PeriodicExport.IncrementalExportExtension}";
                                     exportFilePath = Path.Combine(_status.LastFullExportDirectory, fileName);
 
                                     if (File.Exists(exportFilePath) == false)

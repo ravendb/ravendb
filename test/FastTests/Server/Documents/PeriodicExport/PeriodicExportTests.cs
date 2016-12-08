@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.IO;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,6 +16,7 @@ using Raven.Server.Documents.PeriodicExport;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using System.Linq;
 
 namespace FastTests.Server.Documents.PeriodicExport
 {
@@ -89,7 +91,8 @@ namespace FastTests.Server.Documents.PeriodicExport
 
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
             {
-                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(), _exportPath);
+                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
+                    Directory.GetDirectories(_exportPath).First());
                 using (var session = store.OpenAsyncSession())
                 {
                     var user = await session.LoadAsync<User>(1);
@@ -120,7 +123,8 @@ namespace FastTests.Server.Documents.PeriodicExport
 
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
             {
-                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(), _exportPath);
+                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(), 
+                    Directory.GetDirectories(_exportPath).First());
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -169,7 +173,8 @@ namespace FastTests.Server.Documents.PeriodicExport
 
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
             {
-                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(), _exportPath);
+                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(), 
+                    Directory.GetDirectories(_exportPath).First());
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -230,7 +235,8 @@ namespace FastTests.Server.Documents.PeriodicExport
 
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
             {
-                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(), _exportPath);
+                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
+                    Directory.GetDirectories(_exportPath).First());
                 using (var session = store.OpenAsyncSession())
                 {
                     var users = await session.LoadAsync<User>(new ValueType[] { 1, 2 });
