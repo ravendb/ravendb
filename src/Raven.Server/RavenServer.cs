@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Raven.Abstractions.Data;
 using Raven.Client.Data;
 using Raven.Client.Json;
+using Raven.Server.Alerts;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents.TcpHandlers;
@@ -44,7 +45,6 @@ namespace Raven.Server
         private readonly Logger _tcpLogger;
 
         private readonly LatestVersionCheck _latestVersionCheck;
-        private readonly LicenseHandler _licenseHandler;
 
         public RavenServer(RavenConfiguration configuration)
         {
@@ -62,7 +62,6 @@ namespace Raven.Server
             _tcpLogger = LoggingSource.Instance.GetLogger<RavenServer>("<TcpServer>");
 
             _latestVersionCheck = new LatestVersionCheck(ServerStore);
-            _licenseHandler = new LicenseHandler(ServerStore);
         }
 
         public async Task<string> GetTcpServerPortAsync()
@@ -161,12 +160,21 @@ namespace Raven.Server
 
             try
             {
-                _licenseHandler.Initialize();
+                LicenseManager.Initialize(ServerStore);
             }
             catch (Exception e)
             {
                 if (_logger.IsInfoEnabled)
                     _logger.Info("Could not setup license check.", e);
+
+                ServerStore.Alerts.AddAlert(new Alert
+                {
+                    Type = AlertType.LicenseManagerInitializationError,
+                    Key = nameof(AlertType.LicenseManagerInitializationError),
+                    Severity = AlertSeverity.Info,
+                    Content = new LicenseManager.InitializationErrorAlertContent(e),
+                    Message = LicenseManager.InitializationErrorAlertContent.FormatMessage()
+                });
             }
         }
 
@@ -444,7 +452,6 @@ namespace Raven.Server
             ServerStore?.Dispose();
             ServerMaintenanceTimer?.Dispose();
             _latestVersionCheck?.Dispose();
-            _licenseHandler?.Dispose();
         }
 
         private void CloseTcpListeners(List<TcpListener> listeners)

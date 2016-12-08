@@ -6,6 +6,7 @@ using Raven.Client.Data;
 using Raven.Client.Indexing;
 using Raven.Client.Replication.Messages;
 using Raven.Client.Smuggler;
+using Raven.Server.Commercial;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.PeriodicExport;
 using Raven.Server.Documents.SqlReplication;
@@ -55,5 +56,9 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, Facet> Facet = GenerateJsonDeserializationRoutine<Facet>();
 
         public static readonly Func<BlittableJsonReaderObject, LatestVersionCheck.VersionInfo> LatestVersionCheckVersionInfo = GenerateJsonDeserializationRoutine<LatestVersionCheck.VersionInfo>();
+
+        public static readonly Func<BlittableJsonReaderObject, License> License = GenerateJsonDeserializationRoutine<License>();
+
+        public static readonly Func<BlittableJsonReaderObject, UserRegistrationInfo> UserRegistrationInfo = GenerateJsonDeserializationRoutine<UserRegistrationInfo>();
     }
 }

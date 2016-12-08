@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -110,7 +111,7 @@ namespace Raven.Server.Commercial
             return new BlittableJsonReaderObject(ptr, size, context);
         }
 
-        public unsafe void SaveLicense(DynamicJsonValue license)
+        public unsafe void SaveLicense(License license)
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
@@ -119,7 +120,7 @@ namespace Raven.Server.Commercial
                 var table = tx.InnerTransaction.OpenTable(_licenseStorageSchema, LicenseInfoSchema.LicenseTree);
 
                 using (var id = context.GetLazyString(LicenseStoargeKey))
-                using (var json = context.ReadObject(license, LicenseStoargeKey,
+                using (var json = context.ReadObject(license.ToJson(), LicenseStoargeKey,
                     BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
                     var tvb = new TableValueBuilder
@@ -152,7 +153,8 @@ namespace Raven.Server.Commercial
                     return null;
 
                 var licenseJson = Read(context, reader);
-                return JsonConvert.DeserializeObject<License>(licenseJson.ToString());
+
+                return JsonDeserializationServer.License(licenseJson);
             }
         }
 

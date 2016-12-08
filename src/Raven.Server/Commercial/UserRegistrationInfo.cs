@@ -1,6 +1,6 @@
 namespace Raven.Server.Commercial
 {
-    public class RegisteredUserInfo
+    public class UserRegistrationInfo
     {
         public string Name { get; set; }
 

@@ -1,6 +1,7 @@
+using System;
 using System.Collections.Generic;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Imports.Newtonsoft.Json.Converters;
+using Raven.Server.Utils;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Commercial
 {
@@ -18,8 +19,7 @@ namespace Raven.Server.Commercial
         public string Message { get; set; }
 
         public string Status => Attributes == null ? "AGPL - Open Source" : "Commercial";
-
-        [JsonConverter(typeof(StringEnumConverter))] //TODO: delete this and use blittable for serialization! - temporary fix
+        
         public LicenseType LicenseType
         {
             get
@@ -33,6 +33,21 @@ namespace Raven.Server.Commercial
 
                 return LicenseType.None;
             }
+        }
+
+        public DateTime FirstServerStartDate { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue(GetType())
+            {
+                [nameof(FirstServerStartDate)] = FirstServerStartDate,
+                [nameof(Error)] = Error,
+                [nameof(Message)] = Message,
+                [nameof(Status)] = Status,
+                [nameof(LicenseType)] = LicenseType.ToString(),
+                [nameof(Attributes)] = TypeConverter.ToBlittableSupportedType(Attributes)
+            };
         }
     }
 }
