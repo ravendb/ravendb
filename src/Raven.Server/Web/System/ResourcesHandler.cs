@@ -3,12 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Data;
-using Raven.Client.Data.Indexes;
 using Raven.Server.Documents;
-using Raven.Server.Documents.PeriodicExport;
-using Raven.Server.Json;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -63,8 +59,6 @@ namespace Raven.Server.Web.System
                         if (first == false)
                             writer.WriteComma();
                         first = false;
-                        //TODO: Implement a persistent cache that will be refreshed everytime this endpoint is invoked and the resource is laoded.
-                        //TODO: This will allow us to display the last known state of the resouce (With an indication in the studio that the data is taken from the cache).
                         {
                             var disabled = false;
                             object disabledValue;
@@ -76,6 +70,13 @@ namespace Raven.Server.Web.System
                             Task<DocumentDatabase> dbTask;
                             var online = ServerStore.DatabasesLandlord.ResourcesStoresCache.TryGetValue(dbName, out dbTask) && dbTask != null && dbTask.IsCompleted;
                             var db = online ? dbTask.Result : null;
+                            if (online == false)
+                            {
+                                //If we found the state of the database in the cache was can continue.
+                                //We won't find it if it is a new database or after a dirty shutdown.
+                                if(ServerStore.DatabaseInfoCache.WriteDatabaseInfo(writer, dbName))
+                                    continue;
+                            }
                             var indexingStatus = dbTask != null && dbTask.IsCompleted ? dbTask.Result.IndexStore.Status.ToString() : null;
                             var size = new Size(GetTotalSize(db));
                             var backupInfo = GetBackupInfo(db);
@@ -95,7 +96,7 @@ namespace Raven.Server.Web.System
                                 [nameof(ResourceInfo.Alerts)] = online ? db.Alerts.GetAlertCount() : 0,
                                 [nameof(ResourceInfo.UpTime)] = online ? GetUptime(db).ToString() : null,
                                 [nameof(ResourceInfo.BackupInfo)] = backupInfo,
-                                [nameof(DatabaseInfo.DocumentsCount)] = online ? GetNumberOfDocuments(db) : 0,
+                                [nameof(DatabaseInfo.DocumentsCount)] = online ? db.DocumentsStorage.GetNumberOfDocuments() : 0,
                                 [nameof(DatabaseInfo.IndexesCount)] = online ? db.IndexStore.GetIndexes().Count() : 0,
                                 [nameof(DatabaseInfo.RejectClients)] = false, //TODO: implement me!
                                 [nameof(DatabaseInfo.IndexingStatus)] = indexingStatus
@@ -137,16 +138,6 @@ namespace Raven.Server.Web.System
         {
             return DateTime.UtcNow - db.StartTime;
         }
-
-        private long GetNumberOfDocuments(DocumentDatabase db)
-        {
-            DocumentsOperationContext context;
-            using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-            using (var tx = context.OpenReadTransaction())
-                return db.DocumentsStorage.GetNumberOfDocuments(context);
-        }
-
-
 
         private long GetTotalSize(DocumentDatabase db)
         {
