@@ -228,13 +228,13 @@ namespace Raven.Server.Documents.PeriodicExport
 
                         var now = SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture);
 
-                        if (_status.LastFullExportFolder == null ||
+                        if (_status.LastFullExportDirectory == null ||
                             IsDirectoryExistsOrContainsFiles() == false ||
                             fullExport)
                         {
                             fullExport = true;
-                            _status.LastFullExportFolder = Path.Combine(exportDirectory, $"{now}.ravendb-{_database.Name}-backup");
-                            Directory.CreateDirectory(_status.LastFullExportFolder);
+                            _status.LastFullExportDirectory = Path.Combine(exportDirectory, $"{now}.ravendb-{_database.Name}-backup");
+                            Directory.CreateDirectory(_status.LastFullExportDirectory);
                         }
 
                         if (_logger.IsInfoEnabled)
@@ -263,14 +263,14 @@ namespace Raven.Server.Documents.PeriodicExport
                         {
                             // create filename for full export
                             fileName = $"{now}.ravendb-full-export";
-                            exportFilePath = Path.Combine(_status.LastFullExportFolder, fileName);
+                            exportFilePath = Path.Combine(_status.LastFullExportDirectory, fileName);
                             if (File.Exists(exportFilePath))
                             {
                                 var counter = 1;
                                 while (true)
                                 {
                                     fileName = $"{now} - {counter}.ravendb-full-export";
-                                    exportFilePath = Path.Combine(_status.LastFullExportFolder, fileName);
+                                    exportFilePath = Path.Combine(_status.LastFullExportDirectory, fileName);
 
                                     if (File.Exists(exportFilePath) == false)
                                         break;
@@ -282,14 +282,14 @@ namespace Raven.Server.Documents.PeriodicExport
                         {
                             // create filename for incremental export
                             fileName = $"{now}-0.ravendb-incremental-export";
-                            exportFilePath = Path.Combine(_status.LastFullExportFolder, fileName);
+                            exportFilePath = Path.Combine(_status.LastFullExportDirectory, fileName);
                             if (File.Exists(exportFilePath))
                             {
                                 var counter = 1;
                                 while (true)
                                 {
                                     fileName = $"{now}-{counter}.ravendb-incremental-export";
-                                    exportFilePath = Path.Combine(_status.LastFullExportFolder, fileName);
+                                    exportFilePath = Path.Combine(_status.LastFullExportDirectory, fileName);
 
                                     if (File.Exists(exportFilePath) == false)
                                         break;
@@ -300,7 +300,7 @@ namespace Raven.Server.Documents.PeriodicExport
                             dataExporter.StartDocsEtag = _status.LastDocsEtag;
                             if (dataExporter.StartDocsEtag == null)
                             {
-                                IncrementalExport.ReadLastEtagsFromFile(_status.LastFullExportFolder, context, dataExporter);
+                                IncrementalExport.ReadLastEtagsFromFile(_status.LastFullExportDirectory, context, dataExporter);
                             }
                         }
 
@@ -374,10 +374,10 @@ namespace Raven.Server.Documents.PeriodicExport
 
         public bool IsDirectoryExistsOrContainsFiles()
         {
-            if (Directory.Exists(_status.LastFullExportFolder) == false)
+            if (Directory.Exists(_status.LastFullExportDirectory) == false)
                 return false;
 
-            return Directory.GetFiles(_status.LastFullExportFolder).Length != 0;
+            return Directory.GetFiles(_status.LastFullExportDirectory).Length != 0;
         }
 
         private void WriteStatus()
@@ -394,6 +394,7 @@ namespace Raven.Server.Documents.PeriodicExport
                     ["LastDocsEtag"] = _status.LastDocsEtag,
                     ["LastExportAt"] = _status.LastExportAt.GetDefaultRavenFormat(),
                     ["LastFullExportAt"] = _status.LastFullExportAt.GetDefaultRavenFormat(),
+                    ["LastFullExportDirectory"] = _status.LastFullExportDirectory
                 };
                 var readerObject = context.ReadObject(status, Constants.PeriodicExport.StatusDocumentKey, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                 var putResult = _database.DocumentsStorage.Put(context, Constants.PeriodicExport.StatusDocumentKey, null, readerObject);
