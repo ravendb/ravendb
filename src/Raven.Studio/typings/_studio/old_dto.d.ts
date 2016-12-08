@@ -212,10 +212,10 @@ interface apiKeyDto extends documentDto {
 }
 
 interface serverBuildVersionDto {
-    Version: string;
-    BuildNumber: number;
-    BuildType: buildType;
-    PublishedAt: string;
+    BuildVersion: number;
+    ProductVersion: string;
+    CommitHash: string;
+    FullVersion: string;
 }
 
 interface latestServerBuildVersionDto {

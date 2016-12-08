@@ -39,7 +39,7 @@ namespace Raven.Server.Commercial
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue(GetType())
+            return new DynamicJsonValue
             {
                 [nameof(FirstServerStartDate)] = FirstServerStartDate,
                 [nameof(Error)] = Error,

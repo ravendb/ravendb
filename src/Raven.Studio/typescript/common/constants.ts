@@ -1,11 +1,3 @@
-const enum buildType {
-    Alpha = 1,
-    Beta = 2,
-    Rc = 3,
-    Stable = 4,
-    Patch = 5
-}
-
 const enum viewType {
     Documents = 0,
     Counters = 1,
