@@ -88,5 +88,10 @@ namespace Raven.Server.Routing
         {
             return _request;
         }
+
+        public override string ToString()
+        {
+            return $"{nameof(Method)}: {Method}, {nameof(Path)}: {Path}, {nameof(NoAuthorizationRequired)}: {NoAuthorizationRequired}";
+        }
     }
 }

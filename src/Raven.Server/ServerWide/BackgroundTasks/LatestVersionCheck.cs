@@ -106,7 +106,7 @@ namespace Raven.Server.ServerWide.BackgroundTasks
         }
         public void Dispose()
         {
-            _latestVersionCheckTimer.Dispose();
+            _latestVersionCheckTimer?.Dispose();
         }
 
         public class VersionInfo
