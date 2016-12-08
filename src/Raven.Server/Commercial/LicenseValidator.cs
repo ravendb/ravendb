@@ -49,6 +49,9 @@ namespace Raven.Server.Commercial
 
         public static Dictionary<string, object> Validate(License licenseKey, RSAParameters rsAParameters)
         {
+            if (licenseKey.Keys.Count != 2)
+                throw new InvalidDataException("Wrong number of keys");
+
             var result = new Dictionary<string, object>();
             using (var ms = new MemoryStream())
             using (var br = new BinaryReader(ms))
