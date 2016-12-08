@@ -16,8 +16,6 @@ using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.Documents.SqlReplication;
 using Raven.Server.Documents.PeriodicExport;
-using Raven.Server.Smuggler.Documents.Data;
-using Raven.Server.Web.Operations;
 using Sparrow.Json;
 using TypeScripter;
 using TypeScripter.TypeScript;

@@ -70,7 +70,7 @@ class shell extends viewModelBase {
     static clusterMode = ko.observable<boolean>(false); //TODO: extract from shell
     isInCluster = ko.computed(() => shell.clusterMode()); //TODO: extract from shell
 
-    serverBuildVersion = ko.observable<serverBuildVersionDto>();
+    static serverBuildVersion = ko.observable<serverBuildVersionDto>();
     static serverMainVersion = ko.observable<number>(4);
     static serverMinorVersion = ko.observable<number>(0);
     clientBuildVersion = ko.observable<clientBuildVersionDto>();
@@ -122,7 +122,7 @@ class shell extends viewModelBase {
         this.clientBuildVersion.subscribe(v =>
             viewModelBase.clientVersion(v.Version));
 
-        this.serverBuildVersion.subscribe(buildVersionDto => {
+        shell.serverBuildVersion.subscribe(buildVersionDto => {
             this.initAnalytics({ SendUsageStats: true }, [ buildVersionDto ]);
         });
     }
@@ -331,9 +331,9 @@ class shell extends viewModelBase {
         new getServerBuildVersionCommand()
             .execute()
             .done((serverBuildResult: serverBuildVersionDto) => {
-                this.serverBuildVersion(serverBuildResult);
+                shell.serverBuildVersion(serverBuildResult);
 
-                var currentBuildVersion = serverBuildResult.BuildNumber;
+                var currentBuildVersion = serverBuildResult.BuildVersion;
                 if (currentBuildVersion !== DEV_BUILD_NUMBER) {
                     shell.serverMainVersion(Math.floor(currentBuildVersion / 10000));
                 }
@@ -439,14 +439,14 @@ class shell extends viewModelBase {
     }
 
     private configureAnalytics(track: boolean, [buildVersionResult]: [serverBuildVersionDto]) {
-        let currentBuildVersion = buildVersionResult.BuildNumber;
+        let currentBuildVersion = buildVersionResult.BuildVersion;
         let shouldTrack = track && currentBuildVersion !== DEV_BUILD_NUMBER;
         if (currentBuildVersion !== DEV_BUILD_NUMBER) {
             shell.serverMainVersion(Math.floor(currentBuildVersion / 10000));
         } 
 
-        var env = license.licenseStatus() && license.licenseStatus().LicenseType === "Commercial" ? "prod" : "dev";
-        var version = buildVersionResult.Version;
+        const env = license.licenseStatus() && license.licenseStatus().LicenseType === "Commercial" ? "prod" : "dev";
+        const version = buildVersionResult.FullVersion;
         eventsCollector.default.initialize(
             shell.serverMainVersion() + "." + shell.serverMinorVersion(), currentBuildVersion, env, version, shouldTrack);
     }
