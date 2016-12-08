@@ -13,8 +13,9 @@ import eventsCollector = require("common/eventsCollector");
 
 class globalConfigCustomFunctions extends viewModelBase {
 
+    /* TODO
     developerLicense = globalConfig.developerLicense;
-    canUseGlobalConfigurations = globalConfig.canUseGlobalConfigurations;
+    canUseGlobalConfigurations = globalConfig.canUseGlobalConfigurations;*/
     activated = ko.observable<boolean>(false);
 
     docEditor: AceAjax.Editor;

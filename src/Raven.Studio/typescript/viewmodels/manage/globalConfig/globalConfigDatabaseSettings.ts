@@ -12,8 +12,9 @@ import eventsCollector = require("common/eventsCollector");
 class globalConfigDatabaseSettings extends viewModelBase {
     activated = ko.observable<boolean>(false);
 
+    /* TODO
     developerLicense = globalConfig.developerLicense;
-    canUseGlobalConfigurations = globalConfig.canUseGlobalConfigurations;
+    canUseGlobalConfigurations = globalConfig.canUseGlobalConfigurations;*/
     databaseSettings = ko.observableArray<databaseSetting>([]);
     isSaveEnabled: KnockoutComputed<boolean>;
     settingsAccess = new settingsAccessAuthorizer();

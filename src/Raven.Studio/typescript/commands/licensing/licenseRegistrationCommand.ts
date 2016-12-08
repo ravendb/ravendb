@@ -1,16 +1,16 @@
 import commandBase = require("commands/commandBase");
+import endpoints = require("endpoints");
 
 class licenseRegistrationCommand extends commandBase {
 
-    //TODO: use server type!
-    constructor(private registrationData: any) {
+    constructor(private registrationData: Raven.Server.Commercial.RegisteredUserInfo) {
         super();
     }
 
     execute(): JQueryPromise<void> {
-        //TODO: use endpoints
+        const url = endpoints.global.license.licenseRegistration;
 
-        return this.post("/license/registration", JSON.stringify(this.registrationData), null, { dataType: undefined })
+        return this.post(url, JSON.stringify(this.registrationData), null, { dataType: undefined })
             .fail((response: JQueryXHR) => {
                 this.reportError("Failed to send registration information", response.responseText, response.statusText);
             });

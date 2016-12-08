@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Server.Commercial;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 
 namespace Raven.Server.Web.Studio
@@ -14,21 +15,28 @@ namespace Raven.Server.Web.Studio
         {
             HttpContext.Response.ContentType = "application/json";
             HttpContext.Response.StatusCode = 200;
+
             return HttpContext.Response.WriteAsync(JsonConvert.SerializeObject(Commercial.LicenseHandler.GetLicenseStatus()));
         }
 
         [RavenAction("/license/registration", "POST")]
         public async Task Register()
         {
-            var name = GetStringQueryString("name");
-            var email = GetStringQueryString("email");
-            var company = GetStringQueryString("company", false);
-            await Commercial.LicenseHandler.Register(new RegisteredUserInfo
+            RegisteredUserInfo userInfo = null;
+            var serializer = new JsonSerializer();
+
+            //TODO: use blittable
+            using (var sr = new StreamReader(RequestBodyStream()))
+            using (var jsonTextReader = new JsonTextReader(sr))
             {
-                Name = name,
-                Email = email,
-                Company = company
-            }).ConfigureAwait(false);
+                userInfo = serializer.Deserialize<RegisteredUserInfo>(jsonTextReader); 
+                if (userInfo == null)
+                    throw new InvalidDataException("Unable to deserialize user information!");
+            }
+
+            //TODO: check if name and e-mail is provided, company is optional
+
+            await Commercial.LicenseHandler.Register(userInfo).ConfigureAwait(false);
 
             HttpContext.Response.StatusCode = 200;
         }

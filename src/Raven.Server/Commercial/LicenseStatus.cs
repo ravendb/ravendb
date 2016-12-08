@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Converters;
 
 namespace Raven.Server.Commercial
 {
@@ -17,6 +19,7 @@ namespace Raven.Server.Commercial
 
         public string Status => Attributes == null ? "AGPL - Open Source" : "Commercial";
 
+        [JsonConverter(typeof(StringEnumConverter))] //TODO: delete this and use blittable for serialization! - temporary fix
         public LicenseType LicenseType
         {
             get

@@ -28,9 +28,9 @@ class cluster extends viewModelBase {
     topology = ko.observable<topology>();
     systemDatabaseId = ko.observable<string>();
     serverUrl = ko.observable<string>(); 
-
+    /* TODO
     canCreateCluster = ko.computed(() => !license.licenseStatus().IsCommercial || license.licenseStatus().Attributes.clustering === "true");
-    developerLicense = ko.computed(() => !license.licenseStatus().IsCommercial);
+    developerLicense = ko.computed(() => !license.licenseStatus().IsCommercial);*/
     clusterMode: KnockoutComputed<boolean>;
 
     constructor() {

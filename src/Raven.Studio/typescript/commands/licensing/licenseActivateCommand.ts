@@ -1,20 +1,16 @@
 import commandBase = require("commands/commandBase");
+import endpoints = require("endpoints");
 
 class licenseActivateCommand extends commandBase {
 
-    //TODO: use server type!
-    constructor(private licensePayload: string) {
+    constructor(private licensePayload: Raven.Server.Commercial.License) {
         super();
     }
 
     execute(): JQueryPromise<void> {
-        //TODO: use endpoints
+        const url = endpoints.global.license.licenseActivate;
 
-        const args = {
-            license: this.licensePayload
-        };
-
-        return this.post("/license/activate", JSON.stringify(args), null, { dataType: undefined })
+        return this.post(url, JSON.stringify(this.licensePayload), null, { dataType: undefined })
             .fail((response: JQueryXHR) => {
                 this.reportError("Failed to activate license", response.responseText, response.statusText);
             });
