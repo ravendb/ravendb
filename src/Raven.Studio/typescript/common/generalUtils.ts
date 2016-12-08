@@ -22,8 +22,8 @@ class genUtils {
 
     static formatDuration(duration: moment.Duration) {
         let timeStr = "";
-        if (duration.asHours() > 0) {
-            timeStr = duration.asHours() + " h ";
+        if (duration.asHours() >= 1) {
+            timeStr = Math.floor(duration.asHours()) + " h ";
         }
         if (duration.minutes() > 0) {
             timeStr += duration.minutes() + " m ";
@@ -34,7 +34,10 @@ class genUtils {
         if (duration.milliseconds() > 0) {
             const millis = duration.milliseconds();
 
-            timeStr = Math.floor(millis * 100) / 100 + " ms ";
+            const atLeastOneSecond = duration.asSeconds() >= 1;
+
+            timeStr += atLeastOneSecond ? Math.floor(millis) : Math.floor(millis * 100) / 100;
+            timeStr += " ms";
         }
         return timeStr;
     }

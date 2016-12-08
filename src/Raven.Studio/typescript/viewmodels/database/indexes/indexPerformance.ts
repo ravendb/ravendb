@@ -105,8 +105,6 @@ class metrics extends viewModelBase {
     static readonly colors = {
         axis: "#546175",
         gaps: "#ca1c59",
-        brushFill: "rgba(202, 28, 89, 0.25)",
-        brushStoke: "#ca1c59",
         brushChartColor: "#008cc9",
         trackBackground: "#2c343a",
         trackNameBg: "rgba(57, 67, 79, 0.8)",
@@ -350,7 +348,6 @@ class metrics extends viewModelBase {
 
         this.xBrushTimeScale = this.gapFinder.createScale(this.totalWidth, 0);
 
-        this.drawBrushGaps(context);
         this.drawXaxis(context, this.xBrushTimeScale, metrics.brushSectionHeight);
 
         context.strokeStyle = metrics.colors.axis;
@@ -367,6 +364,8 @@ class metrics extends viewModelBase {
             context.fillRect(x1, 18, x2 - x1, 10);
             context.strokeRect(x1, 18, x2 - x1, 10);
         }
+
+        this.drawBrushGaps(context);
 
         this.prepareBrush();
     }
@@ -468,9 +467,10 @@ class metrics extends viewModelBase {
         const ticks = d3.range(initialOffset, this.totalWidth - step, step)
             .map(y => scale.invert(y));
 
-        context.beginPath();
         context.strokeStyle = metrics.colors.axis;
         context.fillStyle = metrics.colors.axis;
+
+        context.beginPath();
         context.setLineDash([4, 2]);
 
         ticks.forEach((x, i) => {
@@ -478,6 +478,8 @@ class metrics extends viewModelBase {
             context.lineTo(initialOffset + (i * step) + 0.5, height);
         });
         context.stroke();
+
+        context.beginPath();
 
         context.textAlign = "left";
         context.textBaseline = "top";
