@@ -416,7 +416,8 @@ namespace NewClientTests
         {
             var command = new GetDocumentCommand
             {
-                Ids = ids
+                Ids = ids,
+                Context = session.Advanced.Context
             };
             if (session.Advanced.RequestExecuter == null)
                 Console.WriteLine();

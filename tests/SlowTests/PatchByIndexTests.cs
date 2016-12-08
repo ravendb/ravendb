@@ -103,7 +103,8 @@ namespace NewClientTests.NewClient.FastTests.Patching
 
                 var getDocumentCommand = new GetDocumentCommand
                 {
-                    Ids = new[] { item1.Id }
+                    Ids = new[] { item1.Id },
+                    Context = context
                 };
                 store.GetRequestExecuter(store.DefaultDatabase).Execute(getDocumentCommand, context);
 
@@ -123,7 +124,8 @@ namespace NewClientTests.NewClient.FastTests.Patching
 
                 getDocumentCommand = new GetDocumentCommand
                 {
-                    Ids = new[] { item2.Id }
+                    Ids = new[] { item2.Id },
+                    Context = context
                 };
                 store.GetRequestExecuter(store.DefaultDatabase).Execute(getDocumentCommand, context);
 
@@ -189,7 +191,8 @@ namespace NewClientTests.NewClient.FastTests.Patching
 
                 var getDocumentCommand = new GetDocumentCommand
                 {
-                    Ids = new[] { "Item/1", "Item/2" }
+                    Ids = new[] { "Item/1", "Item/2" },
+                    Context = context
                 };
                 store.GetRequestExecuter(store.DefaultDatabase).Execute(getDocumentCommand, context);
 
@@ -198,7 +201,8 @@ namespace NewClientTests.NewClient.FastTests.Patching
 
                 getDocumentCommand = new GetDocumentCommand
                 {
-                    Ids = new[] { "NewItem/3" }
+                    Ids = new[] { "NewItem/3" },
+                    Context = context
                 };
                 store.GetRequestExecuter(store.DefaultDatabase).Execute(getDocumentCommand, context);
 
