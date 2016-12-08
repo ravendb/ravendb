@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using Sparrow.Logging;
@@ -14,34 +15,26 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
     public class IndexSearcherHolder
     {
         private readonly Func<IndexSearcher> _recreateSearcher;
+        private readonly DocumentDatabase _documentDatabase;
 
         private readonly Logger _logger;
-        private readonly LinkedList<IndexSearcherHoldingState> _states = new LinkedList<IndexSearcherHoldingState>();
-        private readonly ReaderWriterLockSlim _lock = new ReaderWriterLockSlim();
+        private ImmutableList<IndexSearcherHoldingState> _states = ImmutableList<IndexSearcherHoldingState>.Empty;
 
         public IndexSearcherHolder(Func<IndexSearcher> recreateSearcher, DocumentDatabase documentDatabase)
         {
             _recreateSearcher = recreateSearcher;
+            _documentDatabase = documentDatabase;
             _logger = LoggingSource.Instance.GetLogger<IndexSearcherHolder>(documentDatabase.Name);
         }
 
         public void SetIndexSearcher(Transaction asOfTx)
         {
             var oldestTx = asOfTx.LowLevelTransaction.Environment.ActiveTransactions.OldestTransaction;
-            var current = new IndexSearcherHoldingState(asOfTx, _recreateSearcher);
+            var state = new IndexSearcherHoldingState(asOfTx, _recreateSearcher, _documentDatabase.Name);
 
-            _lock.EnterWriteLock();
-            try
-            {
-                var newNode = _states.AddFirst(current);
-                current.RemoveOnDispose = new RemoveState(this, newNode);
+            _states = _states.Insert(0, state);
 
-                Cleanup(oldestTx);
-            }
-            finally
-            {
-                _lock.ExitWriteLock();
-            }
+            Cleanup(oldestTx);
         }
         
         public IDisposable GetSearcher(Transaction tx, out IndexSearcher searcher)
@@ -65,134 +58,73 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             var txId = tx.LowLevelTransaction.Id;
 
-            _lock.EnterReadLock();
-            try
+            foreach (var state in _states)
             {
-                var current = _states.First;
-
-                while (current != null)
+                if (state.AsOfTxId > txId)
                 {
-                    var state = current.Value;
-
-                    if (state.AsOfTxId > txId)
-                    {
-                        current = current.Next;
-                        continue;
-                    }
-
-                    Interlocked.Increment(ref state.Usage);
-
-                    return state;
+                    continue;
                 }
 
-                throw new InvalidOperationException($"Could not get an index searcher state holder for transaction {txId}");
+                Interlocked.Increment(ref state.Usage);
+
+                return state;
             }
-            finally
-            {
-                _lock.ExitReadLock();
-            }
+
+            throw new InvalidOperationException($"Could not get an index searcher state holder for transaction {txId}");
         }
 
         public void Cleanup(long oldestTx)
         {
-            if (_states.Count == 0)
+            // note: cleanup cannot be called concurrently
+
+            if (_states.Count == 1)
                 return;
 
-            var lockTaken = false;
-            if (_lock.IsWriteLockHeld == false)
+            if (oldestTx == 0) // no active transaction let's dispose and remove all except the latest one
             {
-                _lock.EnterWriteLock();
-                lockTaken = true;
-            }
-
-            try
-            {
-                if (oldestTx == 0) // no active transaction let's dispose and remove all except the latest one
+                for (var i = 1; i < _states.Count - 1; i++)
                 {
-                    var toRemove = _states.First.Next;
+                    var state = _states[i];
 
-                    while (toRemove != null)
+                    using (state)
                     {
-                        using (toRemove.Value)
-                        {
-                            toRemove.Value.MarkForDisposal();
-                        }
-
-                        toRemove = toRemove.Next;
+                        state.MarkForDisposal();
                     }
-
-                    return;
                 }
 
-                // let's mark states which aren't be necessary as ready for disposal
+                _states = _states.RemoveRange(1, _states.Count - 1);
 
-                var latest = _states.First;
-                var item = _states.Last;
-
-                while (item != null && item != latest)
-                {
-                    var existingState = item.Value;
-
-                    if (existingState.AsOfTxId >= oldestTx)
-                        break;
-
-                    var previous = item.Previous;
-
-                    if (previous.Value.AsOfTxId > oldestTx)
-                        break;
-
-                    Interlocked.Increment(ref existingState.Usage);
-
-                    using (existingState)
-                    {
-                        existingState.MarkForDisposal();
-                    }
-
-                    item = previous;
-                }
+                return;
             }
-            finally
+            
+            // let's mark states which are no longer needed as ready for disposal
+
+            for (var i = _states.Count - 1; i >= 1; i--)
             {
-                if (lockTaken)
-                    _lock.ExitWriteLock();
-            }
-        }
+                var state = _states[i];
 
-        internal class RemoveState : IDisposable
-        {
-            private readonly IndexSearcherHolder _holder;
-            private readonly LinkedListNode<IndexSearcherHoldingState> _node;
+                if (state.AsOfTxId >= oldestTx)
+                    break;
 
-            public RemoveState(IndexSearcherHolder holder, LinkedListNode<IndexSearcherHoldingState> node)
-            {
-                _holder = holder;
-                _node = node;
-            }
+                var nextState = _states[i - 1];
 
-            public void Dispose()
-            {
-                var lockTaken = false;
+                if (nextState.AsOfTxId > oldestTx)
+                    break;
 
-                if (_holder._lock.IsWriteLockHeld == false)
+                Interlocked.Increment(ref state.Usage);
+
+                using (state)
                 {
-                    lockTaken = true;
-                    _holder._lock.EnterWriteLock();
+                    state.MarkForDisposal();
                 }
 
-                try
-                {
-                    _holder._states.Remove(_node);
-                }
-                finally
-                {
-                    if (lockTaken)
-                        _holder._lock.ExitWriteLock();
-                }
+                _states = _states.Remove(state);
             }
         }
 
         internal class IndexSearcherHoldingState : IDisposable
         {
+            private readonly Logger _logger;
             public readonly Lazy<IndexSearcher> IndexSearcher;
 
             public volatile bool ShouldDispose;
@@ -200,14 +132,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             public readonly long AsOfTxId;
             private readonly ConcurrentDictionary<Tuple<int, uint>, StringCollectionValue> _docsCache = new ConcurrentDictionary<Tuple<int, uint>, StringCollectionValue>();
 
-            public IndexSearcherHoldingState(Transaction tx, Func<IndexSearcher> recreateSearcher)
+            public IndexSearcherHoldingState(Transaction tx, Func<IndexSearcher> recreateSearcher, string dbName)
             {
+                _logger = LoggingSource.Instance.GetLogger<IndexSearcherHolder>(dbName);
                 IndexSearcher = new Lazy<IndexSearcher>(recreateSearcher, LazyThreadSafetyMode.ExecutionAndPublication);
                 AsOfTxId = tx.LowLevelTransaction.Id;
             }
 
-            public LinkedListNode<IndexSearcherHoldingState> Node;
-            public RemoveState RemoveOnDispose { get; set; }
+            ~IndexSearcherHoldingState()
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"IndexSearcherHoldingState wasn't properly disposed. Usage count: {Usage}, tx id: {AsOfTxId}, should dispose: {ShouldDispose}");
+
+                Dispose();
+            }
 
             public void MarkForDisposal()
             {
@@ -218,9 +156,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 if (Interlocked.Decrement(ref Usage) > 0)
                     return;
+
                 if (ShouldDispose == false)
                     return;
-                DisposeRudely();
+
+                if (IndexSearcher.IsValueCreated)
+                {
+                    using (IndexSearcher.Value)
+                    using (IndexSearcher.Value.IndexReader) { }
+                }
+
+                GC.SuppressFinalize(this);
             }
 
             public StringCollectionValue GetFieldsValues(int docId, uint fieldsHash, string[] fields, JsonOperationContext context)
@@ -239,18 +185,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                                       where fld.StringValue != null
                                                       select fld.StringValue).ToList(), context);
                 });
-
-            }
-
-            private void DisposeRudely()
-            {
-                if (IndexSearcher.IsValueCreated)
-                {
-                    using (IndexSearcher.Value)
-                    using (IndexSearcher.Value.IndexReader) { }
-                }
-
-                RemoveOnDispose.Dispose();
             }
         }
 
