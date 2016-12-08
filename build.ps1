@@ -9,7 +9,6 @@ $DEV_BUILD_NUMBER = 40
 . '.\scripts\package.ps1'
 . '.\scripts\buildProjects.ps1'
 . '.\scripts\getScriptDirectory.ps1'
-. '.\scripts\copyStudioPkg.ps1'
 . '.\scripts\copyDocs.ps1'
 . '.\scripts\env.ps1'
 . '.\scripts\updateSourceWithBuildInfo.ps1'
@@ -27,17 +26,20 @@ $version = "4.0.0-$versionSuffix"
 $PROJECT_DIR = Get-ScriptDirectory
 $RELEASE_DIR = [io.path]::combine($PROJECT_DIR, "artifacts")
 $OUT_DIR = [io.path]::combine($PROJECT_DIR, "artifacts")
-$CLIENT_OUT_DIR = [io.path]::combine($RELEASE_DIR, "Client")
-$NEW_CLIENT_OUT_DIR = [io.path]::combine($RELEASE_DIR, "NewClient")
-$BUILD_DIR = [io.path]::combine($PROJECT_DIR, "artifacts", "build")
-$BUILD_TOOLS_DIR = [io.path]::combine($PROJECT_DIR, "build", "tools");
-$SERVER_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Server")
+
 $CLIENT_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Client")
+$CLIENT_OUT_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Client", "bin", "Release")
+
 $NEW_CLIENT_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.NewClient")
+$NEW_CLIENT_OUT_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.NewClient", "bin", "Release")
+
+$SERVER_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Server")
+
 $SPARROW_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Sparrow")
-$STUDIO_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Studio")
 $TYPINGS_GENERATOR_SRC_DIR = [io.path]::combine($PROJECT_DIR, "tools", "TypingsGenerator")
-$STUDIO_BUILD_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Studio", "build");
+
+$STUDIO_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Studio")
+$STUDIO_OUT_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Studio", "build")
 
 $SPECS = @(
     @{
@@ -49,13 +51,13 @@ $SPECS = @(
     @{
        "Name" = "ubuntu.14.04-x64";
        "Runtime" = "ubuntu.14.04-x64";
-       "PkgType" = "tar";
+       "PkgType" = "tar.bz2";
        "IsUnix" = $True;
     },
     @{
        "Name" = "ubuntu.16.04-x64";
        "Runtime" = "ubuntu.16.04-x64";
-       "PkgType" = "tar";
+       "PkgType" = "tar.bz2";
        "IsUnix" = $True;
     },
     @{
@@ -68,7 +70,7 @@ $SPECS = @(
 
 CleanBuildDirectories $RELEASE_DIR
 
-DownloadDependencies
+#DownloadDependencies
 
 UpdateSourceWithBuildInfo $PROJECT_DIR $buildNumber $version
 
@@ -80,19 +82,20 @@ CreateNugetPackage $NEW_CLIENT_SRC_DIR $RELEASE_DIR $versionSuffix
 CreateNugetPackage $CLIENT_SRC_DIR $RELEASE_DIR $versionSuffix
 
 BuildTypingsGenerator $TYPINGS_GENERATOR_SRC_DIR
-BuildStudio $STUDIO_SRC_DIR $PROJECT_DIR $version
+#BuildStudio $STUDIO_SRC_DIR $PROJECT_DIR $version
 
 Foreach ($spec in $SPECS) {
     $runtime = $spec.Runtime
     $specOutDir = [io.path]::combine($OUT_DIR, $spec.Name)
     BuildServer $SERVER_SRC_DIR $specOutDir $runtime $spec.Name
-    CopyStudioPackage $STUDIO_BUILD_DIR $specOutDir
+    
 
     $specOutDirs = @{
         "Main" = $specOutDir;
         "Client" = $CLIENT_OUT_DIR;
         "NewClient" = $NEW_CLIENT_OUT_DIR;
         "Server" = $([io.path]::combine($specOutDir, "Server"));
+        "Studio" = $STUDIO_OUT_DIR
     }
 
     CreateRavenPackage $PROJECT_DIR $RELEASE_DIR $specOutDirs $spec $version

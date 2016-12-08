@@ -1,10 +1,14 @@
 $NETSTANDARD13 = 'netstandard1.3'
 
+$SUPPORTED_CLIENT_FRAMEWORKS = @( 'netstandard1.6' ) 
+
 function CreateArchiveFromDir ( $targetFilename, $dir, $spec ) {
     if ($spec.PkgType -eq "zip") {
         ZipFilesFromDir $targetFilename $dir
+    } elseif ($spec.PkgType -eq "tar.bz2") {
+        TarBzFilesFromDir $targetFilename $dir
     } elseif ($spec.PkgType -eq "tar") {
-        TarGzFilesFromDir $targetFilename $dir
+        TarFilesFromDir $targetFilename $dir
     } else {
         throw "Unknown archive method for $targetFilename"
     }
@@ -17,7 +21,7 @@ function ZipFilesFromDir( $targetFilename, $sourceDir )
     Compress-Archive -Path "$toZipGlob" -DestinationPath "$zipFile"
 }
 
-function TarGzFilesFromDir ( $targetFilename, $sourceDir ) {
+function TarBzFilesFromDir ( $targetFilename, $sourceDir ) {
     $glob = [io.path]::combine($sourceDir, '*')
     if ($(Get-Command "tar" -ErrorAction SilentlyContinue))
     {
@@ -32,6 +36,22 @@ function TarGzFilesFromDir ( $targetFilename, $sourceDir ) {
         & "$7za" a -tbzip2 "$targetFilename.tar.bz2" "$targetFilename.tar"
         CheckLastExitCode
         rm "$targetFilename.tar"
+        CheckLastExitCode
+    }
+}
+
+function TarFilesFromDir ( $targetFilename, $sourceDir ) {
+    $glob = [io.path]::combine($sourceDir, '*')
+    if ($(Get-Command "tar" -ErrorAction SilentlyContinue))
+    {
+        & tar -C $sourceDir -cjvf "$targetFilename.tar.bz2" .
+        CheckLastExitCode
+    }
+    else
+    {
+        $7za = [io.path]::combine("scripts", "assets", "bin", "7za.exe")
+        & "$7za" a -ttar "$targetFilename.tar" $glob
+        CheckLastExitCode
     }
 }
 
@@ -52,10 +72,12 @@ function GetRavenArchiveFileName ( $version, $spec ) {
 }
 
 function CreatePackageLayout ( $packageDir, $projectDir, $outDirs, $spec ) {
+    CopyStudioPackage $outDirs
     CopyLicenseFile $packageDir
     CopyAckFile $packageDir
     CreatePackageServerLayout $($outDirs.Server) $packageDir $projectDir $spec
     CreatePackageClientLayout $outDirs $packageDir $projectDir $spec
+    
     if ($spec.Name.Contains('raspberry-pi') -eq $False) {
         CopyClientReadMe $(Join-Path $packageDir -ChildPath 'Client')
     }
@@ -64,6 +86,13 @@ function CreatePackageLayout ( $packageDir, $projectDir, $outDirs, $spec ) {
         CopyDaemonScripts $projectDir $packageDir
         CopyLinuxScripts $projectDir $packageDir
     }
+}
+
+function CopyStudioPackage ( $outDirs ) {
+    $studioZipPath = [io.path]::combine($outDirs.Studio, "Raven.Studio.zip")
+    write-host "Copying Studio package from $studioZipPath to $outDirs.Server"
+    cp $studioZipPath $outDirs.Server
+    CheckLastExitCode
 }
 
 function CopyLinuxScripts ( $projectDir, $packageDir ) {
