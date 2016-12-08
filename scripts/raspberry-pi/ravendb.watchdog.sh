@@ -21,5 +21,5 @@ then
 fi
 echo "`date` : ravendb watchdog detected on PID=${RDB_PID} with exit code=${RDB_RC}. Restarting service..." >> ${LOGFILE}
 sudo /usr/sbin/service ravendbd restart
-echo "`date` : ravendb deamon restarted" >> ${LOGFILE}
+echo "`date` : ravendb daemon restarted" >> ${LOGFILE}
 exit $RDB_RC
