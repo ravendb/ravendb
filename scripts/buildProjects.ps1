@@ -11,38 +11,29 @@ function BuildServer ( $srcDir, $outDir, $runtime, $specName ) {
 
 function BuildClient ( $srcDir, $outDir, $specName ) {
     write-host "Building Client for $specName..."
-
-    & dotnet build --output $outDir `
-                --no-incremental `
-                --framework "netstandard1.3" `
+    & dotnet build --no-incremental `
                 --configuration "Release" $srcDir;
     CheckLastExitCode
 }
 
-function BuildNewClient ( $srcDir, $outDir, $specName ) {
+function BuildNewClient ( $srcDir, $specName ) {
     write-host "Building NewClient for $specName..."
-
-    & dotnet build --output $outDir `
-                --no-incremental `
-                --framework "netstandard1.3" `
+    & dotnet build --no-incremental `
                 --configuration "Release" $srcDir;
     CheckLastExitCode
 }
 
 function BuildTypingsGenerator ( $srcDir ) {
-    # build typings generator
     & dotnet build --no-incremental --configuration "Release" $srcDir;
     CheckLastExitCode
 }
 
 function BuildSparrow ( $srcDir ) {
-    # build sparrow
     & dotnet build --configuration "Release" $srcDir;
     CheckLastExitCode
 }
 
 function BuildStudio ( $srcDir, $projectDir, $version ) {
-    # build studio
     write-host "Building Studio..."
     cd $srcDir
 

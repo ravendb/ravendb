@@ -3,7 +3,7 @@ function SetTeamCityEnvironmentVariable ( $name, $value ) {
 }
 
 function SetVersionEnvironmentVariableInTeamCity($version) {
-    SetTeamCityEnvironmentVariable('env.informationalVersion', $version)
+    SetTeamCityEnvironmentVariable 'env.informationalVersion' $version
 }
 
 function GetBuildNumber () {

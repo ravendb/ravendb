@@ -3,6 +3,7 @@
 NODE_CMD=$(which node)
 DOTNET_CMD=$(which dotnet)
 POWERSHELL_CMD=$(which powershell)
+MONO_CMD=$(which mono)
 UBUNTU_CODENAME=$(lsb_release -c | cut -d ":" -f2 | sed 's/\t//g')
 UBUNTU_VERSION=$(lsb_release -r | cut -d ":" -f2 | sed 's/\t//g')
 
@@ -61,6 +62,16 @@ else
     else
     echo "Node $NODE_VERSION is installed."
     fi
+fi
+
+if [ -z "$MONO_CMD" ] ; then
+    echo "Mono not found. Installing..."
+    sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
+    echo "deb http://download.mono-project.com/repo/debian wheezy main" | sudo tee /etc/apt/sources.list.d/mono-xamarin.list
+    sudo apt-get update
+    sudo apt-get install -y mono-complete
+else 
+    echo "Mono is installed."
 fi
 
 echo "To build RavenDB run: powershell ./build.ps1"
