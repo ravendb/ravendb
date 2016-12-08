@@ -35,7 +35,8 @@ namespace Raven.NewClient.Client.Commands
             return new GetDocumentCommand
             {
                 Ids = _idsToCheckOnServer.ToArray(),
-                Includes = _includes
+                Includes = _includes,
+                Context = _session.Context
             };
         }
 

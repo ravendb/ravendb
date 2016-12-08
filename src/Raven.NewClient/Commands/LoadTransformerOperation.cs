@@ -39,7 +39,8 @@ namespace Raven.NewClient.Client.Commands
                 Ids = _idsToCheckOnServer.ToArray(),
                 Includes = _includes,
                 Transformer = _transformer,
-                TransformerParameters = _transformerParameters
+                TransformerParameters = _transformerParameters,
+                Context = _session.Context
             };
         }
 

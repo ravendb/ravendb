@@ -110,7 +110,8 @@ namespace Raven.NewClient.Client.Document
 
             var command = new GetDocumentCommand
             {
-                Ids = new[] { documentInfo.Id }
+                Ids = new[] { documentInfo.Id },
+                Context = this.Context
             };
             RequestExecuter.Execute(command, Context);
 

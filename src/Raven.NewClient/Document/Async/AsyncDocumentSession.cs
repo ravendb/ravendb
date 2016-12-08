@@ -57,7 +57,8 @@ namespace Raven.NewClient.Client.Document.Async
 
             var command = new GetDocumentCommand
             {
-                Ids = new[] { documentInfo.Id }
+                Ids = new[] { documentInfo.Id },
+                Context = this.Context
             };
             await RequestExecuter.ExecuteAsync(command, Context, token);
 
