@@ -5,7 +5,7 @@
     "allowUnsafe": true,
     "warningsAsErrors": true,
     "copyToOutput": {
-      "include": [ "../xunit.runner.json"]
+      "include": [ "../xunit.runner.json" ]
     }
   },
 
@@ -28,14 +28,14 @@
   },
 
   "dependencies": {
+    "dotnet-test-xunit": "2.2.0-preview2-build1029",
+    "Sparrow": "4.0.0-*",
+    "FastTests": "4.0.0-*",
     "Microsoft.NETCore.App": {
       "type": "platform",
       "version": "1.1.0"
     },
-    "dotnet-test-xunit": "2.2.0-preview2-build1029",
-    "FastTests": "4.0.0-*",
     "SlowTests": "4.0.0-*",
-    "Sparrow": "4.0.0-*",
     "Tests.Infrastructure": "1.0.0-*",
     "Voron": "4.0.0-*",
     "xunit": "2.2.0-beta4-build3444"
