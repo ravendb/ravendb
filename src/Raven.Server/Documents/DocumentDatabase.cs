@@ -59,7 +59,7 @@ namespace Raven.Server.Documents
             HugeDocuments = new HugeDocuments(configuration.Databases.MaxCollectionSizeHugeDocuments,
                 configuration.Databases.MaxWarnSizeHugeDocuments);
             ConfigurationStorage = new ConfigurationStorage(this, serverStore);
-            DatabaseInfoCache = serverStore.DatabaseInfoCache;
+            DatabaseInfoCache = serverStore?.DatabaseInfoCache;
         }
 
         public DatabaseInfoCache DatabaseInfoCache { get; set; }
@@ -203,7 +203,7 @@ namespace Raven.Server.Documents
         {
             //before we dispose of the database we take its latest info to be displayed in the studio
             var databaseInfo = GenerateDatabaseInfo();
-            DatabaseInfoCache.InsertDatabaseInfo(databaseInfo, Name);
+            DatabaseInfoCache?.InsertDatabaseInfo(databaseInfo, Name);
 
             _databaseShutdown.Cancel();
             // we'll wait for 1 minute to drain all the requests
@@ -352,7 +352,7 @@ namespace Raven.Server.Documents
             yield return new StorageEnvironmentWithType("Configuration", StorageEnvironmentWithType.StorageEnvironmentType.Configuration, ConfigurationStorage.Environment);
             foreach (var index in IndexStore.GetIndexes())
             {
-                var env = index._indexStorage.Environment();
+                var env = index._indexStorage?.Environment();
                 if (env != null)
                     yield return new StorageEnvironmentWithType(index.Name, StorageEnvironmentWithType.StorageEnvironmentType.Index, env);
             }
