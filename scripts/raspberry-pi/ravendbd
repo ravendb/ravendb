@@ -1,13 +1,13 @@
 #!/bin/bash
 
 ### BEGIN INIT INFO
-# Provides:          ravendb-deamon
+# Provides:          ravendb-daemon
 # Required-Start:    $local_fs
 # Required-Stop:     $local_fs
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
-# Short-Description: ravendb deamon
-# Description: ravendb deamon
+# Short-Description: ravendb daemon
+# Description: ravendb daemon
 ### END INIT INFO
 
 
@@ -20,7 +20,7 @@ function shutRavenGracefully(){
 	then
 		PID=$(ps -ef | grep corerun | grep Raven.Server.dll | awk '{print $2}')
 		printf "on $1 command found already running instance. killing it without resume"
-		sudo /sbin/runuser ubuntu -c "echo \"lockfile\" > /tmp/ravendb.${PID}.lockfile"
+		sudo /sbin/runuser RDB_USERNAME -c "echo \"lockfile\" > /tmp/ravendb.${PID}.lockfile"
 		ps -ef | grep corerun | grep Raven.Server.dll | awk '{print $2}' | xargs kill
 	fi
 }
@@ -32,7 +32,7 @@ start|restart|reload|force-reload)
 		rm -f /tmp/ravendb.*.lockfile
 	fi
 	shutRavenGracefully 
-	/sbin/runuser ubuntu -c 'RDB_RAVENDB_PATH/ravendb.watchdog.sh RDB_RAVENDB_PATH RDB_DOTNET_PATH' &
+	/sbin/runuser RDB_USERNAME -c 'RDB_RAVENDB_PATH/ravendb.watchdog.sh RDB_RAVENDB_PATH RDB_DOTNET_PATH' &
     ;;
 stop)
 	shutRavenGracefully

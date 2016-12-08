@@ -7,7 +7,7 @@ fi
 
 if [ -f ravendb.4.0/Server/Raven.Server.dll ]
 then
-	dotnet/corerun ravendb.4.0}/Raven.Server.dll \
+	dotnet/corerun ravendb.4.0/Server/Raven.Server.dll \
 		 --Raven/RunAsService=true \
 		 --Raven/ServerUrl=http://0.0.0.0:8080 \
 		 --Raven/LogsDirectory=Logs \

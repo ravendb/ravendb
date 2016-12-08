@@ -171,7 +171,7 @@ namespace Raven.Server.Documents.Replication
                                             [nameof(ReplicationMessageReply.MessageType)] = messageType,
                                             [nameof(ReplicationMessageReply.LastEtagAccepted)] = -1,
                                             [nameof(ReplicationMessageReply.LastIndexTransformerEtagAccepted)] = -1,
-                                            [nameof(ReplicationMessageReply.Error)] = e.ToString()
+                                            [nameof(ReplicationMessageReply.Exception)] = e.ToString()
                                         });
 
                                         exceptionLogged = true;
@@ -708,6 +708,7 @@ namespace Raven.Server.Documents.Replication
             var merged = ReplicationUtils.MergeVectors(conflictingVector, _tempReplicatedChangeVector);
             _documentsContext.DocumentDatabase.DocumentsStorage.DeleteConflictsFor(_documentsContext, doc.Id);
             _database.DocumentsStorage.Put(_documentsContext, doc.Id, null, json, merged);
+            Interlocked.Decrement(ref _database.DocumentsStorage._hasConflicts);
         }
 
         private void ResolveConflictToLocal(ReplicationDocumentsPositions doc, ChangeVectorEntry[] conflictingVector)
@@ -744,6 +745,7 @@ namespace Raven.Server.Documents.Replication
                         doc.Collection);
                 }
             }
+            Interlocked.Decrement(ref _database.DocumentsStorage._hasConflicts);
         }
 
         private void ReadChangeVector(ReplicationIndexOrTransformerPositions index, Dictionary<Guid, long> maxReceivedChangeVectorByDatabase)
@@ -823,7 +825,7 @@ namespace Raven.Server.Documents.Replication
                 [nameof(ReplicationMessageReply.MessageType)] = handledMessageType,
                 [nameof(ReplicationMessageReply.LastEtagAccepted)] = lastDocumentEtag,
                 [nameof(ReplicationMessageReply.LastIndexTransformerEtagAccepted)] = lastIndexOrTransformerEtag,
-                [nameof(ReplicationMessageReply.Error)] = null,
+                [nameof(ReplicationMessageReply.Exception)] = null,
                 [nameof(ReplicationMessageReply.DocumentsChangeVector)] = documentChangeVectorAsDynamicJson,
                 [nameof(ReplicationMessageReply.IndexTransformerChangeVector)] = indexesChangeVectorAsDynamicJson
             });
@@ -1075,10 +1077,10 @@ namespace Raven.Server.Documents.Replication
             if (remoteHasLargerEntries && localHasLargerEntries)
                 return ConflictStatus.Conflict;
 
-            if (!remoteHasLargerEntries && localHasLargerEntries)
-                return ConflictStatus.AlreadyMerged;
+            if(remoteHasLargerEntries == false && localHasLargerEntries == false)
+                return ConflictStatus.AlreadyMerged; // change vectors identical
 
-            return ConflictStatus.Update;
+            return remoteHasLargerEntries ? ConflictStatus.Update : ConflictStatus.AlreadyMerged;
         }
     }
 }

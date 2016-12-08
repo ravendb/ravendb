@@ -9,8 +9,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
+#if !NET46
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
+#endif
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Data;
@@ -107,6 +109,7 @@ namespace Raven.NewClient.Client.Data
             return path.ToString();
         }
 
+#if !NET46
         public static FacetQuery Parse(IQueryCollection query, int start, int pageSize)
         {
             var result = new FacetQuery
@@ -145,6 +148,7 @@ namespace Raven.NewClient.Client.Data
 
             return result;
         }
+#endif
 
         public static FacetQuery Create(string indexName, IndexQueryBase query, string facetSetupDoc, List<Facet> facets,  int start, int? pageSize)
         {

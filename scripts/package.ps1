@@ -1,4 +1,4 @@
-$NETSTANDARD16 = 'netstandard1.6'
+$NETSTANDARD13 = 'netstandard1.3'
 
 function CreateArchiveFromDir ( $targetFilename, $dir, $spec ) {
     if ($spec.PkgType -eq "zip") {
@@ -55,8 +55,10 @@ function CreatePackageLayout ( $packageDir, $projectDir, $outDirs, $spec ) {
     CopyLicenseFile $packageDir
     CopyAckFile $packageDir
     CreatePackageServerLayout $($outDirs.Server) $packageDir $projectDir $spec
-    CreatePackageClientLayout $outDirs $packageDir $projectDir
-    CopyClientReadMe $(Join-Path $packageDir -ChildPath 'Client')
+    CreatePackageClientLayout $outDirs $packageDir $projectDir $spec
+    if ($spec.Name.Contains('raspberry-pi') -eq $False) {
+        CopyClientReadMe $(Join-Path $packageDir -ChildPath 'Client')
+    }
 
     if ($spec.IsUnix) {
         CopyDaemonScripts $projectDir $packageDir
@@ -109,7 +111,7 @@ function CreatePackageServerLayout ( $serverOutDir, $packageDir, $projectDir ) {
 }
 
 function CreatePackageClientLayout ( $outDirs, $packageDir, $projectDir, $spec ) {
-    if ($spec.Name -eq "raspberry-pi") {
+    if ($spec.Name.Contains("raspberry-pi")) {
         CreateRaspberryPiClientLayout $outDirs $packageDir $projectDir
     } else {
         CreateRegularPackageClientLayout $outDirs $packageDir $projectDir
@@ -146,8 +148,8 @@ function CreateRegularPackageClientLayout( $outDirs, $packageDir, $projectDir ) 
 function CopyClient ( $clientOutDir, $packageDir, $assetsDir) {
     # layout client dir structure
     $ravenClientAssetsDir = [io.path]::combine($assetsDir, "Raven.Client")
-    $ravenClientDir = [io.path]::combine($packageDir, 'Client', $NETSTANDARD16, 'Raven.Client')
-    $ravenClientDllDir = [io.path]::combine($ravenClientDir, $NETSTANDARD16)
+    $ravenClientDir = [io.path]::combine($packageDir, 'Client', $NETSTANDARD13, 'Raven.Client')
+    $ravenClientDllDir = [io.path]::combine($ravenClientDir, $NETSTANDARD13)
     New-Item -ItemType Directory -Path $ravenClientDllDir
 
     cp $(Join-Path $clientOutDir -ChildPath "Raven.Client.dll") $ravenClientDllDir
@@ -166,8 +168,8 @@ function CopyClient ( $clientOutDir, $packageDir, $assetsDir) {
 function CopyNewClient ( $clientOutDir, $packageDir, $assetsDir ) {
     # layout client dir structure
     $ravenClientAssetsDir = [io.path]::combine($assetsDir, "Raven.NewClient")
-    $ravenClientDir = [io.path]::combine($packageDir, 'Client', $NETSTANDARD16, 'Raven.NewClient')
-    $ravenClientDllDir = [io.path]::combine($ravenClientDir, $NETSTANDARD16)
+    $ravenClientDir = [io.path]::combine($packageDir, 'Client', $NETSTANDARD13, 'Raven.NewClient')
+    $ravenClientDllDir = [io.path]::combine($ravenClientDir, $NETSTANDARD13)
     New-Item -ItemType Directory -Path $ravenClientDllDir
 
     cp $(Join-Path $clientOutDir -ChildPath "Raven.NewClient.dll") $ravenClientDllDir
@@ -186,8 +188,8 @@ function CopyNewClient ( $clientOutDir, $packageDir, $assetsDir ) {
 function CopySparrow ( $clientOutDir, $packageDir, $assetsDir ) {
     $sparrowAssetsDir = [io.path]::combine($assetsDir, "Sparrow")
     # layout sparrow dir structure
-    $sparrowDir = [io.path]::combine($packageDir, 'Client', $NETSTANDARD16, 'Sparrow')
-    $sparrowDllDir = [io.path]::combine($packageDir, 'Client', $NETSTANDARD16, 'Sparrow', $NETSTANDARD16)
+    $sparrowDir = [io.path]::combine($packageDir, 'Client', $NETSTANDARD13, 'Sparrow')
+    $sparrowDllDir = [io.path]::combine($packageDir, 'Client', $NETSTANDARD13, 'Sparrow', $NETSTANDARD13)
     New-Item -ItemType Directory -Path $sparrowDllDir
 
     cp $(Join-Path $clientOutDir -ChildPath "Sparrow.dll") $sparrowDllDir

@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             _fields = fields;
             _releaseReadTransaction = directory.SetTransaction(readTransaction);
-            _currentStateHolder = searcherHolder.GetCurrentStateHolder();
+            _currentStateHolder = searcherHolder.GetStateHolder(readTransaction);
             _searcher = _currentStateHolder.IndexSearcher.Value;
         }
 

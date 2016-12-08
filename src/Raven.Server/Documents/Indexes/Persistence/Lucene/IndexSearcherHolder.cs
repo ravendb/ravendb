@@ -1,49 +1,45 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using Sparrow.Logging;
 using Lucene.Net.Search;
 using Sparrow;
 using Sparrow.Json;
+using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
     public class IndexSearcherHolder
     {
         private readonly Func<IndexSearcher> _recreateSearcher;
+        private readonly DocumentDatabase _documentDatabase;
 
-        private Logger _logger;
-        private volatile IndexSearcherHoldingState _current;
+        private readonly Logger _logger;
+        private ImmutableList<IndexSearcherHoldingState> _states = ImmutableList<IndexSearcherHoldingState>.Empty;
 
-        public IndexSearcherHolder(Func<IndexSearcher> recreateSearcher)
+        public IndexSearcherHolder(Func<IndexSearcher> recreateSearcher, DocumentDatabase documentDatabase)
         {
             _recreateSearcher = recreateSearcher;
-        }
-
-        public ManualResetEvent SetIndexSearcher(bool wait)
-        {
-            var old = _current;
-            _current = new IndexSearcherHoldingState(_recreateSearcher);
-
-            if (old == null)
-                return null;
-
-            Interlocked.Increment(ref old.Usage);
-            using (old)
-            {
-                if (wait)
-                    return old.MarkForDisposalWithWait();
-                old.MarkForDisposal();
-                return null;
-            }
-        }
-
-        public IDisposable GetSearcher(out IndexSearcher searcher, DocumentDatabase documentDatabase)
-        {
+            _documentDatabase = documentDatabase;
             _logger = LoggingSource.Instance.GetLogger<IndexSearcherHolder>(documentDatabase.Name);
-            var indexSearcherHoldingState = GetCurrentStateHolder();
+        }
+
+        public void SetIndexSearcher(Transaction asOfTx)
+        {
+            var oldestTx = asOfTx.LowLevelTransaction.Environment.ActiveTransactions.OldestTransaction;
+            var state = new IndexSearcherHoldingState(asOfTx, _recreateSearcher, _documentDatabase.Name);
+
+            _states = _states.Insert(0, state);
+
+            Cleanup(oldestTx);
+        }
+        
+        public IDisposable GetSearcher(Transaction tx, out IndexSearcher searcher)
+        {
+            var indexSearcherHoldingState = GetStateHolder(tx);
             try
             {
                 searcher = indexSearcherHoldingState.IndexSearcher.Value;
@@ -58,35 +54,97 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        internal IndexSearcherHoldingState GetCurrentStateHolder()
+        internal IndexSearcherHoldingState GetStateHolder(Transaction tx)
         {
-            while (true)
+            var txId = tx.LowLevelTransaction.Id;
+
+            foreach (var state in _states)
             {
-                var state = _current;
-                Interlocked.Increment(ref state.Usage);
-                if (state.ShouldDispose)
+                if (state.AsOfTxId > txId)
                 {
-                    state.Dispose();
                     continue;
                 }
 
+                Interlocked.Increment(ref state.Usage);
+
                 return state;
+            }
+
+            throw new InvalidOperationException($"Could not get an index searcher state holder for transaction {txId}");
+        }
+
+        public void Cleanup(long oldestTx)
+        {
+            // note: cleanup cannot be called concurrently
+
+            if (_states.Count == 1)
+                return;
+
+            if (oldestTx == 0) // no active transaction let's dispose and remove all except the latest one
+            {
+                for (var i = 1; i < _states.Count - 1; i++)
+                {
+                    var state = _states[i];
+
+                    using (state)
+                    {
+                        state.MarkForDisposal();
+                    }
+                }
+
+                _states = _states.RemoveRange(1, _states.Count - 1);
+
+                return;
+            }
+            
+            // let's mark states which are no longer needed as ready for disposal
+
+            for (var i = _states.Count - 1; i >= 1; i--)
+            {
+                var state = _states[i];
+
+                if (state.AsOfTxId >= oldestTx)
+                    break;
+
+                var nextState = _states[i - 1];
+
+                if (nextState.AsOfTxId > oldestTx)
+                    break;
+
+                Interlocked.Increment(ref state.Usage);
+
+                using (state)
+                {
+                    state.MarkForDisposal();
+                }
+
+                _states = _states.Remove(state);
             }
         }
 
-
         internal class IndexSearcherHoldingState : IDisposable
         {
+            private readonly Logger _logger;
             public readonly Lazy<IndexSearcher> IndexSearcher;
 
             public volatile bool ShouldDispose;
             public int Usage;
-            private readonly Lazy<ManualResetEvent> _disposed = new Lazy<ManualResetEvent>(() => new ManualResetEvent(false));
+            public readonly long AsOfTxId;
             private readonly ConcurrentDictionary<Tuple<int, uint>, StringCollectionValue> _docsCache = new ConcurrentDictionary<Tuple<int, uint>, StringCollectionValue>();
 
-            public IndexSearcherHoldingState(Func<IndexSearcher> recreateSearcher)
+            public IndexSearcherHoldingState(Transaction tx, Func<IndexSearcher> recreateSearcher, string dbName)
             {
+                _logger = LoggingSource.Instance.GetLogger<IndexSearcherHolder>(dbName);
                 IndexSearcher = new Lazy<IndexSearcher>(recreateSearcher, LazyThreadSafetyMode.ExecutionAndPublication);
+                AsOfTxId = tx.LowLevelTransaction.Id;
+            }
+
+            ~IndexSearcherHoldingState()
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"IndexSearcherHoldingState wasn't properly disposed. Usage count: {Usage}, tx id: {AsOfTxId}, should dispose: {ShouldDispose}");
+
+                Dispose();
             }
 
             public void MarkForDisposal()
@@ -94,20 +152,21 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 ShouldDispose = true;
             }
 
-            public ManualResetEvent MarkForDisposalWithWait()
-            {
-                var x = _disposed.Value;//  first create the value
-                ShouldDispose = true;
-                return x;
-            }
-
             public void Dispose()
             {
                 if (Interlocked.Decrement(ref Usage) > 0)
                     return;
+
                 if (ShouldDispose == false)
                     return;
-                DisposeRudely();
+
+                if (IndexSearcher.IsValueCreated)
+                {
+                    using (IndexSearcher.Value)
+                    using (IndexSearcher.Value.IndexReader) { }
+                }
+
+                GC.SuppressFinalize(this);
             }
 
             public StringCollectionValue GetFieldsValues(int docId, uint fieldsHash, string[] fields, JsonOperationContext context)
@@ -126,18 +185,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                                       where fld.StringValue != null
                                                       select fld.StringValue).ToList(), context);
                 });
-
-            }
-
-            private void DisposeRudely()
-            {
-                if (IndexSearcher.IsValueCreated)
-                {
-                    using (IndexSearcher.Value)
-                    using (IndexSearcher.Value.IndexReader) { }
-                }
-                if (_disposed.IsValueCreated)
-                    _disposed.Value.Set();
             }
         }
 

@@ -49,7 +49,7 @@ namespace Raven.Server.ServerWide.BackgroundTasks
 
                 // TODO @gregolsky make channel customizable 
                 var stream =
-                    await apiRavenDbClient.GetStreamAsync("/api/versions/latest?channel=dev&min=40000&max=49999");
+                    await apiRavenDbClient.GetStreamAsync("/api/v1/versions/latest?channel=dev&min=40000&max=49999");
 
                 JsonOperationContext context;
                 using (_serverStore.ContextPool.AllocateOperationContext(out context))
@@ -57,7 +57,8 @@ namespace Raven.Server.ServerWide.BackgroundTasks
                     var json = context.ReadForMemory(stream, "latest/version");
                     var latestVersionInfo = JsonDeserializationServer.LatestVersionCheckVersionInfo(json);
 
-                    if (latestVersionInfo?.BuildNumber > ServerVersion.Build)
+                    if (ServerVersion.Build != ServerVersion.DevBuildNumber && 
+                        latestVersionInfo?.BuildNumber > ServerVersion.Build)
                     {
                         var severityInfo = DetermineSeverity(latestVersionInfo);
 

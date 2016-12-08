@@ -936,20 +936,26 @@ namespace Raven.Server.Documents.Indexes
                         CommitStats commitStats;
                         tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out commitStats);
 
+                        tx.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
+                        {
+                            if (writeOperation.IsValueCreated)
+                            {
+                                using (stats.For(IndexingOperation.Lucene.RecreateSearcher))
+                                {
+                                    // we need to recreate it after transaction commit to prevent it from seeing uncommitted changes
+                                    // also we need this to be called when new read transaction are prevented in order to ensure
+                                    // that queries won't get the searcher having 'old' state but see 'new' changes committed here
+                                    // e.g. the old searcher could have a segment file in its in-memory state which has been removed in this tx
+                                    IndexPersistence.RecreateSearcher(tx.InnerTransaction);
+                                }
+                            }
+                        };
+
                         tx.Commit();
 
                         stats.RecordCommitStats(commitStats.NumberOfModifiedPages, commitStats.NumberOfPagesWrittenToDisk);
                     }
-
-                    if (writeOperation.IsValueCreated)
-                    {
-                        using (stats.For(IndexingOperation.Lucene.RecreateSearcher))
-                        {
-                            IndexPersistence.RecreateSearcher();
-                            // we need to recreate it after transaction commit to prevent it from seeing uncommitted changes
-                        }
-                    }
-
+                    
                     return mightBeMore;
                 }
             }

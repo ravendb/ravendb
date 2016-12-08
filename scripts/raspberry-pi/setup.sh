@@ -3,11 +3,11 @@
 SCRIPT_TITLE="setup"
 PKG_INSTALLER="apt-get" # supports : sudo ${PKG_INSTALLER} install <pkgname> 
 
-CHK_PKGS=( "bzip2" "libunwind8" "tar" )
+CHK_PKGS=( "bzip2" "libunwind8" "tar" "libcurl3" )
 DOTNET_DIR="dotnet"
 RAVENDB_DIR="ravendb.4.0"
 PROGS=( ${DOTNET_DIR} ${RAVENDB_DIR} )
-RDB_DEAMON="ravendbd"
+RDB_DAEMON="ravendbd"
 
 OP_SYSTEM_STARTUP=1
 OP_SKIP_ERRORS=0
@@ -32,7 +32,7 @@ ATTACHMENTS=()
 UPGRADE_SCRIPT="https://ravendb.net/raspberry-pi/updater.sh"
 
 function printWelcome () {
-	printf "\n\n${CYAN}RavenDB on Raspberry PI (Linux + dontnet core)\nSetup Script${BLUE} (v0.1) ${NC}\n"
+	printf "\n\n${CYAN}RavenDB on Raspberry PI (Linux + dontnet core)\nSetup Script${BLUE} (v0.2) ${NC}\n"
 	printf "${PURPLE}==============================================${NC}\n"
 	TEST_ARCH=$(lsb_release -r 2>/dev/null | grep '16.04' | wc -l)$(uname -a | grep 'armv7l' | wc -l)
 	if [ ${TEST_ARCH} != "11" ]; then
@@ -141,7 +141,7 @@ function checkPackages () {
 		if [ -z "$pkg" ] 
 		then
 			pkgsNotInstalled+=($i)
-			echoErrorPkg
+			echoErrorPkg ${RECURSIVE_CALL}
 			foundMissingPkgs=1
 		else
 			echoOkPkg
@@ -152,7 +152,12 @@ function checkPackages () {
 		printf "\n${GREEN} All needed packages are installed${NC}\n\n"		
 	else
 		echo "`date +"%d/%m/%Y_%H:%M:%S"` FATAL ERROR - Missing packages : ${pkgsNotInstalled[@]}" >> ${REPORT_FILE}
-		printf "\n${RED} Missing packages : "		
+		ERR_COLOR="${RED}"
+		if [ ${RECURSIVE_CALL} == 0 ]
+		then
+			ERR_COLOR="${YELLOW}"
+		fi
+		printf "\n${ERR_COLOR} Missing packages : "		
 		printf "${pkgsNotInstalled[@]}${NC}\n"
 
 		if [ ${RECURSIVE_CALL} == 0 ]
@@ -164,7 +169,7 @@ function checkPackages () {
 				sudo ${PKG_INSTALLER} -y install ${i}
 			done
 			RECURSIVE_CALL=1
-			printf "\n{YELLOW}About to retry test packages existance${NC}\n\n"
+			printf "\n${YELLOW}About to retry test packages existance${NC}\n\n"
 			checkPackages
 			return
 		fi
@@ -189,10 +194,17 @@ function echoTestProgram () {
 }
 
 function echoErrorPkg () {
-	printf " ${RED} Not installed!${NC}"
+	ERR_COLOR="${RED}"
+	ERR_MESSG="ERROR"
+	if [ "a$1" == "a0" ] 
+	then 
+		ERR_COLOR="${YELLOW}"
+		ERR_MESSG="WARN "
+	fi
+	printf " ${ERR_COLOR} Not installed!${NC}"
 	tput cub 9999
 	tput cuf 1
-	printf "${RED}ERROR${NC}\n"
+	printf "${ERR_COLOR}${ERR_MESSG}${NC}\n"
 }
 
 function echoOkPkg () {
@@ -353,13 +365,13 @@ fi
 function addToStartup () {
 	if [ $OP_SYSTEM_STARTUP == 1 ]
 	then
-		echoExecProgram "Add RavenDB deamon to startup"
+		echoExecProgram "Add RavenDB daemon to startup"
 		sudo chmod +x ravendb.4.0/ravendb.watchdog.sh
 		ESCAPED_PWD=$(pwd | sed 's/\//\\\//g' | sed 's/\&/\\\&/g')
-		cat ${RAVENDB_DIR}/${RDB_DEAMON} | sed 's/RDB_DOTNET_PATH/'${ESCAPED_PWD}'\/'${DOTNET_DIR}'/g' | sed 's/RDB_RAVENDB_PATH/'${ESCAPED_PWD}'\/'${RAVENDB_DIR}'/g' > ${RDB_DEAMON}.config
-		sudo mv ${RDB_DEAMON}.config /etc/init.d/${RDB_DEAMON} >& /dev/null
-		sudo chmod +x /etc/init.d/${RDB_DEAMON} >& /dev/null
-		sudo update-rc.d ${RDB_DEAMON} defaults
+		cat ${RAVENDB_DIR}/${RDB_DAEMON} | sed 's/RDB_DOTNET_PATH/'${ESCAPED_PWD}'\/'${DOTNET_DIR}'/g' | sed 's/RDB_RAVENDB_PATH/'${ESCAPED_PWD}'\/'${RAVENDB_DIR}'/g' | sed 's/RDB_USERNAME/'${USER}'/g' > ${RDB_DAEMON}.config
+		sudo mv ${RDB_DAEMON}.config /etc/init.d/${RDB_DAEMON} >& /dev/null
+		sudo chmod +x /etc/init.d/${RDB_DAEMON} >& /dev/null
+		sudo update-rc.d ${RDB_DAEMON} defaults
 		status=$?
 		if [ ${status} == 0 ];
 		then
@@ -368,14 +380,14 @@ function addToStartup () {
 			echoFailExec $status
 			exit 152
 		fi
-		echoExecProgram "Start RavenDB deamon (wait upto 40s)"
-		sudo service ${RDB_DEAMON} restart >& /tmp/${RDB_DEAMON}.setup.log &
+		echoExecProgram "Start RavenDB daemon (wait upto 40s)"
+		sudo service ${RDB_DAEMON} restart >& /tmp/${RDB_DAEMON}.setup.log &
 		TIMEWAIT=40
 		SAWTHELIGHT=0
 		while [ ${TIMEWAIT} -gt 0 ];
 		do
 			sleep 1
-			SAWTHELIGHT=$(sudo service ${RDB_DEAMON} status | tail -1 | grep "Running as Service" | wc -l)
+			SAWTHELIGHT=$(sudo service ${RDB_DAEMON} status | tail -1 | grep "Running as Service" | wc -l)
 			if [ ${SAWTHELIGHT} == 1 ]
 			then
 				break;
