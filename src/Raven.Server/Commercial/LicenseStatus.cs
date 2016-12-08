@@ -19,19 +19,22 @@ namespace Raven.Server.Commercial
         public string Message { get; set; }
 
         public string Status => Attributes == null ? "AGPL - Open Source" : "Commercial";
-        
-        public LicenseType LicenseType
+
+        public string LicenseType
         {
             get
             {
                 if (Error)
-                    return LicenseType.Invalid;
+                    return "Invalid";
+
+                if (Attributes == null)
+                    return "None";
 
                 object type;
                 if (Attributes != null && Attributes.TryGetValue("type", out type))
-                    return (LicenseType) type;
+                    return (string)type;
 
-                return LicenseType.None;
+                return "Unknown";
             }
         }
 
@@ -45,7 +48,7 @@ namespace Raven.Server.Commercial
                 [nameof(Error)] = Error,
                 [nameof(Message)] = Message,
                 [nameof(Status)] = Status,
-                [nameof(LicenseType)] = LicenseType.ToString(),
+                [nameof(LicenseType)] = LicenseType,
                 [nameof(Attributes)] = TypeConverter.ToBlittableSupportedType(Attributes)
             };
         }
