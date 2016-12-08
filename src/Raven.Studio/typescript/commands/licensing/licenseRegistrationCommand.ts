@@ -3,7 +3,7 @@ import endpoints = require("endpoints");
 
 class licenseRegistrationCommand extends commandBase {
 
-    constructor(private registrationData: Raven.Server.Commercial.RegisteredUserInfo) {
+    constructor(private registrationData: Raven.Server.Commercial.UserRegistrationInfo) {
         super();
     }
 

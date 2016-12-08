@@ -28,7 +28,7 @@ class registrationModel {
         });
     }
 
-    toDto(): Raven.Server.Commercial.RegisteredUserInfo {
+    toDto(): Raven.Server.Commercial.UserRegistrationInfo {
         return {
             Name: this.name(),
             Email: this.email(),
