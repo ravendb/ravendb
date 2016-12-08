@@ -12,6 +12,10 @@ function CheckPrerequisites () {
         throw "dotnet not found in path."
     }
 
+    if ($($IsWindows -eq $False) -and $(Get-Command "mono" -ErrorAction SilentlyContinue) -eq $null) {
+        throw "Mono not found in path."
+    }
+
     if ($(Get-Command "node" -ErrorAction SilentlyContinue) -eq $null) {
         throw "Node.js not found in path."
     }
