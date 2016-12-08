@@ -18,6 +18,8 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
         {
             public string Id { get; set; }
             public string Name { get; set; }
+            public string LastName { get; set; }
+            public string FullName { get; set; }
             public string PartnerId { get; set; }
             public string Email { get; set; }
             public string[] Tags { get; set; }

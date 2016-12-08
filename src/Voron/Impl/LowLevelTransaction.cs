@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using Sparrow;
 using Sparrow.Utils;
@@ -63,7 +64,8 @@ namespace Voron.Impl
 
         public event Action<LowLevelTransaction> OnCommit;
         public event Action<LowLevelTransaction> OnDispose;
-        
+        public event Action AfterCommitWhenNewReadTransactionsPrevented;
+
         private readonly IFreeSpaceHandling _freeSpaceHandling;
         internal FixedSizeTree _freeSpaceTree;
 
@@ -694,6 +696,13 @@ namespace Voron.Impl
             if (_pagerStates.Add(state) == false)
                 return;
             state.AddRef();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void OnAfterCommitWhenNewReadTransactionsPrevented()
+        {
+            // the event cannot be called outside this class while we need to call it in StorageEnvironment.TransactionAfterCommit
+            AfterCommitWhenNewReadTransactionsPrevented?.Invoke();
         }
 
 

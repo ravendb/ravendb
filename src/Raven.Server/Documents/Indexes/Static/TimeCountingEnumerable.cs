@@ -8,10 +8,10 @@ namespace Raven.Server.Documents.Indexes.Static
         private readonly IEnumerable _enumerable;
         private readonly IndexingStatsScope _stats;
 
-        public TimeCountingEnumerable(IEnumerable enumerable, IndexingStatsScope stats, string name)
+        public TimeCountingEnumerable(IEnumerable enumerable, IndexingStatsScope stats)
         {
             _enumerable = enumerable;
-            _stats = stats.For(name, start: false);
+            _stats = stats;
         }
 
         public IEnumerator GetEnumerator()

@@ -469,6 +469,8 @@ namespace Voron
                 ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches();
                 Journal.UpdateCacheForJournalSnapshots();
 
+                tx.OnAfterCommitWhenNewReadTransactionsPrevented();
+
                 if (tx.Committed && tx.FlushedToJournal)
                     _transactionsCounter = tx.Id;
                 

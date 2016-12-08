@@ -2023,7 +2023,7 @@ If you really want to do in memory filtering on the data returned from the query
             if (localStringsCache.TryGetValue(type, out value))
                 return value;
 
-            var methodInfo = type.GetTypeInfo().GetMethod("op_Implicit", new[] { type });
+            var methodInfo = type.GetMethod("op_Implicit", new[] { type });
 
             if (methodInfo == null || methodInfo.ReturnType != typeof(string))
             {

@@ -14,6 +14,7 @@ using Raven.NewClient.Client.Connection;
 
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document.Batches;
 using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Linq;
@@ -68,14 +69,29 @@ namespace Raven.NewClient.Client.Document.Async
             return GetMetadataFor(instance);
         }
 
-        public Task<Operation> DeleteByIndexAsync<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new()
+        public async Task<Operation> DeleteByIndexAsync<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new()
         {
-            throw new NotImplementedException();
+            var indexCreator = new TIndexCreator();
+            return await DeleteByIndexAsync<T>(indexCreator.IndexName, expression).ConfigureAwait(false);
         }
 
-        public Task<Operation> DeleteByIndexAsync<T>(string indexName, Expression<Func<T, bool>> expression)
+        public async Task<Operation> DeleteByIndexAsync<T>(string indexName, Expression<Func<T, bool>> expression)
         {
-            throw new NotImplementedException();
+            var query = Query<T>(indexName).Where(expression);
+            var indexQuery = new IndexQuery()
+            {
+                Query = query.ToString()
+            };
+            var deleteByIndexOperation = new DeleteByIndexOperation(Context);
+            var command = deleteByIndexOperation.CreateRequest(indexName, indexQuery,
+                new QueryOperationOptions(), (DocumentStore)this.DocumentStore);
+
+            if (command != null)
+            {
+                await RequestExecuter.ExecuteAsync(command, Context);
+                return new Operation(command.Result.OperationId);
+            }
+            return null;
         }
 
         /// <summary>

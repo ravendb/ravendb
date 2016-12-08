@@ -1,4 +1,4 @@
-﻿/// <binding BeforeBuild='generate-ts' AfterBuild='compile-changed:app' ProjectOpened='restore' />
+﻿/// <binding />
 
 require('./gulp/shim');
 
@@ -15,13 +15,12 @@ var gulp = require('gulp'),
     findNewestFile = require('./gulp/findNewestFile'),
     checkAllFilesExist = require('./gulp/checkAllFilesExist'),
     gutil = require('gulp-util'),
-    autoPrefixer = require('gulp-autoprefixer');
+    autoPrefixer = require('gulp-autoprefixer'),
+    fileExists = require('file-exists');
 
 var PATHS = require('./gulp/paths');
 
-var tsCompilerConfig = plugins.typescript.createProject('tsconfig.json', {
-    typescript: require('typescript')
-});
+var tsProject = plugins.typescript.createProject('tsconfig.json');
 
 gulp.task('clean', ['clean:js'], function () {
     del.sync(PATHS.releaseTarget);
@@ -57,18 +56,36 @@ gulp.task('less', function() {
         .pipe(gulp.dest(PATHS.lessTarget));
 });
 
-gulp.task('generate-typings', function(cb) {
-    exec('dotnet ../../tools/TypingsGenerator/bin/Debug/netcoreapp1.1/TypingsGenerator.dll', function (err, stdout, stderr) {
-        console.log(stdout);
-        console.log(stderr);
-        cb(err);
-    });
+gulp.task('generate-typings', function (cb) {
+    var debugPath = '../../tools/TypingsGenerator/bin/Debug/netcoreapp1.1/TypingsGenerator.dll';
+    var releasePath = '../../tools/TypingsGenerator/bin/Release/netcoreapp1.1/TypingsGenerator.dll';
+
+    if (fileExists(releasePath)) {
+        exec('dotnet ' + releasePath, function (err, stdout, stderr) {
+            console.log(stdout);
+            console.log(stderr);
+            cb(err);
+        });
+        return;
+    }
+
+    if (fileExists(debugPath)) {
+        exec('dotnet ' + debugPath, function (err, stdout, stderr) {
+            console.log(stdout);
+            console.log(stderr);
+            cb(err);
+        });
+        return;
+    }
+
+    console.log('Could not find TypingsGenerator');
+    cb('Could not find TypingsGenerator');
 });
 
 gulp.task('compile:test', ['generate-ts'], function() {
      return gulp.src([PATHS.test.tsSource])
         .pipe(plugins.sourcemaps.init())
-        .pipe(plugins.typescript(tsCompilerConfig))
+        .pipe(tsProject())
         .js
         .pipe(plugins.sourcemaps.write("."))
         .pipe(gulp.dest(PATHS.test.tsOutput));
@@ -76,18 +93,9 @@ gulp.task('compile:test', ['generate-ts'], function() {
 
 gulp.task('compile:app', ['generate-ts'], function () {
     return gulp.src([PATHS.tsSource])
+        .pipe(plugins.naturalSort())
         .pipe(plugins.sourcemaps.init())
-        .pipe(plugins.typescript(tsCompilerConfig))
-        .js
-        .pipe(plugins.sourcemaps.write("."))
-        .pipe(gulp.dest(PATHS.tsOutput));
-});
-
-gulp.task('compile-changed:app', ['generate-ts'], function() {
-    return gulp.src([PATHS.tsSource])
-        .pipe(plugins.changed(PATHS.tsOutput, { extension: '.js' }))
-        .pipe(plugins.sourcemaps.init())
-        .pipe(plugins.typescript(tsCompilerConfig))
+        .pipe(tsProject())
         .js
         .pipe(plugins.sourcemaps.write("."))
         .pipe(gulp.dest(PATHS.tsOutput));
