@@ -30,17 +30,17 @@
   },
 
   "dependencies": {
-    "Raven.Client": "4.0.0-*",
-    "Raven.Server": "4.0.0-*",
     "Sparrow": "4.0.0-*",
-    "Voron": "4.0.0-*",
+    "AsyncFriendlyStackTrace": "1.4.1",
     "FastTests": "4.0.0-*",
-    "SlowTests": "4.0.0-*",
     "Microsoft.CSharp": "4.3.0",
     "Microsoft.NETCore.App": {
       "type": "platform",
       "version": "1.1.0"
     },
-    "AsyncFriendlyStackTrace": "1.4.1"
+    "Raven.Client": "4.0.0-*",
+    "Raven.Server": "4.0.0-*",
+    "SlowTests": "4.0.0-*",
+    "Voron": "4.0.0-*"
   }
 }
