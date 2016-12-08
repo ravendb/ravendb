@@ -28,7 +28,7 @@ class registrationModel {
         });
     }
 
-    toDto() { //TODO: use server side type
+    toDto(): Raven.Server.Commercial.RegisteredUserInfo {
         return {
             Name: this.name(),
             Email: this.email(),
@@ -83,18 +83,18 @@ class registration extends dialogViewModelBase {
 
     private registrationModel = ko.validatedObservable(new registrationModel());
     private licenseKeyModel = ko.validatedObservable(new licenseKeyModel());
-    private license: licenseStatusDto;
+    private license: Raven.Server.Commercial.LicenseStatus;
 
     private hasInvalidLicense = ko.observable<boolean>(false);
 
-    constructor(license: licenseStatusDto, canBeDismissed: boolean) {
+    constructor(license: Raven.Server.Commercial.LicenseStatus, canBeDismissed: boolean) {
         super();
         this.license = license;
 
         this.dismissVisible(canBeDismissed);
     }
 
-    static showRegistrationDialogIfNeeded(license: licenseStatusDto) {
+    static showRegistrationDialogIfNeeded(license: Raven.Server.Commercial.LicenseStatus) {
         if (license.LicenseType === "Invalid") {
             const vm = new registration(license, false);
             app.showBootstrapDialog(vm);
@@ -154,9 +154,12 @@ class registration extends dialogViewModelBase {
             return;
         }
 
+        //TODO: parse pasted key into json and validate
+
         this.isBusy(true);
 
-        new licenseActivateCommand(this.licenseKeyModel().key())
+        const license = JSON.parse(this.licenseKeyModel().key()) as Raven.Server.Commercial.License;
+        new licenseActivateCommand(license)
             .execute()
             .done(() => {
                 // TODO: on activated action

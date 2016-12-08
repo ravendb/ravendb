@@ -8,8 +8,10 @@ class globalConfig extends viewModelBase {
     router: DurandalRouter;
     currentRouteTitle: KnockoutComputed<string>;
 
+    /* TODO
     static developerLicense = ko.computed(() => !license.licenseStatus().IsCommercial);
     static canUseGlobalConfigurations = ko.computed(() => !license.licenseStatus().IsCommercial || license.licenseStatus().Attributes.globalConfigurations === "true");
+    */
 
     constructor() {
         super();

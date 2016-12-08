@@ -227,45 +227,6 @@ interface clientBuildVersionDto {
     Version: string;
 }
 
-interface licenseStatusDto {
-    LicenseType: string;
-
-    Message: string;
-    Status: string;
-    Error: boolean;
-    Details?:string;
-    IsCommercial: boolean;
-    LicensePath: string;
-    ValidCommercialLicenseSeen: boolean;
-    Attributes: {
-        periodicBackup: string;
-        encryption: string;
-        compression: string;
-        quotas: string;
-        authorization: string;
-        fips: string;
-        counters: string;
-        timeSeries: string;
-        globalConfigurations: string;
-        documentExpiration: string;
-        replication: string;
-        versioning: string;
-        version: string;
-        allowWindowsClustering: string;
-        OEM: string;
-        numberOfDatabases: string;
-        maxSizeInMb: string;
-        maxRamUtilization: string;
-        maxParallelism: string;
-        ravenfs: string;
-        counterStorage: string;
-        monitoring: string;
-        clustering: string;
-        hotSpare: string;
-        updatesExpiration: string;
-    }
-}
-
 interface supportCoverageDto {
     Status: string;
     EndsAt: string;

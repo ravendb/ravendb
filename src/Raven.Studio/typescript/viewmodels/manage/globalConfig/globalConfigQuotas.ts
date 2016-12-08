@@ -10,8 +10,9 @@ import eventsCollector = require("common/eventsCollector");
 
 class globalConfigQuotas extends viewModelBase {
 
+    /* TODO
     developerLicense = globalConfig.developerLicense;
-    canUseGlobalConfigurations = globalConfig.canUseGlobalConfigurations;
+    canUseGlobalConfigurations = globalConfig.canUseGlobalConfigurations; */
     settingsDocument = ko.observable<document>();
 
     activated = ko.observable<boolean>(false);

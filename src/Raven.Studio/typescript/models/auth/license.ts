@@ -1,7 +1,7 @@
 /// <reference path="../../../typings/tsd.d.ts" />
 
 class license {
-    static licenseStatus = ko.observable<licenseStatusDto>();
+    static licenseStatus = ko.observable<Raven.Server.Commercial.LicenseStatus>();
     static supportCoverage = ko.observable<supportCoverageDto>();
     static hotSpare = ko.observable<HotSpareDto>();
 
@@ -11,7 +11,7 @@ class license {
         if (hotSpare) {
             return 'hot-spare';
         }
-        if (status == null || !status.IsCommercial) {
+        if (status == null || status.LicenseType !== "Commercial") {
             return 'dev-only';
         }
         if (status.Status.contains("Expired")) {

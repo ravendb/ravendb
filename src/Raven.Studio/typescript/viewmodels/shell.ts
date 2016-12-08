@@ -358,10 +358,10 @@ class shell extends viewModelBase {
             });
     }
 
-    static fetchLicenseStatus(): JQueryPromise<licenseStatusDto> {
+    static fetchLicenseStatus(): JQueryPromise<Raven.Server.Commercial.LicenseStatus> {
         return new getLicenseStatusCommand()
             .execute()
-            .done((result: licenseStatusDto) => {
+            .done((result: Raven.Server.Commercial.LicenseStatus) => {
                 if (result.Status.contains("AGPL")) {
                     result.Status = "Development Only";
                 }
@@ -445,7 +445,7 @@ class shell extends viewModelBase {
             shell.serverMainVersion(Math.floor(currentBuildVersion / 10000));
         } 
 
-        var env = license.licenseStatus() && license.licenseStatus().IsCommercial ? "prod" : "dev";
+        var env = license.licenseStatus() && license.licenseStatus().LicenseType === "Commercial" ? "prod" : "dev";
         var version = buildVersionResult.Version;
         eventsCollector.default.initialize(
             shell.serverMainVersion() + "." + shell.serverMinorVersion(), currentBuildVersion, env, version, shouldTrack);

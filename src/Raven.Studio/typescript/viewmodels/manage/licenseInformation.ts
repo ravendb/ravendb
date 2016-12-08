@@ -29,6 +29,7 @@ class licenseInformation extends viewModelBase {
     }
 
     fetchLicenseStatus() {
+        /* TODO
         return new getLicenseStatusCommand()
             .execute()
             .done((result: licenseStatusDto) => {
@@ -36,7 +37,7 @@ class licenseInformation extends viewModelBase {
                 result.Status = "Development Only";
             }
             license.licenseStatus(result);
-        });
+        });*/
     }
 
     fetchSupportCoverage() {

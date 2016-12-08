@@ -30,9 +30,10 @@ class licensingStatus extends dialogViewModelBase {
     attrCpus: string;
     attributes: attributeItem[];
 
-    constructor(private licenseStatus: licenseStatusDto, supportCoverage: supportCoverageDto, hotSpare: HotSpareDto) {
+    constructor(private licenseStatus: Raven.Server.Commercial.LicenseStatus, supportCoverage: supportCoverageDto, hotSpare: HotSpareDto) {
         super();
 
+        /* TODO
         if (licenseStatus.Attributes.hotSpare === "true") {
             this.isHotSpare = true;
             
@@ -87,7 +88,7 @@ class licensingStatus extends dialogViewModelBase {
             { displayName: "Allow Windows Clustering", value: licenseStatus.Attributes.allowWindowsClustering }
         ];
 
-        this.attributes.forEach(attr => attr.value = this.prepareHtmlForAttribute(attr.value));
+        this.attributes.forEach(attr => attr.value = this.prepareHtmlForAttribute(attr.value));*/
     }
 
     private prepareHtmlForAttribute(input: string) {
