@@ -86,7 +86,11 @@ namespace Raven.Server.ServerWide
 
             Alerts = new AlertsStorage("Raven/Server", this);
             LicenseStorage = new LicenseStorage();
+
+            DatabaseInfoCache = new DatabaseInfoCache();
         }
+
+        public DatabaseInfoCache DatabaseInfoCache { get; set; }
 
         public TransactionContextPool ContextPool;
 
@@ -144,6 +148,7 @@ namespace Raven.Server.ServerWide
             ContextPool = new TransactionContextPool(_env);
             _timer = new Timer(IdleOperations, null, _frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
             Alerts.Initialize(_env, ContextPool);
+            DatabaseInfoCache.Initialize(_env, ContextPool);
             LicenseStorage.Initialize(_env, ContextPool);
         }
 
@@ -222,6 +227,7 @@ namespace Raven.Server.ServerWide
             using (Slice.From(ctx.Allocator, id.ToLowerInvariant(), out key))
             {
                 items.DeleteByKey(key);
+                DatabaseInfoCache.DeleteInternal(ctx, key);
             }
         }
 

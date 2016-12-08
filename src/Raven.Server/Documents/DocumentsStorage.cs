@@ -1684,6 +1684,14 @@ namespace Raven.Server.Documents
             return table.GetNumberEntriesFor(indexDef, afterEtag, out totalCount);
         }
 
+        public long GetNumberOfDocuments()
+        {
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenReadTransaction())
+                return GetNumberOfDocuments(context);
+        }
+
         public long GetNumberOfDocuments(DocumentsOperationContext context)
         {
             var fstIndex = DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice];
