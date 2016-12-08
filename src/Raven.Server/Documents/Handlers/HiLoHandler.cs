@@ -92,7 +92,6 @@ namespace Raven.Server.Documents.Handlers
                         ["LastRangeAt"] = cmd.HiLoResults.LastRangeAt.ToString("o")
                     });
                 }
-
             }
         }
 
@@ -110,41 +109,37 @@ namespace Raven.Server.Documents.Handlers
                 var hiLoDocumentKey = ravenKeyGeneratorsHilo + Key;
                 var prefix = Key + Separator;
 
+                long oldMax = 0;
+                var newDoc = new DynamicJsonValue();
                 BlittableJsonReaderObject hiloDocReader = null, serverPrefixDocReader = null;
-
                 try
                 {
-                    serverPrefixDocReader = Database.DocumentsStorage.Get(context, ravenKeyServerPrefix)?.Data;
-                    hiloDocReader = Database.DocumentsStorage.Get(context, hiLoDocumentKey)?.Data;                    
-                }
-                catch (DocumentConflictException e)
-                {
-                    // resolving the conflict by selecting the document with the highest number
-                    var conflicts = e.Conflicts.Select(x => x.Doc).ToList();
-                    long highestMax = 0, tmpMax;
-                    
-                    foreach (var doc in conflicts)
+
+                    try
                     {
-                        if (doc.TryGet("Max", out tmpMax) && tmpMax > highestMax)
-                        {                            
-                            highestMax = tmpMax;
-                            hiloDocReader = doc;                            
+                        serverPrefixDocReader = Database.DocumentsStorage.Get(context, ravenKeyServerPrefix)?.Data;
+                        hiloDocReader = Database.DocumentsStorage.Get(context, hiLoDocumentKey)?.Data;
+                    }
+                    catch (DocumentConflictException e)
+                    {
+                        // resolving the conflict by selecting the document with the highest number
+                        long highestMax = 0;
+                        foreach (var conflict in e.Conflicts)
+                        {
+                            long tmpMax;
+                            if (conflict.Doc.TryGet("Max", out tmpMax) && tmpMax > highestMax)
+                            {
+                                highestMax = tmpMax;
+                                hiloDocReader = conflict.Doc;
+                            }
                         }
                     }
 
-                    //temporary, until DocumentsStorage.Put will resolve confilcts by itself
-                    Database.DocumentsStorage.DeleteConflictsFor(context, hiLoDocumentKey); 
-                }
-
-                finally
-                {
                     string serverPrefix;
-                    if (serverPrefixDocReader != null && serverPrefixDocReader.TryGet("ServerPrefix", out serverPrefix))
+                    if (serverPrefixDocReader != null &&
+                        serverPrefixDocReader.TryGet("ServerPrefix", out serverPrefix))
                         prefix += serverPrefix;
-                    serverPrefixDocReader?.Dispose();
 
-                    long oldMax = 0;
-                    var newDoc = new DynamicJsonValue();
                     if (hiloDocReader != null)
                     {
                         hiloDocReader.TryGet("Max", out oldMax);
@@ -158,19 +153,24 @@ namespace Raven.Server.Documents.Handlers
                         }
                     }
 
-                    hiloDocReader?.Dispose();
-                    oldMax = Math.Max(oldMax, LastRangeMax);
-
-                    newDoc["Max"] = oldMax + Capacity;
-
-                    using (var freshHilo = context.ReadObject(newDoc, hiLoDocumentKey, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
-                    {
-                        Database.DocumentsStorage.Put(context, hiLoDocumentKey, null, freshHilo);
-                    }
-
-                    HiLoResults = new HiLoResult(oldMax + 1, oldMax + Capacity, prefix, Capacity, DateTime.UtcNow);
-
                 }
+                finally
+                {
+                    serverPrefixDocReader?.Dispose();
+                    hiloDocReader?.Dispose();
+                }
+                oldMax = Math.Max(oldMax, LastRangeMax);
+
+                newDoc["Max"] = oldMax + Capacity;
+
+                using (
+                    var freshHilo = context.ReadObject(newDoc, hiLoDocumentKey,
+                        BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                {
+                    Database.DocumentsStorage.Put(context, hiLoDocumentKey, null, freshHilo);
+                }
+
+                HiLoResults = new HiLoResult(oldMax + 1, oldMax + Capacity, prefix, Capacity, DateTime.UtcNow);
             }
         }
 

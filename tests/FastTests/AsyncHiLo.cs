@@ -28,7 +28,7 @@ namespace NewClientTests.NewClient
         }
 
         [Fact]
-        public async void CanUseServerPrefix()
+        public async void Can_Use_Server_Prefix()
         {
 
             using (var store = GetDocumentStore())
@@ -52,7 +52,7 @@ namespace NewClientTests.NewClient
         }
 
         [Fact]
-        public async void HiloCannotGoDown()
+        public async void Hilo_Cannot_Go_Down()
         {
             using (var store = GetDocumentStore())
             {
@@ -92,7 +92,7 @@ namespace NewClientTests.NewClient
         }
 
         [Fact]
-        public async void HiLoMultiDb()
+        public async void HiLo_Async_MultiDb()
         {
             using (var store = GetDocumentStore())
             {
@@ -128,7 +128,7 @@ namespace NewClientTests.NewClient
         }
 
         [Fact]
-        public async void CheckThatCapacityDoubles()
+        public async void Capacity_Should_Double()
         {
 
             using (var store = GetDocumentStore())
@@ -171,7 +171,7 @@ namespace NewClientTests.NewClient
         }
 
         [Fact]
-        public async void ReturnUnusedRange()
+        public async void Return_Unused_Range()
         {
 
             using (var store = GetDocumentStore())

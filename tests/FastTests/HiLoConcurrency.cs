@@ -16,8 +16,6 @@ namespace NewClientTests.NewClient
         [Fact]
         public void ParallelGeneration_NoClashesOrGaps()
         {
-
-            //using (var server = Server)
             using (var store = GetDocumentStore())
             {
 
@@ -30,7 +28,6 @@ namespace NewClientTests.NewClient
         [Fact]
         public void AsyncParallelGeneration_NoClashesOrGaps()
         {
-            //using (var server = Server)
             using (var store = GetDocumentStore())
             {
                 var gen = new AsyncHiLoKeyGenerator("When_async_generating_lots_of_keys_concurrently_there_are_no_clashes", store, store.DefaultDatabase, store.Conventions.IdentityPartsSeparator);
@@ -41,7 +38,6 @@ namespace NewClientTests.NewClient
         [Fact]
         public void SequentialGeneration_NoClashesOrGaps()
         {
-            //using (var server = Server)
             using (var store = GetDocumentStore())
             {
                 var gen = new HiLoKeyGenerator("When_generating_lots_of_keys_concurrently_there_are_no_clashes", store,
@@ -53,7 +49,6 @@ namespace NewClientTests.NewClient
         [Fact]
         public void AsyncSequentialGeneration_NoClashesOrGaps()
         {
-            //using (var server = Server)
             using (var store = GetDocumentStore())
             {
                 var gen = new AsyncHiLoKeyGenerator("When_generating_lots_of_keys_concurrently_there_are_no_clashes", store,

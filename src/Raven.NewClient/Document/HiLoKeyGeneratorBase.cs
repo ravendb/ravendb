@@ -38,8 +38,6 @@ namespace Raven.NewClient.Client.Document
             return string.Format("{0}{1}", _prefix, nextId);
         }
 
-        public bool DisableCapacityChanges { get; set; }
-
         protected RangeValue Range
         {
             get { return _range; }

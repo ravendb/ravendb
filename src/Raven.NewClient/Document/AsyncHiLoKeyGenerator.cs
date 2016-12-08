@@ -136,52 +136,5 @@ namespace Raven.NewClient.Client.Document
             }
         }
 
-        /*public Task<long> NextIdAsync2()
-        {
-            //in order to use this method, we need to add back to the class:
-            //private SpinLock _generatorLock = new SpinLock(enableThreadOwnerTracking: false); // Using a spin lock rather than Monitor.Enter, because it's not reentrant
-            
-            var myRange = Range; // thread safe copy
-            long incrementedCurrent = Interlocked.Increment(ref myRange.Current);
-            if (incrementedCurrent <= myRange.Max)
-            {
-                return CompletedTask.With(incrementedCurrent);
-            }
-
-            bool lockTaken = false;
-            try
-            {
-                _generatorLock.Enter(ref lockTaken);
-                if (Range != myRange)
-                {
-                    // Lock was contended, and the max has already been changed. Just get a new id as usual.
-                    _generatorLock.Exit();
-                    return NextIdAsync();
-                }
-                // Get a new max, and use the current value.
-                return GetNextRangeAsync()
-                    .ContinueWith(task =>
-                    {
-                        try
-                        {
-                            Range = task.Result;
-                        }
-                        finally
-                        {
-                            _generatorLock.Exit();
-                        }
-
-                        return NextIdAsync();
-                    }).Unwrap();
-            }
-            catch
-            {
-                // We only unlock in exceptional cases (and not in a finally clause) because non exceptional cases will either have already
-                // unlocked or will have started a task that will unlock in the future.
-                if (lockTaken)
-                    _generatorLock.Exit();
-                throw;
-            }
-        } */
     }
 }

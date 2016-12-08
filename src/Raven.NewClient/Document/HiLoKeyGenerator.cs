@@ -62,9 +62,8 @@ namespace Raven.NewClient.Client.Document
                         // Lock was contended, and the max has already been changed.
                         continue;
 
-                    var waitingForRangeUpdate = Interlocked.Read(ref threadsWaitingForRangeUpdate);
-                    Range = waitingForRangeUpdate > 10 ? GetNextRangeDoubleBuffered() : GetNextRange();
-                    //Range = GetNextRange();
+                    var waitingForRangeUpdate = Interlocked.Read(ref threadsWaitingForRangeUpdate);                    
+                    Range = GetNextRange();
 
                 }
                 finally
@@ -74,30 +73,6 @@ namespace Raven.NewClient.Client.Document
                 }
             }
         }
-
-        /*public long NextId2()
-        {
-            //in order to use this method, we need to add back to the class:
-            //private readonly object _generatorLock = new object();
-
-            while (true)
-            {
-                var myRange = Range; // thread safe copy
-
-                var current = Interlocked.Increment(ref myRange.Current);
-                if (current <= myRange.Max)
-                    return current;
-
-                lock (_generatorLock)
-                {
-                    if (Range != myRange)
-                        // Lock was contended, and the max has already been changed. Just get a new id as usual.
-                        continue;
-
-                    Range = GetNextRange();
-                }
-            }
-        } */
 
         private RangeValue GetNextRange()
         {
@@ -142,9 +117,5 @@ namespace Raven.NewClient.Client.Document
             }
         }
 
-        private RangeValue GetNextRangeDoubleBuffered()
-        {
-            return GetNextRange();
-        }
     }
 }

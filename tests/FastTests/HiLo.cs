@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Server.Documents.Replication;
 using NewClientTests;
 using Raven.Json.Linq;
 using Raven.Tests.Core.Utils.Entities;
@@ -36,7 +35,7 @@ namespace NewClientTests.NewClient
         }
 
         [Fact]
-        public void CanUseServerPrefix()
+        public void Can_Use_Server_Prefix()
         {
 
             using (var store = GetDocumentStore())
@@ -60,7 +59,7 @@ namespace NewClientTests.NewClient
         }
 
         [Fact]
-        public void HiloCannotGoDown()
+        public void Hilo_Cannot_Go_Down()
         {
             using (var store = GetDocumentStore())
             {
@@ -100,7 +99,7 @@ namespace NewClientTests.NewClient
         }
 
         [Fact]
-        public void HiLoMultiDb()
+        public void HiLo_MultiDb()
         {
             using (var store = GetDocumentStore())
             {
@@ -136,7 +135,7 @@ namespace NewClientTests.NewClient
         }
 
         [Fact]
-        public void CheckThatCapacityDoubles()
+        public void Capacity_Should_Double()
         {
 
             using (var store = GetDocumentStore())
@@ -179,40 +178,7 @@ namespace NewClientTests.NewClient
         }
 
         [Fact]
-        public void ReturnUnusedRange()
-        {
-
-            using (var store = GetDocumentStore())
-            {
-                var hiLoKeyGenerator = new HiLoKeyGenerator("users", store, store.DefaultDatabase,
-                    store.Conventions.IdentityPartsSeparator);
-
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new HiloDoc
-                    {
-                        Max = 64
-                    }, "Raven/Hilo/users");
-
-                    session.SaveChanges();
-
-                    hiLoKeyGenerator.GenerateDocumentKey(new User());
-                    hiLoKeyGenerator.GenerateDocumentKey(new User());
-
-                    hiLoKeyGenerator.ReturnUnusedRange(); //should change hiloDoc.max to 66                  
-                }
-
-                using (var session = store.OpenSession())
-                {
-                    var hiloDoc = session.Load<HiloDoc>("Raven/Hilo/Users");
-                    var max = hiloDoc.Max;
-                    Assert.Equal(max, 66);
-                }
-            }
-        }
-
-        [Fact]
-        public void ReturnUnusedRangeOnDispose()
+        public void Return_Unused_Range_On_Dispose()
         {
 
             using (var store = GetDocumentStore())
@@ -289,14 +255,9 @@ namespace NewClientTests.NewClient
 
                 WaitForMarkerDocumentAndAllPrecedingDocumentsToReplicate(store2);
                 
-                var hilo = new HiLoKeyGenerator("users", store2, store2.DefaultDatabase,
-                store2.Conventions.IdentityPartsSeparator);
-                var nextId = hilo.NextId();
-                for (var i=0; i<32; i++)
-                    {
-                        hilo.NextId();
-                    }
-                Assert.Equal(nextId, 161);               
+                var nextId = new HiLoKeyGenerator("users", store2, store2.DefaultDatabase,
+                store2.Conventions.IdentityPartsSeparator).NextId();
+                Assert.Equal(nextId, 129);                              
             }
         }
 
@@ -337,64 +298,6 @@ namespace NewClientTests.NewClient
             }
         }
 
-        /*[Fact]
-          public void ShouldResolveConflictWithHighestNumber()
-          {
-              using (var server = GetDocumentStore())
-              using (var store = new DocumentStore
-              {
-                  Url = "http://localhost:8079"
-              }.Initialize())
-              {
-                  server.SystemDatabase.TransactionalStorage.Batch(accessor =>
-                  {
-                      accessor.Documents.AddDocument(
-                          "Raven/Hilo/Users/Conflict/1", null,
-                          new RavenJObject
-                          {
-                              {"Max", 32}
-                          },
-                          new RavenJObject());
-
-                      accessor.Documents.AddDocument(
-                          "Raven/Hilo/Users/Conflict/2", null,
-                          new RavenJObject
-                          {
-                              {"Max", 64}
-                          },
-                          new RavenJObject());
-
-                      accessor.Documents.AddDocument("Raven/Hilo/Users", null,
-                              new RavenJObject
-                              {
-                              {
-                                  "Conflicts",
-                                  new RavenJArray()
-                                  {
-                                      "Raven/Hilo/Users/Conflict/1",
-                                      "Raven/Hilo/Users/Conflict/2"
-                                  }
-                                  }
-                              },
-                              new RavenJObject
-                              {
-                              {
-                                  "@Http-Status-Code"
-                                  ,
-                                  409
-                                  },
-                              {
-                                  "@Http-Status-Description"
-                                  , "Conflicted doc"
-                                  }
-                              });
-                  });
-
-                  var hiLoKeyGenerator = new HiLoKeyGenerator("Users", 32);
-                  var nextId = hiLoKeyGenerator.NextId(store.DatabaseCommands);
-                  Assert.Equal(65, nextId);
-              }
-          }*/
 
     }
 }
