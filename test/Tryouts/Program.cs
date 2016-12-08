@@ -18,9 +18,9 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i); 
-                using (var store = new FastTests.Server.Documents.Replication.ReplicationBasicTests())
+                using (var store = new FastTests.Server.Documents.PeriodicExport.PeriodicExportTests())
                 {
-                    store.Master_master_replication_from_etag_zero_without_conflict_should_work();
+                    store.CanExportToDirectory().Wait();
                 }
             }
             //); 

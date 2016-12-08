@@ -238,7 +238,7 @@ namespace Raven.Server.Documents
                     CollectionsSchema.Create(tx, "Collections");
 
                     _hasConflicts = tx.OpenTable(ConflictsSchema, "Conflicts").NumberOfEntries > 0 ? 1 : 0;
-                    
+
                     _lastEtag = ReadLastEtag(tx);
                     _collectionsCache = ReadCollections(tx);
 
@@ -388,7 +388,7 @@ namespace Raven.Server.Documents
             if (collectionName == null)
                 yield break;
 
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, 
+            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
                 collectionName.GetTableName(CollectionTableType.Documents),
                 throwIfDoesNotExist: false);
 
@@ -470,7 +470,7 @@ namespace Raven.Server.Documents
             if (collectionName == null)
                 yield break;
 
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, 
+            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
                 collectionName.GetTableName(CollectionTableType.Documents),
                 throwIfDoesNotExist: false);
 
@@ -495,7 +495,7 @@ namespace Raven.Server.Documents
         {
             foreach (var collection in collections)
             {
-                if(take <=0)
+                if (take <= 0)
                     yield break;
 
                 foreach (var document in GetDocumentsFrom(context, collection, etag, 0, int.MaxValue))
@@ -566,7 +566,7 @@ namespace Raven.Server.Documents
             var tvr = table.ReadByKey(loweredKey);
             if (tvr == null)
             {
-                if(_hasConflicts != 0)
+                if (_hasConflicts != 0)
                     ThrowDocumentConflictIfNeeded(context, loweredKey);
                 return null;
             }
@@ -613,7 +613,7 @@ namespace Raven.Server.Documents
             if (collectionName == null)
                 yield break;
 
-            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, 
+            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
                 collectionName.GetTableName(CollectionTableType.Tombstones),
                 throwIfDoesNotExist: false);
 
@@ -641,8 +641,8 @@ namespace Raven.Server.Documents
             if (collectionName == null)
                 return 0;
 
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, 
-                collectionName.GetTableName(CollectionTableType.Documents), 
+            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
+                collectionName.GetTableName(CollectionTableType.Documents),
                 throwIfDoesNotExist: false
                 );
 
@@ -668,7 +668,7 @@ namespace Raven.Server.Documents
             if (collectionName == null)
                 return 0;
 
-            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, 
+            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
                 collectionName.GetTableName(CollectionTableType.Tombstones),
                 throwIfDoesNotExist: false);
 
@@ -694,7 +694,7 @@ namespace Raven.Server.Documents
             if (collectionName == null)
                 return 0;
 
-            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, 
+            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
                 collectionName.GetTableName(CollectionTableType.Tombstones),
                 throwIfDoesNotExist: false);
 
@@ -706,7 +706,7 @@ namespace Raven.Server.Documents
                     .Count();
         }
 
-       
+
 
         public static Document TableValueToDocument(JsonOperationContext context, TableValueReader tvr)
         {
@@ -731,13 +731,13 @@ namespace Raven.Server.Documents
 
             result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(tvr, 4);
 
-            result.LastModified = new DateTime(*(long*) tvr.Read(5, out size));
+            result.LastModified = new DateTime(*(long*)tvr.Read(5, out size));
 
             if (tvr.Count > 6)
             {
-                result.Flags = (DocumentFlags) (*(int*) tvr.Read(6, out size));
+                result.Flags = (DocumentFlags)(*(int*)tvr.Read(6, out size));
             }
-     
+
             return result;
         }
 
@@ -932,7 +932,7 @@ namespace Raven.Server.Documents
             Slice loweredKey;
             using (Slice.External(context.Allocator, lowerKey, lowerSize, out loweredKey))
             {
-                if(_hasConflicts != 0)
+                if (_hasConflicts != 0)
                     ThrowDocumentConflictIfNeeded(context, loweredKey);
 
                 var result = GetDocumentOrTombstone(context, loweredKey);
@@ -1101,9 +1101,10 @@ namespace Raven.Server.Documents
             var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
 
             var list = new List<ChangeVectorEntry[]>();
-            while (true)
+            bool deleted = true;
+            while (deleted)
             {
-                bool deleted = false;
+                deleted = false;
                 // deleting a value might cause other ids to change, so we can't just pass the list
                 // of ids to be deleted, because they wouldn't remain stable during the deletions
                 foreach (var tvr in conflictsTable.SeekByPrimaryKey(loweredKey, startsWith: true))
@@ -1122,29 +1123,24 @@ namespace Raven.Server.Documents
                     conflictsTable.Delete(tvr.Id);
                     break;
                 }
-                if (deleted == false)
-                {
-                    // once this value has been set, we can't set it to false
-                    // an older transaction may be running and seeing it is false it
-                    // will not detect a conflict. It is an optimization only that
-                    // we have to do, so we'll handle it.
-
-                    //Only register the event if we actually deleted any conflicts
-                    if (list.Count > 0)
-                    {
-                        context.Transaction.InnerTransaction.LowLevelTransaction
-                                .AfterCommitWhenNewReadTransactionsPrevented +=
-                            () =>
-                            {
-                                //I don't do this as an interlocked operation on purpose since interlock is expensive and 
-                                //we don't mind getting false positives once in a while.
-                                _documentDatabase.DocumentsStorage._hasConflicts -= list.Count;
-                            };
-                    }
-                    // _hasConflicts = conflictsTable.NumberOfEntries > 0;
-                    return list;
-                }
             }
+
+            // once this value has been set, we can't set it to false
+            // an older transaction may be running and seeing it is false it
+            // will not detect a conflict. It is an optimization only that
+            // we have to do, so we'll handle it.
+
+            //Only register the event if we actually deleted any conflicts
+            var listCount = list.Count;
+            if (listCount > 0)
+            {
+                var tx = context.Transaction.InnerTransaction.LowLevelTransaction;
+                tx.AfterCommitWhenNewReadTransactionsPrevented += () =>
+                {
+                    Interlocked.Add(ref _documentDatabase.DocumentsStorage._hasConflicts, -listCount);
+                };
+            }
+            return list;
         }
 
         public DocumentConflict GetConflictForChangeVector(
@@ -1355,7 +1351,7 @@ namespace Raven.Server.Documents
             int keySize;
             DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, key, out lowerKey, out lowerSize, out keyPtr, out keySize);
 
-            if(_hasConflicts != 0)
+            if (_hasConflicts != 0)
                 changeVector = MergeConflictChangeVectorIfNeededAndDeleteConflicts(changeVector, context, key);
 
             // delete a tombstone if it exists
@@ -1398,7 +1394,7 @@ namespace Raven.Server.Documents
                         if (hasVersion)
                         {
                             int flags = (int)DocumentFlags.Versioned;
-                            tbv.Add((byte*) &flags, sizeof(int));
+                            tbv.Add((byte*)&flags, sizeof(int));
                         }
                     }
 
@@ -1425,7 +1421,7 @@ namespace Raven.Server.Documents
                                 $"Document {key} has etag {oldEtag}, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
                             {
                                 ActualETag = oldEtag,
-                                ExpectedETag = (long) expectedEtag
+                                ExpectedETag = (long)expectedEtag
                             };
 
                         int oldSize;
@@ -1442,7 +1438,7 @@ namespace Raven.Server.Documents
 
                 if (collectionName.IsSystem == false)
                 {
-                    
+
                     _documentDatabase.BundleLoader.ExpiredDocumentsCleaner?.Put(context,
                         keySlice, document);
                 }
@@ -1466,7 +1462,7 @@ namespace Raven.Server.Documents
             };
         }
 
-        private ChangeVectorEntry[] MergeConflictChangeVectorIfNeededAndDeleteConflicts(ChangeVectorEntry[] documentChangeVector,DocumentsOperationContext context, string key)
+        private ChangeVectorEntry[] MergeConflictChangeVectorIfNeededAndDeleteConflicts(ChangeVectorEntry[] documentChangeVector, DocumentsOperationContext context, string key)
         {
             ChangeVectorEntry[] mergedChangeVectorEntries = null;
             bool firstTime = true;
@@ -1484,7 +1480,7 @@ namespace Raven.Server.Documents
             if (mergedChangeVectorEntries != null)
             {
                 DeleteConflictsFor(context, key);
-                if(documentChangeVector != null)
+                if (documentChangeVector != null)
                     return ReplicationUtils.MergeVectors(mergedChangeVectorEntries, documentChangeVector);
 
                 return mergedChangeVectorEntries;
@@ -1666,15 +1662,15 @@ namespace Raven.Server.Documents
             TableSchema.FixedSizeSchemaIndexDef indexDef;
             if (tombstones)
             {
-                table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, 
+                table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
                     collectionName.GetTableName(CollectionTableType.Tombstones),
                     throwIfDoesNotExist: false);
-                
+
                 indexDef = TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice];
             }
             else
             {
-                table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, 
+                table = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
                     collectionName.GetTableName(CollectionTableType.Documents),
                     throwIfDoesNotExist: false);
                 indexDef = DocsSchema.FixedSizeIndexes[CollectionEtagsSlice];
@@ -1686,6 +1682,14 @@ namespace Raven.Server.Documents
             }
 
             return table.GetNumberEntriesFor(indexDef, afterEtag, out totalCount);
+        }
+
+        public long GetNumberOfDocuments()
+        {
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenReadTransaction())
+                return GetNumberOfDocuments(context);
         }
 
         public long GetNumberOfDocuments(DocumentsOperationContext context)
@@ -1727,7 +1731,7 @@ namespace Raven.Server.Documents
                 };
             }
 
-            var collectionTable = context.Transaction.InnerTransaction.OpenTable(DocsSchema, 
+            var collectionTable = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
                 collectionName.GetTableName(CollectionTableType.Documents),
                 throwIfDoesNotExist: false);
 
@@ -1753,7 +1757,7 @@ namespace Raven.Server.Documents
             if (collectionName == null)
                 return;
 
-            var table = transaction.OpenTable(TombstonesSchema, 
+            var table = transaction.OpenTable(TombstonesSchema,
                 collectionName.GetTableName(CollectionTableType.Tombstones),
                 throwIfDoesNotExist: false);
             if (table == null)
@@ -1868,7 +1872,7 @@ namespace Raven.Server.Documents
                     var collectionNames = new Dictionary<string, CollectionName>(_collectionsCache,
                         StringComparer.OrdinalIgnoreCase);
                     collectionNames[name.Name] = name;
-                    _collectionsCache=collectionNames;
+                    _collectionsCache = collectionNames;
                 };
             }
             return name;
