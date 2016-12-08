@@ -1,13 +1,13 @@
 #!/bin/bash
 
 ### BEGIN INIT INFO
-# Provides:          ravendb-deamon
+# Provides:          ravendb-daemon
 # Required-Start:    $local_fs
 # Required-Stop:     $local_fs
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
-# Short-Description: ravendb deamon
-# Description: ravendb deamon
+# Short-Description: ravendb daemon
+# Description: ravendb daemon
 ### END INIT INFO
 
 

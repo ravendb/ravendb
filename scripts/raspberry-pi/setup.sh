@@ -3,7 +3,7 @@
 SCRIPT_TITLE="setup"
 PKG_INSTALLER="apt-get" # supports : sudo ${PKG_INSTALLER} install <pkgname> 
 
-CHK_PKGS=( "bzip2" "libunwind8" "tar" )
+CHK_PKGS=( "bzip2" "libunwind8" "tar" "libcurl3" )
 DOTNET_DIR="dotnet"
 RAVENDB_DIR="ravendb.4.0"
 PROGS=( ${DOTNET_DIR} ${RAVENDB_DIR} )
@@ -141,7 +141,7 @@ function checkPackages () {
 		if [ -z "$pkg" ] 
 		then
 			pkgsNotInstalled+=($i)
-			echoErrorPkg
+			echoErrorPkg ${RECURSIVE_CALL}
 			foundMissingPkgs=1
 		else
 			echoOkPkg
@@ -152,7 +152,12 @@ function checkPackages () {
 		printf "\n${GREEN} All needed packages are installed${NC}\n\n"		
 	else
 		echo "`date +"%d/%m/%Y_%H:%M:%S"` FATAL ERROR - Missing packages : ${pkgsNotInstalled[@]}" >> ${REPORT_FILE}
-		printf "\n${RED} Missing packages : "		
+		ERR_COLOR="${RED}"
+		if [ ${RECURSIVE_CALL} == 0 ]
+		then
+			ERR_COLOR="${YELLOW}"
+		fi
+		printf "\n${ERR_COLOR} Missing packages : "		
 		printf "${pkgsNotInstalled[@]}${NC}\n"
 
 		if [ ${RECURSIVE_CALL} == 0 ]
@@ -164,7 +169,7 @@ function checkPackages () {
 				sudo ${PKG_INSTALLER} -y install ${i}
 			done
 			RECURSIVE_CALL=1
-			printf "\n{YELLOW}About to retry test packages existance${NC}\n\n"
+			printf "\n${YELLOW}About to retry test packages existance${NC}\n\n"
 			checkPackages
 			return
 		fi
@@ -189,10 +194,17 @@ function echoTestProgram () {
 }
 
 function echoErrorPkg () {
-	printf " ${RED} Not installed!${NC}"
+	ERR_COLOR="${RED}"
+	ERR_MESSG="ERROR"
+	if [ "a$1" == "a0" ] 
+	then 
+		ERR_COLOR="${YELLOW}"
+		ERR_MESSG="WARN "
+	fi
+	printf " ${ERR_COLOR} Not installed!${NC}"
 	tput cub 9999
 	tput cuf 1
-	printf "${RED}ERROR${NC}\n"
+	printf "${ERR_COLOR}${ERR_MESSG}${NC}\n"
 }
 
 function echoOkPkg () {
@@ -353,7 +365,7 @@ fi
 function addToStartup () {
 	if [ $OP_SYSTEM_STARTUP == 1 ]
 	then
-		echoExecProgram "Add RavenDB deamon to startup"
+		echoExecProgram "Add RavenDB daemon to startup"
 		sudo chmod +x ravendb.4.0/ravendb.watchdog.sh
 		ESCAPED_PWD=$(pwd | sed 's/\//\\\//g' | sed 's/\&/\\\&/g')
 		cat ${RAVENDB_DIR}/${RDB_DEAMON} | sed 's/RDB_DOTNET_PATH/'${ESCAPED_PWD}'\/'${DOTNET_DIR}'/g' | sed 's/RDB_RAVENDB_PATH/'${ESCAPED_PWD}'\/'${RAVENDB_DIR}'/g' > ${RDB_DEAMON}.config
@@ -368,7 +380,7 @@ function addToStartup () {
 			echoFailExec $status
 			exit 152
 		fi
-		echoExecProgram "Start RavenDB deamon (wait upto 40s)"
+		echoExecProgram "Start RavenDB daemon (wait upto 40s)"
 		sudo service ${RDB_DEAMON} restart >& /tmp/${RDB_DEAMON}.setup.log &
 		TIMEWAIT=40
 		SAWTHELIGHT=0
