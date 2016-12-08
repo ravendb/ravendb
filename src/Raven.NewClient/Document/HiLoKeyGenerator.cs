@@ -28,7 +28,7 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         /// <param name="entity">The entity.</param>
         /// <returns></returns>
-        public string GenerateDocumentKey(object entity) //can lose convention?
+        public string GenerateDocumentKey(object entity)
         {
             return GetDocumentKeyFromId(NextId());
         }
