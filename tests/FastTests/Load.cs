@@ -166,5 +166,35 @@ namespace NewClientTests.NewClient
                 }
             }
         }
+
+        [Fact]
+        public void Should_Load_Many_Ids_As_Post_Request()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var ids = new List<string>();
+                using (var session = store.OpenSession())
+                {
+                    // Length of all the ids together should be larger than 1024 for POST request
+                    for (int i = 0; i < 200; i++)
+                    {
+                        var id = "users/" + i;
+                        ids.Add(id);
+
+                        session.Store(new User()
+                        {
+                            Name = "Person " + i
+                        }, id);
+                    }
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var users = session.Load<User>(ids);
+                    Assert.Equal(users[77].Id, "users/77");
+                }
+            }
+        }
     }
 }
