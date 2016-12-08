@@ -20,5 +20,7 @@ namespace Raven.Server.ServerWide
         public static string FullVersion => 
             _fullVersion ?? (_fullVersion = Client.RavenVersionAttribute.Instance.FullVersion);
 
+        public const int DevBuildNumber = 40;
+
     }
 }
