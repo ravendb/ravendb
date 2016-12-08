@@ -67,10 +67,9 @@ class documentItem extends layoutableItem {
 
     connectedEntries = [] as entryItem[];
 
-    constructor(name: string, drawOffset: number) {
+    constructor(name: string) {
         super();
         this.name = name;
-        this.drawOffset = drawOffset;
     }
 
     get visible() {
@@ -498,7 +497,7 @@ class visualizerGraphDetails {
     }
 
     addDocument(documentName: string) {
-        const document = new documentItem(documentName, this.currentLineOffset);
+        const document = new documentItem(documentName);
         this.currentLineOffset += visualizerGraphDetails.margins.betweenLinesOffset;
         this.documents.push(document);
     }
@@ -568,14 +567,17 @@ class visualizerGraphDetails {
         this.layoutDocuments(yStart);
     }
 
+    // Return the visible items for the detailed view, ordered by their connectedEntries y coordinate
     getVisibleDocuments(): documentItem[] {
-        return this.documents.filter(x => x.visible);
+        return this.documents.filter(x => x.visible).sort((a, b) => { return a.connectedEntries[0].y - b.connectedEntries[0].y });
     }
 
+    // set x & y of document & the draw offsets
     private layoutDocuments(yStart: number) {
         let totalWidth = 0;
 
         const visibleDocuments = this.getVisibleDocuments();
+
         for (let i = 0; i < visibleDocuments.length; i++) {
             const doc = visibleDocuments[i];
 
@@ -598,13 +600,18 @@ class visualizerGraphDetails {
             extraItemPadding = (this.currentTree.totalWidth - totalWidth) / (visibleDocuments.length + 1);
         }
 
-        let currentX = visualizerGraphDetails.margins.minMarginBetweenDocumentNames + extraItemPadding;
+        // if there are many documents to draw than we better start with a lower y coordinate
+        let yOffsetOfHorizontalLine = visibleDocuments.length > 10 ?  20 : 0;
 
+        let currentX = visualizerGraphDetails.margins.minMarginBetweenDocumentNames + extraItemPadding;
         for (let i = 0; i < visibleDocuments.length; i++) {
             const doc = visibleDocuments[i];
-            doc.x = currentX;
 
+            doc.x = currentX;
             currentX += doc.width + visualizerGraphDetails.margins.minMarginBetweenDocumentNames + extraItemPadding;
+
+            doc.drawOffset = yOffsetOfHorizontalLine;
+            yOffsetOfHorizontalLine -= visualizerGraphDetails.margins.betweenLinesOffset;
         }
     }
 
@@ -786,8 +793,10 @@ class visualizerGraphDetails {
                 ctx.beginPath();
                 ctx.moveTo(source[0], source[1]);
                 ctx.lineTo(source[0], this.connectionsBaseY + doc.drawOffset);
-                ctx.lineTo(target[0] - visualizerGraphDetails.margins.straightLine - doc.drawOffset, this.connectionsBaseY + doc.drawOffset);
-                ctx.lineTo(target[0] - visualizerGraphDetails.margins.straightLine - doc.drawOffset, target[1]);
+                ctx.lineTo(target[0] - visualizerGraphDetails.margins.straightLine - doc.drawOffset - visualizerGraphDetails.margins.betweenLinesOffset * visibleDocuments.length,
+                           this.connectionsBaseY + doc.drawOffset);
+                ctx.lineTo(target[0] - visualizerGraphDetails.margins.straightLine - doc.drawOffset - visualizerGraphDetails.margins.betweenLinesOffset * visibleDocuments.length,
+                           target[1]);
                 ctx.lineTo(target[0], target[1]);
                 ctx.stroke();
 
