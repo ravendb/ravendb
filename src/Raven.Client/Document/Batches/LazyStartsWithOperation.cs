@@ -87,7 +87,9 @@ namespace Raven.Client.Document.Batches
                 return;
             }
 
-            var jsonDocuments = SerializationHelper.RavenJObjectsToJsonDocuments(((RavenJArray)response.Result).OfType<RavenJObject>());
+            var resultsArray = response.Result.Value<RavenJArray>("Results");
+
+            var jsonDocuments = SerializationHelper.RavenJObjectsToJsonDocuments(resultsArray.OfType<RavenJObject>());
 
             int nextPageStart;
             if (pagingInformation != null && int.TryParse(response.Headers[Constants.Headers.NextPageStart], out nextPageStart))
