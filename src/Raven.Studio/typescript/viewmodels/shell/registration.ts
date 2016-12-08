@@ -1,11 +1,13 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import app = require("durandal/app");
+import shell = require("viewmodels/shell");
 import dialog = require("plugins/dialog");
 
 import licenseRegistrationCommand = require("commands/licensing/licenseRegistrationCommand");
 import licenseActivateCommand = require("commands/licensing/licenseActivateCommand");
 
 import moment = require("moment");
+import license = require("models/auth/license");
 
 
 class registrationModel {
@@ -178,12 +180,11 @@ class registration extends dialogViewModelBase {
 
         this.isBusy(true);
 
-        const license = JSON.parse(this.licenseKeyModel().key()) as Raven.Server.Commercial.License;
-        new licenseActivateCommand(license)
+        const parsedLicense = JSON.parse(this.licenseKeyModel().key()) as Raven.Server.Commercial.License;
+        new licenseActivateCommand(parsedLicense)
             .execute()
             .done(() => {
-                // TODO: on activated action
-                // TODO: fetch license status?
+                license.fetchLicenseStatus();
 
                 dialog.close(this);
             })

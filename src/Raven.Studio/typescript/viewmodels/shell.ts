@@ -37,7 +37,6 @@ import notificationCenter = require("common/notifications/notificationCenter");
 import virtualGrid = require("widgets/virtualGrid/virtualGrid");
 
 import getClientBuildVersionCommand = require("commands/database/studio/getClientBuildVersionCommand");
-import getLicenseStatusCommand = require("commands/auth/getLicenseStatusCommand");
 import getSupportCoverageCommand = require("commands/auth/getSupportCoverageCommand");
 import getServerConfigsCommand = require("commands/database/studio/getServerConfigsCommand");
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
@@ -152,7 +151,7 @@ class shell extends viewModelBase {
         this.fetchClientBuildVersion();
         this.fetchServerBuildVersion();
 
-        return shell.fetchLicenseStatus();
+        return license.fetchLicenseStatus();
     }
 
     private setupRouting() {
@@ -355,17 +354,6 @@ class shell extends viewModelBase {
             .execute()
             .done((topology: topology) => {
                 shell.clusterMode(topology && topology.allNodes().length > 0);
-            });
-    }
-
-    static fetchLicenseStatus(): JQueryPromise<Raven.Server.Commercial.LicenseStatus> {
-        return new getLicenseStatusCommand()
-            .execute()
-            .done((result: Raven.Server.Commercial.LicenseStatus) => {
-                if (result.Status.contains("AGPL")) {
-                    result.Status = "Development Only";
-                }
-                license.licenseStatus(result);
             });
     }
 
