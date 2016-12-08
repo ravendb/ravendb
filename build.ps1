@@ -36,6 +36,8 @@ $NEW_CLIENT_OUT_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.NewClient",
 $SERVER_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Server")
 
 $SPARROW_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Sparrow")
+$SPARROW_OUT_DIR = [io.path]::combine($PROJECT_DIR, "src", "Sparrow", "bin", "Release")
+
 $TYPINGS_GENERATOR_SRC_DIR = [io.path]::combine($PROJECT_DIR, "tools", "TypingsGenerator")
 
 $STUDIO_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Studio")
@@ -47,7 +49,7 @@ $SPECS = @(
         "Runtime" = "win10-x64";
         "PkgType" = "zip";
         "IsUnix" = $False;
-    }
+    },
     @{
        "Name" = "ubuntu.14.04-x64";
        "Runtime" = "ubuntu.14.04-x64";
@@ -75,6 +77,7 @@ CleanBuildDirectories $RELEASE_DIR
 UpdateSourceWithBuildInfo $PROJECT_DIR $buildNumber $version
 
 BuildSparrow $SPARROW_SRC_DIR
+
 BuildClient $CLIENT_SRC_DIR $CLIENT_OUT_DIR $spec.Name
 BuildNewClient $NEW_CLIENT_SRC_DIR $NEW_CLIENT_OUT_DIR $spec.Name
 
@@ -95,7 +98,8 @@ Foreach ($spec in $SPECS) {
         "Client" = $CLIENT_OUT_DIR;
         "NewClient" = $NEW_CLIENT_OUT_DIR;
         "Server" = $([io.path]::combine($specOutDir, "Server"));
-        "Studio" = $STUDIO_OUT_DIR
+        "Studio" = $STUDIO_OUT_DIR;
+        "Sparrow" = $SPARROW_OUT_DIR;
     }
 
     CreateRavenPackage $PROJECT_DIR $RELEASE_DIR $specOutDirs $spec $version
