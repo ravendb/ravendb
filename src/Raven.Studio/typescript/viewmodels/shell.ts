@@ -193,7 +193,6 @@ class shell extends viewModelBase {
 
         this.initializeShellComponents();
 
-        //TODO: use constants
         registration.showRegistrationDialogIfNeeded(license.licenseStatus());
     }
 

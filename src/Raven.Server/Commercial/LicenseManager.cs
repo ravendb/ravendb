@@ -69,6 +69,8 @@ namespace Raven.Server.Commercial
                 serverStore.LicenseStorage.SetFirstServerStartDate(firstServerStartDate.Value);
             }
 
+            LicenseStatus.FirstServerStartDate = firstServerStartDate.Value;
+
             var license = serverStore.LicenseStorage.LoadLicense();
             if (license == null)
                 return;
@@ -78,7 +80,6 @@ namespace Raven.Server.Commercial
                 LicenseStatus.Attributes = LicenseValidator.Validate(license, RSAParameters);
                 LicenseStatus.Error = false;
                 LicenseStatus.Message = null;
-                LicenseStatus.FirstServerStartDate = firstServerStartDate.Value;
             }
             catch (Exception e)
             {
