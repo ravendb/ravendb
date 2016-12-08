@@ -120,6 +120,7 @@ namespace Raven.Server.Documents.Handlers
             else if (HttpContext.Request.Query.ContainsKey("startsWith"))
             {
                 isLoadStartingWith = true;
+
                 documents = Database.DocumentsStorage.GetDocumentsStartingWith(context,
                     HttpContext.Request.Query["startsWith"],
                     HttpContext.Request.Query["matches"],
