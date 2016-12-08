@@ -116,22 +116,47 @@ class registration extends dialogViewModelBase {
         this.dismissVisible(canBeDismissed);
     }
 
+
     static showRegistrationDialogIfNeeded(license: Raven.Server.Commercial.LicenseStatus) {
         if (license.LicenseType === "Invalid") {
-            const vm = new registration(license, false);
-            app.showBootstrapDialog(vm);
+            registration.showRegistrationDialog(license, false);
             return;
         }
 
         if (license.LicenseType === "None") {
-            const dismissedUntil = registrationDismissStorage.getDismissedUntil();
+            const firstStart = moment(license.FirstServerStartDate);
+            const weekAfterFirstStart = firstStart.add("1", "week");
+            const treeWeeksAfterFirstStart = firstStart.add("3", "weeks");
 
-            if (!dismissedUntil || dismissedUntil.getTime() < new Date().getTime()) {
-                const vm = new registration(license, true);
-                app.showBootstrapDialog(vm);
-                return;
+            const now = moment();
+
+            let shouldShow = false;
+            let canDismiss = false;
+
+            if (now.isBefore(weekAfterFirstStart)) {
+                shouldShow = false;
+            } else {
+                if (now.isAfter(treeWeeksAfterFirstStart)) {
+                    shouldShow = true;
+                    canDismiss = false;
+                } else {
+                    // show if not dismissed
+                    const dismissedUntil = registrationDismissStorage.getDismissedUntil();
+
+                    canDismiss = true;
+                    shouldShow = !dismissedUntil || dismissedUntil.getTime() < new Date().getTime();
+                }
+            }
+
+            if (shouldShow) {
+                registration.showRegistrationDialog(license, canDismiss);
             }
         }
+    }
+
+    static showRegistrationDialog(license: Raven.Server.Commercial.LicenseStatus, canBeDismissed: boolean) {
+        const vm = new registration(license, canBeDismissed);
+        app.showBootstrapDialog(vm);
     }
 
     dismiss(days: number) {
