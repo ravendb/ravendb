@@ -85,7 +85,7 @@ class virtualGrid<T> {
         if (this.settings.columns && this.settings.columns.length > 0) {
             // Also, insert the row selection checkbox column if we're configured to do so.
             if (this.settings.showRowSelectionCheckbox) {
-                this.columns([new checkedColumn()].concat(this.settings.columns));
+                this.columns([new checkedColumn() as virtualColumn].concat(this.settings.columns));
             } else {
                 this.columns(this.settings.columns);
             }
@@ -339,7 +339,7 @@ class virtualGrid<T> {
             });
 
         // Insert the row selection checkbox column as necessary.
-        var initialColumns = this.settings.showRowSelectionCheckbox ? [new checkedColumn()] : [];
+        const initialColumns: virtualColumn[] = this.settings.showRowSelectionCheckbox ? [new checkedColumn()] : [];
         this.columns(initialColumns.concat(columnNames.map(p => new textColumn(p, p, columnWidth))));
     }
 
