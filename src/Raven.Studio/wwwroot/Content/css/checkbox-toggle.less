@@ -36,6 +36,7 @@
 .checkbox-variant(@parent, @color) {
     .@{parent} label:before {
         background-color: fadeout(@color, 70%);
+        border-color: fadeout(@color, 70%);
     }
 
     .@{parent} input[type="checkbox"]:checked + label,
@@ -228,7 +229,7 @@
             padding-left: 3px;
             padding-top: 0px;
             font-size: 15px;
-            color: @brand-primary;
+            color: @gray-light;
         }
     }
 
@@ -242,8 +243,8 @@
         }
 
         &:checked + label::before {
-            border-color:@gray-lighter;
-            background-color: @gray-lighter;
+            border-color:@gray-light;
+            background-color: transparent;
         }
 
 

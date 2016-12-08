@@ -1,7 +1,7 @@
 <div class="resources" data-bind="css: { 'resources_compact': compactView() }">
     <div class="resourcesToolbar toolbar clearfix">
         <div class="form-inline">
-            <div class="checkbox checkbox-inline align-checkboxes">
+            <div class="checkbox checkbox-primary checkbox-inline align-checkboxes">
                 <input type="checkbox" class="styled" data-bind="checkboxTriple: selectionState, event: { change: toggleSelectAll }">
                 <label></label>
             </div>
@@ -12,7 +12,7 @@
                 </button>
                 <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
                     <li>
-                        <a href="#">
+                        <a href="#" class="has-badge">
                             <i class="icon-database"></i>
                             <span>
                                 Databases
@@ -21,7 +21,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="#" class="btn-prerelease">
+                        <a href="#" class="btn-prerelease has-badge">
                             <i class="icon-filesystem"></i>
                             <span>
                                 Filesystems
