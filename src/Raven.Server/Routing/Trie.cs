@@ -10,6 +10,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Binary;
 
 namespace Raven.Server.Routing
 {
@@ -35,10 +36,16 @@ namespace Raven.Server.Routing
     /// <typeparam name="T"></typeparam>
     public class Trie<T>
     {
+        public string DebugKey;
         public string Key;
         public T Value;
+        public int Mask;
         public Trie<T>[] Children;
-        public Trie<T>[] FilteredChildren => Children?.Where(x => x != null).Distinct().ToArray();
+
+        public Trie<T>[] FilteredChildren
+            => Children
+                ?.Where(x => x != null)
+                .ToArray();
 
         public struct MatchResult
         {
@@ -52,8 +59,8 @@ namespace Raven.Server.Routing
                 {
                     if (CurrentIndex < current.Key.Length)
                     {
-                        // if(current.Key[currentIndex] != url[i])
-                        if (CharEqualsAt(current.Key, CurrentIndex, term, i) == false)
+                        // if(current.Key[currentIndex] != term[i])
+                        if (CharEqualsAt(current.Key[CurrentIndex], term[i]) == false)
                         {
                             if (current.Key[CurrentIndex] == '$')
                             {
@@ -72,12 +79,10 @@ namespace Raven.Server.Routing
                         return null;
                     }
 
-                    var maybe = term[i] <= current.Children.Length
-                          ? current.Children[term[i]]
-                          : null;
+                    var maybe = current.GetNodeAt(term[i]);
                     if (maybe == null)
                     {
-                        maybe = current.Children['*'];
+                        maybe = current.GetNodeAt('*');
                         if (maybe != null)
                         {
                             Match.CaptureStart = i;
@@ -93,7 +98,7 @@ namespace Raven.Server.Routing
                         }
                         else
                         {
-                            maybe = current.Children['$'];
+                            maybe = current.GetNodeAt('$');
                             if (maybe != null)
                             {
                                 CurrentIndex = 0;
@@ -113,7 +118,17 @@ namespace Raven.Server.Routing
                 Match.MatchLength = term.Length;
                 return current;
             }
+        }
 
+        private Trie<T> GetNodeAt(char ch)
+        {
+            var index = ch & Mask;
+            var trie = Children[index];
+            if (trie == null)
+                return null;
+            if (CharEqualsAt(trie.Key[0], ch) == false)
+                return null;
+            return trie;
         }
 
         public MatchResult TryMatch(string method, string url)
@@ -134,7 +149,7 @@ namespace Raven.Server.Routing
             }
 
             result = match.SearchTrie(result, url);
-            if (result == null || 
+            if (result == null ||
                  (match.CurrentIndex != result.Key.Length && result.Key[match.CurrentIndex] != '$')
                )
             {
@@ -160,8 +175,46 @@ namespace Raven.Server.Routing
             var trie = new Trie<T>();
 
             Build(trie, source, sortedKeys, 0, 0, sortedKeys.Length);
+            trie.DebugKey = trie.Key;
+            trie.Optimize();
 
             return trie;
+        }
+
+        private void Optimize()
+        {
+            if (Children == null)
+                return;
+
+            if (Mask != 0)
+                return;// already run
+
+            var children = FilteredChildren;
+            var size = Bits.NextPowerOf2(children.Length);
+            OptimizeInternal(size, children);
+        }
+
+        private void OptimizeInternal(int size, Trie<T>[] children)
+        {
+            var smallChildren = new Trie<T>[size];
+            Mask = int.MaxValue >> 31 - Bits.CeilLog2(size);
+            foreach (var trie in children)
+            {
+                var key = trie.Key[0] & Mask;
+                if (smallChildren[key] != null)
+                {
+                    if (smallChildren[key] == trie)
+                        break; // different casing, same val, nothing to do
+                    // real collision, double the size and try again
+                    OptimizeInternal(size*2, children);
+                    return;
+                }
+                trie.DebugKey = DebugKey + trie.Key;
+
+                smallChildren[key] = trie;
+                trie.Optimize();
+            }
+            Children = smallChildren;
         }
 
         private static void EnsureRoutsAreOnlyUsingASCII(string[] sortedKeys)
@@ -218,7 +271,7 @@ namespace Raven.Server.Routing
             while (childStart + childCount < start + count)
             {
                 var nextKey = sortedKeys[childStart + childCount];
-                if (matchingIndex < nextKey.Length && CharEqualsAt(nextKey, matchingIndex, minKey, matchingIndex))
+                if (matchingIndex < nextKey.Length && CharEqualsAt(nextKey[matchingIndex], minKey[matchingIndex]))
                 {
                     childCount++;
                     continue;
@@ -267,17 +320,17 @@ namespace Raven.Server.Routing
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool CharEqualsAt(string x, int xIndex, string y, int yIndex)
+        private static bool CharEqualsAt(char x, char y)
         {
-            if (x[xIndex] == y[yIndex])
-                return true;			
+            if (x == y)
+                return true;
 
-            if (x[xIndex] > 'Z' && y[yIndex] <= 'Z')
-                return y[yIndex] - 'A' + 'a' == x[xIndex];
-            if (x[xIndex] <= 'Z' && y[yIndex] > 'Z')
-                return x[xIndex] - 'A' + 'a' == y[yIndex];
+            if (x > 'Z' && y <= 'Z')
+                return y - 'A' + 'a' == x;
+            if (x <= 'Z' && y > 'Z')
+                return x - 'A' + 'a' == y;
 
-            return y[yIndex] - 'A' + 'a' == x[xIndex] - 'A' + 'a';
+            return y - 'A' + 'a' == x - 'A' + 'a';
 
         }
     }
