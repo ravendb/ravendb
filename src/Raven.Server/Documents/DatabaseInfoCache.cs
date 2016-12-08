@@ -125,7 +125,8 @@ namespace Raven.Server.Documents
         {
             TransactionOperationContext ctx;
             Slice key;
-            using(_contextPool.AllocateOperationContext(out ctx))
+            using (_contextPool.AllocateOperationContext(out ctx))
+            using(ctx.OpenWriteTransaction())
             using (Slice.From(ctx.Allocator, databaseName.ToLowerInvariant(), out key))
             {
                 DeleteInternal(ctx, key);

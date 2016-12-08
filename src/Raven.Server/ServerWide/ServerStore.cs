@@ -223,7 +223,7 @@ namespace Raven.Server.ServerWide
             using (Slice.From(ctx.Allocator, id.ToLowerInvariant(), out key))
             {
                 items.DeleteByKey(key);
-                DatabaseInfoCache.Delete(ctx, key);
+                DatabaseInfoCache.DeleteInternal(ctx, key);
             }
         }
 
