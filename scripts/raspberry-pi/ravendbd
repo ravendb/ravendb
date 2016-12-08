@@ -20,7 +20,7 @@ function shutRavenGracefully(){
 	then
 		PID=$(ps -ef | grep corerun | grep Raven.Server.dll | awk '{print $2}')
 		printf "on $1 command found already running instance. killing it without resume"
-		sudo /sbin/runuser ubuntu -c "echo \"lockfile\" > /tmp/ravendb.${PID}.lockfile"
+		sudo /sbin/runuser RDB_USERNAME -c "echo \"lockfile\" > /tmp/ravendb.${PID}.lockfile"
 		ps -ef | grep corerun | grep Raven.Server.dll | awk '{print $2}' | xargs kill
 	fi
 }
@@ -32,7 +32,7 @@ start|restart|reload|force-reload)
 		rm -f /tmp/ravendb.*.lockfile
 	fi
 	shutRavenGracefully 
-	/sbin/runuser ubuntu -c 'RDB_RAVENDB_PATH/ravendb.watchdog.sh RDB_RAVENDB_PATH RDB_DOTNET_PATH' &
+	/sbin/runuser RDB_USERNAME -c 'RDB_RAVENDB_PATH/ravendb.watchdog.sh RDB_RAVENDB_PATH RDB_DOTNET_PATH' &
     ;;
 stop)
 	shutRavenGracefully
