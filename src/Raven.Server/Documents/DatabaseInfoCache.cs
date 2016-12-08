@@ -50,7 +50,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public unsafe void InsertDatabaseInfo(DynamicJsonValue databaseInfo)
+        public unsafe void InsertDatabaseInfo(DynamicJsonValue databaseInfo, string databaseName)
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
@@ -58,9 +58,8 @@ namespace Raven.Server.Documents
             {
                 var table = tx.InnerTransaction.OpenTable(_databaseInfoSchema, DatabaseInfoSchema.DatabaseInfoTree);
 
-                var databaseName = databaseInfo["Name"] as string;
 
-                using (var id = context.GetLazyString(databaseName))
+                using (var id = context.GetLazyString(databaseName.ToLowerInvariant()))
                 using (
                     var json = context.ReadObject(databaseInfo, "DatabaseInfo",
                         BlittableJsonDocumentBuilder.UsageMode.ToDisk))
@@ -87,7 +86,7 @@ namespace Raven.Server.Documents
 
                 Slice databaseNameAsSlice;
                 TableValueReader infoTvr;
-                using (Slice.From(tx.InnerTransaction.Allocator, databaseName, out databaseNameAsSlice))
+                using (Slice.From(tx.InnerTransaction.Allocator, databaseName.ToLowerInvariant(), out databaseNameAsSlice))
                 {
                     infoTvr = table.ReadByKey(databaseNameAsSlice);
                 }
@@ -114,12 +113,23 @@ namespace Raven.Server.Documents
         /// </summary>
         /// <param name="ctx">A context allocated outside the method with an open write transaction</param>
         /// <param name="databaseName">The database name as a slice</param>
-        public void Delete(TransactionOperationContext ctx, Slice databaseName)
+        public void DeleteInternal(TransactionOperationContext ctx, Slice databaseName)
         {
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Deleteing database info for '{databaseName}'.");
             var table = ctx.Transaction.InnerTransaction.OpenTable(_databaseInfoSchema, DatabaseInfoSchema.DatabaseInfoTree);
             table.DeleteByKey(databaseName);            
+        }
+
+        public void Delete(string databaseName)
+        {
+            TransactionOperationContext ctx;
+            Slice key;
+            using(_contextPool.AllocateOperationContext(out ctx))
+            using (Slice.From(ctx.Allocator, databaseName.ToLowerInvariant(), out key))
+            {
+                DeleteInternal(ctx, key);
+            }
         }
 
         public static class DatabaseInfoSchema
@@ -134,5 +144,7 @@ namespace Raven.Server.Documents
 #pragma warning restore 169
             }
         }
+
+
     }
 }

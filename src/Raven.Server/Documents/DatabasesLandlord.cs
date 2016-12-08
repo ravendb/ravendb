@@ -112,7 +112,7 @@ namespace Raven.Server.Documents
                 var sp = Stopwatch.StartNew();
                 var documentDatabase = new DocumentDatabase(config.DatabaseName, config, ServerStore);
                 documentDatabase.Initialize();
-                UpdateDatabaseInfoCache(documentDatabase, ServerStore);
+                DeleteDatabaseCachedInfo(documentDatabase,ServerStore);
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Started database {config.DatabaseName} in {sp.ElapsedMilliseconds:#,#;;0}ms");
 
@@ -131,9 +131,9 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void UpdateDatabaseInfoCache(DocumentDatabase database, ServerStore serverStore)
+        private void DeleteDatabaseCachedInfo(DocumentDatabase database, ServerStore serverStore)
         {
-            serverStore.DatabaseInfoCache.InsertDatabaseInfo(database.GenerateDatabaseInfo(true));
+            serverStore.DatabaseInfoCache.Delete(database.Name);
         }
 
         public RavenConfiguration CreateDatabaseConfiguration(StringSegment databaseName, bool ignoreDisabledDatabase = false)
