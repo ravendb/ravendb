@@ -8,7 +8,6 @@ import dialog = require("plugins/dialog");
  *    - Listens to Enter key and submits the form only if all the fields have been completed
  */
 class searchDialogViewModel extends dialogViewModelBase {
-    static dialogSelector = ".messageBox";
 
     constructor(inputs: KnockoutObservable<string>[]) {
         super();
