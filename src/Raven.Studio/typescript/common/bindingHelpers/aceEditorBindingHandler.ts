@@ -10,7 +10,7 @@ import ace = require("ace/ace");
 class aceEditorBindingHandler {
 
     defaults = {
-        theme: "ace/theme/ambiance",
+        theme: "ace/theme/pastel_dark_raven",
         fontSize: "16px",
         lang: "ace/mode/csharp",
         readOnly: false,
