@@ -589,7 +589,7 @@ input[type=file] + .form-control {
 .dropdown-menu {
     a.btn-spinner {
         .global-spinner;
-        pointer-events:none;
+        pointer-events: none;
 
         [class*=" icon-"],
         [class^="icon-"] {
@@ -916,7 +916,7 @@ pre {
 }
 
 .toolbar {
-    margin-bottom:@grid-gutter-width /2 ;
+    margin-bottom: @grid-gutter-width /2;
 }
 
 .panel {
@@ -1002,7 +1002,7 @@ pre {
 }
 
 .form-group-dropdown {
-    position:relative;
+    position: relative;
 
     .dropdown-menu {
         top: 36px !important;
@@ -1019,6 +1019,107 @@ pre {
 
 .font-normal {
     font-weight: normal;
+}
+
+#about-page {
+
+    .icon-logo {
+        font-size:120px;
+    }
+
+    .path {
+        word-break: break-word;
+        font-size: 15px;
+        color: @gray-dark;
+        font-weight: 700;
+    }
+
+    .license-table {
+        overflow-y: auto;
+        max-height: 420px;
+    }
+
+    .license-table table td {
+        width: 50%;
+    }
+    .padding {
+        padding: 20px;
+    }
+
+    .roundborder {
+        display: inline-block;
+        width: 100px;
+        height: 100px;
+        position: relative;
+    }
+
+    @media (min-height:900px) {
+        .roundborder {
+            margin-top: 30px;
+            width: 150px;
+            height: 150px;
+        }
+    }
+
+    .roundborder:after, .roundborder:before {
+        content: '';
+        display: block;
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border-radius: 300px;
+        border: 8px solid #eee;
+        -webkit-transform: rotate(45deg);
+        transform: rotate(45deg);
+    }
+
+    .roundborder:before {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 85%;
+        height: 85%;
+        border: none;
+        -webkit-transform: translateX(-50%) translateY(-50%);
+        transform: translateX(-50%) translateY(-50%);
+    }
+
+    .roundborder.commercial:after {
+        border-color: #38b44a;
+    }
+
+    .roundborder.expired:after {
+        border-color: #f36523;
+    }
+
+    .roundborder.dev-only .fa, .roundborder.no-support .fa {
+        color: #df382c;
+    }
+
+    .roundborder.dev-only:after, .roundborder.no-support:after {
+        border-color: #eee;
+    }
+
+    .roundborder.prerelease:after {
+        border-style: dotted;
+        border-color: @brand-warning;
+    }
+
+    .roundborder i {
+        color: @gray-light;
+        font-size: 50px;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        -webkit-transform: translateX(-50%) translateY(-50%);
+        transform: translateX(-50%) translateY(-50%);
+    }
+
+    @media (min-height:900px) {
+        .roundborder i {
+            font-size: 70px;
+        }
+    }
 }
 
 @import "pages/tasks-sampleData";

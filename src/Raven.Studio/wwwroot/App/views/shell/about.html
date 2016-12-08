@@ -1,1 +1,49 @@
-<div data-bind="compose: 'common/underDevelopment.html'"></div>
+<div id="about-page">
+    <div class="row">
+        <div class="col-sm-10 col-sm-offset-1 col-md-8 col-md-offset-2 col-lg-6 col-lg-offset-3">
+            <div class="row">
+                <div class="col-sm-12 text-center">
+                    <i class="icon-logo text-primary"></i>
+                    <h3 class="text-center">Server: v4.0.0-alpha-40000</h3>
+                    <h3 class="text-center">Client: v4.0.0-alpha-40000</h3>
+
+
+                </div>
+                <div class="col-sm-6 text-center">
+                       <div data-bind="visible: isNonExpiredCommercial">
+                        <div class="roundborder prerelease">
+                            <i class="icon-document"></i>
+                        </div>
+                        <h3>LICENSE</h3>
+                        <h4 data-bind="text: licenseStatusText">Prerelease license</h4>
+                    </div>
+   
+                    <p data-bind="visible: licenseExpiresAt" class="expire-date"><small>EXPIRES: <span data-bind="text: licenseExpiresAt">2016-Jun-22</span></small></p>
+                    <a href="http://ravendb.net/support" class="btn btn-lg">Register</a>
+                </div>
+                <div class="col-sm-6 text-center">                   
+                        <div data-bind="visible: supportStatus === 'LicenseNotFound'">
+                            <div class="roundborder prerelease">
+                                <i class="icon-help"></i>
+                            </div>
+                            <h3>SUPPORT</h3>
+                            <h4>Upcoming in final release</h4>
+                            <p>&nbsp;</p>
+                        </div>
+                        <div data-bind="visible: supportExpiresAt" class="expire-date" style="display: none;">
+                            EXPIRES: <span data-bind="text: supportExpiresAt"></span>
+                        </div>
+                    <a href="mailto:support@ravendb.net" class="btn btn-lg">Feedback</a>
+                </div>
+            </div>
+
+            <hr />
+
+
+
+            <p class="text-center">
+                <small>Copyright &copy; 2016 Hibernating Rhinos. All rights reserved</small>
+            </p>
+        </div>
+    </div>
+</div>
