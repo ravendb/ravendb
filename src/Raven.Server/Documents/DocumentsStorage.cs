@@ -1129,6 +1129,18 @@ namespace Raven.Server.Documents
                     // will not detect a conflict. It is an optimization only that
                     // we have to do, so we'll handle it.
 
+                    //Only register the event if we actually deleted any conflicts
+                    if (list.Count > 0)
+                    {
+                        context.Transaction.InnerTransaction.LowLevelTransaction
+                                .AfterCommitWhenNewReadTransactionsPrevented +=
+                            () =>
+                            {
+                                //I don't do this as an interlocked operation on purpose since interlock is expensive and 
+                                //we don't mind getting false positives once in a while.
+                                _documentDatabase.DocumentsStorage._hasConflicts -= list.Count;
+                            };
+                    }
                     // _hasConflicts = conflictsTable.NumberOfEntries > 0;
                     return list;
                 }
@@ -1458,10 +1470,8 @@ namespace Raven.Server.Documents
         {
             ChangeVectorEntry[] mergedChangeVectorEntries = null;
             bool firstTime = true;
-            int numOfConflicts = 0;
             foreach (var conflict in GetConflictsFor(context, key))
             {
-                numOfConflicts++;
                 if (firstTime)
                 {
                     mergedChangeVectorEntries = conflict.ChangeVector;
@@ -1474,7 +1484,6 @@ namespace Raven.Server.Documents
             if (mergedChangeVectorEntries != null)
             {
                 DeleteConflictsFor(context, key);
-                Interlocked.Add(ref _hasConflicts,-1*numOfConflicts);
                 if(documentChangeVector != null)
                     return ReplicationUtils.MergeVectors(mergedChangeVectorEntries, documentChangeVector);
 
