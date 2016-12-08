@@ -7,7 +7,7 @@ CHK_PKGS=( "bzip2" "libunwind8" "tar" "libcurl3" )
 DOTNET_DIR="dotnet"
 RAVENDB_DIR="ravendb.4.0"
 PROGS=( ${DOTNET_DIR} ${RAVENDB_DIR} )
-RDB_DEAMON="ravendbd"
+RDB_DAEMON="ravendbd"
 
 OP_SYSTEM_STARTUP=1
 OP_SKIP_ERRORS=0
@@ -32,7 +32,7 @@ ATTACHMENTS=()
 UPGRADE_SCRIPT="https://ravendb.net/raspberry-pi/updater.sh"
 
 function printWelcome () {
-	printf "\n\n${CYAN}RavenDB on Raspberry PI (Linux + dontnet core)\nSetup Script${BLUE} (v0.1) ${NC}\n"
+	printf "\n\n${CYAN}RavenDB on Raspberry PI (Linux + dontnet core)\nSetup Script${BLUE} (v0.2) ${NC}\n"
 	printf "${PURPLE}==============================================${NC}\n"
 	TEST_ARCH=$(lsb_release -r 2>/dev/null | grep '16.04' | wc -l)$(uname -a | grep 'armv7l' | wc -l)
 	if [ ${TEST_ARCH} != "11" ]; then
@@ -368,10 +368,10 @@ function addToStartup () {
 		echoExecProgram "Add RavenDB daemon to startup"
 		sudo chmod +x ravendb.4.0/ravendb.watchdog.sh
 		ESCAPED_PWD=$(pwd | sed 's/\//\\\//g' | sed 's/\&/\\\&/g')
-		cat ${RAVENDB_DIR}/${RDB_DEAMON} | sed 's/RDB_DOTNET_PATH/'${ESCAPED_PWD}'\/'${DOTNET_DIR}'/g' | sed 's/RDB_RAVENDB_PATH/'${ESCAPED_PWD}'\/'${RAVENDB_DIR}'/g' | sed 's/RDB_USERNAME/'${USER}'/g' > ${RDB_DEAMON}.config
-		sudo mv ${RDB_DEAMON}.config /etc/init.d/${RDB_DEAMON} >& /dev/null
-		sudo chmod +x /etc/init.d/${RDB_DEAMON} >& /dev/null
-		sudo update-rc.d ${RDB_DEAMON} defaults
+		cat ${RAVENDB_DIR}/${RDB_DAEMON} | sed 's/RDB_DOTNET_PATH/'${ESCAPED_PWD}'\/'${DOTNET_DIR}'/g' | sed 's/RDB_RAVENDB_PATH/'${ESCAPED_PWD}'\/'${RAVENDB_DIR}'/g' | sed 's/RDB_USERNAME/'${USER}'/g' > ${RDB_DAEMON}.config
+		sudo mv ${RDB_DAEMON}.config /etc/init.d/${RDB_DAEMON} >& /dev/null
+		sudo chmod +x /etc/init.d/${RDB_DAEMON} >& /dev/null
+		sudo update-rc.d ${RDB_DAEMON} defaults
 		status=$?
 		if [ ${status} == 0 ];
 		then
@@ -381,13 +381,13 @@ function addToStartup () {
 			exit 152
 		fi
 		echoExecProgram "Start RavenDB daemon (wait upto 40s)"
-		sudo service ${RDB_DEAMON} restart >& /tmp/${RDB_DEAMON}.setup.log &
+		sudo service ${RDB_DAEMON} restart >& /tmp/${RDB_DAEMON}.setup.log &
 		TIMEWAIT=40
 		SAWTHELIGHT=0
 		while [ ${TIMEWAIT} -gt 0 ];
 		do
 			sleep 1
-			SAWTHELIGHT=$(sudo service ${RDB_DEAMON} status | tail -1 | grep "Running as Service" | wc -l)
+			SAWTHELIGHT=$(sudo service ${RDB_DAEMON} status | tail -1 | grep "Running as Service" | wc -l)
 			if [ ${SAWTHELIGHT} == 1 ]
 			then
 				break;
