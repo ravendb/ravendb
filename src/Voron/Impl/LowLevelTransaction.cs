@@ -30,9 +30,9 @@ namespace Voron.Impl
         private readonly bool _disposeAllocator;
 
         private Tree _root;
-        public Tree RootObjects => _root;        
+        public Tree RootObjects => _root;
 
-        public bool FlushedToJournal;        
+        public bool FlushedToJournal;
 
         private readonly WriteAheadJournal _journal;
         internal readonly List<JournalSnapshot> JournalSnapshots = new List<JournalSnapshot>();
@@ -58,7 +58,7 @@ namespace Voron.Impl
         private readonly Stack<long> _pagesToFreeOnCommit;
         private readonly Dictionary<long, PageFromScratchBuffer> _scratchPagesTable;
         private readonly HashSet<PagerState> _pagerStates;
-        private readonly Dictionary<int, PagerState> _scratchPagerStates;        
+        private readonly Dictionary<int, PagerState> _scratchPagerStates;
         // END: Structures that are safe to pool.
 
 
@@ -77,7 +77,7 @@ namespace Voron.Impl
         private readonly HashSet<PageFromScratchBuffer> _transactionPages;
         private readonly HashSet<long> _freedPages;
         private readonly List<PageFromScratchBuffer> _unusedScratchPages;
-        
+
 
         private readonly StorageEnvironmentState _state;
 
@@ -164,7 +164,7 @@ namespace Voron.Impl
             _dirtyPages = _env.WriteTransactionPool.DirtyPagesPool;
             _freedPages = new HashSet<long>(NumericEqualityComparer.Instance);
             _unusedScratchPages = new List<PageFromScratchBuffer>();
-            _transactionPages = new HashSet<PageFromScratchBuffer>(PageFromScratchBufferEqualityComparer.Instance);           
+            _transactionPages = new HashSet<PageFromScratchBuffer>(PageFromScratchBufferEqualityComparer.Instance);
             _pagesToFreeOnCommit = new Stack<long>();
 
             _state = env.State.Clone();
@@ -267,7 +267,7 @@ namespace Voron.Impl
             _env.AssertNoCatastrophicFailure();
 
             // Check if we can hit the lowest level locality cache.
-            Page currentPage = GetPage(num);            
+            Page currentPage = GetPage(num);
 
             if (_dirtyPages.Contains(num))
                 return currentPage;
@@ -498,7 +498,7 @@ namespace Voron.Impl
 
             if (!Committed && !RolledBack && Flags == TransactionFlags.ReadWrite)
                 Rollback();
-            
+
             _disposed = true;
 
             if (Flags == TransactionFlags.ReadWrite)
@@ -516,7 +516,7 @@ namespace Voron.Impl
 
             if (_disposeAllocator)
                 _allocator.Dispose();
-            
+
             OnDispose?.Invoke(this);
         }
 
@@ -719,27 +719,27 @@ namespace Voron.Impl
 
         private void ValidateReadOnlyPages()
         {
-            foreach(var readOnlyKey in readOnlyPages )
+            foreach (var readOnlyKey in readOnlyPages)
             {
                 long pageNumber = readOnlyKey.Key;
                 if (_dirtyPages.Contains(pageNumber))
-                    VoronUnrecoverableErrorException.Raise("Read only page is dirty (which means you are modifying a page directly in the data -- non transactionally -- ).");
+                    VoronUnrecoverableErrorException.Raise(_env, "Read only page is dirty (which means you are modifying a page directly in the data -- non transactionally -- ).");
 
                 var page = this.GetPage(pageNumber);
 
                 ulong pageHash = Hashing.XXHash64.Calculate(page.Pointer, (ulong)Environment.Options.PageSize);
                 if (pageHash != readOnlyKey.Value)
-                    VoronUnrecoverableErrorException.Raise("Read only page content is different (which means you are modifying a page directly in the data -- non transactionally -- ).");
+                    VoronUnrecoverableErrorException.Raise(_env, "Read only page content is different (which means you are modifying a page directly in the data -- non transactionally -- ).");
             }
         }
 
         private void ValidateWritablePages()
         {
-            foreach(var writableKey in writablePages)
+            foreach (var writableKey in writablePages)
             {
                 long pageNumber = writableKey.Key;
                 if (!_dirtyPages.Contains(pageNumber))
-                    VoronUnrecoverableErrorException.Raise("Writable key is not dirty (which means you are asking for a page modification for no reason).");
+                    VoronUnrecoverableErrorException.Raise(_env, "Writable key is not dirty (which means you are asking for a page modification for no reason).");
             }
         }
 
@@ -769,10 +769,10 @@ namespace Voron.Impl
             ulong pageHash = Hashing.XXHash64.Calculate(page.Pointer, (ulong)Environment.Options.PageSize);
 
             ulong storedHash;
-            if ( readOnlyPages.TryGetValue(page.PageNumber, out storedHash) )
+            if (readOnlyPages.TryGetValue(page.PageNumber, out storedHash))
             {
                 if (pageHash != storedHash)
-                    VoronUnrecoverableErrorException.Raise("Read Only Page has change between tracking requests. Page #" + page.PageNumber);
+                    VoronUnrecoverableErrorException.Raise(_env, "Read Only Page has change between tracking requests. Page #" + page.PageNumber);
             }
             else
             {
