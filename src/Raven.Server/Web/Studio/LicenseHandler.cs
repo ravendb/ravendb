@@ -56,7 +56,6 @@ namespace Raven.Server.Web.Studio
             }
 
             LicenseManager.Activate(license);
-            ServerStore.LicenseStorage.SaveLicense(license);
 
             return Task.CompletedTask;
         }

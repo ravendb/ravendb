@@ -45,7 +45,7 @@ namespace Raven.Server.ServerWide
         public readonly RavenConfiguration Configuration;
         public readonly IoMetrics IoMetrics;
         public readonly AlertsStorage Alerts;
-        public LicenseStorage LicenseStorage { get; }
+        public static LicenseStorage LicenseStorage { get; } = new LicenseStorage();
 
         // this is only modified by write transactions under lock
         // no need to use thread safe ops
@@ -85,7 +85,6 @@ namespace Raven.Server.ServerWide
             DatabasesLandlord = new DatabasesLandlord(this);
 
             Alerts = new AlertsStorage("Raven/Server", this);
-            LicenseStorage = new LicenseStorage();
         }
 
         public TransactionContextPool ContextPool;
