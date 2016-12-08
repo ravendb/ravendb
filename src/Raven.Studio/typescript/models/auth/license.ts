@@ -1,9 +1,23 @@
 /// <reference path="../../../typings/tsd.d.ts" />
 
+import getLicenseStatusCommand = require("commands/auth/getLicenseStatusCommand");
+
 class license {
     static licenseStatus = ko.observable<Raven.Server.Commercial.LicenseStatus>();
     static supportCoverage = ko.observable<supportCoverageDto>();
     static hotSpare = ko.observable<HotSpareDto>();
+
+
+    static fetchLicenseStatus(): JQueryPromise<Raven.Server.Commercial.LicenseStatus> {
+        return new getLicenseStatusCommand()
+            .execute()
+            .done((result: Raven.Server.Commercial.LicenseStatus) => {
+                if (result.Status.contains("AGPL")) {
+                    result.Status = "Development Only";
+                }
+                license.licenseStatus(result);
+            });
+    }
 
     static licenseCssClass = ko.computed(() => {
         var status = license.licenseStatus();
