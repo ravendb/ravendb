@@ -160,7 +160,7 @@ namespace Raven.Server
 
             try
             {
-                LicenseManager.Initialize(ServerStore);
+                LicenseManager.Initialize();
             }
             catch (Exception e)
             {

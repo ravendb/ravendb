@@ -60,7 +60,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public static void Initialize(ServerStore serverStore)
+        public static void Initialize()
         {
             var firstServerStartDate = ServerStore.LicenseStorage.GetFirstServerStartDate();
             if (firstServerStartDate == null)
