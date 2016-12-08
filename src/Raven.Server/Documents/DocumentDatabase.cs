@@ -202,8 +202,8 @@ namespace Raven.Server.Documents
         public void Dispose()
         {
             //before we dispose of the database we take its latest info to be displayed in the studio
-            var databaseInfo = GenerateDatabaseInfo(true);
-            DatabaseInfoCache.InsertDatabaseInfo(databaseInfo);
+            var databaseInfo = GenerateDatabaseInfo();
+            DatabaseInfoCache.InsertDatabaseInfo(databaseInfo, Name);
 
             _databaseShutdown.Cancel();
             // we'll wait for 1 minute to drain all the requests
@@ -300,7 +300,7 @@ namespace Raven.Server.Documents
         }
 
         private static readonly string CachedDatabaseInfo = "CachedDatabaseInfo";
-        public DynamicJsonValue GenerateDatabaseInfo(bool forCache)
+        public DynamicJsonValue GenerateDatabaseInfo()
         {
             Size size = new Size(GetAllStoragesEnvironment().Sum(env => env.Environment.Stats().AllocatedDataFileSizeInBytes));
             var databaseInfo = new DynamicJsonValue
@@ -322,7 +322,7 @@ namespace Raven.Server.Documents
                 [nameof(DatabaseInfo.IndexesCount)] = IndexStore.GetIndexes().Count(),
                 [nameof(DatabaseInfo.RejectClients)] = false, //TODO: implement me!
                 [nameof(DatabaseInfo.IndexingStatus)] = IndexStore.Status.ToString(),
-                [CachedDatabaseInfo] = forCache
+                [CachedDatabaseInfo] = true
             };
             return databaseInfo;
         }
