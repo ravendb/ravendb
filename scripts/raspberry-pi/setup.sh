@@ -368,7 +368,7 @@ function addToStartup () {
 		echoExecProgram "Add RavenDB daemon to startup"
 		sudo chmod +x ravendb.4.0/ravendb.watchdog.sh
 		ESCAPED_PWD=$(pwd | sed 's/\//\\\//g' | sed 's/\&/\\\&/g')
-		cat ${RAVENDB_DIR}/${RDB_DEAMON} | sed 's/RDB_DOTNET_PATH/'${ESCAPED_PWD}'\/'${DOTNET_DIR}'/g' | sed 's/RDB_RAVENDB_PATH/'${ESCAPED_PWD}'\/'${RAVENDB_DIR}'/g' > ${RDB_DEAMON}.config
+		cat ${RAVENDB_DIR}/${RDB_DEAMON} | sed 's/RDB_DOTNET_PATH/'${ESCAPED_PWD}'\/'${DOTNET_DIR}'/g' | sed 's/RDB_RAVENDB_PATH/'${ESCAPED_PWD}'\/'${RAVENDB_DIR}'/g' | sed 's/RDB_USERNAME/'${USER}'/g' > ${RDB_DEAMON}.config
 		sudo mv ${RDB_DEAMON}.config /etc/init.d/${RDB_DEAMON} >& /dev/null
 		sudo chmod +x /etc/init.d/${RDB_DEAMON} >& /dev/null
 		sudo update-rc.d ${RDB_DEAMON} defaults
