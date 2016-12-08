@@ -13,5 +13,6 @@
         PeriodicExport,
         Replication,
         NewServerVersionAvailable,
+        LicenseManagerInitializationError
     }
 }

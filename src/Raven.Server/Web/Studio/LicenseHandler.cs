@@ -1,10 +1,12 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Server.Commercial;
 using Raven.Server.Json;
 using Raven.Server.Routing;
+using Sparrow.Json;
 
 namespace Raven.Server.Web.Studio
 {
@@ -13,30 +15,29 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/license/status", "GET")]
         public Task Status()
         {
-            HttpContext.Response.ContentType = "application/json";
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                context.Write(writer, LicenseManager.GetLicenseStatus().ToJson());
+            }
+
             HttpContext.Response.StatusCode = 200;
 
-            return HttpContext.Response.WriteAsync(JsonConvert.SerializeObject(Commercial.LicenseHandler.GetLicenseStatus()));
+            return Task.CompletedTask;
         }
 
         [RavenAction("/license/registration", "POST")]
         public async Task Register()
         {
-            RegisteredUserInfo userInfo = null;
-            var serializer = new JsonSerializer();
+            UserRegistrationInfo userInfo;
 
-            //TODO: use blittable
-            using (var sr = new StreamReader(RequestBodyStream()))
-            using (var jsonTextReader = new JsonTextReader(sr))
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                userInfo = serializer.Deserialize<RegisteredUserInfo>(jsonTextReader); 
-                if (userInfo == null)
-                    throw new InvalidDataException("Unable to deserialize user information!");
+                var json = context.Read(RequestBodyStream(), "license registration form");
+                userInfo = JsonDeserializationServer.UserRegistrationInfo(json);
             }
 
-            //TODO: check if name and e-mail is provided, company is optional
-
-            await Commercial.LicenseHandler.Register(userInfo).ConfigureAwait(false);
+            await LicenseManager.RegisterForFreeLicense(userInfo).ConfigureAwait(false);
 
             HttpContext.Response.StatusCode = 200;
         }
@@ -44,19 +45,18 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/license/activate", "POST")]
         public Task Activate()
         {
-            License license = null;
-            var serializer = new JsonSerializer();
-            using (var sr = new StreamReader(RequestBodyStream()))
-            using (var jsonTextReader = new JsonTextReader(sr))
+            License license;
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                license = serializer.Deserialize<License>(jsonTextReader);
-                if (license == null)
-                    throw new InvalidDataException("License cannot be null!");
+                var json = context.Read(RequestBodyStream(), "license activation");
+                license = JsonDeserializationServer.License(json);
             }
 
-            Commercial.LicenseHandler.Activate(license);
-            ServerStore.LicenseStorage.SaveLicense(license.ToJson());
+            LicenseManager.Activate(license);
+            ServerStore.LicenseStorage.SaveLicense(license);
             HttpContext.Response.StatusCode = 200;
+
             return Task.CompletedTask;
         }
     }

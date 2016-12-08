@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Commercial
@@ -19,11 +18,7 @@ namespace Raven.Server.Commercial
             {
                 [nameof(Id)] = Id.ToString(),
                 [nameof(Name)] = Name,
-                [nameof(Keys)] = new DynamicJsonArray
-                {
-                    Keys.First(),
-                    Keys.Last()
-                }
+                [nameof(Keys)] = new DynamicJsonArray(Keys)
             };
         }
     }

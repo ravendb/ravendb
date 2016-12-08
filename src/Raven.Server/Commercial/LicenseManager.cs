@@ -6,23 +6,31 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Server.Alerts;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.BackgroundTasks;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Server.Commercial
 {
-    public class LicenseHandler : IDisposable
+    public static class LicenseManager
     {
-        private const string ApiRavenDbNet = "http://api.ravendb.net"; //TODO: change to https
+        private const string ApiRavenDbNet = "https://api.ravendb.net";
+
         private static readonly LicenseStatus LicenseStatus = new LicenseStatus();
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LatestVersionCheck>(null);
-        private ServerStore _serverStore;
-        private DateTime FirstServerStartDate;
-        private static HttpClient _httpClient;
-        //private Timer _leaseLicenseTimer;
-        private readonly object _leaseLicenseLock = new object();
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LatestVersionCheck>("Server");
+        private static readonly HttpClient HttpClient = new HttpClient
+        {
+            BaseAddress = new Uri(ApiRavenDbNet)
+        };
+
+        //private Timer _leaseLicenseTimer = new Timer((state) =>
+        //        AsyncHelpers.RunSync(LeaseLicense), null, 0, (int)TimeSpan.FromHours(24).TotalMilliseconds);
+
+        private static readonly object LeaseLicenseLock = new object();
 
         private static RSAParameters? _rsaParameters;
         
@@ -35,7 +43,7 @@ namespace Raven.Server.Commercial
 
                 string publicKeyString;
                 const string publicKeyPath = "Raven.Server.Commercial.RavenDB.public.json";
-                using (var stream = typeof(LicenseHandler).GetTypeInfo().Assembly.GetManifestResourceStream(publicKeyPath))
+                using (var stream = typeof(LicenseManager).GetTypeInfo().Assembly.GetManifestResourceStream(publicKeyPath))
                 {
                     if (stream == null)
                         throw new InvalidOperationException("Could not find public key for the license");
@@ -52,30 +60,16 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public LicenseHandler(ServerStore serverStore)
+        public static void Initialize(ServerStore serverStore)
         {
-            _serverStore = serverStore;
-            _httpClient = new HttpClient
-            {
-                BaseAddress = new Uri(ApiRavenDbNet)
-            };
-
-            /*_leaseLicenseTimer = new Timer((state) =>
-                AsyncHelpers.RunSync(LeaseLicense), null, 0, (int)TimeSpan.FromHours(24).TotalMilliseconds);*/
-        }
-
-        public void Initialize()
-        {
-            var firstServerStartDate = _serverStore.LicenseStorage.GetFirstServerStartDate();
+            var firstServerStartDate = serverStore.LicenseStorage.GetFirstServerStartDate();
             if (firstServerStartDate == null)
             {
-                firstServerStartDate = DateTime.UtcNow;
-                _serverStore.LicenseStorage.SetFirstServerStartDate(firstServerStartDate.Value);
+                firstServerStartDate = SystemTime.UtcNow;
+                serverStore.LicenseStorage.SetFirstServerStartDate(firstServerStartDate.Value);
             }
 
-            FirstServerStartDate = firstServerStartDate.Value;
-
-            var license = _serverStore.LicenseStorage.LoadLicense();
+            var license = serverStore.LicenseStorage.LoadLicense();
             if (license == null)
                 return;
 
@@ -84,6 +78,7 @@ namespace Raven.Server.Commercial
                 LicenseStatus.Attributes = LicenseValidator.Validate(license, RSAParameters);
                 LicenseStatus.Error = false;
                 LicenseStatus.Message = null;
+                LicenseStatus.FirstServerStartDate = firstServerStartDate.Value;
             }
             catch (Exception e)
             {
@@ -92,7 +87,7 @@ namespace Raven.Server.Commercial
                 LicenseStatus.Message = e.Message;
 
                 if (Logger.IsInfoEnabled)
-                    Logger.Info("Could not validate license", e);
+                    Logger.Info("Could not validate license. License details", e);
 
                 throw new InvalidDataException("Could not validate license!");
             }
@@ -103,10 +98,10 @@ namespace Raven.Server.Commercial
             return LicenseStatus;
         }
 
-        public static async Task Register(RegisteredUserInfo registeredUserInfo)
+        public static async Task RegisterForFreeLicense(UserRegistrationInfo userInfo)
         {
-            var response = await _httpClient.PostAsync("api/v1/license/register",
-                    new StringContent(JsonConvert.SerializeObject(registeredUserInfo), Encoding.UTF8, "application/json"))
+            var response = await HttpClient.PostAsync("api/v1/license/register",
+                    new StringContent(JsonConvert.SerializeObject(userInfo), Encoding.UTF8, "application/json"))
                 .ConfigureAwait(false);
 
             var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
@@ -131,19 +126,24 @@ namespace Raven.Server.Commercial
                 LicenseStatus.Error = true;
                 LicenseStatus.Message = e.Message;
 
-                if (Logger.IsInfoEnabled)
-                    Logger.Info("Could not validate license", e);
+                var message = $"Could not validate the following license:{Environment.NewLine}" +
+                              $"Id: {license.Id}{Environment.NewLine}" +
+                              $"Name: {license.Name}{Environment.NewLine}" +
+                              $"Keys: [{string.Join(", ", license.Keys)}]";
 
-                throw new InvalidDataException("Could not validate license!");
+                if (Logger.IsInfoEnabled)
+                    Logger.Info(message, e);
+
+                throw new InvalidDataException("Could not validate license!", e);
             }
         }
 
-        private void LeaseLicense()
+        private static void LeaseLicense()
         {
             var lockTaken = false;
             try
             {
-                Monitor.TryEnter(_leaseLicenseLock, ref lockTaken);
+                Monitor.TryEnter(LeaseLicenseLock, ref lockTaken);
                 if (lockTaken == false)
                     return;
 
@@ -171,13 +171,32 @@ namespace Raven.Server.Commercial
             finally
             {
                 if (lockTaken)
-                    Monitor.Exit(_leaseLicenseLock);
+                    Monitor.Exit(LeaseLicenseLock);
             }
         }
 
-        public void Dispose()
+        public class InitializationErrorAlertContent : IAlertContent
         {
-            //_leaseLicenseTimer.Dispose();
+            public InitializationErrorAlertContent(Exception e)
+            {
+                Exception = e;
+            }
+
+            public Exception Exception { get; set; }
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue(GetType())
+                {
+                    [nameof(Exception)] = Exception.ToString()
+                };
+            }
+
+            public static string FormatMessage()
+            {
+                return $@"
+            <h3>License manager initialization error!</h3>
+            <p>Could not intitalize the license manager</p>";
+            }
         }
     }
 }

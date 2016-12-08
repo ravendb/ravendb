@@ -135,7 +135,7 @@ namespace TypingsGenerator
 
             // license 
             scripter.AddType(typeof(License));
-            scripter.AddType(typeof(RegisteredUserInfo));
+            scripter.AddType(typeof(UserRegistrationInfo));
             scripter.AddType(typeof(LicenseStatus));
 
             return scripter;
