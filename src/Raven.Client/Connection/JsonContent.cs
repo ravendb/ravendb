@@ -44,9 +44,10 @@ namespace Raven.Abstractions.Connection
                 return new CompletedTask<bool>(true);
 
             using (var undisposableStream = new UndisposableStream(stream))
-            using (var bufferedStream = new BufferedStream(undisposableStream))
+            //using (var bufferedStream = new BufferedStream(undisposableStream))
             {
-                var streamToUse = bufferedStream;
+                //var streamToUse = bufferedStream;
+                var streamToUse = undisposableStream;
                 var writer = new StreamWriter(streamToUse, DefaultEncoding);
                 if (string.IsNullOrEmpty(Jsonp) == false)
                 {

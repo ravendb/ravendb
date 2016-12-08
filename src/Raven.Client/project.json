@@ -10,7 +10,7 @@
     "repository": {
       "type": "git",
       "url": "https://github.com/ravendb/ravendb"
-    },
+  },
     "requireLicenseAcceptance": true,
     "iconUrl": "http://static.ravendb.net/logo-for-nuget.png",
     "owners": [
@@ -26,9 +26,9 @@
     "projectUrl": "https://ravendb.net",
     "files": {
       "mappings": {
-        "lib/netstandard1.6/": {
+        "lib/netstandard1.3/": {
           "includeFiles": [
-            "../Sparrow/bin/Release/netstandard1.6/Sparrow.dll"
+            "../Sparrow/bin/Release/netstandard1.3/Sparrow.dll"
           ]
         }
       }
@@ -58,7 +58,9 @@
     }
   },
   "dependencies": {
-    "NETStandard.Library": "1.6.1",
+    "Microsoft.AspNetCore.Http.Features": "1.1.0",
+    "Microsoft.Extensions.Primitives": "1.1.0",
+    "Newtonsoft.Json": "9.0.1",
     "Sparrow": {
       "version": "4.0.0-*",
       "type": "build",
@@ -66,15 +68,18 @@
     },
     "System.Collections.Specialized": "4.3.0",
     "System.Diagnostics.Process": "4.3.0",
+    "System.Diagnostics.Tracing": "4.3.0",
+    "System.IO.Compression": "4.3.0",
     "System.Linq.Queryable": "4.3.0",
+    "System.Net.Http": "4.3.0",
     "System.Net.Requests": "4.3.0",
-    "System.Net.NameResolution": "4.3.0",
+    "System.Net.Sockets": "4.3.0",
     "System.Net.WebSockets.Client": "4.3.0",
-    "System.Reflection.TypeExtensions": "4.3.0",
     "System.Security.Cryptography.Cng": "4.3.0",
-    "System.ServiceModel.Primitives": "4.3.0"
+    "System.ServiceModel.Primitives": "4.3.0",
+    "System.Net.NameResolution": "4.3.0"
   },
   "frameworks": {
-    "netstandard1.6": {}
+    "netstandard1.3": {}
   }
 }

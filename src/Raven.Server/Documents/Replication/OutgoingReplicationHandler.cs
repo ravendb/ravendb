@@ -222,14 +222,13 @@ namespace Raven.Server.Documents.Replication
                                     indexAndTransformerSender.ExecuteReplicationOnce();
                                 }
 
-                                if (documentSender.ExecuteReplicationOnce() == false)
+                                var sp = Stopwatch.StartNew();
+                                while (documentSender.ExecuteReplicationOnce())
                                 {
-                                    using (_documentsContext.OpenReadTransaction())
+                                    if (sp.ElapsedMilliseconds > 60 * 1000)
                                     {
-                                        currentEtag =
-                                            DocumentsStorage.ReadLastEtag(_documentsContext.Transaction.InnerTransaction);
-                                        if (currentEtag != _lastSentDocumentEtag)
-                                            continue;
+                                        _waitForChanges.Set();
+                                        break;
                                     }
                                 }
 
@@ -396,9 +395,9 @@ namespace Raven.Server.Documents.Replication
                                 break;
                             case ReplicationMessageReply.ReplyType.Error:
                                 _log.Info(
-                                    $"Received reply for replication batch from {_destination.Database} at {_destination.Url}. There has been a failure, error string received : {replicationBatchReply.Error}");
+                                    $"Received reply for replication batch from {_destination.Database} at {_destination.Url}. There has been a failure, error string received : {replicationBatchReply.Exception}");
                                 throw new InvalidOperationException(
-                                    $"Received failure reply for replication batch. Error string received = {replicationBatchReply.Error}");
+                                    $"Received failure reply for replication batch. Error string received = {replicationBatchReply.Exception}");
                             default:
                                 throw new ArgumentOutOfRangeException(nameof(replicationBatchReply),
                                     "Received reply for replication batch with unrecognized type... got " +
@@ -407,8 +406,8 @@ namespace Raven.Server.Documents.Replication
                     }
 
                     return Tuple.Create(replicationBatchReply.Type, 
-                        replicationBatchReply.Type == ReplicationMessageReply.ReplyType.Error ? 
-                        replicationBatchReply.Exception : String.Empty);
+                        item2: replicationBatchReply.Type == ReplicationMessageReply.ReplyType.Error ? 
+                        replicationBatchReply.Exception : string.Empty);
                 }
             }
             catch (Exception e)

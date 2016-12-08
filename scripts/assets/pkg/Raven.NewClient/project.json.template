@@ -5,10 +5,10 @@
   },
 
   "frameworks": {
-    "netstandard1.6": {
+    "netstandard1.3": {
       "bin": {
-        "assembly": "netstandard1.6\\Raven.NewClient.dll",
-        "pdb": "netstandard1.6\\Raven.NewClient.pdb"
+        "assembly": "netstandard1.3\\Raven.NewClient.dll",
+        "pdb": "netstandard1.3\\Raven.NewClient.pdb"
       }
     }
   }

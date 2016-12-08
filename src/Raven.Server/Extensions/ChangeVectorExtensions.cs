@@ -90,7 +90,7 @@ namespace Raven.Server.Extensions
                     .Append(changeVector[i].Etag)
                     .Append(", ");
             }
-            sb.Length -= 3;
+            sb.Length -= 2;
             sb.Append("]");
             return sb.ToString();
         }

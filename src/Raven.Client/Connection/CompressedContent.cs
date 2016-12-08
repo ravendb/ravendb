@@ -60,11 +60,11 @@ namespace Raven.Abstractions.Connection
         protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
         {
             using (var uncloseableStream = new UndisposableStream(stream))
-            using (var bufferedStream = new BufferedStream(uncloseableStream))
+            //using (var bufferedStream = new BufferedStream(uncloseableStream))
             {
-
-                var streamToUse = bufferedStream;
-                Stream compressedStream = null;
+                //var streamToUse = bufferedStream;
+                var streamToUse = uncloseableStream;
+                Stream compressedStream;
 
                 if (encodingType == "gzip")
                 {

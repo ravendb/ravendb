@@ -71,12 +71,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
 
             _fields = fields.ToDictionary(x => IndexField.ReplaceInvalidCharactersInFieldName(x.Name), x => (object)null);
-            _indexSearcherHolder = new IndexSearcherHolder(() => new IndexSearcher(_directory, true));
+            _indexSearcherHolder = new IndexSearcherHolder(() => new IndexSearcher(_directory, true), _index._indexStorage.DocumentDatabase);
         }
 
         public void Clean()
         {
             _converter?.Clean();
+            _indexSearcherHolder.Cleanup(_index._indexStorage.Environment().ActiveTransactions.OldestTransaction);
         }
 
         public void Initialize(StorageEnvironment environment)
@@ -91,7 +92,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 using (_directory.SetTransaction(tx))
                 {
                     CreateIndexStructure();
-                    RecreateSearcher();
+                    RecreateSearcher(tx);
+
+                    // force tx commit so it will bump tx counter and just created searcher holder will have valid tx id
+                    tx.LowLevelTransaction.ModifyPage(0); 
                 }
 
                 tx.Commit();
@@ -129,9 +133,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return new IndexFacetedReadOperation(_index.Definition.Name, _index.Definition.MapFields, _directory, _indexSearcherHolder, readTransaction, _index._indexStorage.DocumentDatabase);
         }
 
-        internal void RecreateSearcher()
+        internal void RecreateSearcher(Transaction asOfTx)
         {
-            _indexSearcherHolder.SetIndexSearcher(wait: false);
+            _indexSearcherHolder.SetIndexSearcher(asOfTx);
         }
 
         internal LuceneIndexWriter EnsureIndexWriter()
