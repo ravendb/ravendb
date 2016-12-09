@@ -52,7 +52,7 @@ describe(helperUnderTest, () => {
         });
     });
 
-    it('should aggregate 2 overlapping ranges', () => {
+    it.skip('should aggregate 2 overlapping ranges', () => {
         const finder = new rangeAggregator();
 
         finder.pushRange(1, 10);
