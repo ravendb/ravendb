@@ -33,7 +33,7 @@ namespace Raven.Server.Commercial
         private static readonly object LeaseLicenseLock = new object();
 
         private static RSAParameters? _rsaParameters;
-        
+
         private static RSAParameters RSAParameters
         {
             get
@@ -60,18 +60,18 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public static void Initialize(ServerStore serverStore)
+        public static void Initialize()
         {
-            var firstServerStartDate = serverStore.LicenseStorage.GetFirstServerStartDate();
+            var firstServerStartDate = ServerStore.LicenseStorage.GetFirstServerStartDate();
             if (firstServerStartDate == null)
             {
                 firstServerStartDate = SystemTime.UtcNow;
-                serverStore.LicenseStorage.SetFirstServerStartDate(firstServerStartDate.Value);
+                ServerStore.LicenseStorage.SetFirstServerStartDate(firstServerStartDate.Value);
             }
 
             LicenseStatus.FirstServerStartDate = firstServerStartDate.Value;
 
-            var license = serverStore.LicenseStorage.LoadLicense();
+            var license = ServerStore.LicenseStorage.LoadLicense();
             if (license == null)
                 return;
 
@@ -120,6 +120,9 @@ namespace Raven.Server.Commercial
                 LicenseStatus.Attributes = LicenseValidator.Validate(license, RSAParameters);
                 LicenseStatus.Error = false;
                 LicenseStatus.Message = null;
+
+                ServerStore.LicenseStorage.SaveLicense(license);
+                Task.Run(() => LeaseLicense());
             }
             catch (Exception e)
             {
@@ -146,6 +149,10 @@ namespace Raven.Server.Commercial
             {
                 Monitor.TryEnter(LeaseLicenseLock, ref lockTaken);
                 if (lockTaken == false)
+                    return;
+
+                var license = ServerStore.LicenseStorage.LoadLicense();
+                if (license == null)
                     return;
 
                 //TODO: implement this (grisha)
