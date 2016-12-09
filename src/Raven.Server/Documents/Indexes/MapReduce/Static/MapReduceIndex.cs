@@ -118,6 +118,33 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return PutMapResults(key, wrapper, indexContext, stats);
         }
 
+        protected override bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null)
+        {
+            var isStale = base.IsStale(databaseContext, indexContext, cutoff);
+            if (isStale || _referencedCollections.Count == 0)
+                return isStale;
+
+            return StaticIndexHelper.IsStale(this, databaseContext, indexContext, cutoff);
+        }
+
+        protected override unsafe long CalculateIndexEtag(bool isStale, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
+        {
+            if (_referencedCollections.Count == 0)
+                return base.CalculateIndexEtag(isStale, documentsContext, indexContext);
+
+            var minLength = MinimumSizeForCalculateIndexEtagLength();
+            var length = minLength +
+                         sizeof(long) * 2 * (Collections.Count * _referencedCollections.Count); // last referenced collection etags and last processed reference collection etags
+
+            var indexEtagBytes = stackalloc byte[length];
+
+            CalculateIndexEtagInternal(indexEtagBytes, isStale, documentsContext, indexContext);
+
+            var writePos = indexEtagBytes + minLength;
+
+            return StaticIndexHelper.CalculateIndexEtag(this, length, indexEtagBytes, writePos, documentsContext, indexContext);
+        }
+
         public override int? ActualMaxNumberOfIndexOutputs
         {
             get
@@ -128,7 +155,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 return _actualMaxNumberOfIndexOutputs;
             }
         }
+
         public override int MaxNumberOfIndexOutputs => _maxNumberOfIndexOutputs;
+
         protected override bool EnsureValidNumberOfOutputsForDocument(int numberOfAlreadyProducedOutputs)
         {
             if (base.EnsureValidNumberOfOutputsForDocument(numberOfAlreadyProducedOutputs) == false)
