@@ -28,7 +28,7 @@ function UploadArtifact ( $uploader, $buildNumber, $buildType, $filename, $log )
     while ($uploadTryCount -lt 5) {
         $uploadTryCount += 1
 
-        & $uploader "$uploadCategory" "$versionString" $file "$log"
+        & $uploader "$uploadCategory" "$versionString" "$filename" "$log"
 
         if ($lastExitCode -ne 0) {
             write-host "Failed to upload to S3: $lastExitCode. UploadTryCount: $uploadTryCount"
