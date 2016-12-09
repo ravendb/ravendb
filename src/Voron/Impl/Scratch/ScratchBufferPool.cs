@@ -87,22 +87,17 @@ namespace Voron.Impl.Scratch
 
         private ScratchBufferItem NextFile(long minSize, long? requestedSize)
         {
-            var current = _recycleArea.Last;
-            while(current != null)
+            if (_recycleArea.Count > 0)
             {
-                var recycled = current.Value.Item2;
-                
-                if (recycled.File.Size <= Math.Max(minSize, requestedSize ?? 0) && 
-                    // even though this is in the recyle bin, there might still be some transactions looking at it
-                    // so we have to make sure that this is realy unused before actually reusing it
-                    recycled.File.HasActivelyUsedBytes(_env.ActiveTransactions.OldestTransaction) == false)
+                var recycled = _recycleArea.Last.Value.Item2;
+                _recycleArea.RemoveLast();
+
+                if (recycled.File.Size <= Math.Max(minSize, requestedSize ?? 0))
                 {
                     recycled.File.Reset();
-                    _recycleArea.Remove(current);
                     _scratchBuffers.TryAdd(recycled.Number, recycled);
                     return recycled;
                 }
-                current = current.Previous;
             }
 
             _currentScratchNumber++;
@@ -184,11 +179,9 @@ namespace Voron.Impl.Scratch
 
         public void Free(int scratchNumber, long page, LowLevelTransaction tx)
         {
-            long asOfTxId = tx?.Id ?? -1;
-
             var scratch = _scratchBuffers[scratchNumber];
             scratch.File.Free(page, tx);
-            if (scratch.File.CurrentlyAllocatedBytes != 0)
+            if (scratch.File.AllocatedPagesCount != 0 || scratch.File.HasActivelyUsedBytes(_env.ActiveTransactions.OldestTransaction))
                 return;
 
             while (_recycleArea.First != null)
@@ -206,15 +199,7 @@ namespace Voron.Impl.Scratch
             {
                 if (scratch.File.Size <= _options.MaxScratchBufferSize)
                 {
-                    // called by tx commit
-                    if (asOfTxId == -1)
-                        return;
-
-                    // we'll take the chance that no one is using us to reset the memory allocations
-                    // and avoid fragmentation, we can only do that if no transaction is looking at us
-                    if(scratch.File.HasActivelyUsedBytes(asOfTxId) == false)
-                        scratch.File.Reset();
-
+                    scratch.File.Reset();
                     return;
                 }
 
@@ -223,7 +208,7 @@ namespace Voron.Impl.Scratch
                 newCurrent.File.PagerState.AddRef();
                 _current = newCurrent;
             }
-
+            
             RecyleScratchFile(scratch);
         }
 
@@ -302,7 +287,7 @@ namespace Voron.Impl.Scratch
 
         public long GetAvailablePagesCount()
         {
-            return _current.File.NumberOfAllocatedPages - _current.File.AllocatedPagesUsedSize;
+            return _current.File.NumberOfAllocatedPages - _current.File.AllocatedPagesCount;
         }
 
         public void Cleanup()
