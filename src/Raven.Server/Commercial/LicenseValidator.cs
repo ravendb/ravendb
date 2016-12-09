@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace Raven.Server.Commercial
 {
@@ -40,13 +41,6 @@ namespace Raven.Server.Commercial
             return Convert.FromBase64String(str);
         }
 
-        private static string GetString(byte[] bytes)
-        {
-            var chars = new char[bytes.Length / sizeof(char)];
-            Buffer.BlockCopy(bytes, 0, chars, 0, bytes.Length);
-            return new string(chars);
-        }
-
         public static Dictionary<string, object> Validate(License licenseKey, RSAParameters rsAParameters)
         {
             if (licenseKey.Keys.Count != 2)
@@ -82,7 +76,7 @@ namespace Raven.Server.Commercial
                             break;
                         case ValueType.String:
                             var valLength = (int)br.ReadByte();
-                            val = GetString(br.ReadBytes(valLength));
+                            val = Encoding.UTF8.GetString(br.ReadBytes(valLength));
                             break;
                         default:
                             throw new ArgumentOutOfRangeException();
