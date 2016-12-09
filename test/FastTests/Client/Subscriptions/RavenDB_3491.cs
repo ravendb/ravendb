@@ -173,7 +173,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-5799")]
         public async Task SubscribtionWithEtag_MultipleOpens()
         {
             using (var store = GetDocumentStore())
