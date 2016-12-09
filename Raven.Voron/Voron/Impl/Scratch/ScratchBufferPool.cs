@@ -78,7 +78,7 @@ namespace Voron.Impl.Scratch
                 return result;
 
             long sizeAfterAllocation;
-            long oldestActiveTransaction = tx.Environment.OldestTransaction;
+            long oldestActiveTransaction = tx.Environment.PossibleOldestReadTransaction;
 
             if (_scratchBuffers.Count == 1)
             {
@@ -198,6 +198,7 @@ namespace Voron.Impl.Scratch
                 debugInfoBuilder.AppendFormat("Current transaction id: {0}\r\n", tx.Id);
                 debugInfoBuilder.AppendFormat("Requested number of pages: {0} (adjusted size: {1} == {2:#,#;;0} KB)\r\n", numberOfPages, size, size * AbstractPager.PageSize / 1024);
                 debugInfoBuilder.AppendFormat("Oldest active transaction: {0} (snapshot: {1})\r\n", tx.Environment.OldestTransaction, oldestActiveTransaction);
+                debugInfoBuilder.AppendFormat("Possible oldest active transaction: {0}\r\n", tx.Environment.PossibleOldestReadTransaction);
                 debugInfoBuilder.AppendFormat("Oldest active transaction when flush was forced: {0}\r\n", _oldestTransactionWhenFlushWasForced);
                 debugInfoBuilder.AppendFormat("Next write transaction id: {0}\r\n", tx.Environment.NextWriteTransactionId + 1);
 
