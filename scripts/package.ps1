@@ -91,8 +91,9 @@ function CreatePackageLayout ( $packageDir, $projectDir, $outDirs, $spec ) {
 
 function CopyStudioPackage ( $outDirs ) {
     $studioZipPath = [io.path]::combine($outDirs.Studio, "Raven.Studio.zip")
-    write-host "Copying Studio package from $studioZipPath to $outDirs.Server"
-    Copy-Item "$studioZipPath" -Destination "$outDirs.Server"
+    $dst = $outDirs.Server
+    write-host "Copying Studio package from $studioZipPath to $dst"
+    Copy-Item "$studioZipPath" -Destination $dst
     CheckLastExitCode
 }
 
@@ -216,7 +217,7 @@ function CreateRegularPackageClientLayout( $outDirs, $packageDir, $projectDir) {
     }
 
     $sparrowFrameworks = $($SUPPORTED_CLIENT_FRAMEWORKS + $SUPPORTED_NEW_CLIENT_FRAMEWORKS) | select -uniq
-    write-host $sparrowFrameworks
+
     foreach ($framework in $sparrowFrameworks) {
         $frameworkOutDir = [io.path]::combine($outDirs.Sparrow, $framework)
         CopySparrow $frameworkOutDir $packageDir $assetsDir $framework
@@ -236,6 +237,7 @@ function CopyClient ( $clientOutDir, $packageDir, $assetsDir, $framework ) {
     $ravenClientProjectTemplate = Get-Content -Raw -Path $(Join-Path $ravenClientAssetsDir "project.json.template") | ConvertFrom-Json
     $ravenClientProjectOrig = Get-Content -Raw -Path $([io.path]::combine($projectDir, "src", "Raven.Client",  "project.json")) | ConvertFrom-Json
     $ravenClientProjectTemplate.dependencies = $ravenClientProjectOrig.dependencies
+    $ravenClientProjectTemplate.dependencies.Sparrow = $ravenClientProjectOrig.dependencies.Sparrow.version
     $ravenClientProjectTemplate `
     | ConvertTo-Json -Depth 100 `
     | Out-File $(Join-Path $ravenClientDir -ChildPath "project.json") -Encoding UTF8
@@ -262,6 +264,7 @@ function CopyNewClient ( $clientOutDir, $packageDir, $assetsDir, $framework ) {
         $ravenClientProjectTemplate = Get-Content -Raw -Path $(Join-Path $ravenClientAssetsDir "project.json.template") | ConvertFrom-Json
         $ravenClientProjectOrig = Get-Content -Raw -Path $([io.path]::combine($projectDir, "src", "Raven.NewClient",  "project.json")) | ConvertFrom-Json
         $ravenClientProjectTemplate.dependencies = $ravenClientProjectOrig.dependencies
+        $ravenClientProjectTemplate.dependencies.Sparrow = $ravenClientProjectOrig.dependencies.Sparrow.version
         $ravenClientProjectTemplate `
         | ConvertTo-Json -Depth 100 `
         | Out-File $(Join-Path $ravenClientDir -ChildPath "project.json") -Encoding UTF8
