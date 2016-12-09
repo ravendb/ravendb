@@ -8,8 +8,8 @@ class getPendingIndexReplacementsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<Array<indexReplaceDocument>> {
-        var resultsSelector = (result: indexReplaceDocumentDto[]) =>
-            result.map((dto: indexReplaceDocumentDto) => new indexReplaceDocument(dto));
+        var resultsSelector = (result: queryResultDto<indexReplaceDocumentDto>) =>
+            result.Results.map((dto: indexReplaceDocumentDto) => new indexReplaceDocument(dto));
         var url = "/docs";//TODO: use endpoints
         var args = {
             startsWith: indexReplaceDocument.replaceDocumentPrefix,

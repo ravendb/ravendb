@@ -140,8 +140,8 @@ class editSqlReplication extends viewModelBase {
                 this.editedReplication().collections = this.collections;
                 new getDocumentsMetadataByIDPrefixCommand(editSqlReplication.sqlReplicationDocumentPrefix, 256, this.activeDatabase())
                     .execute()
-                    .done((results: string[]) => {
-                        this.loadedSqlReplications = results;
+                    .done((results: queryResultDto<string>) => {
+                        this.loadedSqlReplications = results.Results;
                         loadDeferred.resolve();
                     }).
                     fail(() => loadDeferred.reject());

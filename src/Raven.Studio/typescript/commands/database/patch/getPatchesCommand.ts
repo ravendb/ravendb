@@ -16,7 +16,7 @@ class getPatchesCommand extends commandBase {
             pageSize: 256
         };
 
-        return this.query("/docs", args, this.db, (dtos: patchDto[]) => dtos.map(dto => new patchDocument(dto)));//TODO: use endpoints
+        return this.query("/docs", args, this.db, (dtos: queryResultDto<patchDto>) => dtos.Results.map(dto => new patchDocument(dto)));//TODO: use endpoints
     }
 }
 

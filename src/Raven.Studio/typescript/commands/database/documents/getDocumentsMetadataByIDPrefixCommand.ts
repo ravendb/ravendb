@@ -7,7 +7,7 @@ class getDocumentsMetadataByIDPrefixCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<documentMetadataDto[]> {
+    execute(): JQueryPromise<queryResultDto<documentMetadataDto>> {
         var url = '/docs';//TODO: use endpoints
         var args = {
             'startsWith': this.prefix,
@@ -16,7 +16,7 @@ class getDocumentsMetadataByIDPrefixCommand extends commandBase {
             'pageSize': this.resultsAmount,
             'metadata-only': true
         };
-        return this.query<any>(url, args, this.db);
+        return this.query<any>(url, args, this.db, x => x.Results);
     }
 }
 

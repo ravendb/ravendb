@@ -16,7 +16,8 @@ class getSqlReplicationsCommand extends commandBase {
             pageSize: 256
         };
 
-        return this.query("/docs", args, this.db, (dtos: Raven.Server.Documents.SqlReplication.SqlReplicationConfiguration[]) => dtos.map(dto => new sqlReplication(dto)));//TODO: use endpoints
+        return this.query("/docs", args, this.db,
+            (dtos: queryResultDto<Raven.Server.Documents.SqlReplication.SqlReplicationConfiguration>) => dtos.Results.map(dto => new sqlReplication(dto)));//TODO: use endpoints
     }
 }
 

@@ -18,7 +18,7 @@ class getDocumentWithMetadataCommand extends commandBase {
         const documentResult = $.Deferred<any>();
         const postResult = this.post(endpoints.databases.document.docs, JSON.stringify([this.id]), this.db);
         postResult.fail((xhr: JQueryXHR) => documentResult.reject(xhr));
-        postResult.done((queryResult: queryResultDto) => {
+        postResult.done((queryResult: queryResultDto<documentDto>) => {
             if (queryResult.Results.length === 0) {
                 if (this.shouldResolveNotFoundAsNull) {
                     documentResult.resolve(null);

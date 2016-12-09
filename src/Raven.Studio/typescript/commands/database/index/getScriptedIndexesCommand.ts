@@ -16,7 +16,7 @@ class getScriptedIndexesCommand extends commandBase {
             pageSize: 256
         };
 
-        return this.query("/docs", args, this.db, (dtos: scriptedIndexDto[]) => dtos.map(dto => new scriptedIndex(dto)));//TODO: use endpoints
+        return this.query("/docs", args, this.db, (dtos: queryResultDto<scriptedIndexDto>) => dtos.Results.map(dto => new scriptedIndex(dto)));//TODO: use endpoints
     }
 }
 

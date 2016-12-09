@@ -6,7 +6,7 @@ import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCom
 import getReplicationsCommand = require("commands/database/replication/getReplicationsCommand");
 import updateServerPrefixHiLoCommand = require("commands/database/documents/updateServerPrefixHiLoCommand");
 import saveReplicationDocumentCommand = require("commands/database/replication/saveReplicationDocumentCommand");
-import saveAutomaticConflictResolutionDocument = require("commands/database/replication/saveAutomaticConflictResolutionDocument");
+import saveAutomaticConflictResolutionDocumentCommand = require("commands/database/replication/saveAutomaticConflictResolutionDocumentCommand");
 import getServerPrefixForHiLoCommand = require("commands/database/documents/getServerPrefixForHiLoCommand");
 import replicateAllIndexesCommand = require("commands/database/replication/replicateAllIndexesCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
@@ -308,7 +308,7 @@ class replications extends viewModelBase {
 
         var db = this.activeDatabase();
         if (db) {
-            new saveAutomaticConflictResolutionDocument(this.replicationConfig().toDto(), db)
+            new saveAutomaticConflictResolutionDocumentCommand(this.replicationConfig().toDto(), db)
                 .execute()
                 .done(() => {
                     this.replicationConfigDirtyFlag().reset();
