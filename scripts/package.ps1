@@ -24,7 +24,7 @@ function ZipFilesFromDir( $targetFilename, $sourceDir )
 
 function TarBzFilesFromDir ( $targetFilename, $sourceDir ) {
     $glob = [io.path]::combine($sourceDir, '*')
-    if ($(Get-Command "tar" -ErrorAction SilentlyContinue))
+    if ($($IsWindows -eq $False) -and $(Get-Command "tar" -ErrorAction SilentlyContinue))
     {
         & tar -C $sourceDir -cjvf "$targetFilename.tar.bz2" .
         CheckLastExitCode
@@ -43,7 +43,7 @@ function TarBzFilesFromDir ( $targetFilename, $sourceDir ) {
 
 function TarFilesFromDir ( $targetFilename, $sourceDir ) {
     $glob = [io.path]::combine($sourceDir, '*')
-    if ($(Get-Command "tar" -ErrorAction SilentlyContinue))
+    if ($($IsWindows -eq $False) -and $(Get-Command "tar" -ErrorAction SilentlyContinue))
     {
         & tar -C $sourceDir -cvf "$targetFilename.tar" .
         CheckLastExitCode
@@ -174,7 +174,7 @@ function CreateRavenDBTarForRaspberryPi ( $projectDir, $packageDir ) {
 
     cd $packageDir
 
-    if ($(Get-Command "tar" -ErrorAction SilentlyContinue))
+    if ($($IsWindows -eq $False) -and $(Get-Command "tar" -ErrorAction SilentlyContinue))
     {
         & tar -cjvf "$targetFilename.tar.bz2" "Client" "Server" "acknowledgements.txt" "license.txt" "ravendbd" "ravendb.watchdog.sh"
         CheckLastExitCode
