@@ -438,6 +438,19 @@ namespace Voron
         public long CurrentReadTransactionId => Volatile.Read(ref _transactionsCounter);
         public long NextWriteTransactionId => Volatile.Read(ref _transactionsCounter) + 1;
 
+        public long PossibleOldestReadTransaction
+        {
+            get
+            {
+                var oldestActive = ActiveTransactions.OldestTransaction;
+
+                if (oldestActive == 0)
+                    return CurrentReadTransactionId;
+
+                return Math.Min(CurrentReadTransactionId, oldestActive);
+            }
+        }
+
         internal ExitWriteLock PreventNewReadTransactions()
         {
             _txCommit.EnterWriteLock();

@@ -29,12 +29,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public void SetIndexSearcher(Transaction asOfTx)
         {
-            var oldestTx = asOfTx.LowLevelTransaction.Environment.ActiveTransactions.OldestTransaction;
             var state = new IndexSearcherHoldingState(asOfTx, _recreateSearcher, _documentDatabase.Name);
 
             _states = _states.Insert(0, state);
 
-            Cleanup(oldestTx);
+            Cleanup(asOfTx.LowLevelTransaction.Environment.PossibleOldestReadTransaction);
         }
         
         public IDisposable GetSearcher(Transaction tx, out IndexSearcher searcher)
@@ -79,23 +78,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (_states.Count == 1)
                 return;
-
-            if (oldestTx == 0) // no active transaction let's dispose and remove all except the latest one
-            {
-                for (var i = 1; i < _states.Count - 1; i++)
-                {
-                    var state = _states[i];
-
-                    using (state)
-                    {
-                        state.MarkForDisposal();
-                    }
-                }
-
-                _states = _states.RemoveRange(1, _states.Count - 1);
-
-                return;
-            }
             
             // let's mark states which are no longer needed as ready for disposal
 
