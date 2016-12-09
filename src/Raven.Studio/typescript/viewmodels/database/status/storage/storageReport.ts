@@ -186,7 +186,7 @@ class storageReport extends viewModelBase {
     }
 
     private detectContainerSize() {
-        const $chartNode = $("#storage-report-container .chart")
+        const $chartNode = $("#storage-report-container .chart");
         this.w = $chartNode.width();
         this.h = $chartNode.height();
     }
@@ -222,7 +222,7 @@ class storageReport extends viewModelBase {
 
         const self = this;
         const showTypeOffset = 7;
-        const showTypePredicate = (d: storageReportItem) => d.showType && d.dy > 14 && d.dx > 14;
+        const showTypePredicate = (d: storageReportItem) => d.showType && d.dy > 22 && d.dx > 20;
 
         this.svg.selectAll("g.cell").remove();
 
@@ -241,7 +241,7 @@ class storageReport extends viewModelBase {
             .attr("height", d => d.dy - 1);
 
         cell.append("svg:text")
-            .filter(d => d.dx > 14 && d.dy > 6)
+            .filter(d => d.dx > 20 && d.dy > 8)
             .attr("x", d => d.dx / 2)
             .attr("y", d => showTypePredicate(d) ? d.dy/2 - showTypeOffset : d.dy / 2)
             .attr("dy", ".35em")
