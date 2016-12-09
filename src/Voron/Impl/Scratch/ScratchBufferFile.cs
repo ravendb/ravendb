@@ -117,8 +117,8 @@ namespace Voron.Impl.Scratch
                 return false;
 
             var val = list.Last.Value;
-            var oldestTransaction = tx.Environment.ActiveTransactions.OldestTransaction;
-            if (oldestTransaction != 0 && val.ValidAfterTransactionId >= oldestTransaction) // OldestTransaction can be 0 when there are none other transactions and we are in process of new transaction header allocation
+
+            if (val.ValidAfterTransactionId >= tx.Environment.PossibleOldestReadTransaction)
                 return false;
 
             list.RemoveLast();

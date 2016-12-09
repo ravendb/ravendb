@@ -142,11 +142,9 @@ namespace Voron.Impl.Scratch
             if (tx == null)
                 throw new ArgumentNullException(nameof(tx));
             var size = Bits.NextPowerOf2(numberOfPages);
-
-
+            
             var current = _current;
-
-
+            
             PageFromScratchBuffer result;
             if (current.File.TryGettingFromAllocatedBuffer(tx, numberOfPages, size, out result))
                 return result;
@@ -181,7 +179,7 @@ namespace Voron.Impl.Scratch
         {
             var scratch = _scratchBuffers[scratchNumber];
             scratch.File.Free(page, tx);
-            if (scratch.File.AllocatedPagesCount != 0 || scratch.File.HasActivelyUsedBytes(_env.ActiveTransactions.OldestTransaction))
+            if (scratch.File.AllocatedPagesCount != 0 || scratch.File.HasActivelyUsedBytes(_env.PossibleOldestReadTransaction))
                 return;
 
             while (_recycleArea.First != null)
