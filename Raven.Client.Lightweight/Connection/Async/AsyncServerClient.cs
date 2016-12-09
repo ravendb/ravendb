@@ -20,6 +20,7 @@ using System.Transactions;
 #endif
 #if SILVERLIGHT
 using Raven.Client.Silverlight.Connection;
+using Raven.Client.Changes;
 #elif NETFX_CORE
 using Raven.Client.WinRT.Connection;
 #endif
