@@ -1,4 +1,4 @@
-$ARTIFACTS = [io.path]::combine("artifacts", "*.zip")
+$ARTIFACTS = Get-ChildItem $([io.path]::combine("artifacts", '*')) -Include "*.zip", "*.tar", "*.tar.bz2"
 
 . '.\scripts\env.ps1'
 . '.\scripts\checkLastExitCode.ps1'
