@@ -92,14 +92,14 @@ namespace Voron.Impl.Scratch
             if (available >= size)
                 return true;
 
-            var oldestTransaction = tx.Environment.OldestTransaction;
+            var oldestTransaction = tx.Environment.PossibleOldestReadTransaction;
 
             var sizesFromLargest = _freePagesBySize.Keys.OrderByDescending(x => x);
             foreach (var sizeKey in sizesFromLargest)
             {
                 var item = _freePagesBySize[sizeKey].Last;
 
-                while (item != null && (oldestTransaction == 0 || item.Value.ValidAfterTransactionId < oldestTransaction))
+                while (item != null && item.Value.ValidAfterTransactionId < oldestTransaction)
                 {
                     available += sizeKey;
 
@@ -139,8 +139,8 @@ namespace Voron.Impl.Scratch
                 return false;
 
             var val = list.Last.Value;
-            var oldestTransaction = tx.Environment.OldestTransaction;
-            if (oldestTransaction != 0 && val.ValidAfterTransactionId >= oldestTransaction) // OldestTransaction can be 0 when there are none other transactions and we are in process of new transaction header allocation
+
+            if (val.ValidAfterTransactionId >= tx.Environment.PossibleOldestReadTransaction)
                 return false;
 
             list.RemoveLast();
