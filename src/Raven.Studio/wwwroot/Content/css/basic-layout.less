@@ -7,7 +7,13 @@
 @menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
 @layout-border: @gray-dark;
 
-
+.absolute-fill {
+    position:absolute;
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+}
 
 .navbar {
     background-color: @gray-base;
@@ -304,7 +310,7 @@
             &.active {
                 z-index: 23;
 
-                .form-control {
+                .resource-switcher {
                     background-color: @gray-dark;
                     border-color: @gray-dark;
                 }
@@ -365,6 +371,12 @@
                     content: "\e926";
                     color: @brand-timeseries-color;
                 }
+            }
+
+            .database-filter {
+                background-color:@gray-base;
+                border-color:@gray-base;
+                margin-bottom:5px;
             }
         }
 
@@ -491,6 +503,13 @@ body.show-top-alert {
             top: @navbar-height + @top-alert-height;
         }
     }
+    #right-options-panel {
+        top: @navbar-height-xs + @top-alert-height;
+
+        @media (min-width: @screen-md) {
+            top: @navbar-height + @top-alert-height;
+        }
+    }
 }
 
 .content-container {
@@ -499,7 +518,8 @@ body.show-top-alert {
     bottom: 0;
     right: 0;
     left: 0;
-    padding-bottom: 50px;
+    padding-bottom: @grid-gutter-width / 2;
+    padding-top: @grid-gutter-width / 2;
     overflow-y: auto;
     -webkit-transition: left @menu-transition-ease;
     -moz-transition: left @menu-transition-ease;
@@ -512,16 +532,20 @@ body.show-top-alert {
         left: @menu-width;
         padding-left: @grid-gutter-width;
         padding-right: @grid-gutter-width;
+        padding-bottom: @grid-gutter-width;
+        padding-top: @grid-gutter-width;
     }
 
     .content-container-margin {
-        margin-top: @grid-gutter-width / 2;
+        min-height: 100%;
+        position: relative;
+        /*margin-top: @grid-gutter-width / 2;
         margin-bottom: @grid-gutter-width / 2;
 
         @media(min-width:@screen-md) {
             margin-top: @grid-gutter-width;
             margin-bottom: @grid-gutter-width;
-        }
+        }*/
     }
 }
 
@@ -537,7 +561,7 @@ body.show-top-alert {
         width: @menu-width;
         top: @navbar-height-xs;
         bottom: 0;
-        right: 15px;
+        right:0;
 
         @media (min-width: @screen-md) {
             top: @navbar-height;

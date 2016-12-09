@@ -59,7 +59,7 @@ color: #797878\
 color: #AFA472\
 }\
 .ace-pastel-dark-raven .ace_constant.ace_language {\
-color: #DE8E30\
+color: #20c0e6\
 }\
 .ace-pastel-dark-raven .ace_constant.ace_numeric {\
 color: #CCCCCC\
@@ -82,7 +82,7 @@ border-color: #8F938F\
 color: #AEB2F8\
 }\
 .ace-pastel-dark-raven .ace_string {\
-color: #66A968\
+color: #eca136\
 }\
 .ace-pastel-dark-raven .ace_string.ace_regexp {\
 color: #E9C062\
@@ -91,7 +91,7 @@ color: #E9C062\
 color: #A6C6FF\
 }\
 .ace-pastel-dark-raven .ace_variable {\
-color: #BEBF55\
+color: #4ae296\
 }\
 .ace-pastel-dark-raven .ace_variable.ace_language {\
 color: #C1C144\
