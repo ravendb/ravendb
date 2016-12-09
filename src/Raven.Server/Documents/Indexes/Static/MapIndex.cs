@@ -73,40 +73,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (isStale || _referencedCollections.Count == 0)
                 return isStale;
 
-            foreach (var collection in Collections)
-            {
-                HashSet<CollectionName> referencedCollections;
-                if (_compiled.ReferencedCollections.TryGetValue(collection, out referencedCollections) == false)
-                    continue;
-
-                foreach (var referencedCollection in referencedCollections)
-                {
-                    var lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, referencedCollection.Name);
-                    var lastProcessedReferenceEtag = _indexStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection);
-
-                    if (cutoff == null)
-                    {
-                        if (lastDocEtag > lastProcessedReferenceEtag)
-                            return true;
-
-                        var lastTombstoneEtag = DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, referencedCollection.Name);
-                        var lastProcessedTombstoneEtag = _indexStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection);
-
-                        if (lastTombstoneEtag > lastProcessedTombstoneEtag)
-                            return true;
-                    }
-                    else
-                    {
-                        if (Math.Min(cutoff.Value, lastDocEtag) > lastProcessedReferenceEtag)
-                            return true;
-
-                        if (DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesWithDocumentEtagLowerThan(databaseContext, referencedCollection.Name, cutoff.Value) > 0)
-                            return true;
-                    }
-                }
-            }
-
-            return false;
+            return StaticIndexHelper.IsStale(this, databaseContext, indexContext, cutoff);
         }
 
         protected override void HandleDocumentChange(DocumentChangeNotification notification)
@@ -132,27 +99,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var writePos = indexEtagBytes + minLength;
 
-            foreach (var collection in Collections)
-            {
-                HashSet<CollectionName> referencedCollections;
-                if (_compiled.ReferencedCollections.TryGetValue(collection, out referencedCollections) == false)
-                    continue;
-
-                foreach (var referencedCollection in referencedCollections)
-                {
-                    var lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, referencedCollection.Name);
-                    var lastMappedEtag = _indexStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction, collection, referencedCollection);
-
-                    *(long*)writePos = lastDocEtag;
-                    writePos += sizeof(long);
-                    *(long*)writePos = lastMappedEtag;
-                }
-            }
-
-            unchecked
-            {
-                return (long)Hashing.XXHash64.Calculate(indexEtagBytes, (ulong)length);
-            }
+            return StaticIndexHelper.CalculateIndexEtag(this, length, indexEtagBytes, writePos, documentsContext, indexContext);
         }
 
         public override int? ActualMaxNumberOfIndexOutputs
