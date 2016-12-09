@@ -185,7 +185,7 @@ namespace Raven.Server.Web.System
                 var results = new List<DynamicJsonValue>();
                 foreach (var name in names)
                 {
-                    var configuration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(name);
+                    var configuration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(name, ignoreDisabledDatabase:true);
                     if (configuration == null)
                     {
                         results.Add(new DynamicJsonValue
