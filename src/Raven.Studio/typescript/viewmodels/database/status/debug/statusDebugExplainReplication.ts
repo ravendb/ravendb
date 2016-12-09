@@ -60,9 +60,9 @@ class statusDebugExplainReplication extends viewModelBase {
         if (query.length >= 2) {
             new getDocumentsMetadataByIDPrefixCommand(query, 10, this.activeDatabase())
                 .execute()
-                .done((results: string[]) => {
+                .done((results: queryResultDto<string>) => {
                     if (this.documentId() === query) {
-                        this.documentIdSearchResults(results);
+                        this.documentIdSearchResults(results.Results);
                     }
                 });
         } else if (query.length == 0) {

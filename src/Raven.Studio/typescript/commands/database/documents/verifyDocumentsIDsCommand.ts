@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class verifyDocumentsIDsCommand extends commandBase {
 
-    static IDsLocalStorage: Array<string> = [];
+    static IDsLocalStorage: Array<string> = []; //TODO: it isn't scoped to current database?
     static InvalidIDsLocal: Array<string> = [];
 
     constructor(private docIDs: string[], private db: database, private queryLocalStorage:boolean, private storeResultsInLocalStorage:boolean) {
@@ -46,12 +46,12 @@ class verifyDocumentsIDsCommand extends commandBase {
             var url = endpoints.databases.document.docs;
             var postResult = this.post(url + "?metadata-only=true", JSON.stringify(this.docIDs), this.db);
             postResult.fail((xhr: JQueryXHR) => verifyResult.reject(xhr));
-            postResult.done((queryResult: queryResultDto) => {
+            postResult.done((queryResult: queryResultDto<documentDto>) => {
                 if (queryResult && queryResult.Results) {
                     queryResult.Results.forEach(curVerifiedID => {
                         verifiedIDs.push(curVerifiedID['@metadata']['@id']);                        
                         if (this.queryLocalStorage) {
-                            verifyDocumentsIDsCommand.IDsLocalStorage.push(curVerifiedID);
+                            verifyDocumentsIDsCommand.IDsLocalStorage.push(curVerifiedID['@metadata']['@id']);
                         }
                     });
 

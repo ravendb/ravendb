@@ -1,7 +1,7 @@
 /// <reference path="../tsd.d.ts"/>
 
-interface queryResultDto {
-    Results: any[];
+interface queryResultDto<T> {
+    Results: T[];
     Includes: any[];
 }
 

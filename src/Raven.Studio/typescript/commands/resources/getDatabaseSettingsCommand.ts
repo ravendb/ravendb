@@ -17,7 +17,7 @@ class getDatabaseSettingsCommand extends commandBase {
             this.reportInfo("Fetching Database Settings for '" + this.db.name + "'");
         }
 
-        var resultsSelector = (queryResult: queryResultDto) => new document(queryResult);
+        var resultsSelector = (queryResult: queryResultDto<documentDto>) => new document(queryResult);
         var url = "/admin/databases/" + this.db.name;//TODO: use endpoints
         var getTask = this.query(url, null, null, resultsSelector);
 

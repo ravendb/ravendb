@@ -71,13 +71,13 @@ class sqlReplicationSimulationDialog extends dialogViewModelBase {
         if (query.length >= 2) {
             new getDocumentsMetadataByIDPrefixCommand(query, 10, this.db)
                 .execute()
-                .done((results: string[]) => {
+                .done((results: queryResultDto<string>) => {
                     if (this.documentId() === query) {
-                        if (results.length == 1 && this.documentId() == results[0]) {
+                        if (results.Results.length == 1 && this.documentId() == results.Results[0]) {
                             this.documentAutocompletes.removeAll();
                             return;
                         }
-                        this.documentAutocompletes(results);
+                        this.documentAutocompletes(results.Results);
                     }
                 });
         } else if (query.length == 0) {
