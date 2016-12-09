@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using Voron.Data;
 using Voron.Impl.Paging;
 
 namespace Voron.Impl.Scratch
@@ -30,9 +29,9 @@ namespace Voron.Impl.Scratch
         private readonly Dictionary<long, LinkedList<long>> _freePagesBySizeAvailableImmediately = new Dictionary<long, LinkedList<long>>(NumericEqualityComparer.Instance);
         private readonly Dictionary<long, PageFromScratchBuffer> _allocatedPages = new Dictionary<long, PageFromScratchBuffer>(NumericEqualityComparer.Instance);
         
-        private long _allocatedPagesUsedSize;
+        private long _allocatedPagesCount;
         private long _lastUsedPage;
-        private long _latestFreePagesAvailableAfterTransaction = -1;
+        private long _txIdAfterWhichLatestFreePagesBecomeAvailable = -1;
 
         public long LastUsedPage => _lastUsedPage;
 
@@ -40,7 +39,7 @@ namespace Voron.Impl.Scratch
         {
             _scratchPager = scratchPager;
             _scratchNumber = scratchNumber;
-            _allocatedPagesUsedSize = 0;
+            _allocatedPagesCount = 0;
             _pageSize = scratchPager.PageSize;
         }
 
@@ -49,9 +48,9 @@ namespace Voron.Impl.Scratch
             _allocatedPages.Clear();
             _freePagesBySizeAvailableImmediately.Clear();
             _freePagesBySize.Clear();
-            _latestFreePagesAvailableAfterTransaction = -1;
+            _txIdAfterWhichLatestFreePagesBecomeAvailable = -1;
             _lastUsedPage = 0;
-            _allocatedPagesUsedSize = 0;
+            _allocatedPagesCount = 0;
         }
 
         public PagerState PagerState => _scratchPager.PagerState;
@@ -64,7 +63,7 @@ namespace Voron.Impl.Scratch
 
         public long NumberOfAllocatedPages => _scratchPager.NumberOfAllocatedPages;
 
-        public long AllocatedPagesUsedSize => _allocatedPagesUsedSize;
+        public long AllocatedPagesCount => _allocatedPagesCount;
 
         public long SizeAfterAllocation(long sizeToAllocate)
         {
@@ -78,7 +77,7 @@ namespace Voron.Impl.Scratch
 
             var result = new PageFromScratchBuffer(_scratchNumber, _lastUsedPage, sizeToAllocate, numberOfPages);
 
-            _allocatedPagesUsedSize += numberOfPages;
+            _allocatedPagesCount += numberOfPages;
             _allocatedPages.Add(_lastUsedPage, result);
             _lastUsedPage += sizeToAllocate;
 
@@ -107,7 +106,7 @@ namespace Voron.Impl.Scratch
 
                 result = new PageFromScratchBuffer (_scratchNumber, freeAndAvailablePageNumber, size, numberOfPages);
 
-                _allocatedPagesUsedSize += numberOfPages;
+                _allocatedPagesCount += numberOfPages;
                 _allocatedPages.Add(freeAndAvailablePageNumber, result);
 
                 return true;
@@ -135,17 +134,17 @@ namespace Voron.Impl.Scratch
 
             result = new PageFromScratchBuffer ( _scratchNumber, val.Page, size, numberOfPages );
 
-            _allocatedPagesUsedSize += numberOfPages;
+            _allocatedPagesCount += numberOfPages;
             _allocatedPages.Add(val.Page, result);
             return true;
         }
 
         public bool HasActivelyUsedBytes(long oldestActiveTransaction)
         {
-            if (_allocatedPagesUsedSize > 0)
+            if (_allocatedPagesCount > 0)
                 return true;
 
-            if (oldestActiveTransaction > _latestFreePagesAvailableAfterTransaction)
+            if (oldestActiveTransaction > _txIdAfterWhichLatestFreePagesBecomeAvailable)
                 return false;
 
             return true;
@@ -182,7 +181,7 @@ namespace Voron.Impl.Scratch
                 throw new InvalidOperationException("Attempt to free page that wasn't currently allocated: " + page);
             }
 
-            _allocatedPagesUsedSize -= value.NumberOfPages;
+            _allocatedPagesCount -= value.NumberOfPages;
             _allocatedPages.Remove(page);
 
             if (value.Size == 0)
@@ -215,8 +214,8 @@ namespace Voron.Impl.Scratch
                     ValidAfterTransactionId = asOfTxId
                 });
 
-                if (asOfTxId > _latestFreePagesAvailableAfterTransaction)
-                    _latestFreePagesAvailableAfterTransaction = asOfTxId;
+                if (asOfTxId > _txIdAfterWhichLatestFreePagesBecomeAvailable)
+                    _txIdAfterWhichLatestFreePagesBecomeAvailable = asOfTxId;
             }
         }
 
@@ -229,8 +228,6 @@ namespace Voron.Impl.Scratch
         {
             return _scratchPager.AcquirePagePointer(tx, p);
         }
-
-        public long CurrentlyAllocatedBytes => _allocatedPagesUsedSize*_pageSize;
 
         internal Dictionary<long, long> GetMostAvailableFreePagesBySize()
         {
