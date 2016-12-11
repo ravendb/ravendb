@@ -221,12 +221,6 @@ namespace Raven.Storage.Voron
         public Guid Id { get; private set; }
         public IDocumentCacher DocumentCacher { get { return documentCacher; }}
 
-        public IDisposable WriteLock()
-        {
-            Monitor.Enter(this);
-            return exitLockDisposable;
-        }
-
         /// <summary>
         /// Force current operations inside context to be performed directly
         /// </summary>
