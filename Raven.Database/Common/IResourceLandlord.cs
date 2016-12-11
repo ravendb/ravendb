@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
+using Raven.Database.Config;
 
 namespace Raven.Database.Common
 {
@@ -17,5 +18,7 @@ namespace Raven.Database.Common
         bool TryGetOrCreateResourceStore(string resourceName, out Task<TResource> resourceTask);
 
         ConcurrentDictionary<string, DateTime> LastRecentlyUsed { get; }
+
+        InMemoryRavenConfiguration GetSystemConfiguration();
     }
 }
