@@ -3,7 +3,9 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net.WebSockets;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -37,17 +39,52 @@ namespace Sparrow.Logging
 
         private static byte[] _headerRow =
             Encoding.UTF8.GetBytes("Time,\tThread,\tLevel,\tSource,\tLogger,\tMessage,\tException");
-        
-        private readonly ConcurrentDictionary<WebSocket, TaskCompletionSource<object>> _listeners = new ConcurrentDictionary<WebSocket, TaskCompletionSource<object>>();
+
+        public class WebSocketContext
+        {
+            public TaskCompletionSource<object> TaskCompletion { get; } = new TaskCompletionSource<object>();
+            public LogginFilter Filter { get; } = new LogginFilter();
+        }
+        private readonly ConcurrentDictionary<WebSocket, WebSocketContext> _listeners = new ConcurrentDictionary<WebSocket, WebSocketContext>();
+
         private LogMode _logMode;
         private LogMode _oldLogMode;
 
-        public async Task Register(WebSocket source)
+        public async Task<string> ReadFromWebsocket(WebSocket source, CancellationTokenSource sourceToken)
+        {
+            ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[1024]);
+
+            using (var ms = new MemoryStream())
+            {
+                WebSocketReceiveResult result;
+                do
+                {
+                    result = await source.ReceiveAsync(buffer, sourceToken.Token);
+                    if (result.CloseStatus != null)
+                    {
+                        sourceToken.Cancel();
+                        return "";
+                    }
+                    ms.Write(buffer.Array, buffer.Offset, result.Count);
+                }
+                while (!result.EndOfMessage);
+
+                ms.Seek(0, SeekOrigin.Begin);
+
+                using (var reader = new StreamReader(ms, Encoding.UTF8))
+                    return reader.ReadToEnd();
+            }
+        }
+
+        public async Task Register(WebSocket source,string db = null)
         {
             await source.SendAsync(new ArraySegment<byte>(_headerRow), WebSocketMessageType.Text, true,
                 CancellationToken.None);
-            
-            var taskCompletionSource = new TaskCompletionSource<object>();
+            var context = new WebSocketContext();
+            if (db != null)
+            {
+                context.Filter.Add("source:"+db);
+            }
             lock (this)
             {
                 if (_listeners.Count == 0)
@@ -55,10 +92,24 @@ namespace Sparrow.Logging
                     _oldLogMode = _logMode;
                     SetupLogMode(LogMode.Information, _path);
                 }
-                if (_listeners.TryAdd(source, taskCompletionSource) == false)
+                if (_listeners.TryAdd(source, context) == false)
                     throw new InvalidOperationException("Socket was already added?");
             }
-            await taskCompletionSource.Task;
+
+            CancellationTokenSource tokenSource = new CancellationTokenSource();
+            CancellationToken token = tokenSource.Token;
+
+            while (!token.IsCancellationRequested)
+            {
+                var res = context.Filter.ParseInput(await ReadFromWebsocket(source, tokenSource));
+                if (!token.IsCancellationRequested)
+                {
+                    await source.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(res)), WebSocketMessageType.Text, true,
+            token);
+                }
+            }
+
+            await context.TaskCompletion.Task;
         }
 
 
@@ -194,9 +245,16 @@ namespace Sparrow.Logging
             if (entry.Type == LogMode.Operations && IsOperationsEnabled == false)
                 throw new InvalidOperationException("Logging of ops level when ops is disabled");
 #endif
-
             MemoryStream destination;
             var state = _localState.Value;
+            foreach (var kvp in _listeners)
+            {
+                if (!kvp.Value.Filter.Forward(entry))
+                {
+                    state.BlockedWebSockets.Add(kvp.Key);
+                }
+            }
+
             if (state.Free.Dequeue(out destination))
             {
                 destination.SetLength(0);
@@ -213,6 +271,7 @@ namespace Sparrow.Logging
 
         private void WriteEntryToWriter(StreamWriter writer, LogEntry entry)
         {
+
             if (_currentThreadId == null)
             {
                 _currentThreadId = ", " + Thread.CurrentThread.ManagedThreadId.ToString(CultureInfo.InvariantCulture) +
@@ -303,7 +362,7 @@ namespace Sparrow.Logging
                                     item.TryGetBuffer(out bytes);
                                     currentFile.Write(bytes.Array, bytes.Offset, bytes.Count);
                                     if (_listeners.Count != 0)
-                                        WriteToListeningWebSockets(bytes);
+                                        WriteToListeningWebSockets(bytes, threadState);
                                     sizeWritten += bytes.Count;
                                     item.SetLength(0);
                                     threadState.Free.Enqueue(item);
@@ -329,20 +388,24 @@ namespace Sparrow.Logging
             }
         }
 
-        private void WriteToListeningWebSockets(ArraySegment<byte> bytes)
+        private void WriteToListeningWebSockets(ArraySegment<byte> bytes, LocalThreadWriterState state)
         {
             foreach (var socket in _listeners.Keys)
             {
+                if (state.BlockedWebSockets.Contains(socket))
+                {
+                    continue;
+                }
                 try
                 {
                     socket.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None).Wait();
                 }
                 catch (Exception)
                 {
-                    TaskCompletionSource<object> value;
+                    WebSocketContext value;
                     if (_listeners.TryRemove(socket, out value))
                     {
-                        Task.Run(() => value.TrySetResult(null));
+                        Task.Run(() => value.TaskCompletion.TrySetResult(null));
                     }
                     if (_listeners.Count == 0)
                     {
@@ -361,6 +424,8 @@ namespace Sparrow.Logging
         private class LocalThreadWriterState
         {
             public readonly ForwardingStream ForwardingStream;
+
+            public readonly List<WebSocket> BlockedWebSockets = new List<WebSocket>();
 
             public readonly SingleProducerSingleConsumerCircularQueue Free =
                 new SingleProducerSingleConsumerCircularQueue(1024);
