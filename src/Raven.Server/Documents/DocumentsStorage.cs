@@ -162,7 +162,7 @@ namespace Raven.Server.Documents
         public DocumentsContextPool ContextPool;
         private UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool;
 
-        internal int _hasConflicts;
+        private long _hasConflicts;
 
         public DocumentsStorage(DocumentDatabase documentDatabase)
         {
@@ -237,7 +237,7 @@ namespace Raven.Server.Documents
                     ConflictsSchema.Create(tx, "Conflicts");
                     CollectionsSchema.Create(tx, "Collections");
 
-                    _hasConflicts = tx.OpenTable(ConflictsSchema, "Conflicts").NumberOfEntries > 0 ? 1 : 0;
+                    _hasConflicts = tx.OpenTable(ConflictsSchema, "Conflicts").NumberOfEntries;
 
                     _lastEtag = ReadLastEtag(tx);
                     _collectionsCache = ReadCollections(tx);
@@ -1137,7 +1137,7 @@ namespace Raven.Server.Documents
                 var tx = context.Transaction.InnerTransaction.LowLevelTransaction;
                 tx.AfterCommitWhenNewReadTransactionsPrevented += () =>
                 {
-                    Interlocked.Add(ref _documentDatabase.DocumentsStorage._hasConflicts, -listCount);
+                    Interlocked.Add(ref _hasConflicts, -listCount);
                 };
             }
             return list;
