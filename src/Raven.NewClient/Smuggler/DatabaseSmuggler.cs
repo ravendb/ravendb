@@ -60,7 +60,13 @@ namespace Raven.NewClient.Client.Smuggler
         public async Task ImportIncrementalAsync(DatabaseSmugglerOptions options,  string directoryPath, CancellationToken cancellationToken = default(CancellationToken))
         {
             var files = Directory.GetFiles(directoryPath)
-                .Where(file => Constants.PeriodicExport.IncrementalExportExtension.Equals(Path.GetExtension(file), StringComparison.OrdinalIgnoreCase))
+                .Where(file =>
+                {
+                    var extension = Path.GetExtension(file);
+                    return
+                        Constants.PeriodicExport.IncrementalExportExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
+                        Constants.PeriodicExport.FullExportExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
+                })
                 .OrderBy(File.GetLastWriteTimeUtc)
                 .ToArray();
 
