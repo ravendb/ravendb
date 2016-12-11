@@ -240,9 +240,11 @@ namespace Sparrow.Logging
                 throw new InvalidOperationException("Logging of ops level when ops is disabled");
 #endif
             MemoryStream destination;
+            List<WebSocket> webSocketsList = new List<WebSocket>();
+            List<WebSocket> dummy;
             var state = _localState.Value;
 
-            if (state.Free.Dequeue(out destination))
+            if (state.Free.Dequeue(out destination,out dummy))
             {
                 destination.SetLength(0);
                 state.ForwardingStream.Destination = destination;
@@ -251,18 +253,18 @@ namespace Sparrow.Logging
             {
                 state.ForwardingStream.Destination = new MemoryStream();
             }
-            WriteEntryToWriter(state.Writer, entry);
-            state.Full.Enqueue(state.ForwardingStream.Destination, timeout: 128);
 
             foreach (var kvp in _listeners)
             {
-                if (kvp.Value.Filter.Forward(entry)) continue;
-                if (!state.BlockedWebSockets.ContainsKey(state.ForwardingStream.Destination))
+                if (!kvp.Value.Filter.Forward(entry))
                 {
-                    state.BlockedWebSockets[state.ForwardingStream.Destination] = new List<WebSocket>();
+                    webSocketsList.Add(kvp.Key);
                 }
-                state.BlockedWebSockets[state.ForwardingStream.Destination].Add(kvp.Key);
             }
+
+            WriteEntryToWriter(state.Writer, entry);
+            state.Full.Enqueue(state.ForwardingStream.Destination, webSocketsList, timeout: 128);
+
             _hasEntries.Set();
         }
 
@@ -352,17 +354,19 @@ namespace Sparrow.Logging
                                 for (var i = 0; i < 16; i++)
                                 {
                                     MemoryStream item;
-                                    if (threadState.Full.Dequeue(out item) == false)
+                                    List<WebSocket> webSocketsList;
+                                    if (threadState.Full.Dequeue(out item,out webSocketsList) == false)
                                         break;
                                     foundEntry = true;
                                     ArraySegment<byte> bytes;
                                     item.TryGetBuffer(out bytes);
                                     currentFile.Write(bytes.Array, bytes.Offset, bytes.Count);
                                     if (_listeners.Count != 0)
-                                        WriteToListeningWebSockets(bytes, item,threadState);
+                                        WriteToListeningWebSockets(bytes, webSocketsList);
                                     sizeWritten += bytes.Count;
                                     item.SetLength(0);
-                                    threadState.Free.Enqueue(item);
+                                    webSocketsList.Clear();
+                                    threadState.Free.Enqueue(item, webSocketsList);
                                 }
                             }
                             if (_newThreadStates.IsEmpty == false)
@@ -385,16 +389,14 @@ namespace Sparrow.Logging
             }
         }
 
-        private void WriteToListeningWebSockets(ArraySegment<byte> bytes, MemoryStream item,LocalThreadWriterState state)
+        private void WriteToListeningWebSockets(ArraySegment<byte> bytes, List<WebSocket> webSocketsList)
         {
-            foreach (var socket in _listeners.Keys)
+            var allowedSockets = _listeners.Keys.Where(k => !webSocketsList.Contains(k));
+            foreach (var socket in allowedSockets)
             {               
                 try
                 {
-                    if (!state.BlockedWebSockets.ContainsKey(item) || !state.BlockedWebSockets[item].Contains(socket))
-                    {
-                        socket.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None).Wait();
-                    }                
+                   socket.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None).Wait();
                 }
                 catch (Exception ex)
                 {
@@ -416,15 +418,12 @@ namespace Sparrow.Logging
                     }
                 }
             }
-            if (state.BlockedWebSockets.ContainsKey(item)){ state.BlockedWebSockets.Remove(item); }
-            
+
         }
 
         private class LocalThreadWriterState
         {
             public readonly ForwardingStream ForwardingStream;
-
-            public readonly Dictionary<MemoryStream,List<WebSocket>> BlockedWebSockets = new Dictionary<MemoryStream,List<WebSocket>>();
             
             public readonly SingleProducerSingleConsumerCircularQueue Free =
                 new SingleProducerSingleConsumerCircularQueue(1024);
