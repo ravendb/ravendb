@@ -8,15 +8,14 @@ using Raven.Abstractions.Extensions;
 
 namespace Sparrow.Logging
 {
-    public class LogginFilter
+    public class LoggingFilter
     {
 
             private readonly Dictionary<string, List<string>> _rules = new Dictionary<string, List<string>>();
-            private readonly string[] _entryFields;
+            private readonly string[] _entryFields = {"time","source","type","message","exception"};
 
-            public LogginFilter()
+            public LoggingFilter()
             {
-                _entryFields = typeof(LogEntry).GetFields().Select(p => p.Name.ToLower()).ToArray();
                 foreach (var entry in _entryFields)
                 {
                     _rules.Add(entry, new List<string>());
@@ -34,7 +33,7 @@ namespace Sparrow.Logging
                     _rules[key].Add(value.ToLower());
                 }
             }
-            public void Del(string rule)
+            public void Delete(string rule)
             {
                 string[] parts = rule.Split(':');
                 string key = parts[0];
@@ -65,13 +64,13 @@ namespace Sparrow.Logging
                 StringBuilder sb = new StringBuilder();
                 sb.AppendLine("usage: filter [-add] [-del] [-list]\n");
                 sb.AppendLine("The available headers are:");
-                // Array.ForEach(entries, (entry) => sb.Append(entry));
+
                 foreach (var entry in _entryFields)
                 {
                     sb.Append(entry + "  ");
                 }
                 
-                sb.AppendLine("\n-add <header>:somestring");
+                sb.AppendLine("\n\n-add <header>:somestring");
                 sb.AppendLine("-del <header>:rule number");
             return sb.ToString();
             }
@@ -87,21 +86,28 @@ namespace Sparrow.Logging
                     valid = false;
                     switch (e)
                         {
-                        // Don't know how to do it more generic (and prettier) without the use of reflection
-                        case "at":
-                                valid = listOfRules.Any(rule => entry.At.GetDefaultRavenFormat(true).ToLower().StartsWith(rule));
+                            case "time":
+                                var time = entry.At.GetDefaultRavenFormat(true).ToLower();
+                                valid = listOfRules.Any(rule => time.StartsWith(rule));
                                 break;
                             case "source":
-                                valid = listOfRules.Any(rule => entry.Source.ToLower().StartsWith(rule));
+                                var source = entry.Source.ToLower();
+                                valid = listOfRules.Any(rule => source.StartsWith(rule));
                                 break;
                             case "logger":
-                                valid = listOfRules.Any(rule => entry.Logger.ToLower().StartsWith(rule));
+                                var logger = entry.Logger.ToLower();
+                                valid = listOfRules.Any(rule => logger.StartsWith(rule));
                                 break;
                             case "message":
-                                valid = listOfRules.Any(rule => entry.Message.ToLower().StartsWith(rule));
+                                var message = entry.Message.ToLower();
+                                valid = listOfRules.Any(rule => message.StartsWith(rule));
                                 break;
                             case "exception":
-                                valid = listOfRules.Any(rule => entry.Exception != null && entry.Exception.Message.ToLower().StartsWith(rule));
+                                if (entry.Exception != null)
+                                {
+                                    var msg = entry.Exception.Message.ToLower();
+                                    valid = listOfRules.Any(rule => msg.StartsWith(rule));
+                                }                                
                                 break;
                         }
                         if (valid)
@@ -132,7 +138,7 @@ namespace Sparrow.Logging
                                 Add(args[++i]);
                                 break;
                             case ("-del"):
-                                Del(args[++i]);
+                                Delete(args[++i]);
                                 break;
                         }
                     }

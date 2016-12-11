@@ -43,41 +43,34 @@ namespace Sparrow.Logging
         public class WebSocketContext
         {
             public TaskCompletionSource<object> TaskCompletion { get; } = new TaskCompletionSource<object>();
-            public LogginFilter Filter { get; } = new LogginFilter();
+            public LoggingFilter Filter { get; } = new LoggingFilter();
         }
         private readonly ConcurrentDictionary<WebSocket, WebSocketContext> _listeners = new ConcurrentDictionary<WebSocket, WebSocketContext>();
 
         private LogMode _logMode;
         private LogMode _oldLogMode;
 
-        public async Task<string> ReadFromWebsocket(WebSocket source, CancellationTokenSource sourceToken)
+        public async Task<string> ReadFromWebSocket(ArraySegment<byte> buffer, WebSocket source, CancellationTokenSource sourceToken)
         {
-            ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[1024]);
-
-            using (var ms = new MemoryStream())
+            WebSocketReceiveResult result;
+            do
             {
-                WebSocketReceiveResult result;
-                do
+                result = await source.ReceiveAsync(buffer, sourceToken.Token);
+                if (result.CloseStatus != null)
                 {
-                    result = await source.ReceiveAsync(buffer, sourceToken.Token);
-                    if (result.CloseStatus != null)
-                    {
-                        sourceToken.Cancel();
-                        return "";
-                    }
-                    ms.Write(buffer.Array, buffer.Offset, result.Count);
+                    sourceToken.Cancel();
+                    return "";
                 }
-                while (!result.EndOfMessage);
-
-                ms.Seek(0, SeekOrigin.Begin);
-
-                using (var reader = new StreamReader(ms, Encoding.UTF8))
-                    return reader.ReadToEnd();
             }
+            while (!result.EndOfMessage);
+
+            return Encoding.UTF8.GetString(
+                buffer.Array, 0, result.Count);
         }
 
         public async Task Register(WebSocket source,string db = null)
         {
+             
             await source.SendAsync(new ArraySegment<byte>(_headerRow), WebSocketMessageType.Text, true,
                 CancellationToken.None);
             var context = new WebSocketContext();
@@ -98,17 +91,18 @@ namespace Sparrow.Logging
 
             CancellationTokenSource tokenSource = new CancellationTokenSource();
             CancellationToken token = tokenSource.Token;
-
+            ArraySegment<byte> readBuffer = new ArraySegment<byte>(new byte[512]);
+            
             while (!token.IsCancellationRequested)
             {
-                var res = context.Filter.ParseInput(await ReadFromWebsocket(source, tokenSource));
+                var res = context.Filter.ParseInput(await ReadFromWebSocket(readBuffer, source, tokenSource));
                 if (!token.IsCancellationRequested)
                 {
                     await source.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(res)), WebSocketMessageType.Text, true,
             token);
                 }
             }
-
+            
             await context.TaskCompletion.Task;
         }
 
