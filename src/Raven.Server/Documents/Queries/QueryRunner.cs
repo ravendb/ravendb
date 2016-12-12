@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
+using Raven.Abstractions.Exceptions;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Data.Queries;
@@ -35,11 +36,15 @@ namespace Raven.Server.Documents.Queries
 
         public async Task<DocumentQueryResult> ExecuteQuery(string indexName, IndexQueryServerSide query, StringValues includes, long? existingResultEtag, OperationCancelToken token)
         {
+            DocumentQueryResult result;
+            var sw = Stopwatch.StartNew();
             if (DynamicQueryRunner.IsDynamicIndex(indexName))
             {
                 var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, token);
 
-                return await runner.Execute(indexName, query, existingResultEtag).ConfigureAwait(false);
+                result = await runner.Execute(indexName, query, existingResultEtag);
+                result.DurationMilliseconds = (long)sw.Elapsed.TotalMilliseconds;
+                return result;
             }
 
             var index = GetIndex(indexName);
@@ -50,7 +55,9 @@ namespace Raven.Server.Documents.Queries
                     return DocumentQueryResult.NotModifiedResult;
             }
 
-            return await index.Query(query, _documentsContext, token);
+            result = await index.Query(query, _documentsContext, token);
+            result.DurationMilliseconds = (long)sw.Elapsed.TotalMilliseconds;
+            return result;
         }
 
         public async Task ExecuteStreamQuery(string indexName, IndexQueryServerSide query, HttpResponse response, BlittableJsonTextWriter writer, OperationCancelToken token)
@@ -277,7 +284,7 @@ namespace Raven.Server.Documents.Queries
         {
             var index = _database.IndexStore.GetIndex(indexName);
             if (index == null)
-                throw new InvalidOperationException("There is not index with name: " + indexName);
+                throw new IndexDoesNotExistsException("There is not index with name: " + indexName);
 
             return index;
         }
