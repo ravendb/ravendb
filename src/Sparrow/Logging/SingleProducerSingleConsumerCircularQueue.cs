@@ -6,10 +6,17 @@ using System.Threading;
 
 namespace Sparrow.Logging
 {
-    public class SingleProducerSingleConsumerCircularQueue
+    public class WebSocketMessageEntry
     {
-        private readonly MemoryStream[] _data;
-        private readonly List<WebSocket>[]  _webSocketsList;
+        public MemoryStream Data { get; set; }
+        public readonly List<WebSocket> WebSocketsList = new List<WebSocket>();
+    }
+
+    public class SingleProducerSingleConsumerCircularQueue<T>
+    {
+        private readonly T[] _data;
+       // private readonly MemoryStream[] _data;
+       // private readonly List<WebSocket>[]  _webSocketsList;
         private readonly int _queueSize;
         private volatile uint _readPos;
 #pragma warning disable 169 // unused field
@@ -21,12 +28,7 @@ namespace Sparrow.Logging
         public SingleProducerSingleConsumerCircularQueue(int queueSize)
         {
             _queueSize = queueSize;
-            _data = new MemoryStream[_queueSize];
-            _webSocketsList = new List<WebSocket>[_queueSize];
-            for (int i = 0; i < _queueSize; i++)
-            {
-                _webSocketsList[i] = new List<WebSocket>();
-            }
+            _data = new T[_queueSize];
         }
 
         private int PositionToArrayIndex(uint pos)
@@ -34,7 +36,7 @@ namespace Sparrow.Logging
             return (int)(pos % _queueSize);
         }
 
-        public bool Enqueue(MemoryStream entry, List<WebSocket> webSocketsList)
+        public bool Enqueue(T entry)
         {
             var readIndex = PositionToArrayIndex(_readPos);
             var currentWritePos = _writePos;
@@ -44,8 +46,6 @@ namespace Sparrow.Logging
                 return false; // queue full
 
             _data[PositionToArrayIndex(currentWritePos)] = entry;
-            _webSocketsList[PositionToArrayIndex(currentWritePos)].AddRange(webSocketsList);
-            //_allowedWebSockets[PositionToArrayIndex(currentWritePos)].AddRange(allowdWebSockets);
 
             _writePos++;
             return true;
@@ -53,9 +53,9 @@ namespace Sparrow.Logging
 
         private int _numberOfTimeWaitedForEnqueue;
 
-        public bool Enqueue(MemoryStream entry, List<WebSocket> webSocketsList,int timeout)
+        public bool Enqueue(T entry,int timeout)
         {
-            if (Enqueue(entry, webSocketsList))
+            if (Enqueue(entry))
             {
                 _numberOfTimeWaitedForEnqueue = 0;
                 return true;
@@ -70,7 +70,7 @@ namespace Sparrow.Logging
                     timeToWait = timeout;
                 timeout -= timeToWait;
                 Thread.Sleep(timeToWait);
-                if (Enqueue(entry, webSocketsList))
+                if (Enqueue(entry))
                 {
                     return true;
                 }
@@ -78,18 +78,17 @@ namespace Sparrow.Logging
             return false;
         }
 
-        public bool Dequeue(out MemoryStream entry, out List<WebSocket> webSocketsList)
+        public bool Dequeue(out T entry)
         {
-            entry = null;
+            entry = default(T);
             var readIndex = PositionToArrayIndex(_readPos);
             var writeIndex = PositionToArrayIndex(_writePos);
-            webSocketsList = _webSocketsList[readIndex];
 
             if (readIndex == writeIndex)
                 return false; // queue empty
 
             entry = _data[readIndex];
-            _data[readIndex] = null;
+            _data[readIndex] = default(T);
             _readPos++;
 
             return true;
