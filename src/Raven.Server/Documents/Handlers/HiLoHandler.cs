@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.Handlers
                         ["Low"] = cmd.OldMax + 1,
                         ["High"] = cmd.OldMax + capacity,
                         ["LastSize"] = capacity,
-                        ["LastRangeAt"] = cmd.LastRangeAt.ToString("o")
+                        ["LastRangeAt"] = DateTime.UtcNow.ToString("o")
                     });
                 }
             }
@@ -102,7 +102,6 @@ namespace Raven.Server.Documents.Handlers
             public long LastRangeMax;
             public string Prefix;
             public long OldMax;
-            public DateTime LastRangeAt;
 
             public override void Execute(DocumentsOperationContext context, RavenTransaction tx)
             {
@@ -170,8 +169,7 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 OldMax = oldMax;
-                Prefix = prefix;
-                LastRangeAt = DateTime.UtcNow;
+                Prefix = prefix;                
             }
         }
 

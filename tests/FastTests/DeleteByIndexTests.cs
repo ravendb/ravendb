@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -49,8 +49,7 @@ namespace NewClientTests.NewClient.Client.Indexing
                 DeleteByIndex(context, indexName, store);
                 var databaseStatistics = DatabaseStatistics(store, context);
 
-                //TODO - after we have hilo need to be 1
-                Assert.Equal(0, databaseStatistics.CountOfDocuments);
+                Assert.Equal(1, databaseStatistics.CountOfDocuments);
             }
         }
 
