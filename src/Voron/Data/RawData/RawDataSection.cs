@@ -146,6 +146,9 @@ namespace Voron.Data.RawData
 
         public bool TryWriteDirect(long id, int size, out byte* writePos)
         {
+            if (_tx.Flags == TransactionFlags.Read)
+                ThrowReadOnlyTransaction(id);
+
             var posInPage = (int)(id % _pageSize);
             var pageNumberInSection = (id - posInPage) / _pageSize;
             var pageHeader = PageHeaderFor(pageNumberInSection);
@@ -218,6 +221,9 @@ namespace Voron.Data.RawData
 
         public void DeleteSection(long sectionPageNumber)
         {
+            if (_tx.Flags == TransactionFlags.Read)
+                ThrowReadOnlyTransaction(sectionPageNumber);
+
             if (sectionPageNumber != _sectionHeader->PageNumber)
             {
                 // this is in another section, cannot delete it directly, so we'll forward to the right section
@@ -240,6 +246,9 @@ namespace Voron.Data.RawData
 
         public double Free(long id)
         {
+            if (_tx.Flags == TransactionFlags.Read)
+                ThrowReadOnlyTransaction(id);
+
             var posInPage = (int)(id % _pageSize);
             var pageNumberInSection = (id - posInPage) / _pageSize;
             var pageHeader = PageHeaderFor(pageNumberInSection);
@@ -325,6 +334,11 @@ namespace Voron.Data.RawData
             if ((pageHeader->Flags & PageFlags.RawData) != PageFlags.RawData)
                 ThrowInvalidPage(pageNumber);
             return pageHeader;
+        }
+
+        private static void ThrowReadOnlyTransaction(long id)
+        {
+            throw new InvalidOperationException($"Attempted to modify page {id} in a read only transaction");
         }
 
         private static void ThrowInvalidPage(long id)

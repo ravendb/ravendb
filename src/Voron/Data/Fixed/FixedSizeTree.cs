@@ -58,7 +58,7 @@ namespace Voron.Data.Fixed
         {
             if (clone)
             {
-                if(_treeName .HasValue)
+                if(_treeName.HasValue)
                     _tx.Allocator.Release(ref _treeName.Content);
 
                 _treeName = treeName.Clone(_tx.Allocator);
@@ -178,6 +178,9 @@ namespace Voron.Data.Fixed
 
         public byte* DirectAdd(long key, out bool isNew)
         {
+            if (_tx.Flags == TransactionFlags.Read)
+                throw new InvalidOperationException("Cannot add a value in a read only transaction");
+
             _changes++;
             byte* pos;
             switch (_type)
@@ -370,7 +373,7 @@ namespace Voron.Data.Fixed
             _pageLocator.Reset(pageNumber);
         }
 
-        public FixedSizeTreePage ModifyPage(FixedSizeTreePage page)
+        private FixedSizeTreePage ModifyPage(FixedSizeTreePage page)
         {
             if (page.Dirty)
                 return page;
@@ -757,6 +760,9 @@ namespace Voron.Data.Fixed
 
         public DeletionResult Delete(long key)
         {
+            if (_tx.Flags == TransactionFlags.Read)
+                throw new InvalidOperationException("Cannot delete a value in a read only transaction");
+
             _changes++;
             switch (_type)
             {
@@ -781,6 +787,9 @@ namespace Voron.Data.Fixed
 
         public DeletionResult DeleteRange(long start, long end)
         {
+            if (_tx.Flags == TransactionFlags.Read)
+                throw new InvalidOperationException("Cannot delete a range in a read only transaction");
+
             _changes++;
             if (start > end)
                 throw new InvalidOperationException("Start range cannot be greater than the end of the range");
