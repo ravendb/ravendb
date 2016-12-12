@@ -138,7 +138,6 @@ namespace Voron.Impl
                 if (tree == null)
                     continue;
 
-                tree.State.InWriteTransaction = false;
                 var treeState = tree.State;
                 if (treeState.IsModified)
                 {

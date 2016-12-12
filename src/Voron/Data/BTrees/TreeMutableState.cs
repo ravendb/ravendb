@@ -14,7 +14,6 @@ namespace Voron.Data.BTrees
         public TreeFlags Flags;
 
         private bool _isModified;
-        public bool InWriteTransaction;
 
         public long BranchPages;
         public long LeafPages;
@@ -33,7 +32,7 @@ namespace Voron.Data.BTrees
             get { return _isModified; }
             set
             {
-                if (InWriteTransaction == false)
+                if (_tx.Flags != TransactionFlags.ReadWrite)
                     throw new InvalidOperationException("Invalid operation outside of a write transaction");
                 _isModified = value;
             }

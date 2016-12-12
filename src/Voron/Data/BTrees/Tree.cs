@@ -79,8 +79,7 @@ namespace Voron.Data.BTrees
                     OverflowPages = header->OverflowPages,
                     LeafPages = header->LeafPages,
                     NumberOfEntries = header->NumberOfEntries,
-                    Flags = header->Flags,
-                    InWriteTransaction = (llt.Flags == TransactionFlags.ReadWrite),
+                    Flags = header->Flags
                 }
             };
         }
@@ -98,7 +97,6 @@ namespace Voron.Data.BTrees
                     RootObjectType = type,
                     Depth = 1,
                     Flags = flags,
-                    InWriteTransaction = true,
                 }
             };
 
@@ -219,11 +217,14 @@ namespace Voron.Data.BTrees
         {
             Debug.Assert(nodeType == TreeNodeFlags.Data || nodeType == TreeNodeFlags.MultiValuePageRef);
 
-            if (State.InWriteTransaction)
+            if (_llt.Flags == TransactionFlags.ReadWrite)
+            {
                 State.IsModified = true;
-
-            if (_llt.Flags == (TransactionFlags.ReadWrite) == false)
+            }
+            else
+            {
                 throw new ArgumentException("Cannot add a value in a read only transaction");
+            }
 
             if (AbstractPager.IsKeySizeValid(key.Size) == false)
                 throw new ArgumentException($"Key size is too big, must be at most {AbstractPager.MaxKeySize} bytes, but was {(key.Size + AbstractPager.RequiredSpaceForNewNode)}", nameof(key));
