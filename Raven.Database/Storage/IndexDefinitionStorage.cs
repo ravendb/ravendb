@@ -515,15 +515,16 @@ namespace Raven.Database.Storage
                     if (version >= currentIndexVersion)
                     {
                         if (version > currentIndexVersion)
-                            logger.Error("Trying to add an index ({0}) with a version smaller " +
-                                         "than the deleted version, this should not happen", indexName);
+                            logger.Error("Trying to add an index ({0}) with a version smaller ({1})" +
+                                         "than the deleted version (2), this should not happen", indexName, currentIndexVersion, version);
 
                         res = true;
                     }
                 }
                 else
                 {
-                    logger.Error("Failed to parse index version of index {0}", indexName);
+                    logger.Error("Failed to parse index version of index {0} using {1} list. " +
+                                 "Got the following value: {2}. Current index version: {3}", indexName, listName, versionStr, currentIndexVersion);
                 }
             });
 
