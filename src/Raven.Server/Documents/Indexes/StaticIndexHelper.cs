@@ -44,6 +44,13 @@ namespace Raven.Server.Documents.Indexes
                 if (compiled.ReferencedCollections.TryGetValue(collection, out referencedCollections) == false)
                     continue;
 
+                var lastIndexedEtag = index._indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
+                // we haven't handled references for that collection yet
+                // in theory we could check what is the last etag for that collection in documents store
+                // but this was checked earlier by the base index class
+                if (lastIndexedEtag == 0) 
+                    continue;
+
                 foreach (var referencedCollection in referencedCollections)
                 {
                     var lastDocEtag = databaseContext.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, referencedCollection.Name);
