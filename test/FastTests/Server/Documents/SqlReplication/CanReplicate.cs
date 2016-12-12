@@ -10,6 +10,8 @@ using System.Data.SqlClient;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.WebSockets;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -338,7 +340,7 @@ replicateToOrders(orderData);");
             }
         }
 
-     
+
         [NonLinuxFact]
         public async Task RavenDB_3341()
         {
@@ -548,7 +550,7 @@ replicateToOrders(orderData);");
         [NonLinuxFact(Skip = "Waiting for RavenDB-4398: Internal log")]
         public async Task WillLog()
         {
-            LogManager.RegisterTarget<DatabaseMemoryTarget>();
+            ClientWebSocket client = new ClientWebSocket();
 
             using (var store = GetDocumentStore())
             {
@@ -567,18 +569,26 @@ replicateToOrders(orderData);");
                     await session.StoreAsync(new Order());
                     await session.SaveChangesAsync();
                 }
-
+                string str = String.Format("{0}/admin/logs/watch", store.Url.Replace("http", "ws"));
+                StringBuilder sb = new StringBuilder();
+                await client.ConnectAsync(new Uri(str), CancellationToken.None);
+                new Thread(async () =>
+                {
+                    ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[1024]);
+                    while (client.State == WebSocketState.Open)
+                    {
+                        sb.AppendLine(await ReadFromWebSocket(buffer, client));
+                    }
+                }).Start();
                 await SetupSqlReplication(store, @"output ('Tralala');asdfsadf
 var nameArr = this.StepName.split('.');");
 
                 Assert.True(eventSlim.Wait(TimeSpan.FromSeconds(30)));
+                await client.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
 
-                var databaseMemoryTarget = LogManager.GetTarget<DatabaseMemoryTarget>();
-                var warnLog = databaseMemoryTarget[Constants.SystemDatabase].WarnLog;
                 var msg = "Could not process SQL Replication script for OrdersAndLines, skipping document: orders/1";
-
-                if (warnLog.Any(x => x.FormattedMessage.Contains(msg)) == false)
-                    throw new InvalidOperationException("Got bad message. Full warn log is: \r\n" + String.Join(Environment.NewLine, databaseMemoryTarget[Constants.SystemDatabase].WarnLog.Select(x => x.FormattedMessage)));
+                if (sb.ToString().Split(new string[] { Environment.NewLine }, StringSplitOptions.None).ToList().Any(x => x.Contains(msg)) == false)
+                    throw new InvalidOperationException("Got bad message. Full log is: \r\n" + sb);
             }
         }
 
@@ -652,6 +662,23 @@ var nameArr = this.StepName.split('.');");
                     }
                 }
         */
+
+        private async Task<string> ReadFromWebSocket(ArraySegment<byte> buffer, WebSocket source)
+        {
+            using (var ms = new MemoryStream())
+            {
+                WebSocketReceiveResult result;
+                do
+                {
+                    result = await source.ReceiveAsync(buffer, CancellationToken.None);
+                    ms.Write(buffer.Array, buffer.Offset, result.Count);
+                }
+                while (!result.EndOfMessage);
+                ms.Seek(0, SeekOrigin.Begin);
+
+                return new StreamReader(ms, Encoding.UTF8).ReadToEnd();
+            }
+        }
 
         private static void AssertCounts(int ordersCount, int orderLineCounts, DocumentStore store)
         {
