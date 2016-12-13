@@ -1,4 +1,4 @@
-define("ace/theme/pastel_dark_raven",["require","exports","module","ace/lib/dom"], function(require, exports, module) {
+ace.define("ace/theme/pastel_dark_raven",["require","exports","module","ace/lib/dom"], function(require, exports, module) {
 
 exports.isDark = true;
 exports.cssClass = "ace-pastel-dark-raven";
