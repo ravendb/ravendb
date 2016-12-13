@@ -60,14 +60,14 @@ namespace Raven.Server.Documents.Indexes.Static
             return IndexDefinition;
         }
 
-        public override bool Equals(IndexDefinitionBase indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs)
+        public override IndexDefinitionCompareDifferences Compare(IndexDefinitionBase indexDefinition)
         {
-            return false;
+            return IndexDefinitionCompareDifferences.All;
         }
 
-        public override bool Equals(IndexDefinition indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs)
+        public override IndexDefinitionCompareDifferences Compare(IndexDefinition indexDefinition)
         {
-            return IndexDefinition.Equals(indexDefinition, compareIndexIds: false, ignoreFormatting: ignoreFormatting, ignoreMaxIndexOutputs: ignoreMaxIndexOutputs);
+            return IndexDefinition.Compare(indexDefinition);
         }
 
         protected override int ComputeRestOfHash(int hashCode)

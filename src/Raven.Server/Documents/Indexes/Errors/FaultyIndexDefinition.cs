@@ -1,7 +1,6 @@
 using System;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexing;
-using Raven.Server.ServerWide.Context;
 
 using Sparrow.Json;
 
@@ -24,19 +23,19 @@ namespace Raven.Server.Documents.Indexes.Errors
             throw new NotSupportedException($"Definition of a faulty '{Name}' index does not support that");
         }
 
-        public override bool Equals(IndexDefinitionBase indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs)
-        {
-            throw new NotSupportedException($"Definition of a faulty '{Name}' index does not support that");
-        }
-
-        public override bool Equals(IndexDefinition indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs)
-        {
-            throw new NotSupportedException($"Definition of a faulty '{Name}' index does not support that");
-        }
-
         protected override int ComputeRestOfHash(int hashCode)
         {
-            return (hashCode*397) ^ -1337;
+            return (hashCode * 397) ^ -1337;
+        }
+
+        public override IndexDefinitionCompareDifferences Compare(IndexDefinitionBase indexDefinition)
+        {
+            return IndexDefinitionCompareDifferences.All;
+        }
+
+        public override IndexDefinitionCompareDifferences Compare(IndexDefinition indexDefinition)
+        {
+            return IndexDefinitionCompareDifferences.All;
         }
     }
 }

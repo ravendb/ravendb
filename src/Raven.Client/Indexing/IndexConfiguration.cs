@@ -60,30 +60,6 @@ namespace Raven.Client.Indexing
             return value;
         }
 
-        public bool Equals(IndexConfiguration configuration, bool ignoreMaxIndexOutputs)
-        {
-            if (configuration == null)
-                return false;
-
-            if (Count != configuration.Count)
-                return false;
-
-            foreach (var kvp in this)
-            {
-                if (ignoreMaxIndexOutputs && kvp.Key.Equals(Constants.Configuration.Indexing.MaxIndexOutputsPerDocument, StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                string value;
-                if (configuration.TryGetValue(kvp.Key, out value) == false)
-                    return false;
-
-                if (Equals(value, kvp.Value) == false)
-                    return false;
-            }
-
-            return true;
-        }
-
         protected bool Equals(IndexConfiguration other)
         {
             return DictionaryExtensions.ContentEquals(this, other);
