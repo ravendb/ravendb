@@ -1,6 +1,5 @@
 /// <reference path="../../../typings/tsd.d.ts" />
 import composition = require("durandal/composition");
-import ace = require("ace/ace");
 
 /*
  * A custom Knockout binding handler transforms the target element (usually a <pre>) into a code editor, powered by Ace. http://ace.c9.io
@@ -19,8 +18,8 @@ class aceEditorBindingHandler {
         bubbleEnterKey: false
     }
 
-    static dom = require("ace/lib/dom");
-    static commands = require("ace/commands/default_commands").commands;
+    static dom = ace.require("ace/lib/dom");
+    static commands = ace.require("ace/commands/default_commands").commands;
     static isInFullScreeenMode = ko.observable<boolean>(false);
     static goToFullScreenText = "Press Shift + F11  to enter full screen mode";
     static leaveFullScreenText = "Press Shift + F11 or Esc to leave full screen mode";
@@ -46,8 +45,8 @@ class aceEditorBindingHandler {
             composition.addBindingHandler("aceEditor");
 
 
-            var Editor = require("ace/editor").Editor;
-            require("ace/config").defineOptions(Editor.prototype, "editor", {
+            var Editor = ace.require("ace/editor").Editor;
+            ace.require("ace/config").defineOptions(Editor.prototype, "editor", {
                 editorType: {
                     set: function (val :any) {
                     },

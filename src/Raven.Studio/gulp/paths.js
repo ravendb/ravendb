@@ -16,6 +16,8 @@ var paths = {
     typings: './typings/**/*.d.ts',
     tsOutput: './wwwroot/App/',
 
+    aceDir: './wwwroot/Content/ace/',
+
     test: {
         dir: STUDIO_TEST_DIR,
         tsSource: path.join(STUDIO_TEST_DIR, 'typescript/**/*.ts'),
@@ -26,19 +28,17 @@ var paths = {
 
     lessSource: [
         './wwwroot/Content/css/styles.less',
-        './wwwroot/Content/css/legacy_styles.less',
-        './wwwroot/Content/css/bootstrap/bootstrap.less'],
+        './wwwroot/Content/css/legacy_styles.less'],
     lessTarget: './wwwroot/Content/',
     lessTargetSelector: './wwwroot/Content/**/*.css',
 
     releaseTarget: './build/',
     bowerSource: './wwwroot/lib/',
     cssToMerge: [
-        'wwwroot/Content/css/bootstrap/bootstrap.css',
         'wwwroot/lib/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.css',
         'wwwroot/lib/bootstrap-select/dist/css/bootstrap-select.css',
         'wwwroot/lib/bootstrap-multiselect/dist/css/bootstrap-multiselect.css',
-        'wwwroot/lib/font-awesome/css/font-awesome.css',
+        'wwwroot/lib/font-awesome/css/font-awesome.css', /* TODO: remove in future */
         'wwwroot/lib/Durandal/css/durandal.css',
         //'wwwroot/lib/jquery-ui/themes/base-wo-comments/all.css',
         //'wwwroot/lib/jquery.dynatree/dist/skin/ui.dynatree.css',
@@ -92,5 +92,8 @@ var paths = {
 };
 
 paths.releaseTargetApp = path.join(paths.releaseTarget, 'App');
+paths.releaseTargetContent = path.join(paths.releaseTarget, 'Content');
+paths.releaseTargetContentCss = path.join(paths.releaseTargetContent, 'css');
 
 module.exports = paths;
+    
