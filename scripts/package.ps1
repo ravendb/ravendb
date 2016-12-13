@@ -1,7 +1,7 @@
 $NETSTANDARD13 = 'netstandard1.3'
 $NET46 = 'net46'
 $SUPPORTED_CLIENT_FRAMEWORKS = @( $NETSTANDARD13 ) 
-$SUPPORTED_NEW_CLIENT_FRAMEWORKS = @( $NET46, $NETSTANDARD13 ) 
+$SUPPORTED_NEW_CLIENT_FRAMEWORKS = @( $NETSTANDARD13 ) 
 
 function CreateArchiveFromDir ( $targetFilename, $dir, $spec ) {
     if ($spec.PkgType -eq "zip") {

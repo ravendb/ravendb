@@ -43,11 +43,6 @@
         "System.Threading.Thread": "4.3.0",
         "System.Threading.Timer": "4.3.0"
       }
-    },
-    "net46": {
-      "dependencies": {
-        "System.Runtime": "4.0.20"
-      }
     }
   }
 }
