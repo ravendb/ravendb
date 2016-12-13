@@ -4,6 +4,7 @@ using FastTests.Server.Basic;
 using FastTests.Server.Documents.Alerts;
 using FastTests.Server.Documents.Patching;
 using FastTests.Server.Documents.Replication;
+using FastTests.Server.Documents.SqlReplication;
 using Sparrow.Logging;
 
 namespace Tryouts
@@ -18,9 +19,9 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i); 
-                using (var store = new FastTests.Server.Documents.PeriodicExport.PeriodicExportTests())
+                using (var store = new CanReplicate())
                 {
-                    store.CanExportToDirectory().Wait();
+                    store.WillLog().Wait();
                 }
             }
             //); 

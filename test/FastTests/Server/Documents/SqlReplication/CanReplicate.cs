@@ -547,7 +547,7 @@ replicateToOrders(orderData);");
             }
         }
 
-        [NonLinuxFact(Skip = "Waiting for RavenDB-4398: Internal log")]
+        [NonLinuxFact]
         public async Task WillLog()
         {
             ClientWebSocket client = new ClientWebSocket();
@@ -569,22 +569,23 @@ replicateToOrders(orderData);");
                     await session.StoreAsync(new Order());
                     await session.SaveChangesAsync();
                 }
-                string str = String.Format("{0}/admin/logs/watch", store.Url.Replace("http", "ws"));
+                string str = string.Format("{0}/admin/logs/watch", store.Url.Replace("http", "ws"));
                 StringBuilder sb = new StringBuilder();
                 await client.ConnectAsync(new Uri(str), CancellationToken.None);
-                new Thread(async () =>
+                var task= Task.Run(async () =>
                 {
                     ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[1024]);
                     while (client.State == WebSocketState.Open)
                     {
                         sb.AppendLine(await ReadFromWebSocket(buffer, client));
                     }
-                }).Start();
+                });
                 await SetupSqlReplication(store, @"output ('Tralala');asdfsadf
 var nameArr = this.StepName.split('.');");
 
                 Assert.True(eventSlim.Wait(TimeSpan.FromSeconds(30)));
                 await client.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
+                await task;
 
                 var msg = "Could not process SQL Replication script for OrdersAndLines, skipping document: orders/1";
                 if (sb.ToString().Split(new string[] { Environment.NewLine }, StringSplitOptions.None).ToList().Any(x => x.Contains(msg)) == false)
