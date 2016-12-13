@@ -25,6 +25,7 @@ using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Web.System;
 using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Json.Parsing;
@@ -218,7 +219,6 @@ namespace NewClientTests
             ModifyStore(store);
             store.Initialize();
 
-            //TODO -EFRAT - WIP
             var createDatabaseOperation = new CreateDatabaseOperation(context);
             var command = createDatabaseOperation.CreateRequest(store, doc);
             if (command != null)
@@ -231,12 +231,21 @@ namespace NewClientTests
                 if (databaseTask != null && databaseTask.IsCompleted == false)
                     databaseTask.Wait(); // if we are disposing store before database had chance to load then we need to wait
 
-                var deleteDatabaseOperation = new DeleteDatabaseOperation();
-                var delCommand = deleteDatabaseOperation.CreateRequest(name, hardDelete);
-                if (delCommand != null)
+
+                Server.ServerStore.DatabasesLandlord.UnloadAndLock(name, () =>
                 {
-                   store.GetRequestExecuter(name).Execute(delCommand, context);
-                }
+                    var dbId = Constants.Database.Prefix + name;
+                    using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
+                    using (var tx = context.OpenWriteTransaction())
+                    {
+                        Server.ServerStore.Delete(context, dbId);
+                        tx.Commit();
+                    }
+
+                    if (databaseTask != null)
+                        DatabaseHelper.DeleteDatabaseFiles(databaseTask.Result.Configuration);
+                });
+              
                 CreatedStores.TryRemove(store);
             };
             CreatedStores.Add(store);
