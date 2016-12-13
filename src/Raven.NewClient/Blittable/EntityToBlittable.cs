@@ -34,9 +34,9 @@ namespace Raven.NewClient.Client.Blittable
             return reader;
         }
 
-        public BlittableJsonReaderObject ConvertEntityToBlittable(object entity, DocumentConvention documentConvention, JsonOperationContext jsonOperationContext)
+        public BlittableJsonReaderObject ConvertEntityToBlittable(object entity, DocumentConvention documentConvention, JsonOperationContext jsonOperationContext, DocumentInfo documentInfo = null)
         {
-            var writer = new BlittableJsonWriter(jsonOperationContext);
+            var writer = new BlittableJsonWriter(jsonOperationContext, documentInfo);
             var serializer = documentConvention.CreateSerializer();
 
             serializer.Serialize(writer, entity);

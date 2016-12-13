@@ -6,18 +6,18 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Raven.NewClient.Abstractions;
 using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Logging;
-
-using Raven.NewClient.Client.Extensions;
+using Raven.NewClient.Client.Commands;
+using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Platform;
-
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using AsyncHelpers = Raven.NewClient.Abstractions.Util.AsyncHelpers;
+using Raven.NewClient.Client.Blittable;
 
 namespace Raven.NewClient.Client.Document
 {
@@ -27,16 +27,12 @@ namespace Raven.NewClient.Client.Document
         private readonly CancellationTokenSource _cts;
         private readonly Task _getServerResponseTask;
         private JsonOperationContext _jsonOperationContext;
-        private readonly BlockingCollection<MemoryStream> _documents = new BlockingCollection<MemoryStream>();
-
-        private readonly BlockingCollection<MemoryStream> _buffers =
-            // we use a stack based back end to ensure that we always use the active buffers
-            new BlockingCollection<MemoryStream>(new ConcurrentStack<MemoryStream>());
-
+        private readonly BlockingCollection<Tuple<object,string>> _documents = new BlockingCollection<Tuple<object, string>>();
+        private readonly IDocumentStore _store;
+        private readonly EntityToBlittable _entityToBlittable;
         private readonly Task _writeToServerTask;
         private DateTime _lastHeartbeat;
         private readonly long _sentAccumulator;
-
         private readonly ManualResetEventSlim _throttlingEvent = new ManualResetEventSlim();
         private bool _isThrottling;
         private readonly long _maxDiffSizeBeforeThrottling = 20L * 1024 * 1024; // each buffer is 4M. We allow the use of 5-6 buffers out of 8 possible
@@ -57,19 +53,16 @@ namespace Raven.NewClient.Client.Document
             }
         }
 
-        /*public TcpBulkInsertOperation(AsyncServerClient asyncServerClient, CancellationTokenSource cts)
+        public TcpBulkInsertOperation(string database, IDocumentStore store, RequestExecuter requestExecuter, CancellationTokenSource cts)
         {
             _throttlingEvent.Set();
             _jsonOperationContext = new JsonOperationContext(1024 * 1024, 16 * 1024);
             _cts = cts ?? new CancellationTokenSource();
             _tcpClient = new TcpClient();
 
-            for (int i = 0; i < 64; i++)
-            {
-                _buffers.Add(new MemoryStream());
-            }
-
-            var connectToServerTask = ConnectToServer(asyncServerClient);
+            _store = store;
+            _entityToBlittable = new EntityToBlittable(null);
+            var connectToServerTask = ConnectToServer(requestExecuter);
 
             _sentAccumulator = 0;
             _getServerResponseTask = connectToServerTask.ContinueWith(task =>
@@ -79,97 +72,79 @@ namespace Raven.NewClient.Client.Document
 
             _writeToServerTask = connectToServerTask.ContinueWith(task =>
             {
-                WriteToServer(task.Result);
+                WriteToServer(database, task.Result);
             });
-
         }
 
-        private async Task<Stream> ConnectToServer(AsyncServerClient asyncServerClient)
+        private async Task<Stream> ConnectToServer(RequestExecuter requestExecuter)
         {
-            throw new NotImplementedException();
-            /* var connectionInfo = await asyncServerClient.GetTcpInfoAsync().ConfigureAwait(false);
-             _url = asyncServerClient.Url;
-             await _tcpClient.ConnectAsync(new Uri(_url).Host, connectionInfo.Port).ConfigureAwait(false);
-
-             _tcpClient.NoDelay = true;
-             _tcpClient.SendBufferSize = 32 * 1024;
-             _tcpClient.ReceiveBufferSize = 4096;
-             var networkStream = _tcpClient.GetStream();
-
-             return networkStream;#1#
-        }
-
-        private void WriteToServer(Stream serverStream)
-        {
-            const string debugTag = "bulk/insert/document";
-            var jsonParserState = new JsonParserState();
-            var streamNetworkBuffer = new BufferedStream(serverStream, 32*1024);
-            var writeToStreamBuffer = new byte[32*1024];
-            var header = Encoding.UTF8.GetBytes(RavenJObject.FromObject(new TcpConnectionHeaderMessage
+            var command = new GetTcpInfoCommand();
+            JsonOperationContext context;
+            using (requestExecuter.ContextPool.AllocateOperationContext(out context))
             {
-                DatabaseName = MultiDatabase.GetDatabaseName(_url),
-                Operation = TcpConnectionHeaderMessage.OperationTypes.BulkInsert
-            }).ToString());
-            streamNetworkBuffer.Write(header, 0, header.Length);
-            JsonOperationContext.ManagedPinnedBuffer bytes;
-            using (_jsonOperationContext.GetManagedBuffer(out bytes))
-            {
-                while (_documents.IsCompleted == false)
-                {
-                    _cts.Token.ThrowIfCancellationRequested();
-
-                    MemoryStream jsonBuffer;
-
-                    try
-                    {
-                        jsonBuffer = _documents.Take();
-                    }
-                    catch (InvalidOperationException)
-                    {
-                        break;
-                    }
-
-                    var needToThrottle = _throttlingEvent.Wait(0) == false;
-
-                    _jsonOperationContext.ResetAndRenew();
-                    using (var jsonParser = new UnmanagedJsonParser(_jsonOperationContext, jsonParserState, debugTag))
-                    using (var builder = new BlittableJsonDocumentBuilder(_jsonOperationContext,
-                        BlittableJsonDocumentBuilder.UsageMode.ToDisk, debugTag,
-                        jsonParser, jsonParserState))
-                    {
-                        _jsonOperationContext.CachedProperties.NewDocument();
-                        builder.ReadObjectDocument();
-                        while (true)
-                        {
-                            var read = jsonBuffer.Read(bytes.Buffer.Array, bytes.Buffer.Offset, bytes.Length);
-                            if (read == 0)
-                                throw new EndOfStreamException("Stream ended without reaching end of json content");
-                            jsonParser.SetBuffer(bytes, read);
-                            if (builder.Read())
-                                break;
-                        }
-                        _buffers.Add(jsonBuffer);
-                        builder.FinalizeDocument();
-                        WriteVariableSizeInt(streamNetworkBuffer, builder.SizeInBytes);
-                        WriteToStream(streamNetworkBuffer, builder, writeToStreamBuffer);
-                    }
-
-                    if (needToThrottle)
-                    {
-                        streamNetworkBuffer.Flush();
-                        _throttlingEvent.Wait(500);
-                    }
-                }
-                streamNetworkBuffer.WriteByte(0); //done
-                streamNetworkBuffer.Flush();
+                await requestExecuter.ExecuteAsync(command, context).ConfigureAwait(false);
             }
+
+            var uri = new Uri(command.Result.Url);
+            await _tcpClient.ConnectAsync(uri.Host, uri.Port).ConfigureAwait(false);
+
+            _tcpClient.NoDelay = true;
+            _tcpClient.SendBufferSize = 32 * 1024;
+            _tcpClient.ReceiveBufferSize = 4096;
+            var networkStream = _tcpClient.GetStream();
+
+            return networkStream;
         }
 
-        private static unsafe void WriteToStream(BufferedStream networkBufferedStream, BlittableJsonDocumentBuilder builder,
-            byte[] buffer)
+        private void WriteToServer(string database, Stream serverStream)
         {
-            using (var reader = builder.CreateReader())
+            var streamNetworkBuffer = serverStream;
+            var writeToStreamBuffer = new byte[32*1024];
+            var header = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new TcpConnectionHeaderMessage
             {
+                DatabaseName = database,
+                Operation = TcpConnectionHeaderMessage.OperationTypes.BulkInsert
+            }));
+            streamNetworkBuffer.Write(header, 0, header.Length);
+            while (_documents.IsCompleted == false)
+            {
+                _cts.Token.ThrowIfCancellationRequested();
+                Tuple<object,string> doc;
+                try
+                {
+                    doc = _documents.Take();
+                }
+                catch (InvalidOperationException)
+                {
+                    break;
+                }
+                var needToThrottle = _throttlingEvent.Wait(0) == false;
+                _jsonOperationContext.ResetAndRenew();
+
+                var documentInfo = new DocumentInfo();
+                var tag = _store.Conventions.GetDynamicTagName(doc.Item1);
+                var metadata = new DynamicJsonValue();
+                if (tag != null)
+                    metadata[Constants.Headers.RavenEntityName] = tag;
+                metadata[Constants.Metadata.Id] = doc.Item2;
+
+                documentInfo.Metadata = _jsonOperationContext.ReadObject(metadata, doc.Item2);
+                var data = _entityToBlittable.ConvertEntityToBlittable(doc.Item1, _store.Conventions, _jsonOperationContext, documentInfo);
+                WriteVariableSizeInt(streamNetworkBuffer, data.Size);
+                WriteToStream(streamNetworkBuffer, data, writeToStreamBuffer);
+
+                if (needToThrottle)
+                {
+                    streamNetworkBuffer.Flush();
+                    _throttlingEvent.Wait(500);
+                }
+            }
+            streamNetworkBuffer.WriteByte(0); //done
+            streamNetworkBuffer.Flush();
+        }
+
+        private static unsafe void WriteToStream(Stream networkBufferedStream, BlittableJsonReaderObject reader, byte[] buffer)
+        {
                 fixed (byte* pBuffer = buffer)
                 {
                     var bytes = reader.BasePointer;
@@ -182,9 +157,7 @@ namespace Raven.NewClient.Client.Document
                         networkBufferedStream.Write(buffer, 0, size);
                     }
                 }
-            }
-        }*/
-
+        }
 
         public static void WriteVariableSizeInt(Stream stream, int value)
         {
@@ -322,28 +295,15 @@ namespace Raven.NewClient.Client.Document
             }
         }
 
-        /*public async Task WriteAsync(string id, RavenJObject metadata, RavenJObject data)
+        public async Task WriteAsync(string id, object data)
         {
             _cts.Token.ThrowIfCancellationRequested();
 
             await AssertValidServerConnection().ConfigureAwait(false);// we should never actually get here, the await will throw
 
-            metadata[Constants.Metadata.Id] = id;
-            data[Constants.Metadata.Key] = metadata;
+            _documents.Add(new Tuple<object, string>(data,id));
 
-            MemoryStream jsonBuffer;
-            while (true)
-            {
-                if (_buffers.TryTake(out jsonBuffer, 250))
-                    break;
-                await AssertValidServerConnection().ConfigureAwait(false);
-            }
-            jsonBuffer.SetLength(0);
-
-            data.WriteTo(jsonBuffer);
-            jsonBuffer.Position = 0;
-            _documents.Add(jsonBuffer);
-        }*/
+        }
 
         private async Task AssertValidServerConnection()
         {
