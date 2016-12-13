@@ -10,6 +10,8 @@ using System.Data.SqlClient;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.WebSockets;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -338,7 +340,7 @@ replicateToOrders(orderData);");
             }
         }
 
-     
+
         [NonLinuxFact]
         public async Task RavenDB_3341()
         {
@@ -545,10 +547,10 @@ replicateToOrders(orderData);");
             }
         }
 
-        [NonLinuxFact(Skip = "Waiting for RavenDB-4398: Internal log")]
+        [NonLinuxFact]
         public async Task WillLog()
         {
-            LogManager.RegisterTarget<DatabaseMemoryTarget>();
+            ClientWebSocket client = new ClientWebSocket();
 
             using (var store = GetDocumentStore())
             {
@@ -567,91 +569,46 @@ replicateToOrders(orderData);");
                     await session.StoreAsync(new Order());
                     await session.SaveChangesAsync();
                 }
-
+                string str = string.Format("{0}/admin/logs/watch", store.Url.Replace("http", "ws"));
+                StringBuilder sb = new StringBuilder();
+                await client.ConnectAsync(new Uri(str), CancellationToken.None);
+                var task= Task.Run(async () =>
+                {
+                    ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[1024]);
+                    while (client.State == WebSocketState.Open)
+                    {
+                        sb.AppendLine(await ReadFromWebSocket(buffer, client));
+                    }
+                });
                 await SetupSqlReplication(store, @"output ('Tralala');asdfsadf
 var nameArr = this.StepName.split('.');");
 
                 Assert.True(eventSlim.Wait(TimeSpan.FromSeconds(30)));
+                await client.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
+                await task;
 
-                var databaseMemoryTarget = LogManager.GetTarget<DatabaseMemoryTarget>();
-                var warnLog = databaseMemoryTarget[Constants.SystemDatabase].WarnLog;
                 var msg = "Could not process SQL Replication script for OrdersAndLines, skipping document: orders/1";
-
-                if (warnLog.Any(x => x.FormattedMessage.Contains(msg)) == false)
-                    throw new InvalidOperationException("Got bad message. Full warn log is: \r\n" + String.Join(Environment.NewLine, databaseMemoryTarget[Constants.SystemDatabase].WarnLog.Select(x => x.FormattedMessage)));
+                if (sb.ToString().Split(new string[] { Environment.NewLine }, StringSplitOptions.None).ToList().Any(x => x.Contains(msg)) == false)
+                    throw new InvalidOperationException("Got bad message. Full log is: \r\n" + sb);
             }
         }
 
-        /*
-                [Fact]
-                public void RavenDB_3106()
+        private async Task<string> ReadFromWebSocket(ArraySegment<byte> buffer, WebSocket source)
+        {
+            using (var ms = new MemoryStream())
+            {
+                WebSocketReceiveResult result;
+                do
                 {
-                    using (var store = GetDocumentStore())
-                    {
-                        CreateRdbmsSchema(store);
-
-                        var eventSlim = new ManualResetEventSlim(false);
-                        var database = await GetDatabase(store.DefaultDatabase);
-                        database.SqlReplicationLoader.AfterReplicationCompleted += statistics =>
-                        {
-                            if (statistics.SuccessCount != 0)
-                                eventSlim.Set();
-                        };
-
-                        using (var session = store.OpenAsyncSession())
-                        {
-                            for (var i = 0; i < 2048; i++)
-                            {
-                                await session.StoreAsync(new Order
-                                {
-                                    OrderLines = new List<OrderLine>
-                                    {
-                                        new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
-                                        new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
-                                    }
-                                });
-                            }
-                            await session.SaveChangesAsync();
-                        }
-
-                        await SetupSqlReplication(store, defaultScript);
-
-                        eventSlim.Wait(TimeSpan.FromMinutes(5));
-
-                        AssertCountsWithTimeout(2048, 4096, TimeSpan.FromMinutes(1), store);
-
-                        eventSlim.Reset();
-
-                        PauseReplication(0, database);
-
-                        WaitForIndexing(store);
-
-                        await store.AsyncDatabaseCommands.DeleteCollectionAsync("Orders", "OrderLines");
-
-                        WaitForIndexing(store);
-
-                        using (var session = store.OpenSession())
-                        {
-                            session.Store(new Order
-                            {
-                                OrderLines = new List<OrderLine>
-                                {
-                                    new OrderLine{Cost = 3, Product = "Milk", Quantity = 3},
-                                    new OrderLine{Cost = 4, Product = "Bear", Quantity = 2},
-                                }
-                            });
-
-                            session.SaveChanges();
-                        }
-
-                        ContinueReplication(0, store.DocumentDatabase);
-
-                        eventSlim.Wait(TimeSpan.FromMinutes(5));
-
-                        AssertCountsWithTimeout(1, 2, TimeSpan.FromMinutes(1), store);
-                    }
+                    result = await source.ReceiveAsync(buffer, CancellationToken.None);
+                    ms.Write(buffer.Array, buffer.Offset, result.Count);
                 }
-        */
+                while (!result.EndOfMessage);
+                ms.Seek(0, SeekOrigin.Begin);
+
+                return new StreamReader(ms, Encoding.UTF8).ReadToEnd();
+            }
+        }
 
         private static void AssertCounts(int ordersCount, int orderLineCounts, DocumentStore store)
         {

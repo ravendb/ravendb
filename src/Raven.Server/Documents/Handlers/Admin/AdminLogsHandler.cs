@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
 using Raven.Server.Routing;
 using Sparrow.Logging;
 
@@ -11,7 +12,18 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             using (var socket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             {
-                await LoggingSource.Instance.Register(socket);
+                var context = new LoggingSource.WebSocketContext();
+
+                foreach (var filter in HttpContext.Request.Query["only"])
+                {
+                    context.Filter.Add(filter, true);
+                }
+                foreach (var filter in HttpContext.Request.Query["except"])
+                {
+                    context.Filter.Add(filter, false);
+                }
+
+                await LoggingSource.Instance.Register(socket, context, ServerStore.ServerShutdown);
             }
         }
 

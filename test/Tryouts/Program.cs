@@ -4,6 +4,7 @@ using FastTests.Server.Basic;
 using FastTests.Server.Documents.Alerts;
 using FastTests.Server.Documents.Patching;
 using FastTests.Server.Documents.Replication;
+using FastTests.Server.Documents.SqlReplication;
 using Sparrow.Logging;
 
 namespace Tryouts

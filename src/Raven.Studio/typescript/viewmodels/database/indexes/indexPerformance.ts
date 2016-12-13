@@ -214,29 +214,26 @@ class metrics extends viewModelBase {
             this.expandedTracks.push(args.indexName);
         }
 
+        return new getIndexesPerformance(this.activeDatabase())
+            .execute()
+            .done(result => this.data = result);
+    }
+
+    compositionComplete() {
+        super.compositionComplete();
+
+        this.tooltip = d3.select(".tooltip");
+
         [this.totalWidth, this.totalHeight] = this.getPageHostDimenensions();
 
         this.totalHeight -= 50; // substract toolbar height
-
-        return new getIndexesPerformance(this.activeDatabase())
-            .execute()
-            .done(result => this.data = result)
-    }
-
-    attached() {
-        super.attached();
-
-        this.tooltip = d3.select(".tooltip");
 
         this.initCanvas();
         this.hitTest.init(this.svg,
             (indexName) => this.onToggleIndex(indexName),
             (item, x, y) => this.handleTooltip(item, x, y),
             item => this.showDialog(item));
-    }
 
-    compositionComplete() {
-        super.compositionComplete();
         this.draw();
     }
 
