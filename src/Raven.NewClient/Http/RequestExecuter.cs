@@ -201,9 +201,6 @@ namespace Raven.NewClient.Client.Http
                             return;
                     }
 
-                    if (response.Content.Headers.ContentLength.HasValue && response.Content.Headers.ContentLength == 0)
-                        return;
-
                     using (var stream = await response.Content.ReadAsStreamAsync())
                     {
                         // we intentionally don't dispose the reader here, we'll be using it

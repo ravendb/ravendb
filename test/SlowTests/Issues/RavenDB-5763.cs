@@ -13,7 +13,7 @@ namespace SlowTests.Issues
         [Fact]
         public void Should_not_throw_timeout_and_out_of_memory()
         {
-            Parallel.For(0, 50, i =>
+            Parallel.For(0, 1000, i =>
                 {
                     using (var store = new FastTests.Server.Documents.Replication.ReplicationTombstoneTests())
                     {

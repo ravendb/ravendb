@@ -4,9 +4,16 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
+using System.Linq;
 using System.Threading;
-using Raven.NewClient.Commands;
-using Sparrow.Json;
+
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Exceptions;
+using Raven.NewClient.Client.Connection;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Exceptions;
+
 
 namespace Raven.NewClient.Client.Document
 {
@@ -20,19 +27,21 @@ namespace Raven.NewClient.Client.Document
         /// <summary>
         /// Initializes a new instance of the <see cref="HiLoKeyGenerator"/> class.
         /// </summary>
-        public HiLoKeyGenerator(string tag, DocumentStore store, string dbName, string identityPartsSeparator)
-            : base(tag, store, dbName, identityPartsSeparator)
+        public HiLoKeyGenerator(string tag, long capacity)
+            : base(tag, capacity)
         {
         }
 
         /// <summary>
         /// Generates the document key.
         /// </summary>
+        /// <param name="convention">The convention.</param>
         /// <param name="entity">The entity.</param>
+        /// <param name="databaseCommands">Low level database commands.</param>
         /// <returns></returns>
-        public string GenerateDocumentKey(object entity)
+        public string GenerateDocumentKey(DocumentConvention convention, object entity)
         {
-            return GetDocumentKeyFromId(NextId());
+            return GetDocumentKeyFromId(convention, NextId());
         }
 
         ///<summary>
@@ -61,46 +70,88 @@ namespace Raven.NewClient.Client.Document
 
         private RangeValue GetNextRange()
         {
-            var hiloCommand = new NextHiLoCommand
+            //TODO - Temporary just to make the tests work
+            return new RangeValue(Range.Max + 1, Range.Max + 32);
+            //throw new NotImplementedException();
+            /*using (databaseCommands.ForceReadFromMaster())
             {
-                Tag = _tag,
-                LastBatchSize = _lastBatchSize,
-                LastRangeAt = _lastRangeDate,
-                IdentityPartsSeparator = _identityPartsSeparator,
-                LastRangeMax = Range.Max
-            };
+                ModifyCapacityIfRequired();
+                while (true)
+                {
+                    try
+                    {
+                        var minNextMax = Range.Max;
+                        JsonDocument document;
 
-            var re = _store.GetRequestExecuter(_dbName);
-            JsonOperationContext context;
+                        try
+                        {
+                            document = GetDocument(databaseCommands);
+                        }
+                        catch (ConflictException e)
+                        {
+                            // resolving the conflict by selecting the highest number
+                            var highestMax = e.ConflictedVersionIds
+                                .Select(conflictedVersionId => GetMaxFromDocument(databaseCommands.Get(conflictedVersionId), minNextMax))
+                                .Max();
 
-            using (re.ContextPool.AllocateOperationContext(out context))
-            {
-                re.Execute(hiloCommand, context);
-            }
-                                      
-            _prefix = hiloCommand.Result.Prefix;
-            _lastRangeDate = hiloCommand.Result.LastRangeAt;
-            _lastBatchSize = hiloCommand.Result.LastSize;
+                            PutDocument(databaseCommands, new JsonDocument
+                            {
+                                Etag = e.Etag,
+                                Metadata = new RavenJObject(),
+                                DataAsJson = RavenJObject.FromObject(new { Max = highestMax }),
+                                Key = HiLoDocumentKey
+                            });
 
-            return new RangeValue(hiloCommand.Result.Low, hiloCommand.Result.High);
+                            continue;
+                        }
+
+                        long min, max;
+                        if (document == null)
+                        {
+                            min = minNextMax + 1;
+                            max = minNextMax + capacity;
+                            document = new JsonDocument
+                            {
+                                Etag = 0,
+                                // sending empty etag means - ensure the that the document does NOT exists
+                                Metadata = new RavenJObject(),
+                                DataAsJson = RavenJObject.FromObject(new { Max = max }),
+                                Key = HiLoDocumentKey
+                            };
+                        }
+                        else
+                        {
+                            var oldMax = GetMaxFromDocument(document, minNextMax);
+                            min = oldMax + 1;
+                            max = oldMax + capacity;
+
+                            document.DataAsJson["Max"] = max;
+                        }
+                        PutDocument(databaseCommands, document);
+
+                        return new RangeValue(min, max);
+                    }
+                    catch (ConcurrencyException)
+                    {
+                        // expected, we need to retry
+                    }
+                }
+            }*/
         }
 
-        public void ReturnUnusedRange()
+        /*private void PutDocument( JsonDocument document)
         {
-            var returnCommand = new HiLoReturnCommand()
-            {
-                Tag = _tag,
-                End = Range.Max,
-                Last = Range.Current
-            };
-
-            var re = _store.GetRequestExecuter(_dbName);
-            JsonOperationContext context;
-
-            using (re.ContextPool.AllocateOperationContext(out context))
-            {
-                re.Execute(returnCommand, context);
-            }
+            throw new NotImplementedException();
+            /*databaseCommands.Put(HiLoDocumentKey, document.Etag,
+                                 document.DataAsJson,
+                                 document.Metadata);#1#
         }
+
+        private JsonDocument GetDocument()
+        {
+            throw new NotImplementedException();
+            /*var documents = databaseCommands.Get(new[] { HiLoDocumentKey, RavenKeyServerPrefix }, new string[0]);
+            return HandleGetDocumentResult(documents);#1#
+        }*/
     }
 }
