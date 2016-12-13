@@ -8,6 +8,7 @@ import d3 = require("d3");
 import rbush = require("rbush");
 import gapFinder = require("common/helpers/graph/gapFinder");
 import generalUtils = require("common/generalUtils");
+import RangeAggregator = require("common/helpers/graph/rangeAggregator");
 
 type rTreeLeaf = {
     minX: number;
@@ -171,6 +172,7 @@ class metrics extends viewModelBase {
     private brush: d3.svg.Brush<number>;
     private xBrushNumericScale: d3.scale.Linear<number, number>;
     private xBrushTimeScale: d3.time.Scale<number, number>;
+    private yBrushValueScale: d3.scale.Linear<number, number>;
     private xNumericScale: d3.scale.Linear<number, number>;
     private brushSection: HTMLCanvasElement; // virtual canvas for brush section
     private brushContainer: d3.Selection<any>;
@@ -330,40 +332,42 @@ class metrics extends viewModelBase {
     }
 
     private prepareBrushSection() {
-        const timeRanges = this.extractTimeRanges();
-
-        this.gapFinder = new gapFinder(timeRanges, metrics.minGapSize);
-
-        const collapsedTimeRanges = graphHelper.collapseTimeRanges(timeRanges);
-        //TODO: maybe instead of collaping time range we should graph area chart with # currently indexing as y-axis
+        const timeRanges = this.extractTimeRanges(); 
+        const aggregatedRanges = new RangeAggregator(timeRanges);
+        const workData = aggregatedRanges.aggregate();
+        const maxConcurrentIndexes = aggregatedRanges.getMaxConcurrentIndexes();
 
         this.brushSection = document.createElement("canvas");
         this.brushSection.width = this.totalWidth;
         this.brushSection.height = metrics.brushSectionHeight;
 
-        const context = this.brushSection.getContext("2d");
-
+        this.gapFinder = new gapFinder(timeRanges, metrics.minGapSize);
         this.xBrushTimeScale = this.gapFinder.createScale(this.totalWidth, 0);
 
+        const height = 22; 
+        this.yBrushValueScale = d3.scale.linear().domain([0, maxConcurrentIndexes]).range([0, height]); 
+
+        const context = this.brushSection.getContext("2d");
         this.drawXaxis(context, this.xBrushTimeScale, metrics.brushSectionHeight);
 
         context.strokeStyle = metrics.colors.axis;
         context.strokeRect(0.5, 0.5, this.totalWidth - 1, metrics.brushSectionHeight - 1);
-
         context.fillStyle = metrics.colors.brushChartColor;
         context.strokeStyle = metrics.colors.brushChartColor;
         context.lineWidth = 1;
 
-        for (var i = 0; i < collapsedTimeRanges.length; i++) {
-            const currentRange = collapsedTimeRanges[i];
-            const x1 = this.xBrushTimeScale(currentRange[0]);
-            const x2 = this.xBrushTimeScale(currentRange[1]);
-            context.fillRect(x1, 18, x2 - x1, 10);
-            context.strokeRect(x1, 18, x2 - x1, 10);
+        for (var i = 0; i < workData.length-1; i++) {
+            const x1 = this.xBrushTimeScale(new Date(workData[i].pointInTime)); 
+            const x2 = this.xBrushTimeScale(new Date(workData[i + 1].pointInTime));
+            const rectHeight = this.yBrushValueScale(workData[i].numberOfIndexesWorking);
+
+            if (workData[i].numberOfIndexesWorking > 0) {
+                context.fillRect(x1, metrics.brushSectionHeight - rectHeight, x2 - x1, rectHeight);
+                context.strokeRect(x1, metrics.brushSectionHeight - rectHeight, x2 - x1, rectHeight); 
+            }
         }
 
         this.drawBrushGaps(context);
-
         this.prepareBrush();
     }
 

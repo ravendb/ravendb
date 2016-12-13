@@ -158,3 +158,13 @@ interface aggregatedRange {
     end: number;
     value: number;
 }
+
+interface indexesWorkData {
+    pointInTime: number;
+    numberOfIndexesWorking: number;
+}
+
+interface workTimeUnit {
+    startTime: number;
+    endTime: number;
+}
