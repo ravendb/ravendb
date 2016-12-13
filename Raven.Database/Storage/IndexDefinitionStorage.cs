@@ -516,7 +516,7 @@ namespace Raven.Database.Storage
                     {
                         if (version > currentIndexVersion)
                             logger.Error("Trying to add an index ({0}) with a version smaller ({1})" +
-                                         "than the deleted version (2), this should not happen", indexName, currentIndexVersion, version);
+                                         "than the deleted version ({2}), this should not happen", indexName, currentIndexVersion, version);
 
                         res = true;
                     }
