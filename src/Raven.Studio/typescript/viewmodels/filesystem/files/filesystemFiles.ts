@@ -69,7 +69,7 @@ class filesystemFiles extends viewModelBase {
         this.uploadQueue.subscribe(x => this.newUpload(x));
         fileUploadBindingHandler.install();
         treeBindingHandler.install();
-        treeBindingHandler.includeRevisionsFunc = () => this.activeFilesystem().activeBundles.contains("Versioning");
+        treeBindingHandler.includeRevisionsFunc = () => _.includes(this.activeFilesystem().activeBundles(), "Versioning");
 
         this.selectedFilesText = ko.computed(() => {
             if (!!this.selectedFilesIndices()) {
@@ -94,7 +94,7 @@ class filesystemFiles extends viewModelBase {
             if (!this.selectedFolder())
                 return "Root Folder";
             var splittedName = this.selectedFolder().split("/");
-            return splittedName.last();
+            return _.last(splittedName);
         });
 
         this.hasFiles = ko.computed(() => {
@@ -388,7 +388,7 @@ class filesystemFiles extends viewModelBase {
 
         var grid = this.getFilesGrid();
         if (grid) {
-            var selectedItem = <documentBase>grid.getSelectedItems(1).first();
+            var selectedItem = <documentBase>grid.getSelectedItems(1)[0];
             var fs = this.activeFilesystem();
             var url = appUrl.forResourceQuery(fs) + "/files/" + encodeURIComponent(selectedItem.getUrl());
             this.downloader.download(fs, url);
@@ -400,12 +400,12 @@ class filesystemFiles extends viewModelBase {
 
         var grid = this.getFilesGrid();
         if (grid) {
-            var selectedItem = <file>grid.getSelectedItems(1).first();
+            var selectedItem = <file>grid.getSelectedItems(1)[0];
             var currentFileName = selectedItem.getId();
             var dialog = new fileRenameDialog(currentFileName, this.activeFilesystem());
             dialog.onExit().done((newName: string) => {
                 var currentFilesystemName = this.activeFilesystem().name;
-                var recentFilesForCurFilesystem = filesystemEditFile.recentDocumentsInFilesystem().first(x => x.filesystemName === currentFilesystemName);
+                var recentFilesForCurFilesystem = filesystemEditFile.recentDocumentsInFilesystem().find(x => x.filesystemName === currentFilesystemName);
                 if (recentFilesForCurFilesystem) {
                     recentFilesForCurFilesystem.recentFiles.remove(currentFileName);
                 }

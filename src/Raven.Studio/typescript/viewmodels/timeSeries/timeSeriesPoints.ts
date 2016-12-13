@@ -211,7 +211,7 @@ class timeSeriesPoints extends viewModelBase {
         if (!grid)
             return;
 
-        var selectedPoint = <timeSeriesPoint>grid.getSelectedItems(1).first();
+        var selectedPoint = <timeSeriesPoint>grid.getSelectedItems(1)[0];
         var change = new pointChange(selectedPoint);
         var pointChangeVM = new editPointDialog(change, false);
         pointChangeVM.updateTask.done((change: pointChange, isNew: boolean) => {

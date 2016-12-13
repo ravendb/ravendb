@@ -28,7 +28,7 @@ class pointChange {
             if (type.length > 255) {
                 return "'Type' length can't exceed 255 characters";
             }
-            if (type.contains('\\')) {
+            if (type.includes('\\')) {
                 return "'Type' cannot contain '\\' char";
             }
             return "";

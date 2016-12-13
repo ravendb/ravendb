@@ -146,7 +146,7 @@ class resources extends viewModelBase {
 
     private getSelectedResources() {
         const selected = this.selectedResources();
-        return this.resources().sortedResources().filter(x => selected.contains(x.qualifiedName));
+        return this.resources().sortedResources().filter(x => _.includes(selected, x.qualifiedName));
     }
 
     toggleSelectAll(): void {

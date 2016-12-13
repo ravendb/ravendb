@@ -14,7 +14,7 @@ class graphHelper {
         stack.push(input[0]);
 
         for (let i = 1; i < input.length; i++) {
-            const top = stack.last();
+            const top = _.last(stack);
 
             if (top[1].getTime() < input[i][0].getTime()) {
                 stack.push(input[i]);

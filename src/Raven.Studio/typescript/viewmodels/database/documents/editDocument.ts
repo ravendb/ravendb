@@ -189,7 +189,7 @@ class editDocument extends viewModelBase {
     private initializeObservables(): void {
         this.userSpecifiedIdCustomValidityError = ko.computed(() => {
             const documentId = this.userSpecifiedId();
-            return documentId.contains("\\") ? "Document name cannot contain '\\'" : "";
+            return documentId.includes("\\") ? "Document name cannot contain '\\'" : "";
         });
 
         this.document.subscribe(doc => {
@@ -215,12 +215,12 @@ class editDocument extends viewModelBase {
 
         this.isConflictDocument = ko.computed(() => {
             const metadata = this.metadata();
-            return metadata && ("Raven-Replication-Conflict" in metadata) && !metadata.id.contains("/conflicts/");
+            return metadata && ("Raven-Replication-Conflict" in metadata) && !metadata.id.includes("/conflicts/");
         });
 
         this.documentSize = ko.pureComputed(() => {
             try {
-                const size: number = this.documentText().getSizeInBytesAsUTF8() / 1024;
+                const size: number = genUtils.getSizeInBytesAsUTF8(this.documentText()) / 1024;
                 return genUtils.formatAsCommaSeperatedString(size, 2);
             } catch (e) {
                 return "cannot compute";

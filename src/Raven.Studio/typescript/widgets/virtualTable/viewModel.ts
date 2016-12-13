@@ -125,7 +125,7 @@ class ctor {
             this.isIndexMapReduce = ko.observable<boolean>(false);
         }
 
-        this.getCollectionClassFromEntityNameMemoized = <any>this.getCollectionClassFromEntityName.memoize(this);
+        this.getCollectionClassFromEntityNameMemoized = _.memoize(this.getCollectionClassFromEntityName);
         this.items = this.settings.itemsSource();
         this.focusableGridSelector = this.settings.gridSelector + " .ko-grid";
         this.virtualHeight = ko.computed(() => this.rowHeight * this.virtualRowCount());
@@ -240,7 +240,7 @@ class ctor {
 
 
         // Update row checked states.
-        this.recycleRows().forEach((r: row) => r.isChecked(this.settings.selectedIndices().contains(r.rowIndex())));
+        this.recycleRows().forEach((r: row) => r.isChecked(_.includes(this.settings.selectedIndices(), r.rowIndex())));
     }
 
     setupKeyboardShortcuts() {
@@ -282,10 +282,10 @@ class ctor {
     }
 
     refreshIdAndCheckboxColumn() {
-        var containsId = this.columns().first(x => x.binding === "Id");
+        var containsId = this.columns().find(x => x.binding === "Id");
 
         if (!containsId && !this.isIndexMapReduce()) {
-            var containsCheckbox = this.columns().first(x => x.binding === "__IsChecked");
+            var containsCheckbox = this.columns().find(x => x.binding === "__IsChecked");
             if (!containsCheckbox && this.settings.showCheckboxes) {
                 this.columns.push(new column("__IsChecked", ctor.selectColumnWidth));
             }
@@ -359,10 +359,10 @@ class ctor {
     }
 
     editLastSelectedItem() {
-        var selectedItem = this.getSelectedItems(1).first();
+        var selectedItem = this.getSelectedItems(1)[0];
         if (selectedItem) {
             var collectionName = this.items.collectionName;
-            var itemIndex = this.settings.selectedIndices().first();
+            var itemIndex = this.settings.selectedIndices()[0];
             var editUrl = appUrl.forEditItem(selectedItem.getUrl(), activeResourceTracker.default.resource(), itemIndex, collectionName);
             router.navigate(editUrl);
         }
@@ -473,18 +473,18 @@ class ctor {
             delete columnsNeeded[colName];
         }
 
-        var idColumn = this.columns.first(x => x.binding === "Id");
+        var idColumn = this.columns().find(x => x.binding === "Id");
         var idColumnExists = idColumn ? 1 : 0;
 
         var unneededColumns: string[] = [];
         ko.utils.arrayForEach(existingColumns, col => {
-            if (col.binding !== "Id" && col.binding !== "__IsChecked" && !hasOverrides && rows.every(row => !row.getDocumentPropertyNames().contains(col.binding))) {
+            if (col.binding !== "Id" && col.binding !== "__IsChecked" && !hasOverrides && rows.every(row => !_.includes(row.getDocumentPropertyNames(), col.binding))) {
                 unneededColumns.push(col.binding);
             }
         });
 
-        desiredColumns = desiredColumns.filter(c => !unneededColumns.contains(c.binding));
-        this.settings.customColumns().columns.remove(c => unneededColumns.contains(c.binding()));
+        desiredColumns = desiredColumns.filter(c => !_.includes(unneededColumns, c.binding));
+        this.settings.customColumns().columns.remove(c => _.includes(unneededColumns, c.binding()));
 
         var columnsCurrentTotalWidth = 0;
         for (var i = 2; i < existingColumns.length; i++) {
@@ -634,14 +634,14 @@ class ctor {
         if (this.settings.isAllAutoSelected()) {
             var cachedIndeices = this.items.getCachedIndices(this.settings.selectedIndices());
             this.settings.selectedIndices(cachedIndeices);
-            this.recycleRows().forEach(r => r.isChecked(this.settings.selectedIndices().contains(r.rowIndex())));
+            this.recycleRows().forEach(r => r.isChecked(_.includes(this.settings.selectedIndices(), r.rowIndex())));
             this.settings.isAllAutoSelected(false);
             this.settings.isAnyAutoSelected(true);
         }
 
         var rowIndex = row.rowIndex();
         var isChecked = row.isChecked();
-        var firstIndex = this.settings.selectedIndices.first();
+        var firstIndex = _.first(this.settings.selectedIndices());
         var toggledIndices: Array<number> = isShiftSelect && this.settings.selectedIndices().length > 0 ? this.getRowIndicesRange(firstIndex, rowIndex) : [rowIndex];
 
         if (eventFromCheckbox) {
@@ -656,13 +656,13 @@ class ctor {
             // Going from unchecked to checked.
             if (this.settings.selectedIndices.indexOf(rowIndex) === -1) {
                 toggledIndices
-                    .filter(i => !this.settings.selectedIndices.contains(i))
+                    .filter(i => !_.includes(this.settings.selectedIndices(), i))
                     .reverse()
                     .forEach(i => this.settings.selectedIndices.unshift(i));
             }
         }
 
-        this.recycleRows().forEach(r => r.isChecked(this.settings.selectedIndices().contains(r.rowIndex())));
+        this.recycleRows().forEach(r => r.isChecked(_.includes(this.settings.selectedIndices(), r.rowIndex())));
     }
 
     selectNone() {
@@ -698,7 +698,7 @@ class ctor {
         for (var i = firstVisibleRowNumber; i < firstVisibleRowNumber + actualNumberOfVisibleRows; i++) {
             allIndices.push(i);
         }
-        this.recycleRows().forEach((r: row) => r.isChecked(allIndices.contains(r.rowIndex())));
+        this.recycleRows().forEach((r: row) => r.isChecked(_.includes(allIndices, r.rowIndex())));
 
         this.settings.selectedIndices(allIndices);
 
@@ -781,7 +781,7 @@ class ctor {
         deleteDocsVm.deletionTask.done(() => {
             var deletedDocIndices = items.map(d => this.items.indexOf(d));
             deletedDocIndices.forEach(i => this.settings.selectedIndices.remove(i));
-            this.recycleRows().forEach(r => r.isChecked(this.settings.selectedIndices().contains(r.rowIndex()))); // Update row checked states.
+            this.recycleRows().forEach(r => r.isChecked(_.includes(this.settings.selectedIndices(), r.rowIndex()))); // Update row checked states.
             this.recycleRows().filter(r => deletedDocIndices.indexOf(r.rowIndex()) >= 0).forEach(r => r.isInUse(false));
             this.items.invalidateCache(); // Causes the cache of items to be discarded.
             this.onGridScrolled(); // Forces a re-fetch of the rows in view.
@@ -815,7 +815,7 @@ class ctor {
     }
 
     getColumnsNames() {
-        var row = this.items.getAllCachedItems().first();
+        var row = this.items.getAllCachedItems()[0];
         return row ? row.getDocumentPropertyNames() : [];
     }
 

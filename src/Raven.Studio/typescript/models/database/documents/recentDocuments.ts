@@ -9,7 +9,7 @@ class recentDocuments {
     getTopRecentDocuments(activeDatabase: database, documentId: string): Array<connectedDocument> {
         const currentDbName = activeDatabase ? activeDatabase.name : null;
         const recentDocumentsForCurDb = recentDocuments.recentDocumentsInDatabases()
-            .first(x => x.databaseName === currentDbName);
+            .find(x => x.databaseName === currentDbName);
         if (recentDocumentsForCurDb) {
             const value = recentDocumentsForCurDb
                 .recentDocuments()
@@ -27,17 +27,17 @@ class recentDocuments {
 
     documentRemoved(db: database, docId: string) {
         const recentDocsForDatabase = recentDocuments.recentDocumentsInDatabases()
-            .first(x => x.databaseName === db.name);
+            .find(x => x.databaseName === db.name);
         if (recentDocsForDatabase) {
             recentDocsForDatabase.recentDocuments.remove(docId);
         }
     }
 
     appendRecentDocument(db: database, docId: string): void {
-        var existingRecentDocumentsStore = recentDocuments.recentDocumentsInDatabases.first(x => x.databaseName === db.name);
+        var existingRecentDocumentsStore = recentDocuments.recentDocumentsInDatabases().find(x => x.databaseName === db.name);
         if (existingRecentDocumentsStore) {
             const recentDocs = existingRecentDocumentsStore.recentDocuments();
-            recentDocs.remove(docId);
+            _.pull(recentDocs, docId);
             recentDocs.unshift(docId);
             while (recentDocs.length > recentDocuments.maxRecentItems) {
                 recentDocs.pop();
@@ -50,7 +50,7 @@ class recentDocuments {
 
     getPreviousDocument(db: database): string {
         const recentDocsForDatabase = recentDocuments.recentDocumentsInDatabases()
-            .first(x => x.databaseName === db.name);
+            .find(x => x.databaseName === db.name);
         if (recentDocsForDatabase && recentDocsForDatabase.recentDocuments().length) {
             return recentDocsForDatabase.recentDocuments()[0];
         }

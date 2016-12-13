@@ -1,6 +1,5 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import d3 = require("d3");
-import nv = require("nvd3");
 import appUrl = require("common/appUrl");
 import listDiskPerformanceRunsCommand = require("commands/maintenance/listDiskPerformanceRunsCommand");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");

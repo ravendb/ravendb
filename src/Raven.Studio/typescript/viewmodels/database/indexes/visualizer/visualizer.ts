@@ -97,14 +97,14 @@ class visualizer extends viewModelBase {
             return;
         }
 
-        if (this.documents.docKeys.contains(key)) {
+        if (_.includes(this.documents.docKeys(), key)) {
             this.globalGraph.zoomToDocument(key);
         } else {
             //TODO: spinner
             new getIndexMapReduceTreeCommand(this.activeDatabase(), this.currentIndex(), key)
                 .execute()
                 .done((mapReduceTrees) => {
-                    if (!this.documents.docKeys.contains(key)) {
+                    if (!_.includes(this.documents.docKeys(), key)) {
                         this.documents.docKeys.push(key);
 
                         this.addDocument(key);

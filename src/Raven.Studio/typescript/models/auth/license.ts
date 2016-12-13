@@ -12,7 +12,7 @@ class license {
         return new getLicenseStatusCommand()
             .execute()
             .done((result: Raven.Server.Commercial.LicenseStatus) => {
-                if (result.Status.contains("AGPL")) {
+                if (result.Status.includes("AGPL")) {
                     result.Status = "Development Only";
                 }
                 license.licenseStatus(result);
@@ -28,7 +28,7 @@ class license {
         if (status == null || status.LicenseType !== "Commercial") {
             return 'dev-only';
         }
-        if (status.Status.contains("Expired")) {
+        if (status.Status.includes("Expired")) {
             return 'expired';
         } else {
             return 'commercial';

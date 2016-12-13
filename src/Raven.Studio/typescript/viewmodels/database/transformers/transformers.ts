@@ -138,10 +138,10 @@ class transformers extends viewModelBase {
         eventsCollector.default.reportEvent("transformers", "put-into-group");
 
         const groupName = trans.name().split("/")[0];
-        const group = this.transformersGroups.first(g => g.entityName === groupName);
+        const group = this.transformersGroups().find(g => g.entityName === groupName);
 
         if (group) {
-            const existingTrans = group.transformers.first((cur: transformer) => cur.name() === trans.name());
+            const existingTrans = group.transformers().find((cur: transformer) => cur.name() === trans.name());
 
             if (!existingTrans) {
                 group.transformers.push(trans);
@@ -162,13 +162,13 @@ class transformers extends viewModelBase {
 
     private getAllTransformers(): transformer[] {
         var all: transformer[] = [];
-        this.transformersGroups().forEach(g => all.pushAll(g.transformers()));
-        return all.distinct();
+        this.transformersGroups().forEach(g => all.push(...g.transformers()));
+        return _.uniq(all);
     }
 
     private getSelectedTransformers(): Array<transformer> {
         const selectedTransformers = this.selectedTransformersName();
-        return this.getAllTransformers().filter(x => selectedTransformers.contains(x.name()));
+        return this.getAllTransformers().filter(x => _.includes(selectedTransformers, x.name()));
     }
 
     deleteTransformer(transformerToDelete: transformer) {

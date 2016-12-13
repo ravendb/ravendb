@@ -65,7 +65,7 @@ class runningTasks extends viewModelBase {
         var allTasks = this.allTasks();
         allTasks.forEach(task => {
             var type = task.taskType;
-            var existingItem = types.first(t => t.name === type);
+            var existingItem = types.find(t => t.name === type);
             if (existingItem) {
                 existingItem.count++;
             } else {

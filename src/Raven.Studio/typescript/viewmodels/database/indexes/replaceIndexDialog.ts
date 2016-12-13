@@ -41,7 +41,7 @@ class replaceIndexDialog extends dialogViewModelBase {
     }
 
     processDbStats(stats: Raven.Client.Data.DatabaseStatistics) {
-        var oldIndex = stats.Indexes.first(i => i.Name == this.indexName);
+        var oldIndex = stats.Indexes.find(i => i.Name === this.indexName);
         //TODO: this.lastIndexedEtag(oldIndex.LastIndexedEtag);       
     }
 

@@ -52,7 +52,7 @@ class resourceBackup {
         this.nameCustomValidityError = ko.computed(() => {
             var errorMessage: string = "";
             var newResourceName = this.resourceName();
-            var foundRs = this.resources().first((rs: resource) => newResourceName === rs.name && rs.qualifier === this.qualifier);
+            var foundRs = this.resources().find((rs: resource) => newResourceName === rs.name && rs.qualifier === this.qualifier);
 
             if (!foundRs && newResourceName.length > 0) {
                 errorMessage = this.fullTypeName() + " name doesn't exist!";
@@ -62,7 +62,7 @@ class resourceBackup {
         });
 
         this.resourceName.throttle(200).subscribe((resource) => {
-            var foundRs = this.resources().first((rs: resource) => resource === rs.name && rs.qualifier === this.qualifier);
+            var foundRs = this.resources().find((rs: resource) => resource === rs.name && rs.qualifier === this.qualifier);
             if (foundRs) {
                 new getResourceDrives(foundRs.name, foundRs.type.toString()).execute()
                     .done((drives: string[]) => {

@@ -89,7 +89,7 @@ class documentMetadata {
         var metaPropsToRemove = ["@id", "@etag", "Raven-Last-Modified"];
 
         for (var property in metaDto) {
-            if (metaDto.hasOwnProperty(property) && metaPropsToRemove.contains(property)) {
+            if (metaDto.hasOwnProperty(property) && _.includes(metaPropsToRemove, property)) {
                 if ((<any>metaDto)[property] && removedProps) {
                     removedProps.push({ name: property, value: (<any>metaDto)[property] });
                 }

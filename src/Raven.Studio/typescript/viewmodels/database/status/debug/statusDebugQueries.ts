@@ -39,9 +39,9 @@ class statusDebugQueries extends viewModelBase {
 
         $.map(results, (dtoGroup) => {
             if (dtoGroup.Queries.length > 0) {
-                var foundGroup = this.data().first((item) => item.indexName === dtoGroup.IndexName);
+                var foundGroup = this.data().find((item) => item.indexName === dtoGroup.IndexName);
                 if (foundGroup) {
-                    currentGroups.remove(dtoGroup.IndexName);
+                    _.pull(currentGroups, dtoGroup.IndexName);
                 } else {
                     foundGroup = new statusDebugQueriesGroup(dtoGroup);
                     this.data.push(foundGroup);
@@ -52,7 +52,7 @@ class statusDebugQueries extends viewModelBase {
 
         // remove empty and unused groups
         currentGroups.forEach(group => {
-            var foundGroup = this.data.first((item) => item.indexName === group);
+            var foundGroup = this.data().find((item) => item.indexName === group);
             if (foundGroup) {
                 this.data.remove(foundGroup);
             }
@@ -63,9 +63,9 @@ class statusDebugQueries extends viewModelBase {
         var currentQueryIds = $.map(group.queries(), (query) => query.queryId);
 
         $.map(dtoGroup.Queries, (dtoQuery) => {
-            var foundQuery = group.queries.first((item) => item.queryId == dtoQuery.QueryId);
+            var foundQuery = group.queries().find((item) => item.queryId === dtoQuery.QueryId);
             if (foundQuery) {
-                currentQueryIds.remove(foundQuery.queryId);
+                _.pull(currentQueryIds, foundQuery.queryId);
                 foundQuery.duration(dtoQuery.Duration);
             } else {
                 group.queries.push(new statusDebugQueriesQuery(dtoQuery));
@@ -74,7 +74,7 @@ class statusDebugQueries extends viewModelBase {
 
         // remove unused queries
         currentQueryIds.forEach(query => {
-            var foundQuery = group.queries.first((item) => item.queryId == query);
+            var foundQuery = group.queries().find((item) => item.queryId === query);
             if (foundQuery) {
                 group.queries.remove(foundQuery);
             }
@@ -88,7 +88,7 @@ class statusDebugQueries extends viewModelBase {
             .done(() => {
                 // find and delete query from model
                 this.data().forEach(group => {
-                    var foundQuery = group.queries.first(q => q.queryId == queryId);
+                    var foundQuery = group.queries().find(q => q.queryId === queryId);
                     if (foundQuery) {
                         group.queries.remove(foundQuery);
                     }

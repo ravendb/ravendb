@@ -79,7 +79,7 @@ class selectColumns extends dialogViewModelBase {
 
         var notAlreadyUsedColumns = allAvailableColumns.filter(name => {
             var nameLower = name.toLocaleLowerCase();
-            return !alreadyUsedColumns.first(x => x.toLocaleLowerCase() === nameLower);
+            return !alreadyUsedColumns.find(x => x.toLocaleLowerCase() === nameLower);
         });
 
         this.autoCompleteBase(notAlreadyUsedColumns.map(x => ko.observable<string>(x)));

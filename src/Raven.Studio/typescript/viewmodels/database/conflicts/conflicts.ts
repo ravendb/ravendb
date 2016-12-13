@@ -108,7 +108,7 @@ class conflicts extends viewModelBase {
     performIndexCheck(db: database): JQueryPromise<any> {
 
         // first look in cache
-        if (conflicts.performedIndexChecks.contains(db.name)) {
+        if (_.includes(conflicts.performedIndexChecks, db.name)) {
             return $.Deferred<any>().resolve();
         }
 

@@ -122,7 +122,7 @@ class treeBindingHandler {
 
             if (options && node.hasChildren()) {
                 var keys: string[] = node.getChildren().map(x => x.data.key);
-                options.currentLevelNodes.pushAll(keys);
+                options.currentLevelNodes.push(...keys);
             }
         });
     }

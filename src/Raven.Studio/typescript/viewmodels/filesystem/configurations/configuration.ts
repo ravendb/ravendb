@@ -261,7 +261,7 @@ class configuration extends viewModelBase {
     }
 
     addKey(key: string) {
-        var foundKey = this.keys.first((configKey: configurationKey) => configKey.key === key);
+        const foundKey = this.keys().find((configKey: configurationKey) => configKey.key === key);
 
         if (!foundKey) {
             var newKey = new configurationKey(this.activeFilesystem(), key);

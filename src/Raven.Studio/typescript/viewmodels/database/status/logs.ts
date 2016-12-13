@@ -35,11 +35,11 @@ class logs extends viewModelBase {
 
         autoRefreshBindingHandler.install();
 
-        this.debugLogCount = ko.pureComputed(() => this.allLogs().count(l => l.level() === "Debug"));
-        this.infoLogCount = ko.pureComputed(() => this.allLogs().count(l => l.level() === "Info"));
-        this.warningLogCount = ko.pureComputed(() => this.allLogs().count(l => l.level() === "Warn"));
-        this.errorLogCount = ko.pureComputed(() => this.allLogs().count(l => l.level() === "Error"));
-        this.fatalLogCount = ko.pureComputed(() => this.allLogs().count(l => l.level() === "Fatal"));
+        this.debugLogCount = ko.pureComputed(() => this.allLogs().filter(l => l.level() === "Debug").length);
+        this.infoLogCount = ko.pureComputed(() => this.allLogs().filter(l => l.level() === "Info").length);
+        this.warningLogCount = ko.pureComputed(() => this.allLogs().filter(l => l.level() === "Warn").length);
+        this.errorLogCount = ko.pureComputed(() => this.allLogs().filter(l => l.level() === "Error").length);
+        this.fatalLogCount = ko.pureComputed(() => this.allLogs().filter(l => l.level() === "Fatal").length);
         this.searchTextThrottled = this.searchText.throttle(400);
         this.activeDatabase.subscribe(() => this.fetchLogs());
         this.updateCurrentNowTime();
@@ -105,7 +105,7 @@ class logs extends viewModelBase {
             var mapped: logEntry = new logEntry(r, this.now);
             mapped.isVisible = ko.pureComputed(() => {
                 var matchesSearch = this.matchesFilterAndSearch(mapped);
-                var matchesFilters = this.filteredLoggers().contains(mapped.loggerName());
+                var matchesFilters = _.includes(this.filteredLoggers(), mapped.loggerName());
                 return matchesSearch && !matchesFilters;
             });
             return mapped;
@@ -194,7 +194,7 @@ class logs extends viewModelBase {
     hideLogType(log: logEntry) {
         eventsCollector.default.reportEvent("logs", "toggle-type", "hide");
 
-        if (!this.filteredLoggers.contains(log.loggerName())) {
+        if (!_.includes(this.filteredLoggers(), log.loggerName())) {
             this.filteredLoggers.push(log.loggerName());
         }
     }
@@ -202,9 +202,7 @@ class logs extends viewModelBase {
     unHidelogType(loggerName: string) {
         eventsCollector.default.reportEvent("logs", "toggle-type", "show");
 
-        if (this.filteredLoggers.contains(loggerName)) {
-            this.filteredLoggers.remove(loggerName);
-        }
+        this.filteredLoggers.remove(loggerName);
     }
 
     sortBy(columnName: string) {

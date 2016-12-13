@@ -139,7 +139,7 @@ class counters extends viewModelBase {
             ko.postbox.subscribe("ChangesApiReconnected", (cs: counterStorage) => this.reloadCountersData(cs)),
             ko.postbox.subscribe("SortGroups", () => this.sortGroups()),
             ko.postbox.subscribe("SelectGroup", (groupName: string) => {
-                var groupToSelect = this.groups.first(g => g.name === groupName);
+                var groupToSelect = this.groups().find(g => g.name === groupName);
                 if (!!groupToSelect) {
                     this.selectGroupInternal(groupToSelect);
                 }
@@ -164,7 +164,7 @@ class counters extends viewModelBase {
         var allGroups = [this.allGroupsGroup].concat(groups);
         this.groups(allGroups);
 
-        var groupToSelect = this.groups.first(g => g.name === this.groupToSelectName) || this.allGroupsGroup;
+        var groupToSelect = this.groups().find(g => g.name === this.groupToSelectName) || this.allGroupsGroup;
         groupToSelect.activate();
     }
 
@@ -207,7 +207,7 @@ class counters extends viewModelBase {
     change() {
         var grid = this.getCountersGrid();
         if (grid) {
-            var counterData = grid.getSelectedItems(1).first();
+            var counterData = grid.getSelectedItems(1)[0];
             var dto = {
                 CurrentValue: counterData.Total,
                 Group: counterData["Group Name"],
@@ -228,7 +228,7 @@ class counters extends viewModelBase {
     reset() {
         var grid = this.getCountersGrid();
         if (grid) {
-            var counterData = grid.getSelectedItems(1).first();
+            var counterData = grid.getSelectedItems(1)[0];
             var confirmation = this.confirmationMessage("Reset Counter", "Are you sure that you want to reset the counter?");
             confirmation.done(() => {
                 var resetCommand = new resetCounterCommand(this.activeCounterStorage(), counterData["Group Name"], counterData["Counter Name"]);
@@ -314,14 +314,14 @@ class counters extends viewModelBase {
         var deletedGroups: counterGroup[] = [];
 
         this.groups().forEach((group: counterGroup) => {
-            if (!receivedGroups.first((receivedGroup: counterGroup) => group.name === receivedGroup.name) && group.name !== "All Groups") {
+            if (!receivedGroups.find((receivedGroup: counterGroup) => group.name === receivedGroup.name) && group.name !== "All Groups") {
                 deletedGroups.push(group);
             }
         });
 
         this.groups.removeAll(deletedGroups);
         receivedGroups.forEach((receivedGroup: counterGroup) => {
-            var foundGroup = this.groups().first((group: counterGroup) => group.name === receivedGroup.name);
+            var foundGroup = this.groups().find((group: counterGroup) => group.name === receivedGroup.name);
             if (!foundGroup) {
                 this.groups.push(receivedGroup);
             } else {
@@ -330,7 +330,7 @@ class counters extends viewModelBase {
         });
 
         //if the group is deleted, go to the all groups group
-        var currentGroup: counterGroup = this.groups().first(g => g.name === this.selectedGroup().name);
+        var currentGroup: counterGroup = this.groups().find(g => g.name === this.selectedGroup().name);
         if (!currentGroup || currentGroup.countersCount() === 0) {
             this.selectedGroup(this.allGroupsGroup);
         }

@@ -32,7 +32,7 @@ class resourceSwitcher {
                 return [];
             }
 
-            return resources.filter(x => x.name.toLowerCase().contains(filter.toLowerCase()));
+            return resources.filter(x => x.name.toLowerCase().includes(filter.toLowerCase()));
         });
     }
 

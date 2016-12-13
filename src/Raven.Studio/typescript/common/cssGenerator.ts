@@ -4,7 +4,7 @@ import resource = require("models/resources/resource");
 
 class cssGenerator {
     static getCssClass(entityName: string, colorMaps: resourceStyleMap[], rs: resource): string {
-        var resourceStyleMap = colorMaps.first((map: resourceStyleMap) => map.resourceName === rs.name);
+        var resourceStyleMap = colorMaps.find((map: resourceStyleMap) => map.resourceName === rs.name);
         if (!resourceStyleMap) {
             resourceStyleMap = {
                 resourceName: rs.name,

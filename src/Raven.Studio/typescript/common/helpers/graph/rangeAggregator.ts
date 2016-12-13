@@ -35,10 +35,10 @@ class rangeAggregator {
         }
 
         // after all
-        if (start > this.aggregation.last().end) {
-            if (this.aggregation.last().end !== start) {
+        if (start > _.last(this.aggregation).end) {
+            if (_.last(this.aggregation).end !== start) {
                 this.aggregation.push({
-                    start: this.aggregation.last().end,
+                    start: _.last(this.aggregation).end,
                     end: start,
                     value: 0
                 });

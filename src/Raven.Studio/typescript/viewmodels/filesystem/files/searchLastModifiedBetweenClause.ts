@@ -28,8 +28,8 @@ class searchLastModifiedBetweenClause extends searchDialogViewModel {
     applyFilter() {
         if (!this.fromDateText() || !this.toDateText())
             return false;
-        var dates = "__modified:[" + this.fromDateText().trim().replaceAll(" ", "_")
-            + " TO " + this.toDateText().trim().replaceAll(" ", "_") + "]";
+        var dates = "__modified:[" + _.replace(this.fromDateText().trim(), / /g, "_")
+            + " TO " + _.replace(this.toDateText().trim(), / /g, "_") + "]";
         this.applyFilterTask.resolve(dates);
         
         this.close()

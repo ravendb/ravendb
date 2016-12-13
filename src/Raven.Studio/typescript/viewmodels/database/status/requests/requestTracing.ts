@@ -19,8 +19,8 @@ class requestTracing extends viewModelBase {
 
         autoRefreshBindingHandler.install();
 
-        this.failedCount = ko.computed(() => this.allEntries().count(l => l.StatusCode >= 400));
-        this.successCount = ko.computed(() => this.allEntries().count(l => l.StatusCode < 400));
+        this.failedCount = ko.computed(() => this.allEntries().filter(l => l.StatusCode >= 400).length);
+        this.successCount = ko.computed(() => this.allEntries().filter(l => l.StatusCode < 400).length);
         this.activeDatabase.subscribe(() => this.fetchRequestTracing());
 
         this.tableNavigation = new tableNavigationTrait<requestTracingDto>("#requestTracingTableContainer", this.selectedEntry, this.allEntries, i => "#requestTracingTableContainer table tbody tr:nth-child(" + (i + 1) + ")");

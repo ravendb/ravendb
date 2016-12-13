@@ -12,6 +12,7 @@ import changesContext = require("common/changesContext");
 import optional = require("common/optional");
 import deleteIndexesConfirm = require("viewmodels/database/indexes/deleteIndexesConfirm");
 import eventsCollector = require("common/eventsCollector");
+import genUtils = require("common/generalUtils");
 
 class indexMergeSuggestions extends viewModelBase {
     
@@ -63,7 +64,7 @@ class indexMergeSuggestions extends viewModelBase {
         var miliSecondsInWeek = 1000 * 3600 * 24 * 7;
         stats.Indexes.forEach(indexDto => {
             // we are using contains not equals as priority may contains 
-            if (indexDto.Priority.contains("Idle") || indexDto.Priority.contains("Abandoned")) {
+            if (indexDto.Priority.includes("Idle") || indexDto.Priority.includes("Abandoned")) {
                 this.idleOrAbandonedIndexes.push(indexDto);
             }
 
@@ -72,7 +73,7 @@ class indexMergeSuggestions extends viewModelBase {
                 if (lastQueryDate.isValid()) {
                     var agoInMs = now.diff(lastQueryDate);
                     if (agoInMs > miliSecondsInWeek) {
-                        (<any>indexDto)["LastQueryTimestampText"] = optional.val(indexDto.LastQueryTimestamp).bind(v => v.toHumanizedDate());
+                        (<any>indexDto)["LastQueryTimestampText"] = optional.val(indexDto.LastQueryTimestamp).bind(v => genUtils.toHumanizedDate(v));
                         this.notUsedForLastWeek.push(indexDto);
                     }
                 }

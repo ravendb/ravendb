@@ -41,7 +41,7 @@ class backupFilesystemCommand extends commandBase {
                     if (backupStatus.Success) {
                         this.reportSuccess("Filesystem backup was successfully created!");
                     } else {
-                        var cause = backupStatus.Messages.last(x => x.Severity === 'Error');
+                        var cause = _.findLast(backupStatus.Messages, x => x.Severity === 'Error');
                         this.reportError("Failed to backup filesystem: " + cause.Message);
                     }
                     

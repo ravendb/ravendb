@@ -28,17 +28,17 @@ class verifyDocumentsIDsCommand extends commandBase {
         if (this.queryLocalStorage) {
 
             if (verifyDocumentsIDsCommand.InvalidIDsLocal.length > 0) {
-                this.docIDs.removeAll(verifyDocumentsIDsCommand.InvalidIDsLocal);
+                _.pullAll(this.docIDs, verifyDocumentsIDsCommand.InvalidIDsLocal);
             }
 
             if (verifyDocumentsIDsCommand.IDsLocalStorage.length > 0) {
                 this.docIDs.forEach(curId => {
-                    if (verifyDocumentsIDsCommand.IDsLocalStorage.first(x => x === curId)) {
+                    if (verifyDocumentsIDsCommand.IDsLocalStorage.find(x => x === curId)) {
                         verifiedIDs.push(curId);
                     } 
                 });
 
-                this.docIDs.removeAll(verifyDocumentsIDsCommand.IDsLocalStorage);
+                _.pullAll(this.docIDs, verifyDocumentsIDsCommand.IDsLocalStorage);
             }
         } 
 
@@ -56,8 +56,8 @@ class verifyDocumentsIDsCommand extends commandBase {
                     });
 
                     if (this.queryLocalStorage) {
-                        this.docIDs.removeAll(queryResult.Results.map(curResult => curResult['@metadata']['@id']));
-                        verifyDocumentsIDsCommand.InvalidIDsLocal.pushAll(this.docIDs);
+                        _.pullAll(this.docIDs, queryResult.Results.map(curResult => curResult['@metadata']['@id']));
+                        verifyDocumentsIDsCommand.InvalidIDsLocal.push(...this.docIDs);
                     }
                 }
                 verifyResult.resolve(verifiedIDs);

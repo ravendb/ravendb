@@ -158,7 +158,7 @@ class menu {
 
         let { fragment } = router.activeInstruction();
         let matchingRoute = this.registeredRoutes()
-            .first(routeRegex => routeRegex.test(fragment));
+            .find(routeRegex => routeRegex.test(fragment));
 
         if (!matchingRoute) {
             return;

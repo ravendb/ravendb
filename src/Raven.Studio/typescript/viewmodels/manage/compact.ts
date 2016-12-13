@@ -32,7 +32,7 @@ class resourceCompact {
         this.nameCustomValidityError = ko.computed(() => {
             var errorMessage: string = '';
             var newResourceName = this.resourceName();
-            var foundRs = this.resources().first((rs: resource) => newResourceName === rs.name);
+            var foundRs = this.resources().find((rs: resource) => newResourceName === rs.name);
 
             if (!foundRs && newResourceName.length > 0) {
                 errorMessage = (this.type === database.type ? "Database" : "File system") + " name doesn't exist!";

@@ -81,7 +81,7 @@ class exportDatabase extends viewModelBase {
             }
             const filterLowerCase = filter.toLowerCase();
 
-            return collections.filter(x => x.toLowerCase().contains(filterLowerCase));
+            return collections.filter(x => x.toLowerCase().includes(filterLowerCase));
         });
 
         this.exportCommand = ko.pureComputed<string>(() => {

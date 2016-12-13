@@ -91,7 +91,7 @@ class viewModelBase {
             this.changesContext
                 .afterConnection
                 .done(() => {
-                    this.notifications.pushAll(this.createNotifications());
+                    this.notifications.push(...this.createNotifications());
                 });
         });
 
@@ -180,7 +180,7 @@ class viewModelBase {
     }
 
     removeNotification(subscription: changeSubscription) {
-        this.notifications.remove(subscription);
+        _.pull(this.notifications, subscription);
     }
 
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
@@ -203,7 +203,7 @@ class viewModelBase {
             handler();
         }, this, elementSelector);
 
-        if (!this.keyboardShortcutDomContainers.contains(elementSelector)) {
+        if (!_.includes(this.keyboardShortcutDomContainers, elementSelector)) {
             this.keyboardShortcutDomContainers.push(elementSelector);
         }
     }
@@ -265,7 +265,7 @@ class viewModelBase {
 
         app.showBootstrapDialog(new confirmationDialog(confirmationMessage, title, options))
             .done((answer) => {
-                var isConfirmed = answer === options.last();
+                var isConfirmed = answer === _.last(options);
                 if (isConfirmed) {
                     viewTask.resolve({ can: true });
                 } else if (!forceRejectWithResolve) {

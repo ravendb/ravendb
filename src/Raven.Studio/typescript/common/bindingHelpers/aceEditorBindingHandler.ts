@@ -107,7 +107,7 @@ class aceEditorBindingHandler {
 
     static autoCompleteHub(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void): void {
         var curEditorType = editor.getOption("editorType");
-        var completerThreesome = aceEditorBindingHandler.customCompleters.first(x=> x.editorType === curEditorType);
+        var completerThreesome = aceEditorBindingHandler.customCompleters.find(x=> x.editorType === curEditorType);
 
         if (!!completerThreesome) {
             completerThreesome.completer.call(completerThreesome.completerHostObject, editor, session, pos, prefix, callback);
@@ -193,12 +193,12 @@ class aceEditorBindingHandler {
             aceEditor.setOption("editorType", typeName);
 
             if (!!langTools) {
-                if (!aceEditorBindingHandler.customCompleters.first(x=> x.editorType === typeName)) {
+                if (!aceEditorBindingHandler.customCompleters.find(x=> x.editorType === typeName)) {
                     aceEditorBindingHandler.customCompleters.push({ editorType: typeName, completerHostObject: completerHostObject, completer: bindingValues.completer });
                 }
                 if (!!aceEditor.completers) {
                     var completersList: { getComplitions: any; moduleId?: string }[] = aceEditor.completers;
-                    if (!completersList.first(x=> x.moduleId === "aceEditoBindingHandler")) {
+                    if (!completersList.find(x=> x.moduleId === "aceEditoBindingHandler")) {
                         langTools.addCompleter({ moduleId: "aceEditoBindingHandler", getCompletions: aceEditorBindingHandler.autoCompleteHub });
                     }
                 }
