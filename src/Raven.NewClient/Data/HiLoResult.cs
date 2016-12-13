@@ -4,18 +4,27 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-namespace Raven.Abstractions.Data
+using System;
+
+namespace Raven.NewClient.Abstractions.Data
 {
     /// <summary>
     /// The result of a NextHiLo operation
     /// </summary>   
-    public class HiLoResults
+    public class HiLoResult
     {
-        public HiLoResults(long low, long high, string prefix)
+        public HiLoResult()
+        {
+
+        }
+
+        public HiLoResult(long low, long high, string prefix, long lastSize, DateTime lastRangeAt)
         {
             Low = low;
             High = high;
             Prefix = prefix;
+            LastSize = lastSize;
+            LastRangeAt = lastRangeAt;
         }
 
         public long Low { get; set; }
@@ -27,6 +36,9 @@ namespace Raven.Abstractions.Data
         /// </summary>
         public string Prefix { get; set; }
 
+        public long LastSize { get; set; }
+
+        public DateTime LastRangeAt { get; set; }
 
     }
 }

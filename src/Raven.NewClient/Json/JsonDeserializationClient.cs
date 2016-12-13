@@ -40,5 +40,7 @@ namespace Raven.NewClient.Client.Json
         public static readonly Func<BlittableJsonReaderObject, PatchResult> PatchResult = GenerateJsonDeserializationRoutine<PatchResult>();
 
         public static readonly Func<BlittableJsonReaderObject, DeleteResult> DeleteResult = GenerateJsonDeserializationRoutine<DeleteResult>();
+		
+		public static readonly Func<BlittableJsonReaderObject, HiLoResult> HiLoResult = GenerateJsonDeserializationRoutine<HiLoResult>();
     }
 }
