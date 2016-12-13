@@ -329,13 +329,13 @@ namespace Raven.Client.Indexes
                 serverDef.IndexId = indexDefinition.IndexId;
                 indexDefinition.RemoveDefaultValues();
 
-                if (serverDef.Equals(indexDefinition, false))
+                if (serverDef.Equals(indexDefinition, compareIndexIds: false))
                     return true;
 
                 // now we need to check if this is a legacy index...
                 var legacyIndexDefinition = GetLegacyIndexDefinition(documentConvention);
 
-                return serverDef.Equals(legacyIndexDefinition, compareIndexIds: false, ignoreFormatting: true, ignoreMaxIndexOutputs: true);
+                return serverDef.Equals(legacyIndexDefinition, compareIndexIds: false, ignoreFormatting: true);
             }
             finally
             {

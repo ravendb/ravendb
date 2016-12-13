@@ -100,6 +100,18 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public void WriteDefinition(IndexDefinitionBase indexDefinition)
+        {
+            TransactionOperationContext context;
+            using (_contextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                indexDefinition.Persist(context, _environment.Options);
+
+                tx.Commit();
+            }
+        }
+
         public unsafe void WritePriority(IndexPriority priority)
         {
             TransactionOperationContext context;

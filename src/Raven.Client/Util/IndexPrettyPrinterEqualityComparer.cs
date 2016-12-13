@@ -10,6 +10,8 @@ namespace Raven.Abstractions.Util
 {
     public class IndexPrettyPrinterEqualityComparer : IEqualityComparer<string>
     {
+        public static IndexPrettyPrinterEqualityComparer Instance = new IndexPrettyPrinterEqualityComparer();
+
         public bool Equals(string x, string y)
         {
             if (x == y)

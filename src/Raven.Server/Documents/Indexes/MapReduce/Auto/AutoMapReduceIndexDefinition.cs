@@ -93,20 +93,32 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             writer.WriteEndArray();
         }
 
-        public override bool Equals(IndexDefinitionBase indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs)
-        {
-            // TODO arek
-            return false;
-        }
-
-        public override bool Equals(IndexDefinition indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs)
-        {
-            return false;
-        }
-
         protected override int ComputeRestOfHash(int hashCode)
         {
             return (hashCode * 397) ^ GroupByFields.GetDictionaryHashCode();
+        }
+
+        public override IndexDefinitionCompareDifferences Compare(IndexDefinitionBase other)
+        {
+            var otherDefinition = other as AutoMapReduceIndexDefinition;
+            if (otherDefinition == null)
+                return IndexDefinitionCompareDifferences.All;
+
+            if (ReferenceEquals(this, other))
+                return IndexDefinitionCompareDifferences.None;
+
+            if (Collections.SequenceEqual(otherDefinition.Collections) == false || MapFields.SequenceEqual(otherDefinition.MapFields) == false)
+                return IndexDefinitionCompareDifferences.Maps;
+
+            if (GroupByFields.SequenceEqual(otherDefinition.GroupByFields) == false)
+                return IndexDefinitionCompareDifferences.Reduce;
+
+            return IndexDefinitionCompareDifferences.None;
+        }
+
+        public override IndexDefinitionCompareDifferences Compare(IndexDefinition indexDefinition)
+        {
+            return IndexDefinitionCompareDifferences.All;
         }
 
         public static AutoMapReduceIndexDefinition Load(StorageEnvironment environment)

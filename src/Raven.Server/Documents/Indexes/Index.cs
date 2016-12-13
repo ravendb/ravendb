@@ -20,7 +20,6 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Auto;
-using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
@@ -211,7 +210,7 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexState State { get; protected set; }
 
-        public IndexDefinitionBase Definition { get; }
+        public IndexDefinitionBase Definition { get; private set; }
 
         public string Name => Definition?.Name;
 
@@ -329,8 +328,6 @@ namespace Raven.Server.Documents.Indexes
 
                     DocumentDatabase.Notifications.OnIndexChange += HandleIndexChange;
 
-                    _indexWorkers = CreateIndexWorkExecutors();
-
                     InitializeInternal();
 
                     _initialized = true;
@@ -345,6 +342,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected virtual void InitializeInternal()
         {
+            _indexWorkers = CreateIndexWorkExecutors();
         }
 
         protected virtual void LoadValues()
@@ -414,6 +412,28 @@ namespace Raven.Server.Documents.Indexes
                 //If we invoke Thread.Join from the indexing thread itself it will cause a deadlock
                 if (Thread.CurrentThread != indexingThread)
                     indexingThread.Join();
+            }
+        }
+
+        public virtual void Update(IndexDefinitionBase definition, IndexingConfiguration configuration)
+        {
+            Debug.Assert(Type.IsStatic());
+
+            using (DrainRunningQueries())
+            {
+                var status = Status;
+                if (status == IndexRunningStatus.Running)
+                    Stop();
+
+                _indexStorage.WriteDefinition(definition);
+
+                Definition = definition;
+                Configuration = configuration;
+
+                InitializeInternal();
+
+                if (status == IndexRunningStatus.Running)
+                    Start();
             }
         }
 
@@ -955,7 +975,7 @@ namespace Raven.Server.Documents.Indexes
 
                         stats.RecordCommitStats(commitStats.NumberOfModifiedPages, commitStats.NumberOfPagesWrittenToDisk);
                     }
-                    
+
                     return mightBeMore;
                 }
             }
@@ -1740,46 +1760,6 @@ namespace Raven.Server.Documents.Indexes
             return new QueryDoneRunning(this, executingQueryInfo);
         }
 
-        private struct QueryDoneRunning : IDisposable
-        {
-            readonly Index _parent;
-            private readonly ExecutingQueryInfo _queryInfo;
-            private bool _hasLock;
-            public QueryDoneRunning(Index parent, ExecutingQueryInfo queryInfo)
-            {
-                _parent = parent;
-                _queryInfo = queryInfo;
-                _hasLock = false;
-            }
-
-            public void HoldLock()
-            {
-                if (_parent._currentlyRunningQueriesLock.TryEnterReadLock(TimeSpan.FromSeconds(3)) == false)
-                    ThrowLockTimeoutException();
-                _hasLock = true;
-            }
-
-
-            private void ThrowLockTimeoutException()
-            {
-                throw new TimeoutException($"Could not get the index read lock in a reasonable time, {_parent.Name} is probably undergoing maintenance now, try again later");
-            }
-
-            public void ReleaseLock()
-            {
-                _hasLock = false;
-                _parent._currentlyRunningQueriesLock.ExitReadLock();
-            }
-
-
-            public void Dispose()
-            {
-                if (_hasLock)
-                    _parent._currentlyRunningQueriesLock.ExitReadLock();
-                _parent.CurrentlyRunningQueries.TryRemove(_queryInfo);
-            }
-        }
-
         private static bool WillResultBeAcceptable(bool isStale, IndexQueryBase query, AsyncWaitForIndexing wait)
         {
             if (isStale == false)
@@ -2113,6 +2093,44 @@ namespace Raven.Server.Documents.Indexes
                         $"files that can be cleanly released. Budget increased to {_currentMaximumAllowedMemory}");
                 }
                 return true;
+            }
+        }
+
+        private struct QueryDoneRunning : IDisposable
+        {
+            readonly Index _parent;
+            private readonly ExecutingQueryInfo _queryInfo;
+            private bool _hasLock;
+            public QueryDoneRunning(Index parent, ExecutingQueryInfo queryInfo)
+            {
+                _parent = parent;
+                _queryInfo = queryInfo;
+                _hasLock = false;
+            }
+
+            public void HoldLock()
+            {
+                if (_parent._currentlyRunningQueriesLock.TryEnterReadLock(TimeSpan.FromSeconds(3)) == false)
+                    ThrowLockTimeoutException();
+                _hasLock = true;
+            }
+
+            private void ThrowLockTimeoutException()
+            {
+                throw new TimeoutException($"Could not get the index read lock in a reasonable time, {_parent.Name} is probably undergoing maintenance now, try again later");
+            }
+
+            public void ReleaseLock()
+            {
+                _hasLock = false;
+                _parent._currentlyRunningQueriesLock.ExitReadLock();
+            }
+
+            public void Dispose()
+            {
+                if (_hasLock)
+                    _parent._currentlyRunningQueriesLock.ExitReadLock();
+                _parent.CurrentlyRunningQueries.TryRemove(_queryInfo);
             }
         }
     }

@@ -163,8 +163,8 @@ namespace FastTests.Server.Documents.Indexing.Static
                 Assert.Contains("Name", indexes[0].Definition.MapFields.Keys);
                 Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
                 Assert.Equal(IndexPriority.Normal, indexes[0].Priority);
-                Assert.True(indexes[0].Definition.Equals(indexDefinition1, ignoreFormatting: true, ignoreMaxIndexOutputs: false));
-                Assert.True(indexDefinition1.Equals(indexes[0].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false, ignoreMaxIndexOutputs: false));
+                Assert.Equal(IndexDefinitionCompareDifferences.None, indexes[0].Definition.Compare(indexDefinition1));
+                Assert.True(indexDefinition1.Equals(indexes[0].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false));
 
                 Assert.Equal(2, indexes[1].IndexId);
                 Assert.Equal(IndexType.Map, indexes[1].Type);
@@ -175,8 +175,8 @@ namespace FastTests.Server.Documents.Indexing.Static
                 Assert.Contains("CustomAge", indexes[1].Definition.MapFields.Keys);
                 Assert.Equal(IndexLockMode.Unlock, indexes[1].Definition.LockMode);
                 Assert.Equal(IndexPriority.Normal, indexes[1].Priority);
-                Assert.True(indexes[1].Definition.Equals(indexDefinition2, ignoreFormatting: true, ignoreMaxIndexOutputs: false));
-                Assert.True(indexDefinition2.Equals(indexes[1].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false, ignoreMaxIndexOutputs: false));
+                Assert.Equal(IndexDefinitionCompareDifferences.None, indexes[1].Definition.Compare(indexDefinition2));
+                Assert.True(indexDefinition2.Equals(indexes[1].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false));
             }
         }
 
@@ -250,7 +250,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 {
                     var newIndexDefinition = JsonDeserializationServer.IndexDefinition(json);
 
-                    Assert.True(indexDefinition.Equals(newIndexDefinition, compareIndexIds: true, ignoreFormatting: false, ignoreMaxIndexOutputs: false));
+                    Assert.True(indexDefinition.Equals(newIndexDefinition, compareIndexIds: true, ignoreFormatting: false));
                 }
             }
         }

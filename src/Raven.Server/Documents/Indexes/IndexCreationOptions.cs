@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Indexes
     {
         Noop,
         Update,
-        Create,
-        UpdateWithoutUpdatingCompiledIndex
+        UpdateWithoutUpdatingCompiledIndex,
+        Create
     }
 }

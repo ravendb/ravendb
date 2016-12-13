@@ -4,6 +4,7 @@ using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
+using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.ServerWide.Context;
@@ -43,6 +44,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         protected override void InitializeInternal()
         {
+            base.InitializeInternal();
+
             _maxNumberOfIndexOutputs = Definition.IndexDefinition.Configuration.MaxIndexOutputsPerDocument ?? Configuration.MaxMapIndexOutputsPerDocument;
         }
 
@@ -188,6 +191,15 @@ namespace Raven.Server.Documents.Indexes.Static
             instance.Initialize(environment, documentDatabase, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
 
             return instance;
+        }
+
+        public static void Update(Index index, IndexDefinition definition, DocumentDatabase documentDatabase)
+        {
+            var staticMapIndex = (MapIndex)index;
+            var staticIndex = staticMapIndex._compiled;
+
+            var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys.ToArray(), staticIndex.OutputFields, staticIndex.HasDynamicFields);
+            staticMapIndex.Update(staticMapIndexDefinition, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
         }
 
         private static MapIndex CreateIndexInstance(int indexId, IndexDefinition definition)

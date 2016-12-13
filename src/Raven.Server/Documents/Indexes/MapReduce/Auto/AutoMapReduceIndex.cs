@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
@@ -57,6 +58,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         protected override void InitializeInternal()
         {
+            base.InitializeInternal();
+
             _reduceKeyProcessor = new ReduceKeyProcessor(Definition.GroupByFields.Count, _unmanagedBuffersPool);
         }
 
@@ -73,6 +76,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             return new AutoIndexDocsEnumerator(documents, stats);
+        }
+
+        public override void Update(IndexDefinitionBase definition, IndexingConfiguration configuration)
+        {
+            throw new NotSupportedException($"{Type} index does not support updating it's definition and configuration.");
         }
 
         public override int HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)

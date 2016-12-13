@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
@@ -8,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Raven.Abstractions.Extensions;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.Indexes.Configuration;
 
 namespace Raven.Server.Config.Categories
 {
@@ -24,13 +26,7 @@ namespace Raven.Server.Config.Categories
 
         public void Initialize(Func<string, string> getSetting, bool throwIfThereIsNoSetMethod)
         {
-            var configurationProperties = from property in GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                                          let configurationEntryAttribute = property.GetCustomAttributes<ConfigurationEntryAttribute>().FirstOrDefault()
-                                          where configurationEntryAttribute != null // filter out properties which aren't marked as configuration entry
-                                          orderby configurationEntryAttribute.Order // properties are initialized in order of declaration
-                                          select property;
-
-            foreach (var property in configurationProperties)
+            foreach (var property in GetConfigurationProperties())
             {
                 if (property.SetMethod == null)
                 {
@@ -39,6 +35,8 @@ namespace Raven.Server.Config.Categories
 
                     continue;
                 }
+
+                ValidateProperty(property);
 
                 TimeUnitAttribute timeUnit = null;
                 SizeUnitAttribute sizeUnit = null;
@@ -152,6 +150,21 @@ namespace Raven.Server.Config.Categories
             }
 
             Initialized = true;
+        }
+
+        protected virtual void ValidateProperty(PropertyInfo property)
+        {
+        }
+
+        protected IEnumerable<PropertyInfo> GetConfigurationProperties()
+        {
+            var configurationProperties = from property in GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                                          let configurationEntryAttribute = property.GetCustomAttributes<ConfigurationEntryAttribute>().FirstOrDefault()
+                                          where configurationEntryAttribute != null // filter out properties which aren't marked as configuration entry
+                                          orderby configurationEntryAttribute.Order // properties are initialized in order of declaration
+                                          select property;
+
+            return configurationProperties;
         }
 
         protected object GetDefaultValue<T>(Expression<Func<T, object>> getValue)
