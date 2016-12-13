@@ -247,7 +247,11 @@ class replications extends viewModelBase {
         eventsCollector.default.reportEvent("replications", "save");
         if (this.usingGlobal()) {
             new deleteLocalReplicationsSetupCommand(this.activeDatabase())
-                .execute();
+                .execute()
+                .done(() => {
+                    this.replicationsSetupDirtyFlag().reset();
+                    this.dirtyFlag().reset();
+                });
         } else {
             if (this.isConfigSaveEnabled())
                 this.saveAutomaticConflictResolutionSettings();
