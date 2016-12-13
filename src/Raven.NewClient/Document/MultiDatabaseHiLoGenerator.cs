@@ -11,20 +11,32 @@ namespace Raven.NewClient.Client.Document
 {
     public class MultiDatabaseHiLoGenerator
     {
-        private readonly int capacity;
 
-        private readonly ConcurrentDictionary<string, MultiTypeHiLoKeyGenerator> generators =
+        private readonly ConcurrentDictionary<string, MultiTypeHiLoKeyGenerator> _generators =
             new ConcurrentDictionary<string, MultiTypeHiLoKeyGenerator>();
 
-        public MultiDatabaseHiLoGenerator(int capacity)
+        private readonly DocumentStore _store;
+        private readonly DocumentConvention _conventions;
+
+        public MultiDatabaseHiLoGenerator(DocumentStore store, DocumentConvention conventions)
         {
-            this.capacity = capacity;
+            _store = store;
+            _conventions = conventions;
         }
 
-        public string GenerateDocumentKey(string dbName, DocumentConvention conventions, object entity)
+        public string GenerateDocumentKey(string dbName, object entity)
         {
-            var multiTypeHiLoKeyGenerator = generators.GetOrAdd(dbName ?? Constants.SystemDatabase, s => new MultiTypeHiLoKeyGenerator(capacity));
-            return multiTypeHiLoKeyGenerator.GenerateDocumentKey(conventions, entity);
+            var db = dbName ?? _store.DefaultDatabase;
+            var multiTypeHiLoKeyGenerator = _generators.GetOrAdd(db, s => new MultiTypeHiLoKeyGenerator(_store, db, _conventions));
+            return multiTypeHiLoKeyGenerator.GenerateDocumentKey(entity);
+        }
+
+        public void ReturnUnusedRange()
+        {
+            foreach (var generator in _generators)
+            {
+                generator.Value.ReturnUnusedRange();
+            }
         }
     }
 }
