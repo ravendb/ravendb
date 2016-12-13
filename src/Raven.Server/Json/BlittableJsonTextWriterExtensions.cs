@@ -211,12 +211,16 @@ namespace Raven.Server.Json
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName((nameof(result.TotalResults)));
+            writer.WritePropertyName(nameof(result.TotalResults));
             writer.WriteInteger(result.TotalResults);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(result.SkippedResults)));
+            writer.WritePropertyName(nameof(result.SkippedResults));
             writer.WriteInteger(result.SkippedResults);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.DurationMilliseconds));
+            writer.WriteInteger(result.DurationMilliseconds);
             writer.WriteComma();
 
             writer.WriteQueryResult(context, result, metadataOnly, partial: true);

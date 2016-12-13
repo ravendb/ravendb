@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Data;
 using Raven.Client.Data.Queries;
@@ -28,7 +30,7 @@ namespace Raven.Server.Documents.Handlers
             var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
 
             DocumentsOperationContext context;
-            
+
             using (TrackRequestTime())
             using (var token = CreateTimeLimitedOperationToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
@@ -40,7 +42,7 @@ namespace Raven.Server.Documents.Handlers
                     await FacetedQuery(context, indexName, token).ConfigureAwait(false);
                     return;
                 }
-                
+
                 await Query(context, indexName, token, HttpMethod.Post).ConfigureAwait(false);
             }
         }
@@ -137,14 +139,23 @@ namespace Raven.Server.Documents.Handlers
                     throw new InvalidDataException("Missing 'Query' property in the POST request body");
                 indexQuery.Query = queryString;
             }
-            
+
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
             var includes = GetStringValuesQueryString("include", required: false);
             var metadataOnly = GetBoolValueQueryString("metadata-only", required: false) ?? false;
 
             var runner = new QueryRunner(Database, context);
 
-            var result = await runner.ExecuteQuery(indexName, indexQuery, includes, existingResultEtag, token).ConfigureAwait(false);
+            DocumentQueryResult result;
+            try
+            {
+                result = await runner.ExecuteQuery(indexName, indexQuery, includes, existingResultEtag, token).ConfigureAwait(false);
+            }
+            catch (IndexDoesNotExistsException)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                return;
+            }
 
             if (result.NotModified)
             {
@@ -211,11 +222,11 @@ namespace Raven.Server.Documents.Handlers
         {
             DocumentsOperationContext context;
             var returnContextToPool = ContextPool.AllocateOperationContext(out context); // we don't dispose this as operation is async
-            
-            ExecuteQueryOperation((runner, indexName, query, options, onProgress, token) => runner.ExecuteDeleteQuery(indexName, query, options, context, onProgress, token), 
+
+            ExecuteQueryOperation((runner, indexName, query, options, onProgress, token) => runner.ExecuteDeleteQuery(indexName, query, options, context, onProgress, token),
                 context, returnContextToPool, DatabaseOperations.PendingOperationType.DeleteByIndex);
             return Task.CompletedTask;
-            
+
         }
 
         [RavenAction("/databases/*/queries/$", "PATCH")]
@@ -223,11 +234,11 @@ namespace Raven.Server.Documents.Handlers
         {
             DocumentsOperationContext context;
             var returnContextToPool = ContextPool.AllocateOperationContext(out context); // we don't dispose this as operation is async
-            
+
             var reader = context.Read(RequestBodyStream(), "ScriptedPatchRequest");
             var patch = PatchRequest.Parse(reader);
 
-            ExecuteQueryOperation((runner, indexName, query, options, onProgress, token) => runner.ExecutePatchQuery(indexName, query, options, patch, context, onProgress, token), 
+            ExecuteQueryOperation((runner, indexName, query, options, onProgress, token) => runner.ExecutePatchQuery(indexName, query, options, patch, context, onProgress, token),
                 context, returnContextToPool, DatabaseOperations.PendingOperationType.UpdateByIndex);
             return Task.CompletedTask;
         }
@@ -244,7 +255,7 @@ namespace Raven.Server.Documents.Handlers
 
             var operationId = Database.Operations.GetNextOperationId();
 
-            var task = Database.Operations.AddOperation(indexName, operationType, onProgress => 
+            var task = Database.Operations.AddOperation(indexName, operationType, onProgress =>
                     operation(queryRunner, indexName, query, options, onProgress, token), operationId, token);
 
             task.ContinueWith(_ => returnContextToPool.Dispose());
