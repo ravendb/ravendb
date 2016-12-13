@@ -18,13 +18,13 @@ class enableReplicationCommand extends commandBase {
                 var activeBundles = dbSettings.Settings["Raven/ActiveBundles"];
                 if (activeBundles && activeBundles.indexOf("Replication") > -1) {
                     // looks like we already have replication enabled - nothing to do
-                    task.resolve(activeBundles.split(","));
+                    task.resolve(activeBundles.split(";"));
                     this.reportSuccess("Replication was already enabled for this database");
                 } else {
                     if (!activeBundles) {
                         activeBundles = "Replication";
                     } else {
-                        activeBundles += ",Replication";
+                        activeBundles += ";Replication";
                     }
 
                     dbSettings.__metadata.etag = dbSettings.__metadata["@etag"];
@@ -35,7 +35,7 @@ class enableReplicationCommand extends commandBase {
                     new saveDatabaseSettingsCommand(this.db, dbSettings)
                         .execute()
                         .done(() => {
-                            task.resolve(activeBundles.split(","));
+                            task.resolve(activeBundles.split(";"));
                         }).fail(() => {
                             task.reject();
                         });
