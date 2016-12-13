@@ -17,7 +17,7 @@ class documentHelpers {
             var curField = documentNodesFlattenedList[documentNodesCursor];
             if (typeof curField === "string" && /\w+\/\w+/ig.test(curField)) {
 
-                if (!results.first(x => x === curField.toString())) {
+                if (!results.find(x => x === curField.toString())) {
                     results.push(curField.toString());
                 }
             }

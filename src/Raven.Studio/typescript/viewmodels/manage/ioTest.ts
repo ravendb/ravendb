@@ -6,7 +6,6 @@ import performanceTestRequest = require("models/database/debug/performanceTestRe
 import performanceTestResultWrapped = require("models/database/debug/performanceTestResultWrapped");
 import ioTestCommand = require("commands/database/debug/ioTestCommand");
 import d3 = require('d3');
-import nv = require('nvd3');
 import shell = require("viewmodels/shell");
 import eventsCollector = require("common/eventsCollector");
 

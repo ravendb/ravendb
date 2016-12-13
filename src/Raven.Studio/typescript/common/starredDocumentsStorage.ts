@@ -17,12 +17,12 @@ class starredDocumentsStorage {
 
     static isStarred(db: database, documentId: string): boolean {
         let starred = starredDocumentsStorage.getStarredDocuments(db);
-        return starred.contains(documentId);
+        return _.includes(starred, documentId);
     }
 
     static markDocument(db: database, documentId: string, asStarred: boolean) {
         let starred = starredDocumentsStorage.getStarredDocuments(db);
-        let alreadyStored = starred.contains(documentId); 
+        let alreadyStored = _.includes(starred, documentId); 
         if (asStarred) {
             if (!alreadyStored) {
                 starred.unshift(documentId);
@@ -30,7 +30,7 @@ class starredDocumentsStorage {
             }
         } else {
             if (alreadyStored) {
-                starred.remove(documentId);
+                _.pull(starred, documentId);
                 starredDocumentsStorage.saveToLocalStorage(db, starred);
             }
         }

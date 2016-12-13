@@ -23,8 +23,8 @@ class chunkFetcher<T> {
         this.fetcher(skip, take)
             .fail(x => this.task.reject(x))
             .done(data => {
-                this.result.pushAll(data);
-                if (data.length == take) {
+                this.result.push(...data);
+                if (data.length === take) {
                     this.fetchChunk(skip + take, take);
                 } else {
                     this.task.resolve(this.result);

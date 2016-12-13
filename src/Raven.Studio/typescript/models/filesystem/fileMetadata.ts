@@ -38,12 +38,12 @@ class fileMetadata {
 
             // Effectively remove all the headers that are not useful as metadata.
             for (var property in dto) {
-                if (this.headerPropsToRemove.contains(property))
+                if (_.includes(this.headerPropsToRemove, property))
                     delete dto[property];
             }
                        
             for (var property in dto) {                                                
-                if (!this.standardProps.contains(property.toLowerCase())) {
+                if (!_.includes(this.standardProps, property.toLowerCase())) {
                     this.nonStandardProps = this.nonStandardProps || [];
                     var value = dto[property];
                     (<any>this)[property] = value;

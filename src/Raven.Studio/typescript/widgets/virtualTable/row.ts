@@ -19,7 +19,7 @@ class row {
 
     calculateExternalIdCellColor(cellValue: string) {
         var cellCollectionName = cellValue.slice(0, cellValue.lastIndexOf("/")).toLocaleLowerCase();
-        var matchingCollection = this.viewModel.settings.collections.first((c: collection) => c.name.toLocaleLowerCase() === cellCollectionName);
+        var matchingCollection = this.viewModel.settings.collections().find((c: collection) => c.name.toLocaleLowerCase() === cellCollectionName);
 
         if (!!matchingCollection) {
             return matchingCollection.colorClass;
@@ -28,7 +28,7 @@ class row {
     }
 
     calculateExternalGroupCellColor(cellValue: string) {
-        var matchingGroup = this.viewModel.settings.collections.first((c: counterGroup) => c.name === cellValue);
+        var matchingGroup = this.viewModel.settings.collections().find((c: counterGroup) => c.name === cellValue);
 
         if (!!matchingGroup) {
             return matchingGroup.colorClass;

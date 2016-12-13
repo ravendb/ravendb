@@ -139,7 +139,7 @@ class timeSeriesTypes extends viewModelBase {
         this.types(types);
 
         if (this.typeToSelect)
-            this.types.first(g => g.name === this.typeToSelect).activate();
+            this.types().find(g => g.name === this.typeToSelect).activate();
         else {
             var allTypes = this.types();
             if (allTypes.length > 0) {
@@ -223,14 +223,14 @@ class timeSeriesTypes extends viewModelBase {
         var deletedTypes: Array<timeSeriesType> = [];
 
         this.types().forEach((t: timeSeriesType) => {
-            if (!receivedTypes.first((receivedGroup: timeSeriesType) => t.name === receivedGroup.name)) {
+            if (!receivedTypes.find((receivedGroup: timeSeriesType) => t.name === receivedGroup.name)) {
                 deletedTypes.push(t);
             }
         });
 
         this.types.removeAll(deletedTypes);
         receivedTypes.forEach((receivedGroup: timeSeriesType) => {
-            var foundType = this.types().first((t: timeSeriesType) => t.name === receivedGroup.name);
+            var foundType = this.types().find((t: timeSeriesType) => t.name === receivedGroup.name);
             if (!foundType) {
                 this.types.push(receivedGroup);
             } else {

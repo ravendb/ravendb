@@ -53,13 +53,13 @@ class indexes extends viewModelBase {
 
     private getAllIndexes(): index[] {
         const all: index[] = [];
-        this.indexGroups().forEach(g => all.pushAll(g.indexes()));
-        return all.distinct();
+        this.indexGroups().forEach(g => all.push(...g.indexes()));
+        return _.uniq(all);
     }
 
     private getSelectedIndexes(): Array<index> {
         const selectedIndexes = this.selectedIndexesName();
-        return this.getAllIndexes().filter(x => selectedIndexes.contains(x.name));
+        return this.getAllIndexes().filter(x => _.includes(selectedIndexes, x.name));
     }
 
     private initObservables() {
@@ -146,9 +146,9 @@ class indexes extends viewModelBase {
     }
 
     private putIndexIntoGroupNamed(i: index, groupName: string): void {
-        const group = this.indexGroups.first(g => g.entityName === groupName);
+        const group = this.indexGroups().find(g => g.entityName === groupName);
         if (group) {
-            const oldIndex = group.indexes.first((cur: index) => cur.name === i.name);
+            const oldIndex = group.indexes().find((cur: index) => cur.name === i.name);
             if (oldIndex) {
                 group.indexes.replace(oldIndex, i);
             } else {
@@ -480,7 +480,7 @@ class indexes extends viewModelBase {
             this.indexGroups().forEach(indexGroup => {
                 if (!indexGroup.groupHidden()) {
                     indexGroup.indexes().forEach(index => {
-                        if (!index.filteredOut() && !namesToSelect.contains(index.name)) {
+                        if (!index.filteredOut() && !_.includes(namesToSelect, index.name)) {
                             namesToSelect.push(index.name);
                         }
                     });

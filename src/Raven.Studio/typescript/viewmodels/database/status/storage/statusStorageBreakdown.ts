@@ -13,7 +13,8 @@ class statusStorageOnDisk extends viewModelBase {
     operationId = ko.observable<number>();
 
     formatToPreTag(input: string) {
-        return input.replaceAll('\r\n', '<br />').replaceAll("\t", '&nbsp;&nbsp;&nbsp;&nbsp;');
+        const withBr = _.replace(input, /\r\n/g, '<br />');
+        return _.replace(withBr, /\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;');
     }
 
     cancelOperation() {

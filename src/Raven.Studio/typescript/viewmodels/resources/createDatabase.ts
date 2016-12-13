@@ -126,7 +126,7 @@ class createDatabase extends createResourceBase {
     }
 
     private isBundleActiveComputed(bundleName: string) {
-        return ko.pureComputed(() => this.resourceModel.activeBundles().contains(bundleName));
+        return ko.pureComputed(() => _.includes(this.resourceModel.activeBundles(), bundleName));
     }
 
 }

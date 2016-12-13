@@ -58,7 +58,7 @@ class queryUtil {
 
                 // for non dynamic indexes query index terms, for dynamic indexes, try perform general auto complete
 
-                if (!!currentColumnName && !!indexFields.first(x=> x === currentColumnName)) {
+                if (!!currentColumnName && !!indexFields.find(x=> x === currentColumnName)) {
 
                     if (selectedIndex().indexOf(dynamicPrefix) !== 0) {
                         new getIndexTermsCommand(selectedIndex(), currentColumnName, activeDatabase())

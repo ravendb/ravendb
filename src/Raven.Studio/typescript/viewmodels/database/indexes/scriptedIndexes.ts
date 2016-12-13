@@ -121,8 +121,8 @@ class scriptedIndexes extends viewModelBase {
         return new getScriptedIndexesCommand(db)
             .execute()
             .done((indexes: scriptedIndex[]) => {
-                this.allScriptedIndexes.pushAll(indexes);
-                this.activeScriptedIndexes.pushAll(indexes);
+                this.allScriptedIndexes.push(...indexes);
+                this.activeScriptedIndexes.push(...indexes);
             });
     }
 
@@ -164,7 +164,7 @@ class scriptedIndexes extends viewModelBase {
     private updateIndexes(serverIndexes: bulkDocumentDto[]) {
         for (var i = 0; i < this.allScriptedIndexes().length; i++) {
             var index = this.allScriptedIndexes()[i];
-            var serverIndex = serverIndexes.first(k => k.Key === index.getId());
+            var serverIndex = serverIndexes.find(k => k.Key === index.getId());
             if (serverIndex && !serverIndex.Deleted) {
                 index.__metadata.etag = serverIndex.Etag;
                 index.__metadata.lastModified = serverIndex.Metadata['Last-Modified']; //TODO last -modified is not longer used? use Raven-Last-Modified

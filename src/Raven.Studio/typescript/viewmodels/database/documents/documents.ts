@@ -280,7 +280,7 @@ class documents extends viewModelBase {
         var allCollections = [this.allDocumentsCollection()].concat(collections);
         this.collections(allCollections);
 
-        var collectionToSelect = allCollections.first(c => c.name === this.collectionToSelectName) || this.allDocumentsCollection();
+        var collectionToSelect = allCollections.find(c => c.name === this.collectionToSelectName) || this.allDocumentsCollection();
         collectionToSelect.activate();
     }
 
@@ -363,7 +363,7 @@ class documents extends viewModelBase {
         var deletedCollections: collection[] = [];
 
         this.collections().forEach((col: collection) => {
-            if (!receivedCollections.first((receivedCol: collection) => col.name === receivedCol.name) && col.name !== "System Documents" && col.name !== "All Documents") {
+            if (!receivedCollections.find((receivedCol: collection) => col.name === receivedCol.name) && col.name !== "System Documents" && col.name !== "All Documents") {
                 deletedCollections.push(col);
             }
         });
@@ -372,7 +372,7 @@ class documents extends viewModelBase {
 
         //update collections, including collection count
         receivedCollections.forEach((receivedCol: collection) => {
-            var foundCollection = this.collections().first((col: collection) => col.name === receivedCol.name);
+            var foundCollection = this.collections().find((col: collection) => col.name === receivedCol.name);
             if (!foundCollection) {
                 this.collections.push(receivedCol);
             } else {
@@ -390,7 +390,7 @@ class documents extends viewModelBase {
         });
 
         //if the collection is deleted, go to the all documents collection
-        var currentCollection: collection = this.collections().first(c => c.name === this.selectedCollection().name);
+        var currentCollection: collection = this.collections().find(c => c.name === this.selectedCollection().name);
         if (!currentCollection || currentCollection.documentCount() === 0) {
             this.selectCollection(this.allDocumentsCollection());
         }
@@ -545,7 +545,7 @@ class documents extends viewModelBase {
     generateDocCode() {
         var grid = this.getDocumentsGrid();
         if (grid) {
-            var selectedItem = <Document>grid.getSelectedItems(1).first();
+            var selectedItem = <Document>grid.getSelectedItems(1)[0];
 
             var metadata = (<any>selectedItem)["__metadata"];
             var id = metadata["id"]; 

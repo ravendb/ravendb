@@ -42,7 +42,7 @@ class serverSmuggling extends viewModelBase {
         var smi = resourcesManager.default.databases().map(d => new serverSmugglingItem(d));
         this.resources(smi);
 
-        this.hasResources = ko.computed(() => this.resources().count() > 0);
+        this.hasResources = ko.computed(() => this.resources().length > 0);
 
         this.noIncremental = ko.computed(() => this.selectedResources().length === 0);
 
@@ -121,7 +121,7 @@ class serverSmuggling extends viewModelBase {
         });
 
         this.curlRequest = ko.computed(() => {
-            var json = JSON.stringify(this.getJson(), null, 0).replaceAll("\"", "\\\"");
+            var json = _.replace(JSON.stringify(this.getJson(), null, 0), /\"/g, "\\\"");
 
             return "curl -i -H \"Accept: application/json\" -H \"Content-Type: application/json\" -X POST --data \"" + json + "\" " + appUrl.forServer() + "/admin/serverSmuggling";
         });
@@ -149,7 +149,7 @@ class serverSmuggling extends viewModelBase {
 
             // since resources might change over time we have to apply saved changes carefully. 
             savedValue.Config.forEach(savedConfig => {
-                var item = self.resources().first(r => r.resource.name === savedConfig.Name);
+                var item = self.resources().find(r => r.resource.name === savedConfig.Name);
                 if (item) {
                     self.selectedResources.push(item);
                     item.incremental(savedConfig.Incremental);

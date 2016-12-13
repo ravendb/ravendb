@@ -123,7 +123,7 @@ class deleteResourceCommand extends commandBase {
         var task = $.Deferred<resource[]>();
         this.del(url, null, null, null, 9000 * resources.length)
             .done((resourceNames: string[]) => {
-                task.resolve(resources.filter(r => resourceNames.contains(r.name)));
+                task.resolve(resources.filter(r => _.includes(resourceNames, r.name)));
             })
             .fail(() => task.reject(_arguments));
         return task;

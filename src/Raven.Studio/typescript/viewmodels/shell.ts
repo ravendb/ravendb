@@ -156,7 +156,7 @@ class shell extends viewModelBase {
 
     private setupRouting() {
         let routes = allRoutes.get(this.appUrls);
-        routes.pushAll(routes);
+        routes.push(...routes);
         router.map(routes).buildNavigationModel();
         //TODO: do we indicate this? router.isNavigating.subscribe(isNavigating => this.showNavigationProgress(isNavigating));
         //TODO: do we indicated this? router.on('router:navigation:cancelled', () => this.showNavigationProgress(false));

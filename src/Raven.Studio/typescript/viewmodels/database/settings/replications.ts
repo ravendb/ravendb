@@ -174,7 +174,7 @@ class replications extends viewModelBase {
 
     public onTransformCollectionClick(destination: replicationDestination, collectionName: string) {
         var collections = destination.specifiedCollections();
-        var item = collections.first(c => c.collection() === collectionName);
+        var item = collections.find(c => c.collection() === collectionName);
 
         if (typeof (item.script()) === "undefined") {
             item.script("");

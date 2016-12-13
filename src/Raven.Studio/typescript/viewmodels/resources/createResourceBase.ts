@@ -60,7 +60,7 @@ abstract class createResourceBase extends dialogViewModelBase {
             return;
         }
 
-        if (!this.resourceModel.activeBundles().contains(bundleName)) {
+        if (!_.includes(this.resourceModel.activeBundles(), bundleName)) {
             this.resourceModel.activeBundles.push(bundleName);
         }
         this.advancedConfigurationVisible(false);

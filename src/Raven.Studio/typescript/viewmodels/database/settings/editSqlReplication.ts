@@ -120,8 +120,8 @@ class editSqlReplication extends viewModelBase {
         if (event.originalEvent && obj.connectionStringType() == obj.CONNECTION_STRING) {
             var curConnectionString = !!this.editedReplication().connectionStringValue() ? this.editedReplication().connectionStringValue().trim() : "";
             if (curConnectionString === "" ||
-                sqlReplicationConnections.sqlProvidersConnectionStrings.first(x => x.ConnectionString == curConnectionString)) {
-                var matchingConnectionStringPair: { ProviderName: string; ConnectionString: string; } = sqlReplicationConnections.sqlProvidersConnectionStrings.first(x => x.ProviderName == (<any>event.originalEvent.srcElement).selectedOptions[0].value);
+                sqlReplicationConnections.sqlProvidersConnectionStrings.find(x => x.ConnectionString == curConnectionString)) {
+                var matchingConnectionStringPair: { ProviderName: string; ConnectionString: string; } = sqlReplicationConnections.sqlProvidersConnectionStrings.find(x => x.ProviderName == (<any>event.originalEvent.srcElement).selectedOptions[0].value);
                 if (!!matchingConnectionStringPair) {
                     var matchingConnectionStringValue: string = matchingConnectionStringPair.ConnectionString;
                     this.editedReplication().connectionStringValue(
@@ -252,7 +252,7 @@ class editSqlReplication extends viewModelBase {
 
 
     private isSqlReplicationNameExists(name: string): boolean {
-        return !!this.loadedSqlReplications.first(x => x === name);
+        return !!this.loadedSqlReplications.find(x => x === name);
     }
 
     private initializeAceValidity(element: Element) {

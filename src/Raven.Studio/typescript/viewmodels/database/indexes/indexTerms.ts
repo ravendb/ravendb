@@ -60,7 +60,7 @@ class indexTerms extends viewModelBase {
                 } else {
                     termsForField.hasMoreTerms(false);
                 }
-                termsForField.terms.pushAll(loadedTerms);
+                termsForField.terms.push(...loadedTerms);
                 if (loadedTerms.length > 0) {
                     termsForField.fromValue = loadedTerms[loadedTerms.length - 1];
                 }

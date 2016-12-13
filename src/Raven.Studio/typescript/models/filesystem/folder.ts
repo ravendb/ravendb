@@ -34,11 +34,11 @@ class folder {
                 basePath = basePath + "/"
             }
 
-            var restOfPath = this.path.replace(basePath, "");
+            const restOfPath = this.path.replace(basePath, "");
 
             var subPaths = [new folder(basePath)];
             var lastIndexOfSlash = restOfPath.indexOf("/");
-            for (var i = 0; i < restOfPath.count("/"); i++) {
+            for (let i = 0; i < restOfPath.match(/\//g).length; i++) {
                 if (lastIndexOfSlash > 0) {
                     subPaths.push(new folder(basePath+restOfPath.substring(0, lastIndexOfSlash)));
                 }

@@ -86,7 +86,7 @@ class hitTest {
         const clickLocation = d3.mouse(this.container.node());
         const items = this.findItems(clickLocation[0], clickLocation[1]);
 
-        const currentItem = items.filter(x => x.actionType === "trackItem").map(x => x.arg as Raven.Client.Data.Indexes.IndexingPerformanceOperation).first();
+        const currentItem = items.filter(x => x.actionType === "trackItem").map(x => x.arg as Raven.Client.Data.Indexes.IndexingPerformanceOperation)[0];
         this.handleTooltip(currentItem, clickLocation[0], clickLocation[1]);
     }
 
@@ -417,7 +417,7 @@ class metrics extends viewModelBase {
             domain.push(indexName);
             range.push(currentOffset);
 
-            const isOpened = this.expandedTracks.contains(indexName);
+            const isOpened = _.includes(this.expandedTracks(), indexName);
 
             const itemHeight = isOpened ? metrics.openedTrackHeight : metrics.closedTrackHeight;
 
@@ -581,7 +581,7 @@ class metrics extends viewModelBase {
             const yStart = this.yScale(perfStat.IndexName);
 
             perfStat.Performance.forEach(perf => {
-                const isOpened = this.expandedTracks.contains(perfStat.IndexName);
+                const isOpened = _.includes(this.expandedTracks(), perfStat.IndexName);
 
                 context.fillStyle = metrics.colors.trackBackground;
                 context.fillRect(0, yStart, this.totalWidth, isOpened ? metrics.openedTrackHeight : metrics.closedTrackHeight);
@@ -603,7 +603,7 @@ class metrics extends viewModelBase {
         const extentFunc = gapFinder.extentGeneratorForScaleWithGaps(xScale);
 
         this.data.forEach(perfStat => {
-            const isOpened = this.expandedTracks.contains(perfStat.IndexName);
+            const isOpened = _.includes(this.expandedTracks(), perfStat.IndexName);
             let yStart = this.yScale(perfStat.IndexName);
             yStart += isOpened ? metrics.openedTrackPadding : metrics.closedTrackPadding;
 
@@ -678,7 +678,7 @@ class metrics extends viewModelBase {
             context.fillStyle = metrics.colors.trackNameFg;
             context.fillText(indexName, textStart + 0.5, yScale(indexName) + textShift);
 
-            const isOpened = this.expandedTracks.contains(indexName);
+            const isOpened = _.includes(this.expandedTracks(), indexName);
             context.fillStyle = isOpened ? metrics.colors.openedTrackArrow : metrics.colors.closedTrackArrow;
             graphHelper.drawArrow(context, 5, yScale(indexName) + 6, !isOpened);
         });
@@ -699,7 +699,7 @@ class metrics extends viewModelBase {
     }
 
     private onToggleIndex(indexName: string) {
-        if (this.expandedTracks.contains(indexName)) {
+        if (_.includes(this.expandedTracks(), indexName)) {
             this.expandedTracks.remove(indexName);
         } else {
             this.expandedTracks.push(indexName);

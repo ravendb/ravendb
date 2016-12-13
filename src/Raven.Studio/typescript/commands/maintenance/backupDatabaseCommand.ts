@@ -47,7 +47,7 @@ class backupDatabaseCommand extends commandBase {
                     if (backupStatus.Success) {
                         this.reportSuccess("Database backup was successfully created!");
                     } else {
-                        var cause = backupStatus.Messages.last(x => x.Severity === 'Error');
+                        var cause = _.findLast(backupStatus.Messages, x => x.Severity === 'Error');
                         this.reportError("Failed to backup database: " + cause.Message);
                     }
                     

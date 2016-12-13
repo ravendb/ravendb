@@ -20,11 +20,11 @@ class createDefaultSettingsCommand extends commandBase {
         this.reportInfo("Creating default settings for '" + this.db.name + "'...");
 
         var tasksToWatch: Array<JQueryPromise<any>> = []; 
-        if (this.bundles.contains("Quotas")) {
+        if (_.includes(this.bundles, "Quotas")) {
             tasksToWatch.push(this.updateQuotasSettings());
         }
         /* TODO
-        if (this.bundles.contains("Versioning")) {
+        if (_.includes(this.bundles, "Versioning")) {
             tasksToWatch.push(this.saveVersioningConfiguration());
         }*/
 

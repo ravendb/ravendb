@@ -2,7 +2,6 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import moment = require("moment");
 import d3 = require('d3');
-import nv = require('nvd3');
 
 class indexPrefetches extends viewModelBase {
     /*

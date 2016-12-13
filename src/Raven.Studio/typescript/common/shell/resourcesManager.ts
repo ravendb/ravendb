@@ -199,7 +199,7 @@ class resourcesManager {
                 var activeResource = this.activeResource();
                 var actualResourceObservableArray = resourceObservableArray();
 
-                if (!!activeResource && actualResourceObservableArray.contains(activeResource) === false) {
+                if (!!activeResource && !_.includes(actualResourceObservableArray(), activeResource)) {
                     if (actualResourceObservableArray.length > 0) {
                         resourceObservableArray().first().activate();
                     } else { //if (actualResourceObservableArray.length == 0)
@@ -217,7 +217,7 @@ class resourcesManager {
         const incomingResources = incomingData.sortedResources().map(x => x.asResource());
         const incomingResourcesQualified = incomingResources.map(x => x.qualifiedName);
 
-        const deletedResources = existingResources().filter(x => !incomingResourcesQualified.contains(x.qualifiedName));
+        const deletedResources = existingResources().filter(x => !_.includes(incomingResourcesQualified, x.qualifiedName));
 
         existingResources.removeAll(deletedResources);
 

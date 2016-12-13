@@ -49,7 +49,7 @@ class adminLogs extends viewModelBase {
             });
             // text: allows us to escape values
             $("<div/>").text(logsAsText).appendTo("#rawLogsContainer pre");
-            this.rawLogs().pushAll(pendingCopy);
+            this.rawLogs().push(...pendingCopy);
             this.rawLogs.valueHasMutated();
 
             if (this.keepDown()) {

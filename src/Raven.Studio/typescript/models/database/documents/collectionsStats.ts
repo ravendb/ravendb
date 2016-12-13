@@ -18,7 +18,7 @@ class collectionsStats  {
     }
 
     getCollectionCount(collectionName: string): number {
-        const matchedCollection = this.collections.first(x => x.name === collectionName);
+        const matchedCollection = this.collections.find(x => x.name === collectionName);
         return matchedCollection ? matchedCollection.documentCount() : 0;
     }
    

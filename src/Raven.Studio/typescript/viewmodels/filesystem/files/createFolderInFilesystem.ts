@@ -48,7 +48,7 @@ class createFolderInFilesystem extends dialogViewModelBase {
     }
 
     private folderExists(folderName: string): boolean {
-        return this.foldersLowerCase.contains(folderName.toLowerCase());
+        return _.includes(this.foldersLowerCase, folderName.toLowerCase());
     }
 }
 

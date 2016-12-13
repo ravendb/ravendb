@@ -50,6 +50,7 @@ var paths = {
     externalLibs: [
         "d3/d3.js",
         "jquery/dist/jquery.js",
+        'lodash/dist/lodash.js',
         "blockUI/jquery.blockUI.js",
         "knockout/dist/knockout.debug.js",
         "knockout-validation/dist/knockout.validation.js",

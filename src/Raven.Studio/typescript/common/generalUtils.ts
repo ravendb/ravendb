@@ -12,6 +12,18 @@ class genUtils {
         return parts.join(".");
     }
 
+    static hashCode(input: string) {
+        let hash = 0;
+        if (input.length === 0) return hash;
+        for (let i = 0; i < input.length; i++) {
+            const char = input.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash |= 0; // Convert to 32bit integer
+        }
+        return hash;
+    }
+
+
     static timeSpanAsAgo(input: string, withSuffix: boolean): string {
         if (!input) {
             return null;
@@ -89,5 +101,76 @@ class genUtils {
     static formatNumberToStringFixed(inputNumber: number, n: number) :string {
         return inputNumber.toLocaleString(undefined, { minimumFractionDigits: n, maximumFractionDigits: n });
     }; 
+
+    private static fixedCharCodeAt(input: string, idx: number) {
+        idx = idx || 0;
+        const code = input.charCodeAt(idx);
+        let hi: number, low: number;
+        if (0xD800 <= code && code <= 0xDBFF) { // High surrogate (could change last hex to 0xDB7F to treat high private surrogates as single characters)
+            hi = code;
+            low = input.charCodeAt(idx + 1);
+            if (isNaN(low)) {
+                throw 'No valid character or memory error!';
+            }
+            return ((hi - 0xD800) * 0x400) + (low - 0xDC00) + 0x10000;
+        }
+        if (0xDC00 <= code && code <= 0xDFFF) { // Low surrogate
+            // We return false to allow loops to skip this iteration since should have already handled high surrogate above in the previous iteration
+            return 0;
+        }
+        return code;
+    };
+
+    static toHumanizedDate(input: string) {
+        const dateMoment = moment(input.toString());
+        if (dateMoment.isValid()) {
+            const now = moment();
+            const agoInMs = dateMoment.diff(now);
+            return moment.duration(agoInMs).humanize(true) + dateMoment.format(" (MM/DD/YY, h:mma)");
+        }
+
+        return input;
+    }
+
+    static getSizeInBytesAsUTF8(input: string) {
+        let result = 0;
+        let isQuoted = false;
+        let prevChar: any = 0;
+        for (let n = 0; n < input.length; n++) {
+
+            const charCode = genUtils.fixedCharCodeAt(input, n);
+
+            if (charCode === 34 /*quates*/) {
+                if (!(isQuoted && prevChar === 92 /*backslash*/)) {
+                    isQuoted = !isQuoted;
+                }
+            }
+
+            prevChar = charCode;
+
+            // whiteSpaceCharacters list from : https://en.wikipedia.org/wiki/Whitespace_character
+            const whiteSpaceCharacters = [9, 10, 11, 12, 13, 32, 133, 160, 5760, 8192, 8193, 8194, 8195, 8196, 8197, 8198, 8199, 8200, 8201, 8202, 8232, 8233, 8239, 8287, 12288, 6158, 8203, 8204, 8205, 8288, 65279];
+            if (isQuoted === false && $.inArray(charCode, whiteSpaceCharacters) > -1) {
+                continue;
+            }
+
+            if (typeof charCode === "number") {
+                if (charCode < 128) {
+                    result = result + 1;
+                } else if (charCode < 2048) {
+                    result = result + 2;
+                } else if (charCode < 65536) {
+                    result = result + 3;
+                } else if (charCode < 2097152) {
+                    result = result + 4;
+                } else if (charCode < 67108864) {
+                    result = result + 5;
+                } else {
+                    result = result + 6;
+                }
+            }
+        }
+        return result;
+    };
 } 
 export = genUtils;

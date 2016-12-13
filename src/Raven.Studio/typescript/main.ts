@@ -15,7 +15,6 @@ requirejs.config({
           "d3": "../lib/d3/d3",
           "rbush": "../Content/rbush/rbush",
           "quickselect": "../Content/rbush/quickselect",
-          "dagre": "../lib/dagre/dist/dagre.core",
           "forge": "../lib/forge/js/forge",
           "moment": "../lib/moment/moment",
           "plugins/bootstrapModal": "../App/plugins/bootstrapModal"
@@ -28,10 +27,7 @@ requirejs.config({
 
 define("jquery", () => jQuery);
 define("knockout", () => ko); 
-/* TODO
-define('nvd3', ['d3', 'd3/nv', 'd3/models/timelines', 'd3/models/timelinesChart'], (d3, nv, timelines, chart) => nv);
-define('dagre', ['d3', 'd3/dagre'], (d3, dagre) => dagre);
-*/
+
 define(["durandal/system", "durandal/app", "durandal/viewLocator", "plugins/dialog", "durandal/composition"], (system: any, app: any, viewLocator: any, dialog: any, composition: any) => {
     system.debug(true);
     

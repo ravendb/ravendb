@@ -402,7 +402,7 @@ class editIndex extends viewModelBase {
         eventsCollector.default.reportEvent("index", "format-index");
         var index: indexDefinition = this.editedIndex();
         var mapReduceObservableArray = new Array<KnockoutObservable<string>>();
-        mapReduceObservableArray.pushAll(index.maps());
+        mapReduceObservableArray.push(...index.maps());
         if (!!index.reduce()) {
             mapReduceObservableArray.push(index.reduce);
         }

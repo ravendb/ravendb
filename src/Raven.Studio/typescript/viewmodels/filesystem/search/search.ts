@@ -83,7 +83,10 @@ class search extends viewModelBase {
         var searchSingleInputClauseViewModel: searchSingleInputClause = new searchSingleInputClause("Filename ends with: ");
         searchSingleInputClauseViewModel
             .applyFilterTask
-                .done((input: string) => this.addToSearchInput("__rfileName:" + queryUtil.escapeTerm(String.prototype.reverse(input)) + "*"));
+            .done((input: string) => {
+                const stringReversed = input.split("").reverse().join("");
+                this.addToSearchInput("__rfileName:" + queryUtil.escapeTerm(stringReversed) + "*");
+            });
         app.showBootstrapDialog(searchSingleInputClauseViewModel);
     }
 

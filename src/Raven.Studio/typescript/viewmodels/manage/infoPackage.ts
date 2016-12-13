@@ -1,5 +1,4 @@
 import app = require("durandal/app");
-import nv = require('nvd3');
 import messagePublisher = require("common/messagePublisher");
 import appUrl = require("common/appUrl");
 import svgDownloader = require("common/svgDownloader");
@@ -22,7 +21,7 @@ class stackInfo {
 
     static shortName(v: string) {
         var withoutArgs = v.replace(/\(.*?\)/g, '');
-        if (withoutArgs.contains('+')) {
+        if (withoutArgs.includes('+')) {
             return withoutArgs.replace(/.*\.(.*\+.*)/, '$1');
         } else {
             return withoutArgs.replace(/.*\.([^\.]+\.[^\.]+)$/, '$1');
@@ -307,7 +306,7 @@ class infoPackage extends viewModelBase {/*
                 .append("g")
                 .attr('class', 'traces')
                 .style('clip-path', d => 'url(#stack-clip-path-' + index + ')');
-            var stack = textGroup.selectAll('.trace').data(d.stackWithShortcuts().reverse());
+            var stack = textGroup.selectAll('.trace').data(_.reverse(d.stackWithShortcuts()));
             var reversedOriginalStack = d.StackTrace.reverse();
             stack
                 .enter()

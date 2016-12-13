@@ -698,7 +698,7 @@ class visualizerGraphGlobal {
                 let targetXY: [number, number] = page.getGlobalTargetConnectionPoint();
                 let targetXOffset = targetXY[0] - page.getGlobalTargetConnectionPointXOffset();
 
-                while (targetXValuesDrawnOnScreen.contains(targetXOffset)) {
+                while (_.includes(targetXValuesDrawnOnScreen, targetXOffset)) {
                     targetXOffset += 4;
                 }
                 targetXY[0] = targetXOffset;

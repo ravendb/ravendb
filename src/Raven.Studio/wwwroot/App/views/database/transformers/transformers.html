@@ -97,7 +97,7 @@
     <span class="properties-label">Mode:</span>
     <div class="btn-group properties-value">
         <button type="button" class="btn dropdown-toggle set-size" data-toggle="dropdown" 
-                data-bind="enable: !$root.localLockChangesInProgress().contains(name()), css: { 'btn-spinner': $root.localLockChangesInProgress().contains(name()) }">
+                data-bind="enable: !_.includes($root.localLockChangesInProgress(), name()), css: { 'btn-spinner': _.includes($root.localLockChangesInProgress(), name()) }">
             <span data-bind="visible: isLocked()">
                 <i class="icon-lock"></i><span>Locked</span>
             </span>

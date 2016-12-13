@@ -257,7 +257,7 @@ class storageReport extends viewModelBase {
             .attr("y", d => showTypePredicate(d) ? d.dy/2 + showTypeOffset : d.dy / 2)
             .attr("dy", ".35em")
             .attr("text-anchor", "middle")
-            .text(d => d.type.capitalizeFirstLetter())
+            .text(d => _.upperFirst(d.type))
             .each(function (d) {
                 self.wrap(this, d.dx);
             });
@@ -303,7 +303,7 @@ class storageReport extends viewModelBase {
             .style("opacity", 1);
         let html = "Name: " + d.name;
         if (d.showType) {
-            html += "<br />Type: <strong>" + d.type.capitalizeFirstLetter() + "</strong>";
+            html += "<br />Type: <strong>" + _.upperFirst(d.type) + "</strong>";
         }
         if (this.shouldDisplayNumberOfEntires(d)) {
             html += "<br />Entries: <strong>" + d.numberOfEntries.toLocaleString() + "</strong>";

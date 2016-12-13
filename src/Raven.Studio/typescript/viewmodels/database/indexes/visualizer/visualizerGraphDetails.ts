@@ -275,7 +275,7 @@ class leafPageItem extends pageItem {
                 }
                 result.push(entry);
             } else {
-                if (result.length === 0 || result.last() instanceof entryItem) {
+                if (result.length === 0 || _.last(result) instanceof entryItem) {
                     result.push(new entryPaddingItem());
                 }
             }

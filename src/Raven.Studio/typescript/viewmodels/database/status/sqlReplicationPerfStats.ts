@@ -3,7 +3,6 @@ import generalUtils = require("common/generalUtils");
 import changesContext = require("common/changesContext");
 import getSqlReplicationPerfStatsCommand = require("commands/database/debug/getSqlReplicationPerfStatsCommand");
 import d3 = require("d3");
-import nv = require('nvd3');
 import database = require('models/resources/database');
 import changeSubscription = require('common/changeSubscription');
 
