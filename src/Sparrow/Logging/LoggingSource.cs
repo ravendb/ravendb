@@ -393,13 +393,10 @@ namespace Sparrow.Logging
                 {
                     socket.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None).Wait();
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     WebSocketContext value;
-                    Console.WriteLine(ex.Message);
-                    if (_listeners.TryRemove(socket, out value))
-                    {
-                    }
+                    _listeners.TryRemove(socket, out value);
                     if (_listeners.Count == 0)
                     {
                         lock (this)

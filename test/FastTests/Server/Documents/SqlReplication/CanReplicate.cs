@@ -577,14 +577,16 @@ replicateToOrders(orderData);");
                     ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[1024]);
                     while (client.State == WebSocketState.Open)
                     {
-                        sb.AppendLine(await ReadFromWebSocket(buffer, client));
+                        var value = await ReadFromWebSocket(buffer, client);
+                        sb.AppendLine(value);
+                        if (value.Contains("skipping document: orders/1"))
+                            return;
                     }
                 });
                 await SetupSqlReplication(store, @"output ('Tralala');asdfsadf
 var nameArr = this.StepName.split('.');");
 
                 Assert.True(eventSlim.Wait(TimeSpan.FromSeconds(30)));
-                await client.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
                 await task;
 
                 var msg = "Could not process SQL Replication script for OrdersAndLines, skipping document: orders/1";
@@ -600,7 +602,14 @@ var nameArr = this.StepName.split('.');");
                 WebSocketReceiveResult result;
                 do
                 {
-                    result = await source.ReceiveAsync(buffer, CancellationToken.None);
+                    try
+                    {
+                        result = await source.ReceiveAsync(buffer, CancellationToken.None);
+                    }
+                    catch (Exception)
+                    {
+                        break;
+                    }
                     ms.Write(buffer.Array, buffer.Offset, result.Count);
                 }
                 while (!result.EndOfMessage);
