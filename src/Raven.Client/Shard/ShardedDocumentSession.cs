@@ -43,9 +43,9 @@ namespace Raven.Client.Shard
         /// <param name="dbName">The db name.</param>
         /// <param name="documentStore"></param>
         /// <param name="listeners"></param>
-        public ShardedDocumentSession(string dbName, ShardedDocumentStore documentStore, RequestExecuter requestExecuter, DocumentSessionListeners listeners, Guid id,
+        public ShardedDocumentSession(string dbName, ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
                                       ShardStrategy shardStrategy, IDictionary<string, IDatabaseCommands> shardDbCommands)
-            : base(dbName, documentStore, requestExecuter, listeners, id, shardStrategy, shardDbCommands) { }
+            : base(dbName, documentStore, listeners, id, shardStrategy, shardDbCommands) { }
 
         protected override JsonDocument GetJsonDocument(string documentKey)
         {

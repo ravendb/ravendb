@@ -27,7 +27,7 @@ namespace Raven.Client.Shard
         protected readonly IDictionary<string, TDatabaseCommands> shardDbCommands;
 
 
-        protected BaseShardedDocumentSession(string databaseName, ShardedDocumentStore documentStore, RequestExecuter requestExecuter, DocumentSessionListeners listeners, Guid id,
+        protected BaseShardedDocumentSession(string databaseName, ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
             ShardStrategy shardStrategy, IDictionary<string, TDatabaseCommands> shardDbCommands)
             : base(databaseName, documentStore, listeners, id)
         {

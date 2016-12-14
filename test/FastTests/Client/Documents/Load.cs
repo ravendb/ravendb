@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Document;
 using Xunit;
 
 namespace FastTests.Client.Documents
@@ -50,9 +51,9 @@ namespace FastTests.Client.Documents
                     session.SaveChanges();
                 }
 
-                using (var newSession = store.OpenNewSession())
+                using (var newSession = (DocumentSession)store.OpenSession())
                 {
-                    var bar  =  newSession.LoadInternal<Bar>(new[] {barId},new []
+                    var bar  = newSession.LoadInternal<Bar>(new[] {barId},new []
                     {
                         new KeyValuePair<string, Type>("FooId",typeof(string))
                     });
@@ -91,7 +92,7 @@ namespace FastTests.Client.Documents
                     session.SaveChanges();
                 }
 
-                using (var newSession = store.OpenNewSession())
+                using (var newSession = (DocumentSession)store.OpenSession())
                 {
                     var bar = newSession.LoadInternal<Bar>(new[] { barId }, new[]
                     {

@@ -24,22 +24,6 @@ namespace Raven.Client
     public interface IDocumentStore : IDisposalNotification
     {
         /// <summary>
-        /// Store events
-        /// </summary>
-        event EventHandler<BeforeStoreEventArgs> OnBeforeStore;
-        event EventHandler<AfterStoreEventArgs> OnAfterStore;
-
-        /// <summary>
-        /// Delete event
-        /// </summary>
-        event EventHandler<BeforeDeleteEventArgs> OnBeforeDelete;
-
-        /// <summary>
-        /// Query event
-        /// </summary>
-        event EventHandler<BeforeQueryExecutedEventArgs> OnBeforeQueryExecuted;
-
-        /// <summary>
         /// Subscribe to change notifications from the server
         /// </summary>
         IDatabaseChanges Changes(string database = null);
