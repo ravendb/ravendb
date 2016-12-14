@@ -12,8 +12,7 @@ class rangeAggregator {
 
     constructor(inputItems: Array<[Date, Date]>) {
         this.maxConcurrentIndexes = 0;
-
-        this.items = inputItems.map((x) => { return { startTime: x[0].getTime(), endTime: x[1].getTime() } });
+        this.items = inputItems.map((x) => ({ startTime: x[0].getTime(), endTime: x[1].getTime() }));
     }
 
     inputItems(inputItems: Array<workTimeUnit>) {
