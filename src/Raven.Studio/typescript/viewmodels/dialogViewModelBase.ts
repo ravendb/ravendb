@@ -23,6 +23,10 @@ abstract class dialogViewModelBase {
         }
     }
 
+    protected bindToCurrentInstance(...methods: Array<keyof this>) {
+        _.bindAll(this, ...methods);
+    }
+
     attached() {
         this.onEnterBinding = jwerty.key("enter", () => this.enterKeyPressed());
     }

@@ -113,6 +113,8 @@ class registration extends dialogViewModelBase {
         super();
         this.license = license;
 
+        this.bindToCurrentInstance("dismiss");
+
         this.dismissVisible(canBeDismissed);
     }
 

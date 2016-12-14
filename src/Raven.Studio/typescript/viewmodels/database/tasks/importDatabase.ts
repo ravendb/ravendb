@@ -32,6 +32,9 @@ class importDatabase extends viewModelBase {
 
     constructor() {
         super();
+
+        this.bindToCurrentInstance("copyCommandToClipboard", "fileSelected");
+
         aceEditorBindingHandler.install();
         this.isUploading.subscribe(v => {
             if (!v) {

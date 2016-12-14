@@ -49,6 +49,14 @@ class indexes extends viewModelBase {
     constructor() {
         super();
         this.initObservables();
+        this.bindToCurrentInstance(
+            "lowPriority", "highPriority", "normalPriority",
+            "resetIndex", "deleteIndex",
+            "unlockIndex", "lockIndex", "lockErrorIndex", "lockSideBySide",
+            "enableIndex", "disableIndex",
+            "unlockSelectedIndexes", "lockSelectedIndexes", "lockSideBySideSelectedIndexes", "lockErrorSelectedIndexes",
+            "deleteSelectedIndexes", "startIndexing", "stopIndexing", "resumeIndexing", "pauseUntilRestart", "toggleSelectAll"
+        );
     }
 
     private getAllIndexes(): index[] {
@@ -124,21 +132,18 @@ class indexes extends viewModelBase {
             .done(([stats]: [Array<Raven.Client.Data.Indexes.IndexStats>], [replacements]: [indexReplaceDocument[]], [statuses]: [Raven.Client.Data.Indexes.IndexingStatus]) => this.processData(stats, replacements, statuses));
     }
 
-    processData(stats: Array<Raven.Client.Data.Indexes.IndexStats>, replacements: indexReplaceDocument[], statuses: Raven.Client.Data.Indexes.IndexingStatus) {
+    private processData(stats: Array<Raven.Client.Data.Indexes.IndexStats>, replacements: indexReplaceDocument[], statuses: Raven.Client.Data.Indexes.IndexingStatus) {
         //TODO: handle replacements
 
-        const pausedStatus = "Paused" as Raven.Client.Data.Indexes.IndexRunningStatus;
-
-        this.indexingEnabled(statuses.Status !== pausedStatus);
+        this.indexingEnabled(statuses.Status !== "Paused");
 
         stats
             .map(i => new index(i))
             .forEach(i => {
-                const paused = !!statuses.Indexes.find(x => x.Name === i.name && x.Status === pausedStatus);
+                const paused = !!statuses.Indexes.find(x => x.Name === i.name && x.Status === "Paused");
                 i.pausedUntilRestart(paused);
                 this.putIndexIntoGroups(i);
             });
-                 
     }
 
     private putIndexIntoGroups(i: index): void {
@@ -209,7 +214,7 @@ class indexes extends viewModelBase {
         this.resetsInProgress.delete(i.name);
     }
 
-    processIndexEvent(e: Raven.Abstractions.Data.IndexChangeNotification) {
+    private processIndexEvent(e: Raven.Abstractions.Data.IndexChangeNotification) {
         const indexRemovedEvent = "IndexRemoved" as Raven.Abstractions.Data.IndexChangeTypes;
         if (e.Type === indexRemovedEvent) {
             if (!this.resetsInProgress.has(e.Name)) {
@@ -359,7 +364,7 @@ class indexes extends viewModelBase {
         ];
     }
 
-    processReplaceEvent() {
+    private processReplaceEvent() {
         setTimeout(() => this.fetchIndexes(), 10);
     }
 
@@ -384,7 +389,23 @@ class indexes extends viewModelBase {
         new forceIndexReplace(idx.name, this.activeDatabase()).execute();
     }
 
-    setLockModeSelectedIndexes(lockModeString: Raven.Abstractions.Indexing.IndexLockMode, lockModeStrForTitle: string) {
+    unlockSelectedIndexes() {
+        this.setLockModeSelectedIndexes("Unlock", "Unlock");
+    }
+
+    lockSelectedIndexes() {
+        this.setLockModeSelectedIndexes("LockedIgnore", "Lock");
+    }
+
+    lockSideBySideSelectedIndexes() {
+        this.setLockModeSelectedIndexes("SideBySide", "Lock (Side By Side)");
+    }
+
+    lockErrorSelectedIndexes() {
+        this.setLockModeSelectedIndexes("LockedError", "Lock (Error)");
+    }
+
+    private setLockModeSelectedIndexes(lockModeString: Raven.Abstractions.Indexing.IndexLockMode, lockModeStrForTitle: string) {
         if (this.lockModeCommon() === lockModeString)
             return;
 

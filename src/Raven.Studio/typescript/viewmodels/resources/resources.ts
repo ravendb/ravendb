@@ -51,6 +51,9 @@ class resources extends viewModelBase {
     
     constructor() {
         super();
+
+        this.bindToCurrentInstance("loadResource", "toggleResource", "toggleDatabaseIndexing", "deleteResource");
+
         this.initObservables();
     }
 

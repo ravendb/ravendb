@@ -60,6 +60,10 @@ class viewModelBase {
         eventsCollector.default.reportViewModel(this);
     }
 
+    protected bindToCurrentInstance(...methods: Array<keyof this>) {
+        _.bindAll(this, ...methods);
+    }
+
     canActivate(args: any): boolean | JQueryPromise<canActivateResultDto> {
         var self = this;
         setTimeout(() => viewModelBase.showSplash(self.isAttached === false), 700);

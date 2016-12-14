@@ -29,6 +29,11 @@ class transformers extends viewModelBase {
 
     constructor() {
         super();
+
+        this.bindToCurrentInstance("deleteTransformer", "deleteSelectedTransformers",
+            "unlockTransformer", "lockTransformer",
+            "unlockSelectedTransformers", "lockSelectedTransformers");
+
         this.initObservables();
     }
 
@@ -118,7 +123,7 @@ class transformers extends viewModelBase {
         }
     }
 
-    findTransformerByName(transformerName: string): transformer {
+    private findTransformerByName(transformerName: string): transformer {
         const transformsGroups = this.transformersGroups();
         for (let i = 0; i < transformsGroups.length; i++) {
             const group = transformsGroups[i];
@@ -134,7 +139,7 @@ class transformers extends viewModelBase {
         return null;
     }
 
-    putTransformerIntoGroup(trans: transformer) {
+    private putTransformerIntoGroup(trans: transformer) {
         eventsCollector.default.reportEvent("transformers", "put-into-group");
 
         const groupName = trans.name().split("/")[0];
@@ -188,7 +193,15 @@ class transformers extends viewModelBase {
         this.transformersGroups.remove((item: transformerGroup) => item.transformers().length === 0);
     }
 
-    setLockModeSelectedTransformers(lockModeString: Raven.Abstractions.Indexing.TransformerLockMode,
+    unlockSelectedTransformers() {
+        this.setLockModeSelectedTransformers("Unlock", "Unlock");
+    }
+
+    lockSelectedTransformers() {
+        this.setLockModeSelectedTransformers("LockedIgnore", "Lock");
+    }
+
+    private setLockModeSelectedTransformers(lockModeString: Raven.Abstractions.Indexing.TransformerLockMode,
         localModeString: string) {
 
         if (this.lockModeCommon() === lockModeString)
