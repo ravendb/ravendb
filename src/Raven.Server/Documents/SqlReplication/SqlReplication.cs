@@ -3,14 +3,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Util;
 using Raven.Server.Alerts;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -35,20 +34,20 @@ namespace Raven.Server.Documents.SqlReplication
         protected Thread _replicationThread;
         protected bool _disposed;
         protected CancellationTokenSource _cancellationTokenSource;
-        public AsyncManualResetEvent WaitForChanges;
+        public ManualResetEventSlim WaitForChanges;
 
         public SqlReplication(DocumentDatabase database, SqlReplicationConfiguration configuration)
         {
             _logger = LoggingSource.Instance.GetLogger(database.Name, GetType().FullName);
             _database = database;
             _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
-            WaitForChanges = new AsyncManualResetEvent(_cancellationTokenSource.Token);
+            WaitForChanges = new ManualResetEventSlim();
 
             Configuration = configuration;
             Statistics = new SqlReplicationStatistics(configuration.Name);
             MetricsCountersManager = new SqlReplicationMetricsCountersManager();
         }
-      
+
         private void LoadLastEtag(DocumentsOperationContext context)
         {
             var sqlReplicationStatus = _database.DocumentsStorage.Get(context, Constants.SqlReplication.RavenSqlReplicationStatusPrefix + ReplicationUniqueName);
@@ -77,12 +76,12 @@ namespace Raven.Server.Documents.SqlReplication
             _database.DocumentsStorage.Put(context, key, null, document);
         }
 
-        protected Task ExecuteReplicationOnce()
+        protected void ExecuteReplicationOnce()
         {
             if (Configuration.Disabled)
-                return Task.CompletedTask;
+                return;
             if (Statistics.SuspendUntil.HasValue && Statistics.SuspendUntil.Value > SystemTime.UtcNow)
-                return Task.CompletedTask;
+                return;
 
             int countOfReplicatedItems = 0;
             var startTime = SystemTime.UtcNow;
@@ -98,7 +97,7 @@ namespace Raven.Server.Documents.SqlReplication
                 using (var tx = context.OpenReadTransaction())
                 {
                     LoadLastEtag(context);
-                    
+
                     hasReplicated = ReplicateDeletionsToDestination(context) ||
                                  ReplicateChangesToDestination(context, out countOfReplicatedItems);
 
@@ -129,8 +128,6 @@ namespace Raven.Server.Documents.SqlReplication
                 var afterReplicationCompleted = _database.SqlReplicationLoader.AfterReplicationCompleted;
                 afterReplicationCompleted?.Invoke(Statistics);
             }
-
-            return Task.CompletedTask;
         }
 
         protected bool HasMoreDocumentsToSend()
@@ -157,8 +154,8 @@ namespace Raven.Server.Documents.SqlReplication
                 }
                 writer.Commit();
                 if (_logger.IsInfoEnabled)
-                    _logger.Info("Replicated deletes of " + string.Join(", ", documentsKeys)  + " for config " + Configuration.Name);
-                
+                    _logger.Info("Replicated deletes of " + string.Join(", ", documentsKeys) + " for config " + Configuration.Name);
+
             }
             return true;
         }
@@ -186,13 +183,13 @@ namespace Raven.Server.Documents.SqlReplication
                     if (writer.ExecuteScript(scriptResult))
                     {
                         if (_logger.IsInfoEnabled)
-                            _logger.Info("Replicated changes of " + string.Join(", ", documents.Select(d => d.Key)) + " for replication " +  Configuration.Name);
+                            _logger.Info("Replicated changes of " + string.Join(", ", documents.Select(d => d.Key)) + " for replication " + Configuration.Name);
                         Statistics.CompleteSuccess(countOfReplicatedItems);
                     }
                     else
                     {
                         if (_logger.IsInfoEnabled)
-                            _logger.Info("Replicated changes (with some errors) of " + string.Join(", ", documents.Select(d => d.Key))  + " for replication " + Configuration.Name);
+                            _logger.Info("Replicated changes (with some errors) of " + string.Join(", ", documents.Select(d => d.Key)) + " for replication " + Configuration.Name);
                         Statistics.Success(countOfReplicatedItems);
                     }
                 }
@@ -212,7 +209,7 @@ namespace Raven.Server.Documents.SqlReplication
                 {
                     // double the fallback time (but don't cross 15 minutes)
                     var totalSeconds = (SystemTime.UtcNow - Statistics.LastErrorTime.Value).TotalSeconds;
-                    newTime = SystemTime.UtcNow.AddSeconds(Math.Min(60*15, Math.Max(5, totalSeconds*2)));
+                    newTime = SystemTime.UtcNow.AddSeconds(Math.Min(60 * 15, Math.Max(5, totalSeconds * 2)));
                 }
                 Statistics.RecordWriteError(e, _database, countOfReplicatedItems, newTime);
                 return false;
@@ -288,7 +285,7 @@ namespace Raven.Server.Documents.SqlReplication
 
             if (writeToLog)
                 if (_logger.IsInfoEnabled)
-                    _logger.Info("Connection string name cannot be empty for sql replication config: " + Configuration.ConnectionStringName +", ignoring sql replication setting.");
+                    _logger.Info("Connection string name cannot be empty for sql replication config: " + Configuration.ConnectionStringName + ", ignoring sql replication setting.");
             Statistics.LastAlert = new Alert
             {
                 Type = AlertType.SqlReplicationConnectionStringMissing,
@@ -369,7 +366,7 @@ namespace Raven.Server.Documents.SqlReplication
                 Threading.TrySettingCurrentThreadPriority(ThreadPriority.BelowNormal);
 
                 //haven't found better way to synchronize async method
-                AsyncHelpers.RunSync(ExecuteReplicationLoop);
+                ExecuteReplicationLoop();
             })
             {
                 Name = $"Replication thread, {ReplicationUniqueName}",
@@ -379,7 +376,7 @@ namespace Raven.Server.Documents.SqlReplication
             _replicationThread.Start();
         }
 
-        private async Task ExecuteReplicationLoop()
+        private void ExecuteReplicationLoop()
         {
             while (_cancellationTokenSource.IsCancellationRequested == false)
             {
@@ -392,7 +389,7 @@ namespace Raven.Server.Documents.SqlReplication
                 {
                     _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-                    await ExecuteReplicationOnce();
+                    ExecuteReplicationOnce();
 
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Finished replication for '{ReplicationUniqueName}'.");
@@ -418,10 +415,7 @@ namespace Raven.Server.Documents.SqlReplication
 
                 try
                 {
-                    //if this returns false, this means canceled token is activated                    
-                    if (await WaitForChanges.WaitAsync() == false)
-                        //thus, if code reaches here, cancellation token source has "cancel" requested
-                        return; 
+                    WaitForChanges.Wait(_cancellationTokenSource.Token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -432,25 +426,15 @@ namespace Raven.Server.Documents.SqlReplication
 
         public virtual void Dispose()
         {
-            try
-            {
-                _cancellationTokenSource.Cancel();					
-            }
-            catch (ObjectDisposedException)
-            {
-                //precaution, should not happen
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("ObjectDisposedException thrown during replication executer disposal, should not happen. Something is wrong here.");
-            }
-            catch (AggregateException e)
-            {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Error during replication executer disposal, most likely it is a bug.",e);
-            }
-            finally
-            {
-                _disposed = true;
-            }
+            _disposed = true;
+
+            _cancellationTokenSource.Cancel();
+
+            var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(SqlReplication)} '{ReplicationUniqueName}'");
+
+            exceptionAggregator.Execute(() => _replicationThread?.Join());
+
+            exceptionAggregator.ThrowIfNeeded();
         }
     }
 }

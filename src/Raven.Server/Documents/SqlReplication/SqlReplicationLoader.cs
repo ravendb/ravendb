@@ -116,7 +116,7 @@ namespace Raven.Server.Documents.SqlReplication
         private void WakeReplication(DocumentChangeNotification documentChangeNotification)
         {
             foreach (var replication in Replications)
-                replication.WaitForChanges.SetByAsyncCompletion();
+                replication.WaitForChanges.Set();
         }
 
         private void HandleSystemDocumentChange(DocumentChangeNotification notification)
