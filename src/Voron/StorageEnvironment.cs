@@ -103,14 +103,10 @@ namespace Voron
                     options.BasePath != null && 
                     IsStorageSupportingO_Direct(options.BasePath) == false)
                 {
-                    Console.WriteLine("From : " + options.PosixOpenFlags + " for " + options.BasePath);
-
-                    options.PosixOpenFlags ^= ~OpenFlagsThatAreDifferentBetweenPlatforms.O_DIRECT;
+                    options.PosixOpenFlags &= ~OpenFlagsThatAreDifferentBetweenPlatforms.O_DIRECT;
                     var message = "Path " + options.BasePath +
                                   " not supporting O_DIRECT writes. As a result - data durability is not guarenteed";
                     _options.InvokeNonDurabalitySupportError(this, message, null);
-
-                    Console.WriteLine("CHANGING TO : " + options.PosixOpenFlags + " for " + options.BasePath);
                 }
 
                 _journal = new WriteAheadJournal(this);
