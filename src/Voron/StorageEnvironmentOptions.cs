@@ -22,6 +22,7 @@ namespace Voron
         public string TempPath { get; }
 
         public event EventHandler<RecoveryErrorEventArgs> OnRecoveryError;
+        public event EventHandler<NonDurabalitySupportEventArgs> OnNonDurabalitySupportError = (sender, args) => { };
 
         public abstract override string ToString();
 
@@ -35,6 +36,18 @@ namespace Voron
             }
 
             handler(this, new RecoveryErrorEventArgs(message, e));
+        }
+
+        public void InvokeNonDurabalitySupportError(object sender, string message, Exception e)
+        {
+            var handler = OnNonDurabalitySupportError;
+            if (handler == null)
+            {
+                throw new InvalidDataException(message + Environment.NewLine +
+                     "An exception has been thrown because there isn't a listener to the OnNonDurabalitySupportError event on the storage options.", e);
+            }
+
+            handler(this, new NonDurabalitySupportEventArgs(message, e));
         }
 
         public long? InitialFileSize { get; set; }
@@ -521,12 +534,12 @@ namespace Voron
                RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
 
         public TransactionsMode TransactionsMode { get; set; }
-        public OpenFlags PosixOpenFlags = SafePosixOpenFlags;
+        public OpenFlags PosixOpenFlags;
         public Win32NativeFileAttributes WinOpenFlags = SafeWin32OpenFlags;
         public DateTime? NonSafeTransactionExpiration { get; set; }
 
 
         public const Win32NativeFileAttributes SafeWin32OpenFlags = Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering;
-        public static OpenFlags SafePosixOpenFlags = OpenFlags.O_DSYNC | OpenFlagsThatAreDifferentBetweenPlatforms.O_DIRECT;
+        public OpenFlags SafePosixOpenFlags = OpenFlags.O_DSYNC | OpenFlagsThatAreDifferentBetweenPlatforms.O_DIRECT;
     }
 }
