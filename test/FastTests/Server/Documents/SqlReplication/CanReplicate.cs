@@ -550,8 +550,7 @@ replicateToOrders(orderData);");
         [NonLinuxFact]
         public async Task WillLog()
         {
-            ClientWebSocket client = new ClientWebSocket();
-
+            using (var client = new ClientWebSocket())
             using (var store = GetDocumentStore())
             {
                 CreateRdbmsSchema(store);
@@ -572,17 +571,17 @@ replicateToOrders(orderData);");
                 string str = string.Format("{0}/admin/logs/watch", store.Url.Replace("http", "ws"));
                 StringBuilder sb = new StringBuilder();
                 await client.ConnectAsync(new Uri(str), CancellationToken.None);
-                var task= Task.Run(async () =>
-                {
-                    ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[1024]);
-                    while (client.State == WebSocketState.Open)
-                    {
-                        var value = await ReadFromWebSocket(buffer, client);
-                        sb.AppendLine(value);
-                        if (value.Contains("skipping document: orders/1"))
-                            return;
-                    }
-                });
+                var task = Task.Run(async () =>
+                 {
+                     ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[1024]);
+                     while (client.State == WebSocketState.Open)
+                     {
+                         var value = await ReadFromWebSocket(buffer, client);
+                         sb.AppendLine(value);
+                         if (value.Contains("skipping document: orders/1"))
+                             return;
+                     }
+                 });
                 await SetupSqlReplication(store, @"output ('Tralala');asdfsadf
 var nameArr = this.StepName.split('.');");
 
