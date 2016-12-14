@@ -45,8 +45,6 @@ namespace Raven.Client.Document
 
         private readonly ConcurrentDictionary<string, RequestTimeMetric> requestTimeMetrics = new ConcurrentDictionary<string, RequestTimeMetric>(StringComparer.OrdinalIgnoreCase);
 
-        private readonly ConcurrentDictionary<string, Lazy<RequestExecuter>> _requestExecuters = new ConcurrentDictionary<string, Lazy<RequestExecuter>>(StringComparer.OrdinalIgnoreCase);
-
         /// <summary>
         /// The current session id - only used during construction
         /// </summary>
@@ -269,27 +267,7 @@ namespace Raven.Client.Document
                 Database = database
             });
         }
-
-        /// <summary>
-        /// Opens the session.
-        /// </summary>
-        /// <returns></returns>
-        public Documents.DocumentSession OpenNewSession()
-        {
-            return OpenNewSession(new OpenSessionOptions());
-        }
-
-        /// <summary>
-        /// Opens the session for a particular database
-        /// </summary>
-        public Documents.DocumentSession OpenNewSession(string database)
-        {
-            return OpenNewSession(new OpenSessionOptions
-            {
-                Database = database
-            });
-        }
-
+        
         public override IDocumentSession OpenSession(OpenSessionOptions options)
         {
             EnsureNotClosed();
@@ -308,38 +286,6 @@ namespace Raven.Client.Document
             {
                 currentSessionId = null;
             }
-        }
-
-        public Documents.DocumentSession OpenNewSession(OpenSessionOptions options)
-        {
-            EnsureNotClosed();
-
-            var sessionId = Guid.NewGuid();
-            currentSessionId = sessionId;
-            try
-            {
-                var databaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
-                var requestExecuter = GetRequestExecuter(databaseName);
-                var session = new Documents.DocumentSession(databaseName, this, sessionId,
-                    SetupCommands(DatabaseCommands, databaseName, options.Credentials, options), requestExecuter);
-                RegisterEvents(session);
-                // AfterSessionCreated(session);
-                return session;
-            }
-            finally
-            {
-                currentSessionId = null;
-            }
-        }
-
-        private RequestExecuter GetRequestExecuter(string databaseName)
-        {
-            Lazy<RequestExecuter> lazy;
-            if (_requestExecuters.TryGetValue(databaseName, out lazy))
-                return lazy.Value;
-            lazy = _requestExecuters.GetOrAdd(databaseName,
-                dbName => new Lazy<RequestExecuter>(() => new RequestExecuter(Url, dbName, ApiKey)));
-            return lazy.Value;
         }
 
         private static IDatabaseCommands SetupCommands(IDatabaseCommands databaseCommands, string database, ICredentials credentialsForSession, OpenSessionOptions options)
@@ -644,53 +590,6 @@ namespace Raven.Client.Document
             {
                 jsonRequestFactory.RequestTimeout = old;
             });
-        }
-
-        private Documents.Async.AsyncDocumentSession OpenNewAsyncSessionInternal(OpenSessionOptions options)
-        {
-            AssertInitialized();
-            EnsureNotClosed();
-
-            var sessionId = Guid.NewGuid();
-            currentSessionId = sessionId;
-            try
-            {
-                var asyncDatabaseCommands = SetupCommandsAsync(AsyncDatabaseCommands, options.Database, options.Credentials, options);
-                if (AsyncDatabaseCommands == null)
-                    throw new InvalidOperationException("You cannot open an async session because it is not supported on embedded mode");
-
-                var databaseName = options.Database ?? DefaultDatabase ?? MultiDatabase.GetDatabaseName(Url);
-                var requestExecuter = GetRequestExecuter(databaseName);
-                var session = new Documents.Async.AsyncDocumentSession(databaseName, this, asyncDatabaseCommands, requestExecuter, sessionId);
-                //AfterSessionCreated(session);
-                return session;
-            }
-            finally
-            {
-                currentSessionId = null;
-            }
-        }
-
-        /// <summary>
-        /// Opens the async session.
-        /// </summary>
-        /// <returns></returns>
-        public Documents.Async.AsyncDocumentSession OpenNewAsyncSession(string databaseName)
-        {
-            return OpenNewAsyncSession(new OpenSessionOptions
-            {
-                Database = databaseName
-            });
-        }
-
-        public Documents.Async.AsyncDocumentSession OpenNewAsyncSession(OpenSessionOptions options)
-        {
-            return OpenNewAsyncSessionInternal(options);
-        }
-
-        public Documents.Async.AsyncDocumentSession OpenNewAsyncSession()
-        {
-            return OpenNewAsyncSessionInternal(new OpenSessionOptions());
         }
 
         /// <summary>

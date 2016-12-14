@@ -1,15 +1,17 @@
 ﻿using System;
 using System.IO;
 using System.Net.Http;
-using Raven.Client.Documents.Commands;
-using Raven.Client.Http;
+using NewClientTests;
+using Raven.NewClient.Client.Blittable;
+using Raven.NewClient.Client.Commands;
+using Raven.NewClient.Client.Http;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron.Exceptions;
 using Xunit;
 
-namespace FastTests.Server.Basic
+namespace NewClientTests.NewClient.Server.Basic
 {
     public class ServerStore : RavenTestBase
     {
@@ -63,8 +65,8 @@ namespace FastTests.Server.Basic
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = String.Empty;
-                IsAdminCommand = true;
+                url = $"{node.Url}/admin/databases/{node.Database}";
+                
                 var message = new HttpRequestMessage
                 {
                     Method = HttpMethod.Put
@@ -87,8 +89,8 @@ namespace FastTests.Server.Basic
         {        
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = String.Empty;
-                IsAdminCommand = true;
+                url = $"{node.Url}/admin/databases/{node.Database}";
+
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Get,

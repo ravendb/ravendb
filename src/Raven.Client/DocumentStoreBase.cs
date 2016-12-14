@@ -339,10 +339,6 @@ namespace Raven.Client
         /// Internal notification for integration tools, mainly
         ///</summary>
         public event Action<InMemoryDocumentSessionOperations> SessionCreatedInternal;
-        public event EventHandler<BeforeStoreEventArgs> OnBeforeStore;
-        public event EventHandler<AfterStoreEventArgs> OnAfterStore;
-        public event EventHandler<BeforeDeleteEventArgs> OnBeforeDelete;
-        public event EventHandler<BeforeQueryExecutedEventArgs> OnBeforeQueryExecuted;
 
         protected readonly ProfilingContext profilingContext = new ProfilingContext();
 
@@ -376,15 +372,5 @@ namespace Raven.Client
         }
 
         public abstract void InitializeProfiling();
-
-        protected void RegisterEvents(Documents.InMemoryDocumentSessionOperations session)
-        {
-            session.OnBeforeStore += OnBeforeStore;
-            session.OnAfterStore += OnAfterStore;
-            session.OnBeforeDelete += OnBeforeDelete;
-            session.OnBeforeQueryExecuted += OnBeforeQueryExecuted;
-        }
-
-
     }
 }

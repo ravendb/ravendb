@@ -38,7 +38,7 @@ namespace Raven.Client.Shard
 
         public AsyncShardedDocumentSession(string dbName, ShardedDocumentStore documentStore, DocumentSessionListeners listeners, Guid id,
                                            ShardStrategy shardStrategy, IDictionary<string, IAsyncDatabaseCommands> shardDbCommands)
-            : base(dbName, documentStore, null, listeners, id, shardStrategy, shardDbCommands)
+            : base(dbName, documentStore, listeners, id, shardStrategy, shardDbCommands)
         {
             GenerateDocumentKeysOnStore = false;
             asyncDocumentKeyGeneration = new AsyncDocumentKeyGeneration(this, entitiesAndMetadata.TryGetValue, ModifyObjectId);

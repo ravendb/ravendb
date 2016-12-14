@@ -2,7 +2,7 @@
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Client.Documents.SessionOperations.Commands;
+using Raven.Abstractions.Commands;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
