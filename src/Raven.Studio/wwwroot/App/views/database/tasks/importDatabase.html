@@ -9,7 +9,7 @@
             <div class="row">
                 <div class="col-sm-6">
                     <div class="input-group file-input">
-                        <input required="" type="file" id="importDatabaseFilePicker" data-bind="event: { change: $root.fileSelected.bind($root, $element.value) }, disable: isImporting" tabindex="-1">
+                        <input required="" type="file" id="importDatabaseFilePicker" data-bind="event: { change: _.partial(fileSelected, $element.value) }, disable: isImporting" tabindex="-1">
                         <span class="static-name form-control" data-bind="text: importedFileName() || 'Select file...'"></span>
                         <span class="input-group-btn">
                             <label for="importDatabaseFilePicker" class="btn btn-default">
@@ -100,7 +100,7 @@
                     <label class="control-label">Command</label>
                     <div class="input-group">
                         <span class="input-group-btn">
-                            <button data-bind="click: $root.copyCommandToClipboard.bind($root)" class="btn btn-default">
+                            <button data-bind="click: $root.copyCommandToClipboard" class="btn btn-default">
                                 <i class="icon-copy"></i>
                                 <span>Copy to clipboard</span>
                             </button>

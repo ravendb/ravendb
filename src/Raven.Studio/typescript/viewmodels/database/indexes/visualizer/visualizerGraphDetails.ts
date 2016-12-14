@@ -145,6 +145,7 @@ abstract class pageItem extends layoutableItem {
 
     constructor(parentPage: branchPageItem, pageNumber: number, aggregationResult: any) {
         super();
+
         this.pageNumber = pageNumber;
         this.parentPage = parentPage;
         this.aggregationResult = aggregationResult;
@@ -455,6 +456,10 @@ class visualizerGraphDetails {
 
     private currentLineOffset = 0;
     private connectionsBaseY = 0;
+
+    constructor() {
+        _.bindAll(this, "goToMasterView" as keyof this);
+    }
 
     init(goToMasterViewCallback: () => void, trees: Raven.Server.Documents.Indexes.Debugging.ReduceTree[]) {
         this.gotoMasterViewCallback = goToMasterViewCallback;

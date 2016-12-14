@@ -25,6 +25,12 @@ class storageReport extends viewModelBase {
     showPagesColumn: KnockoutObservable<boolean>;
     showEntriesColumn: KnockoutObservable<boolean>;
 
+    constructor() {
+        super();
+
+        this.bindToCurrentInstance("onClick");
+    }
+
     activate(args: any) {
         super.activate(args);
 
@@ -274,7 +280,7 @@ class storageReport extends viewModelBase {
         }
     } 
 
-    private onClick(d: storageReportItem) {
+    onClick(d: storageReportItem) {
         if (!d.internalChildren || !d.internalChildren.length) {
             return;
         }

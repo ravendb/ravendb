@@ -39,6 +39,8 @@ class visualizer extends viewModelBase {
     constructor() {
         super();
 
+        this.bindToCurrentInstance("setSelectedIndex", "selectDocKey", "addCurrentDocumentKey");
+
         this.initObservables();
     }
 
@@ -92,7 +94,11 @@ class visualizer extends viewModelBase {
         this.detailsGraph.reset();
     }
 
-    addDocKey(key: string) {
+    addCurrentDocumentKey() {
+        this.addDocKey(this.documents.docKey());
+    }
+
+    private addDocKey(key: string) {
         if (!key) {
             return;
         }

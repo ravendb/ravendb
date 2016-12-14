@@ -31,13 +31,13 @@
                             <span class="sr-only">Toggle Dropdown</span>
                         </button>
                         <ul class="dropdown-menu">
-                            <li data-bind="click: setLockModeSelectedTransformers.bind($root, 'Unlock', 'Unlock')">
+                            <li data-bind="click: unlockSelectedTransformers">
                                 <a href="#" title="Unlock selected indexes">
                                     <i class="icon-unlock"></i>
                                     <span>Unlock</span>
                                 </a>
                             </li>
-                            <li data-bind="click: setLockModeSelectedTransformers.bind($root, 'LockedIgnore', 'Lock')">
+                            <li data-bind="click: lockSelectedTransformers">
                                 <a href="#" title="Lock selected indexes">
                                     <i class="icon-lock"></i>
                                     <span>Lock</span>
@@ -79,7 +79,7 @@
                                         <a class="btn btn-default" data-bind="attr: { href: editUrl }"><i class="icon-edit"></i></a>
                                     </div>
                                     <div class="btn-group" role="group">
-                                        <button class="btn btn-danger" title="Delete the transformer" data-bind="click: $root.deleteTransformer.bind($root)">
+                                        <button class="btn btn-danger" title="Delete the transformer" data-bind="click: $root.deleteTransformer">
                                             <i class="icon-trash"></i>
                                         </button>
                                     </div>
@@ -107,13 +107,13 @@
             <span class="caret"></span>
         </button>
         <ul class="dropdown-menu">
-            <li data-bind="click: $root.unlockTransformer.bind($root)">
+            <li data-bind="click: $root.unlockTransformer">
                 <a href="#">
                     <i class="icon-unlock"></i>
                     <span>Unlocked</span>
                 </a>
             </li>
-            <li data-bind="click: $root.lockTransformer.bind($root)">
+            <li data-bind="click: $root.lockTransformer">
                 <a href="#">
                     <i class="icon-lock"></i>
                     <span>Locked</span>
