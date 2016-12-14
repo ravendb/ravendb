@@ -534,12 +534,12 @@ namespace Voron
                RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
 
         public TransactionsMode TransactionsMode { get; set; }
-        public OpenFlags PosixOpenFlags = SafePosixOpenFlags;
+        public OpenFlags PosixOpenFlags;
         public Win32NativeFileAttributes WinOpenFlags = SafeWin32OpenFlags;
         public DateTime? NonSafeTransactionExpiration { get; set; }
 
 
         public const Win32NativeFileAttributes SafeWin32OpenFlags = Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering;
-        public static OpenFlags SafePosixOpenFlags = OpenFlags.O_DSYNC | OpenFlagsThatAreDifferentBetweenPlatforms.O_DIRECT;
+        public OpenFlags SafePosixOpenFlags = OpenFlags.O_DSYNC | OpenFlagsThatAreDifferentBetweenPlatforms.O_DIRECT;
     }
 }

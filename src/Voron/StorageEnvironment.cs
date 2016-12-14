@@ -103,11 +103,13 @@ namespace Voron
                     options.BasePath != null && 
                     IsStorageSupportingO_Direct(options.BasePath) == false)
                 {
-                    options.PosixOpenFlags &= ~OpenFlagsThatAreDifferentBetweenPlatforms.O_DIRECT;
+                    options.SafePosixOpenFlags &= ~OpenFlagsThatAreDifferentBetweenPlatforms.O_DIRECT;
                     var message = "Path " + options.BasePath +
                                   " not supporting O_DIRECT writes. As a result - data durability is not guarenteed";
                     _options.InvokeNonDurabalitySupportError(this, message, null);
                 }
+
+                options.PosixOpenFlags = options.SafePosixOpenFlags;
 
                 _journal = new WriteAheadJournal(this);
 
@@ -128,7 +130,7 @@ namespace Voron
 
         private bool IsStorageSupportingO_Direct(string path)
         {
-            var filename = Path.Combine(path, "test-" + new Guid() + ".tmp");
+            var filename = Path.Combine(path, "test-" + Guid.NewGuid() + ".tmp");
             var fd = Syscall.open(filename,
                 OpenFlags.O_WRONLY | OpenFlags.O_DSYNC | OpenFlagsThatAreDifferentBetweenPlatforms.O_DIRECT |
                 OpenFlags.O_CREAT, FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
@@ -161,6 +163,15 @@ namespace Voron
             {
                 if (_log.IsInfoEnabled)
                     _log.Info("Failed to close test file at '" + filename + "'. (rc = " + result + ").");
+            }
+
+            try
+            {
+                File.Delete(filename);
+            }
+            catch (Exception ex)
+            {
+                _log.Info("Failed to delete test file at '" + filename + "'", ex);
             }
 
             return true;
@@ -785,7 +796,7 @@ namespace Voron
                     case TransactionsMode.Safe:
                     case TransactionsMode.Lazy:
                         {
-                            Options.PosixOpenFlags = StorageEnvironmentOptions.SafePosixOpenFlags;
+                            Options.PosixOpenFlags = Options.SafePosixOpenFlags;
                             Options.WinOpenFlags = StorageEnvironmentOptions.SafeWin32OpenFlags;
                         }
                         break;
