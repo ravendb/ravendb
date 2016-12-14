@@ -107,7 +107,7 @@ class metrics extends viewModelBase {
         axis: "#546175",
         gaps: "#ca1c59",
         brushChartColor: "#37404b",
-        brushChartFrameColor: "#008cc9",
+        brushChartStrokeColor: "#008cc9",
         trackBackground: "#2c343a",
         trackNameBg: "rgba(57, 67, 79, 0.8)",
         trackNameFg: "#98a7b7",
@@ -347,7 +347,9 @@ class metrics extends viewModelBase {
         this.gapFinder = new gapFinder(timeRanges, metrics.minGapSize);
         this.xBrushTimeScale = this.gapFinder.createScale(this.totalWidth, 0);
         
-        this.yBrushValueScale = d3.scale.linear().domain([0, maxConcurrentIndexes]).range([0, metrics.brushSectionIndexesWorkHeight]); 
+        this.yBrushValueScale = d3.scale.linear()
+            .domain([0, maxConcurrentIndexes])
+            .range([0, metrics.brushSectionIndexesWorkHeight]); 
 
         const context = this.brushSection.getContext("2d");
         this.drawXaxis(context, this.xBrushTimeScale, metrics.brushSectionHeight);
@@ -356,12 +358,12 @@ class metrics extends viewModelBase {
         context.strokeRect(0.5, 0.5, this.totalWidth - 1, metrics.brushSectionHeight - 1);
 
         context.fillStyle = metrics.colors.brushChartColor;  
-        context.strokeStyle = metrics.colors.brushChartFrameColor; 
+        context.strokeStyle = metrics.colors.brushChartStrokeColor; 
         context.lineWidth = metrics.brushSectionLineWidth;
 
         // Draw area chart showing indexes work
         let x1: number, x2: number, y0: number = 0, y1: number;
-        for (var i = 0; i < workData.length - 1; i++) {
+        for (let i = 0; i < workData.length - 1; i++) {
 
             context.beginPath();
             x1 = this.xBrushTimeScale(new Date(workData[i].pointInTime));
