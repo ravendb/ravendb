@@ -54,10 +54,7 @@ namespace FastTests.Sparrow
             var historicalBuffer = 20000;
             var metrics = new IoMetrics(currentBuffer, historicalBuffer);
             var forIterations = 1000 * 1000;
-            Parallel.For(0, forIterations, new ParallelOptions
-            {
-                MaxDegreeOfParallelism = 16
-            }, i =>
+            Parallel.For(0, forIterations, RavenTestHelper.DefaultParallelOptions, i =>
             {
                 using (metrics.MeterIoRate("file1.txt", IoMetrics.MeterType.JournalWrite, 1))
                 {
