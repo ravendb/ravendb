@@ -12,7 +12,6 @@ namespace Raven.Client.Documents.SessionOperations
         private readonly InMemoryDocumentSessionOperations _session;
         private static readonly Logger _logger = LoggingSource.Instance.GetLogger<LoadOperation>("Raven.Client");
 
-        public InMemoryDocumentSessionOperations.SaveChangesData Data;
 
         public BatchOperation(InMemoryDocumentSessionOperations session)
         {
@@ -21,17 +20,7 @@ namespace Raven.Client.Documents.SessionOperations
 
         protected void LogBatch()
         {
-            if (_logger.IsInfoEnabled)
-            {
-                var sb = new StringBuilder()
-                    .AppendFormat("Saving {0} changes to {1}", Data.Commands.Count, _session.StoreIdentifier)
-                    .AppendLine();
-                foreach (var commandData in Data.Commands)
-                {
-                    sb.AppendFormat("\t{0} {1}", commandData["Method"], commandData["Key"]).AppendLine();
-                }
-                _logger.Info(sb.ToString());
-            }
+            
         }
 
         private List<object> _entities;
