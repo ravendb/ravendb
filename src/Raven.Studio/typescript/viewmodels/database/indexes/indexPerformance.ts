@@ -8,7 +8,7 @@ import d3 = require("d3");
 import rbush = require("rbush");
 import gapFinder = require("common/helpers/graph/gapFinder");
 import generalUtils = require("common/generalUtils");
-import RangeAggregator = require("common/helpers/graph/rangeAggregator");
+import rangeAggregator = require("common/helpers/graph/rangeAggregator");
 
 type rTreeLeaf = {
     minX: number;
@@ -106,7 +106,8 @@ class metrics extends viewModelBase {
     static readonly colors = {
         axis: "#546175",
         gaps: "#ca1c59",
-        brushChartColor: "#008cc9",
+        brushChartColor: "#37404b",
+        brushChartFrameColor: "#008cc9",
         trackBackground: "#2c343a",
         trackNameBg: "rgba(57, 67, 79, 0.8)",
         trackNameFg: "#98a7b7",
@@ -148,6 +149,8 @@ class metrics extends viewModelBase {
     }
 
     static readonly brushSectionHeight = 40;
+    static readonly brushSectionIndexesWorkHeight = 22;
+    static readonly brushSectionLineWidth = 1;
     static readonly trackHeight = 16; // height used for callstack item
     static readonly stackPadding = 1; // space between call stacks
     static readonly trackMargin = 4;
@@ -333,9 +336,9 @@ class metrics extends viewModelBase {
 
     private prepareBrushSection() {
         const timeRanges = this.extractTimeRanges(); 
-        const aggregatedRanges = new RangeAggregator(timeRanges);
+        const aggregatedRanges = new rangeAggregator(timeRanges);
         const workData = aggregatedRanges.aggregate();
-        const maxConcurrentIndexes = aggregatedRanges.getMaxConcurrentIndexes();
+        const maxConcurrentIndexes = aggregatedRanges.maxConcurrentIndexes;
 
         this.brushSection = document.createElement("canvas");
         this.brushSection.width = this.totalWidth;
@@ -343,29 +346,45 @@ class metrics extends viewModelBase {
 
         this.gapFinder = new gapFinder(timeRanges, metrics.minGapSize);
         this.xBrushTimeScale = this.gapFinder.createScale(this.totalWidth, 0);
-
-        const height = 22; 
-        this.yBrushValueScale = d3.scale.linear().domain([0, maxConcurrentIndexes]).range([0, height]); 
+        
+        this.yBrushValueScale = d3.scale.linear().domain([0, maxConcurrentIndexes]).range([0, metrics.brushSectionIndexesWorkHeight]); 
 
         const context = this.brushSection.getContext("2d");
         this.drawXaxis(context, this.xBrushTimeScale, metrics.brushSectionHeight);
 
         context.strokeStyle = metrics.colors.axis;
         context.strokeRect(0.5, 0.5, this.totalWidth - 1, metrics.brushSectionHeight - 1);
-        context.fillStyle = metrics.colors.brushChartColor;
-        context.strokeStyle = metrics.colors.brushChartColor;
-        context.lineWidth = 1;
 
-        for (var i = 0; i < workData.length-1; i++) {
-            const x1 = this.xBrushTimeScale(new Date(workData[i].pointInTime)); 
-            const x2 = this.xBrushTimeScale(new Date(workData[i + 1].pointInTime));
-            const rectHeight = this.yBrushValueScale(workData[i].numberOfIndexesWorking);
+        context.fillStyle = metrics.colors.brushChartColor;  
+        context.strokeStyle = metrics.colors.brushChartFrameColor; 
+        context.lineWidth = metrics.brushSectionLineWidth;
 
-            if (workData[i].numberOfIndexesWorking > 0) {
-                context.fillRect(x1, metrics.brushSectionHeight - rectHeight, x2 - x1, rectHeight);
-                context.strokeRect(x1, metrics.brushSectionHeight - rectHeight, x2 - x1, rectHeight); 
-            }
+        // Draw area chart showing indexes work
+        let x1: number, x2: number, y0: number = 0, y1: number;
+        for (var i = 0; i < workData.length - 1; i++) {
+
+            context.beginPath();
+            x1 = this.xBrushTimeScale(new Date(workData[i].pointInTime));
+            y1 = Math.round(this.yBrushValueScale(workData[i].numberOfIndexesWorking)) + 0.5;
+            x2 = this.xBrushTimeScale(new Date(workData[i + 1].pointInTime));
+            context.moveTo(x1, metrics.brushSectionHeight - y0);
+            context.lineTo(x1, metrics.brushSectionHeight - y1);
+
+            // Don't want to draw line -or- rect at level 0
+            if (y1 !== 0) {
+                context.lineTo(x2, metrics.brushSectionHeight - y1);
+                context.fillRect(x1, metrics.brushSectionHeight - y1, x2-x1, y1);
+            } 
+
+            context.stroke();
+            y0 = y1; 
         }
+
+        // Draw last line:
+        context.beginPath();
+        context.moveTo(x2, metrics.brushSectionHeight - y1);
+        context.lineTo(x2, metrics.brushSectionHeight);
+        context.stroke(); 
 
         this.drawBrushGaps(context);
         this.prepareBrush();
