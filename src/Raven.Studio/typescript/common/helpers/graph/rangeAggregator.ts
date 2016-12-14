@@ -12,22 +12,17 @@ class rangeAggregator {
 
     constructor(inputItems: Array<[Date, Date]>) {
         this.maxConcurrentIndexes = 0;
-        inputItems.forEach((x) => {
-            this.items.push({ startTime: x[0].getTime(), endTime: x[1].getTime() } );
-        });
+
+        this.items = inputItems.map((x) => { return { startTime: x[0].getTime(), endTime: x[1].getTime() } });
     }
 
     inputItems(inputItems: Array<workTimeUnit>) {
         this.items = inputItems;
     }
 
-    getMaxConcurrentIndexes(): number {
-        return this.maxConcurrentIndexes;
-    }
-
     aggregate() : Array<indexesWorkData> {
         // 1. Sort the times array by startTime & endTime value
-        this.items.sort((a, b) => { return a.startTime === b.startTime ? a.endTime - b.endTime : a.startTime - b.startTime });
+        this.items.sort((a, b) => a.startTime === b.startTime ? a.endTime - b.endTime : a.startTime - b.startTime);
 
         // 2. Create the indexesWork Array
         if (this.items.length !== 0) {
