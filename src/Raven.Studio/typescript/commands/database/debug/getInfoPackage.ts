@@ -7,9 +7,6 @@ import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenComm
 
 class getInfoPackage extends commandBase {
 
-    /**
-    * @param ownerDb The database the collections will belong to.
-    */
     constructor(private db: database, private withStackTrace: boolean) {
         super();
     }
