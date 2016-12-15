@@ -590,7 +590,7 @@ namespace Raven.Server.Documents.Indexes
 
                         _mre.Reset();
 
-                        var stats = _lastStats = new IndexingStatsAggregator(DocumentDatabase.IndexStore.Identities.GetNextIndexingStatsId());
+                        var stats = _lastStats = new IndexingStatsAggregator(DocumentDatabase.IndexStore.Identities.GetNextIndexingStatsId(), _lastStats);
                         LastIndexingTime = stats.StartTime;
 
                         AddIndexingPerformance(stats);
