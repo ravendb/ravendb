@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Net;
 using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
 using Raven.Client.Data;
 using Raven.Client.Exceptions;
 using Xunit;
@@ -10,12 +12,25 @@ namespace FastTests.Server.Documents.Replication
 {
     public class ManualConflictResolution : ReplicationTestsBase
     {
-        [Fact(Skip = "This needs to be refactored after ClientAPI will support the new conflict semantics")]
+        //[Fact(Skip = "This needs to be refactored after ClientAPI will support the new conflict semantics")]
+        [Fact]
         public void CanManuallyResolveConflict()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
+
+                using (var session = slave.OpenSession())
+                {
+                    var destinations = new List<ReplicationDestination>();
+                    session.Store(new ReplicationDocument
+                    {
+                        Destinations = destinations,
+                        DocumentConflictResolution = StraightforwardConflictResolution.ResolveManually
+                    }, Constants.Replication.DocumentReplicationConfiguration);
+                    session.SaveChanges();
+                }
+
                 SetupReplication(master, slave);
 
                 using (var session = slave.OpenSession())

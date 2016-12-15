@@ -19,6 +19,8 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json.Parsing;
 using System.Linq;
+using Jint;
+using Raven.Server.Documents.Patch;
 using ThreadState = System.Threading.ThreadState;
 
 namespace Raven.Server.Documents.Replication
@@ -565,6 +567,7 @@ namespace Raven.Server.Documents.Replication
                         }
                         ChangeVectorEntry[] conflictingVector;
                         var conflictStatus = GetConflictStatusForDocument(_documentsContext, doc.Id, _tempReplicatedChangeVector, out conflictingVector);
+
                         switch (conflictStatus)
                         {
                             case ConflictStatus.Update:
@@ -639,13 +642,55 @@ namespace Raven.Server.Documents.Replication
                 $"Reading past the size of buffer! TotalSize {totalSize} but position is {doc.Position} & size is {doc.DocumentSize}!");
         }
 
+        public void ResovleConflictManually(ReplicationDocumentsPositions docPosition,
+            ChangeVectorEntry[] conflictingVector,
+            BlittableJsonReaderObject doc)
+        {
+            var conflictedDoc =
+                _documentsContext.DocumentDatabase.DocumentsStorage.GetConflictForChangeVector(
+                    _documentsContext,
+                    docPosition.Id,
+                    conflictingVector);
+            var docs = _documentsContext.DocumentDatabase.DocumentsStorage.GetConflictsFor(_documentsContext, docPosition.Id);
+            var local = _documentsContext.DocumentDatabase.DocumentsStorage.GetDocumentOrTombstone(_documentsContext, docPosition.Id,false);
+          
+            PatchConflict patch = new PatchConflict(_database, docs , conflictingVector);
+            PatchRequest request = new PatchRequest
+            {
+                Script = @"output(docs);
+
+for(var i = 0; i < docs.length; i++) 
+    {
+        for(var j = 0; i < docs[i].ShoppingCart.length; j++){
+            var currentLine = docs[i].ShoppingCart[j];
+            var existingLine = docs[0].ShoppingCart.find(function(line) { 
+                                 return line.ProductId == currentLine.ProductId
+                        });
+            if(existingLine)
+                existingLine.Quantity += currentLine.Quantity;
+            else
+                docs[0].ShoppingCart.push(currentLine);
+        }
+    }
+output(docs[0]);
+    return docs[0];
+
+"
+            };
+            request.Values = doc;
+
+
+            var results = patch.Apply(_documentsContext,  request);
+            var a = results.ModifiedDocument;
+            //var merged = results.ModifiedDocument["resolvedDocument"];
+        }
 
         private void HandleConflictForDocument(
             ReplicationDocumentsPositions docPosition,
             ChangeVectorEntry[] conflictingVector,
             BlittableJsonReaderObject doc)
         {
-            switch (ReplicationDocument?.DocumentConflictResolution ?? StraightforwardConflictResolution.None)
+            switch (ReplicationDocument?.DocumentConflictResolution ?? StraightforwardConflictResolution.ResolveManually)
             {
                 case StraightforwardConflictResolution.ResolveToLocal:
                     ResolveConflictToLocal(docPosition, conflictingVector);
@@ -694,6 +739,10 @@ namespace Raven.Server.Documents.Replication
                     {
                         ResolveConflictToLocal(docPosition, conflictingVector);
                     }
+                    break;
+                case StraightforwardConflictResolution.ResolveManually:
+                    _database.DocumentsStorage.AddConflict(_documentsContext, docPosition.Id, doc, _tempReplicatedChangeVector);
+                    ResovleConflictManually(docPosition, conflictingVector, doc);
                     break;
                 default:
                     _database.DocumentsStorage.AddConflict(_documentsContext, docPosition.Id, doc, _tempReplicatedChangeVector);
