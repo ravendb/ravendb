@@ -130,10 +130,12 @@ namespace Voron.Platform.Posix
             int zero = 0;
 
             int rc = (int) write(fd, &zero, 1UL);
+
+            orig = lseek(fd, orig, WhenceFlags.SEEK_SET);
             if (rc == -1)
                 return rc;
 
-            return lseek(fd, orig, WhenceFlags.SEEK_SET);
+            return orig;
         }
     }
 

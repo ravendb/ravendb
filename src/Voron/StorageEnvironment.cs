@@ -135,6 +135,8 @@ namespace Voron
                 OpenFlags.O_WRONLY | OpenFlags.O_DSYNC | OpenFlagsThatAreDifferentBetweenPlatforms.O_DIRECT |
                 OpenFlags.O_CREAT, FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
 
+            int result;
+
             try
             {
                 if (fd == -1)
@@ -144,7 +146,7 @@ namespace Voron
                     return true;
                 }
 
-                var result = Syscall.posix_fallocate(fd, IntPtr.Zero, (UIntPtr)(64L * 1024));
+                result = Syscall.posix_fallocate(fd, IntPtr.Zero, (UIntPtr)(64L * 1024));
                 if (result == (int)Errno.EINVAL)
                 {
                     if (_log.IsInfoEnabled)
@@ -159,23 +161,20 @@ namespace Voron
                     if (_log.IsInfoEnabled)
                         _log.Info("Failed to fallocate test file at '" + filename + "'. (rc = " + result + "). Cannot determine if O_DIRECT supported by the file system. Assuming it is");
                 }
-
+               
+            }
+            finally 
+            {
                 result = Syscall.close(fd);
                 if (result != 0)
                 {
                     if (_log.IsInfoEnabled)
                         _log.Info("Failed to close test file at '" + filename + "'. (rc = " + result + ").");
                 }
-            }
-            finally 
-            {
-                try
+
+                if (Syscall.unlink(filename) != 0)
                 {
-                    File.Delete(filename);
-                }
-                catch(Exception ex)
-                {
-                    _log.Info("Failed to delete test file at '" + filename + "'", ex);
+                    _log.Info("Failed to delete test file at '" + filename + "'", new IOException("Failed to unlink " + filename));
                 }
             }
 
