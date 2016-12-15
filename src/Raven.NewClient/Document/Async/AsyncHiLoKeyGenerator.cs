@@ -10,19 +10,59 @@ using Raven.NewClient.Commands;
 using System.Threading.Tasks;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.NewClient.Client.Document.Async
 {
     /// <summary>
     /// Generate hilo numbers against a RavenDB document
     /// </summary>
-    public class AsyncHiLoKeyGenerator : HiLoKeyGeneratorBase
+    public class AsyncHiLoKeyGenerator
     {
+        private readonly DocumentStore _store;
+        private readonly string _tag;
+        private string _prefix;
+        private long _lastBatchSize;
+        private DateTime _lastRangeDate;
+        private readonly string _dbName;
+        private readonly string _identityPartsSeparator;
+        private volatile RangeValue _range;
+
+
         /// <summary>
         /// Initializes a new instance of the <see cref="HiLoKeyGenerator"/> class.
         /// </summary>
-        public AsyncHiLoKeyGenerator(string tag, DocumentStore store, string dbName, string identityPartsSeparator)
-            : base(tag, store, dbName, identityPartsSeparator)
+        public AsyncHiLoKeyGenerator(string tag, DocumentStore store, string dbName, string identityPartsSeparator)            
         {
+            _store = store;
+            _tag = tag;
+            _dbName = dbName;
+            _identityPartsSeparator = identityPartsSeparator;
+            _range = new RangeValue(1, 0);
+        }
+
+        protected string GetDocumentKeyFromId(long nextId)
+        {
+            return $"{_prefix}{nextId}";
+        }
+
+        protected RangeValue Range
+        {
+            get { return _range; }
+            set { _range = value; }
+        }
+
+        [System.Diagnostics.DebuggerDisplay("[{Min}-{Max}]: {Current}")]
+        protected class RangeValue
+        {
+            public readonly long Min;
+            public readonly long Max;
+            public long Current;
+
+            public RangeValue(long min, long max)
+            {
+                this.Min = min;
+                this.Max = max;
+                this.Current = min - 1;
+            }
         }
 
         private Lazy<Task> _nextRangeTask;
