@@ -5,6 +5,7 @@ using System.Linq;
 using Sparrow;
 using Voron;
 using Voron.Data.BTrees;
+using Voron.Impl;
 using Xunit;
 
 namespace FastTests.Voron.LeafsCompression
@@ -20,7 +21,7 @@ namespace FastTests.Voron.LeafsCompression
         [InlineData(26, 333, true, 1)]
         [InlineData(1024, 555, false, 1)]
         [InlineData(777, 2048, false, 1)]
-        public void Can_compress_leaf_pages_and_read_directly_from_them_after_decompression(int iterationCount, int size, bool sequentialKeys, int seed)
+        public unsafe void Can_compress_leaf_pages_and_read_directly_from_them_after_decompression(int iterationCount, int size, bool sequentialKeys, int seed)
         {
             using (var tx = Env.WriteTransaction())
             {
@@ -60,6 +61,8 @@ namespace FastTests.Voron.LeafsCompression
                 foreach (var id in ids)
                 {
                     tree.Add(id, new MemoryStream(bytes));
+
+                    AssertReads(tx, new HashSet<string> {id}, bytes);
                 }
 
                 var compressedLeafs =
@@ -73,7 +76,10 @@ namespace FastTests.Voron.LeafsCompression
                 tx.Commit();
             }
 
-            AssertReads(ids, bytes);
+            using (var tx = Env.ReadTransaction())
+            {
+                AssertReads(tx, ids, bytes);
+            }
 
             // update
             using (var tx = Env.WriteTransaction())
@@ -98,51 +104,51 @@ namespace FastTests.Voron.LeafsCompression
                 tx.Commit();
             }
 
-            AssertReads(ids, bytes);
-        }
-
-        private unsafe void AssertReads(HashSet<string> ids, byte[] bytes)
-        {
             using (var tx = Env.ReadTransaction())
             {
-                var tree = tx.ReadTree("tree");
+                AssertReads(tx, ids, bytes);
+            }
+        }
 
-                foreach (var id in ids)
+        private unsafe void AssertReads(Transaction tx, HashSet<string> ids, byte[] bytes)
+        {
+            var tree = tx.ReadTree("tree");
+
+            foreach (var id in ids)
+            {
+                Slice key;
+                byte[] result;
+
+                using (Slice.From(tx.Allocator, id, ByteStringType.Immutable, out key))
                 {
-                    Slice key;
-                    byte[] result;
-
-                    using (Slice.From(tx.Allocator, id, ByteStringType.Immutable, out key))
+                    unsafe
                     {
-                        unsafe
+                        TreeNodeHeader* node;
+                        Func<Slice, TreeCursor> cursor;
+                        var page = tree.FindPageFor(key, out node, out cursor, allowCompressed: true);
+
+                        ReadResult readResult;
+
+                        if (page.IsCompressed)
                         {
-                            TreeNodeHeader* node;
-                            Func<Slice, TreeCursor> cursor;
-                            var page = tree.FindPageFor(key, out node, out cursor, allowCompressed: true);
-
-                            ReadResult readResult;
-
-                            if (page.IsCompressed)
+                            using (var decompressed = tree.DecompressPage(page))
                             {
-                                using (var decompressed = tree.DecompressPage(page))
-                                {
-                                    var nodeNumber = decompressed.NodePositionFor(tx.LowLevelTransaction, key);
-                                    node = decompressed.GetNode(nodeNumber);
+                                var nodeNumber = decompressed.NodePositionFor(tx.LowLevelTransaction, key);
+                                node = decompressed.GetNode(nodeNumber);
 
-                                    readResult = new ReadResult(tree.GetValueReaderFromHeader(node), node->Version);
-                                }
-                            }
-                            else
-                            {
                                 readResult = new ReadResult(tree.GetValueReaderFromHeader(node), node->Version);
                             }
-
-                            result = readResult.Reader.ReadBytes(readResult.Reader.Length).ToArray();
                         }
-                    }
+                        else
+                        {
+                            readResult = new ReadResult(tree.GetValueReaderFromHeader(node), node->Version);
+                        }
 
-                    Assert.Equal(bytes, result);
+                        result = readResult.Reader.ReadBytes(readResult.Reader.Length).ToArray();
+                    }
                 }
+
+                Assert.Equal(bytes, result);
             }
         }
     }

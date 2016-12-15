@@ -11,7 +11,7 @@ namespace Voron.Data.Compression
 {
     public unsafe class LeafPageCompressor
     {
-        public static IDisposable TryGetCompressedTempPage(LowLevelTransaction tx, TreePage page, ushort version, out CompressionResult result, bool defrag = true)
+        public static IDisposable TryGetCompressedTempPage(LowLevelTransaction tx, TreePage page, out CompressionResult result, bool defrag = true)
         {
             if (defrag)
             {
@@ -87,7 +87,6 @@ namespace Voron.Data.Compression
                 CompressionOutputPtr = compressionResult,
                 Header = new CompressedNodesHeader
                 {
-                    Version = version,
                     SectionSize = (ushort)compressionSectionSize,
                     CompressedSize = (ushort)compressedSize,
                     UncompressedSize = (ushort)valuesSize,

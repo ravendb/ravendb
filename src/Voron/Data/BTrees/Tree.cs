@@ -354,6 +354,9 @@ namespace Voron.Data.BTrees
             newPage.Dirty = true;
             _recentlyFoundPages.Reset(pageNumber);
 
+            if (IsLeafCompressionSupported && newPage.IsCompressed)
+                DecompressionsCache.Invalidate(pageNumber, DecompressionUsage.Read);
+
             PageModified?.Invoke(pageNumber);
 
             return newPage;

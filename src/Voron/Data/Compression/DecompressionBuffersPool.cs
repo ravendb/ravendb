@@ -33,14 +33,14 @@ namespace Voron.Data.Compression
             return _options.CreateScratchPager($"decompression.{_decompressionPagerCounter++:D10}.buffers", initialSize); // TODO arek - allow to create multiple files, handle cleanup
         }
 
-        public DecompressedLeafPage GetPage(LowLevelTransaction tx, int pageSize, ushort version, TreePage original)
+        public DecompressedLeafPage GetPage(LowLevelTransaction tx, int pageSize, DecompressionUsage usage, TreePage original)
         {
             TemporaryPage tempPage;
             GetTemporaryPage(tx, pageSize, out tempPage);
 
             var treePage = tempPage.GetTempPage();
 
-            return new DecompressedLeafPage(treePage.Base, treePage.PageSize, version, original, tempPage);
+            return new DecompressedLeafPage(treePage.Base, treePage.PageSize, usage, original, tempPage);
         }
 
         public IDisposable GetTemporaryPage(LowLevelTransaction tx, int pageSize, out TemporaryPage tmp)

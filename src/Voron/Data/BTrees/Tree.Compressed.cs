@@ -26,16 +26,14 @@ namespace Voron.Data.BTrees
                 return false;
 
             var pageToCompress = page;
-            ushort version = 0;
 
             if (alreadyCompressed)
             {
-                version = (ushort)(page.CompressionHeader->Version + 1);
-                pageToCompress = DecompressPage(page); // no need to dispose, it's going to be cached anyway
+                pageToCompress = DecompressPage(page, usage: DecompressionUsage.Write); // no need to dispose, it's going to be cached anyway
             }
 
             CompressionResult result;
-            using (LeafPageCompressor.TryGetCompressedTempPage(_llt, pageToCompress, version, out result, defrag: alreadyCompressed == false))
+            using (LeafPageCompressor.TryGetCompressedTempPage(_llt, pageToCompress, out result, defrag: alreadyCompressed == false))
             {
                 if (result == null || result.CompressedPage.GetRequiredSpace(key, len) > result.CompressedPage.SizeLeft)
                 {
@@ -49,30 +47,35 @@ namespace Voron.Data.BTrees
                     {
                         // we've just put a decompressed page to the cache however we aren't going to compress it
                         // need to invalidate it from the cache
-                        DecompressionsCache.Invalidate(page.PageNumber, version);
+                        DecompressionsCache.Invalidate(page.PageNumber, DecompressionUsage.Write);
                     }
 
                     return false;
                 }
-                
+
                 LeafPageCompressor.CopyToPage(result, page);
 
                 return true;
             }
         }
 
-        public DecompressedLeafPage DecompressPage(TreePage p, bool skipCache = false)
+        public DecompressedLeafPage DecompressPage(TreePage p, DecompressionUsage usage = DecompressionUsage.Read, bool skipCache = false)
         {
             var input = new DecompressionInput(p.CompressionHeader, p);
 
             DecompressedLeafPage decompressedPage;
             DecompressedLeafPage cached = null;
 
-            if (skipCache == false && DecompressionsCache.TryGet(p.PageNumber, p.CompressionHeader->Version, out cached))
-                decompressedPage = ReuseCachedPage(cached, ref input);
+            if (skipCache == false && DecompressionsCache.TryGet(p.PageNumber, usage, out cached))
+            {
+                decompressedPage = ReuseCachedPage(cached, usage, ref input);
+
+                if (usage == DecompressionUsage.Read)
+                    return decompressedPage;
+            }
             else
             {
-                decompressedPage = DecompressFromBuffer(ref input);
+                decompressedPage = DecompressFromBuffer(usage, ref input);
             }
 
             Debug.Assert(decompressedPage.NumberOfEntries > 0);
@@ -85,18 +88,19 @@ namespace Voron.Data.BTrees
 
             AppendUncompressedNodes(decompressedPage, p);
 
-            decompressedPage.Version++;
-            
             if (skipCache == false && decompressedPage != cached)
+            {
+                DecompressionsCache.Invalidate(p.PageNumber, usage);
                 DecompressionsCache.Add(decompressedPage);
+            }
 
             decompressedPage.DebugValidate(this, State.RootPageNumber);
             return decompressedPage;
         }
 
-        private DecompressedLeafPage DecompressFromBuffer(ref DecompressionInput input)
+        private DecompressedLeafPage DecompressFromBuffer(DecompressionUsage usage, ref DecompressionInput input)
         {
-            var result = _llt.Environment.DecompressionBuffers.GetPage(_llt, input.DecompressedPageSize, input.Page.CompressionHeader->Version, input.Page);
+            var result = _llt.Environment.DecompressionBuffers.GetPage(_llt, input.DecompressedPageSize, usage, input.Page);
 
             var decompressedNodesOffset = (ushort)(result.PageSize - input.DecompressedSize);
 
@@ -116,26 +120,25 @@ namespace Voron.Data.BTrees
             return result;
         }
 
-        private DecompressedLeafPage ReuseCachedPage(DecompressedLeafPage cached, ref DecompressionInput input)
+        private DecompressedLeafPage ReuseCachedPage(DecompressedLeafPage cached, DecompressionUsage usage, ref DecompressionInput input)
         {
             DecompressedLeafPage result;
 
             var sizeDiff = input.DecompressedPageSize - cached.PageSize;
             if (sizeDiff > 0)
             {
-                result = _llt.Environment.DecompressionBuffers.GetPage(_llt, input.DecompressedPageSize,
-                    input.Page.CompressionHeader->Version, input.Page);
+                result = _llt.Environment.DecompressionBuffers.GetPage(_llt, input.DecompressedPageSize, usage, input.Page);
 
                 Memory.Copy(result.Base, cached.Base, cached.Lower);
                 Memory.Copy(result.Base + cached.Upper + sizeDiff,
                     cached.Base + cached.Upper,
                     cached.PageSize - cached.Upper);
 
-                result.Upper += (ushort) sizeDiff;
+                result.Upper += (ushort)sizeDiff;
 
                 for (var i = 0; i < result.NumberOfEntries; i++)
                 {
-                    result.KeysOffsets[i] += (ushort) sizeDiff;
+                    result.KeysOffsets[i] += (ushort)sizeDiff;
                 }
             }
             else
@@ -207,7 +210,7 @@ namespace Voron.Data.BTrees
                     }
                 }
             }
-        }        
+        }
 
         public struct DecompressionInput
         {
