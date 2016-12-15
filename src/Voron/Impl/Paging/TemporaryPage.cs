@@ -10,7 +10,7 @@ namespace Voron.Impl.Paging
     {
         private readonly byte[] _tempPageBuffer;
         private GCHandle _tempPageHandle;
-        private readonly IntPtr _tempPage;
+        private IntPtr _tempPage;
         internal readonly int PageSize;
 
         public TemporaryPage(StorageEnvironmentOptions options, int? pageSize = null)
@@ -21,12 +21,23 @@ namespace Voron.Impl.Paging
             _tempPage = _tempPageHandle.AddrOfPinnedObject();
         }
 
+        public TemporaryPage(byte* ptr, int pageSize)
+        {
+            PageSize = pageSize;
+            SetPointer(ptr);
+        }
+
         public void Dispose()
         {
             if (_tempPageHandle.IsAllocated)
             {
                 _tempPageHandle.Free();
             }
+        }
+
+        public void SetPointer(byte* ptr)
+        {
+            _tempPage = new IntPtr(ptr);
         }
 
         public byte[] TempPageBuffer => _tempPageBuffer;

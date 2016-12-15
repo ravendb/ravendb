@@ -1091,6 +1091,8 @@ namespace Voron.Data.BTrees
                 _llt.PersistentContext.FreePageLocator(_pageLocator);
                 _pageLocator = null;
             }
+
+            DecompressionsCache?.Dispose();
         }
 
         private void CheckConcurrency(Slice key, ushort? expectedVersion, ushort nodeVersion, TreeActionType actionType)

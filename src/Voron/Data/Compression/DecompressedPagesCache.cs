@@ -1,28 +1,29 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 
 namespace Voron.Data.Compression
 {
-    public class DecompressedPagesCache
+    public class DecompressedPagesCache : IDisposable
     {
+        public const int Size = 4;
+
         private readonly DecompressedLeafPage[] _cache;
-        private readonly int _cacheSize;
 
         private int _current = 0;
 
-        public DecompressedPagesCache(int cacheSize = 8)
+        public DecompressedPagesCache()
         {
-            _cache = new DecompressedLeafPage[cacheSize];
-            _cacheSize = cacheSize;
+            _cache = new DecompressedLeafPage[Size];
         }
 
         public bool TryGet(long pageNumber, ushort version, out DecompressedLeafPage decompressed)
         {
             int position = _current;
 
-            int itemsLeft = _cacheSize;
+            int itemsLeft = Size;
             while (itemsLeft > 0)
             {
-                var page = _cache[position % _cacheSize];
+                var page = _cache[position % Size];
                 if (page == null)
                 {
                     itemsLeft--;
@@ -52,13 +53,13 @@ namespace Voron.Data.Compression
         {
             decompressed.Cached = true;
 
-            var itemsLeft = _cacheSize;
-            var position = _current + _cacheSize;
+            var itemsLeft = Size;
+            var position = _current + Size;
 
             DecompressedLeafPage old;
             while (itemsLeft > 0)
             {
-                var itemIndex = position % _cacheSize;
+                var itemIndex = position % Size;
                 old = _cache[itemIndex];
 
                 if (old == null)
@@ -82,7 +83,7 @@ namespace Voron.Data.Compression
                 position--;
             }
 
-            _current = ++_current % _cacheSize;
+            _current = ++_current % Size;
 
             old = _cache[_current];
 
@@ -111,6 +112,18 @@ namespace Voron.Data.Compression
 
                     return;
                 }
+            }
+        }
+
+        public void Dispose()
+        {
+            foreach (var item in _cache)
+            {
+                if (item == null)
+                    continue;
+
+                item.Cached = false;
+                item.Dispose();
             }
         }
     }
