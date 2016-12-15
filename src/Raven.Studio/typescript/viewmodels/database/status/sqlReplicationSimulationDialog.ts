@@ -1,5 +1,5 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import simulateSqlReplicationCommand = require("commands/database/studio/simulateSqlReplicationCommand");
+import simulateSqlReplicationCommand = require("commands/database/sqlReplication/simulateSqlReplicationCommand");
 import database = require("models/resources/database");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import dialog = require("plugins/dialog");

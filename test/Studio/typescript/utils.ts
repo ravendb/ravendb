@@ -3,17 +3,15 @@
 import Squire = require("Squire");
 import activator = require("durandal/activator");
 import extensions = require("src/Raven.Studio/typescript/common/extensions");
-import commandBaseMock = require("mocks/commandBaseMock");
 import system = require("durandal/system");
 import composition = require("durandal/composition");
 import binder = require("durandal/binder");
 
-import database = require("src/Raven.Studio/typescript/models/resources/database");
 import ace = require("ace/ace");
 
 system.debug(true);
 
-type dbCreator = (db: new (name: string, isAdminCurrentTenant?: boolean, isDisabled?: boolean, bundles?: string[], isIndexingDisabled?: boolean, isRejectClientsMode?: boolean, isLoaded?: boolean, clusterWide?: boolean) => database) => database;
+type dbCreator = (db: new (name: string, isAdminCurrentTenant?: boolean, isDisabled?: boolean, bundles?: string[], isIndexingDisabled?: boolean, isRejectClientsMode?: boolean, isLoaded?: boolean, clusterWide?: boolean) => any) => any;
 
 type viewmodelTestOpts<T> = {
     initViewmodel?: (vm: T) => void;
@@ -21,15 +19,18 @@ type viewmodelTestOpts<T> = {
     afterCtr?: (vm: T) => void;
     afterComposition?: (vm: T) => void;
     assertions?: (vm: T, $container: JQuery) => void;
+    activateArgs?: () => any;
 };
 
 class Utils { 
 
+    static errorHolder = [] as string[];
+
     static injector = new Squire();
 
-    static viewModelPrefix = "src/Raven.Studio/typescript/viewmodels/";
-    static viewTemplatePrefix = "src/Raven.Studio/wwwroot/App/views/";
-    static viewTemplateSuffix = ".html";
+    static readonly viewModelPrefix = "src/Raven.Studio/typescript/viewmodels/";
+    static readonly viewTemplatePrefix = "src/Raven.Studio/wwwroot/App/views/";
+    static readonly viewTemplateSuffix = ".html";
 
     static initTest() {
         Utils.initInjector();
@@ -37,7 +38,7 @@ class Utils {
 
     static mockActiveDatabase(factory: dbCreator): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            Utils.injector.require(["models/resources/database", "common/shell/activeResourceTracker"], (dbCtr: new () => database, resourceTracker: any) => {
+            Utils.injector.require(["models/resources/database", "common/shell/activeResourceTracker"], (dbCtr: new () => any, resourceTracker: any) => {
                 var dbInstance = factory(dbCtr);
                 resourceTracker.default.resource(dbInstance);
                 resolve();
@@ -53,25 +54,68 @@ class Utils {
             Utils.injector = new Squire();
             Utils.injector
                 .mock('knockout', ko)
-                .mock('jquery', jQuery)
-                .mock('commands/commandBase', commandBaseMock);
+                .mock('jquery', jQuery);
 
             Utils.mockCommand('commands/auth/getSingleAuthTokenCommand', () => ({ Token: "Fake Token" }));
 
             return this.aceEditorFacade(Utils.injector)
-                .then(() => new Promise<void>((resolve, reject) => {
-                    Utils.injector.store(['common/oauthContext'])
-                        .require(["common/oauthContext", "common/bindingHelpers/aceEditorBindingHandler"], (context: any, aceEditorBindingHandler: any) => {
-                            context.enterApiKeyTask = $.Deferred().resolve();
-                            aceEditorBindingHandler.useWebWorkers = false;
-
-                            resolve();
-                        }, reject);
-                }));
+                .then(() => Utils.applyConfiguration());
         });
 
         afterEach(() => {
             Utils.injector.remove();
+            Utils.injector = null;
+        });
+    }
+
+    private static applyConfiguration() {
+        return Promise.all([
+            Utils.configureOAuthContext(),
+            Utils.configureCommandBase(),
+            Utils.configureViewModelBase(),
+            Utils.configureAceEditorHandler(),
+        ]);
+    }
+
+    private static configureOAuthContext() {
+        return Utils.requireAndConfigure("common/oauthContext", context => {
+            context.enterApiKeyTask = $.Deferred().resolve();
+        });
+    }
+
+    private static configureCommandBase() {
+        return Utils.requireAndConfigure("commands/commandBase", commandBase => {
+            commandBase.prototype.ajax = function () {
+                const errorMsg = "Command execution is not supported during tests at: " + (<any>this).__moduleId__;
+                Utils.errorHolder.push(errorMsg);
+                throw new Error(errorMsg);
+            }
+        });
+    }
+
+    private static configureAceEditorHandler() {
+        return Utils.requireAndConfigure("common/bindingHelpers/aceEditorBindingHandler", aceEditorBindingHandler => {
+            aceEditorBindingHandler.useWebWorkers = false;
+        });
+    }
+
+    private static configureViewModelBase() {
+        return Utils.requireAndConfigure("viewmodels/viewModelBase", viewModelBase => {
+            viewModelBase.prototype.getPageHostDimenensions = () => [1500, 500];
+        });
+    }
+
+    static requireAndConfigure(moduleName: string, configuration: (obj: any) => void) {
+        return new Promise<void>((resolve, reject) => {
+            Utils.injector
+                .require([moduleName], (obj: any) => {
+                    try {
+                        configuration(obj);
+                        resolve();
+                    } catch (e) {
+                        reject(e);
+                    }
+                }, reject);
         });
     }
 
@@ -92,7 +136,8 @@ class Utils {
         return new Promise<void>((resolve, reject) => squire.require(deps, resolve, reject));
     }
 
-    static mockCommand<T>(commandName: string, resultProvider:() => T): void {
+    static mockCommand<T>(commandName: string, resultProvider: () => T): void {
+        Utils.injector.clean(commandName);
         Utils.injector.mock(commandName, () => ({
             execute: () => $.Deferred<T>().resolve(resultProvider(), "OK", null)
         }));
@@ -121,10 +166,12 @@ class Utils {
                         opts.afterCtr(vm);
                     }
 
-                    activatorInstance.activateItem(vm).then((result: boolean) => {
+                    var activationData = opts.activateArgs ? opts.activateArgs() : undefined;
+
+                    activatorInstance.activateItem(vm, activationData).then((result: boolean) => {
                         if (!result) {
-                            const queue = commandBaseMock.errorQueue;
-                            commandBaseMock.errorQueue = [];
+                            const queue = Utils.errorHolder;
+                            Utils.errorHolder = [];
                             const joinedErrors = queue.join(", ");
 
                             reject(new Error('unable to activate item: ' + joinedErrors));

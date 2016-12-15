@@ -1,22 +1,21 @@
 import utils = require("utils");
 
-import resourcesInfo = require("src/Raven.Studio/typescript/models/resources/info/resourcesInfo");
-
-import resources = require("src/Raven.Studio/typescript/viewmodels/resources/resources");
-
 var viewUnderTest = 'resources/resources';
 
 describe(viewUnderTest, () => {
     utils.initTest();
 
     it('should bind', (done) => {
-        utils.mockCommand('commands/resources/getResourcesCommand', () => new resourcesInfo(getResourcesData()));
 
-        utils.injector.require(["common/changesContext"], (changesContext: any) => {
-            changesContext.default.connectGlobalChangesApi();
+        utils.injector.require(["common/changesContext", "models/resources/info/resourcesInfo"],
+            (changesContext: any, resourcesInfoCtr: new (dto: Raven.Client.Data.ResourcesInfo) => any) => {
 
-            utils.runViewmodelTest(viewUnderTest, {})
-                .then(() => done());
+                utils.mockCommand('commands/resources/getResourcesCommand', () => new resourcesInfoCtr(getResourcesData()));
+
+                changesContext.default.connectGlobalChangesApi();
+
+                utils.runViewmodelTest(viewUnderTest, {})
+                    .then(() => done());
         });
     });
 });

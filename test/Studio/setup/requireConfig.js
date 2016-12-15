@@ -3,11 +3,14 @@ var studioWwwrootPrefix = "../../src/Raven.Studio/wwwroot/";
 var require = {
     paths: {
         'jquery': studioWwwrootPrefix + 'lib/jquery/dist/jquery',
-        'chai': '../../src/Raven.Studio/wwwroot/lib/chai/chai',
-        'Squire': '../../src/Raven.Studio/wwwroot/lib/Squire.js/src/Squire',
+        'chai': studioWwwrootPrefix + 'lib/chai/chai',
+        'Squire': studioWwwrootPrefix + 'lib/Squire.js/src/Squire',
         'utils': 'js/utils',
         "moment": studioWwwrootPrefix + "lib/moment/moment",
         'ace': studioWwwrootPrefix + 'Content/ace',
+        "d3": studioWwwrootPrefix + "lib/d3/d3",
+        "rbush": studioWwwrootPrefix + "Content/rbush/rbush",
+        "quickselect": studioWwwrootPrefix + "Content/rbush/quickselect",
 
         'endpoints': studioWwwrootPrefix + 'App/endpoints',
         'configuration': studioWwwrootPrefix + 'App/configuration',

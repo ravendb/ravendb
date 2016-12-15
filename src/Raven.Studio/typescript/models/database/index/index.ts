@@ -181,7 +181,7 @@ class index {
     }
 
     private static extractCollectionNames(collections: { [index: string]: Raven.Client.Data.Indexes.CollectionStats; }): string[] {
-        return Object.keys(collections);
+        return collections ? Object.keys(collections) : [];
     }
 
     getGroupName() {

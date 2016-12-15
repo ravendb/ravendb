@@ -3,6 +3,7 @@ import getStorageReportCommand = require("commands/database/debug/getStorageRepo
 import generalUtils = require("common/generalUtils");
 import app = require("durandal/app");
 import storageReportItem = require("models/database/status/storageReportItem");
+import d3 = require("d3");
 
 class storageReport extends viewModelBase {
 
