@@ -594,7 +594,7 @@ namespace Raven.Server.Documents.Replication
                                 if (_log.IsInfoEnabled)
                                     _log.Info(
                                         $"Conflict check resolved to Conflict operation, resolving conflict for doc = {doc.Id}, with change vector = {_tempReplicatedChangeVector.Format()}");
-                                HandleConflictForDocument(doc, conflictingVector, json);
+                                HandleConflictForDocument(_documentsContext,doc, conflictingVector, json);
                                 break;
                             case ConflictStatus.AlreadyMerged:
                                 if (_log.IsInfoEnabled)
@@ -640,11 +640,14 @@ namespace Raven.Server.Documents.Replication
         }
 
 
-        private void HandleConflictForDocument(
-            ReplicationDocumentsPositions docPosition,
-            ChangeVectorEntry[] conflictingVector,
-            BlittableJsonReaderObject doc)
+        private void HandleConflictForDocument(DocumentsOperationContext context, ReplicationDocumentsPositions docPosition, ChangeVectorEntry[] conflictingVector, BlittableJsonReaderObject doc)
         {
+            if (docPosition.Id.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase))
+            {
+                HandleHiloConflict(context, docPosition, doc);
+                return;
+            }
+
             switch (ReplicationDocument?.DocumentConflictResolution ?? StraightforwardConflictResolution.None)
             {
                 case StraightforwardConflictResolution.ResolveToLocal:
@@ -699,6 +702,42 @@ namespace Raven.Server.Documents.Replication
                     _database.DocumentsStorage.AddConflict(_documentsContext, docPosition.Id, doc, _tempReplicatedChangeVector);
                     break;
             }
+        }
+
+        private void HandleHiloConflict(DocumentsOperationContext context, ReplicationDocumentsPositions docPosition,
+            BlittableJsonReaderObject doc)
+        {
+            long highestMax;
+            if (!doc.TryGet("Max", out highestMax))
+            {
+                throw new InvalidDataException("Tried to resolve HiLo document conflict but failed. Missing property name'Max'");
+            }
+
+            var conflicts = _database.DocumentsStorage.GetConflictsFor(context, docPosition.Id);
+
+            var resolvedHiLoDoc = doc;
+            if (conflicts.Count == 0)
+            {
+                //conflict with another existing document
+                var localHiloDoc = _database.DocumentsStorage.Get(context, docPosition.Id);
+                double max;
+                if (localHiloDoc.Data.TryGet("Max", out max) && max > highestMax)
+                    resolvedHiLoDoc = localHiloDoc.Data;
+
+            }
+            else
+            {
+                foreach (var conflict in conflicts)
+                {
+                    long tmpMax;
+                    if (conflict.Doc.TryGet("Max", out tmpMax) && tmpMax > highestMax)
+                    {
+                        highestMax = tmpMax;
+                        resolvedHiLoDoc = conflict.Doc;
+                    }
+                }
+            }
+            _database.DocumentsStorage.Put(context, docPosition.Id, null, resolvedHiLoDoc);
         }
 
         private void ResolveConflictToRemote(ReplicationDocumentsPositions doc,
