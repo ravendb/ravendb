@@ -106,7 +106,7 @@ namespace Voron
                     options.SafePosixOpenFlags &= ~OpenFlagsThatAreDifferentBetweenPlatforms.O_DIRECT;
                     var message = "Path " + options.BasePath +
                                   " not supporting O_DIRECT writes. As a result - data durability is not guarenteed";
-                    _options.InvokeNonDurabalitySupportError(this, message, null);
+                    _options.InvokeNonDurabaleFileSystemError(this, message, null);
                 }
 
                 options.PosixOpenFlags = options.SafePosixOpenFlags;
@@ -142,7 +142,8 @@ namespace Voron
                 if (fd == -1)
                 {
                     if (_log.IsInfoEnabled)
-                        _log.Info("Failed to create test file at '" + filename + "'. Cannot determine if O_DIRECT supported by the file system. Assuming it is");
+                        _log.Info(
+                            $"Failed to create test file at \'{filename}\'. Cannot determine if O_DIRECT supported by the file system. Assuming it is");
                     return true;
                 }
 
@@ -151,7 +152,7 @@ namespace Voron
                 {
                     if (_log.IsInfoEnabled)
                         _log.Info(
-                        "Cannot fallocate (rc = EINVAL) to a file '" + filename + "' opened using O_DIRECT. Assuming O_DIRECT is not supported by this file system");
+                            $"Cannot fallocate (rc = EINVAL) to a file \'{filename}\' opened using O_DIRECT. Assuming O_DIRECT is not supported by this file system");
 
                     return false;
                 }
@@ -159,7 +160,8 @@ namespace Voron
                 if (result != 0)
                 {
                     if (_log.IsInfoEnabled)
-                        _log.Info("Failed to fallocate test file at '" + filename + "'. (rc = " + result + "). Cannot determine if O_DIRECT supported by the file system. Assuming it is");
+                        _log.Info(
+                            $"Failed to fallocate test file at \'{filename}\'. (rc = {result}). Cannot determine if O_DIRECT supported by the file system. Assuming it is");
                 }
                
             }
@@ -169,12 +171,13 @@ namespace Voron
                 if (result != 0)
                 {
                     if (_log.IsInfoEnabled)
-                        _log.Info("Failed to close test file at '" + filename + "'. (rc = " + result + ").");
+                        _log.Info($"Failed to close test file at \'{filename}\'. (rc = {result}).");
                 }
 
-                if (Syscall.unlink(filename) != 0)
+                result = Syscall.unlink(filename);
+                if (result != 0)
                 {
-                    _log.Info("Failed to delete test file at '" + filename + "'", new IOException("Failed to unlink " + filename));
+                    _log.Info($"Failed to delete test file at \'{filename}\'. (rc = {result}).");
                 }
             }
 

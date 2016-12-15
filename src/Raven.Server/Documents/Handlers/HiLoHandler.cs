@@ -6,6 +6,7 @@
 
 using System;
 using System.Globalization;
+using System.IO;
 using System.Threading.Tasks;
 using Raven.Server.Exceptions;
 using Raven.Server.Routing;
@@ -115,17 +116,10 @@ namespace Raven.Server.Documents.Handlers
                     }
                     catch (DocumentConflictException e)
                     {
-                        // resolving the conflict by selecting the document with the highest number
-                        long highestMax = 0;
-                        foreach (var conflict in e.Conflicts)
-                        {
-                            long tmpMax;
-                            if (conflict.Doc.TryGet("Max", out tmpMax) && tmpMax > highestMax)
-                            {
-                                highestMax = tmpMax;
-                                hiloDocReader = conflict.Doc;
-                            }
-                        }
+                        throw new InvalidDataException(@"Failed to fetch HiLo document due to a conflict 
+                                                            on the document. This shouldn't happen, since
+                                                            it this conflict should've been resolved during replication.
+                                                             This exception should not happen and is likely a bug.",e);
                     }
 
                     string serverPrefix;

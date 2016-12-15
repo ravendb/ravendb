@@ -23,7 +23,7 @@ namespace Voron
         public string TempPath { get; }
 
         public event EventHandler<RecoveryErrorEventArgs> OnRecoveryError;
-        public event EventHandler<NonDurabalitySupportEventArgs> OnNonDurabalitySupportError;
+        public event EventHandler<NonDurabalitySupportEventArgs> OnNonDurabaleFileSystemError;
 
         public abstract override string ToString();
 
@@ -39,15 +39,13 @@ namespace Voron
             handler(this, new RecoveryErrorEventArgs(message, e));
         }
 
-        public void InvokeNonDurabalitySupportError(object sender, string message, Exception e)
+        public void InvokeNonDurabaleFileSystemError(object sender, string message, Exception e)
         {
-            var handler = OnNonDurabalitySupportError;
+            var handler = OnNonDurabaleFileSystemError;
             if (handler == null)
             {
-                if (_log.IsInfoEnabled)
-                    _log.Info(
-                        "NonDurabalitySupport alert triggered however there isn't a listener to the OnNonDurabalitySupportError event on the storage options.");
-                return;
+                throw new InvalidDataException(message + Environment.NewLine +
+                    "An exception has been thrown because there isn't a listener to the OnNonDurabaleFileSystemError event on the storage options.", e);
             }
 
             handler(this, new NonDurabalitySupportEventArgs(message, e));

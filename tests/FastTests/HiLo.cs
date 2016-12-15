@@ -3,15 +3,15 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-using Raven.Tests.Core.Utils.Entities;
-using Xunit;
-using Raven.NewClient.Client.Document;
+using NewClientTests;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
+using Raven.NewClient.Client.Document;
+using Raven.Tests.Core.Utils.Entities;
+using Xunit;
 using Raven.NewClient.Client.Document.Async;
 
-
-namespace NewClientTests.NewClient
+namespace FastTests
 {
     public class Hilo : RavenTestBase
     {
@@ -263,7 +263,7 @@ namespace NewClientTests.NewClient
                         break;
                     Thread.Sleep(32);
                 }
-                if (sp.Elapsed.TotalSeconds > 30)
+                if (sp.Elapsed.TotalSeconds > (Debugger.IsAttached ? 60 * 1024 : 30))
                     throw new TimeoutException("waited too long");
             }
         }
