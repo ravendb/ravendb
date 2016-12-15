@@ -3,12 +3,11 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Data;
 
-
-namespace Raven.NewClient.Client.Document
+namespace Raven.NewClient.Client.Document.Async
 {
     public class AsyncMultiDatabaseHiLoKeyGenerator
     {
@@ -24,12 +23,18 @@ namespace Raven.NewClient.Client.Document
             _conventions = conventions;
         }
 
+
         public Task<string> GenerateDocumentKeyAsync(string dbName,
                                                      object entity)
         {
             var db = dbName ?? _store.DefaultDatabase;
-            var generator = _generators.GetOrAdd(db, s => new AsyncMultiTypeHiLoKeyGenerator(_store, db, _conventions));
+            var generator = _generators.GetOrAdd(db, GenrateAsyncMultiTypeHiLoFunc);
             return generator.GenerateDocumentKeyAsync(entity);
+        }
+
+        public  AsyncMultiTypeHiLoKeyGenerator GenrateAsyncMultiTypeHiLoFunc(string dbName)
+        {
+            return new AsyncMultiTypeHiLoKeyGenerator(_store, dbName, _conventions);
         }
 
         public async Task ReturnUnusedRange()

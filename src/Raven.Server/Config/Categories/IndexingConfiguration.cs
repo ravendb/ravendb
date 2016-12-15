@@ -30,8 +30,8 @@ namespace Raven.Server.Config.Categories
         }
 
         [Description("Whatever the indexes should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost. This is mostly useful for testing.")]
-        [ConfigurationEntry("Raven/Indexing/RunInMemory", setDefaultValueIfNeeded: false)]
         [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry("Raven/Indexing/RunInMemory", setDefaultValueIfNeeded: false)]
         public virtual bool RunInMemory
         {
             get
@@ -46,15 +46,15 @@ namespace Raven.Server.Config.Categories
         }
 
         [DefaultValue(false)]
-        [ConfigurationEntry("Raven/Indexing/Disable")]
         [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Raven/Indexing/Disable")]
         public virtual bool Disabled { get; protected set; }
 
         [Description("Default path for the indexes on disk. Useful if you want to store the indexes on another HDD for performance reasons.\r\nDefault: ~\\Databases\\[database-name]\\Indexes.")]
         [DefaultValue(null)]
+        [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry(Constants.Configuration.Indexing.StoragePath)]
         [LegacyConfigurationEntry("Raven/IndexStoragePath")]
-        [IndexUpdateType(IndexUpdateType.Reset)]
         public virtual string IndexStoragePath
         {
             get
@@ -77,8 +77,8 @@ namespace Raven.Server.Config.Categories
 
         [Description("List of paths separated by semicolon ';' where database will look for index when it loads.")]
         [DefaultValue(null)]
-        [ConfigurationEntry(Constants.Configuration.Indexing.AdditionalIndexStoragePaths)]
         [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry(Constants.Configuration.Indexing.AdditionalIndexStoragePaths)]
         public virtual string[] AdditionalIndexStoragePaths
         {
             get
@@ -103,54 +103,54 @@ namespace Raven.Server.Config.Categories
         [Description("How long indexing will keep document transaction open when indexing. After this the transaction will be reopened.")]
         [DefaultValue(15)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Raven/Indexing/MaxTimeForDocumentTransactionToRemainOpenInSec")]
         [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Raven/Indexing/MaxTimeForDocumentTransactionToRemainOpenInSec")]
         public TimeSetting MaxTimeForDocumentTransactionToRemainOpen { get; protected set; }
 
         [Description("How long the database should wait before marking an auto index with the idle flag")]
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Minutes)]
-        [ConfigurationEntry("Raven/Indexing/TimeToWaitBeforeMarkingAutoIndexAsIdleInMin")]
         [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Raven/Indexing/TimeToWaitBeforeMarkingAutoIndexAsIdleInMin")]
         public TimeSetting TimeToWaitBeforeMarkingAutoIndexAsIdle { get; protected set; }
 
         [Description("How long the database should wait before deleting an auto index with the idle flag")]
         [DefaultValue(72)]
         [TimeUnit(TimeUnit.Hours)]
-        [ConfigurationEntry("Raven/Indexing/TimeToWaitBeforeDeletingAutoIndexMarkedAsIdleInHrs")]
         [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Raven/Indexing/TimeToWaitBeforeDeletingAutoIndexMarkedAsIdleInHrs")]
         public TimeSetting TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle { get; protected set; }
 
         [Description("Limits the number of map outputs that a map index is allowed to create for a one source document. If a map operation applied to the one document produces more outputs than this number then an index definition will be considered as a suspicious, the indexing of this document will be skipped and the appropriate error message will be added to the indexing errors. Default value: 15. In order to disable this check set value to -1.")]
         [DefaultValue(15)]
-        [ConfigurationEntry(Constants.Configuration.Indexing.MaxMapIndexOutputsPerDocument)]
         [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry(Constants.Configuration.Indexing.MaxMapIndexOutputsPerDocument)]
         public int MaxMapIndexOutputsPerDocument { get; protected set; }
 
         [Description("Limits the number of map outputs that a map-reduce index is allowed to create for a one source document. If a map operation applied to the one document produces more outputs than this number then an index definition will be considered as a suspicious, the indexing of this document will be skipped and the appropriate error message will be added to the indexing errors. Default value: 50. In order to disable this check set value to -1.")]
         [DefaultValue(50)]
-        [ConfigurationEntry(Constants.Configuration.Indexing.MaxMapReduceIndexOutputsPerDocument)]
         [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry(Constants.Configuration.Indexing.MaxMapReduceIndexOutputsPerDocument)]
         public int MaxMapReduceIndexOutputsPerDocument { get; protected set; }
 
         [Description("EXPERT ONLY")]
         [DefaultValue(16)]
-        [ConfigurationEntry("Raven/Indexing/MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory")]
         [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Raven/Indexing/MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory")]
         public int MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory { get; protected set; }
 
         [Description("Number of seconds after which mapping will end even if there is more to map. By default we will map everything we can in single batch.")]
         [DefaultValue(-1)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Raven/Indexing/MapTimeoutInSec")]
         [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Raven/Indexing/MapTimeoutInSec")]
         public TimeSetting MapTimeout { get; protected set; }
 
         [Description("Number of minutes after which mapping will end even if there is more to map. This will only be applied if we pass the last etag in collection that we saw when batch was started.")]
         [DefaultValue(15)]
         [TimeUnit(TimeUnit.Minutes)]
-        [ConfigurationEntry("Raven/Indexing/MapTimeoutAfterEtagReachedInMin")]
         [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Raven/Indexing/MapTimeoutAfterEtagReachedInMin")]
         public TimeSetting MapTimeoutAfterEtagReached { get; protected set; }
 
         protected string AddDatabaseNameToPathIfNeeded(string path)

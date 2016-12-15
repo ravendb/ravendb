@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Util;
 
 
-namespace Raven.NewClient.Client.Document
+namespace Raven.NewClient.Client.Document.Async
 {
     /// <summary>
     /// Generate a hilo key for each given type
