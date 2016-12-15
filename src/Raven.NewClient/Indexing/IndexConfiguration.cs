@@ -48,7 +48,7 @@ namespace Raven.NewClient.Client.Indexing
         public new string this[string key]
         {
             get { return base[key]; }
-            set { Add(key, value);}
+            set { Add(key, value); }
         }
 
         public string GetValue(string key)
@@ -58,30 +58,6 @@ namespace Raven.NewClient.Client.Indexing
                 return null;
 
             return value;
-        }
-
-        public bool Equals(IndexConfiguration configuration, bool ignoreMaxIndexOutputs)
-        {
-            if (configuration == null)
-                return false;
-
-            if (Count != configuration.Count)
-                return false;
-
-            foreach (var kvp in this)
-            {
-                if (ignoreMaxIndexOutputs && kvp.Key.Equals(Constants.Configuration.MaxIndexOutputsPerDocument, StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                string value;
-                if (configuration.TryGetValue(kvp.Key, out value) == false)
-                    return false;
-
-                if (Equals(value, kvp.Value) == false)
-                    return false;
-            }
-
-            return true;
         }
 
         protected bool Equals(IndexConfiguration other)
