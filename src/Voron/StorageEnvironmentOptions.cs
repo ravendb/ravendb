@@ -6,6 +6,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow;
+using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron.Global;
 using Voron.Impl.FileHeaders;
@@ -22,6 +23,7 @@ namespace Voron
         public string TempPath { get; }
 
         public event EventHandler<RecoveryErrorEventArgs> OnRecoveryError;
+        public event EventHandler<NonDurabalitySupportEventArgs> OnNonDurabalitySupportError;
 
         public abstract override string ToString();
 
@@ -35,6 +37,20 @@ namespace Voron
             }
 
             handler(this, new RecoveryErrorEventArgs(message, e));
+        }
+
+        public void InvokeNonDurabalitySupportError(object sender, string message, Exception e)
+        {
+            var handler = OnNonDurabalitySupportError;
+            if (handler == null)
+            {
+                if (_log.IsInfoEnabled)
+                    _log.Info(
+                        "NonDurabalitySupport alert triggered however there isn't a listener to the OnNonDurabalitySupportError event on the storage options.");
+                return;
+            }
+
+            handler(this, new NonDurabalitySupportEventArgs(message, e));
         }
 
         public long? InitialFileSize { get; set; }
@@ -138,6 +154,8 @@ namespace Voron
             IncrementalBackupEnabled = false;
 
             IoMetrics = new IoMetrics(256, 256);
+
+            _log = LoggingSource.Instance.GetLogger<StorageEnvironment>(tempPath);
         }
 
         public int ScratchBufferOverflowTimeout { get; set; }
@@ -521,12 +539,13 @@ namespace Voron
                RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
 
         public TransactionsMode TransactionsMode { get; set; }
-        public OpenFlags PosixOpenFlags = SafePosixOpenFlags;
+        public OpenFlags PosixOpenFlags;
         public Win32NativeFileAttributes WinOpenFlags = SafeWin32OpenFlags;
         public DateTime? NonSafeTransactionExpiration { get; set; }
 
 
         public const Win32NativeFileAttributes SafeWin32OpenFlags = Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering;
-        public static OpenFlags SafePosixOpenFlags = OpenFlags.O_DSYNC | OpenFlagsThatAreDifferentBetweenPlatforms.O_DIRECT;
+        public OpenFlags SafePosixOpenFlags = OpenFlags.O_DSYNC | OpenFlagsThatAreDifferentBetweenPlatforms.O_DIRECT;
+        private readonly Logger _log;
     }
 }
