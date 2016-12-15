@@ -6,13 +6,16 @@
             <div class="button-wrapper">
                 <button class="btn btn-primary btn-lg btn-spinner sampleData-createBtn" data-bind="click: generateSampleData, css: { 'btn-spinner': isBusy() }, disable: !canCreateSampleData()">
                     <span>
-                        Create
+                        Create<span data-bind="visible: justCreatedSampleData()">d</span>
                     </span>
                 </button>
                 <div class="padding padding-xs bg-danger" data-bind="visible: !canCreateSampleData() && !justCreatedSampleData()">
                     <small>
-                        requires an empty database
+                        Requires an empty database
                     </small>
+                </div>
+                <div class="padding padding-xs bg-danger" data-bind="visible: justCreatedSampleData()">
+                    <a href="#" data-bind="attr: { href: urlForDatabaseDocuments() }"><small>Go to documents</small></a>
                 </div>
             </div>
             <br />

@@ -6,6 +6,7 @@ import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBinding
 import eventsCollector = require("common/eventsCollector");
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import collectionsStats = require("models/database/documents/collectionsStats");
+import appUrl = require("common/appUrl");
 
 class createSampleData extends viewModelBase {
 
@@ -72,6 +73,10 @@ class createSampleData extends viewModelBase {
             .done((results: string) => {
                 this.classData(results);
             });
+    }
+
+    private urlForDatabaseDocuments() {
+        return appUrl.forDocuments("", this.activeDatabase());
     }
 }
 
