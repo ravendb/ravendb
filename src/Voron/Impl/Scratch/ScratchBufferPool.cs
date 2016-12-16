@@ -142,9 +142,9 @@ namespace Voron.Impl.Scratch
             if (tx == null)
                 throw new ArgumentNullException(nameof(tx));
             var size = Bits.NextPowerOf2(numberOfPages);
-            
+
             var current = _current;
-            
+
             PageFromScratchBuffer result;
             if (current.File.TryGettingFromAllocatedBuffer(tx, numberOfPages, size, out result))
                 return result;
@@ -206,7 +206,7 @@ namespace Voron.Impl.Scratch
                 newCurrent.File.PagerState.AddRef();
                 _current = newCurrent;
             }
-            
+
             RecyleScratchFile(scratch);
         }
 
@@ -229,6 +229,13 @@ namespace Voron.Impl.Scratch
 
         public void Dispose()
         {
+            if (_pagerStatesAllScratchesCache != null)
+            {
+                foreach (var pagerState in _pagerStatesAllScratchesCache)
+                {
+                    pagerState.Value.Release();
+                }
+            }
             foreach (var scratch in _scratchBuffers)
             {
                 scratch.Value.File.Dispose();
@@ -246,6 +253,15 @@ namespace Voron.Impl.Scratch
                 Number = number;
                 File = file;
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public virtual int CopyPage(AbstractPager dest, IPagerBatchWrites destPagerBatchWrites, int scratchNumber, long p, PagerState pagerState)
+        {
+            var item = GetScratchBufferFile(scratchNumber);
+
+            ScratchBufferFile bufferFile = item.File;
+            return bufferFile.CopyPage(dest, destPagerBatchWrites, p, pagerState);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -303,6 +319,15 @@ namespace Voron.Impl.Scratch
                     _recycleArea.RemoveFirst();
                 }
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void EnsureMapped(LowLevelTransaction tx,int scratchNumber, long positionInScratchBuffer, int numberOfPages)
+        {
+            var item = GetScratchBufferFile(scratchNumber);
+
+            ScratchBufferFile bufferFile = item.File;
+            bufferFile.EnsureMapped(tx, positionInScratchBuffer, numberOfPages);
         }
     }
 }

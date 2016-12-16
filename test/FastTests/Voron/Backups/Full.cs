@@ -49,7 +49,7 @@ namespace FastTests.Voron.Backups
                 tx.Commit();
             }
 
-            Env.FlushLogToDataFile(); // force writing data to the data file - this won't sync data to disk because there was another sync withing last minute
+            Env.FlushLogToDataFile(); // force writing data to the data file - this won't sync data to disk because there was another sync within last minute
 
             BackupMethods.Full.ToFile(Env, Path.Combine(DataDir, "voron-test.backup"));
 

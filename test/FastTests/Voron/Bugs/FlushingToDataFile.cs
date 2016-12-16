@@ -170,12 +170,12 @@ namespace FastTests.Voron.Bugs
 
                             }
 
-                            tx.Commit();
-                            env.FlushLogToDataFile(tx.LowLevelTransaction);
                             var txr = env.ReadTransaction();
-
                             transactions.Add(txr);
+                            tx.Commit();
                         }
+                        env.FlushLogToDataFile();
+
                     }
 
                     Assert.Equal(transactions.OrderBy(x => x.LowLevelTransaction.Id).First().LowLevelTransaction.Id, env.ActiveTransactions.OldestTransaction);

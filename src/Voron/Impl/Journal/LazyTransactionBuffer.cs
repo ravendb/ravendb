@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using Sparrow;
 using Voron.Impl.Paging;
@@ -35,10 +36,12 @@ namespace Voron.Impl.Journal
                 _firstPositionInJournalFile = position; // first lazy tx saves position to all lazy tx that comes afterwards
             }
 
-            Memory.BulkCopy(
-                _lazyTransactionPager.PagerState.MapBase + (long) _lastUsedPage *_lazyTransactionPager.PageSize,
-                pages.Base, 
-                pages.NumberOfPages *_lazyTransactionPager.PageSize);
+            _lazyTransactionPager.BatchWrites.Write(_lastUsedPage,
+                pages.NumberOfPages,
+                pages.Base,
+                null);
+
+            _lazyTransactionPager.BatchWrites.Clear();
 
             _lastUsedPage += pages.NumberOfPages;
         }
@@ -57,7 +60,12 @@ namespace Voron.Impl.Journal
         {
             if (_firstPositionInJournalFile != null)
             {
-                journalFile.JournalWriter.WritePages(_firstPositionInJournalFile.Value, _lazyTransactionPager.AcquirePagePointer(null, 0),_lastUsedPage);
+                using (var tempTx = new TempPagerTransaction())
+                {
+                    _lazyTransactionPager.EnsureMapped(tempTx, 0, _lastUsedPage);
+                    var src = _lazyTransactionPager.AcquirePagePointer(tempTx, 0);
+                    journalFile.JournalWriter.WritePages(_firstPositionInJournalFile.Value, src, _lastUsedPage);
+                }
             }
 
             if (tx != null)

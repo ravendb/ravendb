@@ -33,7 +33,7 @@ namespace Voron.Platform.Win32
         private readonly Logger _logger;
 
         [StructLayout(LayoutKind.Explicit)]
-        private struct SplitValue
+        public struct SplitValue
         {
             [FieldOffset(0)]
             public ulong Value;
@@ -59,7 +59,7 @@ namespace Voron.Platform.Win32
             AllocationGranularity = systemInfo.allocationGranularity;
             _access = access;
             _copyOnWriteMode = Options.CopyOnWriteMode && FileName.EndsWith(Constants.DatabaseFilename);
-            if (options.CopyOnWriteMode && _copyOnWriteMode)
+            if (_copyOnWriteMode)
             {
                 _memoryMappedFileAccess = MemoryMappedFileAccess.Read | MemoryMappedFileAccess.CopyOnWrite;
                 fileAttributes = Win32NativeFileAttributes.Readonly;
@@ -374,18 +374,18 @@ namespace Voron.Platform.Win32
             return _fileInfo.Name;
         }
 
-
         public override void Dispose()
         {
             if (Disposed)
                 return;
+
+            base.Dispose();
 
             _fileStream?.Dispose();
             _handle?.Dispose();
             if (DeleteOnClose)
                 _fileInfo?.Delete();
 
-            base.Dispose();
         }
 
         public override void ReleaseAllocationInfo(byte* baseAddress, long size)
@@ -437,23 +437,6 @@ namespace Voron.Platform.Win32
                 throw new Win32Exception();
         }
 
-
-        public override void MaybePrefetchMemory(List<TreePage> sortedPages)
-        {
-            if (Sparrow.Platform.CanPrefetch == false)
-                return; // not supported
-
-            if (sortedPages.Count == 0)
-                return;
-
-            var ranges = SortedPagesToList(sortedPages);
-            fixed (Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* entries = ranges.ToArray())
-            {
-                Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32Helper.CurrentProcess,
-                    (UIntPtr)ranges.Count,
-                    entries, 0);
-            }
-        }
 
         internal override void ProtectPageRange(byte* start, ulong size, bool force = false)
         {

@@ -19,7 +19,15 @@ using Voron.Util;
 
 namespace Voron.Impl
 {
-    public unsafe class LowLevelTransaction : IDisposable
+    public interface IPagerLevelTransactionState : IDisposable
+    {
+        Dictionary<AbstractPager, SparseMemoryMappedPager.TransactionState> SparsePagerTransactionState { get; set; }
+        event Action<IPagerLevelTransactionState> OnDispose;
+        void EnsurePagerStateReference(PagerState state);
+        StorageEnvironment Environment { get; }
+    }
+
+    public unsafe class LowLevelTransaction : IPagerLevelTransactionState
     {
         private const int PagesTakenByHeader = 1;
 
@@ -36,6 +44,12 @@ namespace Voron.Impl
 
         private readonly WriteAheadJournal _journal;
         internal readonly List<JournalSnapshot> JournalSnapshots = new List<JournalSnapshot>();
+
+        Dictionary<AbstractPager, SparseMemoryMappedPager.TransactionState> IPagerLevelTransactionState.SparsePagerTransactionState
+        {
+            get;
+            set;
+        }
 
         internal class WriteTransactionPool
         {
@@ -63,7 +77,7 @@ namespace Voron.Impl
 
 
         public event Action<LowLevelTransaction> OnCommit;
-        public event Action<LowLevelTransaction> OnDispose;
+        public event Action<IPagerLevelTransactionState> OnDispose;
         public event Action AfterCommitWhenNewReadTransactionsPrevented;
 
         private readonly IFreeSpaceHandling _freeSpaceHandling;
@@ -100,7 +114,7 @@ namespace Voron.Impl
 
         internal bool CreatedByJournalApplicator;
 
-        internal StorageEnvironment Environment => _env;
+        public StorageEnvironment Environment => _env;
 
         public long Id => _id;
 
@@ -414,6 +428,14 @@ namespace Voron.Impl
             if (numberOfPages > 1)
                 _dirtyOverflowPages.Add(pageNumber + 1, numberOfPages - 1);
 
+            if (numberOfPages != 1)
+            {
+                _env.ScratchBufferPool.EnsureMapped(this,
+                    pageFromScratchBuffer.ScratchFileNumber,
+                    pageFromScratchBuffer.PositionInScratchBuffer,
+                    numberOfPages);
+            }
+
             var newPage = _env.ScratchBufferPool.ReadPage(this, pageFromScratchBuffer.ScratchFileNumber,
                 pageFromScratchBuffer.PositionInScratchBuffer);
 
@@ -686,7 +708,7 @@ namespace Voron.Impl
         internal ActiveTransactions.Node ActiveTransactionNode;
         internal bool FlushInProgressLockTaken;
 
-        internal void EnsurePagerStateReference(PagerState state)
+        public void EnsurePagerStateReference(PagerState state)
         {
             if (state == _lastState || state == null)
                 return;

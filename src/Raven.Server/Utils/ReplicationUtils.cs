@@ -240,7 +240,6 @@ namespace Raven.Server.Utils
                 conflictsArray.Add(new DynamicJsonValue
                 {
                     ["ChangeVector"] = c.ChangeVector.ToJson(),
-                    ["Doc"] = c.Doc
                 });
             }
 

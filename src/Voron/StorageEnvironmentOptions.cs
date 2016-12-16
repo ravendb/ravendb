@@ -207,7 +207,8 @@ namespace Voron
                     if (RunningOnPosix)
                         return new PosixMemoryMapPager(this, FilePath, InitialFileSize);
 
-                    return new Win32MemoryMapPager(this, FilePath, InitialFileSize, usePageProtection: true);
+//                    return new Win32MemoryMapPager(this, FilePath, InitialFileSize, usePageProtection: true);
+                    return new SparseMemoryMappedPager(this, FilePath, InitialFileSize);
                 });
             }
 
@@ -342,7 +343,8 @@ namespace Voron
                         DeleteOnClose = true
                     };
                 }
-                return new Win32MemoryMapPager(this, scratchFile, initialSize, (Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary));
+                return new SparseMemoryMappedPager(this, scratchFile,initialSize, (Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary));
+                //return new Win32MemoryMapPager(this, scratchFile, initialSize, (Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary));
             }
 
             public override AbstractPager OpenJournalPager(long journalNumber)
@@ -353,10 +355,13 @@ namespace Voron
                     throw new InvalidOperationException("No such journal " + path);
                 if (RunningOnPosix)
                     return new PosixMemoryMapPager(this, path);
-                var win32MemoryMapPager = new Win32MemoryMapPager(this, path, access: Win32NativeFileAccess.GenericRead,
+                //var win32MemoryMapPager = new Win32MemoryMapPager(this, path, access: Win32NativeFileAccess.GenericRead,
+                //    fileAttributes: Win32NativeFileAttributes.SequentialScan);
+                //win32MemoryMapPager.TryPrefetchingWholeFile();
+                //return win32MemoryMapPager;
+                return new SparseMemoryMappedPager(this, path,
+                    access: Win32NativeFileAccess.GenericRead,
                     fileAttributes: Win32NativeFileAttributes.SequentialScan);
-                win32MemoryMapPager.TryPrefetchingWholeFile();
-                return win32MemoryMapPager;
             }
         }
 
@@ -385,7 +390,8 @@ namespace Voron
                 {
                     if (RunningOnPosix)
                         return new PosixTempMemoryMapPager(this, Path.Combine(TempPath, filename), InitialFileSize);
-                    return new Win32MemoryMapPager(this, Path.Combine(TempPath, filename), InitialFileSize, Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
+//                    return new Win32MemoryMapPager(this, Path.Combine(TempPath, filename), InitialFileSize, Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
+                    return new SparseMemoryMappedPager(this, Path.Combine(TempPath, filename), InitialFileSize);
                 }, true);
             }
 
@@ -480,15 +486,17 @@ namespace Voron
                 if (RunningOnPosix)
                     return new PosixTempMemoryMapPager(this, Path.Combine(TempPath, filename), intialSize);
 
-                return new Win32MemoryMapPager(this, Path.Combine(TempPath, filename), intialSize,
-                        Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
+                return new SparseMemoryMappedPager(this, Path.Combine(TempPath, filename), intialSize);
+//                return new Win32MemoryMapPager(this, Path.Combine(TempPath, filename), intialSize,
+//                        Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
             }
 
             public override AbstractPager OpenPager(string filename)
             {
                 if (RunningOnPosix)
                     return new PosixMemoryMapPager(this, filename);
-                return new Win32MemoryMapPager(this, filename);
+//                return new Win32MemoryMapPager(this, filename);
+                return new SparseMemoryMappedPager(this, filename);
             }
 
             public override AbstractPager OpenJournalPager(long journalNumber)

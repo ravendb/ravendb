@@ -37,7 +37,7 @@ namespace Voron.Platform.Win32
                 options.WinOpenFlags, IntPtr.Zero);
 
             if (_handle.IsInvalid)
-                throw new Win32Exception();
+                throw new IOException("When opening file " + filename, new Win32Exception(Marshal.GetLastWin32Error()));
 
             _maxNumberOfPagesPerSingleWrite = int.MaxValue/_options.PageSize;
 
@@ -98,7 +98,8 @@ namespace Voron.Platform.Win32
 
         public AbstractPager CreatePager()
         {
-            return new Win32MemoryMapPager(_options,_filename);
+//            return new Win32MemoryMapPager(_options,_filename);
+            return new SparseMemoryMappedPager(_options,_filename);
         }
 
         public bool Read(long pageNumber, byte* buffer, int count)

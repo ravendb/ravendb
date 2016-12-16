@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO.MemoryMappedFiles;
 using System.Threading;
@@ -52,11 +54,12 @@ namespace Voron.Impl
             if (Interlocked.Decrement(ref _refs) != 0)
                 return;
 
+
 #if DEBUG_PAGER_STATE
             String value;
             Instances.TryRemove(this, out value);
 #endif
-         
+
             ReleaseInternal();
         }
 
@@ -86,7 +89,6 @@ namespace Voron.Impl
 #if DEBUG_PAGER_STATE
         public ConcurrentQueue<string> AddedRefs = new ConcurrentQueue<string>();
 #endif
-
         public void AddRef()
         {
             if (Released)

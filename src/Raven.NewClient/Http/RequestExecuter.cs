@@ -37,7 +37,7 @@ namespace Raven.NewClient.Client.Http
 
         private readonly ApiKeyAuthenticator _authenticator = new ApiKeyAuthenticator();
 
-        public readonly ThreadLocal<AggresiveCacheOptions> AggressiveCaching = new ThreadLocal<AggresiveCacheOptions>();
+        public readonly AsyncLocal<AggresiveCacheOptions> AggressiveCaching = new AsyncLocal<AggresiveCacheOptions>();
 
         private readonly HttpCache _cache = new HttpCache();
 

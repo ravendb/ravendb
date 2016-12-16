@@ -13,15 +13,10 @@ namespace Tryouts
     {
         static void Main(string[] args)
         {
-            Parallel.For(0, 1000, i =>
-                {
-                    Console.WriteLine(i);
-                    using (var store = new FastTests.Server.Documents.Replication.ReplicationTombstoneTests())
-                    {
-                        store.Two_tombstones_should_replicate_in_master_master().Wait();
-                    }
-                }
-            );
+            using (var store = new FastTests.Client.Indexing.IndexesFromClient())
+            {
+                store.GetStats().Wait();
+            }
         }
     }
 
