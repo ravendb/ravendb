@@ -4,8 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Sparrow;
-using Sparrow.Binary;
-using Sparrow.Compression;
 using Voron.Data.Compression;
 using Voron.Data.Fixed;
 using Voron.Debugging;
@@ -861,6 +859,12 @@ namespace Voron.Data.BTrees
             Func<Slice, TreeCursor> cursorConstructor;
             TreeNodeHeader* node;
             var page = FindPageFor(key, node: out node, cursor: out cursorConstructor, allowCompressed: true);
+
+            if (page.IsCompressed)
+            {
+                DeleteOnCompressedPage(page, key, cursorConstructor);
+                return;
+            }
 
             if (page.LastMatch != 0)
                 return; // not an exact match, can't delete

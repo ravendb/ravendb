@@ -80,22 +80,25 @@ namespace Voron.Data.BTrees
 
             Debug.Assert(decompressedPage.NumberOfEntries > 0);
 
-            if (p.NumberOfEntries == 0)
+            try
             {
-                decompressedPage.DebugValidate(this, State.RootPageNumber);
+                if (p.NumberOfEntries == 0)
+                    return decompressedPage;
+
+                HandleUncompressedNodes(decompressedPage, p, usage);
+                
                 return decompressedPage;
             }
-
-            AppendUncompressedNodes(decompressedPage, p);
-
-            if (skipCache == false && decompressedPage != cached)
+            finally
             {
-                DecompressionsCache.Invalidate(p.PageNumber, usage);
-                DecompressionsCache.Add(decompressedPage);
-            }
+                decompressedPage.DebugValidate(this, State.RootPageNumber);
 
-            decompressedPage.DebugValidate(this, State.RootPageNumber);
-            return decompressedPage;
+                if (skipCache == false && decompressedPage != cached)
+                {
+                    DecompressionsCache.Invalidate(p.PageNumber, usage);
+                    DecompressionsCache.Add(decompressedPage);
+                }
+            }
         }
 
         private DecompressedLeafPage DecompressFromBuffer(DecompressionUsage usage, ref DecompressionInput input)
@@ -147,7 +150,7 @@ namespace Voron.Data.BTrees
             return result;
         }
 
-        private void AppendUncompressedNodes(DecompressedLeafPage decompressedPage, TreePage p)
+        private void HandleUncompressedNodes(DecompressedLeafPage decompressedPage, TreePage p, DecompressionUsage usage)
         {
             for (var i = 0; i < p.NumberOfEntries; i++)
             {
@@ -156,6 +159,12 @@ namespace Voron.Data.BTrees
                 Slice nodeKey;
                 using (TreeNodeHeader.ToSlicePtr(_tx.Allocator, uncompressedNode, out nodeKey))
                 {
+                    if (uncompressedNode->Flags == TreeNodeFlags.CompressionTombstone)
+                    {
+                        HandleTombstone(decompressedPage, nodeKey, usage);
+                        continue;
+                    }
+
                     if (decompressedPage.HasSpaceFor(_llt, TreeSizeOf.NodeEntry(uncompressedNode)) == false)
                         throw new InvalidOperationException("Could not add uncompressed node to decompressed page");
 
@@ -186,7 +195,12 @@ namespace Voron.Data.BTrees
                                 index = decompressedPage.NodePositionFor(_llt, nodeKey);
 
                                 if (decompressedPage.LastMatch == 0) // update
+                                {
                                     decompressedPage.RemoveNode(index);
+
+                                    if (usage == DecompressionUsage.Write)
+                                        State.NumberOfEntries--;
+                                }
                             }
                         }
                     }
@@ -209,6 +223,78 @@ namespace Voron.Data.BTrees
                             throw new NotSupportedException("Invalid node type to copye: " + uncompressedNode->Flags);
                     }
                 }
+            }
+        }
+
+        private void HandleTombstone(DecompressedLeafPage decompressedPage, Slice nodeKey, DecompressionUsage usage)
+        {
+            decompressedPage.Search(_llt, nodeKey);
+
+            if (decompressedPage.LastMatch != 0)
+                return;
+            
+            var node = decompressedPage.GetNode(decompressedPage.LastSearchPosition);
+
+            if (usage == DecompressionUsage.Write)
+            {
+                State.NumberOfEntries--;
+
+                if (node->Flags == TreeNodeFlags.PageRef)
+                {
+                    var overflowPage = GetReadOnlyTreePage(node->PageNumber);
+                    FreePage(overflowPage);
+                }
+            }
+
+            decompressedPage.RemoveNode(decompressedPage.LastSearchPosition);
+        }
+
+        private void DeleteOnCompressedPage(TreePage page, Slice keyToDelete, Func<Slice, TreeCursor> cursorConstructor)
+        {
+            var tombstoneNodeSize = page.GetRequiredSpace(keyToDelete, 0);
+
+            page = ModifyPage(page);
+            ushort nodeVersion;
+
+            if (page.HasSpaceFor(_llt, tombstoneNodeSize))
+            {
+                if (page.LastMatch == 0)
+                    RemoveLeafNode(page, out nodeVersion);
+
+                page.AddCompressionTombstoneNode(page.LastSearchPosition, keyToDelete);
+                return;
+            }
+
+            var decompressed = DecompressPage(page, usage: DecompressionUsage.Write);
+
+            try
+            {
+                decompressed.Search(_llt, keyToDelete);
+
+                if (decompressed.LastMatch != 0)
+                    return;
+
+                State.NumberOfEntries--;
+
+                RemoveLeafNode(decompressed, out nodeVersion);
+
+                // TODO arek CheckConcurrency(key, version, nodeVersion, TreeActionType.Delete);
+
+                using (var cursor = cursorConstructor(keyToDelete))
+                {
+                    var treeRebalancer = new TreeRebalancer(_llt, this, cursor);
+                    var changedPage = (TreePage)decompressed;
+                    while (changedPage != null)
+                    {
+                        changedPage = treeRebalancer.Execute(changedPage);
+                    }
+                }
+
+                page.DebugValidate(this, State.RootPageNumber);
+            }
+            finally
+            {
+                decompressed.CopyToOriginal(_llt, defragRequired: true);
             }
         }
 

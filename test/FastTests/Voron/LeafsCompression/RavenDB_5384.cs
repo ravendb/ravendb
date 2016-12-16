@@ -21,7 +21,7 @@ namespace FastTests.Voron.LeafsCompression
         [InlineData(26, 333, true, 1)]
         [InlineData(1024, 555, false, 1)]
         [InlineData(777, 2048, false, 1)]
-        public unsafe void Can_compress_leaf_pages_and_read_directly_from_them_after_decompression(int iterationCount, int size, bool sequentialKeys, int seed)
+        public void Can_compress_leaf_pages_and_read_directly_from_them_after_decompression(int iterationCount, int size, bool sequentialKeys, int seed)
         {
             using (var tx = Env.WriteTransaction())
             {
@@ -62,7 +62,7 @@ namespace FastTests.Voron.LeafsCompression
                 {
                     tree.Add(id, new MemoryStream(bytes));
 
-                    AssertReads(tx, new HashSet<string> {id}, bytes);
+                    AssertReads(tx, new[] { id }, bytes);
                 }
 
                 var compressedLeafs =
@@ -108,9 +108,58 @@ namespace FastTests.Voron.LeafsCompression
             {
                 AssertReads(tx, ids, bytes);
             }
+
+            // deletes - partial
+            var deleted = new HashSet<string>();
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var tree = tx.ReadTree("tree");
+
+                Assert.True(tree.State.Flags.HasFlag(TreeFlags.LeafsCompressed));
+
+                foreach (var id in ids)
+                {
+                    if (random.Next() % 2 == 0)
+                    {
+                        tree.Delete(id);
+
+                        deleted.Add(id);
+                    }
+                }
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                AssertReads(tx, ids.Except(deleted), bytes);
+                AssertDeletes(tx, deleted);
+            }
+
+            // deletes - everything
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var tree = tx.ReadTree("tree");
+
+                Assert.True(tree.State.Flags.HasFlag(TreeFlags.LeafsCompressed));
+
+                foreach (var id in ids)
+                {
+                    tree.Delete(id);
+                }
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                AssertDeletes(tx, ids);
+            }
         }
 
-        private unsafe void AssertReads(Transaction tx, HashSet<string> ids, byte[] bytes)
+        private unsafe void AssertReads(Transaction tx, IEnumerable<string> ids, byte[] bytes)
         {
             var tree = tx.ReadTree("tree");
 
@@ -149,6 +198,36 @@ namespace FastTests.Voron.LeafsCompression
                 }
 
                 Assert.Equal(bytes, result);
+            }
+        }
+
+        private unsafe void AssertDeletes(Transaction tx, IEnumerable<string> deleted)
+        {
+            var tree = tx.ReadTree("tree");
+
+            foreach (var id in deleted)
+            {
+                Slice key;
+                using (Slice.From(tx.Allocator, id, ByteStringType.Immutable, out key))
+                {
+                    TreeNodeHeader* node;
+                    Func<Slice, TreeCursor> cursor;
+                    var page = tree.FindPageFor(key, out node, out cursor, allowCompressed: true);
+
+                    if (page.IsCompressed)
+                    {
+                        using (var decompressed = tree.DecompressPage(page))
+                        {
+                            decompressed.Search(tx.LowLevelTransaction, key);
+                            
+                            Assert.NotEqual(0, decompressed.LastMatch);
+                        }
+                    }
+                    else
+                    {
+                        Assert.NotEqual(0, page.LastMatch);
+                    }
+                }
             }
         }
     }

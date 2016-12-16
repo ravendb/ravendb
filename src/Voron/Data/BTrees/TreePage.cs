@@ -265,6 +265,12 @@ namespace Voron.Data.BTrees
             return (byte*)node + Constants.NodeHeaderSize + key.Size;
         }
 
+        public void AddCompressionTombstoneNode(int index, Slice key)
+        {
+            var node = CreateNode(index, key, TreeNodeFlags.CompressionTombstone, 0, 0);
+            node->PageNumber = 0;
+        }
+
         public void ChangeImplicitRefPageNode(long implicitRefPageNumber)
         {
             const int implicitRefIndex = 0;
