@@ -1,11 +1,12 @@
 ﻿using System;
+using System.Reflection;
 using Raven.Abstractions.Data;
 using Raven.Client.Indexing;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Utils;
 
-namespace Raven.Server.Documents.Indexes
+namespace Raven.Server.Documents.Indexes.Configuration
 {
     public class SingleIndexConfiguration : IndexingConfiguration
     {
@@ -78,5 +79,27 @@ namespace Raven.Server.Documents.Indexes
         }
 
         public override string[] AdditionalIndexStoragePaths => _databaseConfiguration.Indexing.AdditionalIndexStoragePaths;
+
+        public IndexUpdateType CalculateUpdateType(SingleIndexConfiguration newConfiguration)
+        {
+            var result = IndexUpdateType.None;
+            foreach (var property in GetConfigurationProperties())
+            {
+                var currentValue = property.GetValue(this);
+                var newValue = property.GetValue(newConfiguration);
+
+                if (Equals(currentValue, newValue))
+                    continue;
+
+                var updateTypeAttribute = property.GetCustomAttribute<IndexUpdateTypeAttribute>();
+
+                if (updateTypeAttribute.UpdateType == IndexUpdateType.Reset)
+                    return IndexUpdateType.Reset; // worst case, we do not need to check further
+
+                result = updateTypeAttribute.UpdateType;
+            }
+
+            return result;
+        }
     }
 }

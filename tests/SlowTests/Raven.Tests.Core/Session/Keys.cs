@@ -41,21 +41,24 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             }
         }
 
+        
         [Fact]
         public async Task KeyGeneration()
         {
             using (var store = GetDocumentStore())
             {
-                store.Conventions.RegisterIdConvention<User>((databaseName, entity) => "abc");
-                store.Conventions.RegisterAsyncIdConvention<User>((databaseName, entity) => new CompletedTask<string>("def"));
+                store.Conventions.RegisterAsyncIdConvention<User>((databaseName, entity) => new CompletedTask<string>("abc"));
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     var user = new User { Name = "John" };
-                    session.Store(user);
+                    await session.StoreAsync(user);
 
                     Assert.Equal("abc", user.Id);
                 }
+                Assert.Equal("abc", await store.Conventions.GenerateDocumentKeyAsync(store.DefaultDatabase, new User()));
+
+                store.Conventions.RegisterAsyncIdConvention<User>((databaseName, entity) => new CompletedTask<string>("def"));
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -64,8 +67,6 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
 
                     Assert.Equal("def", user.Id);
                 }
-
-                Assert.Equal("abc", store.Conventions.GenerateDocumentKey(store.DefaultDatabase,  new User()));
                 Assert.Equal("def", await store.Conventions.GenerateDocumentKeyAsync(store.DefaultDatabase,  new User()));
 
                 Assert.Equal("addresses/1", store.Conventions.GenerateDocumentKey(store.DefaultDatabase,  new Address()));
@@ -78,7 +79,9 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
         {
             using (var store = GetDocumentStore())
             {
-                store.Conventions.RegisterIdConvention<TShirt>((databaseName, entity) => "ts/" + entity.ReleaseYear);
+                //store.Conventions.RegisterIdConvention<TShirt>((databaseName, entity) => "ts/" + entity.ReleaseYear);
+                store.Conventions.RegisterAsyncIdConvention<TShirt>((databaseName, entity) => new CompletedTask<string>("ts/" + entity.ReleaseYear));
+
                 store.Conventions.RegisterIdLoadConvention<TShirt>(id => "ts/" + id);
 
                 using (var session = store.OpenSession())
@@ -96,5 +99,6 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
                 }
             }
         }
+
     }
 }

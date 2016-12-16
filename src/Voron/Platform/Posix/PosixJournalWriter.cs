@@ -39,7 +39,16 @@ namespace Voron.Platform.Posix
                 PosixHelper.ThrowLastError(err, "when opening " + filename);
             }
 
-            var result = Syscall.posix_fallocate(_fd, IntPtr.Zero, (UIntPtr)journalSize);
+            int result;
+            if ((options.SafePosixOpenFlags & OpenFlagsThatAreDifferentBetweenPlatforms.O_DIRECT) == 0)
+            {
+                // fallocate doesn't supported, we'll use lseek instead
+                result = Syscall.AllocateUsingLseek(_fd, journalSize);
+            }
+            else
+            {
+                result = Syscall.posix_fallocate(_fd, IntPtr.Zero, (UIntPtr) journalSize);
+            }
             if (result != 0)
                 PosixHelper.ThrowLastError(result, "when allocating " + filename);
 

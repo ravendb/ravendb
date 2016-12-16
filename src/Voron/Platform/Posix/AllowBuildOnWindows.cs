@@ -12,13 +12,13 @@ namespace Voron.Platform.Posix
         public static extern int sysinfo(ref sysinfo_t info);
 
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int mkdir (
-            [MarshalAs (UnmanagedType.LPStr)] string filename, 
-            [MarshalAs (UnmanagedType.U2)] ushort mode);
+        public static extern int mkdir(
+            [MarshalAs(UnmanagedType.LPStr)] string filename,
+            [MarshalAs(UnmanagedType.U2)] ushort mode);
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int close(int fd);
-        
+
         // pread(2)
         //    ssize_t pread(int fd, void *buf, size_t count, off_t offset);
         [DllImport(LIBC_6, SetLastError = true)]
@@ -26,7 +26,7 @@ namespace Voron.Platform.Posix
 
         public static unsafe long pread(int fd, void* buf, ulong count, long offset)
         {
-            return (long)pread(fd, (IntPtr)buf, (UIntPtr)count, (UIntPtr)offset);
+            return (long) pread(fd, (IntPtr) buf, (UIntPtr) count, (UIntPtr) offset);
         }
 
         // posix_fallocate(P)
@@ -40,7 +40,7 @@ namespace Voron.Platform.Posix
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern IntPtr mmap(IntPtr start, UIntPtr length,
-                MmapProts prot, MmapFlags flags, int fd, IntPtr offset);
+            MmapProts prot, MmapFlags flags, int fd, IntPtr offset);
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int munmap(IntPtr start, UIntPtr length);
@@ -53,15 +53,15 @@ namespace Voron.Platform.Posix
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int unlink(
-                            [MarshalAs(UnmanagedType.LPStr)] string filename);
+            [MarshalAs(UnmanagedType.LPStr)] string filename);
 
         // open(2)
         //    int open(const char *pathname, int flags, mode_t mode);
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int open(
-                [MarshalAs(UnmanagedType.LPStr)] string pathname,
-                [MarshalAs(UnmanagedType.I4)] OpenFlags flags,
-                [MarshalAs(UnmanagedType.U2)] FilePermissions mode);
+            [MarshalAs(UnmanagedType.LPStr)] string pathname,
+            [MarshalAs(UnmanagedType.I4)] OpenFlags flags,
+            [MarshalAs(UnmanagedType.U2)] FilePermissions mode);
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int fsync(int fd);
@@ -74,7 +74,7 @@ namespace Voron.Platform.Posix
 
         public static unsafe long read(int fd, void* buf, ulong count)
         {
-            return (long)read(fd, (IntPtr)buf, (UIntPtr)count);
+            return (long) read(fd, (IntPtr) buf, (UIntPtr) count);
         }
 
 
@@ -85,7 +85,7 @@ namespace Voron.Platform.Posix
 
         public static unsafe long pwrite(int fd, void* buf, ulong count, long offset)
         {
-            return (long)pwrite(fd, (IntPtr)buf, (UIntPtr)count, (IntPtr)offset);
+            return (long) pwrite(fd, (IntPtr) buf, (UIntPtr) count, (IntPtr) offset);
         }
 
 
@@ -96,7 +96,7 @@ namespace Voron.Platform.Posix
 
         public static unsafe long write(int fd, void* buf, ulong count)
         {
-            return (long)write(fd, (IntPtr)buf, (UIntPtr)count);
+            return (long) write(fd, (IntPtr) buf, (UIntPtr) count);
         }
 
 
@@ -105,7 +105,7 @@ namespace Voron.Platform.Posix
 
         public static long sysconf(SysconfName name)
         {
-            return sysconf(name, (Errno)0);
+            return sysconf(name, (Errno) 0);
         }
 
 
@@ -114,6 +114,38 @@ namespace Voron.Platform.Posix
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int ftruncate(int fd, IntPtr size);
+
+        [DllImport(LIBC_6, SetLastError = true)]
+        public static extern int lseek(int fd, long offset, WhenceFlags whence);
+
+        public static unsafe int AllocateUsingLseek(int fd, long size)
+        {
+            if (size <= 0)
+                return 0;
+            var orig = lseek(fd, 0, WhenceFlags.SEEK_CUR);
+            var offset = lseek(fd, size - 1, WhenceFlags.SEEK_SET);
+            if (offset == -1)
+                return offset;
+
+            int zero = 0;
+
+            int rc = (int) write(fd, &zero, 1UL);
+
+            orig = lseek(fd, orig, WhenceFlags.SEEK_SET);
+            if (rc == -1)
+                return rc;
+
+            return orig;
+        }
+    }
+
+
+    [Flags]
+    public enum WhenceFlags : int
+    {
+        SEEK_SET = 0,
+        SEEK_CUR = 1,
+        SEEK_END = 2
     }
 
     [Flags]

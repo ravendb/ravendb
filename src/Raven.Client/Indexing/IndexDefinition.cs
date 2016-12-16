@@ -69,14 +69,59 @@ namespace Raven.Client.Indexing
             set { _configuration = value; }
         }
 
+        public IndexDefinitionCompareDifferences Compare(IndexDefinition other)
+        {
+            if (other == null)
+                throw new ArgumentNullException(nameof(other));
+
+            var result = IndexDefinitionCompareDifferences.None;
+
+            if (ReferenceEquals(this, other))
+                return result;
+
+            if (Equals(IndexId, other.IndexId) == false)
+                result |= IndexDefinitionCompareDifferences.IndexId;
+
+            if (Maps.SequenceEqual(other.Maps) == false)
+            {
+                if (Maps.SequenceEqual(other.Maps, IndexPrettyPrinterEqualityComparer.Instance))
+                    result |= IndexDefinitionCompareDifferences.MapsFormatting;
+                else
+                    result |= IndexDefinitionCompareDifferences.Maps;
+            }
+
+            if (Equals(Reduce, other.Reduce) == false)
+            {
+                if (IndexPrettyPrinterEqualityComparer.Instance.Equals(Reduce, other.Reduce))
+                    result |= IndexDefinitionCompareDifferences.ReduceFormatting;
+                else
+                    result |= IndexDefinitionCompareDifferences.Reduce;
+            }
+
+            if (DictionaryExtensions.ContentEquals(other.Fields, Fields) == false)
+                result |= IndexDefinitionCompareDifferences.Fields;
+
+            bool configurationEquals;
+            if (other._configuration == null && _configuration == null)
+                configurationEquals = true;
+            else if (other._configuration != null)
+                configurationEquals = other._configuration.Equals(_configuration);
+            else
+                configurationEquals = _configuration.Equals(other._configuration);
+
+            if (configurationEquals == false)
+                result |= IndexDefinitionCompareDifferences.Configuration;
+
+            return result;
+        }
+
         /// <summary>
         /// Equals the specified other.
         /// </summary>
         /// <param name="other">The other.</param>
         /// <param name="compareIndexIds">allow caller to choose whether to include the index Id in the comparison</param>
         /// <param name="ignoreFormatting">Comparision ignores formatting in both of the definitions</param>
-        /// <param name="ignoreMaxIndexOutputs">Comparision ignores MaxIndexOutputsPerDocument</param>
-        public bool Equals(IndexDefinition other, bool compareIndexIds = true, bool ignoreFormatting = false, bool ignoreMaxIndexOutputs = false)
+        public bool Equals(IndexDefinition other, bool compareIndexIds = true, bool ignoreFormatting = false)
         {
             if (ReferenceEquals(null, other))
                 return false;
@@ -84,31 +129,24 @@ namespace Raven.Client.Indexing
             if (ReferenceEquals(this, other))
                 return true;
 
-            if (compareIndexIds && !Equals(other.IndexId, IndexId))
+            var result = Compare(other);
+
+            if (result == IndexDefinitionCompareDifferences.None)
+                return true;
+
+            if (compareIndexIds && result.HasFlag(IndexDefinitionCompareDifferences.IndexId))
                 return false;
 
-            bool mapsReduceEquals;
-            if (ignoreFormatting)
-            {
-                var comparer = new IndexPrettyPrinterEqualityComparer();
-                mapsReduceEquals = Maps.SequenceEqual(other.Maps, comparer) && comparer.Equals(Reduce, other.Reduce);
-            }
-            else
-            {
-                mapsReduceEquals = Maps.SequenceEqual(other.Maps) && Equals(other.Reduce, Reduce);
-            }
+            var mapsReduceEquals = ignoreFormatting
+                ? result.HasFlag(IndexDefinitionCompareDifferences.MapsFormatting) == false && result.HasFlag(IndexDefinitionCompareDifferences.ReduceFormatting) == false
+                : result.HasFlag(IndexDefinitionCompareDifferences.Maps) == false && result.HasFlag(IndexDefinitionCompareDifferences.Reduce) == false;
 
-            bool settingsEquals;
-            if (other._configuration == null && _configuration == null)
-                settingsEquals = true;
-            else if (other._configuration != null)
-                settingsEquals = other._configuration.Equals(_configuration, ignoreMaxIndexOutputs);
-            else
-                settingsEquals = _configuration.Equals(other._configuration, ignoreMaxIndexOutputs);
+            var configurationEquals = result.HasFlag(IndexDefinitionCompareDifferences.Configuration) == false;
+            var fieldsEquals = result.HasFlag(IndexDefinitionCompareDifferences.Fields) == false;
 
             return mapsReduceEquals
-                   && settingsEquals
-                   && DictionaryExtensions.ContentEquals(other.Fields, Fields);
+                   && configurationEquals
+                   && fieldsEquals;
         }
 
         private static int DictionaryHashCode<TKey, TValue>(IEnumerable<KeyValuePair<TKey, TValue>> x)
@@ -292,5 +330,20 @@ namespace Raven.Client.Indexing
         {
             return Name;
         }
+    }
+
+    [Flags]
+    public enum IndexDefinitionCompareDifferences
+    {
+        None = 0,
+        IndexId = 1 << 0,
+        Maps = 1 << 1,
+        MapsFormatting = 1 << 2,
+        Reduce = 1 << 3,
+        ReduceFormatting = 1 << 4,
+        Fields = 1 << 5,
+        Configuration = 1 << 6,
+
+        All = IndexId | Maps | MapsFormatting | Reduce | ReduceFormatting | Fields | Configuration
     }
 }

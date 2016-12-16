@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
@@ -53,6 +54,11 @@ namespace Raven.Server.Documents.Indexes.Errors
         public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch)
         {
             throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index", _e);
+        }
+
+        public override void Update(IndexDefinitionBase definition, IndexingConfiguration configuration)
+        {
+            throw new NotSupportedException($"{Type} index does not support updating it's definition and configuration.");
         }
 
         public override List<IndexingError> GetErrors()

@@ -26,12 +26,15 @@ using Newtonsoft.Json.Serialization;
 using Raven.NewClient.Abstractions;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Json;
+using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Converters;
 using Raven.NewClient.Client.Util;
 
 using Raven.NewClient.Client.Json;
 using Sparrow.Json;
+
+
 
 namespace Raven.NewClient.Client.Document
 {
@@ -48,9 +51,6 @@ namespace Raven.NewClient.Client.Document
             Func<Func<IEnumerable<object>, IEnumerable>> generateTransformResults);
 
         private Dictionary<Type, Func<IEnumerable<object>, IEnumerable>> compiledReduceCache = new Dictionary<Type, Func<IEnumerable<object>, IEnumerable>>();
-
-        private readonly IList<Tuple<Type, Func<string, object, string>>> listOfRegisteredIdConventions =
-            new List<Tuple<Type, Func<string, object, string>>>();
 
         private readonly IList<Tuple<Type, Func<string, object, Task<string>>>> listOfRegisteredIdConventionsAsync =
             new List<Tuple<Type, Func<string, object, Task<string>>>>();
@@ -372,23 +372,10 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         /// <param name="entity">The entity.</param>
         /// <param name="dbName">Name of the database</param>
-        /// <param name="databaseCommands">Low level database commands.</param>
         /// <returns></returns>
         public string GenerateDocumentKey(string dbName, object entity)
         {
-            var type = entity.GetType();
-            foreach (var typeToRegisteredIdConvention in listOfRegisteredIdConventions
-                .Where(typeToRegisteredIdConvention => typeToRegisteredIdConvention.Item1.IsAssignableFrom(type)))
-            {
-                return typeToRegisteredIdConvention.Item2(dbName, entity);
-            }
-
-            if (listOfRegisteredIdConventionsAsync.Any(x => x.Item1.IsAssignableFrom(type)))
-            {
-                throw new InvalidOperationException("Id convention for synchronous operation was not found for entity " + type.FullName + ", but convention for asynchronous operation exists.");
-            }
-
-            return DocumentKeyGenerator(dbName, entity);
+            return AsyncHelpers.RunSync(() => GenerateDocumentKeyAsync(dbName, entity));
         }
 
         public Task<string> GenerateDocumentKeyAsync(string dbName, object entity)
@@ -398,11 +385,6 @@ namespace Raven.NewClient.Client.Document
                 .Where(typeToRegisteredIdConvention => typeToRegisteredIdConvention.Item1.IsAssignableFrom(type)))
             {
                 return typeToRegisteredIdConvention.Item2(dbName, entity);
-            }
-
-            if (listOfRegisteredIdConventions.Any(x => x.Item1.IsAssignableFrom(type)))
-            {
-                throw new InvalidOperationException("Id convention for asynchronous operation was not found for entity " + type.FullName + ", but convention for synchronous operation exists.");
             }
 
             return AsyncDocumentKeyGenerator(dbName, entity);
@@ -463,12 +445,6 @@ namespace Raven.NewClient.Client.Document
         /// Gets or sets the document key generator.
         /// </summary>
         /// <value>The document key generator.</value>
-        public Func<string, object, string> DocumentKeyGenerator { get; set; }
-
-        /// <summary>
-        /// Gets or sets the document key generator.
-        /// </summary>
-        /// <value>The document key generator.</value>
         public Func<string, object, Task<string>> AsyncDocumentKeyGenerator { get; set; }
 
         /// <summary>
@@ -492,35 +468,6 @@ namespace Raven.NewClient.Client.Document
         /// single client. For multiple clients, <see cref="ShouldAggressiveCacheTrackChanges"/>.
         /// </summary>
         public bool ShouldSaveChangesForceAggressiveCacheCheck { get; set; }
-
-        /// <summary>
-        /// Register an id convention for a single type (and all of its derived types.
-        /// Note that you can still fall back to the DocumentKeyGenerator if you want.
-        /// </summary>
-        public DocumentConvention RegisterIdConvention<TEntity>(Func<string, TEntity, string> func)
-        {
-            var type = typeof(TEntity);
-            var entryToRemove = listOfRegisteredIdConventions.FirstOrDefault(x => x.Item1 == type);
-            if (entryToRemove != null)
-            {
-                listOfRegisteredIdConventions.Remove(entryToRemove);
-            }
-
-            int index;
-            for (index = 0; index < listOfRegisteredIdConventions.Count; index++)
-            {
-                var entry = listOfRegisteredIdConventions[index];
-                if (entry.Item1.IsAssignableFrom(type))
-                {
-                    break;
-                }
-            }
-
-            var item = new Tuple<Type, Func<string, object, string>>(typeof(TEntity), (dbName, o) => func(dbName, (TEntity)o));
-            listOfRegisteredIdConventions.Insert(index, item);
-
-            return this;
-        }
 
         /// <summary>
         /// Register an async id convention for a single type (and all of its derived types.

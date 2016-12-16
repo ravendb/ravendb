@@ -4,9 +4,6 @@ import uploadItem = require("models/filesystem/uploadItem");
 
 class uploadFileToFilesystemCommand extends commandBase {
 
-    /**
-    * @param ownerDb The database the collections will belong to.
-    */
     constructor(private source: File, private directory: string, private uploadId: string, private fs: filesystem, progressHandlingFunction: (evt: any) => void, private reportUploadProgress = true) {
         super();
     }

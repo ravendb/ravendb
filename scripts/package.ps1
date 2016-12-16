@@ -84,7 +84,7 @@ function LayoutRegularPackage ( $packageDir, $projectDir, $outDirs, $spec ) {
     CopyStudioPackage $outDirs
     CopyLicenseFile $packageDir
     CopyAckFile $packageDir
-    CreatePackageServerLayout $($outDirs.Server) $packageDir $projectDir $spec
+    CreatePackageServerLayout $projectDir $($outDirs.Server) $packageDir $spec
     CreatePackageClientLayout $outDirs $packageDir $projectDir $spec
     CopyClientReadMe $(Join-Path $packageDir -ChildPath 'Client')
 }
@@ -93,7 +93,7 @@ function LayoutRaspberryPiPackage ( $packageDir, $projectDir, $outDirs, $spec ) 
     CopyStudioPackage $outDirs
     CopyLicenseFile $packageDir
     CopyAckFile $packageDir
-    CreatePackageServerLayout $($outDirs.Server) $packageDir $projectDir $spec
+    CreatePackageServerLayout $projectDir $($outDirs.Server) $packageDir $spec
     CreatePackageClientLayout $outDirs $packageDir $projectDir $spec
 
     CopyDaemonScripts $projectDir $packageDir
@@ -153,8 +153,13 @@ function CopyDaemonScripts ( $projectDir, $packageDir ) {
     }
 }
 
-function CreatePackageServerLayout ( $serverOutDir, $packageDir, $projectDir ) {
+function CreatePackageServerLayout ( $projectDir, $serverOutDir, $packageDir, $spec ) {
     write-host "Create package server directory layout..."
+
+    $settingsFileName = If ($spec.IsUnix) { "settings_posix.json" } Else { "settings_windows.json" }
+    $settingsFilePath = [io.path]::combine($projectDir, 'src', 'Raven.Server', $settingsFileName)
+
+    Copy-Item "$settingsFilePath" $serverOutDir
 
     if ($spec.Name -eq "raspberry-pi") {
         del $([io.path]::combine($serverOutDir, "*.so"))

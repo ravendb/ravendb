@@ -35,30 +35,24 @@ namespace Raven.Server.Documents.Indexes.Auto
             return indexDefinition;
         }
 
-        public override bool Equals(IndexDefinitionBase other, bool ignoreFormatting, bool ignoreMaxIndexOutputs)
+        public override IndexDefinitionCompareDifferences Compare(IndexDefinitionBase other)
         {
             var otherDefinition = other as AutoMapIndexDefinition;
             if (otherDefinition == null)
-                return false;
+                return IndexDefinitionCompareDifferences.All;
 
             if (ReferenceEquals(this, other))
-                return true;
+                return IndexDefinitionCompareDifferences.None;
 
-            if (string.Equals(Name, other.Name, StringComparison.OrdinalIgnoreCase) == false)
-                return false;
+            if (Collections.SequenceEqual(otherDefinition.Collections) == false || MapFields.SequenceEqual(otherDefinition.MapFields) == false)
+                return IndexDefinitionCompareDifferences.Maps;
 
-            if (Collections.SequenceEqual(otherDefinition.Collections) == false)
-                return false;
-
-            if (MapFields.SequenceEqual(otherDefinition.MapFields) == false)
-                return false;
-
-            return true;
+            return IndexDefinitionCompareDifferences.None;
         }
 
-        public override bool Equals(IndexDefinition indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs)
+        public override IndexDefinitionCompareDifferences Compare(IndexDefinition indexDefinition)
         {
-            return false;
+            return IndexDefinitionCompareDifferences.All;
         }
 
         protected override int ComputeRestOfHash(int hashCode)

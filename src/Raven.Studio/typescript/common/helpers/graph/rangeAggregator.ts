@@ -3,73 +3,93 @@
 import d3 = require("d3");
 
 class rangeAggregator {
-    
-    aggregation = [] as Array<aggregatedRange>;
 
-    pushRange(start: number, end: number) {
-        if (this.aggregation.length === 0) {
-            this.aggregation.push({
-                start: start,
-                end: end,
-                value: 1
-            });
-            return;
-        }
+    items: Array<workTimeUnit> = [];
+    indexesWork: Array<indexesWorkData> = [];
+    ptrStart: number;
+    ptrEnd: number;
+    maxConcurrentIndexes: number;
 
-        // before all
-        if (end < this.aggregation[0].start) {
-            if (this.aggregation[0].end !== start) {
-                this.aggregation.unshift({
-                    start: this.aggregation[0].end,
-                    end: start,
-                    value: 0
-                });
-            }
-
-            this.aggregation.unshift({
-                start: start,
-                end: end,
-                value: 1
-            });
-            return;
-        }
-
-        // after all
-        if (start > _.last(this.aggregation).end) {
-            if (_.last(this.aggregation).end !== start) {
-                this.aggregation.push({
-                    start: _.last(this.aggregation).end,
-                    end: start,
-                    value: 0
-                });
-            }
-
-            this.aggregation.push({
-                start: start,
-                end: end,
-                value: 1
-            });
-            return;
-        }
-
-        let currentPosition = start;
-
-        if (start < this.aggregation[0].start) {
-            this.aggregation.unshift({
-                start: start,
-                end: this.aggregation[0].start,
-                value: 1
-            });
-            currentPosition = this.aggregation[0].start;
-        } else {
-            // seek to item to divide
-
-        }
-
-        //TODO:
-
+    constructor(inputItems: Array<[Date, Date]>) {
+        this.maxConcurrentIndexes = 0;
+        this.items = inputItems.map((x) => ({ startTime: x[0].getTime(), endTime: x[1].getTime() }));
     }
-    
+
+    inputItems(inputItems: Array<workTimeUnit>) {
+        this.items = inputItems;
+    }
+
+    aggregate() : Array<indexesWorkData> {
+        // 1. Sort the times array by startTime & endTime value
+        this.items.sort((a, b) => a.startTime === b.startTime ? a.endTime - b.endTime : a.startTime - b.startTime);
+
+        // 2. Create the indexesWork Array
+        if (this.items.length !== 0) {
+
+            // 3. Push first item
+            this.indexesWork.push({ pointInTime: this.items[0].startTime, numberOfIndexesWorking: 1 });
+            this.indexesWork.push({ pointInTime: this.items[0].endTime + 1, numberOfIndexesWorking: 0 });
+            this.maxConcurrentIndexes = 1;
+
+            // 4. Push all other items 
+            for (let i = 1; i < this.items.length; i++) {
+                this.pushRange(this.items[i].startTime, this.items[i].endTime);
+            }
+        }
+        return this.indexesWork;
+    }
+
+    pushRange(startTime: number, endTime: number) {
+
+        // 1. Find appropriate start position for the new element
+        let i = 0;
+        while ((i < this.indexesWork.length) && (startTime > this.indexesWork[i].pointInTime)) {
+            i++;
+        }
+        this.ptrStart = i;
+
+        let previousValue = (this.ptrStart === 0) ? this.indexesWork[0].numberOfIndexesWorking : this.indexesWork[this.ptrStart - 1].numberOfIndexesWorking;
+       
+        if (this.ptrStart === this.indexesWork.length) {
+            // 1.1 Push new item in the end
+            let newValue = previousValue + 1;
+            this.indexesWork.push({ pointInTime: startTime, numberOfIndexesWorking: newValue });
+            if (newValue > this.maxConcurrentIndexes) { this.maxConcurrentIndexes++; };
+        }
+        else if (this.indexesWork[this.ptrStart].pointInTime === startTime) {
+            // 1.2 Only increase counter
+            let newValue = ++(this.indexesWork[this.ptrStart].numberOfIndexesWorking);
+            if (newValue > this.maxConcurrentIndexes) { this.maxConcurrentIndexes++; };
+        }
+        else if (this.indexesWork[this.ptrStart].pointInTime !== startTime) {
+            // 1.3 Create new element in the start/middle 
+            let newValue = previousValue + 1;
+            this.indexesWork.splice(this.ptrStart, 0, { pointInTime: startTime, numberOfIndexesWorking: newValue });
+            if (newValue > this.maxConcurrentIndexes) { this.maxConcurrentIndexes++; };
+        }
+
+        // 2. Find appropriate end position for the new element AND update working indexes counter along the way...
+        i = this.ptrStart;
+        while ((i < this.indexesWork.length) && (endTime + 1 > this.indexesWork[i].pointInTime)) {
+            if ((i + 1 < this.indexesWork.length) && (endTime + 1 > this.indexesWork[i + 1].pointInTime)) {               
+                let newValue = ++(this.indexesWork[i + 1].numberOfIndexesWorking);
+                if (newValue > this.maxConcurrentIndexes) { this.maxConcurrentIndexes++; };
+            }
+            i++;
+        }
+        this.ptrEnd = i;
+
+        previousValue = (this.ptrEnd === 0) ? this.indexesWork[0].numberOfIndexesWorking : this.indexesWork[this.ptrEnd - 1].numberOfIndexesWorking - 1 ;
+
+        if (this.ptrEnd === this.indexesWork.length) {
+            // 2.1 Push new item in the end
+            this.indexesWork.push({ pointInTime: endTime + 1, numberOfIndexesWorking: 0 });
+        }
+        else if (this.indexesWork[this.ptrEnd].pointInTime !== endTime + 1) {
+            // 2.2 Create new element in the middle
+            this.indexesWork.splice(this.ptrEnd, 0, { pointInTime: endTime + 1, numberOfIndexesWorking: previousValue });
+        }
+    }
 }
 
 export = rangeAggregator;
