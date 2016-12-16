@@ -141,11 +141,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                             if (reduceKeyHash == existing.ReduceKeyHash)
                             {
-                                var existingResult = storeOfExisting.Get(existing.Id);
-
-                                if (ResultsBinaryEqual(mapResult.Data, existingResult))
+                                using (var existingResult = storeOfExisting.Get(existing.Id))
                                 {
-                                    continue;
+                                    if (ResultsBinaryEqual(mapResult.Data, existingResult.Data))
+                                    {
+                                        continue;
+                                    }
                                 }
 
                                 id = existing.Id;

@@ -6,6 +6,7 @@ using Sparrow.Binary;
 using Sparrow.Json;
 using Voron;
 using Voron.Data.BTrees;
+using Voron.Data.Compression;
 using Voron.Impl;
 using Voron.Util;
 
@@ -130,7 +131,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
         }
 
-        public PtrSize Get(long id)
+        public ReadMapEntryScope Get(long id)
         {
             switch (Type)
             {
@@ -138,16 +139,39 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     Slice entrySlice;
                     using (Slice.External(_indexContext.Allocator, (byte*)&id, sizeof(long), out entrySlice))
                     {
-                        var read = Tree.Read(entrySlice);
+                        TreeNodeHeader* node;
+                        Func<Slice, TreeCursor> cursor;
+                        var page = Tree.FindPageFor(entrySlice, out node, out cursor, allowCompressed: true);
 
-                        if (read == null)
-                            throw new InvalidOperationException($"Could not find a map result wit id '{id}' in '{Tree.Name}' tree");
+                        ReadResult read;
+                        DecompressedLeafPage decompressed = null;
 
-                        return PtrSize.Create(read.Reader.Base, read.Reader.Length);
+                        if (page.IsCompressed)
+                        {
+                            decompressed = Tree.DecompressPage(page);
+
+                            var nodeNumber = decompressed.NodePositionFor(Tree.Llt, entrySlice);
+
+                            if (decompressed.LastMatch != 0)
+                                throw new InvalidOperationException($"Could not find a map result wit id '{id}' in '{Tree.Name}' tree");
+
+                            node = decompressed.GetNode(nodeNumber);
+
+                            read = new ReadResult(Tree.GetValueReaderFromHeader(node), node->Version);
+                        }
+                        else
+                        {
+                            if (page.LastMatch != 0)
+                                throw new InvalidOperationException($"Could not find a map result wit id '{id}' in '{Tree.Name}' tree");
+
+                            read = new ReadResult(Tree.GetValueReaderFromHeader(node), node->Version);
+                        }
+
+                        return new ReadMapEntryScope(PtrSize.Create(read.Reader.Base, read.Reader.Length), decompressed);
                     }
                 case MapResultsStorageType.Nested:
                     var section = GetNestedResultsSection();
-                    return section.Get(id);
+                    return new ReadMapEntryScope(section.Get(id));
                 default:
                     throw new ArgumentOutOfRangeException(Type.ToString());
             }
