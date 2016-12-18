@@ -9,6 +9,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
 using Xunit;
 using Xunit.Extensions;
 
@@ -146,7 +147,7 @@ namespace Raven.Tests.FileSystem.ClientApi
                         x.WriteByte(i);
                 });
 
-                await AssertAsync.Throws<BadRequestException>(() => session.SaveChangesAsync());
+                await AssertAsync.Throws<ErrorResponseException>(() => session.SaveChangesAsync());
             }
         }
 
@@ -274,11 +275,11 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Theory]
-        [InlineData(27, 19)]
-        [InlineData(19, 27)]
-        public async Task DeleteDirectoryByQuery(int uploadSize1, int uploadSize2)
+        [InlineData("voron", 27, 19)]
+        [InlineData("esent", 19, 27)]
+        public async Task DeleteDirectoryByQuery(string storage, int uploadSize1, int uploadSize2)
         {
-            using (var store = NewStore())
+            using (var store = NewStore(requestedStorage: storage))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -320,11 +321,11 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Theory]
-        [InlineData(11, 26)]
-        [InlineData(26, 11)]
-        public async Task DeleteByQuery(int uploadSize1, int uploadSize2)
+        [InlineData("voron", 11, 26)]
+        [InlineData("esent", 26, 11)]
+        public async Task DeleteByQuery(string storage, int uploadSize1, int uploadSize2)
         {
-            using (var store = NewStore())
+            using (var store = NewStore(requestedStorage: storage))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -375,10 +376,11 @@ namespace Raven.Tests.FileSystem.ClientApi
         }
 
         [Theory]
-        [InlineData(1000)]
-        public async Task DeleteBigBatchOfFilesByQuery(int uploadSize)
+        [InlineData("voron", 1000)]
+        [InlineData("esent", 1000)]
+        public async Task DeleteBigBatchOfFilesByQuery(string storage, int uploadSize)
         {
-            using (var store = NewStore())
+            using (var store = NewStore(requestedStorage: storage))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -443,11 +445,10 @@ namespace Raven.Tests.FileSystem.ClientApi
             }
         }
 
-        [Theory]
-        [PropertyData("Storages")]
-        public async Task EnsureSlashPrefixWorks(string storage)
+        [Fact]
+        public async Task EnsureSlashPrefixWorks()
         {
-            using (var store = NewStore(requestedStorage: storage))
+            using (var store = NewStore())
             using (var session = store.OpenAsyncSession())
             {
                 session.RegisterUpload("/b/test1.file", CreateUniformFileStream(128));
@@ -541,7 +542,7 @@ namespace Raven.Tests.FileSystem.ClientApi
                     });
                     session.RegisterRename("test2.file", "test3.file");
 
-                    await AssertAsync.Throws<BadRequestException>(() => session.SaveChangesAsync());
+                    await AssertAsync.Throws<ErrorResponseException>(() => session.SaveChangesAsync());
 
                     var shouldExist = await session.LoadFileAsync("test2.file");
                     Assert.NotNull(shouldExist);
@@ -732,11 +733,10 @@ namespace Raven.Tests.FileSystem.ClientApi
             }
         }
 
-        [Theory]
-        [PropertyData("Storages")]
-        public async Task CombinationOfDeletesAndUpdatesNotPermitted(string storage)
+        [Fact]
+        public async Task CombinationOfDeletesAndUpdatesNotPermitted()
         {
-            using (var store = NewStore(requestedStorage: storage))
+            using (var store = NewStore())
             using (var session = store.OpenAsyncSession())
             {
                 session.RegisterUpload("test1.file", CreateUniformFileStream(128));
@@ -748,11 +748,10 @@ namespace Raven.Tests.FileSystem.ClientApi
             }
         }
 
-        [Theory]
-        [PropertyData("Storages")]
-        public async Task MultipleLoadsInTheSameCall(string storage)
+        [Fact]
+        public async Task MultipleLoadsInTheSameCall()
         {
-            using (var store = NewStore(requestedStorage: storage))
+            using (var store = NewStore())
             using (var session = store.OpenAsyncSession())
             {
                 session.RegisterUpload("test.file", CreateUniformFileStream(10));
@@ -768,12 +767,11 @@ namespace Raven.Tests.FileSystem.ClientApi
             }
         }
 
-        [Theory]
-        [PropertyData("Storages")]
-        public async Task MetadataDatesArePreserved(string storage)
+        [Fact]
+        public async Task MetadataDatesArePreserved()
         {
             FileHeader originalFile;
-            using (var store = NewStore(requestedStorage: storage))
+            using (var store = NewStore())
             using (var session = store.OpenAsyncSession())
             {
                 session.RegisterUpload("test1.file", CreateUniformFileStream(128));
@@ -793,11 +791,10 @@ namespace Raven.Tests.FileSystem.ClientApi
             }
         }
 
-        [Theory]
-        [PropertyData("Storages")]
-        public async Task UploadedFileShouldBeIncludedInSessionContextAfterSaveChanges(string storage)
+        [Fact]
+        public async Task UploadedFileShouldBeIncludedInSessionContextAfterSaveChanges()
         {
-            using (var store = NewStore(requestedStorage: storage))
+            using (var store = NewStore())
             using (var session = store.OpenAsyncSession())
             {
                 session.RegisterUpload("test.file", CreateUniformFileStream(128));
@@ -814,11 +811,10 @@ namespace Raven.Tests.FileSystem.ClientApi
             }
         }
 
-        [Theory]
-        [PropertyData("Storages")]
-        public async Task RenamedFileShouldBeIncludedInSessionContextAfterSaveChanges(string storage)
+        [Fact]
+        public async Task RenamedFileShouldBeIncludedInSessionContextAfterSaveChanges()
         {
-            using (var store = NewStore(requestedStorage: storage))
+            using (var store = NewStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -844,11 +840,10 @@ namespace Raven.Tests.FileSystem.ClientApi
             }
         }
 
-        [Theory]
-        [PropertyData("Storages")]
-        public async Task ShouldNotAttemptToLoadAlreadyDeletedFile(string storage)
+        [Fact]
+        public async Task ShouldNotAttemptToLoadAlreadyDeletedFile()
         {
-            using (var store = NewStore(requestedStorage: storage))
+            using (var store = NewStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -871,6 +866,20 @@ namespace Raven.Tests.FileSystem.ClientApi
                     Assert.Equal(numberOfRequests, asyncFilesSession.NumberOfRequests);
                 }
             }
+        }
+
+        [Fact]
+        public void DefaultFileSystemCannotBeEmptyOrNull()
+        {
+            Assert.Throws<ArgumentException>(() => new FilesStore
+            {
+                DefaultFileSystem = null
+            });
+
+            Assert.Throws<ArgumentException>(() => new FilesStore
+            {
+                DefaultFileSystem = ""
+            });
         }
     }
 }

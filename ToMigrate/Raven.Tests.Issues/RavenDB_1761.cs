@@ -15,17 +15,15 @@ using Raven.Tests.Common;
 using Raven.Tests.Helpers;
 
 using Xunit;
-using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
-    public class RavenDB_1761 : RavenTest
+    public class RavenDB_1761 : RavenTestBase
     {
-        [Theory]
-        [PropertyData("Storages")]
-        public void DateFacetTest(string storage)
+        [Fact]
+        public void DateFacetTest()
         {
-            using (var store = NewDocumentStore(requestedStorage: storage))
+            using (var store = NewDocumentStore(requestedStorage: "esent"))
             {
                 new SampleData_Index().Execute(store);
 
@@ -145,7 +143,7 @@ namespace Raven.Tests.Issues
                                 x => x.CDate > todayDate.AddDays(DayOfWeek.Sunday - DateTime.Now.DayOfWeek), // THIS WEEK
                                 x => x.CDate > todayDate.AddDays(DayOfWeek.Sunday - DateTime.Now.DayOfWeek - 7) && x.CDate < todayDate.AddDays(DayOfWeek.Sunday - DateTime.Now.DayOfWeek), // LAST WEEK
                                 x => x.CDate > new DateTime(todayDate.Year, todayDate.Month, 1), // THIS MONTH
-                                x => x.CDate > new DateTime(todayDate.Year, todayDate.Month - 1, 1) && x.CDate < new DateTime(todayDate.Year, todayDate.Month, 1), // LAST MONTH
+                                x => x.CDate > new DateTime(todayDate.Year, todayDate.Month, 1).AddMonths(-1) && x.CDate < new DateTime(todayDate.Year, todayDate.Month, 1), // LAST MONTH
                                 x => x.CDate > new DateTime(todayDate.Year, 1, 1), // THIS YEAR
                                 x => x.CDate > new DateTime(todayDate.Year - 1, 1, 1) && x.CDate < new DateTime(todayDate.Year, 1, 1), // LAST YEAR
                                 x => x.CDate < new DateTime(todayDate.Year - 1, 1, 1), // OLDER

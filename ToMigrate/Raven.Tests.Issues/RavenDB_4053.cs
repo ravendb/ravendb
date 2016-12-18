@@ -25,7 +25,7 @@ namespace Raven.Tests.Issues
             }
             catch (IndexCompilationException e)
             {
-                Assert.True(false, "Index failed to compile on server.");
+                Assert.True(false,"Index failed to compile on server.");
             }
         }
     }

@@ -42,7 +42,7 @@ namespace Raven.Tests.Issues
             store1.DatabaseCommands.ForDatabase("Northwind").Get("force/load/of/db");
 
             Assert.True(
-                Directory.Exists(Path.Combine(server1.SystemDatabase.Configuration.Core.DataDirectory,
+                Directory.Exists(Path.Combine(server1.SystemDatabase.Configuration.DataDirectory,
                                               "N")));
 
 
@@ -52,20 +52,18 @@ namespace Raven.Tests.Issues
         {
             Database.Server.NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
 
-            var serverConfiguration = new Database.Config.AppSettingsBasedConfiguration
+            var serverConfiguration = new Database.Config.RavenConfiguration
             {
+                AnonymousUserAccessMode = Database.Server.AnonymousUserAccessMode.Admin,
+                DataDirectory = dataDirectory,
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-                Core =
-                {
-                    RunInMemory = false,
-                    DataDirectory = dataDirectory,
-                    Port = port,
-                    AnonymousUserAccessMode = Database.Server.AnonymousUserAccessMode.Admin,
-                }
+                RunInMemory = false,
+                Port = port,
+                DefaultStorageTypeName = "esent"
             };
 
             if (removeDataDirectory)
-                IOExtensions.DeleteDirectory(serverConfiguration.Core.DataDirectory);
+                IOExtensions.DeleteDirectory(serverConfiguration.DataDirectory);
 
             var server = new RavenDbServer(serverConfiguration)
             {
@@ -82,7 +80,7 @@ namespace Raven.Tests.Issues
             {
                 server1.Dispose();
                 if (server1.SystemDatabase != null)
-                    IOExtensions.DeleteDirectory(server1.SystemDatabase.Configuration.Core.DataDirectory);
+                    IOExtensions.DeleteDirectory(server1.SystemDatabase.Configuration.DataDirectory);
             }
 
             if (store1 != null)

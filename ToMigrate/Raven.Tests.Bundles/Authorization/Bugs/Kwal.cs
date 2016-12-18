@@ -4,7 +4,6 @@ using Raven.Abstractions.Data;
 using Xunit;
 
 using Raven.Client.Extensions;
-using Raven.Database.Config;
 
 namespace Raven.Tests.Bundles.Authorization.Bugs
 {
@@ -21,7 +20,7 @@ namespace Raven.Tests.Bundles.Authorization.Bugs
                         Id = "Raven/Databases/Testing",
                         Settings =
                            {
-                               { RavenConfiguration.GetKey(x => x.Core.RunInMemory), "false" },
+                               { Constants.RunInMemory, "false" },
                                { "Raven/DataDir", "~\\Testing" }
                            }
                     }

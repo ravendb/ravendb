@@ -1,9 +1,6 @@
-using System;
-using System.Globalization;
+﻿using System;
 using System.Linq;
 using Raven.Abstractions.TimeSeries;
-using Raven.Database.TimeSeries;
-using Voron;
 using Xunit;
 
 namespace Raven.Tests.TimeSeries
@@ -19,7 +16,7 @@ namespace Raven.Tests.TimeSeries
             {
                 using (var writer = tss.CreateWriter())
                 {
-                    writer.CreateType(new TimeSeriesType {Type = "3Value", Fields = new[] {"Value", "Index", "Ticks"}});
+                    writer.CreateType("3Value", new[] {"Value", "Index", "Ticks"});
                     writer.Commit();
                 }
 
@@ -87,7 +84,7 @@ namespace Raven.Tests.TimeSeries
             {
                 using (var writer = tss.CreateWriter())
                 {
-                    writer.CreateType(new TimeSeriesType { Type = "3Val", Fields = new[] { "Value 1", "Value Two", "Value 3" } });
+                    writer.CreateType("3Val", new[] { "Value 1", "Value Two", "Value 3" });
                     for (int i = 0; i < 7; i++)
                     {
                         writer.Append("3Val", "Money", start.AddHours(i), 1000 + i, StringToIndex("Money"), start.AddHours(i).Ticks);

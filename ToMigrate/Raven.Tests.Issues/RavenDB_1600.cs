@@ -6,7 +6,6 @@
 using System.Threading;
 using Raven.Database.Actions;
 using Raven.Tests.Common;
-using Raven.Tests.Helpers.Util;
 
 namespace Raven.Tests.Issues
 {
@@ -41,21 +40,18 @@ namespace Raven.Tests.Issues
             public string Name { get; set; }
         }
 
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
+        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
         {
             base.ModifyConfiguration(configuration);
-            configuration.Get().RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
+            configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
         }
 
         [Fact]
         public void ShouldNotSetAutoIndexesToAbandonedPriorityAfterDatabaseRecovery()
         {
-            using (var db = new DocumentDatabase(new AppSettingsBasedConfiguration
+            using (var db = new DocumentDatabase(new RavenConfiguration
             {
-                Core =
-                {
-                    DataDirectory = DataDir
-                },
+                DataDirectory = DataDir,
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false
             }, null))
             {
@@ -81,24 +77,21 @@ namespace Raven.Tests.Issues
 
                 autoIdexes.ForEach(x => db.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(x.Id, IndexingPriority.Idle)));
                 
-                db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
+                db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument(), new ResourceBackupState());
                 WaitForBackup(db, true);
             }
             IOExtensions.DeleteDirectory(DataDir);
 
-            MaintenanceActions.Restore(new AppSettingsBasedConfiguration(), new DatabaseRestoreRequest
+            MaintenanceActions.Restore(new RavenConfiguration(), new DatabaseRestoreRequest
             {
                 BackupLocation = BackupDir,
                 DatabaseLocation = DataDir,
                 Defrag = true
             },s => { });
 
-            using (var db = new DocumentDatabase(new AppSettingsBasedConfiguration
+            using (var db = new DocumentDatabase(new RavenConfiguration
             {
-                Core =
-                {
-                    DataDirectory = DataDir,
-                }, 
+                DataDirectory = DataDir,
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
             }, null))
             {

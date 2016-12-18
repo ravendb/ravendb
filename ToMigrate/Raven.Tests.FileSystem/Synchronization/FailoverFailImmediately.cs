@@ -18,7 +18,8 @@ namespace Raven.Tests.FileSystem.Synchronization
         }
 
         [Theory]
-        [PropertyData("Storages")]
+        [InlineData("voron")]
+        [InlineData("esent")]
         public async Task failover_throws(string storage)
         {
             IAsyncFilesCommandsImpl sourceClient = null;

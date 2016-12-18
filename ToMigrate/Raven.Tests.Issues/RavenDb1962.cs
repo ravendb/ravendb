@@ -57,6 +57,7 @@ namespace Raven.Tests.Issues
                 }
                 }
         }
+
         [Fact]
         public async Task CanExecuteLazyQueriesInAsyncSession()
         {
@@ -65,16 +66,18 @@ namespace Raven.Tests.Issues
                 using (var session = store.OpenAsyncSession())
                 {
                     await StoreDataAsync(store, session);
-
-                    WaitForIndexing(store);
                 }
+
+                WaitForIndexing(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
                     var q1 = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(x => x.Name == "Test User #1").LazilyAsync();
 
                     var q2 = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(x => x.Name == "Test User #3").LazilyAsync();
 
                     var requestTimes = await session.Advanced.Eagerly.ExecuteAllPendingLazyOperationsAsync();

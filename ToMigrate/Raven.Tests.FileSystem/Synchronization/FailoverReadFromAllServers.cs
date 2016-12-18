@@ -16,7 +16,8 @@ namespace Raven.Tests.FileSystem.Synchronization
         }
 
         [Theory]
-        [PropertyData("Storages")]
+        [InlineData("voron")]
+        [InlineData("esent")]
         public async Task load_balancing_with_two_master_master_servers(string storage)
         {
             IAsyncFilesCommandsImpl sourceClient = null;

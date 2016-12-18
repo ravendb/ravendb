@@ -1,9 +1,17 @@
-﻿using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Client;
+using Raven.Client.Connection;
 using Raven.Client.Indexes;
+using Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Statistics;
 using Raven.Tests.Common;
 using Xunit;
+using Raven.Tests.Helpers;
 
 namespace Raven.Tests.Issues
 {
@@ -94,11 +102,8 @@ namespace Raven.Tests.Issues
                 using (var session = server.DocumentStore.OpenAsyncSession())
                 {
                     var persons = GetNewPersons();
-
-                    foreach (var person in persons)
-                    {
+                    foreach(var person in persons)
                         await session.StoreAsync(person);
-                    }
 
                     await session.SaveChangesAsync();
                 }
@@ -168,3 +173,4 @@ namespace Raven.Tests.Issues
         }
     }
 }
+

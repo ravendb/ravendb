@@ -40,6 +40,26 @@ namespace Raven.Tests.FileSystem
         }
 
         [Fact]
+        public async Task WillNotGetFoldersWithSharedPrefix()
+        {
+            var client = NewAsyncClient();
+            var ms = new MemoryStream();
+            await client.UploadAsync("test/aa/bb/cc/file.txt", ms);
+            await client.UploadAsync("test/aa/b/dd/file.txt", ms);
+            await client.UploadAsync("aa/b/test/file.txt", ms);
+
+            var strings = await client.GetDirectoriesAsync("test/aa");
+            Assert.Equal(new [] { "/test/aa/b", "/test/aa/bb"}, strings);
+
+            strings = await client.GetDirectoriesAsync("test/aa/b");
+            Assert.Equal(new[] { "/test/aa/b/dd" }, strings);
+
+            strings = await client.GetDirectoriesAsync("test/aa/bb");
+            Assert.Equal(new[] { "/test/aa/bb/cc" }, strings);
+
+        }
+
+        [Fact]
         public async Task WillWorkWithTrailingSlash()
         {
             var client = NewAsyncClient();

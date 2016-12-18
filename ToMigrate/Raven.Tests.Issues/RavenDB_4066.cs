@@ -42,14 +42,12 @@ namespace Raven.Tests.Issues
 
             var exception = Assert.Throws<Exception>(() =>
             {
-                using (new DocumentDatabase(new RavenConfiguration()
+                using (new DocumentDatabase(new InMemoryRavenConfiguration()
                 {
-                    Core =
-                    {
-                        RunInMemory = false,
-                        DataDirectory = path
-                    }
-                }, null))
+                    RunInMemory = false,
+                    DataDirectory = path
+                },
+                null))
                 {
 
                 }

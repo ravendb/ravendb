@@ -16,7 +16,6 @@ using Raven.Tests.Common.Dto;
 
 using Xunit;
 using Raven.Client.Extensions;
-using Raven.Tests.Helpers.Util;
 
 namespace Raven.Tests.Bundles.Replication.Bugs
 {
@@ -24,9 +23,9 @@ namespace Raven.Tests.Bundles.Replication.Bugs
     {
         private const string apikey = "test/ThisIsMySecret";
 
-        protected override void ModifyConfiguration(ConfigurationModification serverConfiguration)
+        protected override void ModifyConfiguration(InMemoryRavenConfiguration serverConfiguration)
         {
-            serverConfiguration.Modify(x => x.Core.AnonymousUserAccessMode, AnonymousUserAccessMode.None);
+            serverConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
             Authentication.EnableOnce();
         }
 
@@ -43,7 +42,7 @@ namespace Raven.Tests.Bundles.Replication.Bugs
                     new ResourceAccess {TenantId = Constants.SystemDatabase, Admin = true},
                     new ResourceAccess {TenantId = databaseName, Admin = true}
                 }
-            }), new RavenJObject());
+            }), new RavenJObject(), null);
         }
 
         [Fact]
@@ -65,7 +64,7 @@ namespace Raven.Tests.Bundles.Replication.Bugs
                 Id = "repl",
                 Settings =
                 {
-                    {RavenConfiguration.GetKey(x => x.Core.RunInMemory), "true"},
+                    {Constants.RunInMemory, "true"},
                     {"Raven/DataDir", "~/db1"},
                     {"Raven/ActiveBundles", "Replication"}
                 }
@@ -75,7 +74,7 @@ namespace Raven.Tests.Bundles.Replication.Bugs
                 Id = "repl",
                 Settings =
                 {
-                    {RavenConfiguration.GetKey(x => x.Core.RunInMemory), "true"},
+                    {Constants.RunInMemory, "true"},
                     {"Raven/DataDir", "~/db2"},
                     {"Raven/ActiveBundles", "Replication"}
                 }

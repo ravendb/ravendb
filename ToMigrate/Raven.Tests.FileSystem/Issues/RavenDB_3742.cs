@@ -21,9 +21,9 @@ namespace Raven.Tests.FileSystem.Issues
 
         [Theory]
         [PropertyData("Storages")]
-        public void file_system_backup_operation_sucessfully_waits_for_backup_to_complete(string storage)
+        public void file_system_backup_operation_sucessfully_waits_for_backup_to_complete(string requestedStorage)
         {
-            using (var store = NewStore(runInMemory: false, requestedStorage: storage))
+            using (var store = NewStore(runInMemory: false, requestedStorage: "esent"))
             {
                 using (var operation = new FilesystemBackupOperation(new BackupParameters
                 {

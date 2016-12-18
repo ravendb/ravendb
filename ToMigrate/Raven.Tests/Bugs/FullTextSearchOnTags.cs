@@ -312,6 +312,10 @@ namespace Raven.Tests.Bugs
                     {
                         Tags = new[] { "dogs", "animal", "canine" }
                     });
+                    session.Store(new Image
+                    {
+                        Tags = new[] { "bugs", "resolving", "tricky" }
+                    });
                     session.SaveChanges();
                 }
 
@@ -320,16 +324,18 @@ namespace Raven.Tests.Bugs
                     var ravenQueryable = session.Query<Image>("test")
                         .Customize(x => x.WaitForNonStaleResults())
                         .Search(x => x.Tags, "i love cats", boost: 3)
+                        .Search(x => x.Tags, "i love bugs", boost: 20)
                         .Search(x => x.Tags, "canine love", boost: 13);
                     var s = ravenQueryable
                         .ToString();
-                    Assert.Equal("( Tags:(i love cats)^3 Tags:(canine love)^13)", s);
+                    Assert.Equal("( Tags:(i love cats)^3 Tags:(i love bugs)^20 Tags:(canine love)^13)", s);
 
                     var images = ravenQueryable.ToList();
 
-                    Assert.Equal(2, images.Count);
-                    Assert.Equal("images/2", images[0].Id);
-                    Assert.Equal("images/1", images[1].Id);
+                    Assert.Equal(3, images.Count);
+                    Assert.Equal("images/2", images[1].Id);
+                    Assert.Equal("images/1", images[2].Id);
+                    Assert.Equal("images/3", images[0].Id);
                 }
             }
         }

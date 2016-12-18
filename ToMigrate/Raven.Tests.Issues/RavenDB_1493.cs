@@ -15,14 +15,13 @@ using Raven.Tests.Common;
 using Raven.Tests.Helpers;
 
 using Xunit;
-using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
     /// <remarks>
     /// issue opened as consequence of conversion in mailing list --> https://groups.google.com/forum/#!topic/ravendb/o3PRd8M5b3A
     /// </remarks>
-    public class RavenDB_1493 : RavenTest
+    public class RavenDB_1493 : RavenTestBase
     {
         private int concurrencyExceptionCount;
         private int concurrentUpdatesCount;
@@ -30,9 +29,8 @@ namespace Raven.Tests.Issues
 
         private ConcurrentDictionary<string, ConcurrentBag<string>> concurrentUpdateLog;
 
-        [Theory]
-        [PropertyData("Storages")]
-        public void ConsistencyTest(string storage)
+        [Fact]
+        public void ConsistencyTest()
         {
             concurrentUpdateLog = new ConcurrentDictionary<string, ConcurrentBag<string>>();
             var testConfig = new TestConfig(2, 55);
@@ -43,7 +41,7 @@ namespace Raven.Tests.Issues
             for (int i = 1; i <= testConfig.NumberOfUpdatesPerDocument; i++)
                 expectedVersionLog += (i + ";");
 
-            using(var documentStore = NewRemoteDocumentStore(requestedStorage: storage,runInMemory:false))
+            using(var documentStore = NewRemoteDocumentStore(requestedStorage:"esent",runInMemory:false))
             {
                 if(documentStore.DatabaseCommands.GetStatistics().SupportsDtc == false)
                     return;
@@ -88,7 +86,11 @@ namespace Raven.Tests.Issues
         {
             using (IDocumentSession session = store.OpenSession())
             {
-                var loadOperation = from id in documentIds select session.Load<TestDoc>(id);
+                session.Advanced.AllowNonAuthoritativeInformation = false;
+
+                IEnumerable<TestDoc> loadOperation =
+                    from id in documentIds
+                    select session.Load<TestDoc>(id);
 
                 return loadOperation.ToArray();
             }

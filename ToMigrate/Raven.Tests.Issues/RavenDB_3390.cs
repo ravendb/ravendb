@@ -7,7 +7,6 @@ using System;
 using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
-using Raven.Database.Config.Settings;
 using Raven.Database.JsConsole;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
@@ -45,20 +44,20 @@ namespace Raven.Tests.Issues
             {
                 var configuration = store.DocumentDatabase.Configuration;
 
-                Assert.False(configuration.Prefetcher.Disabled);
+                Assert.False(configuration.DisableDocumentPreFetching);
 
                 new AdminJsConsole(store.DocumentDatabase).ApplyScript(new AdminJsScript
                 {
                     Script = @"
-                                database.Configuration.Prefetcher.Disabled = true;
-                                database.Configuration.Prefetcher.MaxNumberOfItemsToPreFetch = 13;
-                                database.Configuration.BulkInsert.ImportBatchTimeout = new Raven.Database.Config.Settings.TimeSetting(13, Raven.Database.Config.Settings.TimeUnit.Minutes);
+                                database.Configuration.DisableDocumentPreFetching = true;
+                                database.Configuration.MaxNumberOfItemsToPreFetch = 13;
+                                database.Configuration.BulkImportBatchTimeout = System.TimeSpan.FromMinutes(13);
                              "
                 });
 
-                Assert.True(configuration.Prefetcher.Disabled);
-                Assert.Equal(13, configuration.Prefetcher.MaxNumberOfItemsToPreFetch);
-                Assert.Equal(TimeSpan.FromMinutes(13), configuration.BulkInsert.ImportBatchTimeout.AsTimeSpan);
+                Assert.True(configuration.DisableDocumentPreFetching);
+                Assert.Equal(13, configuration.MaxNumberOfItemsToPreFetch);
+                Assert.Equal(TimeSpan.FromMinutes(13), configuration.BulkImportBatchTimeout);
             }
         }
 
@@ -67,7 +66,7 @@ namespace Raven.Tests.Issues
         {
             using (var store = NewDocumentStore())
             {
-                var tombstoneRetentionTime = store.DocumentDatabase.Configuration.Core.TombstoneRetentionTime.AsTimeSpan;
+                var tombstoneRetentionTime = store.DocumentDatabase.Configuration.TombstoneRetentionTime;
 
                 SystemTime.UtcDateTime = () => DateTime.UtcNow.Subtract(tombstoneRetentionTime.Add(tombstoneRetentionTime));
 
@@ -144,7 +143,7 @@ namespace Raven.Tests.Issues
                     Script = @"
                                 var doc = Raven.Json.Linq.RavenJObject.Parse('{ ""Name"" : ""Raven"" }');
                                 var metadata = Raven.Json.Linq.RavenJObject.Parse('{ ""Raven-Entity-Name"" : ""Docs"" }');
-                                database.Documents.Put('doc/1', null, doc, metadata, null);
+                                database.Documents.Put('doc/1', null, doc, metadata, null, null);
                              "
                 });
 

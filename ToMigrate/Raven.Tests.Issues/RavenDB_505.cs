@@ -2,17 +2,15 @@ using Raven.Abstractions.Indexing;
 using Raven.Tests.Common;
 
 using Xunit;
-using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
     public class RavenDB_505 : RavenTest
     {
-        [Theory]
-        [PropertyData("Storages")]
-        public void CreateDeleteCreateIndex(string storage)
+        [Fact]
+        public void CreateDeleteCreateIndex()
         {
-            using (var store = NewDocumentStore(requestedStorage: storage))
+            using (var store = NewDocumentStore(requestedStorage:"esent"))
             {
                 var indexDefinition = new IndexDefinition
                 {

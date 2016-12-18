@@ -67,8 +67,10 @@ namespace Raven.Tests.Issues
         public void OneShardPerSessionStrategy()
         {
             using (var session = documentStore.OpenSession())
-            {  
-                var expectedShard = shardNames[session.GetHashCode() % shardNames.Count];
+            {
+                var sessionMetadata = ExtractSessionMetadataFromSession(session);
+
+                var expectedShard = shardNames[sessionMetadata.GetHashCode() % shardNames.Count];
 
                 var entity1 = new Person { Id = "1", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
                 session.Store(entity1);
@@ -90,7 +92,9 @@ namespace Raven.Tests.Issues
 
             using (var session = documentStore.OpenSession())
             {
-                var expectedShard = shardNames[session.GetHashCode() % shardNames.Count];
+                var sessionMetadata = ExtractSessionMetadataFromSession(session);
+
+                var expectedShard = shardNames[sessionMetadata.GetHashCode() % shardNames.Count];
 
                 var entity1 = new Person { Id = "1", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
                 session.Store(entity1);
@@ -108,7 +112,9 @@ namespace Raven.Tests.Issues
         {
             using (var session = documentStore.OpenAsyncSession())
             {
-                var expectedShard = shardNames[session.GetHashCode() % shardNames.Count];
+                var sessionMetadata = ExtractSessionMetadataFromSession(session);
+
+                var expectedShard = shardNames[sessionMetadata.GetHashCode() % shardNames.Count];
 
                 var entity1 = new Person { Id = "1", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
                 await session.StoreAsync(entity1);
@@ -130,7 +136,9 @@ namespace Raven.Tests.Issues
 
             using (var session = documentStore.OpenAsyncSession())
             {
-                var expectedShard = shardNames[session.GetHashCode() % shardNames.Count];
+                var sessionMetadata = ExtractSessionMetadataFromSession(session);
+
+                var expectedShard = shardNames[sessionMetadata.GetHashCode() % shardNames.Count];
 
                 var entity1 = new Person { Id = "1", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
                 await session.StoreAsync(entity1);
@@ -153,5 +161,9 @@ namespace Raven.Tests.Issues
             base.Dispose();
         }
 
+        private ITransactionalDocumentSession ExtractSessionMetadataFromSession(object session)
+        {
+            return (ITransactionalDocumentSession) session;
+        }
     }
 }

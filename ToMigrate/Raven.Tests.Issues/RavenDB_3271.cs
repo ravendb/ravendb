@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
 using Raven.Bundles.Authorization.Model;
+using Raven.Client;
 using Raven.Client.Authorization;
 using Raven.Client.Exceptions;
+using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Server.Security;
 using Raven.Tests.Bundles.Authorization;
-using Raven.Tests.Helpers.Util;
-
+using Raven.Tests.Common;
 using Xunit;
 
 namespace Raven.Tests.Issues
@@ -15,10 +16,10 @@ namespace Raven.Tests.Issues
     public class SanityCheck : AuthorizationTest
 {
 
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
+        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
         {
             Authentication.EnableOnce();
-            configuration.Modify(x => x.Core.AnonymousUserAccessMode, AnonymousUserAccessMode.None);
+            configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
         }
 
         [Fact]
@@ -29,8 +30,7 @@ namespace Raven.Tests.Issues
             const string roleId = "test-roleAuthorization-Roles-Doctors";            
      using (var session = store.OpenSession())
              {
-                 try
-                 {
+                
                      // Allow doctors to authorize hospitalizations
                      session.Store(
                          new AuthorizationRole
@@ -82,14 +82,9 @@ namespace Raven.Tests.Issues
                      //Test allowed operation
                      //WaitForUserToContinueTheTest(store);
                      session.SecureFor(drHowser.Id, "Patient/View");
-                     try
-                     {
+                     
                          maryMallon = session.Load<User>(maryMallon.Id);
-                     }
-                     catch (Exception)
-                     {
-                         Assert.True(false);
-                     }
+                    
 
 
                      //Clear session as second level cached documents bypass the cache
@@ -99,11 +94,7 @@ namespace Raven.Tests.Issues
                      Assert.Throws(typeof(ReadVetoException), () => session.Load<User>(maryMallon.Id));
 
 
-                 }
-                 catch (Exception)
-                 {
-                     Assert.True(false);
-                 }
+                 
              }     
         }
          public class User

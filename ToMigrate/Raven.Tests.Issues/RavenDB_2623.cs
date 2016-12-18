@@ -41,7 +41,7 @@ namespace Raven.Tests.Issues
                     .DeleteByIndex(Constants.DocumentsByEntityNameIndex, new IndexQuery { Query = "Tag:People" }, options: null)
                     .WaitForCompletion());
 
-                Assert.True(e.Message.StartsWith("Operation failed: Bulk operation"));
+                Assert.Equal("Operation failed: Bulk operation cancelled because the index is stale and allowStale is false", e.Message);
             }
         }
     }

@@ -1,6 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="..\packages\xunit.runner.visualstudio.2.0.1\build\net20\xunit.runner.visualstudio.props" Condition="Exists('..\packages\xunit.runner.visualstudio.2.0.1\build\net20\xunit.runner.visualstudio.props')" />
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -15,7 +14,6 @@
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
     <TargetFrameworkProfile />
-    <NuGetPackageImportStamp>bc8bdbac</NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -27,6 +25,7 @@
     <WarningLevel>4</WarningLevel>
     <NoWarn>618</NoWarn>
     <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>6</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -61,11 +60,6 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="FluentAssertions, Version=4.0.0.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
-      <HintPath>..\packages\FluentAssertions.4.0.0\lib\net45\FluentAssertions.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="FluentAssertions.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
-      <HintPath>..\packages\FluentAssertions.4.0.0\lib\net45\FluentAssertions.Core.dll</HintPath>
       <HintPath>..\packages\FluentAssertions.4.0.0\lib\net45\FluentAssertions.dll</HintPath>
       <Private>True</Private>
     </Reference>
@@ -147,6 +141,9 @@
     <Compile Include="..\Raven.Tests\Properties\TestAssemblyInfo.cs">
       <Link>Properties\TestAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="LoadAsyncValueTypeWithIncludes.cs" />
+    <Compile Include="LoadAsyncWithHierarchicalIncludesTest.cs" />
+    <Compile Include="PatchingWithNaNAndIsFinite.cs" />
     <Compile Include="PeterBalzli.cs" />
     <Compile Include="AaronSt.cs" />
     <Compile Include="AccessControlHeaders.cs" />
@@ -169,6 +166,8 @@
     <Compile Include="AsyncShouldThrowConcurrencyException.cs" />
     <Compile Include="AsyncSpatial.cs" />
     <Compile Include="AsyncSpatialTest.cs" />
+    <Compile Include="AsyncWithToken.cs" />
+    <Compile Include="AttachmentContentType.cs" />
     <Compile Include="AutoGenIndexLinqQuery.cs" />
     <Compile Include="BadTransformer.cs" />
     <Compile Include="BadQuery.cs" />
@@ -258,7 +257,7 @@
     <Compile Include="FilteredIndexTest.cs" />
     <Compile Include="FirstOrDefaultNullableDate.cs" />
     <Compile Include="FormOpensByDateAndMediaSourceAndVersionTest.cs" />
-    <Compile Include="FragmentFail.cs" />
+    <Compile Include="FragementFail.cs" />
     <Compile Include="Gal.cs" />
     <Compile Include="Garrett.cs" />
     <Compile Include="gaz.cs" />
@@ -268,6 +267,7 @@
     <Compile Include="GuidProjection.cs" />
     <Compile Include="Hancock.cs" />
     <Compile Include="HeadAsync.cs" />
+    <Compile Include="Hendrik.cs" />
     <Compile Include="HierarchicalInheritanceIndexing.cs" />
     <Compile Include="HierarchyTests.cs" />
     <Compile Include="HiloTests.cs" />
@@ -311,6 +311,7 @@
     <Compile Include="JsonNetRequiresUsToHaveTheDynamicSnkFileAsAnEmbeddedResource.cs" />
     <Compile Include="JustFacetSearch.cs" />
     <Compile Include="Justin.cs" />
+    <Compile Include="Kamran.cs" />
     <Compile Include="kendaleiv.cs" />
     <Compile Include="Kijana.cs" />
     <Compile Include="Kushnir.cs" />
@@ -354,6 +355,7 @@
     <Compile Include="Maverix2.cs" />
     <Compile Include="Maxime.cs" />
     <Compile Include="Maxime2.cs" />
+    <Compile Include="MbsCountIndex.cs" />
     <Compile Include="Micha.cs" />
     <Compile Include="MissingIncludes.cs" />
     <Compile Include="MoreLikeThisEvaluation.cs" />
@@ -377,26 +379,59 @@
     <Compile Include="NullableInIndex.cs" />
     <Compile Include="Nullables.cs" />
     <Compile Include="NullableSorting.cs" />
+    <Compile Include="NullToNonNullSelectFields2.cs" />
     <Compile Include="Oguzhntopcu.cs" />
     <Compile Include="OrderByProjectSameField.cs" />
     <Compile Include="OrderByValueTypeCast.cs" />
     <Compile Include="Oregon.cs" />
+    <Compile Include="Pfeffer.cs" />
+    <Compile Include="Phil-Updated.cs" />
+    <Compile Include="Phil.cs" />
     <Compile Include="PhilJones\PhilJones.cs" />
     <Compile Include="PhilJones\PhilJones88.cs" />
     <Compile Include="PhilJones\Projections.cs" />
+    <Compile Include="PhilJones_Search.cs" />
+    <Compile Include="PhilJones_SelectMany_NoResults.cs" />
+    <Compile Include="PlusInId.cs" />
+    <Compile Include="ProjectingIdFromNestedClass.cs" />
+    <Compile Include="ProjectionShouldNotLoadDocument.cs" />
+    <Compile Include="ProjectionTests.cs" />
+    <Compile Include="QueryExplanation.cs" />
+    <Compile Include="QueryIn.cs" />
+    <Compile Include="QueryingIntArray.cs" />
+    <Compile Include="QueryingOnValueWithMultipleMinusAnalyzed .cs" />
+    <Compile Include="QueryingOn_A_Prefix.cs" />
+    <Compile Include="QueryingUsingOr.cs" />
+    <Compile Include="QueryNotAnyTest.cs" />
+    <Compile Include="QueryOnItems.cs" />
+    <Compile Include="QueryShouldNotAppendMetaData.cs" />
+    <Compile Include="QueryWhereInTests.cs" />
+    <Compile Include="RacielRod.cs" />
+    <Compile Include="Random.cs" />
+    <Compile Include="RangeQueriesOverSum.cs" />
+    <Compile Include="RateTests.cs" />
     <Compile Include="RavenArrayQueryInputTests.cs" />
+    <Compile Include="RavenAsyncTest.cs" />
+    <Compile Include="RavenCannotQueryAgainstFloatProperty.cs" />
+    <Compile Include="RavenCountTest.cs" />
+    <Compile Include="RavenDb1192_MapReduceNestedItemsTests.cs" />
+    <Compile Include="RavenDB1206.cs" />
     <Compile Include="RavenDB252.cs" />
     <Compile Include="RavenDB669.cs" />
     <Compile Include="RavenDbBugs.cs" />
     <Compile Include="RavenDbPutTest.cs" />
+    <Compile Include="RavenDbRecoveryTests.cs" />
+    <Compile Include="RavenDB_859.cs" />
     <Compile Include="RavenDeserializationBug.cs" />
     <Compile Include="RavenDynamicTests.cs" />
     <Compile Include="RavenProjectionGuid.cs" />
+    <Compile Include="Raven_json_serialization_fail_tests.cs" />
     <Compile Include="RecreatingIndexes.cs" />
     <Compile Include="ReduceAndTransform2.cs" />
     <Compile Include="RenamedProperty.cs" />
     <Compile Include="ResultTransformerMetaData .cs" />
     <Compile Include="Rob.cs" />
+    <Compile Include="RobinM\AttachmentsStatic.cs" />
     <Compile Include="RobStats\Entity.cs" />
     <Compile Include="RobStats\Opinion.cs" />
     <Compile Include="RobStats\StatisticsBug.cs" />
@@ -414,6 +449,7 @@
     <Compile Include="Sean.cs" />
     <Compile Include="SeanBuchanan.cs" />
     <Compile Include="SearchByMapReduceExample.cs" />
+    <Compile Include="SessionAlreadyHaveSessionContext.cs" />
     <Compile Include="SetBased.cs" />
     <Compile Include="ShardedFacets.cs" />
     <Compile Include="SkippedResults.cs" />
@@ -480,11 +516,13 @@
     <Compile Include="TroyMapReduceImport.cs" />
     <Compile Include="TypeConverter.cs" />
     <Compile Include="TypeNameHandlingWithCollectionsTest.cs" />
+    <Compile Include="Tytkowska.cs" />
     <Compile Include="UintId.cs" />
     <Compile Include="UnicodePoop\WriteAndReadUnicode.cs" />
     <Compile Include="UpdatingData.cs" />
     <Compile Include="UriProperty.cs" />
     <Compile Include="UrlInIdsRepro.cs" />
+    <Compile Include="UsingLoadStartsWithAndDashSepartor.cs" />
     <Compile Include="VacancyCampaignsTests.cs" />
     <Compile Include="ValerioBorioni.cs" />
     <Compile Include="Vicente.cs" />
@@ -492,6 +530,7 @@
     <Compile Include="Vitaliy.cs" />
     <Compile Include="Vitaly.cs" />
     <Compile Include="Vlad.cs" />
+    <Compile Include="AggresiveCacheLazyIgnored.cs" />
     <Compile Include="Wallace.cs" />
     <Compile Include="WallaceTurner.cs" />
     <Compile Include="Wayne.cs" />
@@ -512,13 +551,9 @@
     <EmbeddedResource Include="MapReduceIssue\MvcMusicStore_Dump.json" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Sandbox.ravendump" />
+    <EmbeddedResource Include="Sandbox.ravendbdump" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Raven.Abstractions.Database\Raven.Abstractions.Database.csproj">
-      <Project>{AE07B425-0EF2-4710-B747-67B8EC20FCB7}</Project>
-      <Name>Raven.Abstractions.Database</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>
@@ -565,5 +600,12 @@
     <EmbeddedResource Include="UnicodePoop\activities-1958073.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
   <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
 </Project>

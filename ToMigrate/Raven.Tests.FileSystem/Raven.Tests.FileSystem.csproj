@@ -1,6 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="..\packages\xunit.runner.visualstudio.2.0.1\build\net20\xunit.runner.visualstudio.props" Condition="Exists('..\packages\xunit.runner.visualstudio.2.0.1\build\net20\xunit.runner.visualstudio.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -14,7 +13,6 @@
     <TargetFrameworkProfile />
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
-    <NuGetPackageImportStamp>32920453</NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -28,6 +26,7 @@
     <PlatformTarget>x64</PlatformTarget>
     <NoWarn>618</NoWarn>
     <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>6</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -74,27 +73,21 @@
     <Reference Include="FluentAssertions.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\FluentAssertions.4.0.0\lib\net45\FluentAssertions.Core.dll</HintPath>
-      <HintPath>..\packages\FluentAssertions.4.0.0\lib\net45\FluentAssertions.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="FluentAssertions.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
-      <HintPath>..\packages\FluentAssertions.4.0.0\lib\net45\FluentAssertions.Core.dll</HintPath>
-      <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.Owin.Host.HttpListener, Version=3.0.1.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Microsoft.Owin.Host.HttpListener.3.0.1\lib\net45\Microsoft.Owin.Host.HttpListener.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="NLog, Version=4.1.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
-      <HintPath>..\packages\NLog.4.1.0\lib\net45\NLog.dll</HintPath>
+    <Reference Include="NLog, Version=4.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
+      <HintPath>..\packages\NLog.4.3.0-rc3\lib\net45\NLog.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
-    <Reference Include="System.IO.Compression" />
     <Reference Include="System.IO.Compression.FileSystem" />
+    <Reference Include="System.Linq" />
     <Reference Include="System.Net" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Net.Http.WebRequest" />
@@ -124,6 +117,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Raven.Tests\Properties\TestAssemblyInfo.cs">
+      <Link>Properties\TestAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="Auth\ClientOAuthAuthentication.cs" />
     <Compile Include="Auth\ClientWindowsAuth.cs" />
     <Compile Include="Auth\ClientWindowsAuth2.cs" />
@@ -139,6 +135,7 @@
     <Compile Include="Bugs\Queries.cs" />
     <Compile Include="Bugs\SearchingCollections.cs" />
     <Compile Include="Bugs\SynchronizationAfterSetUpDestinations.cs" />
+    <Compile Include="Bugs\SynchronizationOfFileInsideDirectory.cs" />
     <Compile Include="Bugs\UpdatingMetadata.cs" />
     <Compile Include="Bugs\UploadFilesWithTheSameContentConcurrently.cs" />
     <Compile Include="Bugs\UploadDownload.cs" />
@@ -162,21 +159,27 @@
     <Compile Include="FileHandling.cs" />
     <Compile Include="FileNamingTests.cs" />
     <Compile Include="Folders.cs" />
+    <Compile Include="Issues\RavenDB_4847.cs" />
+    <Compile Include="Issues\RavenDB_5347.cs" />
     <Compile Include="Issues\RavenDB_3887.cs" />
     <Compile Include="Issues\RavenDB_3904_Commands.cs" />
     <Compile Include="Issues\RavenDB_3904_Session.cs" />
     <Compile Include="Issues\RavenDB_3920.cs" />
     <Compile Include="Issues\RavenDB_3955.cs" />
     <Compile Include="Issues\RavenDB_4059.cs" />
+    <Compile Include="Issues\RavenDB_4065.cs" />
     <Compile Include="Issues\RavenDB_4066.cs" />
     <Compile Include="Issues\RavenDB_4069.cs" />
     <Compile Include="Issues\RavenDB_4092.cs" />
     <Compile Include="Issues\RavenDB_4164.cs" />
     <Compile Include="Issues\RavenDB_4206.cs" />
     <Compile Include="Issues\RavenDB_4208.cs" />
-    <Compile Include="Issues\RavenDB_4219.cs" />
     <Compile Include="Issues\RavenDB_4217.cs" />
     <Compile Include="Issues\RavenDB_4224.cs" />
+    <Compile Include="Issues\RavenDB_4219.cs" />
+    <Compile Include="Issues\RavenDB_4189.cs" />
+    <Compile Include="Issues\RavenDB_4690.cs" />
+    <Compile Include="Issues\RavenDB_4961.cs" />
     <Compile Include="Issues\RavenDB_FEI_2.cs" />
     <Compile Include="Issues\RavenDB_3648.cs" />
     <Compile Include="Issues\RavenDB_2889.cs" />
@@ -245,7 +248,10 @@
   <ItemGroup>
     <None Include="app.config" />
     <EmbeddedResource Include="DefaultLogging.config" />
-    <None Include="Migration\Backups\readme.md" />
+    <None Include="Migration\Backups\from-3628\destination-3628-esent.zip" />
+    <None Include="Migration\Backups\from-3628\destination-3628-voron.zip" />
+    <None Include="Migration\Backups\from-3628\source-3628-esent.zip" />
+    <None Include="Migration\Backups\from-3628\source-3628-voron.zip" />
     <None Include="packages.config">
       <SubType>Designer</SubType>
     </None>
@@ -255,10 +261,6 @@
     <WCFMetadata Include="Service References\" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Raven.Abstractions.Database\Raven.Abstractions.Database.csproj">
-      <Project>{AE07B425-0EF2-4710-B747-67B8EC20FCB7}</Project>
-      <Name>Raven.Abstractions.Database</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>
@@ -282,10 +284,6 @@
     <ProjectReference Include="..\Raven.Smuggler\Raven.Smuggler.csproj">
       <Project>{3E6401AC-3E33-4B61-A460-49953654A207}</Project>
       <Name>Raven.Smuggler</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Raven.Sparrow\Sparrow\Sparrow.csproj">
-      <Project>{104699C8-0FD3-4AB9-8542-E8FA89ED199B}</Project>
-      <Name>Sparrow</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Common\Raven.Tests.Common.csproj">
       <Project>{381234CC-8AA7-41FF-8CAD-22330E15F993}</Project>
@@ -313,10 +311,4 @@
   </Target>
   -->
   <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
-  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
-    <PropertyGroup>
-      <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
-    </PropertyGroup>
-    <Error Condition="!Exists('..\packages\xunit.runner.visualstudio.2.0.1\build\net20\xunit.runner.visualstudio.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\xunit.runner.visualstudio.2.0.1\build\net20\xunit.runner.visualstudio.props'))" />
-  </Target>
 </Project>

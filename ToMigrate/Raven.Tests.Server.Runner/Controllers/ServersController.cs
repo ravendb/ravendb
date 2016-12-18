@@ -43,11 +43,13 @@ namespace Raven.Tests.Server.Runner.Controllers
 
             if (serverConfiguration.HasApiKey)
             {
-                configuration.Core.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+                configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
                 Authentication.EnableOnce();
             }
 
-            MaybeRemoveServer(configuration.Core.Port);
+            configuration.PostInit();
+
+            MaybeRemoveServer(configuration.Port);
             var server = CreateNewServer(configuration, deleteData);
 
             if (serverConfiguration.UseCommercialLicense)
@@ -65,7 +67,7 @@ namespace Raven.Tests.Server.Runner.Controllers
                     new ResourceAccess {TenantId = "*", Admin = true},
                     new ResourceAccess {TenantId = Constants.SystemDatabase, Admin = true},
                 }
-                }), new RavenJObject());
+                }), new RavenJObject(), null);
             }
 
             return Json(new { ServerUrl = configuration.ServerUrl });
@@ -98,27 +100,27 @@ namespace Raven.Tests.Server.Runner.Controllers
             GC.WaitForPendingFinalizers();
         }
 
-        private static RavenDbServer CreateNewServer(RavenConfiguration configuration, bool deleteData)
+        private static RavenDbServer CreateNewServer(InMemoryRavenConfiguration configuration, bool deleteData)
         {
-            var port = configuration.Core.Port.ToString(CultureInfo.InvariantCulture);
+            var port = configuration.Port.ToString(CultureInfo.InvariantCulture);
 
-            configuration.Core.DataDirectory = Path.Combine(Context.DataDir, port, "System");
+            configuration.DataDirectory = Path.Combine(Context.DataDir, port, "System");
             configuration.FileSystem.DataDirectory = Path.Combine(Context.DataDir, port, "FileSystem");
-            configuration.Server.AccessControlAllowOrigin = new HashSet<string> { "*" };
+            configuration.AccessControlAllowOrigin = new HashSet<string> { "*" };
 
-            if (configuration.Core.RunInMemory == false && deleteData)
+            if (configuration.RunInMemory == false && deleteData)
             {
                 var pathToDelete = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Context.DataDir, port);
                 Context.DeleteDirectory(pathToDelete);
             }
 
-            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(configuration.Core.Port);
+            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(configuration.Port);
             var server = new RavenDbServer(configuration) { UseEmbeddedHttpServer = true };
 
             server.Initialize();
-            Context.Servers.Add(configuration.Core.Port, server);
+            Context.Servers.Add(configuration.Port, server);
 
-            Console.WriteLine("Created a server (Port: {0}, RunInMemory: {1})", configuration.Core.Port, configuration.Core.RunInMemory);
+            Console.WriteLine("Created a server (Port: {0}, RunInMemory: {1})", configuration.Port, configuration.RunInMemory);
 
             return server;
         }

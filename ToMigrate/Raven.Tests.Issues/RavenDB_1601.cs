@@ -19,15 +19,13 @@ using Xunit;
 using Raven.Client.Linq;
 using System.Linq;
 
-using Raven.Tests.Helpers.Util;
-
 namespace Raven.Tests.Issues
 {
     public class RavenDB_1601 : RavenTest
     {
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
+        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
         {
-            configuration.Modify(x => x.Core._ActiveBundlesString, "ScriptedIndexResults");
+            configuration.Settings["Raven/ActiveBundles"] = "ScriptedIndexResults";
         }
 
         public class Developer

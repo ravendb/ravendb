@@ -55,7 +55,7 @@ namespace Raven.Tests.Issues
                             }
                     };
 
-                    store.DatabaseCommands.PutIndex($"TestIndex/Numer{i}", builder.ToIndexDefinition(store.Conventions));
+                    store.DatabaseCommands.PutIndex("TestIndex/Numer"+i , builder.ToIndexDefinition(store.Conventions));
                 }
 
                 WaitForIndexing(store);

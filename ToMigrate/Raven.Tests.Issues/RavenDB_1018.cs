@@ -104,11 +104,11 @@ namespace Raven.Tests.Issues
 
                 var csvString = new WebClient().DownloadString(string.Format("http://localhost:8079/databases/{0}/streams/query/SimpleIndex?format=excel", store.DefaultDatabase));
 
-                Assert.Equal("@id,Name,Value,Date,\r\nSimpleClasses/1,name1,1,2000-05-09T00:00:00.0000000,\r\nSimpleClasses/2,name2,2,2000-05-08T00:00:00.0000000,\r\nSimpleClasses/3,name3,3,2000-05-07T00:00:00.0000000,\r\n", csvString);
+                Assert.Equal("@id,Name,Value,Date\r\nSimpleClasses/1,name1,1,2000-05-09T00:00:00.0000000\r\nSimpleClasses/2,name2,2,2000-05-08T00:00:00.0000000\r\nSimpleClasses/3,name3,3,2000-05-07T00:00:00.0000000\r\n", csvString);
 
                 csvString = new WebClient().DownloadString(string.Format("http://localhost:8079/databases/{0}/streams/query/SimpleIndex?format=excel&query=Value:1", store.DefaultDatabase));
 
-                Assert.Equal("@id,Name,Value,Date,\r\nSimpleClasses/1,name1,1,2000-05-09T00:00:00.0000000,\r\n", csvString);
+                Assert.Equal("@id,Name,Value,Date\r\nSimpleClasses/1,name1,1,2000-05-09T00:00:00.0000000\r\n", csvString);
             }
         }
 
@@ -168,11 +168,11 @@ namespace Raven.Tests.Issues
                 WaitForUserToContinueTheTest();
                 var csvString = new WebClient().DownloadString(string.Format("http://localhost:8079/databases/{0}/streams/query/ComplexIndex?format=excel", store.DefaultDatabase));
 
-                Assert.Equal("@id,Field,Class.Name,Class.Value,Class.Date,\r\nComplexClasses/1,field1,name1,1,2000-05-09T00:00:00.0000000,\r\nComplexClasses/2,field2,name2,2,2000-05-08T00:00:00.0000000,\r\nComplexClasses/3,field3,name3,3,2000-05-07T00:00:00.0000000,\r\n", csvString);
+                Assert.Equal("@id,Field,Class.Name,Class.Value,Class.Date\r\nComplexClasses/1,field1,name1,1,2000-05-09T00:00:00.0000000\r\nComplexClasses/2,field2,name2,2,2000-05-08T00:00:00.0000000\r\nComplexClasses/3,field3,name3,3,2000-05-07T00:00:00.0000000\r\n", csvString);
 
                 csvString = new WebClient().DownloadString(string.Format("http://localhost:8079/databases/{0}/streams/query/ComplexIndex?format=excel&query=Value:1", store.DefaultDatabase));
 
-                Assert.Equal("@id,Field,Class.Name,Class.Value,Class.Date,\r\nComplexClasses/1,field1,name1,1,2000-05-09T00:00:00.0000000,\r\n", csvString);
+                Assert.Equal("@id,Field,Class.Name,Class.Value,Class.Date\r\nComplexClasses/1,field1,name1,1,2000-05-09T00:00:00.0000000\r\n", csvString);
             }
         }
     }

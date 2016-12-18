@@ -8,16 +8,10 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Database.Smuggler;
-using Raven.Abstractions.Database.Smuggler.Database;
+using Raven.Abstractions.Smuggler;
 using Raven.Bundles.Versioning.Data;
 using Raven.Client.Bundles.Versioning;
-using Raven.Database.Extensions;
-using Raven.Database.Smuggler.Embedded;
-using Raven.Smuggler.Database;
-using Raven.Smuggler.Database.Files;
-using Raven.Smuggler.Database.Remote;
-
+using Raven.Smuggler;
 using Xunit;
 
 namespace Raven.Tests.Bundles.Versioning
@@ -283,6 +277,7 @@ namespace Raven.Tests.Bundles.Versioning
                 session.Advanced.Defer(new DeleteCommandData
                 {
                     Key = "companies/1/revisions/1",
+                    TransactionInformation = new TransactionInformation()
                 });
 
                 Assert.Throws<ErrorResponseException>(() => session.SaveChanges());
@@ -317,6 +312,7 @@ namespace Raven.Tests.Bundles.Versioning
                 session.Advanced.Defer(new DeleteCommandData
                 {
                     Key = "companies/1/revisions/1",
+                    TransactionInformation = new TransactionInformation()
                 });
                 session.SaveChanges();
             }
@@ -486,33 +482,25 @@ namespace Raven.Tests.Bundles.Versioning
             var file = Path.GetTempFileName();
             try
             {
-                var smuggler = new DatabaseSmuggler(
-                    new DatabaseSmugglerOptions()
-                    {
-                        ShouldDisableVersioningBundle = true
-                    }, 
-                    new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
-                    {
-                        Database = documentStore.DefaultDatabase,
-                        Url = documentStore.Url
-                    }),
-                    new DatabaseSmugglerFileDestination(file));
-
-                smuggler.Execute();
+                new SmugglerDatabaseApi().ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = file, From = new RavenConnectionStringOptions { Url = documentStore.Url, DefaultDatabase = documentStore.DefaultDatabase } }).Wait();
 
                 using (var documentStore2 = CreateDocumentStore(port: 8078))
                 {
-                    smuggler = new DatabaseSmuggler(
-                        new DatabaseSmugglerOptions(),
-                        new DatabaseSmugglerFileSource(file), 
-                        new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
+                    var importSmuggler = new SmugglerDatabaseApi(new SmugglerDatabaseOptions()
+                    {
+                        ShouldDisableVersioningBundle = true
+                    });
+                    importSmuggler.ImportData(
+                        new SmugglerImportOptions<RavenConnectionStringOptions>
                         {
-                            Database = documentStore2.DefaultDatabase,
-                            Url = documentStore2.Url,
-                            Credentials = documentStore2.Credentials
-                        }));
-
-                    smuggler.Execute();
+                            FromFile = file,
+                            To = new RavenConnectionStringOptions
+                            {
+                                Url = documentStore2.Url,
+                                Credentials = documentStore2.Credentials,
+                                DefaultDatabase = documentStore2.DefaultDatabase
+                            }
+                        }).Wait();
 
                     using (var session = documentStore2.OpenSession())
                     {
@@ -532,7 +520,10 @@ namespace Raven.Tests.Bundles.Versioning
             }
             finally
             {
-                IOExtensions.DeleteFile(file);
+                if (File.Exists(file))
+                {
+                    File.Delete(file);
+                }
             }
         }
 

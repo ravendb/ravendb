@@ -8,6 +8,7 @@ using System;
 using Raven.Client.UniqueConstraints;
 
 using Xunit;
+using Raven.Client;
 
 namespace Raven.Tests.Bundles.UniqueConstraints.Bugs
 {
@@ -38,6 +39,31 @@ namespace Raven.Tests.Bundles.UniqueConstraints.Bugs
             {
                 var loadedEntity = session.LoadByUniqueConstraint<MyEntity>(r => r.ExternalReference, reference);
                 Assert.Equal(entity.Id, loadedEntity.Id);
+            }
+        }
+
+
+        [Fact]
+        public void LoadByUniqueConstraintWithCustomIDocumentSessionWrapper()
+        {
+            var externalReferente = "abcd123";
+            var user = new MyEntity
+            {
+                Id = "Test User",
+                ExternalReference = externalReferente,
+            };
+
+            using (var session = new MyCustomDocumentSession(DocumentStore.OpenSession()))
+            {
+                session.Store(user);
+                session.SaveChanges();
+            }
+
+            using (var session = new MyCustomDocumentSession(DocumentStore.OpenSession()))
+            {
+                var storedUser = session.LoadByUniqueConstraint<MyEntity>(r => r.ExternalReference, externalReferente);
+                Assert.Equal(user.Id, storedUser.Id);
+                Assert.Equal(user.ExternalReference, storedUser.ExternalReference);
             }
         }
 

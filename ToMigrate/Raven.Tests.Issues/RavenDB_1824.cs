@@ -62,7 +62,7 @@ namespace Raven.Tests.Issues
                 hash.TransformBlock(Encoding.UTF8.GetBytes(block), 0, block.Length);
             }
 
-            return IOExtensions.GetAsHex(hash.TransformFinalBlock());
+            return IOExtensions.GetMD5Hex(hash.TransformFinalBlock());
         }
 
     }
