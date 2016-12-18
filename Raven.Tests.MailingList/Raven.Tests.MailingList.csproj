@@ -530,6 +530,7 @@
     <Compile Include="Vitaliy.cs" />
     <Compile Include="Vitaly.cs" />
     <Compile Include="Vlad.cs" />
+    <Compile Include="AggresiveCacheLazyIgnored.cs" />
     <Compile Include="Wallace.cs" />
     <Compile Include="WallaceTurner.cs" />
     <Compile Include="Wayne.cs" />

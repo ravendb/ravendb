@@ -2,6 +2,7 @@ using System;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Client.Connection.Implementation;
 using Raven.Client.Exceptions;
 using Raven.Imports.Newtonsoft.Json;
@@ -105,6 +106,7 @@ namespace Raven.Client.Connection
 
                     foreach (string header in cachedData[i].Headers)
                     {
+                        cachedData[i].Time = SystemTime.UtcNow;
                         responses[i].Headers[header] = cachedData[i].Headers[header];
                     }
                     responses[i].Result = cachedData[i].Data.CloneToken();
