@@ -165,7 +165,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
             };
         }
 
-        public void AssociatePage(string filename, int pageId, int pagePositionInFile, int pageSize)
+        public void AssociatePage(string filename, int pageId, int pagePositionInFile, int pageSize, bool incrementUsageCount = false)
         {
             var usageByFileName = storage.Usage.GetIndex(Tables.Usage.Indices.ByFileName);
             var usageByFileNameAndPosition = storage.Usage.GetIndex(Tables.Usage.Indices.ByFileNameAndPosition);
@@ -210,6 +210,23 @@ namespace Raven.Database.FileSystem.Storage.Voron
             storage.Usage.Add(writeBatch.Value, usageKeySlice, usage, 0);
             usageByFileName.MultiAdd(writeBatch.Value, (Slice)CreateKey(filename), usageKeySlice);
             usageByFileNameAndPosition.Add(writeBatch.Value, (Slice)CreateKey(filename, pagePositionInFile), usageKey, 0);
+
+            if (incrementUsageCount)
+                IncrementUsageCount(pageId);
+        }
+
+        private void IncrementUsageCount(int pageId)
+        {
+            var key = (Slice)CreateKey(pageId);
+
+            ushort version;
+            var page = LoadJson(storage.Pages, key, writeBatch.Value, out version);
+            if (page == null)
+                throw new InvalidOperationException($"Could not find page '{pageId}'. Probably data is corrupted.");
+
+            var usageCount = page.Value<int>("usage_count");
+            page["usage_count"] = usageCount + 1;
+            storage.Pages.Add(writeBatch.Value, key, page, version);
         }
 
         public int ReadPage(int pageId, byte[] buffer)
