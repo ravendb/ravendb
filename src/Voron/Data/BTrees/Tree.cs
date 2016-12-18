@@ -404,30 +404,35 @@ namespace Voron.Data.BTrees
             while (stack.Count > 0)
             {
                 var p = stack.Pop();
-                if (p.NumberOfEntries == 0 && p != root)
-                {
-                    DebugStuff.RenderAndShowTree(this, rootPageNumber);
-                    throw new InvalidOperationException("The page " + p.PageNumber + " is empty");
 
-                }
-                p.DebugValidate(this, rootPageNumber);
-                if (p.IsBranch == false)
-                    continue;
-
-                if (p.NumberOfEntries < 2)
+                using (p.IsCompressed ? (DecompressedLeafPage)(p = DecompressPage(p, skipCache: true)) : null)
                 {
-                    throw new InvalidOperationException("The branch page " + p.PageNumber + " has " + p.NumberOfEntries + " entry");
-                }
-
-                for (int i = 0; i < p.NumberOfEntries; i++)
-                {
-                    var page = p.GetNode(i)->PageNumber;
-                    if (pages.Add(page) == false)
+                    if (p.NumberOfEntries == 0 && p != root)
                     {
                         DebugStuff.RenderAndShowTree(this, rootPageNumber);
-                        throw new InvalidOperationException("The page " + page + " already appeared in the tree!");
+                        throw new InvalidOperationException("The page " + p.PageNumber + " is empty");
+
                     }
-                    stack.Push(GetReadOnlyTreePage(page));
+                    p.DebugValidate(this, rootPageNumber);
+                    if (p.IsBranch == false)
+                        continue;
+
+                    if (p.NumberOfEntries < 2)
+                    {
+                        throw new InvalidOperationException("The branch page " + p.PageNumber + " has " +
+                                                            p.NumberOfEntries + " entry");
+                    }
+
+                    for (int i = 0; i < p.NumberOfEntries; i++)
+                    {
+                        var page = p.GetNode(i)->PageNumber;
+                        if (pages.Add(page) == false)
+                        {
+                            DebugStuff.RenderAndShowTree(this, rootPageNumber);
+                            throw new InvalidOperationException("The page " + page + " already appeared in the tree!");
+                        }
+                        stack.Push(GetReadOnlyTreePage(page));
+                    }
                 }
             }
         }
@@ -548,7 +553,7 @@ namespace Voron.Data.BTrees
             return p;
         }
 
-        private TreePage SearchForPage(Slice key, bool allowCompressed, out Func<Slice, TreeCursor> cursorConstructor, out TreeNodeHeader* node)
+        private TreePage SearchForPage(Slice key, bool allowCompressed, out Func<Slice, TreeCursor> cursorConstructor, out TreeNodeHeader* node, bool addToRecentlyFoundPages = true)
         {
             var p = GetReadOnlyTreePage(State.RootPageNumber);
 
@@ -613,7 +618,7 @@ namespace Voron.Data.BTrees
 
             node = p.Search(_llt, key); // will set the LastSearchPosition
 
-            if (p.NumberOfEntries > 0) // compressed page can have no ordinary entries
+            if (p.NumberOfEntries > 0 && addToRecentlyFoundPages) // compressed page can have no ordinary entries
                 AddToRecentlyFoundPages(cursor, p, leftmostPage, rightmostPage);
 
             return p;

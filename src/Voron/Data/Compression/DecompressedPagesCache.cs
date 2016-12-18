@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using Voron.Impl;
 
 namespace Voron.Data.Compression
 {
@@ -117,14 +118,57 @@ namespace Voron.Data.Compression
 
         public void Dispose()
         {
-            foreach (var item in _cache)
+            for (var i = 0; i < _cache.Length; i++)
             {
+                var item = _cache[i];
+
                 if (item == null)
                     continue;
 
                 item.Cached = false;
                 item.Dispose();
+
+                _cache[i] = null;
             }
+        }
+
+        public bool TryFindPageForReading(Slice key, LowLevelTransaction tx, out DecompressedLeafPage result)
+        {
+            Debug.Assert(key.Options == SliceOptions.Key);
+
+            var position = _current;
+
+            var itemsLeft = Size;
+            while (itemsLeft > 0)
+            {
+                var page = _cache[position % Size];
+                if (page == null || page.Usage != DecompressionUsage.Read || page.NumberOfEntries == 0) // decompressed page can has 0 entries if each compressed entry had a tombstone marker
+                {
+                    itemsLeft--;
+                    position++;
+
+                    continue;
+                }
+
+                Slice first;
+                Slice last;
+
+                using (page.GetNodeKey(tx, 0, out first))
+                using (page.GetNodeKey(tx, page.NumberOfEntries - 1, out last))
+                {
+                    if (SliceComparer.Compare(key, first) >= 0 && SliceComparer.Compare(key, last) <= 0)
+                    {
+                        result = page;
+                        return true;
+                    }                    
+                }
+
+                itemsLeft--;
+                position++;
+            }
+
+            result = null;
+            return false;
         }
     }
 }

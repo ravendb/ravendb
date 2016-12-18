@@ -298,6 +298,37 @@ namespace Voron.Data.BTrees
             }
         }
 
+        public DecompressedReadResult ReadDecompressed(Slice key)
+        {
+            DecompressedLeafPage decompressed;
+            TreeNodeHeader* node;
+
+            if (DecompressionsCache.TryFindPageForReading(key, _llt, out decompressed))
+            {
+                node = decompressed.Search(_llt, key);
+
+                if (decompressed.LastMatch != 0)
+                    return null;
+            }
+            else
+            {
+                Func<Slice, TreeCursor> cursor;
+
+                var page = SearchForPage(key, true, out cursor, out node, addToRecentlyFoundPages: false);
+
+                if (page.IsCompressed)
+                {
+                    page = decompressed = DecompressPage(page);
+                    node = page.Search(_llt, key);
+                }
+
+                if (page.LastMatch != 0)
+                    return null;
+            }
+
+            return new DecompressedReadResult(GetValueReaderFromHeader(node), node->Version, decompressed);
+        }
+        
         public struct DecompressionInput
         {
             public DecompressionInput(CompressedNodesHeader* header, TreePage p)

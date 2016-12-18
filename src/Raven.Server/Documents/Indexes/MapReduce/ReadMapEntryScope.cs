@@ -4,21 +4,26 @@ using Voron.Util;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
 {
-    public class ReadMapEntryScope : IDisposable
+    public unsafe class ReadMapEntryScope : IDisposable
     {
-        public ReadMapEntryScope(PtrSize entry, DecompressedLeafPage page = null)
+        public ReadMapEntryScope(DecompressedReadResult read)
         {
-            Data = entry;
-            _page = page;
+            _read = read;
+            Data = PtrSize.Create(read.Reader.Base, read.Reader.Length);
+        }
+
+        public ReadMapEntryScope(PtrSize data)
+        {
+            Data = data;
         }
 
         public readonly PtrSize Data;
 
-        private readonly DecompressedLeafPage _page;
+        private readonly DecompressedReadResult _read;
 
         public void Dispose()
         {
-            _page?.Dispose();
+            _read?.Dispose();
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Sparrow;
@@ -159,49 +160,32 @@ namespace FastTests.Voron.LeafsCompression
             }
         }
 
-        private unsafe void AssertReads(Transaction tx, IEnumerable<string> ids, byte[] bytes)
+        private void AssertReads(Transaction tx, IEnumerable<string> ids, byte[] bytes)
         {
             var tree = tx.ReadTree("tree");
 
             foreach (var id in ids)
             {
                 Slice key;
-                byte[] result;
 
                 using (Slice.From(tx.Allocator, id, ByteStringType.Immutable, out key))
                 {
-                    unsafe
+                    using (var readResult = tree.ReadDecompressed(key))
                     {
-                        TreeNodeHeader* node;
-                        Func<Slice, TreeCursor> cursor;
-                        var page = tree.FindPageFor(key, out node, out cursor, allowCompressed: true);
-
-                        ReadResult readResult;
-
-                        if (page.IsCompressed)
+                        if (readResult == null)
                         {
-                            using (var decompressed = tree.DecompressPage(page))
-                            {
-                                var nodeNumber = decompressed.NodePositionFor(tx.LowLevelTransaction, key);
-                                node = decompressed.GetNode(nodeNumber);
-
-                                readResult = new ReadResult(tree.GetValueReaderFromHeader(node), node->Version);
-                            }
-                        }
-                        else
-                        {
-                            readResult = new ReadResult(tree.GetValueReaderFromHeader(node), node->Version);
+                            
                         }
 
-                        result = readResult.Reader.ReadBytes(readResult.Reader.Length).ToArray();
+                        var result = readResult.Reader.ReadBytes(readResult.Reader.Length).ToArray();
+
+                        Assert.Equal(bytes, result);
                     }
                 }
-
-                Assert.Equal(bytes, result);
             }
         }
 
-        private unsafe void AssertDeletes(Transaction tx, IEnumerable<string> deleted)
+        private void AssertDeletes(Transaction tx, IEnumerable<string> deleted)
         {
             var tree = tx.ReadTree("tree");
 
@@ -210,22 +194,9 @@ namespace FastTests.Voron.LeafsCompression
                 Slice key;
                 using (Slice.From(tx.Allocator, id, ByteStringType.Immutable, out key))
                 {
-                    TreeNodeHeader* node;
-                    Func<Slice, TreeCursor> cursor;
-                    var page = tree.FindPageFor(key, out node, out cursor, allowCompressed: true);
-
-                    if (page.IsCompressed)
+                    using (var readResult = tree.ReadDecompressed(key))
                     {
-                        using (var decompressed = tree.DecompressPage(page))
-                        {
-                            decompressed.Search(tx.LowLevelTransaction, key);
-                            
-                            Assert.NotEqual(0, decompressed.LastMatch);
-                        }
-                    }
-                    else
-                    {
-                        Assert.NotEqual(0, page.LastMatch);
+                        Assert.Null(readResult);
                     }
                 }
             }
