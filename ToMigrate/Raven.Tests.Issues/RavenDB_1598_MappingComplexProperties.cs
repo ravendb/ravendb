@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 using Raven.Tests.Common;
 using Raven.Tests.Helpers;
-using Raven.Tests.Helpers.Util;
 
 namespace Raven.Tests.Issues
 {
@@ -100,9 +99,9 @@ namespace Raven.Tests.Issues
             }
         }
 
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
+        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
         {
-            configuration.Modify(x => x.Core._ActiveBundlesString, "ScriptedIndexResults");
+            configuration.Settings["Raven/ActiveBundles"] = "ScriptedIndexResults";
         }
 
         [Fact]

@@ -4,13 +4,15 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading;
+using Newtonsoft.Json;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Tests.Common;
 
 using Xunit;
-using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
@@ -23,49 +25,47 @@ namespace Raven.Tests.Issues
             public string Phone { get; set; }
         }
 
-        [Theory]
-        [PropertyData("Storages")]
-        public void ShouldWork(string storage)
+        [Fact]
+        public void ShouldWork()
         {
-            using (var store1 = CreateStore(requestedStorage: storage))
-            using (var store2 = CreateStore(requestedStorage: storage))
-            using (var store3 = CreateStore(requestedStorage: storage))
+            using (var store1 = CreateStore(requestedStorageType: "esent"))
+            using (var store2 = CreateStore(requestedStorageType: "esent"))
+            using (var store3 = CreateStore(requestedStorageType: "esent"))
             {
                 DeployNorthwind(store1);
 
                 TellFirstInstanceToReplicateToSecondInstance();
 
-                WaitForDocument(store2.DatabaseCommands, "shippers/1");
+                Assert.True(SpinWait.SpinUntil(() => store2.DatabaseCommands.Get("shippers/1") == null, Debugger.IsAttached ? TimeSpan.FromSeconds(30) : TimeSpan.FromSeconds(15)));
 
                 var path = NewDataPath();
 
                 store1
                     .DatabaseCommands
                     .GlobalAdmin
-                    .StartBackup(path, null, false, store1.DefaultDatabase);
-
-                WaitForBackup(store1.DatabaseCommands, false);
+                    .StartBackup(path, null, false, store1.DefaultDatabase)
+                    .WaitForCompletion();
 
                 store3
                     .DatabaseCommands
                     .GlobalAdmin
                     .StartRestore(new DatabaseRestoreRequest
-                                  {
-                                      BackupLocation = path,
-                                      DatabaseName = "DBX"
-                                  })
+                    {
+                        BackupLocation = path,
+                        DatabaseName = "DBX"
+                    })
                     .WaitForCompletion();
 
-                WaitForDocument(store3.DatabaseCommands.ForDatabase("DBX"), Constants.RavenAlerts);
+                 WaitForReplication(store3, session =>
+                 {
+                     var alerts = session.Load<AlertsDocument>(Constants.RavenAlerts);
+                     if (alerts == null)
+                         return false;
 
-                using (var session = store3.OpenSession("DBX"))
-                {
-                    var alerts = session.Load<AlertsDocument>(Constants.RavenAlerts);
-
-                    Assert.True(alerts.Alerts.Any(alert => alert.Title.Contains("Replication error. Multiple databases replicating at the same time with same DatabaseId")));
-                }
-
-                SystemTime.UtcDateTime = () => DateTime.Now.AddMinutes(1);
+                     return (alerts.Alerts.Any(alert => alert.Title.Contains("Replication error. Multiple databases replicating at the same time with same DatabaseId")));
+                 }, "DBX");
+                
+                SystemTime.UtcDateTime = () => DateTime.Now.AddMinutes(11);
 
                 using (var session = store3.OpenSession("DBX"))
                 {
@@ -81,3 +81,4 @@ namespace Raven.Tests.Issues
         }
     }
 }
+

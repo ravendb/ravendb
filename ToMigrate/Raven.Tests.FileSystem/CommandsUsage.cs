@@ -8,15 +8,15 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Replication;
-using Raven.Abstractions.Util;
 using Raven.Client.FileSystem;
 using Raven.Client.FileSystem.Connection;
 using Raven.Client.FileSystem.Extensions;
-using Raven.Database.Config;
 using Raven.Json.Linq;
 using Raven.Tests.FileSystem.Synchronization.IO;
 using Xunit;
 using Xunit.Extensions;
+using Raven.Abstractions.Util;
+using Raven.Server;
 
 namespace Raven.Tests.FileSystem
 {
@@ -531,36 +531,36 @@ namespace Raven.Tests.FileSystem
             var store = NewStore();
             var failoverConvention = store.Conventions.FailoverBehavior;
             store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
-
+            
             try
             {
                 using (var client = store.AsyncFilesCommands)
                 using (var anotherClient = client.ForFileSystem("test"))
                 {
-                await anotherClient.EnsureFileSystemExistsAsync();
+                    await anotherClient.EnsureFileSystemExistsAsync();
 
-                await client.UploadAsync("test1", new RandomStream(10)); // will make it active
-                await anotherClient.UploadAsync("test1", new RandomStream(10)); // will make it active
+                    await client.UploadAsync("test1", new RandomStream(10)); // will make it active
+                    await anotherClient.UploadAsync("test1", new RandomStream(10)); // will make it active
 
-                await client.UploadAsync("test2", new RandomStream(10));
+                    await client.UploadAsync("test2", new RandomStream(10));
 
-                var stats = await anotherClient.Admin.GetStatisticsAsync();
+                    var stats = await anotherClient.Admin.GetStatisticsAsync();
 
-                var stats1 = stats.FirstOrDefault(x => x.Name == client.FileSystemName);
-                Assert.NotNull(stats1);
-                var stats2 = stats.FirstOrDefault(x => x.Name == anotherClient.FileSystemName);
-                Assert.NotNull(stats2);
+                    var stats1 = stats.FirstOrDefault(x => x.Name == client.FileSystemName);
+                    Assert.NotNull(stats1);
+                    var stats2 = stats.FirstOrDefault(x => x.Name == anotherClient.FileSystemName);
+                    Assert.NotNull(stats2);
 
                     Assert.Equal(2, stats1.Metrics.Requests.Count);
-                Assert.Equal(1, stats2.Metrics.Requests.Count);
+                    Assert.Equal(1, stats2.Metrics.Requests.Count);
 
-                Assert.Equal(0, stats1.ActiveSyncs.Count);
-                Assert.Equal(0, stats1.PendingSyncs.Count);
+                    Assert.Equal(0, stats1.ActiveSyncs.Count);
+                    Assert.Equal(0, stats1.PendingSyncs.Count);
 
-                Assert.Equal(0, stats2.ActiveSyncs.Count);
-                Assert.Equal(0, stats2.PendingSyncs.Count);
+                    Assert.Equal(0, stats2.ActiveSyncs.Count);
+                    Assert.Equal(0, stats2.PendingSyncs.Count);
+                }
             }
-        }
             finally
             {
                 store.Conventions.FailoverBehavior= failoverConvention;
@@ -596,7 +596,7 @@ namespace Raven.Tests.FileSystem
                 Id = "Raven/FileSystem/" + newFileSystemName,
                 Settings =
                  {
-                     {RavenConfiguration.GetKey(x => x.FileSystem.DataDirectory), Path.Combine("~", Path.Combine("FileSystems", newFileSystemName))}
+                     {Constants.FileSystem.DataDirectory, Path.Combine("~", Path.Combine("FileSystems", newFileSystemName))}
                  }
             }, newFileSystemName);
 
@@ -657,7 +657,7 @@ namespace Raven.Tests.FileSystem
                 Id = Constants.FileSystem.Prefix + newFileSystemName,
                 Settings =
                  {
-                     {RavenConfiguration.GetKey(x => x.FileSystem.DataDirectory), Path.Combine("~", Path.Combine("FileSystems", newFileSystemName))}
+                     {Constants.FileSystem.DataDirectory, Path.Combine("~", Path.Combine("FileSystems", newFileSystemName))}
                  }
             };
 
@@ -666,6 +666,7 @@ namespace Raven.Tests.FileSystem
             var names = await adminClient.GetNamesAsync();
             Assert.Contains(newFileSystemName, names);
             Assert.Throws<InvalidOperationException>(()=>AsyncHelpers.RunSync(() => adminClient.CreateFileSystemAsync(fileSystemSpec)));
+
         }
 
         [Fact]

@@ -26,7 +26,7 @@ namespace Raven.Tests.Issues
         {
             store = NewDocumentStore();
             var workContext = store.SystemDatabase.WorkContext;
-            prefetchingBehavior = new PrefetchingBehavior(PrefetchingUser.Indexer, workContext, new IndexBatchSizeAutoTuner(workContext),string.Empty );
+            prefetchingBehavior = new PrefetchingBehavior(PrefetchingUser.Indexer, workContext, new IndexBatchSizeAutoTuner(workContext), string.Empty);
             prefetchingBehavior.ShouldHandleUnusedDocumentsAddedAfterCommit = true;
         }
 
@@ -48,7 +48,7 @@ namespace Raven.Tests.Issues
                 };
             }).ToArray());
 
-            last = EtagUtil.Increment(last, store.Configuration.Core.MaxNumberOfItemsToProcessInSingleBatch);
+            last = EtagUtil.Increment(last, store.Configuration.MaxNumberOfItemsToProcessInSingleBatch);
 
             prefetchingBehavior.AfterStorageCommitBeforeWorkNotifications(Enumerable.Range(0, 5).Select(x =>
             {

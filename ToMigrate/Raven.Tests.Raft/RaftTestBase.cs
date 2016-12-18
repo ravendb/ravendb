@@ -26,11 +26,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Raven.Client.Connection.Async;
+using Raven.Client.Connection.Request;
+using Raven.Tests.Common;
 using Xunit;
 
 namespace Raven.Tests.Raft
 {
-    public class RaftTestBase : RavenTestBase
+    public class RaftTestBase : RavenTest
     {
         private const int PortRangeStart = 9000;
 
@@ -76,10 +79,18 @@ namespace Raven.Tests.Raft
                 throw new Exception("WaitFor failed");
         }
 
-        public List<DocumentStore> CreateRaftCluster(int numberOfNodes, string activeBundles = null, Action<DocumentStore> configureStore = null, [CallerMemberName] string databaseName = null, bool inMemory = true)
+        private Action<DocumentStore> defaultConfigureStore = store => store.Conventions.FailoverBehavior = FailoverBehavior.ReadFromLeaderWriteToLeader;
+        public List<DocumentStore> CreateRaftCluster(int numberOfNodes, string activeBundles = null, Action<DocumentStore> configureStore = null, [CallerMemberName] string databaseName = null, bool inMemory = true, bool fiddler = false)
         {
+            if (configureStore == null)
+                configureStore = defaultConfigureStore;
             var nodes = Enumerable.Range(0, numberOfNodes)
-                .Select(x => GetNewServer(GetPort(), activeBundles: activeBundles, databaseName: databaseName, runInMemory:inMemory))
+                .Select(x => GetNewServer(GetPort(), activeBundles: activeBundles, databaseName: databaseName, runInMemory:inMemory, 
+                configureConfig: configuration =>
+                {
+                    configuration.Cluster.ElectionTimeout *= 10;
+                    configuration.Cluster.HeartbeatTimeout *= 10;
+                }))
                 .ToList();
 
             var allNodesFinishedJoining = new ManualResetEventSlim();
@@ -89,7 +100,7 @@ namespace Raven.Tests.Raft
 
             leader.Options.ClusterManager.Value.InitializeTopology(forceCandidateState:true);
 
-            Assert.True(leader.Options.ClusterManager.Value.Engine.WaitForLeader(), "Leader was not elected by himself in time");
+            Assert.True(leader.Options.ClusterManager.Value.Engine.WaitForLeader(),"Leader was not elected by himself in time");
 
             leader.Options.ClusterManager.Value.Engine.TopologyChanged += command =>
             {
@@ -117,22 +128,42 @@ namespace Raven.Tests.Raft
                 allNodesFinishedJoining.Set();
 
             Assert.True(allNodesFinishedJoining.Wait(10000 * numberOfNodes), "Not all nodes become voters. " + leader.Options.ClusterManager.Value.Engine.CurrentTopology);
-            Assert.True(leader.Options.ClusterManager.Value.Engine.WaitForLeader(), "Wait for leader timedout");
+            Assert.True(leader.Options.ClusterManager.Value.Engine.WaitForLeader(),"Wait for leader timedout");
 
             WaitForClusterToBecomeNonStale(nodes);
 
-            return nodes
-                .Select(node => NewRemoteDocumentStore(ravenDbServer: node, activeBundles: activeBundles, configureStore: configureStore, databaseName: databaseName))
+            foreach (var node in nodes)
+            {
+                var url = node.SystemDatabase.ServerUrl.ForDatabase(databaseName);
+                var serverHash = ServerHash.GetServerHash(url);
+                ReplicationInformerLocalCache.ClearClusterNodesInformationLocalCache(serverHash);
+                ReplicationInformerLocalCache.ClearReplicationInformationFromLocalCache(serverHash);
+            }
+
+            var documentStores = nodes
+                .Select(node => NewRemoteDocumentStore(ravenDbServer: node, fiddler: fiddler,activeBundles: activeBundles, configureStore: configureStore, databaseName: databaseName))
                 .ToList();
+            foreach (var documentStore in documentStores)
+            {
+                ((ClusterAwareRequestExecuter)((ServerClient)documentStore.DatabaseCommands).RequestExecuter).WaitForLeaderTimeout = TimeSpan.FromSeconds(30);
+            }
+            return documentStores;
         }
 
         public List<DocumentStore> ExtendRaftCluster(int numberOfExtraNodes, string activeBundles = null, Action<DocumentStore> configureStore = null, [CallerMemberName] string databaseName = null, bool inMemory = true)
         {
+            if (configureStore == null)
+                configureStore = defaultConfigureStore;
             var leader = servers.FirstOrDefault(server => server.Options.ClusterManager.Value.IsLeader());
             Assert.NotNull(leader);
 
             var nodes = Enumerable.Range(0, numberOfExtraNodes)
-                .Select(x => GetNewServer(GetPort(), activeBundles: activeBundles, databaseName: databaseName, runInMemory:inMemory))
+                .Select(x => GetNewServer(GetPort(), activeBundles: activeBundles, databaseName: databaseName, runInMemory:inMemory,
+                configureConfig: configuration =>
+                {
+                    configuration.Cluster.ElectionTimeout *= 10;
+                    configuration.Cluster.HeartbeatTimeout *= 10;
+                }))
                 .ToList();
 
             var allNodesFinishedJoining = new ManualResetEventSlim();
@@ -156,7 +187,7 @@ namespace Raven.Tests.Raft
                     Name = RaftHelper.GetNodeName(n.SystemDatabase.TransactionalStorage.Id),
                     Uri = RaftHelper.GetNodeUrl(n.SystemDatabase.Configuration.ServerUrl)
                 }).Wait(10000));
-                Assert.True(allNodesFinishedJoining.Wait(10000), "Not all nodes finished joining");
+                Assert.True(allNodesFinishedJoining.Wait(10000),"Not all nodes finished joining");
                 allNodesFinishedJoining.Reset();
             }
 
@@ -189,16 +220,35 @@ namespace Raven.Tests.Raft
                 throw new InvalidOperationException("Cluster is stale.");
         }
 
+        protected IDisposable ForceNonClusterRequests(List<DocumentStore> stores)
+        {
+            var conventionsRestoreInfo = stores.Select(x => new
+            {
+                Store = x,
+                Convention = x.Conventions.FailoverBehavior
+            }).ToDictionary(x => x.Store, x => x.Convention);
+
+            stores.ForEach(store => store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately);
+
+            return new DisposableAction(() =>
+            {
+                foreach (var restoreInfo in conventionsRestoreInfo)
+                {
+                    restoreInfo.Key.Conventions.FailoverBehavior = restoreInfo.Value;
+                }
+            });
+        }
+
         protected void WaitForClusterToBecomeNonStale(int numberOfNodes)
         {
             servers.ForEach(server => Assert.True(SpinWait.SpinUntil(() =>
             {
                 var topology = server.Options.ClusterManager.Value.Engine.CurrentTopology;
                 return topology.AllVotingNodes.Count() == numberOfNodes;
-            }, TimeSpan.FromSeconds(15)), $"Node didn't become unstale in time, {server}"));
+            }, TimeSpan.FromSeconds(15*numberOfNodes)), $"Node didn't become unstale in time, {server}"));
         }
 
-        protected void SetupClusterConfiguration(List<DocumentStore> clusterStores, bool enableReplication = true)
+        protected void SetupClusterConfiguration(List<DocumentStore> clusterStores, bool enableReplication = true, Dictionary<string, string> databaseSettings = null)
         {
             var clusterStore = clusterStores[0];
             var requestFactory = new HttpRavenRequestFactory();
@@ -207,22 +257,35 @@ namespace Raven.Tests.Raft
             {
                 Url = clusterStore.Url
             });
-            replicationRequest.Write(RavenJObject.FromObject(new ClusterConfiguration { EnableReplication = enableReplication }));
+            replicationRequest.Write(RavenJObject.FromObject(new ClusterConfiguration
+            {
+                EnableReplication = enableReplication,
+                DatabaseSettings = databaseSettings
+            }));
             replicationRequest.ExecuteRequest();
 
             clusterStores.ForEach(store => WaitForDocument(store.DatabaseCommands.ForSystemDatabase(), Constants.Global.ReplicationDestinationsDocumentName));
-            clusterStores.ForEach(store => WaitFor(store.DatabaseCommands.ForDatabase(store.DefaultDatabase, ClusterBehavior.None), commands =>
+            using (ForceNonClusterRequests(clusterStores))
             {
-                using (var request = commands.CreateRequest("/configuration/replication", HttpMethod.Get))
+                clusterStores.ForEach(store => WaitFor(store.DatabaseCommands, commands =>
                 {
-                    var replicationDocumentJson = request.ReadResponseJson() as RavenJObject;
-                    if (replicationDocumentJson == null) 
-                        return false;
+                    using (var request = commands.CreateRequest("/configuration/replication", HttpMethod.Get))
+                    {
+                        var replicationDocumentJson = request.ReadResponseJson() as RavenJObject;
+                        if (replicationDocumentJson == null)
+                            return false;
 
-                    var replicationDocument = replicationDocumentJson.JsonDeserialization<ReplicationDocument>();
-                    return replicationDocument.Destinations.Count == clusterStores.Count - 1;
-                }
-            }));
+                        var replicationDocument = replicationDocumentJson.JsonDeserialization<ReplicationDocument>();
+                        return replicationDocument.Destinations.Count == clusterStores.Count - 1;
+                    }
+                }));
+            }
+        }
+
+        protected void UpdateTopologyForAllClients(IEnumerable<DocumentStore> clusterStores)
+        {
+            clusterStores.ForEach(store => ((ServerClient)store.DatabaseCommands).RequestExecuter.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands, force: true));
         }
     }
 }
+

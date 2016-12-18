@@ -275,7 +275,7 @@ namespace Raven.Tests.Issues
                         };
             }
 
-            protected override IEnumerable<object> ApplyReduceFunctionIfExists(IndexQuery indexQuery, IEnumerable<object> enumerable)
+            protected internal override IEnumerable<object> ApplyReduceFunctionIfExists(IndexQuery indexQuery, IEnumerable<object> enumerable)
             {
                 return enumerable;
             }

@@ -1,25 +1,32 @@
+using System;
 using System.Collections.Generic;
-
+using System.Linq;
+using System.Net;
+using System.Text;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Client.Embedded;
 using Raven.Client.Extensions;
 using Raven.Database.Server;
 using Raven.Database.Server.Security;
+using Raven.Database.Server.Security.Windows;
 using Raven.Json.Linq;
 using Raven.Server;
+using Raven.Tests.Core.Utils.Entities;
 using Raven.Tests.Helpers;
-using Raven.Tests.Helpers.Util;
-
 using Xunit;
+using Xunit.Sdk;
 
 namespace Raven.Tests.Issues
 {
     public class RavenDB_3559 : RavenTestBase
     {
         private const string Operation = "Content/View";
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
+        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
         {
-            configuration.Modify(x => x.Core.AnonymousUserAccessMode, AnonymousUserAccessMode.None);
+            configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
             Authentication.EnableOnce();
         }
         

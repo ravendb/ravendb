@@ -5,7 +5,6 @@ using Raven.Tests.Common.Attributes;
 using Raven.Tests.Common.Util;
 
 using Xunit;
-using System.Collections.Generic;
 
 namespace Raven.Tests.MailingList
 {

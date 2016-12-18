@@ -63,7 +63,7 @@ namespace Raven.Tests.FileSystem.Auth
                                                   }
                                               }
                                           }
-                                      }), new RavenJObject());
+                                      }), new RavenJObject(), null);
         }
 
         [Fact]
@@ -83,7 +83,7 @@ namespace Raven.Tests.FileSystem.Auth
             ms.Position = 0;
             result.Position = 0;
 
-            Assert.Equal(ms.GetHashAsHex(), result.GetHashAsHex());
+            Assert.Equal(ms.GetMD5Hash(), result.GetMD5Hash());
             await client.RenameAsync("/dir/ms.bin", "/dir/sm.bin");
 
             var searchResults = await client.SearchOnDirectoryAsync("/dir");
@@ -174,5 +174,5 @@ namespace Raven.Tests.FileSystem.Auth
 
             await storageClient.CleanUpAsync();
         }
-                }
-                }
+    }
+}

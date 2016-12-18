@@ -78,7 +78,7 @@ namespace Raven.Tests.Notifications
                 store1.DatabaseCommands.PutAttachment("attachment/1", null, new MemoryStream(new byte[] {1, 2, 3}),
                                                       new RavenJObject());
 
-                store2.DatabaseCommands.PutAttachment("attachment/1", null, new MemoryStream(new byte[] {1, 2, 3}),
+                store2.DatabaseCommands.PutAttachment("attachment/1", null, new MemoryStream(new byte[] {1, 2, 3, 4}),
                                                       new RavenJObject());
 
                 var list = new BlockingCollection<ReplicationConflictNotification>();

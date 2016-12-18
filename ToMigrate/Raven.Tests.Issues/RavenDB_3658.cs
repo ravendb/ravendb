@@ -7,13 +7,12 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
-using Raven.Abstractions.Database.Smuggler.Common;
-using Raven.Abstractions.Database.Smuggler.Database;
-using Raven.Smuggler.Database;
-using Raven.Smuggler.Database.Remote;
-using Raven.Smuggler.Database.Streams;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Smuggler;
+using Raven.Smuggler;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Dto;
+using Raven.Tests.Core.Smuggler;
 
 using Xunit;
 
@@ -38,38 +37,40 @@ namespace Raven.Tests.Issues
 
                 using (var stream = new MemoryStream())
                 {
-                    var options = new DatabaseSmugglerOptions();
-                    options.Filters.Add(new FilterSetting
+                    var smugglerApi = new SmugglerDatabaseApi(new SmugglerDatabaseOptions
                     {
-                        Path = "@metadata.Raven-Entity-Name",
-                        ShouldMatch = true,
-                        Values = { "People" }
+                        Filters =
+                        {
+                            new FilterSetting
+                            {
+                                Path = "@metadata.Raven-Entity-Name",
+                                ShouldMatch = true,
+                                Values = { "People" }
+                            }
+                        }
                     });
 
-                    var smuggler = new DatabaseSmuggler(
-                        options, 
-                        new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
+                    await smugglerApi.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions>
+                    {
+                        From = new RavenConnectionStringOptions
                         {
-                            Database = store1.DefaultDatabase,
+                            DefaultDatabase = store1.DefaultDatabase,
                             Url = store1.Url
-                        }), 
-                        new DatabaseSmugglerStreamDestination(stream));
-
-
-                    await smuggler.ExecuteAsync();
+                        },
+                        ToStream = stream
+                    });
 
                     stream.Position = 0;
 
-                    smuggler = new DatabaseSmuggler(
-                        options,
-                        new DatabaseSmugglerStreamSource(stream),
-                        new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
+                    await smugglerApi.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions>
+                    {
+                        FromStream = stream,
+                        To = new RavenConnectionStringOptions
                         {
-                            Database = store2.DefaultDatabase,
+                            DefaultDatabase = store2.DefaultDatabase,
                             Url = store2.Url
-                        }));
-
-                    await smuggler.ExecuteAsync();
+                        }
+                    });
                 }
 
                 WaitForIndexing(store2);
@@ -111,29 +112,32 @@ namespace Raven.Tests.Issues
 
                 using (var stream = new MemoryStream())
                 {
-                    var options = new DatabaseSmugglerOptions();
-                    options.Filters.Add(new FilterSetting
+                    var smugglerApi = new SmugglerDatabaseApi(new SmugglerDatabaseOptions
                     {
-                        Path = "@metadata.Raven-Entity-Name",
-                        ShouldMatch = true,
-                        Values = { "People" }
+                        Filters =
+                        {
+                            new FilterSetting
+                            {
+                                Path = "@metadata.Raven-Entity-Name",
+                                ShouldMatch = true,
+                                Values = { "People" }
+                            }
+                        }
                     });
 
-                    var smuggler = new DatabaseSmuggler(
-                        options,
-                        new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
+                    await smugglerApi.Between(new SmugglerBetweenOptions<RavenConnectionStringOptions>
+                    {
+                        From = new RavenConnectionStringOptions
                         {
-                            Database = store1.DefaultDatabase,
+                            DefaultDatabase = store1.DefaultDatabase,
                             Url = store1.Url
-                        }),
-                        new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
+                        },
+                        To = new RavenConnectionStringOptions
                         {
-                            Database = store2.DefaultDatabase,
+                            DefaultDatabase = store2.DefaultDatabase,
                             Url = store2.Url
-                        }));
-
-
-                    await smuggler.ExecuteAsync();
+                        }
+                    });
                 }
 
                 WaitForIndexing(store2);

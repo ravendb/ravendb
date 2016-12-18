@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using Raven.Tests.Common;
-using Raven.Tests.Helpers.Util;
 
 namespace Raven.Tests.Issues
 {
@@ -29,19 +28,19 @@ namespace Raven.Tests.Issues
                 store.DatabaseCommands.Put(
                     "docs/2", null, new RavenJObject(), new RavenJObject());
 
-                var result = store.SystemDatabase.Patches.ApplyPatch("docs/1", null, new ScriptedPatchRequest { Script = "" });
+                var result = store.SystemDatabase.Patches.ApplyPatch("docs/1", null, new ScriptedPatchRequest { Script = "" }, null);
                 Assert.Equal(PatchResult.DocumentDoesNotExists, result.Item1.PatchResult);
 
-                result = store.SystemDatabase.Patches.ApplyPatch("docs/2", null, new ScriptedPatchRequest { Script = @"this[""Test""] = 999;" });
+                result = store.SystemDatabase.Patches.ApplyPatch("docs/2", null, new ScriptedPatchRequest { Script = @"this[""Test""] = 999;" }, null);
                 Assert.Equal(PatchResult.Patched, result.Item1.PatchResult);
 
-                Assert.Equal(999, store.SystemDatabase.Documents.Get("docs/2").DataAsJson.Value<int>("Test"));
+                Assert.Equal(999, store.SystemDatabase.Documents.Get("docs/2", null).DataAsJson.Value<int>("Test"));
             }
         }
 
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
+        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
         {
-            configuration.Modify(x => x.Core._ActiveBundlesString, "replication");
+            configuration.Settings["Raven/ActiveBundles"] = "replication";
         }
     }
 }

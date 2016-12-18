@@ -6,17 +6,15 @@
 using Raven.Tests.Common;
 
 using Xunit;
-using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
     public class RavenDB_1304 : RavenTest
     {
-        [Theory]
-        [PropertyData("Storages")]
-        public void StoringObjectsWithIdsThatDifferAfterLength127ShouldNotThrowConcurrencyException(string storage)
+        [Fact]
+        public void StoringObjectsWithIdsThatDifferAfterLength127ShouldNotThrowConcurrencyException()
         {
-            using (var store = NewDocumentStore(requestedStorage: storage))
+            using (var store = NewDocumentStore(requestedStorage:"esent"))
             {
                 using (var session = store.OpenSession())
                 {

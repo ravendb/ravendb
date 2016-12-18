@@ -119,7 +119,7 @@ namespace Raven.Tests.FileSystem.Synchronization
         }
 
         [Fact]
-        public async Task NotificationsAreReceivedOnDestinationWhenSynchronizationsAreFinished()
+        public async Task NotificationsAreReceivedOnDestinationWhenSynchronizationsAreStartedAndFinished()
         {
             // content update
             await sourceClient.UploadAsync("test.bin", new MemoryStream(new byte[] {1, 2, 3}));
@@ -127,7 +127,7 @@ namespace Raven.Tests.FileSystem.Synchronization
             var notificationTask = destinationStore.Changes().ForSynchronization()
                                         .Where(s => s.Direction == SynchronizationDirection.Incoming)
                                         .Timeout(TimeSpan.FromSeconds(20))
-                                        .Take(1).ToArray()
+                                        .Take(2).ToArray()
                                         .ToTask();
 
             var report = await sourceClient.Synchronization.StartAsync("test.bin", destinationClient);
@@ -140,13 +140,17 @@ namespace Raven.Tests.FileSystem.Synchronization
             Assert.Equal(FileHeader.Canonize("test.bin"), synchronizationUpdates[0].FileName);
             Assert.Equal(SynchronizationType.ContentUpdate, synchronizationUpdates[0].Type);
 
+            Assert.Equal(SynchronizationAction.Finish, synchronizationUpdates[1].Action);
+            Assert.Equal(FileHeader.Canonize("test.bin"), synchronizationUpdates[1].FileName);
+            Assert.Equal(SynchronizationType.ContentUpdate, synchronizationUpdates[1].Type);
+
             // metadata update
             await sourceClient.UpdateMetadataAsync("test.bin", new RavenJObject { { "key", "value" } });
 
             notificationTask = destinationStore.Changes().ForSynchronization()
                                    .Where(s => s.Direction == SynchronizationDirection.Incoming)
                                    .Timeout(TimeSpan.FromSeconds(20))
-                                   .Take(1).ToArray()
+                                   .Take(2).ToArray()
                                    .ToTask();
 
             report = await sourceClient.Synchronization.StartAsync("test.bin", destinationClient);
@@ -159,13 +163,17 @@ namespace Raven.Tests.FileSystem.Synchronization
             Assert.Equal(FileHeader.Canonize("test.bin"), synchronizationUpdates[0].FileName);
             Assert.Equal(SynchronizationType.MetadataUpdate, synchronizationUpdates[0].Type);
 
+            Assert.Equal(SynchronizationAction.Finish, synchronizationUpdates[1].Action);
+            Assert.Equal(FileHeader.Canonize("test.bin"), synchronizationUpdates[1].FileName);
+            Assert.Equal(SynchronizationType.MetadataUpdate, synchronizationUpdates[1].Type);
+
             // rename update
             await sourceClient.RenameAsync("test.bin", "rename.bin");
 
             notificationTask = destinationStore.Changes().ForSynchronization()
                                    .Where(s => s.Direction == SynchronizationDirection.Incoming)
                                    .Timeout(TimeSpan.FromSeconds(20))
-                                   .Take(1).ToArray()
+                                   .Take(2).ToArray()
                                    .ToTask();
 
             report = await sourceClient.Synchronization.StartAsync("test.bin", destinationClient);
@@ -178,13 +186,17 @@ namespace Raven.Tests.FileSystem.Synchronization
             Assert.Equal(FileHeader.Canonize("test.bin"), synchronizationUpdates[0].FileName);
             Assert.Equal(SynchronizationType.Rename, synchronizationUpdates[0].Type);
 
+            Assert.Equal(SynchronizationAction.Finish, synchronizationUpdates[1].Action);
+            Assert.Equal(FileHeader.Canonize("test.bin"), synchronizationUpdates[1].FileName);
+            Assert.Equal(SynchronizationType.Rename, synchronizationUpdates[1].Type);
+
             // delete update
             await sourceClient.DeleteAsync("rename.bin");
 
             notificationTask = destinationStore.Changes().ForSynchronization()
                                    .Where(s => s.Direction == SynchronizationDirection.Incoming)
                                    .Timeout(TimeSpan.FromSeconds(20))
-                                   .Take(1).ToArray()
+                                   .Take(2).ToArray()
                                    .ToTask();
 
             report = await sourceClient.Synchronization.StartAsync("rename.bin", destinationClient);
@@ -196,6 +208,10 @@ namespace Raven.Tests.FileSystem.Synchronization
             Assert.Equal(SynchronizationAction.Start, synchronizationUpdates[0].Action);
             Assert.Equal(FileHeader.Canonize("rename.bin"), synchronizationUpdates[0].FileName);
             Assert.Equal(SynchronizationType.Delete, synchronizationUpdates[0].Type);
+
+            Assert.Equal(SynchronizationAction.Finish, synchronizationUpdates[1].Action);
+            Assert.Equal(FileHeader.Canonize("rename.bin"), synchronizationUpdates[1].FileName);
+            Assert.Equal(SynchronizationType.Delete, synchronizationUpdates[1].Type);
         }
 
         public override void Dispose()

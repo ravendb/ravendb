@@ -1,3 +1,4 @@
+using Raven.Abstractions.Data;
 using Raven.Tests.Bundles.Replication;
 using Raven.Tests.Common;
 
@@ -82,6 +83,7 @@ namespace Raven.Tests.Issues
                 Assert.NotNull(c1);
                 Assert.Null(c2);
 
+                c1.Metadata.Remove(Constants.RavenReplicationConflictDocument);
                 store1.DatabaseCommands.Put("people/1", null, c1.DataAsJson, c1.Metadata);
             }
 

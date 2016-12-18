@@ -49,17 +49,17 @@ namespace Raven.Tests.Common
             Action<DocumentStore> configureStore = null,
             AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin,
             bool enableAuthorization = false,
-            string requestedStorage = "voron", 
+            string requestedStorageType = "voron",
             bool useFiddler = false,
             [CallerMemberName] string databaseName = null,
             bool runInMemory = true)
         {
             var port = PortRangeStart - stores.Count;
-            return CreateStoreAtPort(port, enableCompressionBundle, configureStore, anonymousUserAccessMode, enableAuthorization, requestedStorage, useFiddler, databaseName, runInMemory);
+            return CreateStoreAtPort(port, enableCompressionBundle, configureStore, anonymousUserAccessMode, enableAuthorization, requestedStorageType, useFiddler, databaseName, runInMemory);
         }
 
         public EmbeddableDocumentStore CreateEmbeddableStore(bool enableCompressionBundle = false,
-            AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, string requestedStorageType = "voron", [CallerMemberName] string databaseName = null)
+            AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.Admin, string requestedStorageType = "esent", [CallerMemberName] string databaseName = null)
         {
             var port = PortRangeStart - stores.Count;
             return CreateEmbeddableStoreAtPort(port, enableCompressionBundle, anonymousUserAccessMode, requestedStorageType, databaseName);
@@ -89,6 +89,7 @@ namespace Raven.Tests.Common
                 configureStore: configureStore,
                 fiddler: useFiddler,
                 databaseName: databaseName,
+                activeBundles: "Replication",
                 runInMemory: runInMemory);
 
             return documentStore;
@@ -114,7 +115,7 @@ namespace Raven.Tests.Common
             return !timeouted;
         }
 
-        protected bool WaitForConflictDocumentsToAppear(IDocumentStore store, string id, string databaseName, int maxDocumentsToCheck = 1024, int timeoutMs = 15000)
+        protected bool WaitForConflictDocumentsCore(Func<JsonDocument[],bool> conditionFunc ,IDocumentStore store, string id, string databaseName, int maxDocumentsToCheck = 1024, int timeoutMs = 15000)
         {
             var beginningTime = DateTime.UtcNow;
             var timeouted = false;
@@ -128,9 +129,18 @@ namespace Raven.Tests.Common
                     break;
                 }
                 docs = store.DatabaseCommands.ForDatabase(databaseName).GetDocuments(0, maxDocumentsToCheck);
-            } while (!docs.Any(d => d.Key.Contains(id + "/conflicts")));
+            } while (conditionFunc(docs));
 
             return !timeouted;
+        }
+        protected bool WaitForConflictDocumentsToAppear(IDocumentStore store, string id, string databaseName, int maxDocumentsToCheck = 1024, int timeoutMs = 15000)
+        {
+            return WaitForConflictDocumentsCore(docs => !docs.Any(d => d.Key.Contains(id + "/conflicts")), store, id, databaseName, maxDocumentsToCheck, timeoutMs);
+        }
+
+        protected bool WaitForConflictDocumentsToDisappear(IDocumentStore store, string id, string databaseName, int maxDocumentsToCheck = 1024, int timeoutMs = 15000)
+        {
+            return WaitForConflictDocumentsCore(docs =>docs.Any(d => d.Key.Contains(id + "/conflicts")), store, id, databaseName, maxDocumentsToCheck, timeoutMs);
         }
 
         protected virtual void ConfigureServer(RavenDBOptions options)
@@ -138,12 +148,12 @@ namespace Raven.Tests.Common
 
         }
 
-        protected virtual void ConfigureConfig(ConfigurationModification config)
+        protected virtual void ConfigureConfig(InMemoryRavenConfiguration inMemoryRavenConfiguration)
         {
 
         }
 
-        private EmbeddableDocumentStore CreateEmbeddableStoreAtPort(int port, bool enableCompressionBundle = false, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.All, string storeTypeName = "voron", string databaseName = null)
+        private EmbeddableDocumentStore CreateEmbeddableStoreAtPort(int port, bool enableCompressionBundle = false, AnonymousUserAccessMode anonymousUserAccessMode = AnonymousUserAccessMode.All, string storeTypeName = "esent", string databaseName = null)
         {
             NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(port);
             var store = NewDocumentStore(port: port,
@@ -169,23 +179,21 @@ namespace Raven.Tests.Common
         {
             var previousServer = servers[index];
 
-            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(previousServer.SystemDatabase.Configuration.Core.Port);
-            var serverConfiguration = new AppSettingsBasedConfiguration
-            {
-                RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true,
-                Core =
-                {
-                    RunInMemory = previousServer.SystemDatabase.Configuration.Core.RunInMemory,
-                    DataDirectory = previousServer.SystemDatabase.Configuration.Core.DataDirectory,
-                    Port = previousServer.SystemDatabase.Configuration.Core.Port,
-                    AnonymousUserAccessMode = AnonymousUserAccessMode.Admin,
-                    _ActiveBundlesString = "replication"
-                }
-            };
+            NonAdminHttp.EnsureCanListenToWhenInNonAdminContext(previousServer.SystemDatabase.Configuration.Port);
+            var serverConfiguration = new RavenConfiguration { Settings = { { "Raven/ActiveBundles", "replication" } } };
 
+            ConfigurationHelper.ApplySettingsToConfiguration(serverConfiguration);
+
+            serverConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.Admin;
+            serverConfiguration.DataDirectory = previousServer.SystemDatabase.Configuration.DataDirectory;
+            serverConfiguration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true;
+            serverConfiguration.RunInMemory = previousServer.SystemDatabase.Configuration.RunInMemory;
+            serverConfiguration.Port = previousServer.SystemDatabase.Configuration.Port;
+            serverConfiguration.DefaultStorageTypeName = GetDefaultStorageType();
+            serverConfiguration.MaxSecondsForTaskToWaitForDatabaseToLoad = 20;
             serverConfiguration.Encryption.UseFips = ConfigurationHelper.UseFipsEncryptionAlgorithms;
 
-            ModifyConfiguration(new ConfigurationModification(serverConfiguration));
+            ModifyConfiguration(serverConfiguration);
 
             serverConfiguration.PostInit();
             var ravenDbServer = new RavenDbServer(serverConfiguration)
@@ -203,9 +211,9 @@ namespace Raven.Tests.Common
 
             var previousServer = servers[index];
             previousServer.Dispose();
-            IOExtensions.DeleteDirectory(previousServer.SystemDatabase.Configuration.Core.DataDirectory);
+            IOExtensions.DeleteDirectory(previousServer.SystemDatabase.Configuration.DataDirectory);
 
-            return CreateStoreAtPort(previousServer.SystemDatabase.Configuration.Core.Port, enableAuthentication, databaseName: databaseName);
+            return CreateStoreAtPort(previousServer.SystemDatabase.Configuration.Port, enableAuthentication, databaseName: databaseName);
         }
 
         protected void TellFirstInstanceToReplicateToSecondInstance(string apiKey = null, string username = null, string password = null, string domain = null, string authenticationScheme = null)
@@ -245,7 +253,7 @@ namespace Raven.Tests.Common
                 var replicationDestination = new ReplicationDestination
                 {
                     Url = destination is EmbeddableDocumentStore ?
-                            "http://localhost:" + (destination as EmbeddableDocumentStore).Configuration.Core.Port :
+                            "http://localhost:" + (destination as EmbeddableDocumentStore).Configuration.Port :
                             destination.Url.Replace("localhost", "ipv4.fiddler"),
                     TransitiveReplicationBehavior = transitiveReplicationBehavior,
                     Disabled = disabled,
@@ -389,11 +397,11 @@ namespace Raven.Tests.Common
                 new RavenJObject());
         }
 
-        protected TDocument WaitForDocument<TDocument>(IDocumentStore store2, string expectedId) where TDocument : class
+        protected TDocument WaitForDocument<TDocument>(IDocumentStore store2, string expectedId,int timeoutSeconds = 10) where TDocument : class
         {
             TDocument document = null;
 
-            for (int i = 0; i < RetriesCount; i++)
+            for (int i = 0; i < timeoutSeconds * 10; i++)
             {
                 using (var session = store2.OpenSession())
                 {
@@ -411,16 +419,53 @@ namespace Raven.Tests.Common
             {
                 using (var session = store2.OpenSession())
                 {
-                    Thread.Sleep(TimeSpan.FromSeconds(10));
+                    Thread.Sleep(TimeSpan.FromSeconds(timeoutSeconds));
 
                     document = session.Load<TDocument>(expectedId);
                     if (document == null)
                         throw;
 
-                    throw new Exception("WaitForDocument failed, but after waiting 10 seconds more, WaitForDocument succeed. Do we have a race condition here?", ex);
+                    throw new Exception(@"WaitForDocument failed, but after waiting 10 seconds more, 
+                        WaitForDocument succeed. Do we have a race condition here?", ex);
                 }
             }
             return document;
+        }
+
+        protected Attachment WaitForAttachment(IDocumentStore store2, string expectedId, Etag changedSince = null)
+        {
+            Attachment attachment = null;
+
+            for (int i = 0; i < RetriesCount; i++)
+            {
+                attachment = store2.DatabaseCommands.GetAttachment(expectedId);
+                if (attachment != null)
+                {
+                    if (changedSince != null)
+                    {
+                        if (attachment.Etag != changedSince)
+                            break;
+                    }
+                    else break;
+                }
+                Thread.Sleep(100);
+            }
+            try
+            {
+                Assert.NotNull(attachment);
+            }
+            catch (Exception ex)
+            {
+                Thread.Sleep(TimeSpan.FromSeconds(10));
+
+                attachment = store2.DatabaseCommands.GetAttachment(expectedId);
+                if (attachment == null) throw;
+
+                throw new Exception(
+                    "WaitForDocument failed, but after waiting 10 seconds more, WaitForDocument succeed. Do we have a race condition here?",
+                    ex);
+            }
+            return attachment;
         }
 
         protected void WaitForDocument(IDatabaseCommands commands, string expectedId, Etag afterEtag = null, CancellationToken? token = null)
@@ -441,7 +486,7 @@ namespace Raven.Tests.Common
             var jsonDocumentMetadata = commands.Head(expectedId);
 
             Assert.NotNull(jsonDocumentMetadata);
-            }
+        }
 
         protected bool WaitForDocument(IDatabaseCommands commands, string expectedId, int timeoutInMs)
         {
@@ -461,13 +506,19 @@ namespace Raven.Tests.Common
                 using (var session = store.OpenSession(db))
                 {
                     var e = session.Load<object>(id);
-                    if (e == null)
+                    if (e != null)
                     {
                         if (changedSince != null)
                         {
                             if (session.Advanced.GetEtagFor(e) != changedSince)
                                 break;
+
+                            Thread.Sleep(100);
+                            continue;
                         }
+                    }
+                    else
+                    {
                         Thread.Sleep(100);
                         continue;
                     }
@@ -552,9 +603,9 @@ namespace Raven.Tests.Common
                     {
                         mre.Set();
                         break;
-    }
+                    }
                     Thread.Sleep(25);
-}
+                }
             });
 
             var success = mre.Wait(timeoutInMilliseconds);

@@ -6,7 +6,6 @@
 using System.Collections.Generic;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
-using Raven.Database.Config;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
 using Xunit;
@@ -25,14 +24,14 @@ namespace Raven.Tests.Issues
                     Settings = new Dictionary<string, string>()
                     {
                         {
-                            RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString), ""
+                            Constants.ActiveBundles, ""
                         }
                     }
                 };
 
                 store.SystemDatabase.Documents.Put("Raven/Databases/RavenDB_1344_1", null, RavenJObject.FromObject(dbDoc), new RavenJObject(), null);
 
-                dbDoc.Settings[RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString)] = "Replication";
+                dbDoc.Settings[Constants.ActiveBundles] = "Replication";
 
                 Assert.Throws<OperationVetoedException>(() => store.SystemDatabase.Documents.Put("Raven/Databases/RavenDB_1344_1", null, RavenJObject.FromObject(dbDoc), new RavenJObject(), null));
 
@@ -42,14 +41,14 @@ namespace Raven.Tests.Issues
                     Settings = new Dictionary<string, string>()
                     {
                         {
-                            RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString), "Replication"
+                            Constants.ActiveBundles, "Replication"
                         }
                     }
                 };
 
                 store.SystemDatabase.Documents.Put("Raven/Databases/RavenDB_1344_2", null, RavenJObject.FromObject(dbDoc2), new RavenJObject(), null);
 
-                dbDoc2.Settings[RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString)] = "";
+                dbDoc2.Settings[Constants.ActiveBundles] = "";
 
                 Assert.Throws<OperationVetoedException>(() => store.SystemDatabase.Documents.Put("Raven/Databases/RavenDB_1344_2", null, RavenJObject.FromObject(dbDoc2), new RavenJObject(), null));
 
@@ -58,14 +57,14 @@ namespace Raven.Tests.Issues
                     Settings = new Dictionary<string, string>()
                     {
                         {
-                            RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString), "Replication"
+                            Constants.ActiveBundles, "Replication"
                         }
                     }
                 };
 
                 store.SystemDatabase.Documents.Put("Raven/Databases/RavenDB_1344_3", null, RavenJObject.FromObject(dbDoc3), new RavenJObject(), null);
 
-                dbDoc3.Settings[RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString)] = "SqlReplication";
+                dbDoc3.Settings[Constants.ActiveBundles] = "SqlReplication";
 
                 Assert.Throws<OperationVetoedException>(() => store.SystemDatabase.Documents.Put("Raven/Databases/RavenDB_1344_3", null, RavenJObject.FromObject(dbDoc3), new RavenJObject(), null));
             }
@@ -81,14 +80,14 @@ namespace Raven.Tests.Issues
                     Settings = new Dictionary<string, string>()
                     {
                         {
-                            RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString), ""
+                            Constants.ActiveBundles, ""
                         }
                     }
                 };
 
                 store.SystemDatabase.Documents.Put("Raven/Databases/RavenDB_1344_1", null, RavenJObject.FromObject(dbDoc), new RavenJObject(), null);
 
-                dbDoc.Settings[RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString)] = "Replication";
+                dbDoc.Settings[Constants.ActiveBundles] = "Replication";
 
                 Assert.DoesNotThrow(() => store.SystemDatabase.Documents.Put("Raven/Databases/RavenDB_1344_1", null, RavenJObject.FromObject(dbDoc), new RavenJObject()
                 {
@@ -103,14 +102,14 @@ namespace Raven.Tests.Issues
                     Settings = new Dictionary<string, string>()
                     {
                         {
-                            RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString), "Replication"
+                            Constants.ActiveBundles, "Replication"
                         }
                     }
                 };
 
                 store.SystemDatabase.Documents.Put("Raven/Databases/RavenDB_1344_2", null, RavenJObject.FromObject(dbDoc2), new RavenJObject(), null);
 
-                dbDoc2.Settings[RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString)] = "";
+                dbDoc2.Settings[Constants.ActiveBundles] = "";
 
                 Assert.DoesNotThrow(() => store.SystemDatabase.Documents.Put("Raven/Databases/RavenDB_1344_2", null, RavenJObject.FromObject(dbDoc2), new RavenJObject()
                 {
@@ -124,14 +123,14 @@ namespace Raven.Tests.Issues
                     Settings = new Dictionary<string, string>()
                     {
                         {
-                            RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString), "Replication"
+                            Constants.ActiveBundles, "Replication"
                         }
                     }
                 };
 
                 store.SystemDatabase.Documents.Put("Raven/Databases/RavenDB_1344_3", null, RavenJObject.FromObject(dbDoc3), new RavenJObject(), null);
 
-                dbDoc3.Settings[RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString)] = "SqlReplication";
+                dbDoc3.Settings[Constants.ActiveBundles] = "SqlReplication";
 
                 Assert.DoesNotThrow(() => store.SystemDatabase.Documents.Put("Raven/Databases/RavenDB_1344_3", null, RavenJObject.FromObject(dbDoc3), new RavenJObject()
                 {

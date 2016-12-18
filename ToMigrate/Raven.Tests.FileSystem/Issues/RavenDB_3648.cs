@@ -15,7 +15,8 @@ namespace Raven.Tests.FileSystem.Issues
     public class RavenDB_3648 : RavenSynchronizationTestBase
     {
         [Theory]
-        [PropertyData("Storages")]
+        [InlineData("voron")]
+        [InlineData("esent")]
         public async Task failover_with_two_servers(string storage)
         {
             IAsyncFilesCommandsImpl sourceClient = null;
@@ -55,7 +56,8 @@ namespace Raven.Tests.FileSystem.Issues
         }
 
         [Theory]
-        [PropertyData("Storages")]
+        [InlineData("voron")]
+        [InlineData("esent")]
         public async Task failover_with_three_servers(string storage)
         {
             IAsyncFilesCommandsImpl sourceClient1 = null;

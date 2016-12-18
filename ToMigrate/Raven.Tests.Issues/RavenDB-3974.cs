@@ -2,11 +2,10 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
+using Raven.Database.Config;
 using Raven.Database.Server.Security;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
-using Raven.Tests.Helpers.Util;
-
 using Xunit;
 using Xunit.Extensions;
 
@@ -14,9 +13,9 @@ namespace Raven.Tests.Issues
 {
     public class RavenDB_3974 : ReplicationBase
     {
-        protected override void ConfigureConfig(ConfigurationModification ravenConfiguration)
+        protected override void ConfigureConfig(InMemoryRavenConfiguration inMemoryRavenConfiguration)
         {
-            ravenConfiguration.Modify(x => x.Licensing.AllowAdminAnonymousAccessForCommercialUse, true);
+            inMemoryRavenConfiguration.Settings["Raven/Licensing/AllowAdminAnonymousAccessForCommercialUse"] = "true";
         }
 
         protected override void ConfigureDatabase(Database.DocumentDatabase database, string databaseName = null)

@@ -7,7 +7,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection;
@@ -25,7 +25,7 @@ namespace Raven.Tests.Issues
     public class RavenDB_2514 : RavenTestBase
     {
         [Fact]
-        public void CanBulkInsert()
+        public void CanKillBulkInsert()
         {
             const int bulkInsertSize = 2000;
             using (var store = NewRemoteDocumentStore())
@@ -45,7 +45,12 @@ namespace Raven.Tests.Issues
                             t => ((RavenJObject)t).Deserialize<TaskActions.PendingTaskDescriptionAndStatus>(store.Conventions)).ToList();
                         if (taskList.Count > 0)
                         {
-                            var operationId = taskList.First().Id;
+                            var bulkInsertTask = taskList.FirstOrDefault(x => x.TaskType == TaskActions.PendingTaskType.BulkInsert);
+
+                            if (bulkInsertTask == null)
+                                continue;
+                            
+                            var operationId = bulkInsertTask.Id;
                             store.JsonRequestFactory.CreateHttpJsonRequest(
                                 new CreateHttpJsonRequestParams(null, store.Url.ForDatabase(store.DefaultDatabase) + "/operation/kill?id=" + operationId,
                                     HttpMethods.Get, store.DatabaseCommands.PrimaryCredentials, store.Conventions)).ExecuteRequest();
@@ -75,9 +80,21 @@ namespace Raven.Tests.Issues
                 action();
                 Assert.True(false);
             }
+            catch (ErrorResponseException e)
+            {
+                Assert.Contains("Timeout", e.Message);
+            }
             catch (AggregateException e)
             {
-                Assert.True(e.ExtractSingleInnerException() is OperationCanceledException);
+                var extractSingleInnerException = e.ExtractSingleInnerException();
+                var errorResponseException = extractSingleInnerException as ErrorResponseException;
+                if (errorResponseException != null)
+                {
+                    Assert.Contains("Timeout", errorResponseException.Message);
+                    return;
+                }
+                Assert.True(extractSingleInnerException is OperationCanceledException,
+                    e.ToString());
             }
             catch (OperationCanceledException)
             {

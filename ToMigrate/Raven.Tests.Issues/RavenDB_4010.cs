@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Database.Indexing;
 using Raven.Tests.Common;
@@ -26,7 +27,7 @@ namespace Raven.Tests.Issues
 
                 var maxAllowed = store.DocumentDatabase.WorkContext.CurrentNumberOfParallelTasks;
                 Assert.True(taskCount <= maxAllowed, string.Format("Max {0}, but was {1}", maxAllowed, taskCount));
-            }
+            } 
         }
     }
 }

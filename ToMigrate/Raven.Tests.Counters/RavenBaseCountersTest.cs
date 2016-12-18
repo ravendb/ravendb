@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -20,7 +20,6 @@ using Raven.Database.Server.Security;
 using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Helpers;
-using Raven.Tests.Helpers.Util;
 
 namespace Raven.Tests.Counters
 {
@@ -43,11 +42,9 @@ namespace Raven.Tests.Counters
 
         protected CounterStorage NewCounterStorage()
         {
-            var newCounterStorage = new CounterStorage(String.Empty, DefaultCounterStorageName, new RavenConfiguration
+            var newCounterStorage = new CounterStorage(String.Empty, DefaultCounterStorageName, new InMemoryRavenConfiguration
             {
-                Core = {
-                    RunInMemory = true
-                }
+                RunInMemory = true
             });
 
             disposables.Add(newCounterStorage);
@@ -55,22 +52,22 @@ namespace Raven.Tests.Counters
         }
 
 
-        protected void ConfigureServerForAuth(ConfigurationModification serverConfiguration)
+        protected void ConfigureServerForAuth(InMemoryRavenConfiguration serverConfiguration)
         {
-            serverConfiguration.Modify(x => x.Core.AnonymousUserAccessMode, AnonymousUserAccessMode.None);
+            serverConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
             Authentication.EnableOnce();
         }
 
         protected void ConfigureApiKey(Database.DocumentDatabase database, string Name, string Secret, string resourceName = null, bool isAdmin = false)
         {
             var allowedResources = new List<ResourceAccess>
-            {
+            {					
                 new ResourceAccess {TenantId = resourceName, Admin = isAdmin}
             };
 
             if (isAdmin)
             {
-                allowedResources.Add(new ResourceAccess { TenantId = Constants.SystemDatabase, Admin = true });
+                allowedResources.Add(new ResourceAccess { TenantId = Constants.SystemDatabase, Admin = true});
             }
 
             var apiKeyDefinition = RavenJObject.FromObject(new ApiKeyDefinition
@@ -84,16 +81,16 @@ namespace Raven.Tests.Counters
         }
 
 
-        protected ICounterStore NewRemoteCountersStore(string counterStorageName, bool createDefaultCounter = true, OperationCredentials credentials = null, RavenDbServer ravenServer = null)
+        protected ICounterStore NewRemoteCountersStore(string counterStorageName, bool createDefaultCounter = true,OperationCredentials credentials = null, RavenDbServer ravenServer = null)
         {
             ravenServer = ravenServer ?? this.RavenDbServer.Value;
             var serverUrl = ravenServer.SystemDatabase.ServerUrl;
-            serverCount.AddOrUpdate(serverUrl, id => 1, (id, val) => val++);
-
+            serverCount.AddOrUpdate(serverUrl, id => 1, (id, val) => val++);		
+    
             var counterStore = new CounterStore
             {
                 Url = GetServerUrl(true, serverUrl),
-                Credentials = credentials ?? new OperationCredentials(null, CredentialCache.DefaultNetworkCredentials),
+                Credentials = credentials ?? new OperationCredentials(null,CredentialCache.DefaultNetworkCredentials),
                 Name = counterStorageName + serverCount[serverUrl]
             };
             counterStore.Initialize(createDefaultCounter);
@@ -107,8 +104,8 @@ namespace Raven.Tests.Counters
 
             try
             {
-                foreach (var server in servers)
-                    IOExtensions.DeleteDirectory(server.Configuration.Core.DataDirectory); //for failover tests that have runInMemory = false
+                foreach(var server in servers)
+                    IOExtensions.DeleteDirectory(server.Configuration.DataDirectory); //for failover tests that have runInMemory = false
                 IOExtensions.DeleteDirectory("Counters");
 
                 disposables.ForEach(d => d.Dispose());
@@ -135,7 +132,7 @@ namespace Raven.Tests.Counters
                 {
                     var sourceValue = await source.GetOverallTotalAsync(groupName, counterName);
                     var targetValue = await destination.GetOverallTotalAsync(groupName, counterName);
-                    if (sourceValue == targetValue)
+                    if (sourceValue.IsExists && targetValue.IsExists && sourceValue.Total == targetValue.Total)
                     {
                         hasReplicated = true;
                         break;

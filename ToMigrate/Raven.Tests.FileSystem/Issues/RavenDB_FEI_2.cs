@@ -16,7 +16,8 @@ namespace Raven.Tests.FileSystem.Issues
         private const int Size = 1024*1024; //1mb
 
         [Theory]
-        [PropertyData("Storages")]
+        [InlineData("voron")]
+        [InlineData("esent")]
         public async Task Can_Download_File_Case_Sensitive(string storage)
         {
             var client = NewAsyncClient(requestedStorage: storage);
@@ -29,7 +30,8 @@ namespace Raven.Tests.FileSystem.Issues
         }
 
         [Theory]
-        [PropertyData("Storages")]
+        [InlineData("voron")]
+        [InlineData("esent")]
         public async Task Can_Rename_File_Case_Sensitive(string storage)
         {
             var client = NewAsyncClient(requestedStorage: storage);

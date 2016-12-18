@@ -9,8 +9,10 @@ namespace Raven.Tests.Issues
 {
     using System;
     using System.Linq;
-    using Abstractions.Data;
-    using Database.Tasks;
+
+    using Raven.Abstractions.Data;
+    using Raven.Database.Tasks;
+
     using Xunit;
     using Xunit.Extensions;
 

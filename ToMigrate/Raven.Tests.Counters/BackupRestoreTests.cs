@@ -23,7 +23,7 @@ namespace Raven.Tests.Counters
         private const string CounterStorageId = "FooBar";
 
         private readonly CounterStorage storage;
-        private readonly AppSettingsBasedConfiguration config;
+        private readonly RavenConfiguration config;
 
         public BackupRestoreTests()
         {
@@ -35,19 +35,18 @@ namespace Raven.Tests.Counters
             RestoreToDirectory += uniqueId;
             DocumentDatabaseDirectory += uniqueId;
 
-            config = new AppSettingsBasedConfiguration
+            config = new RavenConfiguration
             {
-                Core =
-                {
-                    RunInMemory = false,
-                    DataDirectory = DocumentDatabaseDirectory,
-                    Port = 8090,
-                    AnonymousUserAccessMode = AnonymousUserAccessMode.Admin, 
-                },
+                Port = 8090,
+                DataDirectory = DocumentDatabaseDirectory,
+                RunInMemory = false,
+                DefaultStorageTypeName = "Voron",
+                AnonymousUserAccessMode = AnonymousUserAccessMode.Admin, 
                 Encryption = { UseFips = ConfigurationHelper.UseFipsEncryptionAlgorithms },
             };
 
             config.Counter.DataDirectory = BackupSourceDirectory;
+            config.Settings["Raven/StorageTypeName"] = config.DefaultStorageTypeName;
             config.PostInit();
 
             storage = new CounterStorage("http://localhost:8080","TestCounter",config);
@@ -89,9 +88,9 @@ namespace Raven.Tests.Counters
             var restoreOperation = NewRestoreOperation();
             restoreOperation.Execute();
 
-            var restoreConfig = new AppSettingsBasedConfiguration
+            var restoreConfig = new RavenConfiguration
             {
-                Core = { RunInMemory = false }
+                RunInMemory = false
             };
             restoreConfig.Counter.DataDirectory = RestoreToDirectory;
 
@@ -99,7 +98,10 @@ namespace Raven.Tests.Counters
             {
                 using (var reader = restoredStorage.CreateReader())
                 {
-                    Assert.Equal(6, reader.GetCounterTotal("Bar", "Foo"));
+                    long? total;
+                    Assert.True(reader.TryGetCounterTotal("Bar", "Foo", out total));
+                    Assert.NotNull(total);
+                    Assert.Equal(6, total.Value);
                     /*var counter = reader.GetCounterValuesByPrefix("Bar", "Foo");
                     var counterValues = counter.CounterValues.ToArray();
 
@@ -128,9 +130,9 @@ namespace Raven.Tests.Counters
             var restoreOperation = NewRestoreOperation();
             restoreOperation.Execute();
 
-            var restoreConfig = new AppSettingsBasedConfiguration
+            var restoreConfig = new RavenConfiguration
             {
-                Core = { RunInMemory = false }
+                RunInMemory = false
             };
             restoreConfig.Counter.DataDirectory = RestoreToDirectory;
 
@@ -138,7 +140,10 @@ namespace Raven.Tests.Counters
             {
                 using (var reader = restoredStorage.CreateReader())
                 {
-                    Assert.Equal(6, reader.GetCounterTotal("Bar", "Foo"));
+                    long? total;
+                    Assert.True(reader.TryGetCounterTotal("Bar", "Foo", out total));
+                    Assert.NotNull(total);
+                    Assert.Equal(6, total.Value);
 
                     /*var counter = reader.GetCounterValuesByPrefix("Bar", "Foo");
                     var counterValues = counter.CounterValues.ToArray();

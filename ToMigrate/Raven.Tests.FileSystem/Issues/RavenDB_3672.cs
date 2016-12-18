@@ -21,7 +21,6 @@ using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Common.Dto;
 using Xunit;
-using Xunit.Extensions;
 
 namespace Raven.Tests.FileSystem.Issues
 {
@@ -29,15 +28,15 @@ namespace Raven.Tests.FileSystem.Issues
     {
         public class WithoutAuth : RavenDB_3672
         {
-            [Theory]
-            [PropertyData("Storages")]
-            public async Task SynchronizationTopologyDiscovererSimpleTest(string storage)
+            [Fact]
+            public async Task SynchronizationTopologyDiscovererSimpleTest()
             {
-                using (var store1 = NewStore(0, requestedStorage: storage))
-                using (var store2 = NewStore(1, requestedStorage: storage))
-                using (var store3 = NewStore(2, requestedStorage: storage))
-                using (var store4 = NewStore(3, requestedStorage: storage))
-                using (var store5 = NewStore(4, requestedStorage: storage))
+                //TODO: use default storage!
+                using (var store1 = NewStore(0, requestedStorage: "esent"))
+                using (var store2 = NewStore(1, requestedStorage: "esent"))
+                using (var store3 = NewStore(2, requestedStorage: "esent"))
+                using (var store4 = NewStore(3, requestedStorage: "esent"))
+                using (var store5 = NewStore(4, requestedStorage: "esent"))
                 {
                     await store1.AsyncFilesCommands.Synchronization.SetDestinationsAsync(store2.AsyncFilesCommands.ToSynchronizationDestination());
                     await store2.AsyncFilesCommands.Synchronization.SetDestinationsAsync(store3.AsyncFilesCommands.ToSynchronizationDestination());
@@ -119,19 +118,21 @@ namespace Raven.Tests.FileSystem.Issues
                     new ResourceAccess {TenantId = Constants.SystemDatabase, Admin = true}, // required to create file system
                     new ResourceAccess {TenantId = fileSystemName}
                 },
-                }), new RavenJObject());
+                }), new RavenJObject(), null);
             }
 
-            [Theory]
-            [PropertyData("Storages")]
-            public async Task SynchronizationTopologyDiscovererSimpleTestWithOAuth(string storage)
+            [Fact]
+            public async Task SynchronizationTopologyDiscovererSimpleTestWithOAuth()
             {
-                using (var store1 = NewStore(0, requestedStorage: storage, enableAuthentication: true, apiKey: apiKey))
-                using (var store2 = NewStore(1, requestedStorage: storage, enableAuthentication: true, apiKey: apiKey))
-                using (var store3 = NewStore(2, requestedStorage: storage, enableAuthentication: true, apiKey: apiKey))
-                using (var store4 = NewStore(3, requestedStorage: storage, enableAuthentication: true, apiKey: apiKey))
-                using (var store5 = NewStore(4, requestedStorage: storage, enableAuthentication: true, apiKey: apiKey))
+                //TODO: use default storage!
+                using (var store1 = NewStore(0, requestedStorage: "esent", enableAuthentication: true, apiKey: apiKey))
+                using (var store2 = NewStore(1, requestedStorage: "esent", enableAuthentication: true, apiKey: apiKey))
+                using (var store3 = NewStore(2, requestedStorage: "esent", enableAuthentication: true, apiKey: apiKey))
+                using (var store4 = NewStore(3, requestedStorage: "esent", enableAuthentication: true, apiKey: apiKey))
+                using (var store5 = NewStore(4, requestedStorage: "esent", enableAuthentication: true, apiKey: apiKey))
                 {
+
+
                     await store1.AsyncFilesCommands.Synchronization.SetDestinationsAsync(store2.AsyncFilesCommands.ToSynchronizationDestination());
                     await store2.AsyncFilesCommands.Synchronization.SetDestinationsAsync(store3.AsyncFilesCommands.ToSynchronizationDestination());
                     await store3.AsyncFilesCommands.Synchronization.SetDestinationsAsync(store4.AsyncFilesCommands.ToSynchronizationDestination());

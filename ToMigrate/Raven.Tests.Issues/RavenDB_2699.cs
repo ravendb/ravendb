@@ -5,9 +5,9 @@
 // -----------------------------------------------------------------------
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Database.Config;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
-using Raven.Tests.Helpers.Util;
 
 using Xunit;
 using Xunit.Extensions;
@@ -16,9 +16,11 @@ namespace Raven.Tests.Issues
 {
     public class RavenDB_2699 : RavenTest
     {
-        protected override void ModifyConfiguration(ConfigurationModification config)
+        protected override void ModifyConfiguration(InMemoryRavenConfiguration config)
         {
-            config.Modify(x => x.Storage.AllowIncrementalBackups, true);
+            config.Settings[Constants.Esent.CircularLog] = "false";
+            config.Settings[Constants.Voron.AllowIncrementalBackups] = "true";
+            config.Storage.Voron.AllowIncrementalBackups = true;
         }
 
         [Theory]
@@ -35,12 +37,12 @@ namespace Raven.Tests.Issues
                     store.DatabaseCommands.Put("keys/" + i, null, new RavenJObject { { "Key", 1 } }, new RavenJObject());
                 }
 
-                await store.AsyncDatabaseCommands.GlobalAdmin.StartBackupAsync(backupDir, null, true, store.DefaultDatabase);
-                WaitForBackup(store.DatabaseCommands, true);
+                var operation = await store.AsyncDatabaseCommands.GlobalAdmin.StartBackupAsync(backupDir, null, true, store.DefaultDatabase);
+                operation.WaitForCompletion();
 
                 // do an empty backup
-                await store.AsyncDatabaseCommands.GlobalAdmin.StartBackupAsync(backupDir, null, true, store.DefaultDatabase);
-                WaitForBackup(store.DatabaseCommands, true);
+                operation = await store.AsyncDatabaseCommands.GlobalAdmin.StartBackupAsync(backupDir, null, true, store.DefaultDatabase);
+                operation.WaitForCompletion();
 
                 // put more data
                 for (int i = 501; i <= 1000; i++)
@@ -48,8 +50,8 @@ namespace Raven.Tests.Issues
                     store.DatabaseCommands.Put("keys/" + i, null, new RavenJObject { { "Key", 2 } }, new RavenJObject());
                 }
 
-                await store.AsyncDatabaseCommands.GlobalAdmin.StartBackupAsync(backupDir, null, true, store.DefaultDatabase);
-                WaitForBackup(store.DatabaseCommands, true);
+                operation = await store.AsyncDatabaseCommands.GlobalAdmin.StartBackupAsync(backupDir, null, true, store.DefaultDatabase);
+                operation.WaitForCompletion();
 
                 // restore as a new database
                 await store.AsyncDatabaseCommands.GlobalAdmin.StartRestoreAsync(new DatabaseRestoreRequest

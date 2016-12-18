@@ -24,7 +24,7 @@ namespace Raven.Tests.Issues
                         Name = "user1",
                         Salary = 12.5,
                         Date = DateTime.Now,
-                        Exam1Marks = new[] { 88, 99, 77 }
+                        Exam1Marks = new[] {88, 99, 77}
                     }, "UserDatas/1");
                     session.Store(new UserData
                     {
@@ -72,7 +72,7 @@ namespace Raven.Tests.Issues
             }
         }
         [Fact]
-        public void CanDetectManyObjectChanges()
+        public void CanDetectManyObjectChanges() 
         {
             using (var store = NewDocumentStore())
             {
@@ -130,7 +130,7 @@ namespace Raven.Tests.Issues
                     Assert.True(changes3.ContainsKey("UserDatas/2"));
                     var supposedChanges = new DocumentsChanges
                     {
-                        Change = DocumentsChanges.ChangeType.FieldChanged,
+                        Change  = DocumentsChanges.ChangeType.FieldChanged,
                         FieldName = "Salary",
                         FieldNewType = "Float",
                         FieldNewValue = "556",
@@ -199,7 +199,7 @@ namespace Raven.Tests.Issues
             }
         }
         [Fact]
-        public void CanDetectObjectUpdateChanges()
+        public void CanDetectObjectUpdateChanges() 
         {
             using (var store = NewDocumentStore())
             {
@@ -271,13 +271,13 @@ namespace Raven.Tests.Issues
                     }
 
                     session.SaveChanges();
+  
 
-
-                }
+                    }
             }
         }
-        [Fact]
-        public void CanDetectObjectDeleteChanges()
+         [Fact]
+        public void CanDetectObjectDeleteChanges() 
         {
             using (var store = NewDocumentStore())
             {
@@ -307,8 +307,8 @@ namespace Raven.Tests.Issues
                         Date = new DateTime(2014, 1, 2)
                     }, "UserDatas/3");
 
-                    session.SaveChanges();
-                }
+                      session.SaveChanges();
+                 }
 
                 using (var session = store.OpenSession())
                 {
@@ -331,7 +331,7 @@ namespace Raven.Tests.Issues
 
 
                     session.Delete(userdata);
-
+    
 
                     IDictionary<string, DocumentsChanges[]> changes1 = session.Advanced.WhatChanged();
                     var supposedChangesNumber = 2;
@@ -344,59 +344,59 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
-        public void CanDetectAddMetadataChanges()
-        {
-            using (var store = NewDocumentStore())
-            {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new UserData
-                    {
-                        Id = 123,
-                        Name = "user1",
-                        Salary = 12.5,
-                        Date = DateTime.Now
-                    }, "UserDatas/1");
-                    session.Store(new UserData
-                    {
-                        Id = 1234,
-                        Name = "user2",
-                        Salary = 12.51,
-                        Date = new DateTime(2014, 1, 1)
-                    }, "UserDatas/2");
-                    session.Store(new UserData
-                    {
-                        Id = 1235,
-                        Name = "user3",
-                        Salary = 12.45,
-                        Date = new DateTime(2014, 1, 2)
-                    }, "UserDatas/3");
-                    session.SaveChanges();
-                }
+         [Fact]
+         public void CanDetectAddMetadataChanges()
+         {
+             using (var store = NewDocumentStore())
+             {
+                 using (var session = store.OpenSession())
+                 {
+                     session.Store(new UserData
+                     {
+                         Id = 123,
+                         Name = "user1",
+                         Salary = 12.5,
+                         Date = DateTime.Now
+                     }, "UserDatas/1");
+                     session.Store(new UserData
+                     {
+                         Id = 1234,
+                         Name = "user2",
+                         Salary = 12.51,
+                         Date = new DateTime(2014, 1, 1)
+                     }, "UserDatas/2");
+                     session.Store(new UserData
+                     {
+                         Id = 1235,
+                         Name = "user3",
+                         Salary = 12.45,
+                         Date = new DateTime(2014, 1, 2)
+                     }, "UserDatas/3");
+                     session.SaveChanges();
+                 }
 
-                using (var session = store.OpenSession())
-                {
-                    var userdata3 = session.Load<UserData>("UserDatas/3");
-                    RavenJObject metadata3 = session.Advanced.GetMetadataFor(userdata3);
-                    metadata3["tel"] = 1;
-                    metadata3["fax"] = 221;
-                    metadata3["mail"] = "test_mail";
+                 using (var session = store.OpenSession())
+                 {
+                     var userdata3 = session.Load<UserData>("UserDatas/3");
+                     RavenJObject metadata3 = session.Advanced.GetMetadataFor(userdata3);
+                     metadata3["tel"] = 1;
+                     metadata3["fax"] = 221;
+                     metadata3["mail"] = "test_mail";
 
-                    IDictionary<string, DocumentsChanges[]> changes3 = session.Advanced.WhatChanged();
-                    int supposedChangesNumber = 1;
-                    Assert.Equal(supposedChangesNumber, changes3.Count);
-                    Assert.True(changes3.ContainsKey("UserDatas/3"));
-
-                    DocumentsChanges[] data3 = { };
-                    if (changes3.TryGetValue("UserDatas/3", out data3))
-                    {
-                        Assert.Equal(data3.Length, 3);
-                    }
-                    session.SaveChanges();
-                }
-            }
-        }
+                     IDictionary<string, DocumentsChanges[]> changes3 = session.Advanced.WhatChanged();
+                     int supposedChangesNumber = 1;
+                     Assert.Equal(supposedChangesNumber, changes3.Count);
+                     Assert.True(changes3.ContainsKey("UserDatas/3"));
+  
+                     DocumentsChanges[] data3 = { };
+                     if (changes3.TryGetValue("UserDatas/3", out data3))
+                     {
+                         Assert.Equal(data3.Length, 3);
+                     }
+                         session.SaveChanges();
+                 }
+             }
+         }
 
         [Fact]
         public void CanDetectUpdateMetadataChanges()
@@ -545,11 +545,11 @@ namespace Raven.Tests.Issues
                             Id = 123,
                             Name = "user1",
                             Salary = 12.5,
-                            Exam1Marks = new[] { 1, 2, },
+                            Exam1Marks = new []{1,2,},
                             Date = DateTime.Now
                         }
                     }, "friends/1");
-
+                    
                     session.SaveChanges();
                 }
 
@@ -558,12 +558,12 @@ namespace Raven.Tests.Issues
                     var friend = session.Load<Friend>(1);
 
                     friend.UserData.Name = "Foo";
-                    friend.UserData.Exam1Marks = new[] { 1, 2, 3 };
+                    friend.UserData.Exam1Marks = new[] {1, 2, 3};
 
                     var changes3 = session.Advanced.WhatChanged();
 
                     Assert.Equal("UserData.Name", changes3["friends/1"][0].FieldName);
-                    Assert.Equal("UserData.Exam1Marks", changes3["friends/1"][1].FieldName);
+                    Assert.Equal("UserData.Exam1Marks[2]", changes3["friends/1"][1].FieldName);
                 }
             }
         }
@@ -577,7 +577,7 @@ namespace Raven.Tests.Issues
                 {
                     session.Store(new BigFriend
                     {
-                        Descr = "Test",
+                        Descr="Test",
                         UserData = new UserData
                         {
                             Id = 123,
@@ -602,7 +602,7 @@ namespace Raven.Tests.Issues
 
                     Assert.Equal("Descr", changes3["bigfriends/1"][0].FieldName);
                     Assert.Equal("UserData.Name", changes3["bigfriends/1"][1].FieldName);
-                    Assert.Equal("UserData.Exam1Marks", changes3["bigfriends/1"][2].FieldName);
+                    Assert.Equal("UserData.Exam1Marks[2]", changes3["bigfriends/1"][2].FieldName);
                 }
             }
         }
@@ -627,4 +627,6 @@ namespace Raven.Tests.Issues
             public string Descr;
         }
     }
+
+  
 }

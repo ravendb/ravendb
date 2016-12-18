@@ -81,17 +81,17 @@ namespace Raven.Tests.FileSystem.Synchronization
             string destination1Md5;
             using (var resultFileContent = await destination1Client.DownloadAsync("test.bin"))
             {
-                destination1Md5 = resultFileContent.GetHashAsHex();
+                destination1Md5 = resultFileContent.GetMD5Hash();
             }
 
             string destination2Md5;
             using (var resultFileContent = await destination2Client.DownloadAsync("test.bin"))
             {
-                destination2Md5 = resultFileContent.GetHashAsHex();
+                destination2Md5 = resultFileContent.GetMD5Hash();
             }
 
             sourceContent.Position = 0;
-            var sourceMd5 = sourceContent.GetHashAsHex();
+            var sourceMd5 = sourceContent.GetMD5Hash();
 
             Assert.Equal(sourceMd5, destination1Md5);
             Assert.Equal(sourceMd5, destination2Md5);

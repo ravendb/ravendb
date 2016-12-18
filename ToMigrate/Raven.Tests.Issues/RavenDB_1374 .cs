@@ -120,7 +120,7 @@ namespace Raven.Tests.Issues
                     Bazes = new List<string>()
                 };
 
-                var globalLimit = store.SystemDatabase.Configuration.Indexing.MaxSimpleIndexOutputsPerDocument;
+                var globalLimit = store.SystemDatabase.Configuration.MaxSimpleIndexOutputsPerDocument;
 
                 Assert.True(index.MaxIndexOutputsPerDocument > globalLimit); // index limit should be greater than a global one
 

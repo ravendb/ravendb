@@ -47,12 +47,9 @@ namespace Raven.Tests.FileSystem.Issues
 
             var exception = Assert.Throws<Exception>(() =>
             {
-                using (new RavenFileSystem(new RavenConfiguration()
+                using (new RavenFileSystem(new InMemoryRavenConfiguration()
                 {
-                    Core =
-                    {
-                        RunInMemory = false,
-                    },
+                    RunInMemory = false,
                     FileSystem =
                     {
                         DataDirectory = path

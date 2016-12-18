@@ -27,13 +27,6 @@ namespace Raven.SlowTests.Migration
 
         private Dictionary<string, ProductSales.Result> productSalesResults;
 
-        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
-        {
-            configuration.MaxSecondsForTaskToWaitForDatabaseToLoad = 15;
-
-            base.ModifyConfiguration(configuration);
-        }
-
         public MigrationTests()
         {
             FillOrdersByCompany();

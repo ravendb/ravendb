@@ -11,11 +11,10 @@ using Raven.Tests.Common;
 using Raven.Tests.Helpers;
 
 using Xunit;
-using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
-    public class RavenDB_1539 : RavenTest
+    public class RavenDB_1539 : RavenTestBase
     {
         public class TestDoc
         {
@@ -23,17 +22,17 @@ namespace Raven.Tests.Issues
             public string Data { get; set; }
         }
 
-        [Theory]
-        [PropertyData("Storages")]
-        public void Several_SaveChanges_for_the_same_document_in_single_transaction_and_the_same_session_should_work(string storage)
+        [Fact]
+        public void Several_SaveChanges_for_the_same_document_in_single_transaction_and_the_same_session_should_work()
         {
-            using (var documentStore = NewRemoteDocumentStore(runInMemory: false, requestedStorage: storage))
+            using (var documentStore = NewRemoteDocumentStore(runInMemory: false, requestedStorage: "esent"))
             using (var session = documentStore.OpenSession())
             {
                 if(documentStore.DatabaseCommands.GetStatistics().SupportsDtc == false)
                     return;
 
                 session.Advanced.UseOptimisticConcurrency = true;
+                session.Advanced.AllowNonAuthoritativeInformation = false;
 
                 using (var transaction = new TransactionScope())
                 {
@@ -52,17 +51,17 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Theory]
-        [PropertyData("Storages")]
-        public void Several_SaveChanges_for_the_same_document_in_single_transaction_should_allow_commit_without_concurrency_exception(string storage)
+        [Fact]
+        public void Several_SaveChanges_for_the_same_document_in_single_transaction_should_allow_commit_without_concurrency_exception()
         {
-            using (var documentStore = NewRemoteDocumentStore(runInMemory: false, requestedStorage: storage))
+            using (var documentStore = NewRemoteDocumentStore(runInMemory: false, requestedStorage: "esent"))
             using (var session = documentStore.OpenSession())
             {
                 if (documentStore.DatabaseCommands.GetStatistics().SupportsDtc == false)
                     return;
 
                 session.Advanced.UseOptimisticConcurrency = true;
+                session.Advanced.AllowNonAuthoritativeInformation = false;
 
                 Assert.DoesNotThrow(() =>
                 {
@@ -94,6 +93,7 @@ namespace Raven.Tests.Issues
                     return;
 
                 session.Advanced.UseOptimisticConcurrency = true;
+                session.Advanced.AllowNonAuthoritativeInformation = false;
 
                 using (var transaction = new TransactionScope())
                 {

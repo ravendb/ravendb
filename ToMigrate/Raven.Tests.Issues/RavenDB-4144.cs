@@ -19,7 +19,7 @@ namespace Raven.Tests.Issues
             {
                 var foo = new Foo
                 {
-                    List = { "test" }
+                    List = {"test"}
                 };
 
                 using (var session = store.OpenSession())
@@ -39,7 +39,7 @@ namespace Raven.Tests.Issues
                 using (var session = store.OpenSession())
                 {
                     var loaded = session.Load<Foo>(foo.Id);
-                    Assert.Equal(new List<string> { "my", "list" }, loaded.List);
+                    Assert.Equal(new List<string> {"my", "list"}, loaded.List);
                 }
             }
         }
@@ -172,7 +172,7 @@ namespace Raven.Tests.Issues
         {
             public Foo()
             {
-                List = new List<string>();
+                List = new List<string>();    
             }
 
             public string Id { get; set; }
