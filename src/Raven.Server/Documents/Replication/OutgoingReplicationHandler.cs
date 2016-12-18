@@ -384,6 +384,27 @@ namespace Raven.Server.Documents.Replication
                         UpdateDestinationChangeVector(replicationBatchReply);
                         OnSuccessfulTwoWaysCommunication();
                     }
+                    else
+                    {
+                        var msg = $"Received error from remote replication destination. Error received: {replicationBatchReply.Exception}";
+                        if (_log.IsInfoEnabled)
+                        {
+                            _log.Info(msg);
+                        }
+
+                        using (var txw = _configurationContext.OpenWriteTransaction())
+                        {
+                            _database.Alerts.AddAlert(new Alert
+                            {
+                                Key = FromToString,
+                                Type = AlertType.Replication,
+                                Message = msg,
+                                CreatedAt = DateTime.UtcNow,
+                                Severity = AlertSeverity.Warning
+                            }, _configurationContext, txw);
+                            txw.Commit();
+                        }
+                    }
 
                     if (_log.IsInfoEnabled)
                     {
