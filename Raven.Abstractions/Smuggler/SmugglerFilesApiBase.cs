@@ -201,6 +201,8 @@ namespace Raven.Abstractions.Smuggler
 
                 try
                 {
+                    var log = LogManager.GetCurrentClassLogger();
+
                     while (true)
                     {
                         FileHeader fileHeader = null;
@@ -216,22 +218,32 @@ namespace Raven.Abstractions.Smuggler
 
                         cts.Token.ThrowIfCancellationRequested();
 
-                        // Write the metadata (which includes the stream size and file container name)
-                        var fileContainer = new FileContainer
+                        try
                         {
-                            Key = Path.Combine(fileHeader.Directory.TrimStart('/'), fileHeader.Name),
-                            Metadata = fileHeader.Metadata,
-                        };
+                            // Write the metadata (which includes the stream size and file container name)
+                            var fileContainer = new FileContainer
+                            {
+                                Key = Path.Combine(fileHeader.Directory.TrimStart('/'), fileHeader.Name),
+                                Metadata = fileHeader.Metadata,
+                            };
 
-                        ZipArchiveEntry fileToStore = archive.CreateEntry(fileContainer.Key);
+                            ZipArchiveEntry fileToStore = archive.CreateEntry(fileContainer.Key);
 
-                        using (var fileStream = await Operations.DownloadFile(fileHeader).ConfigureAwait(false))
-                        using (var zipStream = fileToStore.Open())
-                        {
-                            await fileStream.CopyToAsync(zipStream).ConfigureAwait(false);
+                            using (var fileStream = await Operations.DownloadFile(fileHeader).ConfigureAwait(false))
+                            using (var zipStream = fileToStore.Open())
+                            {
+                                await fileStream.CopyToAsync(zipStream).ConfigureAwait(false);
+                            }
+
+                            metadataList.Add(fileContainer);
                         }
-
-                        metadataList.Add(fileContainer);
+                        catch (Exception e)
+                        {
+                            var message = $"Failed to export file: '{fileHeader.FullPath}', Exception: {e}, skipping it";
+                            Operations.ShowProgress(message);
+                            log.WarnException(message, e);
+                            continue;
+                        }
 
                         totalCount++;
                         if (totalCount % 30 == 0 || SystemTime.UtcNow - lastReport > reportInterval)
