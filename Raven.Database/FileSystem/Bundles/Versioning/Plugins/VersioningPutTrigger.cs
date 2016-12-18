@@ -49,7 +49,8 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
                 object value;
                 metadata.__ExternalState.TryGetValue("Next-Revision", out value);
 
-                accessor.AssociatePage(name + "/revisions/" + value, pageId, pagePositionInFile, pageSize);
+                // update the usage count of the page
+                accessor.AssociatePage(name + "/revisions/" + value, pageId, pagePositionInFile, pageSize, incrementUsageCount: true);
             });
         }
 

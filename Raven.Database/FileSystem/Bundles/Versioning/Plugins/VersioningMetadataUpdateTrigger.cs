@@ -54,7 +54,8 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
 
                     foreach (var page in fileWithPages.Pages)
                     {
-                        accessor.AssociatePage(revisionFile, page.Id, page.PositionInFile, page.Size);
+                        // update the usage count of the page
+                        accessor.AssociatePage(revisionFile, page.Id, page.PositionInFile, page.Size, incrementUsageCount: true);
                     }
 
                     start += pagesToLoad;
