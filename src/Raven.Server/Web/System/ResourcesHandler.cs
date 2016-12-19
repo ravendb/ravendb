@@ -54,7 +54,10 @@ namespace Raven.Server.Web.System
 
                     writer.WriteStartArray();
                     var first = true;
-                    foreach (var dbDoc in ServerStore.StartingWith(context, "db/", GetStart(), GetPageSize()))
+
+                    int numberOfDatabasesToGet = GetIntValueQueryString(PageSizeParameter, false) ?? -1;
+                    // If numberOfDatabasesToGet is -1 than All databases will be returned
+                    foreach (var dbDoc in ServerStore.StartingWith(context, "db/", GetStart(), numberOfDatabasesToGet))
                     {
                         if (first == false)
                             writer.WriteComma();
