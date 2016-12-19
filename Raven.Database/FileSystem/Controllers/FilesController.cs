@@ -22,6 +22,7 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using Microsoft.Isam.Esent.Interop;
 using Raven.Database.FileSystem.Bundles.Versioning;
+using Raven.Database.FileSystem.Extensions;
 using Raven.Json.Linq;
 
 namespace Raven.Database.FileSystem.Controllers
@@ -154,10 +155,10 @@ namespace Raven.Database.FileSystem.Controllers
                 if (nameSplitted.Length >= 2)
                 {
                     var fileName = Path.GetFileName(nameSplitted[nameSplitted.Length - 2]);
-                    return $"Revision {nameSplitted[nameSplitted.Length - 1]}, {fileName}";
+                    return string.Format("Revision {0}, {1}", nameSplitted[nameSplitted.Length - 1], fileName);
                 }
             }
-
+        
             return Path.GetFileName(name);
         }
 
