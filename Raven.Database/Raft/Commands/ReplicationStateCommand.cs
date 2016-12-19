@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Rachis.Commands;
 using Raven.Database.Raft.Dto;
 
@@ -18,7 +14,7 @@ namespace Raven.Database.Raft.Commands
         public static ReplicationStateCommand Create
             (ReplicationState databaseToLastModified)
         {
-            return new ReplicationStateCommand()
+            return new ReplicationStateCommand
             {
                 DatabaseToLastModified = databaseToLastModified,
                 Completion = new TaskCompletionSource<object>()
