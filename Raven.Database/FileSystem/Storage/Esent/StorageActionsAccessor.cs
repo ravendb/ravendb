@@ -297,7 +297,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
                 return;
             }
 
-            log.Warn($"Couldn't increment the usage count for page id: {pageId}");
+            log.Warn("Couldn't increment the usage count for page id: {0}", pageId);
         }
 
         private long? GetTotalSize()
