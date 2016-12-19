@@ -222,7 +222,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
             ushort version;
             var page = LoadJson(storage.Pages, key, writeBatch.Value, out version);
             if (page == null)
-                throw new InvalidOperationException($"Could not find page '{pageId}'. Probably data is corrupted.");
+                throw new InvalidOperationException(string.Format("Could not find page '{0}'. Probably data is corrupted.", pageId));
 
             var usageCount = page.Value<int>("usage_count");
             page["usage_count"] = usageCount + 1;
