@@ -190,7 +190,7 @@ namespace Raven.Client.FileSystem
         {
             return ExecuteWithReplication(HttpMethods.Post, async (operation, requestTimeMetric) =>
             {
-                var requestUriString = operation.Url + "/files/copy/" + Uri.EscapeDataString(sourceName) + "?targetFilename=" + Uri.EscapeDataString(targetName);
+                var requestUriString = operation.Url + "/files-copy/" + Uri.EscapeDataString(sourceName) + "?targetFilename=" + Uri.EscapeDataString(targetName);
 
                 using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUriString, HttpMethods.Post, operation.Credentials, Conventions)).AddOperationHeaders(OperationsHeaders))
                 {
@@ -1502,7 +1502,7 @@ namespace Raven.Client.FileSystem
 
             public async Task<long> StartRestore(FilesystemRestoreRequest restoreRequest)
             {
-                var requestUrlString = string.Format("{0}/admin/fs/restore", client.ServerUrl);
+                var requestUrlString = string.Format("{0}/admin/fs-restore", client.ServerUrl);
 
                 using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUrlString, HttpMethods.Post, client.PrimaryCredentials, convention)))
                 {
@@ -1522,7 +1522,7 @@ namespace Raven.Client.FileSystem
 
             public async Task<long> StartCompact(string filesystemName)
             {
-                var requestUrlString = string.Format("{0}/admin/fs/compact?filesystem={1}", client.ServerUrl, Uri.EscapeDataString(filesystemName));
+                var requestUrlString = string.Format("{0}/admin/fs-compact?filesystem={1}", client.ServerUrl, Uri.EscapeDataString(filesystemName));
 
                 using (var request = client.RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUrlString, HttpMethods.Post, client.PrimaryCredentials, convention)))
                 {

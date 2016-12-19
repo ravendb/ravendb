@@ -21,7 +21,7 @@ class startRestoreCommand extends commandBase {
                 result.reject();
             })
             .done(_=> {
-            this.post('/admin/fs/restore?defrag=' + this.defrag, ko.toJSON(this.restoreRequest), null, { dataType: 'text' })
+            this.post('/admin/fs-restore?defrag=' + this.defrag, ko.toJSON(this.restoreRequest), null, { dataType: 'text' })
                 .fail((response: JQueryXHR) => {
                     this.reportError("Failed to restore backup!", response.responseText, response.statusText);
                     this.logError(response, result);

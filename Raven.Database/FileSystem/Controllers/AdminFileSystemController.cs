@@ -97,6 +97,11 @@ namespace Raven.Database.FileSystem.Controllers
         [RavenRoute("admin/fs/{*id}")]
         public HttpResponseMessage Delete(string id)
         {
+            if (id.StartsWith("batch-delete"))
+            {
+                return BatchDelete();
+            }
+
             var isHardDeleteNeeded = ParseBoolQueryString("hard-delete");
             var message = DeleteFileSystem(id, isHardDeleteNeeded);
             if (message.ErrorCode != HttpStatusCode.OK)
@@ -108,7 +113,7 @@ namespace Raven.Database.FileSystem.Controllers
         }
 
         [HttpDelete]
-        [RavenRoute("admin/fs/batch-delete")]
+        [RavenRoute("admin/fs-batch-delete")]
         public HttpResponseMessage BatchDelete()
         {
             string[] fileSystemsToDelete = GetQueryStringValues("ids");
@@ -132,8 +137,45 @@ namespace Raven.Database.FileSystem.Controllers
             return GetMessageWithObject(successfullyDeletedDatabase.ToArray());
         }
 
+        private const string ToggleDisablePrefix = "toggle-disable";
+
         [HttpPost]
         [RavenRoute("admin/fs/{*id}")]
+        public async Task<HttpResponseMessage> OldToggleDisable(string id)
+        {
+            if (id.StartsWith(ToggleDisablePrefix))
+            {
+                string fsId = id.Substring(ToggleDisablePrefix.Length + 1);
+                var isSettingToggleDisableStr = GetQueryStringValue("isSettingDisabled");
+                bool isSettingToggleDisabled;
+                if (!string.IsNullOrEmpty(isSettingToggleDisableStr) && bool.TryParse(isSettingToggleDisableStr, out isSettingToggleDisabled))
+                {
+                    return ToggleDisable(fsId, isSettingToggleDisabled);
+                }
+                return GetMessageWithString(string.Format("Failed to route call {0}", Request.RequestUri.OriginalString), HttpStatusCode.BadRequest);
+            }
+
+            if (id == "compact")
+            {
+                return Compact();
+            }
+
+            if (id == "restore")
+            {
+                return await Restore().ConfigureAwait(false);
+            }
+
+            var isSettingDisabledStr = GetQueryStringValue("isSettingDisabled");
+            bool isSettingDisabled;
+            if (!string.IsNullOrEmpty(isSettingDisabledStr) && bool.TryParse(isSettingDisabledStr, out isSettingDisabled))
+            {
+                return ToggleDisable(id, isSettingDisabled);
+            }
+            return GetMessageWithString(string.Format("Failed to route call {0}", Request.RequestUri.OriginalString), HttpStatusCode.BadRequest);
+        }
+
+        [HttpPost]
+        [RavenRoute("admin/fs-toggle-disable")]
         public HttpResponseMessage ToggleDisable(string id, bool isSettingDisabled)
         {
             var message = ToggleFileSystemDisabled(id, isSettingDisabled);
@@ -144,6 +186,7 @@ namespace Raven.Database.FileSystem.Controllers
 
             return GetEmptyMessage();
         }
+
 
         [HttpPost]
         [RavenRoute("admin/fs-batch-toggle-disable")]
@@ -328,7 +371,7 @@ namespace Raven.Database.FileSystem.Controllers
         }
 
         [HttpPost]
-        [RavenRoute("admin/fs/compact")]
+        [RavenRoute("admin/fs-compact")]
         public HttpResponseMessage Compact()
         {
             var fs = InnerRequest.RequestUri.ParseQueryString()["filesystem"];
@@ -444,8 +487,8 @@ namespace Raven.Database.FileSystem.Controllers
         }
 
         [HttpPost]
-        [RavenRoute("admin/fs/restore")]
-        [RavenRoute("fs/{fileSystemName}/admin/restore")]
+        [RavenRoute("admin/fs-restore")]
+        [RavenRoute("fs/{fileSystemName}/admin-restore")]
         public async Task<HttpResponseMessage> Restore()
         {
             var restoreStatus = new RestoreStatus { State = RestoreStatusState.Running, Messages = new List<string>() };
