@@ -55,8 +55,7 @@ namespace Raven.Server.Web.System
                     writer.WriteStartArray();
                     var first = true;
 
-                    int numberOfDatabasesToGet = GetIntValueQueryString(PageSizeParameter, false) ?? int.MaxValue;
-                    foreach (var dbDoc in ServerStore.StartingWith(context, "db/", GetStart(), numberOfDatabasesToGet))
+                    foreach (var dbDoc in ServerStore.StartingWith(context, "db/", GetStart(), GetPageSize(int.MaxValue)))
                     {
                         if (first == false)
                             writer.WriteComma();
@@ -100,8 +99,8 @@ namespace Raven.Server.Web.System
                                 [nameof(DatabaseInfo.RejectClients)] = false, //TODO: implement me!
                                 [nameof(DatabaseInfo.IndexingStatus)] = indexingStatus
                             };
-                            
-                            context.Write(writer, doc); 
+
+                            context.Write(writer, doc);
                         }
                     }
 
