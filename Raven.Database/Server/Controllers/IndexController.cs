@@ -306,6 +306,12 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("databases/{databaseName}/indexes/{*id}")]
         public async Task<HttpResponseMessage> IndexPost(string id)
         {
+            if (id == "last-queried")
+            {
+                var lastQueried = await ReadJsonObjectAsync<Dictionary<string, DateTime>>().ConfigureAwait(false);
+                return IndexUpdateLastQueried(lastQueried);
+            }
+
             var index = id;
             /*
            This is a workaround to support version 30037 and below where index post conflicts with index set priorety

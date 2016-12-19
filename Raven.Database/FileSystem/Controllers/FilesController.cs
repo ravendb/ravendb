@@ -225,10 +225,18 @@ namespace Raven.Database.FileSystem.Controllers
             return httpResponseMessage;
         }
 
+        private const string CopyPrefix = "copy/";
+
         [HttpPost]
         [RavenRoute("fs/{fileSystemName}/files/{*name}")]
         public HttpResponseMessage Post(string name)
         {
+            if (name.StartsWith(CopyPrefix))
+            {
+                var targetFileName = GetQueryStringValue("targetFilename");
+                return Copy(name.Substring(CopyPrefix.Length), targetFileName);
+            }
+
             name = FileHeader.Canonize(name);
 
             var metadata = GetFilteredMetadataFromHeaders(ReadInnerHeaders);
@@ -248,7 +256,7 @@ namespace Raven.Database.FileSystem.Controllers
         }
 
         [HttpPost]
-        [RavenRoute("fs/{fileSystemName}/files/copy/{*name}")]
+        [RavenRoute("fs/{fileSystemName}/files-copy/{*name}")]
         public HttpResponseMessage Copy(string name, string targetFilename)
         {
             name = FileHeader.Canonize(name);

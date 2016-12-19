@@ -23,7 +23,7 @@ class startCompactCommand extends commandBase {
                 result.reject();
             })
             .done(_=> {
-                var url = '/admin/fs/compact' + this.urlEncodeArgs({ filesystem: this.fsToCompact });
+                var url = '/admin/fs-compact' + this.urlEncodeArgs({ filesystem: this.fsToCompact });
                 this.post(url, null, this.db)
                     .fail((response: JQueryXHR) => {
                         this.reportError("Failed to compact filesystem!", response.responseText, response.statusText);

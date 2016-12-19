@@ -449,7 +449,7 @@ namespace Raven.Tests.Raft.Client
             response = await httpClient.PostAsync(url + "/facets/facet1", new JsonContent());
             assertion(response);
 
-            response = await httpClient.PostAsync(url + "/facets/multisearch", new JsonContent());
+            response = await httpClient.PostAsync(url + "/facets-multisearch", new JsonContent());
             assertion(response);
         }
 
