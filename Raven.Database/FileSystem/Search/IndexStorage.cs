@@ -563,6 +563,7 @@ namespace Raven.Database.FileSystem.Search
 
         public void Dispose()
         {
+            GC.SuppressFinalize(this);
             var exceptionAggregator = new ExceptionAggregator(Log, string.Format("Could not properly close index storage for file system '{0}'", name));
 
             exceptionAggregator.Execute(() => { if (analyzer != null) analyzer.Close(); });
