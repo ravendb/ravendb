@@ -9,11 +9,10 @@ using Raven.Abstractions.Data;
 using Raven.Tests.Helpers;
 using Xunit;
 using Xunit.Extensions;
-using Raven.Tests.Common;
 
 namespace Raven.Tests.Issues
 {
-    public class RavenDB_3181 : RavenTest
+    public class RavenDB_3181 : RavenTestBase
     {
         public class Item
         {
@@ -21,7 +20,8 @@ namespace Raven.Tests.Issues
 
 
         [Theory]
-        [PropertyData("Storages")]
+        [InlineData("esent")]
+        [InlineData("voron")]
         public void CheckIfDocumentIsCompressed(string storage)
         {
             using (var store = NewDocumentStore(runInMemory: false, requestedStorage: storage))

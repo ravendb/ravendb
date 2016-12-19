@@ -1,10 +1,8 @@
 using System;
 using System.IO;
-
-using Raven.Abstractions.Database.Smuggler.Database;
-using Raven.Smuggler.Database;
-using Raven.Smuggler.Database.Files;
-using Raven.Smuggler.Database.Remote;
+using Raven.Abstractions.Data;
+using Raven.Abstractions.Smuggler;
+using Raven.Smuggler;
 using Raven.Tests.Common;
 
 using Xunit;
@@ -37,32 +35,15 @@ namespace Raven.Tests.MailingList
                         docId = foo.Id;
                         session.SaveChanges();
                     }
-
-                    var smuggler = new DatabaseSmuggler(
-                        new DatabaseSmugglerOptions(),
-                        new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
-                        {
-                            Url = documentStore.Url,
-                            Database = documentStore.DefaultDatabase
-                        }),
-                        new DatabaseSmugglerFileDestination(file));
-
-                    smuggler.Execute();
+                    var smugglerApi = new SmugglerDatabaseApi();
+                    smugglerApi.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = file, From = new RavenConnectionStringOptions { Url = documentStore.Url, DefaultDatabase = documentStore.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var documentStore = NewRemoteDocumentStore())
                 {
-                    var smuggler = new DatabaseSmuggler(
-                        new DatabaseSmugglerOptions(),
-                        new DatabaseSmugglerFileSource(file), 
-                        new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
-                        {
-                            Url = documentStore.Url,
-                            Database = documentStore.DefaultDatabase
-                        }));
-
-                    smuggler.Execute();
-
+                    var smugglerApi = new SmugglerDatabaseApi();
+                    smugglerApi.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = file, To = new RavenConnectionStringOptions { Url = documentStore.Url, DefaultDatabase = documentStore.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    
                     using (var session = documentStore.OpenSession())
                     {
                         var created = session.Load<Foo>(docId).Created;

@@ -1,8 +1,10 @@
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Smuggler;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
+using Raven.Smuggler;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Util;
 using System;
@@ -10,11 +12,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
-using Raven.Abstractions.Database.Smuggler.FileSystem;
-using Raven.Smuggler.FileSystem;
-using Raven.Smuggler.FileSystem.Remote;
-
 using Xunit;
 
 namespace Raven.Tests.FileSystem.Smuggler
@@ -30,27 +27,28 @@ namespace Raven.Tests.FileSystem.Smuggler
         {
             using (var store = NewStore())
             {
-                var smuggler = new FileSystemSmuggler(new FileSystemSmugglerOptions());
+                var smugglerApi = new SmugglerFilesApi();                
 
-                var source = new RemoteSmugglingSource(new FilesConnectionStringOptions()
+                var options = new SmugglerBetweenOptions<FilesConnectionStringOptions>
                 {
-                    Url = store.Url,
-                    DefaultFileSystem = SourceFilesystem
-                });
-
-                var destination = new RemoteSmugglingDestination(new FilesConnectionStringOptions()
-                {
-                    Url = store.Url,
-                    DefaultFileSystem = DestinationFilesystem
-                });
-
-                var exception = await AssertAsync.Throws<SmugglerException>(() => smuggler.ExecuteAsync(source, destination));
-
+                    From = new FilesConnectionStringOptions
+                    {
+                        Url = store.Url,
+                        DefaultFileSystem = SourceFilesystem
+                    },
+                    To = new FilesConnectionStringOptions
+                    {
+                        Url = store.Url,
+                        DefaultFileSystem = DestinationFilesystem
+                    }
+                };
+                
+                var exception = await AssertAsync.Throws<SmugglerException>(() => smugglerApi.Between(options));
                 Assert.True(exception.Message.StartsWith("Smuggler does not support file system creation (file system '" + SourceFilesystem + "' on server"));
 
                 await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(SourceFilesystem);
 
-                exception = await AssertAsync.Throws<SmugglerException>(() => smuggler.ExecuteAsync(source, destination));
+                exception = await AssertAsync.Throws<SmugglerException>(() => smugglerApi.Between(options));
                 Assert.True(exception.Message.StartsWith("Smuggler does not support file system creation (file system '" + DestinationFilesystem + "' on server"));
             }
         }
@@ -59,46 +57,49 @@ namespace Raven.Tests.FileSystem.Smuggler
         [Fact, Trait("Category", "Smuggler")]
         public async Task BetweenOperation_BehaviorWhenServerIsDown()
         {
-            using (var store = NewStore())
+            string dataDirectory = null;
+
+            try
             {
-                var server = GetServer();
-
-                var smuggler = new FileSystemSmuggler(new FileSystemSmugglerOptions());
-
-                var source = new RemoteSmugglingSource(new FilesConnectionStringOptions()
+                using (var store = NewStore())
                 {
-                    Url = "http://localhost:8078/",
-                    DefaultFileSystem = SourceFilesystem
-                });
+                    var server = GetServer();
 
-                var destination = new RemoteSmugglingDestination(new FilesConnectionStringOptions()
-                {
-                    Url = store.Url,
-                    DefaultFileSystem = DestinationFilesystem
-                });
+                    var smugglerApi = new SmugglerFilesApi();
 
-                await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(SourceFilesystem);
-                await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(DestinationFilesystem);
+                    var options = new SmugglerBetweenOptions<FilesConnectionStringOptions>
+                    {
+                        From = new FilesConnectionStringOptions
+                        {
+                            Url = "http://localhost:8078/",
+                            DefaultFileSystem = SourceFilesystem
+                        },
+                        To = new FilesConnectionStringOptions
+                        {
+                            Url = store.Url,
+                            DefaultFileSystem = DestinationFilesystem
+                        }
+                    };
 
-                var e = await AssertAsync.Throws<SmugglerException>(() => smuggler.ExecuteAsync(source, destination));
-                Assert.Contains("Smuggler encountered a connection problem:", e.Message);
+                    await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(SourceFilesystem);
+                    await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(DestinationFilesystem);
 
-                source = new RemoteSmugglingSource(new FilesConnectionStringOptions()
-                {
-                    Url = store.Url,
-                    DefaultFileSystem = SourceFilesystem
-                });
+                    var e = await AssertAsync.Throws<SmugglerException>(() => smugglerApi.Between(options));
+                    Assert.Contains("Smuggler encountered a connection problem:", e.Message);
 
-                destination = new RemoteSmugglingDestination(new FilesConnectionStringOptions()
-                {
-                    Url = "http://localhost:8078/",
-                    DefaultFileSystem = DestinationFilesystem
-                });
+                    options.From.Url = store.Url;
+                    options.To.Url = "http://localhost:8078/";
 
-                e = await AssertAsync.Throws<SmugglerException>(() => smuggler.ExecuteAsync(source, destination));
-                Assert.Contains("Smuggler encountered a connection problem:", e.Message);
+                    e = await AssertAsync.Throws<SmugglerException>(() => smugglerApi.Between(options));
+                    Assert.Contains("Smuggler encountered a connection problem:", e.Message);
 
-                server.Dispose();
+                    server.Dispose();
+                }
+            }
+            finally
+            {
+                if (!string.IsNullOrWhiteSpace(dataDirectory))
+                    IOExtensions.DeleteDirectory(dataDirectory);
             }
         }
 
@@ -112,26 +113,28 @@ namespace Raven.Tests.FileSystem.Smuggler
                 using (var store = NewStore())
                 {
                     var server = GetServer();
-                    dataDirectory = server.Configuration.Core.DataDirectory;
+                    dataDirectory = server.Configuration.DataDirectory;
 
-                    var smuggler = new FileSystemSmuggler(new FileSystemSmugglerOptions());
+                    var smugglerApi = new SmugglerFilesApi();
 
-                    var source = new RemoteSmugglingSource(new FilesConnectionStringOptions()
+                    var options = new SmugglerBetweenOptions<FilesConnectionStringOptions>
                     {
-                        Url = store.Url,
-                        DefaultFileSystem = SourceFilesystem
-                    });
+                        From = new FilesConnectionStringOptions
+                        {
+                            Url = store.Url,
+                            DefaultFileSystem = SourceFilesystem
+                        },
+                        To = new FilesConnectionStringOptions
+                        {
+                            Url = store.Url,
+                            DefaultFileSystem = DestinationFilesystem
+                        }
+                    };
 
-                    var destination = new RemoteSmugglingDestination(new FilesConnectionStringOptions()
-                    {
-                        Url = store.Url,
-                        DefaultFileSystem = DestinationFilesystem
-                    });
-                    
                     await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(SourceFilesystem);
                     await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(DestinationFilesystem);
 
-                    await smuggler.ExecuteAsync(source, destination);
+                    await smugglerApi.Between(options);
 
                     using (var session = store.OpenAsyncSession(DestinationFilesystem))
                     {
@@ -160,7 +163,7 @@ namespace Raven.Tests.FileSystem.Smuggler
 
                 var alreadyReset = false;
                 var port = 8070;
-                var forwarder = new ProxyServer(ref port, server.Configuration.Core.Port)
+                var forwarder = new ProxyServer(ref port, server.Configuration.Port)
                 {
                     VetoTransfer = (totalRead, buffer) =>
                     {
@@ -176,19 +179,21 @@ namespace Raven.Tests.FileSystem.Smuggler
 
                 try
                 {
-                    var smuggler = new FileSystemSmuggler(new FileSystemSmugglerOptions());
+                    var smugglerApi = new SmugglerFilesApi();
 
-                    var source = new RemoteSmugglingSource(new FilesConnectionStringOptions()
+                    var options = new SmugglerBetweenOptions<FilesConnectionStringOptions>
                     {
-                        Url = "http://localhost:" + port,
-                        DefaultFileSystem = SourceFilesystem
-                    });
-
-                    var destination = new RemoteSmugglingDestination(new FilesConnectionStringOptions()
-                    {
-                        Url = store.Url,
-                        DefaultFileSystem = DestinationFilesystem
-                    });
+                        From = new FilesConnectionStringOptions
+                        {
+                            Url = "http://localhost:" + port,
+                            DefaultFileSystem = SourceFilesystem
+                        },
+                        To = new FilesConnectionStringOptions
+                        {
+                            Url = store.Url,
+                            DefaultFileSystem = DestinationFilesystem
+                        }
+                    };
 
                     await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(SourceFilesystem);
                     await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(DestinationFilesystem);
@@ -201,17 +206,17 @@ namespace Raven.Tests.FileSystem.Smuggler
                     Etag lastEtag = Etag.InvalidEtag;
                     try
                     {
-                        await smuggler.ExecuteAsync(source, destination);
+                        await smugglerApi.Between(options);
                         Assert.False(true, "Expected error to happen during this Between operation, but it didn't happen :-(");
                     }
-                    catch (SmugglerException inner)
+                    catch (SmugglerExportException inner)
                     {
                         lastEtag = inner.LastEtag;
                     }
 
                     Assert.NotEqual(Etag.InvalidEtag, lastEtag);
 
-                    await smuggler.ExecuteAsync(source, destination);
+                    await smugglerApi.Between(options);
 
                     using (var session = store.OpenAsyncSession(DestinationFilesystem))
                     {
@@ -232,23 +237,27 @@ namespace Raven.Tests.FileSystem.Smuggler
         {
             using (var store = NewStore())
             {
+                var server = GetServer();
+
                 ReseedRandom(100); // Force a random distribution.
 
                 int fileSize = 10000;
 
-                var smuggler = new FileSystemSmuggler(new FileSystemSmugglerOptions());
+                var smugglerApi = new SmugglerFilesApi();
 
-                var source = new RemoteSmugglingSource(new FilesConnectionStringOptions()
+                var options = new SmugglerBetweenOptions<FilesConnectionStringOptions>
                 {
-                    Url = store.Url,
-                    DefaultFileSystem = SourceFilesystem
-                });
-
-                var destination = new RemoteSmugglingDestination(new FilesConnectionStringOptions()
-                {
-                    Url = store.Url,
-                    DefaultFileSystem = DestinationFilesystem
-                });
+                    From = new FilesConnectionStringOptions
+                    {
+                        Url = store.Url,
+                        DefaultFileSystem = SourceFilesystem
+                    },
+                    To = new FilesConnectionStringOptions
+                    {
+                        Url = store.Url,
+                        DefaultFileSystem = DestinationFilesystem
+                    }
+                };
 
                 await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(SourceFilesystem);
                 await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(DestinationFilesystem);
@@ -260,7 +269,7 @@ namespace Raven.Tests.FileSystem.Smuggler
                     await session.SaveChangesAsync();
                 }
 
-                await smuggler.ExecuteAsync(source, destination);
+                await smugglerApi.Between(options);
 
                 fileContent.Position = 0;
                 using (var session = store.OpenAsyncSession(DestinationFilesystem))
@@ -271,7 +280,7 @@ namespace Raven.Tests.FileSystem.Smuggler
 
                     var stream = session.DownloadAsync(file).Result;
 
-                    Assert.Equal(fileContent.GetHashAsHex(), stream.GetHashAsHex());
+                    Assert.Equal(fileContent.GetMD5Hash(), stream.GetMD5Hash());
                 }
             }
         }
@@ -281,19 +290,23 @@ namespace Raven.Tests.FileSystem.Smuggler
         {
             using (var store = NewStore())
             {
-                var smuggler = new FileSystemSmuggler(new FileSystemSmugglerOptions());
+                var server = GetServer();
 
-                var source = new RemoteSmugglingSource(new FilesConnectionStringOptions()
-                {
-                    Url = store.Url,
-                    DefaultFileSystem = SourceFilesystem
-                });
+                var smugglerApi = new SmugglerFilesApi();
 
-                var destination = new RemoteSmugglingDestination(new FilesConnectionStringOptions()
+                var options = new SmugglerBetweenOptions<FilesConnectionStringOptions>
                 {
-                    Url = store.Url,
-                    DefaultFileSystem = DestinationFilesystem
-                });
+                    From = new FilesConnectionStringOptions
+                    {
+                        Url = store.Url,
+                        DefaultFileSystem = SourceFilesystem
+                    },
+                    To = new FilesConnectionStringOptions
+                    {
+                        Url = store.Url,
+                        DefaultFileSystem = DestinationFilesystem
+                    }
+                };
 
                 await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(SourceFilesystem);
                 await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(DestinationFilesystem);
@@ -310,7 +323,7 @@ namespace Raven.Tests.FileSystem.Smuggler
                     await session.SaveChangesAsync();
                 }
 
-                await smuggler.ExecuteAsync(source, destination);
+                await smugglerApi.Between(options);
 
                 for (int i = 0; i < files.Length; i++)
                 {
@@ -320,7 +333,7 @@ namespace Raven.Tests.FileSystem.Smuggler
                         var stream = await session.DownloadAsync(file);
 
                         files[i].Position = 0;
-                        Assert.Equal(files[i].GetHashAsHex(), stream.GetHashAsHex());
+                        Assert.Equal(files[i].GetMD5Hash(), stream.GetMD5Hash());
                     }
                 }
             }
@@ -331,19 +344,23 @@ namespace Raven.Tests.FileSystem.Smuggler
         {
             using (var store = NewStore())
             {
-                var smuggler = new FileSystemSmuggler(new FileSystemSmugglerOptions());
+                var server = GetServer();
 
-                var source = new RemoteSmugglingSource(new FilesConnectionStringOptions()
-                {
-                    Url = store.Url,
-                    DefaultFileSystem = SourceFilesystem
-                });
+                var smugglerApi = new SmugglerFilesApi();
 
-                var destination = new RemoteSmugglingDestination(new FilesConnectionStringOptions()
+                var options = new SmugglerBetweenOptions<FilesConnectionStringOptions>
                 {
-                    Url = store.Url,
-                    DefaultFileSystem = DestinationFilesystem
-                });
+                    From = new FilesConnectionStringOptions
+                    {
+                        Url = store.Url,
+                        DefaultFileSystem = SourceFilesystem
+                    },
+                    To = new FilesConnectionStringOptions
+                    {
+                        Url = store.Url,
+                        DefaultFileSystem = DestinationFilesystem
+                    }
+                };
 
                 await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(SourceFilesystem);
                 await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(DestinationFilesystem);
@@ -360,7 +377,7 @@ namespace Raven.Tests.FileSystem.Smuggler
                     await session.SaveChangesAsync();
                 }
 
-                await smuggler.ExecuteAsync(source, destination);
+                await smugglerApi.Between(options);
 
                 for (int i = 0; i < files.Length; i++)
                 {
@@ -370,7 +387,7 @@ namespace Raven.Tests.FileSystem.Smuggler
                         var stream = await session.DownloadAsync(file);
 
                         files[i].Position = 0;
-                        Assert.Equal(files[i].GetHashAsHex(), stream.GetHashAsHex());
+                        Assert.Equal(files[i].GetMD5Hash(), stream.GetMD5Hash());
                     }
                 }
             }
@@ -381,19 +398,23 @@ namespace Raven.Tests.FileSystem.Smuggler
         {
             using (var store = NewStore())
             {
-                var smuggler = new FileSystemSmuggler(new FileSystemSmugglerOptions());
+                var server = GetServer();
 
-                var source = new RemoteSmugglingSource(new FilesConnectionStringOptions()
-                {
-                    Url = store.Url,
-                    DefaultFileSystem = SourceFilesystem
-                });
+                var smugglerApi = new SmugglerFilesApi();
 
-                var destination = new RemoteSmugglingDestination(new FilesConnectionStringOptions()
+                var options = new SmugglerBetweenOptions<FilesConnectionStringOptions>
                 {
-                    Url = store.Url,
-                    DefaultFileSystem = DestinationFilesystem
-                });
+                    From = new FilesConnectionStringOptions
+                    {
+                        Url = store.Url,
+                        DefaultFileSystem = SourceFilesystem
+                    },
+                    To = new FilesConnectionStringOptions
+                    {
+                        Url = store.Url,
+                        DefaultFileSystem = DestinationFilesystem
+                    }
+                };
 
                 await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(SourceFilesystem);
                 await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(DestinationFilesystem);
@@ -428,7 +449,7 @@ namespace Raven.Tests.FileSystem.Smuggler
                     await session.SaveChangesAsync();
                 }
 
-                await smuggler.ExecuteAsync(source, destination);
+                await smugglerApi.Between(options);
 
                 using (var session = store.OpenAsyncSession(DestinationFilesystem))
                 {
@@ -451,6 +472,24 @@ namespace Raven.Tests.FileSystem.Smuggler
         {
             using (var store = NewStore())
             {
+                var server = GetServer();
+
+                var smugglerApi = new SmugglerFilesApi();
+
+                var options = new SmugglerBetweenOptions<FilesConnectionStringOptions>
+                {
+                    From = new FilesConnectionStringOptions
+                    {
+                        Url = store.Url,
+                        DefaultFileSystem = SourceFilesystem
+                    },
+                    To = new FilesConnectionStringOptions
+                    {
+                        Url = store.Url,
+                        DefaultFileSystem = DestinationFilesystem
+                    }
+                };
+
                 await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(SourceFilesystem);
                 await store.AsyncFilesCommands.Admin.EnsureFileSystemExistsAsync(DestinationFilesystem);
 
@@ -466,18 +505,7 @@ namespace Raven.Tests.FileSystem.Smuggler
                     await session.SaveChangesAsync();
                 }
 
-                var smuggler = new FileSystemSmuggler(new FileSystemSmugglerOptions());
-
-                await smuggler.ExecuteAsync(new RemoteSmugglingSource(new FilesConnectionStringOptions
-                {
-                    Url = store.Url,
-                    DefaultFileSystem = SourceFilesystem
-                }),
-                new RemoteSmugglingDestination(new FilesConnectionStringOptions
-                {
-                    Url = store.Url,
-                    DefaultFileSystem = DestinationFilesystem
-                }));
+                await smugglerApi.Between(options);
 
                 using (var session = store.OpenAsyncSession(DestinationFilesystem))
                 {

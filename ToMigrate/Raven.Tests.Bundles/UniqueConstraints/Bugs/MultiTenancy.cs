@@ -78,7 +78,7 @@ namespace Raven.Tests.Bundles.UniqueConstraints.Bugs
             {
                 store.Configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(UniqueConstraintsPutTrigger).Assembly));
                 store.RegisterListener(listener);
-            });
+            },activeBundles: "Unique Constraints");
 
             return documentStore;
         }

@@ -33,8 +33,8 @@ namespace Raven.Tests.Issues
                 // 1 difference - "Token-2" value removed
             }
 
-            // Expecting one difference - "Token-2" ArrayValueRemoved
-            Assert.True(difference.Count == 1 && difference.SingleOrDefault(x => x.Change == DocumentsChanges.ChangeType.ArrayValueRemoved &&
+            // Expecting two difference - "Token-3" ArrayValueRemoved,"Token-2" changed
+            Assert.True(difference.Count == 2 && difference.SingleOrDefault(x => x.Change == DocumentsChanges.ChangeType.FieldChanged &&
                                                                                  x.FieldOldValue == "Token-2") != null);
 
             var originalDoc = new Doc {Names = new List<PersonName> {new PersonName {Name = "Tom1"}, new PersonName {Name = "Tom2"}, new PersonName {Name = "Tom3"}}};
@@ -49,9 +49,9 @@ namespace Raven.Tests.Issues
                 // 3 differences - "Tom1", "Tom2", "Tom3" objects removed
             }
 
-            // Expecting one difference - "Tom2" ArrayValueRemoved
-            Assert.True(difference.Count == 1 && difference.SingleOrDefault(x => x.Change == DocumentsChanges.ChangeType.ArrayValueRemoved &&
-                                                                                 x.FieldOldValue == "{\r\n  \"Name\": \"Tom2\"\r\n}") != null);
+            // Expecting two difference - "Tom3" ArrayValueRemoved,Tom2 field change
+            Assert.True(difference.Count == 2 && difference.Where(x => x.Change == DocumentsChanges.ChangeType.ArrayValueRemoved &&
+                                                                                 x.FieldOldValue == "{\r\n  \"Name\": \"Tom3\"\r\n}") != null);
         }
 
 

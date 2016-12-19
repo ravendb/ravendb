@@ -54,28 +54,26 @@ namespace Raven.Server.Web.System
 
                     writer.WriteStartArray();
                     var first = true;
-                    foreach (var dbDoc in ServerStore.StartingWith(context, "db/", GetStart(), GetPageSize()))
+
+                    foreach (var dbDoc in ServerStore.StartingWith(context, "db/", GetStart(), GetPageSize(int.MaxValue)))
                     {
                         if (first == false)
                             writer.WriteComma();
                         first = false;
                         {
-                            var disabled = false;
-                            object disabledValue;
-                            if (dbDoc.Data.TryGetMember("Disabled", out disabledValue))
-                            {
-                                disabled = (bool)disabledValue;
-                            }
+                            bool disabled;
+                            dbDoc.Data.TryGet("Disabled", out disabled);
+
                             var dbName = dbDoc.Key.Substring("db/".Length);
                             Task<DocumentDatabase> dbTask;
                             var online = ServerStore.DatabasesLandlord.ResourcesStoresCache.TryGetValue(dbName, out dbTask) && dbTask != null && dbTask.IsCompleted;
                             var db = online ? dbTask.Result : null;
                             if (online == false)
                             {
-                                //If we found the state of the database in the cache was can continue.
-                                //We won't find it if it is a new database or after a dirty shutdown.
-                                if(ServerStore.DatabaseInfoCache.WriteDatabaseInfo(writer, dbName))
+                                // If state of database is found in the cache we can continue
+                                if (ServerStore.DatabaseInfoCache.TryWriteOfflineDatabaseStatustoRequest(context, writer, dbName, disabled))
                                     continue;
+                                // We won't find it if it is a new database or after a dirty shutdown, so just report empty values then
                             }
                             var indexingStatus = dbTask != null && dbTask.IsCompleted ? dbTask.Result.IndexStore.Status.ToString() : null;
                             var size = new Size(GetTotalSize(db));
@@ -104,8 +102,8 @@ namespace Raven.Server.Web.System
 
                             context.Write(writer, doc);
                         }
-
                     }
+
                     writer.WriteEndArray();
 
                     //TODO: write fs, cs, ts

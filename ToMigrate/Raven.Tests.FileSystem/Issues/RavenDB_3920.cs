@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System.IO;
 using System.Threading.Tasks;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.FileSystem;
 using Raven.Database.FileSystem.Extensions;
@@ -37,7 +38,7 @@ namespace Raven.Tests.FileSystem.Issues
                         s.WriteByte(3);
                     });
 
-                    await ThrowsAsync<BadRequestException>(() => session.SaveChangesAsync()); // 10 bytes declared but only 3 has been uploaded, IndicateFileToDelete is going to be called underhood
+                    await ThrowsAsync<ErrorResponseException>(() => session.SaveChangesAsync()); // 10 bytes declared but only 3 has been uploaded, IndicateFileToDelete is going to be called underhood
                 }
 
                 using (var session = store.OpenAsyncSession())

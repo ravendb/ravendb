@@ -9,7 +9,7 @@ using Raven.Bundles.CascadeDelete;
 using Raven.Bundles.Expiration;
 using Raven.Client.Document;
 using Raven.Database;
-using Raven.Database.Config.Settings;
+using Raven.Database.Bundles.Expiration;
 using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Common;
@@ -27,19 +27,53 @@ namespace Raven.Tests.Bundles.Expiration
 
         public WithCascade()
         {
-            ravenDbServer = GetNewServer(databaseName: Constants.SystemDatabase, activeBundles: "documentExpiration", configureConfig: configuration =>
+            ravenDbServer = GetNewServer(databaseName: Constants.SystemDatabase, activeBundles: "DocumentExpiration;Cascade Delete", configureConfig: configuration =>
             {
-                configuration.Get().Catalog.Catalogs.Add(new AssemblyCatalog(typeof(CascadeDeleteTrigger).Assembly));
-                configuration.Modify(x => x.Expiration.DeleteFrequency, new TimeSetting(1, TimeUnit.Seconds), "1");
+                configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(CascadeDeleteTrigger).Assembly));
+                configuration.Settings["Raven/Expiration/DeleteFrequencySeconds"] = "1";
             });
             documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer, databaseName: Constants.SystemDatabase);
 
             database = ravenDbServer.Server.GetDatabaseInternal(Constants.SystemDatabase).Result;
-        }	
+        }
+
 
         [Fact]
         public void CanDeleteAndCascadeAtTheSameTime()
         {
+            documentStore.DatabaseCommands.PutAttachment("item", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
+            using (var session = documentStore.OpenSession())
+            {
+                var doc = new { Id = "doc/1" };
+                session.Store(doc);
+                session.Advanced.GetMetadataFor(doc)["Raven-Expiration-Date"] = DateTime.Now.AddDays(-15);
+                session.Advanced.GetMetadataFor(doc)[MetadataKeys.AttachmentsToCascadeDelete] = new RavenJArray(new[] { "item" });
+                session.SaveChanges();
+            }
+
+            JsonDocument documentByKey = null;
+            for (int i = 0; i < 50; i++)
+            {
+                database.TransactionalStorage.Batch(accessor =>
+                {
+                    documentByKey = accessor.Documents.DocumentByKey("doc/1");
+
+                });
+                if (documentByKey == null)
+                    break;
+                Thread.Sleep(100);
+            }
+
+            Assert.Null(documentByKey);
+
+            database.TransactionalStorage.Batch(accessor => Assert.Null(accessor.Attachments.GetAttachment("item")));
+        
+        }
+
+        [Fact]
+        public void CanDeleteAndCascadeAtTheSameTimeDocuemnts()
+        {
+        //	documentStore.DatabaseCommands.Put("doc/1", new Etag(), new RavenJObject(), new RavenJObject());
             using (var session = documentStore.OpenSession())
             {
                 var doc1 = new { Id = "doc/1" };

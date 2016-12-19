@@ -192,7 +192,7 @@ namespace Raven.Tests.FileSystem
             await changesApi.Task; // BARRIER: Ensures we are already connected to avoid a race condition and fail to get the notification.
 
             var notificationTask = changesApi.ForConfiguration()
-                                        .Timeout(TimeSpan.FromSeconds(2))
+                                        .Timeout(TimeSpan.FromSeconds(5))
                                         .Take(1).ToTask();
 
             await client.Configuration.SetKeyAsync("Test", new RavenJObject());

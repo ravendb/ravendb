@@ -19,6 +19,7 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json.Parsing;
 using System.Linq;
+using Raven.Abstractions.Util;
 using ThreadState = System.Threading.ThreadState;
 
 namespace Raven.Server.Documents.Replication
@@ -165,19 +166,23 @@ namespace Raven.Server.Documents.Replication
                                     if (!_cts.IsCancellationRequested && !(e is ObjectDisposedException))
                                     {
                                         //return negative ack
-                                        _documentsContext.Write(writer, new DynamicJsonValue
+                                        var returnValue = new DynamicJsonValue
                                         {
                                             [nameof(ReplicationMessageReply.Type)] = ReplicationMessageReply.ReplyType.Error.ToString(),
                                             [nameof(ReplicationMessageReply.MessageType)] = messageType,
                                             [nameof(ReplicationMessageReply.LastEtagAccepted)] = -1,
                                             [nameof(ReplicationMessageReply.LastIndexTransformerEtagAccepted)] = -1,
-                                            [nameof(ReplicationMessageReply.Exception)] = e.ToString()
-                                        });
+                                            [nameof(ReplicationMessageReply.Exception)] = e.SimplifyError()
+                                        };
+
+                                        _documentsContext.Write(writer, returnValue);
+                                        writer.Flush();
 
                                         exceptionLogged = true;
 
                                         if (_log.IsInfoEnabled)
                                             _log.Info($"Failed replicating documents from {FromToString}.", e);
+
                                         throw;
                                     }
                                 }
@@ -210,7 +215,7 @@ namespace Raven.Server.Documents.Replication
                 }
             }
         }
-
+        
         private void HandleReceivedIndexOrTransformerBatch(BlittableJsonReaderObject message, long lastIndexOrTransformerEtag)
         {
             int itemCount;

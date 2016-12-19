@@ -547,11 +547,13 @@ namespace Raven.Tests.Issues
             public Customers_ByName()
             {
                 Map = customers => from customer in customers
-                                   select new
-                                   {
-                                       customer.Name
-                                   };
+                    select new
+                    {
+                        customer.Name
+                    };
             }
         }
     }
 }
+ 
+

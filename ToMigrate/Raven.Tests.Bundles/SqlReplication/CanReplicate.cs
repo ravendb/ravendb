@@ -20,7 +20,6 @@ using Raven.Database.Bundles.SqlReplication;
 using Raven.Database.Util;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Attributes;
-using Raven.Tests.Helpers.Util;
 
 using Xunit;
 using Xunit.Extensions;
@@ -30,9 +29,9 @@ namespace Raven.Tests.Bundles.SqlReplication
 {
     public class CanReplicate : RavenTest
     {
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
+        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
         {
-            configuration.Modify(x => x.Core._ActiveBundlesString, "sqlReplication");
+            configuration.Settings["Raven/ActiveBundles"] = "sqlReplication";
         }
 
         private const string defaultScript = @"
@@ -57,10 +56,10 @@ for (var i = 0; i < this.OrderLines.length; i++) {
 
         private void CreateRdbmsSchema()
         {
-            var providerFactory = DbProviderFactories.GetFactory(MaybeSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
+            var providerFactory = DbProviderFactories.GetFactory(MaybeSqlServerIsAvailable.SqlServerConnectionStringSettings.ProviderName);
             using (var con = providerFactory.CreateConnection())
             {
-                con.ConnectionString = MaybeSqlServerIsAvailable.ConnectionStringSettings.ConnectionString;
+                con.ConnectionString = MaybeSqlServerIsAvailable.SqlServerConnectionStringSettings.ConnectionString;
                 con.Open();
 
                 using (var dbCommand = con.CreateCommand())
@@ -127,10 +126,10 @@ CREATE TABLE [dbo].[Orders]
 
                 eventSlim.Wait(TimeSpan.FromMinutes(5));
 
-                var providerFactory = DbProviderFactories.GetFactory(MaybeSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
+                var providerFactory = DbProviderFactories.GetFactory(MaybeSqlServerIsAvailable.SqlServerConnectionStringSettings.ProviderName);
                 using (var con = providerFactory.CreateConnection())
                 {
-                    con.ConnectionString = MaybeSqlServerIsAvailable.ConnectionStringSettings.ConnectionString;
+                    con.ConnectionString = MaybeSqlServerIsAvailable.SqlServerConnectionStringSettings.ConnectionString;
                     con.Open();
 
                     using (var dbCommand = con.CreateCommand())
@@ -181,10 +180,10 @@ replicateToOrders(orderData);");
 
                 eventSlim.Wait(TimeSpan.FromMinutes(5));
 
-                var providerFactory = DbProviderFactories.GetFactory(MaybeSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
+                var providerFactory = DbProviderFactories.GetFactory(MaybeSqlServerIsAvailable.SqlServerConnectionStringSettings.ProviderName);
                 using (var con = providerFactory.CreateConnection())
                 {
-                    con.ConnectionString = MaybeSqlServerIsAvailable.ConnectionStringSettings.ConnectionString;
+                    con.ConnectionString = MaybeSqlServerIsAvailable.SqlServerConnectionStringSettings.ConnectionString;
                     con.Open();
 
                     using (var dbCommand = con.CreateCommand())
@@ -236,10 +235,10 @@ replicateToOrders(orderData);");
 
                 eventSlim.Wait(TimeSpan.FromMinutes(5));
 
-                var providerFactory = DbProviderFactories.GetFactory(MaybeSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
+                var providerFactory = DbProviderFactories.GetFactory(MaybeSqlServerIsAvailable.SqlServerConnectionStringSettings.ProviderName);
                 using (var con = providerFactory.CreateConnection())
                 {
-                    con.ConnectionString = MaybeSqlServerIsAvailable.ConnectionStringSettings.ConnectionString;
+                    con.ConnectionString = MaybeSqlServerIsAvailable.SqlServerConnectionStringSettings.ConnectionString;
                     con.Open();
 
                     using (var dbCommand = con.CreateCommand())
@@ -342,10 +341,10 @@ replicateToOrders(orderData);");
         private static int GetOrdersCount()
         {
             var providerFactory =
-                    DbProviderFactories.GetFactory(MaybeSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
+                    DbProviderFactories.GetFactory(MaybeSqlServerIsAvailable.SqlServerConnectionStringSettings.ProviderName);
             using (var con = providerFactory.CreateConnection())
             {
-                con.ConnectionString = MaybeSqlServerIsAvailable.ConnectionStringSettings.ConnectionString;
+                con.ConnectionString = MaybeSqlServerIsAvailable.SqlServerConnectionStringSettings.ConnectionString;
                 con.Open();
 
                 using (var dbCommand = con.CreateCommand())
@@ -644,10 +643,10 @@ var nameArr = this.StepName.split('.');");
 
         private static void AssertCounts(int ordersCount, int orderLineCounts)
         {
-            var providerFactory = DbProviderFactories.GetFactory(MaybeSqlServerIsAvailable.ConnectionStringSettings.ProviderName);
+            var providerFactory = DbProviderFactories.GetFactory(MaybeSqlServerIsAvailable.SqlServerConnectionStringSettings.ProviderName);
             using (var con = providerFactory.CreateConnection())
             {
-                con.ConnectionString = MaybeSqlServerIsAvailable.ConnectionStringSettings.ConnectionString;
+                con.ConnectionString = MaybeSqlServerIsAvailable.SqlServerConnectionStringSettings.ConnectionString;
                 con.Open();
 
                 using (var dbCommand = con.CreateCommand())
@@ -668,8 +667,8 @@ var nameArr = this.StepName.split('.');");
                 {
                     Id = "Raven/SqlReplication/Configuration/OrdersAndLines",
                     Name = "OrdersAndLines",
-                    ConnectionString = MaybeSqlServerIsAvailable.ConnectionStringSettings.ConnectionString,
-                    FactoryName = MaybeSqlServerIsAvailable.ConnectionStringSettings.ProviderName,
+                    ConnectionString = MaybeSqlServerIsAvailable.SqlServerConnectionStringSettings.ConnectionString,
+                    FactoryName = MaybeSqlServerIsAvailable.SqlServerConnectionStringSettings.ProviderName,
                     RavenEntityName = "Orders",
                     SqlReplicationTables =
                     {

@@ -19,7 +19,7 @@ namespace Raven.Tests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Customer { Name = "John", Address = "Tel Aviv" });
+                    session.Store(new Customer {Name = "John", Address = "Tel Aviv"});
                     session.SaveChanges();
                 }
 
@@ -58,7 +58,7 @@ namespace Raven.Tests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Customer { Name = "John", Address = "Tel Aviv" });
+                    session.Store(new Customer {Name = "John", Address = "Tel Aviv"});
                     session.SaveChanges();
                 }
 
@@ -66,7 +66,7 @@ namespace Raven.Tests.Issues
 
                 using (var session = store.OpenAsyncSession())
                 {
-
+                    
                     var query = session.Query<Customer>(index.IndexName)
                         .Select(r => new
                         {
@@ -105,5 +105,7 @@ namespace Raven.Tests.Issues
                                    };
             }
         }
-    }
 }
+}
+ 
+

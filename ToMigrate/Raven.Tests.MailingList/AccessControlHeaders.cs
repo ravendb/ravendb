@@ -6,7 +6,6 @@
 using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Tests.Common;
-using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -14,9 +13,9 @@ namespace Raven.Tests.MailingList
 {
     public class AccessControlHeaders : RavenTest
     {
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
+        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
         {
-            configuration.Get().Server.AccessControlAllowOrigin.Add("*");
+            configuration.AccessControlAllowOrigin.Add("*");
         }
 
         [Fact]

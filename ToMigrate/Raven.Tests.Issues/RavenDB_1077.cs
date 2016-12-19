@@ -41,7 +41,7 @@ namespace Raven.Tests.Issues
         }
 
         [Fact]
-        public void ShouldStoreInfoAboutValidCommercialLicense_WhenLicenseWasProvided()
+        public void ShouldStoreInfoAbouValidCommercialLicense_WhenLicenseWasProvided()
         {
             using (var documentStore = NewDocumentStore())
             {

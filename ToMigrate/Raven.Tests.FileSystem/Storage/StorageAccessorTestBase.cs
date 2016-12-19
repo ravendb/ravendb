@@ -1,15 +1,16 @@
-using Raven.Abstractions.Data;
+using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.IO;
+using System.Threading;
+
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Infrastructure;
 using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Storage;
-using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.IO;
-using System.Threading;
+using Raven.Abstractions.Data;
 
 namespace Raven.Tests.FileSystem.Storage
 {
@@ -28,6 +29,7 @@ namespace Raven.Tests.FileSystem.Storage
                 return new[]
                 {
                     new object[] {"voron"},
+                    new object[] {"esent"}
                 };
             }
         }
@@ -54,22 +56,25 @@ namespace Raven.Tests.FileSystem.Storage
         {
             path = path ?? NewDataPath();
 
-            var configuration = new RavenConfiguration
+            var configuration = new InMemoryRavenConfiguration
             {
                 FileSystem =
                 {
                     DataDirectory = path
                 },
-                Core =
-                {
-                    RunInMemory = runInMemory
-                }
+                Settings = new NameValueCollection
+                           {
+                               { Constants.RunInMemory, runInMemory.ToString() }
+                           }
             };
 
             ITransactionalStorage storage;
 
             switch (requestedStorage)
             {
+                case "esent":
+                    storage = new Raven.Database.FileSystem.Storage.Esent.TransactionalStorage(configuration);
+                    break;
                 case "voron":
                     storage = new Raven.Database.FileSystem.Storage.Voron.TransactionalStorage(configuration);
                     break;

@@ -12,16 +12,14 @@ using Raven.Database.Server.Security;
 using Raven.Json.Linq;
 using Raven.Server;
 using Raven.Tests.Common;
-using Raven.Tests.Helpers.Util;
-
 using Xunit;
 namespace Raven.Tests.Issues
 {
     public class RavenDB_3383 : RavenTest
     {
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
+        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
         {
-            configuration.Modify(x => x.Core.AnonymousUserAccessMode, AnonymousUserAccessMode.None);
+            configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
             Authentication.EnableOnce();
         }
 

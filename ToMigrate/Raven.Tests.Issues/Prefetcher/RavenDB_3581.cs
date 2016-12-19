@@ -11,9 +11,8 @@ using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Database.Config;
-using Raven.Database.Config.Settings;
 using Raven.Database.Storage;
-
+using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Tests.Issues.Prefetcher
@@ -181,9 +180,9 @@ namespace Raven.Tests.Issues.Prefetcher
                 count += i;
 
                 if (count == 1536)
-                    {
-                        mre.Set();
-                    }
+                {
+                    mre.Set();
+                }
             };
 
             AddDocumentsToTransactionalStorage(prefetcher.TransactionalStorage, 2048);
@@ -202,7 +201,7 @@ namespace Raven.Tests.Issues.Prefetcher
             var mre = new ManualResetEventSlim();
 
             var prefetcher = CreatePrefetcher();
-            prefetcher.Configuration.Prefetcher.Disabled = true;
+            prefetcher.Configuration.DisableDocumentPreFetching = true;
             prefetcher.PrefetchingBehavior.FutureBatchCompleted += i => mre.Set();
 
             AddDocumentsToTransactionalStorage(prefetcher.TransactionalStorage, 2048);
@@ -238,7 +237,7 @@ namespace Raven.Tests.Issues.Prefetcher
         {
             var mre = new ManualResetEventSlim();
 
-            var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.Core.MaxNumberOfParallelProcessingTasks = 1);
+            var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.MaxNumberOfParallelProcessingTasks = 1);
             prefetcher.PrefetchingBehavior.FutureBatchCompleted += i => mre.Set();
 
             AddDocumentsToTransactionalStorage(prefetcher.TransactionalStorage, 2048);
@@ -256,7 +255,7 @@ namespace Raven.Tests.Issues.Prefetcher
         {
             var mre = new ManualResetEventSlim();
 
-            var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit = MemoryStatistics.TotalPhysicalMemory);
+            var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.AvailableMemoryForRaisingBatchSizeLimit = MemoryStatistics.TotalPhysicalMemory);
             prefetcher.PrefetchingBehavior.FutureBatchCompleted += i => mre.Set();
 
             AddDocumentsToTransactionalStorage(prefetcher.TransactionalStorage, 2048);
@@ -276,7 +275,7 @@ namespace Raven.Tests.Issues.Prefetcher
             var mre2 = new ManualResetEventSlim();
             var count = 0;
 
-            var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.Core.MaxNumberOfItemsToProcessInSingleBatch = 128);
+            var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.MaxNumberOfItemsToProcessInSingleBatch = 128);
             prefetcher.PrefetchingBehavior.FutureBatchCompleted += i =>
             {
                 count += i;
@@ -299,13 +298,63 @@ namespace Raven.Tests.Issues.Prefetcher
         }
 
         [Fact]
-        public void MaybeAddFutureBatchWillFireUpOnceWhenLastActualIndexingBatchInfoContainsDataThanExceedsAvailableMemoryForRaisingBatchSizeLimit()
+        public void MaybeAddFutureBatchWillFireUpOnceWhenLastActualLoadedDataExceedsAvailableMemoryForRaisingBatchSizeLimit()
         {
             var mre1 = new ManualResetEventSlim();
             var mre2 = new ManualResetEventSlim();
             var count = 0;
 
-            var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit = new Size(1, SizeUnit.Megabytes));
+            var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.AvailableMemoryForRaisingBatchSizeLimit = 1);
+            prefetcher.PrefetchingBehavior.FutureBatchCompleted += i =>
+            {
+                count += i;
+                if (count == 512)
+                    mre1.Set();
+
+                if (count > 1536)
+                    mre2.Set();
+            };
+
+            AddDocumentsToTransactionalStorage(prefetcher.TransactionalStorage, 2048);
+
+            var documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 1);
+
+            Assert.Equal(1, documents.Count);
+            Assert.True(mre1.Wait(TimeSpan.FromSeconds(3)));
+            Assert.False(mre2.Wait(TimeSpan.FromSeconds(3)));
+            Assert.Equal(1536, prefetcher.PrefetchingBehavior.InMemoryFutureIndexBatchesSize); // will fire twice
+            Assert.Equal(511, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize); // we took 1
+        }
+
+        [Fact]
+        public void MaybeAddFutureBatchWillNotFireUpWhenLastActualLoadedDataExceedsAvailableMemoryForRaisingBatchSizeLimit()
+        {
+            var mre1 = new ManualResetEventSlim();
+
+            var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.AvailableMemoryForRaisingBatchSizeLimit = 0);
+            prefetcher.PrefetchingBehavior.FutureBatchCompleted += i =>
+            {
+                mre1.Set();
+            };
+
+            AddDocumentsToTransactionalStorage(prefetcher.TransactionalStorage, 2048);
+
+            var documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 1);
+
+            Assert.Equal(1, documents.Count);
+            Assert.False(mre1.Wait(TimeSpan.FromSeconds(3)));
+            Assert.Equal(0, prefetcher.PrefetchingBehavior.InMemoryFutureIndexBatchesSize); // will not have any fututre batches
+            Assert.Equal(511, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize); // we took 1
+        }
+
+        [Fact]
+        public void MaybeAddFutureBatchWillFireUpOnceWhenLastActualLoadedDataExceedsMaxNumberOfItemsToProcessInSingleBatch()
+        {
+            var mre1 = new ManualResetEventSlim();
+            var mre2 = new ManualResetEventSlim();
+            var count = 0;
+
+            var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.MaxNumberOfItemsToProcessInSingleBatch = 1023);
             prefetcher.PrefetchingBehavior.FutureBatchCompleted += i =>
             {
                 count += i;
@@ -317,8 +366,6 @@ namespace Raven.Tests.Issues.Prefetcher
             };
 
             AddDocumentsToTransactionalStorage(prefetcher.TransactionalStorage, 2048);
-
-            prefetcher.WorkContext.LastActualIndexingBatchInfo.Add(new IndexingBatchInfo { TotalDocumentCount = 1024 * 1024 * 2 });
 
             var documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 1);
 
@@ -336,7 +383,7 @@ namespace Raven.Tests.Issues.Prefetcher
             var mre2 = new ManualResetEventSlim();
             var count = 0;
 
-            var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.Memory.AvailableMemoryForRaisingBatchSizeLimit = new Size(1, SizeUnit.Megabytes));
+            var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.AvailableMemoryForRaisingBatchSizeLimit = 1);
             prefetcher.PrefetchingBehavior.FutureBatchCompleted += i =>
             {
                 count += i;
@@ -344,18 +391,17 @@ namespace Raven.Tests.Issues.Prefetcher
                 if (count == 512)
                     mre1.Set();
 
-                if (count > 4096)
+                if (count > 5200)
                     mre2.Set();
             };
 
-            AddDocumentsToTransactionalStorage(prefetcher.TransactionalStorage, 1024 * 5);
+            AddDocumentsToTransactionalStorage(prefetcher.TransactionalStorage, 1024 * 10);
 
             var documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 1);
-
             Assert.Equal(1, documents.Count);
             Assert.True(mre1.Wait(TimeSpan.FromSeconds(3)));
-            Assert.False(mre2.Wait(TimeSpan.FromSeconds(3)));
-            Assert.True(4096 > prefetcher.PrefetchingBehavior.InMemoryFutureIndexBatchesSize); // will fire once
+            Assert.False(mre2.Wait(TimeSpan.FromSeconds(5)));
+            Assert.True(5200 > prefetcher.PrefetchingBehavior.InMemoryFutureIndexBatchesSize); // will fire 10 times
             Assert.Equal(511, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize); // we took 1
         }
 
@@ -371,15 +417,21 @@ namespace Raven.Tests.Issues.Prefetcher
             Assert.Equal(1, documents.Count);
             Assert.Equal(511, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize); // we took 1
 
-            prefetcher.PrefetchingBehavior.CleanupDocuments(new Etag(UuidType.Documents, 0, 512));
+            var etag = Etag.Empty;
+            prefetcher.TransactionalStorage.Batch(accessor =>
+            {
+                etag = accessor.Documents.DocumentByKey("keys/510").Etag;
+            });
 
+            documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(etag, 1);
+            Assert.Equal(1, documents.Count);
             Assert.Equal(0, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize);
         }
 
         [Fact]
         public void CleanupDocuments2()
         {
-            var prefetcher = CreatePrefetcher();
+            var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.DisableDocumentPreFetching = true);
 
             AddDocumentsToTransactionalStorage(prefetcher.TransactionalStorage, 1024);
 
@@ -388,13 +440,24 @@ namespace Raven.Tests.Issues.Prefetcher
             Assert.Equal(1, documents.Count);
             Assert.Equal(511, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize); // we took 1
 
-            prefetcher.PrefetchingBehavior.CleanupDocuments(new Etag(UuidType.Documents, 0, 256));
+            var etag = Etag.Empty;
+            prefetcher.TransactionalStorage.Batch(accessor =>
+            {
+                etag = accessor.Documents.DocumentByKey("keys/310").Etag;
+            });
 
-            Assert.Equal(256, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize);
+            documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(etag, 1);
+            Assert.Equal(1, documents.Count);
+            Assert.Equal(200, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize);
 
-            prefetcher.PrefetchingBehavior.CleanupDocuments(new Etag(UuidType.Documents, 0, 384));
+            prefetcher.TransactionalStorage.Batch(accessor =>
+            {
+                etag = accessor.Documents.DocumentByKey("keys/510").Etag;
+            });
 
-            Assert.Equal(128, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize);
+            documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(etag, 1);
+            Assert.Equal(1, documents.Count);
+            Assert.Equal(0, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize);
         }
 
         [Fact]
@@ -441,7 +504,7 @@ namespace Raven.Tests.Issues.Prefetcher
 
             Assert.Equal(1, documents.Count);
             Assert.True(mre.Wait(TimeSpan.FromSeconds(10)));
-            Assert.True(prefetcher.PrefetchingBehavior.InMemoryFutureIndexBatchesSize > 1536);
+            Assert.True(prefetcher.PrefetchingBehavior.InMemoryFutureIndexBatchesSize >= 1536);
             Assert.Equal(511, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize); // we took 1
 
             prefetcher.PrefetchingBehavior.ClearQueueAndFutureBatches();
@@ -456,14 +519,22 @@ namespace Raven.Tests.Issues.Prefetcher
 
             AddDocumentsToTransactionalStorage(prefetcher.TransactionalStorage, 2048);
 
-            prefetcher.AutoTuner.NumberOfItemsToProcessInSingleBatch = 128;
+            prefetcher.AutoTuner.NumberOfItemsToProcessInSingleBatch = prefetcher.Configuration.InitialNumberOfItemsToProcessInSingleBatch;
             var documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 2048);
-            Assert.Equal(128, documents.Count);
+            Assert.Equal(prefetcher.Configuration.InitialNumberOfItemsToProcessInSingleBatch, documents.Count);
 
-            prefetcher.AutoTuner.NumberOfItemsToProcessInSingleBatch = 64;
+            //let the future batches complete
+            Thread.Sleep(1000);
+            prefetcher.AutoTuner.NumberOfItemsToProcessInSingleBatch = 768;
             documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 2048);
-            Assert.Equal(64, documents.Count);
+            Assert.Equal(768, documents.Count);
 
+            Thread.Sleep(1000);
+            prefetcher.AutoTuner.NumberOfItemsToProcessInSingleBatch = 1024;
+            documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 2048);
+            Assert.Equal(1024, documents.Count);
+
+            Thread.Sleep(1000);
             prefetcher.AutoTuner.NumberOfItemsToProcessInSingleBatch = 1024 * 64;
             documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 2048);
             Assert.Equal(2048, documents.Count);
@@ -538,6 +609,309 @@ namespace Raven.Tests.Issues.Prefetcher
             prefetcher.PrefetchingBehavior.Dispose();
 
             Assert.Equal(0, prefetcher.PrefetchingBehavior.InMemoryFutureIndexBatchesSize);
+        }
+
+        [Fact]
+        public void wont_use_prefetcher_for_different_collection()
+        {
+            var mre = new ManualResetEventSlim();
+
+            var entityNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Keys" };
+            var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => 
+                configuration.AvailableMemoryForRaisingBatchSizeLimit = 1, entityNames: entityNames);
+            prefetcher.PrefetchingBehavior.FutureBatchCompleted += i =>
+            {
+                if (i == 1)
+                    mre.Set();
+            };
+
+            AddDocumentsToTransactionalStorage(prefetcher.TransactionalStorage, 512);
+            prefetcher.TransactionalStorage.Batch(accessor =>
+            {
+                var key = "orders/" + 1;
+                var data = RavenJObject.FromObject(new Order { Id = key, Company = "companies/30" });
+
+                accessor.Documents.AddDocument(key, null, data, new RavenJObject
+                {
+                    {"Raven-Entity-Name", "Orders"}
+                });
+            });
+
+            var documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 512);
+            Assert.Equal(512, documents.Count);
+            Assert.True(mre.Wait(TimeSpan.FromSeconds(3)));
+            Assert.Equal(1, prefetcher.PrefetchingBehavior.InMemoryFutureIndexBatchesSize); // will fire 1 time
+            Assert.Equal(0, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize); // we took 512
+
+            var etag = documents[511].Etag;
+            entityNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Orders" };
+            var result = prefetcher.PrefetchingBehavior.CanUsePrefetcherToLoadFromUsingExistingData(etag, entityNames);
+            Assert.False(result);
+        }
+
+        [Fact]
+        public void wont_use_prefetcher_for_different_collections()
+        {
+            var mre = new ManualResetEventSlim();
+
+            var entityNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Keys" };
+            var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => 
+                configuration.AvailableMemoryForRaisingBatchSizeLimit = 1, entityNames: entityNames);
+            prefetcher.PrefetchingBehavior.FutureBatchCompleted += i =>
+            {
+                if (i == 1)
+                    mre.Set();
+            };
+
+            AddDocumentsToTransactionalStorage(prefetcher.TransactionalStorage, 512);
+            prefetcher.TransactionalStorage.Batch(accessor =>
+            {
+                var key = "orders/" + 1;
+                var data = RavenJObject.FromObject(new Order { Id = key, Company = "companies/30" });
+
+                accessor.Documents.AddDocument(key, null, data, new RavenJObject
+                {
+                    {"Raven-Entity-Name", "Orders"}
+                });
+            });
+
+            var documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 512);
+            Assert.Equal(512, documents.Count);
+            Assert.True(mre.Wait(TimeSpan.FromSeconds(3)));
+            Assert.Equal(1, prefetcher.PrefetchingBehavior.InMemoryFutureIndexBatchesSize); // will fire 1 time
+            Assert.Equal(0, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize); // we took 512
+
+            var etag = documents[511].Etag;
+            entityNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Orders", "Keys" };
+            var result = prefetcher.PrefetchingBehavior.CanUsePrefetcherToLoadFromUsingExistingData(etag, entityNames);
+            Assert.False(result);
+        }
+
+        [Fact]
+        public void should_load_by_collection()
+        {
+            var mre = new ManualResetEventSlim();
+
+            var entityNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Orders" };
+            var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => 
+                configuration.AvailableMemoryForRaisingBatchSizeLimit = 1, entityNames: entityNames);
+            prefetcher.PrefetchingBehavior.FutureBatchCompleted += i =>
+            {
+                if (i == 1)
+                    mre.Set();
+            };
+
+            AddDocumentsToTransactionalStorage(prefetcher.TransactionalStorage, 512);
+            prefetcher.TransactionalStorage.Batch(accessor =>
+            {
+                var key = "orders/" + 1;
+                var data = RavenJObject.FromObject(new Order { Id = key, Company = "companies/30" });
+
+                accessor.Documents.AddDocument(key, null, data, new RavenJObject
+                {
+                    {"Raven-Entity-Name", "Orders"}
+                });
+            });
+
+            var documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 512);
+            Assert.Equal(512, documents.Count);
+            Assert.True(mre.Wait(TimeSpan.FromSeconds(3)));
+            Assert.Equal(1, prefetcher.PrefetchingBehavior.InMemoryFutureIndexBatchesSize); // will fire 1 time
+            Assert.Equal(0, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize); // we took 512
+            Assert.True(documents.Sum(x => x.DataAsJson.Count) == 0); // we get back "empty data"
+
+            var etag = documents[511].Etag;
+            var result = prefetcher.PrefetchingBehavior.CanUsePrefetcherToLoadFromUsingExistingData(etag, entityNames);
+            Assert.True(result);
+
+            documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(etag, 1);
+            Assert.Equal(1, documents.Count);
+            Assert.Equal(2, documents[0].DataAsJson.Count);
+            // we load the from the future batch
+            Assert.Equal(0, prefetcher.PrefetchingBehavior.InMemoryFutureIndexBatchesSize);
+        }
+
+        [Fact]
+        public void should_load_an_empty_document()
+        {
+            var mre = new ManualResetEventSlim();
+
+            var entityNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Keys" };
+            var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => 
+                configuration.AvailableMemoryForRaisingBatchSizeLimit = 1, entityNames: entityNames);
+            prefetcher.PrefetchingBehavior.FutureBatchCompleted += i =>
+            {
+                if (i == 1)
+                    mre.Set();
+            };
+
+            AddDocumentsToTransactionalStorage(prefetcher.TransactionalStorage, 512);
+            prefetcher.TransactionalStorage.Batch(accessor =>
+            {
+                var key = "orders/" + 1;
+                var data = RavenJObject.FromObject(new Order { Id = key, Company = "companies/30" });
+
+                accessor.Documents.AddDocument(key, null, data, new RavenJObject
+                {
+                    {"Raven-Entity-Name", "Orders"}
+                });
+            });
+
+            var documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 512);
+            Assert.Equal(512, documents.Count);
+            Assert.True(mre.Wait(TimeSpan.FromSeconds(3)));
+            Assert.Equal(1, prefetcher.PrefetchingBehavior.InMemoryFutureIndexBatchesSize); // will fire 1 time
+            Assert.Equal(0, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize); // we took 512
+
+            var etag = documents[511].Etag;
+            var result = prefetcher.PrefetchingBehavior.CanUsePrefetcherToLoadFromUsingExistingData(etag, entityNames);
+            Assert.True(result);
+            documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(etag, 1);
+            Assert.Equal(1, documents.Count);
+            Assert.Equal(0, documents[0].DataAsJson.Count);
+            // we load the document from disk and discard what's in the future batch
+            Assert.Equal(0, prefetcher.PrefetchingBehavior.InMemoryFutureIndexBatchesSize);
+        }
+
+        [Fact]
+        public void should_load_documents_for_specific_collection()
+        {
+            var mre = new ManualResetEventSlim();
+
+            var entityNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Keys" };
+            var prefetcher = CreatePrefetcher(modifyConfiguration: configuration => configuration.AvailableMemoryForRaisingBatchSizeLimit = 1, entityNames: entityNames);
+            prefetcher.PrefetchingBehavior.FutureBatchCompleted += i =>
+            {
+                if (i == 512)
+                    mre.Set();
+            };
+
+            AddDocumentsToTransactionalStorage(prefetcher.TransactionalStorage, 1023);
+            prefetcher.TransactionalStorage.Batch(accessor =>
+            {
+                var key = "orders/" + 1;
+                var data = RavenJObject.FromObject(new Order { Id = key, Company = "companies/30" });
+
+                accessor.Documents.AddDocument(key, null, data, new RavenJObject
+                {
+                    {"Raven-Entity-Name", "Orders"}
+                });
+            });
+
+            var documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 512);
+
+            Assert.Equal(512, documents.Count);
+            Assert.True(mre.Wait(TimeSpan.FromSeconds(3)));
+            Assert.Equal(512, prefetcher.PrefetchingBehavior.InMemoryFutureIndexBatchesSize); // will fire 1 time
+            Assert.Equal(0, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize); // we took 512
+
+            documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(documents[511].Etag, 1);
+            var result = prefetcher.PrefetchingBehavior.CanUsePrefetcherToLoadFromUsingExistingData(documents[0].Etag, entityNames);
+            Assert.True(result);
+            Assert.Equal(1, documents.Count);
+            Assert.Equal(3, documents[0].DataAsJson.Count);
+            Assert.Equal(511, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize); // we took 1
+        }
+
+        [Fact]
+        public void should_load_documents_for_sub_collection()
+        {
+            var mre = new ManualResetEventSlim();
+
+            var entityNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Keys" , "Orders" };
+            var prefetcher = CreatePrefetcher(modifyConfiguration: 
+                configuration => configuration.AvailableMemoryForRaisingBatchSizeLimit = 1, entityNames: entityNames);
+            prefetcher.PrefetchingBehavior.FutureBatchCompleted += i =>
+            {
+                if (i == 512)
+                    mre.Set();
+            };
+
+            AddDocumentsToTransactionalStorage(prefetcher.TransactionalStorage, 1023);
+            prefetcher.TransactionalStorage.Batch(accessor =>
+            {
+                var key = "orders/" + 1;
+                var data = RavenJObject.FromObject(new Order { Id = key, Company = "companies/30" });
+
+                accessor.Documents.AddDocument(key, null, data, new RavenJObject
+                {
+                    {"Raven-Entity-Name", "Orders"}
+                });
+            });
+
+            var documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 512);
+
+            Assert.Equal(512, documents.Count);
+            Assert.True(mre.Wait(TimeSpan.FromSeconds(3)));
+            Assert.Equal(512, prefetcher.PrefetchingBehavior.InMemoryFutureIndexBatchesSize); // will fire 1 time
+            Assert.Equal(0, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize); // we took 512
+
+            entityNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Orders" };
+            var fromEtag = documents[511].Etag;
+            var result = prefetcher.PrefetchingBehavior.CanUsePrefetcherToLoadFromUsingExistingData(fromEtag, entityNames);
+            Assert.True(result);
+            result = prefetcher.PrefetchingBehavior.CanUsePrefetcherToLoadFromUsingExistingData(fromEtag, null);
+            Assert.False(result);
+
+            documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(fromEtag, 1);
+            Assert.Equal(1, documents.Count);
+            Assert.Equal(3, documents[0].DataAsJson.Count);
+            Assert.Equal(511, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize); // we took 1
+        }
+
+        [Fact]
+        public void should_load_documents_from_all_collection()
+        {
+            var mre = new ManualResetEventSlim();
+
+            var prefetcher = CreatePrefetcher(modifyConfiguration: 
+                configuration => configuration.AvailableMemoryForRaisingBatchSizeLimit = 1, entityNames: null);
+            prefetcher.PrefetchingBehavior.FutureBatchCompleted += i =>
+            {
+                if (i == 512)
+                    mre.Set();
+            };
+
+            AddDocumentsToTransactionalStorage(prefetcher.TransactionalStorage, 1023);
+            prefetcher.TransactionalStorage.Batch(accessor =>
+            {
+                var key = "orders/" + 1;
+                var data = RavenJObject.FromObject(new Order { Id = key, Company = "companies/30" });
+
+                accessor.Documents.AddDocument(key, null, data, new RavenJObject
+                {
+                    {"Raven-Entity-Name", "Orders"}
+                });
+            });
+
+            var documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(Etag.Empty, 512);
+
+            Assert.Equal(512, documents.Count);
+            Assert.True(mre.Wait(TimeSpan.FromSeconds(3)));
+            Assert.Equal(512, prefetcher.PrefetchingBehavior.InMemoryFutureIndexBatchesSize); // will fire 1 time
+            Assert.Equal(0, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize); // we took 512
+
+            var entityNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Orders" };
+            var fromEtag = documents[511].Etag;
+            var result = prefetcher.PrefetchingBehavior.CanUsePrefetcherToLoadFromUsingExistingData(fromEtag, entityNames);
+            Assert.False(result);
+            entityNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Orders", "Keys" };
+            result = prefetcher.PrefetchingBehavior.CanUsePrefetcherToLoadFromUsingExistingData(fromEtag, entityNames);
+            Assert.False(result);
+            result = prefetcher.PrefetchingBehavior.CanUsePrefetcherToLoadFromUsingExistingData(fromEtag, null);
+            Assert.True(result);
+
+            documents = prefetcher.PrefetchingBehavior.GetDocumentsBatchFrom(fromEtag, 1);
+            Assert.Equal(1, documents.Count);
+            Assert.Equal(3, documents[0].DataAsJson.Count);
+            Assert.Equal(511, prefetcher.PrefetchingBehavior.InMemoryIndexingQueueSize); // we took 1
+        }
+
+        public class Order
+        {
+            public string Id { get; set; }
+
+            public string Company { get; set; }
         }
     }
 }

@@ -136,7 +136,7 @@ namespace Raven.Tests.Bundles.Replication
 
                 using (var session = store2.OpenSession())
                 {
-                    session.Store(new Company());
+                    session.Store(new Company {Name = "Company2"});
                     session.SaveChanges();
                 }
 
@@ -195,6 +195,57 @@ namespace Raven.Tests.Bundles.Replication
                 Assert.Equal("Conflict detected on companies/1, conflict must be resolved before the document will be accessible",
                              conflictException.Message);
             }
-        }	
+        }
+
+        [Fact]
+        public void ShouldThrowConflictExceptionForGettingConflictedAttachment()
+        {
+            using (var store1 = CreateEmbeddableStore())
+            using (var store2 = CreateEmbeddableStore())
+            {
+                store1.DatabaseCommands.PutAttachment("a/1", null, new MemoryStream(new byte[] {}), new RavenJObject());
+                store2.DatabaseCommands.PutAttachment("a/1", null, new MemoryStream (new byte[] { 1, 2 }), new RavenJObject());
+
+                store1.DatabaseCommands.PutAttachment("marker", null, new MemoryStream(new byte[] { 1, 2, 3, 4 }), new RavenJObject());
+
+                TellFirstInstanceToReplicateToSecondInstance();
+
+                WaitForAttachment(store2, "marker");
+
+                var conflictException = Assert.Throws<ConflictException>(() =>
+                {
+                    store2.DatabaseCommands.GetAttachment("a/1");
+                });
+
+                Assert.Equal("Conflict detected on a/1, conflict must be resolved before the attachment will be accessible",
+                             conflictException.Message);
+            }
+        }
+
+        [Fact]
+        public void ShouldThrowConflictExceptionForGettingInfoAboutConflictedAttachment()
+        {
+            using (var store1 = CreateEmbeddableStore())
+            using (var store2 = CreateEmbeddableStore())
+            {
+                store1.DatabaseCommands.PutAttachment("a/1", null, new MemoryStream(new byte[] { }), new RavenJObject());
+                store2.DatabaseCommands.PutAttachment("a/1", null, new MemoryStream(new byte[] { 1, 2 }), new RavenJObject());
+
+                store1.DatabaseCommands.PutAttachment("marker", null, new MemoryStream(new byte[] { 1, 2, 3, 4 }), new RavenJObject());
+
+                TellFirstInstanceToReplicateToSecondInstance();
+
+                WaitForAttachment(store2, "marker");
+
+                var conflictException = Assert.Throws<ConflictException>(() =>
+                {
+                    store2.DatabaseCommands.HeadAttachment("a/1");
+                });
+
+                Assert.Equal(
+                    "Conflict detected on a/1, conflict must be resolved before the attachment will be accessible",
+                    conflictException.Message);
+            }
+        }
     }
 }

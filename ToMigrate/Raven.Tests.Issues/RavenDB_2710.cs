@@ -6,19 +6,18 @@
 using System;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.Client.Embedded;
 using Raven.Tests.Common.Dto;
 using Raven.Tests.Helpers;
-using Raven.Tests.Helpers.Util;
-
 using Xunit;
 
 namespace Raven.Tests.Issues
 {
     public class RavenDB_2710 : RavenTestBase
     {
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
+        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
         {
-            configuration.Modify(x => x.Core._ActiveBundlesString, "PeriodicBackup;Replication");
+            configuration.Settings["Raven/ActiveBundles"] = "PeriodicBackup;Replication";
         }
 
         [Fact]
@@ -26,7 +25,7 @@ namespace Raven.Tests.Issues
         {
             using (var store = NewDocumentStore())
             {
-                SystemTime.UtcDateTime = () => DateTime.UtcNow.Subtract(store.Configuration.Core.TombstoneRetentionTime.AsTimeSpan);
+                SystemTime.UtcDateTime = () => DateTime.UtcNow.Subtract(store.Configuration.TombstoneRetentionTime);
 
                 // create document
                 string user1;

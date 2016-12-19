@@ -15,7 +15,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using Raven.Client.Extensions;
 using Raven.Client.FileSystem;
-using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Tests.Common.Util;
 
@@ -59,8 +58,8 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
                 var md5Sums = FetchMd5Sums(client);
 
                 // create backup
-                await client.Admin.StartBackup(backupDir, null, false, client.FileSystemName);
-                WaitForBackup(client, true);
+                var opId = await client.Admin.StartBackup(backupDir, null, false, client.FileSystemName);
+                await WaitForOperationAsync(server.SystemDatabase.ServerUrl, opId);
 
                 // restore newly created backup
                 await client.Admin.StartRestore(new FilesystemRestoreRequest
@@ -98,8 +97,8 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
                     Id = Constants.FileSystem.Prefix + "FS1",
                     Settings =
                     {
-                        {RavenConfiguration.GetKey(x => x.FileSystem.DataDirectory), Path.Combine(server.Configuration.FileSystem.DataDirectory, "FS1")},
-                        {RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString), "Encryption"}
+                        {Constants.FileSystem.DataDirectory, Path.Combine(server.Configuration.FileSystem.DataDirectory, "FS1")},
+                        {Constants.ActiveBundles, "Encryption"}
                     },
                     SecuredSettings = new Dictionary<string, string>
                     {
@@ -120,8 +119,8 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
                     await session.SaveChangesAsync();
                 }
 
-                await store.AsyncFilesCommands.ForFileSystem("FS1").Admin.StartBackup(backupDir, null, false, "FS1");
-                WaitForBackup(store.AsyncFilesCommands.ForFileSystem("FS1"), true);
+                var opId = await store.AsyncFilesCommands.ForFileSystem("FS1").Admin.StartBackup(backupDir, null, false, "FS1");
+                await WaitForOperationAsync(server.SystemDatabase.ServerUrl, opId);
 
                 string filesystemDir = Path.Combine(server.Configuration.FileSystem.DataDirectory, "FS2");
 
@@ -186,7 +185,7 @@ namespace Raven.Tests.FileSystem.Bundles.Encryption
             {
                 using (var stream = filesCommands.DownloadAsync(string.Format("file{0}.bin", i)).Result)
                 {
-                    return stream.GetHashAsHex();
+                    return stream.GetMD5Hash();
                 }
             }).ToArray();
         }

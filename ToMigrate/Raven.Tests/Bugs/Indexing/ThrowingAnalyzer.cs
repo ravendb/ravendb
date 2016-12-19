@@ -7,11 +7,10 @@ using System;
 using System.IO;
 using Lucene.Net.Analysis;
 using Raven.Abstractions.Indexing;
-using Raven.Database.Indexing;
 using Raven.Tests.Common;
-
 using Xunit;
 using System.Linq;
+using Raven.Abstractions.Data;
 
 namespace Raven.Tests.Bugs.Indexing
 {
@@ -42,6 +41,37 @@ namespace Raven.Tests.Bugs.Indexing
                         .ToList();
 
                 }
+
+                Assert.NotEmpty(store.SystemDatabase.Statistics.Errors);
+            }
+        }
+
+        [Fact]
+        public void Should_disable_index()
+        {
+            using (var store = NewDocumentStore())
+            {
+                store.DatabaseCommands.PutIndex("foo",
+                                                new IndexDefinition
+                                                {
+                                                    Map = "from doc in docs select new { doc.Name}",
+                                                    Analyzers = { { "Name", typeof(ThrowingAnalyzerImpl).AssemblyQualifiedName } }
+                                                });
+
+                for (var i = 0; i < 20; i++)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new User { Name = "Ayende" });
+                        session.SaveChanges();
+                    }
+
+                    WaitForIndexing(store);
+                }
+
+                var index = store.DatabaseCommands.GetStatistics().Indexes.First(x => x.Name == "foo");
+                Assert.True(index.Priority == IndexingPriority.Disabled);
+
                 Assert.NotEmpty(store.SystemDatabase.Statistics.Errors);
             }
         }

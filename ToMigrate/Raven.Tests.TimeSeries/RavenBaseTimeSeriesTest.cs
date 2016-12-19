@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -70,34 +70,6 @@ namespace Raven.Tests.TimeSeries
             base.Dispose();
         }
 
-        protected Task<bool> WaitForReplicationBetween(ITimeSeriesStore source, ITimeSeriesStore destination, string groupName, string timeSeriesName, int timeoutInSec = 30)
-        {
-            var waitStartingTime = DateTime.Now;
-            var hasReplicated = false;
-
-            if (Debugger.IsAttached)
-                timeoutInSec = 60 * 60; //1 hour timeout if debugging
-
-            while (true)
-            {
-                if ((DateTime.Now - waitStartingTime).TotalSeconds > timeoutInSec)
-                    break;
-
-                throw new NotImplementedException();
-                /*var sourceValue = await source.GetOverallTotalAsync(groupName, timeSeriesName);
-                var targetValue = await destination.GetOverallTotalAsync(groupName, timeSeriesName);
-                if (sourceValue == targetValue)
-                {
-                    hasReplicated = true;
-                    break;
-                }*/
-
-                Thread.Sleep(50);
-            }
-
-            return new CompletedTask<bool>(hasReplicated);
-        }
-
         protected static async Task SetupReplicationAsync(ITimeSeriesStore source, params ITimeSeriesStore[] destinations)
         {
             var replicationDocument = new TimeSeriesReplicationDocument();
@@ -106,7 +78,7 @@ namespace Raven.Tests.TimeSeries
                 replicationDocument.Destinations.Add(new TimeSeriesReplicationDestination
                 {
                     TimeSeriesName = destStore.Name,
-                    ServerUrl = destStore.Url
+                    ServerUrl = GetServerUrl(true, destStore.Url),
                 });
             }
 

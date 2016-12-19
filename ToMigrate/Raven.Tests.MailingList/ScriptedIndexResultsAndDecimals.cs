@@ -10,8 +10,6 @@ using Raven.Client.Indexes;
 using Raven.Database.Bundles.ScriptedIndexResults;
 using Raven.Database.Config;
 using Raven.Tests.Common;
-using Raven.Tests.Helpers.Util;
-
 using Xunit;
 
 namespace Raven.Tests.MailingList
@@ -69,10 +67,10 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
+        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
         {
-            configuration.Modify(x => x.Core._ActiveBundlesString, "ScriptedIndexResults");
-            configuration.Get().Catalog.Catalogs.Add(new TypeCatalog(typeof(ScriptedIndexResultsIndexTrigger)));
+            configuration.Settings["Raven/ActiveBundles"] = "ScriptedIndexResults";
+            configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof(ScriptedIndexResultsIndexTrigger)));
         }
 
         public class Foo

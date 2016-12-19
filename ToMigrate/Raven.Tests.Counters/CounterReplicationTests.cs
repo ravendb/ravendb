@@ -1,20 +1,21 @@
-using System.Threading;
+using System;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Client.Counters;
 using Raven.Database.Config;
-using Raven.Database.Config.Settings;
-using Raven.Tests.Helpers.Util;
-
+using Raven.Database.Extensions;
+using Raven.Server;
 using Xunit;
 
 namespace Raven.Tests.Counters
 {
     public class CounterReplicationTests : RavenBaseCountersTest
     {
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
+        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
         {
             base.ModifyConfiguration(configuration);
-            configuration.Modify(x => x.Counter.ReplicationLatency,new TimeSetting(10, TimeUnit.Milliseconds), "10");
+            configuration.Settings[Constants.Counter.ReplicationLatencyMs] = "10";
+            configuration.Counter.ReplicationLatencyInMs = 10;
         }
 
         [Fact]
@@ -63,6 +64,41 @@ namespace Raven.Tests.Counters
         }
 
         //2 way replication
+        [Fact]
+        public async Task Can_recover_from_shutdown_with_twoway_replication()
+        {
+            var dataDirectory = "Data" + Guid.NewGuid();
+            ICounterStore storeA = null;
+            RavenDbServer server = null;
+            try
+            {
+                server = GetNewServer(port:8091,runInMemory: false, dataDirectory: dataDirectory);
+                storeA = NewRemoteCountersStore(DefaultCounterStorageName + "A", ravenServer: server);
+
+                using (var storeB = NewRemoteCountersStore(DefaultCounterStorageName + "B"))
+                {
+                    await SetupReplicationAsync(storeA, storeB);
+                    await SetupReplicationAsync(storeB, storeA);
+
+                    storeA.Dispose();
+                    server.Dispose();
+                    server = GetNewServer(port: 8091, runInMemory: false, dataDirectory: dataDirectory);
+                    storeA = NewRemoteCountersStore(DefaultCounterStorageName + "A", ravenServer: server);
+
+                    await storeA.ChangeAsync("group", "counter", 2);
+                    await storeB.ChangeAsync("group", "counter", 3);
+
+                    Assert.True(await WaitForReplicationBetween(storeA, storeB, "group", "counter"));
+                }
+            }
+            finally
+            {
+                storeA?.Dispose();
+                server?.Dispose();
+                IOExtensions.DeleteDirectory(dataDirectory);
+            }
+        }
+
         [Fact]
         public async Task Two_way_replication_should_work2()
         {

@@ -8,7 +8,7 @@ namespace Raven.Tests.Common.Triggers
 {
     public class VetoReadsOnCapitalNamesTrigger : AbstractReadTrigger
     {
-        public override ReadVetoResult AllowRead(string key, RavenJObject metadata, ReadOperation operation)
+        public override ReadVetoResult AllowRead(string key, RavenJObject metadata, ReadOperation operation, TransactionInformation transactionInformation)
         {
             if (operation == ReadOperation.Index)
                 return ReadVetoResult.Allowed;

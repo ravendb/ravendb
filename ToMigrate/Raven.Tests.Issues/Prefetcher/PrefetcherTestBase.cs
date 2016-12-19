@@ -23,20 +23,24 @@ namespace Raven.Tests.Issues.Prefetcher
     {
         private readonly List<PrefetcherWithContext> createdPrefetchers = new List<PrefetcherWithContext>();
 
-        protected PrefetcherWithContext CreatePrefetcher(Action<RavenConfiguration> modifyConfiguration = null, Action<WorkContext> modifyWorkContext = null)
+        protected PrefetcherWithContext CreatePrefetcher(
+            Action<InMemoryRavenConfiguration> modifyConfiguration = null, 
+            Action<WorkContext> modifyWorkContext = null,
+            HashSet<string> entityNames = null)
         {
-            var configuration = new RavenConfiguration();
+            var configuration = new InMemoryRavenConfiguration
+            {
+                RunInMemory = true
+            };
 
             configuration.Initialize();
-
-            configuration.Core.RunInMemory = true;
 
             if (modifyConfiguration != null)
                 modifyConfiguration(configuration);
 
             var transactionalStorage = new TransactionalStorage(configuration, () => { }, () => { }, () => { }, () => { });
             transactionalStorage.Initialize(new SequentialUuidGenerator { EtagBase = 0 }, new OrderedPartCollection<AbstractDocumentCodec>());
-
+            
             var workContext = new WorkContext
             {
                 Configuration = configuration,
@@ -48,7 +52,7 @@ namespace Raven.Tests.Issues.Prefetcher
 
             var autoTuner = new IndexBatchSizeAutoTuner(workContext);
 
-            var prefetchingBehavior = new PrefetchingBehavior(PrefetchingUser.Indexer, workContext, autoTuner, string.Empty);
+            var prefetchingBehavior = new PrefetchingBehavior(PrefetchingUser.Indexer, workContext, autoTuner, string.Empty, entityNames);
 
             var prefetcherWithContext = new PrefetcherWithContext
                                         {
@@ -74,7 +78,10 @@ namespace Raven.Tests.Issues.Prefetcher
                 {
                     var key = "keys/" + i;
                     var data = RavenJObject.FromObject(new Person { AddressId = key, Id = key, Name = "Name" + i });
-                    accessor.Documents.AddDocument(key, null, data, new RavenJObject());
+                    accessor.Documents.AddDocument(key, null, data, new RavenJObject
+                    {
+                        {"Raven-Entity-Name", "Keys"}
+                    });
 
                     results.Add(key);
                 }
@@ -95,7 +102,7 @@ namespace Raven.Tests.Issues.Prefetcher
         {
             public PrefetchingBehavior PrefetchingBehavior { get; set; }
 
-            public RavenConfiguration Configuration { get; set; }
+            public InMemoryRavenConfiguration Configuration { get; set; }
 
             public WorkContext WorkContext { get; set; }
 
@@ -105,7 +112,9 @@ namespace Raven.Tests.Issues.Prefetcher
 
             public void Dispose()
             {
+                WorkContext.StopWorkRude(); //make sure cancellation token is at "cancel" state
                 WorkContext.Dispose();
+
                 PrefetchingBehavior.Dispose();
                 TransactionalStorage.Dispose();
             }

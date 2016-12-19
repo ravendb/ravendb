@@ -1,6 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="..\packages\xunit.runner.visualstudio.2.0.1\build\net20\xunit.runner.visualstudio.props" Condition="Exists('..\packages\xunit.runner.visualstudio.2.0.1\build\net20\xunit.runner.visualstudio.props')" />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -15,7 +14,6 @@
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
     <TargetFrameworkProfile />
-    <NuGetPackageImportStamp>29e5a0a1</NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -27,6 +25,7 @@
     <WarningLevel>4</WarningLevel>
     <NoWarn>618</NoWarn>
     <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>6</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -62,6 +61,9 @@
     </Reference>
     <Reference Include="Lucene.Net">
       <HintPath>..\SharedLibs\Lucene.Net.dll</HintPath>
+    </Reference>
+    <Reference Include="Lucene.Net.Contrib.Analyzers">
+      <HintPath>..\SharedLibs\Lucene.Net.Contrib.Analyzers.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Owin, Version=3.0.1.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Owin.3.0.1\lib\net45\Microsoft.Owin.dll</HintPath>
@@ -136,21 +138,69 @@
     <Compile Include="1379\RavenDB_1379_Client_Lazy.cs" />
     <Compile Include="1379\RavenDB_1379_Client_Remote.cs" />
     <Compile Include="ActualValueInJsonReaderException.cs" />
+    <Compile Include="RavenDB_5669.cs" />
+    <Compile Include="NewIndexOptimizationIssue.cs" />
+    <Compile Include="RavenDB-5632.cs" />
+    <Compile Include="RavenDB-5303.cs" />
+    <Compile Include="RavenDB-4393.cs" />
+    <Compile Include="RavenDB-4446.cs" />
+    <Compile Include="RavenDB-4852.cs" />
+    <Compile Include="RavenDB-5256.cs" />
+    <Compile Include="RavenDB-5241.cs" />
+    <Compile Include="RavenDB-4977.cs" />
+    <Compile Include="RavenDB-4817.cs" />
+    <Compile Include="RavenDB-4917.cs" />
+    <Compile Include="RavenDB-4877.cs" />
+    <Compile Include="RavenDB-4741.cs" />
+    <Compile Include="RavenDB-4802.cs" />
+    <Compile Include="RavenDB-4705.cs" />
+    <Compile Include="RavenDB-4904.cs" />
+    <Compile Include="RavenDB-5151.cs" />
+    <Compile Include="RavenDB-5422.cs" />
+    <Compile Include="RavenDB-5513.cs" />
+    <Compile Include="RavenDB-5525.cs" />
+    <Compile Include="RavenDB_4645.cs" />
+    <Compile Include="RavenDB_4918.cs" />
+    <Compile Include="RavenDb_4706.cs" />
+    <Compile Include="RavenDB-4613.cs" />
+    <Compile Include="RavenDB-4607.cs" />
+    <Compile Include="RavenDb4583.cs" />
+    <Compile Include="RavenDB-4563.cs" />
+    <Compile Include="RavenDB-3460.cs" />
+    <Compile Include="RavenDB-3736_2.cs" />
+    <Compile Include="RavenDB-3973.cs" />
+    <Compile Include="RavenDB-5686.cs" />
+    <Compile Include="RavenDB-3979.cs" />
+    <Compile Include="RavenDB-3987.cs" />
+    <Compile Include="RavenDB_4025.cs" />
+    <Compile Include="RavenDB_3620.cs" />
+    <Compile Include="RavenDB_3899.cs" />
+    <Compile Include="RavenDB_3878.cs" />
+    <Compile Include="RavenDB_3663.cs" />
+    <Compile Include="RavenDB_3744.cs" />
+    <Compile Include="RavenDB_4147.cs" />
+    <Compile Include="RavenDB_4091.cs" />
+    <Compile Include="RavenDB_4420.cs" />
+    <Compile Include="RavenDB_4461.cs" />
+    <Compile Include="RavenDB-4196.cs" />
+    <Compile Include="RavenDB-4300.cs" />
+    <Compile Include="RavenDB-4379.cs" />
+    <Compile Include="RavenDB_4196.cs" />
     <Compile Include="RavenDB_3928.cs" />
     <Compile Include="RavenDB-4227.cs" />
     <Compile Include="RavenDB_4053.cs" />
     <Compile Include="RavenDB-4222.cs" />
     <Compile Include="RavenDB-4221.cs" />
-    <Compile Include="RavenDB-4215.cs" />
+    <Compile Include="RavenDB_4110.cs" />
+    <Compile Include="RavenDB_4215.cs" />
     <Compile Include="RavenDB-4210.cs" />
-    <Compile Include="RavenDB-3460.cs" />
-    <Compile Include="RavenDB_4091.cs" />
     <Compile Include="RavenDB-4153.cs" />
     <Compile Include="RavenDB-4144.cs" />
-    <Compile Include="RavenDB-3987.cs" />
+    <Compile Include="RavenDB-4240.cs" />
+    <Compile Include="RavenDB-4085.cs" />
     <Compile Include="RavenDB-4041.cs" />
+    <Compile Include="RavenDB-4011.cs" />
     <Compile Include="RavenDB-3931.cs" />
-    <Compile Include="RavenDB-3973.cs" />
     <Compile Include="RavenDB-3974.cs" />
     <Compile Include="BackupRestore.cs" />
     <Compile Include="RavenDB-3559.cs" />
@@ -158,10 +208,12 @@
     <Compile Include="RavenDB-3726.cs" />
     <Compile Include="RavenDB-3763.cs" />
     <Compile Include="RavenDB-3818.cs" />
-    <Compile Include="RavenDB-4011.cs" />
     <Compile Include="RavenDB_3981.cs" />
     <Compile Include="RavenDB_3488.cs" />
     <Compile Include="RavenDB-3472-async.cs" />
+    <Compile Include="RavenDB-4142.cs" />
+    <Compile Include="RavenDB-4161.cs" />
+    <Compile Include="RavenDB3936.cs" />
     <Compile Include="RavenDB_3646.cs" />
     <Compile Include="Prefetcher\PrefetcherTestBase.cs" />
     <Compile Include="RavenDB-3152.cs" />
@@ -220,6 +272,7 @@
     <Compile Include="RavenDB2854.cs" />
     <Compile Include="RavenDB_1344 .cs" />
     <Compile Include="RavenDB_1733.cs" />
+    <Compile Include="RavenDB_2115.cs" />
     <Compile Include="RavenDB_2699.cs" />
     <Compile Include="DatabaseConfiguration.cs" />
     <Compile Include="EmbeddedMultipleDatabases.cs" />
@@ -231,20 +284,24 @@
     <Compile Include="RavenDB-1847.cs" />
     <Compile Include="RavenDb-1934.cs" />
     <Compile Include="RavenDB-2036.cs" />
+    <Compile Include="RavenDB-2334.cs" />
     <Compile Include="RavenDB-2643.cs" />
     <Compile Include="RavenDB1009.cs" />
     <Compile Include="RavenDB1019.cs" />
     <Compile Include="RavenDB1025.cs" />
+    <Compile Include="RavenDB1067.cs" />
     <Compile Include="RavenDB1229.cs" />
     <Compile Include="RavenDB1247.cs" />
     <Compile Include="RavenDB1259.cs" />
     <Compile Include="RavenDB1260.cs" />
     <Compile Include="RavenDB1261.cs" />
+    <Compile Include="RavenDB1316.cs" />
     <Compile Include="RavenDB1369.cs" />
     <Compile Include="RavenDB1508.cs" />
     <Compile Include="RavenDB1519.cs" />
     <Compile Include="RavenDb1962.cs" />
     <Compile Include="RavenDB2408.cs" />
+    <Compile Include="RavenDB2537.cs" />
     <Compile Include="RavenDB2568.cs" />
     <Compile Include="Ravendb718\DateTimeOffset_LoadTests.cs" />
     <Compile Include="Ravendb718\DateTimeOffset_QueryDynamicTests.cs" />
@@ -338,10 +395,13 @@
     <Compile Include="RavenDB_1600.cs" />
     <Compile Include="RavenDB_1601.cs" />
     <Compile Include="RavenDB_1609.cs" />
+    <Compile Include="RavenDB_1610.cs" />
+    <Compile Include="RavenDB_1650.cs" />
     <Compile Include="RavenDB_1666.cs" />
     <Compile Include="RavenDB_1716.cs" />
     <Compile Include="RavenDB_1717.cs" />
     <Compile Include="RavenDB_1735.cs" />
+    <Compile Include="RavenDB_1749.cs" />
     <Compile Include="RavenDB_1760.cs" />
     <Compile Include="RavenDB_1761.cs" />
     <Compile Include="RavenDB_1762.cs" />
@@ -375,6 +435,7 @@
     <Compile Include="RavenDB_2314.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="RavenDB_2387.cs" />
     <Compile Include="RavenDB_2424.cs" />
     <Compile Include="RavenDB_2391.cs" />
     <Compile Include="RavenDB_2432.cs" />
@@ -458,13 +519,13 @@
     <Compile Include="RavenDB_3448.cs" />
     <Compile Include="RavenDB_3462.cs" />
     <Compile Include="RavenDB_3484.cs" />
+    <Compile Include="RavenDB_349.cs" />
     <Compile Include="RavenDB_3501.cs" />
     <Compile Include="RavenDB_3525.cs" />
     <Compile Include="RavenDB_3574.cs" />
     <Compile Include="Prefetcher\RavenDB_3581.cs" />
     <Compile Include="RavenDB_3605.cs" />
     <Compile Include="RavenDB_3612.cs" />
-    <Compile Include="RavenDB_3628.cs" />
     <Compile Include="RavenDB_3629.cs" />
     <Compile Include="RavenDB_3639.cs" />
     <Compile Include="RavenDB_3659.cs" />
@@ -474,32 +535,50 @@
     <Compile Include="RavenDB_367.cs" />
     <Compile Include="RavenDB_3760.cs" />
     <Compile Include="RavenDB_381.cs" />
+    <Compile Include="RavenDB_384.cs" />
     <Compile Include="RavenDB_3864.cs" />
     <Compile Include="RavenDB_3917.cs" />
+    <Compile Include="RavenDB_3921.cs" />
     <Compile Include="RavenDB_3929.cs" />
     <Compile Include="RavenDB_3938.cs" />
+    <Compile Include="RavenDB_3970.cs" />
     <Compile Include="RavenDB_3985.cs" />
     <Compile Include="RavenDB_3996.cs" />
     <Compile Include="RavenDB_4010.cs" />
     <Compile Include="RavenDB_406.cs" />
+    <Compile Include="RavenDB_4065.cs" />
     <Compile Include="RavenDB_4066.cs" />
     <Compile Include="RavenDB_4099.cs" />
     <Compile Include="RavenDB_410.cs" />
+    <Compile Include="RavenDB_4173.cs" />
     <Compile Include="RavenDB_421.cs" />
     <Compile Include="RavenDB_422.cs" />
+    <Compile Include="RavenDB_4248.cs" />
     <Compile Include="RavenDB_4226.cs" />
     <Compile Include="RavenDB_4241.cs" />
-    <Compile Include="RavenDB_4248.cs" />
     <Compile Include="RavenDB_425.cs" />
     <Compile Include="RavenDB_4269.cs" />
+    <Compile Include="RavenDB_4388.cs" />
+    <Compile Include="RavenDB_4432.cs" />
+    <Compile Include="RavenDB_4487.cs" />
+    <Compile Include="RavenDB_4708.cs" />
+    <Compile Include="RavenDB_4708_Conventions.cs" />
+    <Compile Include="RavenDB_4729.cs" />
+    <Compile Include="RavenDB_4748.cs" />
     <Compile Include="RavenDB_478.cs" />
     <Compile Include="RavenDB_483.cs" />
+    <Compile Include="RavenDB_4903.cs" />
+    <Compile Include="RavenDB_4983.cs" />
     <Compile Include="RavenDB_505.cs" />
     <Compile Include="RavenDB_514.cs" />
     <Compile Include="RavenDB_535.cs" />
+    <Compile Include="RavenDB_5390.cs" />
+    <Compile Include="RavenDB_5395.cs" />
     <Compile Include="RavenDB_542 .cs" />
     <Compile Include="RavenDB_554.cs" />
     <Compile Include="RavenDB_556.cs" />
+    <Compile Include="RavenDB_4453.cs" />
+    <Compile Include="RavenDB_5617.cs" />
     <Compile Include="RavenDB_576.cs" />
     <Compile Include="RavenDB_578.cs" />
     <Compile Include="RavenDB_579.cs" />
@@ -532,9 +611,11 @@
     <Compile Include="RavenDB_2907.cs" />
     <Compile Include="RavenDB_3555.cs" />
     <Compile Include="RavenDB_3994.cs" />
+    <Compile Include="RavenDB_4836.cs" />
     <Compile Include="RDBQA_1.cs" />
     <Compile Include="RDBQA_11.cs" />
     <Compile Include="RDBQA_13.cs" />
+    <Compile Include="RDBQA_16.cs" />
     <Compile Include="RDBQA_17.cs" />
     <Compile Include="RDBQA_18.cs" />
     <Compile Include="RDBQA_4.cs" />
@@ -545,14 +626,15 @@
     <Compile Include="RDoc_60.cs" />
     <Compile Include="RDoc_76.cs" />
     <Compile Include="ReplicationAlerts.cs" />
-    <Compile Include="ReplicationBehavior.cs" />
     <Compile Include="RavenDB_3096.cs" />
     <Compile Include="SlowIndex.cs" />
     <Compile Include="RavenDB_3113.cs" />
     <Compile Include="RavenDB_3106.cs" />
     <Compile Include="RavenDB-3225.cs" />
+    <Compile Include="RavenDB_5514.cs" />
+    <Compile Include="ThorMigrationIssues.cs" />
     <Compile Include="WaitForStaleOnAbandonedIndexShouldWork.cs" />
-    <Compile Include="WindowsAuthenticationUserInfo.cs" />
+    <Compile Include="WhatChangedTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Bundles\Raven.Client.Authorization\Raven.Client.Authorization.csproj">
@@ -563,9 +645,9 @@
       <Project>{D185331D-2B7C-4251-8EBE-140EDE1FAB9F}</Project>
       <Name>Raven.Client.UniqueConstraints</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Raven.Abstractions.Database\Raven.Abstractions.Database.csproj">
-      <Project>{AE07B425-0EF2-4710-B747-67B8EC20FCB7}</Project>
-      <Name>Raven.Abstractions.Database</Name>
+    <ProjectReference Include="..\Rachis\Rachis\Rachis.csproj">
+      <Project>{f796f69f-d17b-4260-92d6-65cb94c0e05c}</Project>
+      <Name>Rachis</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
@@ -588,7 +670,7 @@
       <Name>Raven.Smuggler</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Sparrow\Sparrow\Sparrow.csproj">
-      <Project>{104699c8-0fd3-4ab9-8542-e8fa89ed199b}</Project>
+      <Project>{104699C8-0FD3-4AB9-8542-E8FA89ED199B}</Project>
       <Name>Sparrow</Name>
     </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Bundles\Raven.Tests.Bundles.csproj">
@@ -611,10 +693,6 @@
       <Project>{EA32FD05-8537-4A31-879E-20A0F2C87479}</Project>
       <Name>Raven.Tests.MailingList</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Raven.Tests.Smuggler\Raven.Tests.Smuggler.csproj">
-      <Project>{44a7d299-5ae6-4e2e-9e32-18cb9fd82264}</Project>
-      <Name>Raven.Tests.Smuggler</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Voron\Voron\Voron.csproj">
       <Project>{FF83C7C2-BC7B-4DCC-A782-49EF9BBD9390}</Project>
       <Name>Voron</Name>
@@ -632,14 +710,19 @@
     <None Include="..\Raven.Database\RavenDB.snk">
       <Link>RavenDB.snk</Link>
     </None>
-    <None Include="app.config">
-      <SubType>Designer</SubType>
-    </None>
+    <None Include="app.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
   <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
 </Project>

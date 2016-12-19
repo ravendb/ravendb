@@ -44,6 +44,15 @@ namespace Raven.Tests.Web.Controllers.Commands
             return new HttpResponseMessage();
         }
 
+        [Route("api/sync/commands/deleteAttachment")]
+        public HttpResponseMessage DeleteAttachment()
+        {
+#pragma warning disable 618
+            DocumentStore.DatabaseCommands.DeleteAttachment("keys/1", null);
+#pragma warning restore 618
+            return new HttpResponseMessage();
+        }
+
         [Route("api/sync/commands/deleteByIndex")]
         public HttpResponseMessage DeleteByIndex()
         {
@@ -77,6 +86,33 @@ namespace Raven.Tests.Web.Controllers.Commands
         public HttpResponseMessage Get2()
         {
             DocumentStore.DatabaseCommands.Get(new[] { "keys/1", "keys/2" }, null);
+            return new HttpResponseMessage();
+        }
+
+        [Route("api/sync/commands/getAttachment")]
+        public HttpResponseMessage GetAttachment()
+        {
+#pragma warning disable 618
+            DocumentStore.DatabaseCommands.GetAttachment("attachment1");
+#pragma warning restore 618
+            return new HttpResponseMessage();
+        }
+
+        [Route("api/sync/commands/getAttachmentHeadersStartingWith")]
+        public HttpResponseMessage GetAttachmentHeadersStartingWith()
+        {
+#pragma warning disable 618
+            DocumentStore.DatabaseCommands.GetAttachmentHeadersStartingWith("attachments", 0, 128);
+#pragma warning restore 618
+            return new HttpResponseMessage();
+        }
+
+        [Route("api/sync/commands/getAttachments")]
+        public HttpResponseMessage GetAttachments()
+        {
+#pragma warning disable 618
+            DocumentStore.DatabaseCommands.GetAttachments(0, Etag.Empty, 128);
+#pragma warning restore 618
             return new HttpResponseMessage();
         }
 
@@ -211,6 +247,15 @@ namespace Raven.Tests.Web.Controllers.Commands
             return new HttpResponseMessage();
         }
 
+        [Route("api/sync/commands/headAttachment")]
+        public HttpResponseMessage HeadAttachment()
+        {
+#pragma warning disable 618
+            DocumentStore.DatabaseCommands.HeadAttachment("keys/1");
+#pragma warning restore 618
+            return new HttpResponseMessage();
+        }
+
         [Route("api/sync/commands/indexHasChanged")]
         public HttpResponseMessage IndexHasChanged()
         {
@@ -222,6 +267,7 @@ namespace Raven.Tests.Web.Controllers.Commands
         public HttpResponseMessage MoreLikeThis()
         {
             var key = Guid.NewGuid().ToString();
+            DocumentStore.DatabaseCommands.GetStatistics();
             DocumentStore.DatabaseCommands.Put(key, null, new RavenJObject(), new RavenJObject());
 
             SpinWait.SpinUntil(() => DocumentStore.DatabaseCommands.GetStatistics().StaleIndexes.Length == 0);
@@ -270,6 +316,15 @@ namespace Raven.Tests.Web.Controllers.Commands
         public HttpResponseMessage Put()
         {
             DocumentStore.DatabaseCommands.Put("keys/1", null, new RavenJObject(), new RavenJObject());
+            return new HttpResponseMessage();
+        }
+
+        [Route("api/sync/commands/putAttachment")]
+        public HttpResponseMessage PutAttachment()
+        {
+#pragma warning disable 618
+            DocumentStore.DatabaseCommands.PutAttachment("keys/1", null, new MemoryStream(), new RavenJObject());
+#pragma warning restore 618
             return new HttpResponseMessage();
         }
 
@@ -367,6 +422,15 @@ namespace Raven.Tests.Web.Controllers.Commands
         public HttpResponseMessage Suggest()
         {
             DocumentStore.DatabaseCommands.Suggest(new Users_ByName().IndexName, new SuggestionQuery { Field = "Name", Term = "Term1" });
+            return new HttpResponseMessage();
+        }
+
+        [Route("api/sync/commands/updateAttachmentMetadata")]
+        public HttpResponseMessage UpdateAttachmentMetadata()
+        {
+#pragma warning disable 618
+            DocumentStore.DatabaseCommands.UpdateAttachmentMetadata("keys/1", null, new RavenJObject());
+#pragma warning restore 618
             return new HttpResponseMessage();
         }
 
