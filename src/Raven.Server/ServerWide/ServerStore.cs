@@ -240,7 +240,6 @@ namespace Raven.Server.ServerWide
         public IEnumerable<Item> StartingWith(TransactionOperationContext ctx, string prefix, int start, int take)
         {
             var items = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
-            long numberOfEntriesToTake = (take == -1) ? items.NumberOfEntries : take;
 
             Slice loweredPrefix;
             using (Slice.From(ctx.Allocator, prefix.ToLowerInvariant(), out loweredPrefix))
@@ -252,7 +251,7 @@ namespace Raven.Server.ServerWide
                         start--;
                         continue;
                     }
-                    if (numberOfEntriesToTake-- <= 0)
+                    if (take-- <= 0)
                         yield break;
                     yield return GetCurrentItem(ctx, result);
                 }
