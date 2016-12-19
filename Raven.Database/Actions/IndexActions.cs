@@ -326,7 +326,7 @@ namespace Raven.Database.Actions
                 case IndexLockMode.SideBySide:
                     if (isUpdateBySideSide == false)
                     {
-                        Log.Info("Index {0} not saved because it might be only updated by side-by-side index");
+                        Log.Info("Index {0} not saved because it might be only updated by side-by-side index", name);
                         throw new InvalidOperationException("Can not overwrite locked index: " + name + ". This index can be only updated by side-by-side index.");
                     }
 
