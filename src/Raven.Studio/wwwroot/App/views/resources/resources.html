@@ -101,12 +101,7 @@
                             <div class="btn-toolbar pull-right-sm" role="toolbar">
                                 <div class="btn-group">
                                     <button class="btn btn-default"
-                                            data-bind="visible: !online() && !disabled(), click: $root.loadResource, css: { 'btn-spinner': _.includes($root.spinners.resourceLoad(), qualifiedName) }, enable: !_.includes($root.spinners.resourceLoad(), qualifiedName)">
-                                        <i class="icon-load" ></i>
-                                        <span>Load</span>
-                                    </button>
-                                    <button class="btn btn-default"
-                                            data-bind="click: $root.toggleResource, css: { 'btn-spinner': _.includes($root.spinners.itemTakedowns(), qualifiedName) }, enable: !_.includes($root.spinners.itemTakedowns(), qualifiedName), visible: online() || disabled()">
+                                            data-bind="click: $root.toggleResource, css: { 'btn-spinner': _.includes($root.spinners.itemTakedowns(), qualifiedName) }, enable: !_.includes($root.spinners.itemTakedowns(), qualifiedName)">
 
                                         <i class="icon-unlock" data-bind="visible: disabled()"></i>
                                         <span data-bind="visible: disabled()">Enable</span>
