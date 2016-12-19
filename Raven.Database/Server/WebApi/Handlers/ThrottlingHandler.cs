@@ -51,7 +51,7 @@ namespace Raven.Database.Server.WebApi.Handlers
                 {
                     try
                     {
-                        Logger.Info("Too many concurrent requests, throttling!");
+                        Logger.Info("Too many concurrent requests, throttling! ({0})", request.RequestUri);
                         return await HandleTooBusyError(request).ConfigureAwait(false);
                     }
                     catch (Exception e)
