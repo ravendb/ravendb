@@ -94,7 +94,7 @@ namespace Voron.Platform.Posix
             PrefetchRanges(range);
         }
 
-        protected PosixAbstractPager(StorageEnvironmentOptions options) : base(options)
+        protected PosixAbstractPager(StorageEnvironmentOptions options, bool usePageProtection = false) : base(options, usePageProtection: usePageProtection)
         {
         }
     }
