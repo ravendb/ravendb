@@ -349,7 +349,7 @@ namespace Voron.Impl.Paging
         public  void Write(long pageNumber, int numberOfPages, byte* source, PagerState pagerState)
         {
             var toWrite = numberOfPages * _abstractPager.PageSize;
-            byte* destination = pagerState.MapBase + pageNumber * _abstractPager.PageSize;
+            byte* destination = (pagerState ?? _abstractPager.PagerState).MapBase + pageNumber * _abstractPager.PageSize;
 
             _abstractPager.UnprotectPageRange(destination, (ulong)toWrite);
 

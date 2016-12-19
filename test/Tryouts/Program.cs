@@ -13,9 +13,9 @@ namespace Tryouts
     {
         static void Main(string[] args)
         {
-            using (var store = new FastTests.Client.Indexing.IndexesFromClient())
+            using (var store = new FastTests.Server.Documents.Indexing.Auto.BasicAutoMapIndexing())
             {
-                store.GetStats().Wait();
+                store.IndexLoadErrorCreatesFaultyInMemoryIndexFakeAndAddsAlert();
             }
         }
     }
