@@ -35,25 +35,25 @@ namespace Raven.Database.Counters
         public CountersMetricsManager()
         {
             Increments = counterMetrics.Meter("counterMetrics", "inc/min", "increments", TimeUnit.Minutes);
-            MetricsTicker.Instance.AddMeterMetric(Increments);
+            MetricsTicker.Instance.AddFiveSecondsIntervalMeterMetric(Increments);
 
             Decrements = counterMetrics.Meter("counterMetrics", "dec/min", "decrements", TimeUnit.Minutes);
-            MetricsTicker.Instance.AddMeterMetric(Decrements);
+            MetricsTicker.Instance.AddFiveSecondsIntervalMeterMetric(Decrements);
 
             Resets = counterMetrics.Meter("counterMetrics", "reset/min", "resets", TimeUnit.Minutes);
-            MetricsTicker.Instance.AddMeterMetric(Resets);
+            MetricsTicker.Instance.AddFiveSecondsIntervalMeterMetric(Resets);
 
             Deletes = counterMetrics.Meter("counterMetrics", "delete/min", "deletes", TimeUnit.Minutes);
-            MetricsTicker.Instance.AddMeterMetric(Deletes);
+            MetricsTicker.Instance.AddFiveSecondsIntervalMeterMetric(Deletes);
 
             ClientRequests = counterMetrics.Meter("counterMetrics", "client/min", "client requests", TimeUnit.Minutes);
-            MetricsTicker.Instance.AddMeterMetric(ClientRequests);
+            MetricsTicker.Instance.AddFiveSecondsIntervalMeterMetric(ClientRequests);
 
             IncomingReplications = counterMetrics.Meter("counterMetrics", "RepIn/min", "replications", TimeUnit.Minutes);
-            MetricsTicker.Instance.AddMeterMetric(IncomingReplications);
+            MetricsTicker.Instance.AddFiveSecondsIntervalMeterMetric(IncomingReplications);
 
             OutgoingReplications = counterMetrics.Meter("counterMetrics", "RepOut/min", "replications", TimeUnit.Minutes);
-            MetricsTicker.Instance.AddMeterMetric(OutgoingReplications);
+            MetricsTicker.Instance.AddFiveSecondsIntervalMeterMetric(OutgoingReplications);
 
             RequestsPerSecondCounter = counterMetrics.TimedCounter("counterMetrics", "req/sec counter", "Requests Per Second");
             MetricsTicker.Instance.AddPerSecondCounterMetric(RequestsPerSecondCounter);
@@ -90,18 +90,18 @@ namespace Raven.Database.Counters
         {
             counterMetrics.Dispose();
 
-            MetricsTicker.Instance.RemoveMeterMetric(Increments);
-            MetricsTicker.Instance.RemoveMeterMetric(Decrements);
-            MetricsTicker.Instance.RemoveMeterMetric(Resets);
-            MetricsTicker.Instance.RemoveMeterMetric(Deletes);
-            MetricsTicker.Instance.RemoveMeterMetric(ClientRequests);
-            MetricsTicker.Instance.RemoveMeterMetric(IncomingReplications);
-            MetricsTicker.Instance.RemoveMeterMetric(OutgoingReplications);
+            MetricsTicker.Instance.RemoveFiveSecondsIntervalMeterMetric(Increments);
+            MetricsTicker.Instance.RemoveFiveSecondsIntervalMeterMetric(Decrements);
+            MetricsTicker.Instance.RemoveFiveSecondsIntervalMeterMetric(Resets);
+            MetricsTicker.Instance.RemoveFiveSecondsIntervalMeterMetric(Deletes);
+            MetricsTicker.Instance.RemoveFiveSecondsIntervalMeterMetric(ClientRequests);
+            MetricsTicker.Instance.RemoveFiveSecondsIntervalMeterMetric(IncomingReplications);
+            MetricsTicker.Instance.RemoveFiveSecondsIntervalMeterMetric(OutgoingReplications);
             MetricsTicker.Instance.RemovePerSecondCounterMetric(RequestsPerSecondCounter);
 
             foreach (var batchSizeMeter in ReplicationBatchSizeMeter)
             {
-                MetricsTicker.Instance.RemoveMeterMetric(batchSizeMeter.Value);
+                MetricsTicker.Instance.RemoveFiveSecondsIntervalMeterMetric(batchSizeMeter.Value);
             }
         }
 
@@ -111,7 +111,7 @@ namespace Raven.Database.Counters
                 s =>
                 {
                     var meter = counterMetrics.Meter("counterMetrics", "counters replication/min for: " + s, "Replication docs/min Counter", TimeUnit.Minutes);
-                    MetricsTicker.Instance.AddMeterMetric(meter);
+                    MetricsTicker.Instance.AddFiveSecondsIntervalMeterMetric(meter);
                     return meter;
                 });
         }

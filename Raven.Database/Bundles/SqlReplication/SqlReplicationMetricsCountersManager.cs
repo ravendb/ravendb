@@ -31,7 +31,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
             meterName = "SqlReplication Batch docs/min for " + sqlReplicationConfig.Name;
             SqlReplicationBatchSizeMeter = dbMetrics.Meter(MeterContext, meterName, "SQLReplication docs/min Counter", TimeUnit.Minutes);
-            MetricsTicker.Instance.AddMeterMetric(SqlReplicationBatchSizeMeter);
+            MetricsTicker.Instance.AddFiveSecondsIntervalMeterMetric(SqlReplicationBatchSizeMeter);
 
             SqlReplicationBatchSizeHistogram = dbMetrics.Histogram("metrics", "SqlReplication Batch histogram for " + sqlReplicationConfig.Name);
             SqlReplicationDurationHistogram = dbMetrics.Histogram("metrics", "SQLReplication duration Histogram for " + sqlReplicationConfig.Name);
@@ -90,7 +90,7 @@ namespace Raven.Database.Bundles.SqlReplication
                     if (m_sqlReplicationDeleteActionsMeter == null)
                     {
                         m_sqlReplicationDeleteActionsMeter = dbMetrics.Meter(MeterContext, deleteMeterName, "SQLReplication Delete Commands/min Counter", TimeUnit.Minutes);
-                        MetricsTicker.Instance.AddMeterMetric(m_sqlReplicationDeleteActionsMeter);
+                        MetricsTicker.Instance.AddFiveSecondsIntervalMeterMetric(m_sqlReplicationDeleteActionsMeter);
                     }
 
                     return m_sqlReplicationDeleteActionsMeter;
@@ -110,7 +110,7 @@ namespace Raven.Database.Bundles.SqlReplication
                     if (m_sqlReplicationInsertActionsMeter == null)
                     {
                         m_sqlReplicationInsertActionsMeter = dbMetrics.Meter(MeterContext, insertMeterName, "SQLReplication Insert Commands/min Counter", TimeUnit.Minutes);
-                        MetricsTicker.Instance.AddMeterMetric(m_sqlReplicationInsertActionsMeter);
+                        MetricsTicker.Instance.AddFiveSecondsIntervalMeterMetric(m_sqlReplicationInsertActionsMeter);
                     }
 
                     return m_sqlReplicationInsertActionsMeter;
@@ -157,21 +157,21 @@ namespace Raven.Database.Bundles.SqlReplication
                 if (m_sqlReplicationDeleteActionsMeter != null)
                 {
                     dbMetrics.RemoveMeter(MeterContext, deleteMeterName);
-                    MetricsTicker.Instance.RemoveMeterMetric(m_sqlReplicationDeleteActionsMeter);
+                    MetricsTicker.Instance.RemoveFiveSecondsIntervalMeterMetric(m_sqlReplicationDeleteActionsMeter);
                 }
 
 
                 if (m_sqlReplicationInsertActionsMeter != null)
                 {
                     dbMetrics.RemoveMeter(MeterContext, insertMeterName);
-                    MetricsTicker.Instance.RemoveMeterMetric(m_sqlReplicationInsertActionsMeter);
+                    MetricsTicker.Instance.RemoveFiveSecondsIntervalMeterMetric(m_sqlReplicationInsertActionsMeter);
                 }
             }
         }
 
         public void Dispose()
         {
-            MetricsTicker.Instance.RemoveMeterMetric(SqlReplicationBatchSizeMeter);
+            MetricsTicker.Instance.RemoveFiveSecondsIntervalMeterMetric(SqlReplicationBatchSizeMeter);
             dbMetrics.RemoveMeter(MeterContext, meterName);
 
             foreach (var tableMetric in TablesMetrics)
