@@ -103,6 +103,9 @@ namespace Raven.Storage.Voron
 
                 exceptionAggregator.Execute(() => current.Dispose());
 
+                if (documentCacher != null)
+                    exceptionAggregator.Execute(documentCacher.Dispose);
+
                 if (tableStorage != null)
                     exceptionAggregator.Execute(() => tableStorage.Dispose());
 
