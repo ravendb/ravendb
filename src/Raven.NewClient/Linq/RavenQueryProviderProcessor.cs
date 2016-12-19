@@ -36,7 +36,7 @@ namespace Raven.NewClient.Client.Linq
         /// </summary>
         protected readonly IDocumentQueryGenerator queryGenerator;
         private readonly Action<QueryResult> afterQueryExecuted;
-        private readonly Action<StreamResult> afterStreamExcuted;
+        private readonly Action<object> afterStreamExcuted;
         private bool chainedWhere;
         private int insideWhere;
         private IAbstractDocumentQuery<T> documentQuery;
@@ -77,7 +77,7 @@ namespace Raven.NewClient.Client.Linq
         /// <param name="transformerParameters"></param>
         /// /// <param name ="originalType" >the original type of the query if TransformWith is called otherwise null</param>
         public RavenQueryProviderProcessor(IDocumentQueryGenerator queryGenerator, Action<IDocumentQueryCustomization> customizeQuery, Action<QueryResult> afterQueryExecuted,
-             Action<StreamResult> afterStreamExecuted, string indexName, HashSet<string> fieldsToFetch, List<RenamedField> fieldsTRename, bool isMapReduce, string resultsTransformer,
+             Action<object> afterStreamExecuted, string indexName, HashSet<string> fieldsToFetch, List<RenamedField> fieldsTRename, bool isMapReduce, string resultsTransformer,
              Dictionary<string, object> transformerParameters, Type originalType)
         {
             FieldsToFetch = fieldsToFetch;
@@ -2014,7 +2014,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             throw new NotImplementedException();
         }
         
-        public bool RenameSingleResult(ref StreamResult doc)
+        public bool RenameSingleResult(ref object doc)
         {
             /*var changed = false;
             var values = new Dictionary<string, RavenJToken>();
