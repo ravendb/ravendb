@@ -82,7 +82,7 @@ namespace NewClientTests.NewClient.Client.Indexing
                 store.GetRequestExecuter(store.DefaultDatabase).ContextPool.AllocateOperationContext(out context);
 
                
-                var deleteByIndexOperation = new DeleteByIndexOperation(context);
+                var deleteByIndexOperation = new DeleteByIndexOperation();
                 var command = deleteByIndexOperation.CreateRequest(indexName, new IndexQuery(),
                     new QueryOperationOptions { AllowStale = false }, store);
 
@@ -105,7 +105,7 @@ namespace NewClientTests.NewClient.Client.Indexing
 
         private static void DeleteByIndex(JsonOperationContext context, string indexName, DocumentStore store)
         {
-            var deleteByIndexOperation = new DeleteByIndexOperation(context);
+            var deleteByIndexOperation = new DeleteByIndexOperation();
             var command = deleteByIndexOperation.CreateRequest(indexName, new IndexQuery(),
                 new QueryOperationOptions {AllowStale = false}, store);
 

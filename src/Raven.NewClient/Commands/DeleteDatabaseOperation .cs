@@ -1,4 +1,3 @@
-using Raven.NewClient.Client.Document;
 using Sparrow.Logging;
 
 namespace Raven.NewClient.Client.Commands

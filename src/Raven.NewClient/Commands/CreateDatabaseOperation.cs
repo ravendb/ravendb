@@ -1,5 +1,4 @@
 using System;
-using System.Text;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Document;
@@ -14,6 +13,7 @@ namespace Raven.NewClient.Client.Commands
         private readonly JsonOperationContext _context;
         private static readonly Logger _logger = LoggingSource.Instance.GetLogger<CreateDatabaseOperation>("Raven.NewClient.Client");
         private string _databaseName;
+
         public CreateDatabaseOperation(JsonOperationContext context)
         {
             _context = context;

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
 using Raven.NewClient.Client.Document;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -19,7 +18,7 @@ namespace Raven.NewClient.Client.Commands
 
         protected void LogBatch()
         {
-           //TODO - Efrat
+           //TODO
         }
 
         private List<object> _entities;
