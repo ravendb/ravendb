@@ -4,9 +4,6 @@ import counterStorage = require("models/counter/counterStorage");
 
 class getCounterGroupsCommand extends commandBase {
 
-    /**
-    * @param ownerDb The database the collections will belong to.
-    */
     constructor(private cs: counterStorage, private skip: number, private take: number) {
         super();
 

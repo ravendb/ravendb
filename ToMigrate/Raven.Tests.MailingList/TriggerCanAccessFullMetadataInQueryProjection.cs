@@ -64,7 +64,7 @@ namespace Raven.Tests.MailingList
         {
             public Guid Id { get; private set; }
 
-            public override ReadVetoResult AllowRead(string key, RavenJObject metadata, ReadOperation readOperation)
+            public override ReadVetoResult AllowRead(string key, RavenJObject metadata, ReadOperation readOperation, TransactionInformation transactionInformation)
             {
                 if (readOperation == ReadOperation.Query)
                 {

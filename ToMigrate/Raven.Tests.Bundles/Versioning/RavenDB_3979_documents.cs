@@ -3,14 +3,13 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Connection;
 using Raven.Json.Linq;
 using Raven.Bundles.Versioning;
 using Raven.Bundles.Versioning.Triggers;
 using Raven.Database.Config;
 using Raven.Tests.Common;
-using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -69,10 +68,10 @@ namespace Raven.Tests.Bundles.Versioning
             }
         }
 
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
+        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
         {
             if (changesToRevisionsAllowed)
-                configuration.Modify(x => x.Versioning.ChangesToRevisionsAllowed, true);
+                configuration.Settings[Constants.Versioning.ChangesToRevisionsAllowed] = "true";
         }
     }
 }

@@ -33,7 +33,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             'icon-indexes'),*/
         new leafMenuItem({
             route: 'databases/status/storage/report',
-            moduleId: 'viewmodels/database/status/storage/storageReport',
+            moduleId: 'viewmodels/database/status/storageReport',
             title: 'Storage Report',
             tooltip: "TODO", //TODO:
             nav: true,

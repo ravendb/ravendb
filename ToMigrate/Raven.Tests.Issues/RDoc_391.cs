@@ -12,10 +12,10 @@ using Raven.Abstractions.Util;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Client.Shard;
+using Raven.Database.Config;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
 using Raven.Tests.Common.Dto;
-using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -23,9 +23,9 @@ namespace Raven.Tests.Issues
 {
     public class RDoc_391 : RavenTest
     {
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
+        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
         {
-            configuration.Modify(x => x.Core._ActiveBundlesString, "ScriptedIndexResults");
+            configuration.Settings["Raven/ActiveBundles"] = "ScriptedIndexResults";
         }
 
         private class People_By_Name_Different : AbstractIndexCreationTask<Person>
@@ -82,14 +82,12 @@ namespace Raven.Tests.Issues
                 var index = new People_By_Name_With_Scripts();
                 index.Execute(store);
                 WaitForIndexing(store);
-
                 var statsBefore = store.DatabaseCommands.GetStatistics();
                 var indexStats = statsBefore.Indexes.First(x => x.Name == index.IndexName);
                 var lastIndexedEtag = indexStats.LastIndexedEtag;
 
                 var statsAfter = store.DatabaseCommands.GetStatistics();
                 indexStats = statsAfter.Indexes.First(x => x.Name == index.IndexName);
-
                 Assert.Equal(lastIndexedEtag, indexStats.LastIndexedEtag);
             }
         }

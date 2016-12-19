@@ -6,14 +6,10 @@
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Database.Smuggler;
-using Raven.Abstractions.Database.Smuggler.FileSystem;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Smuggler;
 using Raven.Json.Linq;
 using Raven.Smuggler;
-using Raven.Smuggler.FileSystem;
-using Raven.Smuggler.FileSystem.Remote;
-using Raven.Smuggler.FileSystem.Streams;
 using Raven.Tests.Helpers;
 using Xunit;
 
@@ -48,26 +44,34 @@ namespace Raven.Tests.FileSystem.Smuggler
 
                     countOfConfigurations = (await store.AsyncFilesCommands.Configuration.GetKeyNamesAsync(0, 200)).Length;
 
-                    await new FileSystemSmuggler(new FileSystemSmugglerOptions()).ExecuteAsync(
-                        new RemoteSmugglingSource(new FilesConnectionStringOptions
+                    var exportOptions = new SmugglerExportOptions<FilesConnectionStringOptions>
+                    {
+                        From = new FilesConnectionStringOptions
                         {
                             Url = store.Url,
                             DefaultFileSystem = store.DefaultFileSystem
-                        }),
-                        new StreamSmugglingDestination(exportStream, true));
+                        },
+                        ToStream = exportStream
+                    };
+
+                    await new SmugglerFilesApi().ExportData(exportOptions);
                 }
 
                 using (var import = NewStore(1))
                 {
                     exportStream.Position = 0;
-                    
-                    await new FileSystemSmuggler(new FileSystemSmugglerOptions()).ExecuteAsync(
-                        new StreamSmugglingSource(exportStream, true),
-                        new RemoteSmugglingDestination(new FilesConnectionStringOptions()
+
+                    var importOptions = new SmugglerImportOptions<FilesConnectionStringOptions>
+                    {
+                        FromStream = exportStream,
+                        To = new FilesConnectionStringOptions()
                         {
                             Url = import.Url,
                             DefaultFileSystem = import.DefaultFileSystem
-                        }));
+                        }
+                    };
+
+                    await new SmugglerFilesApi().ImportData(importOptions);
 
                     Assert.Equal(countOfConfigurations, (await import.AsyncFilesCommands.Configuration.GetKeyNamesAsync(0, 200)).Length);
 
@@ -103,21 +107,25 @@ namespace Raven.Tests.FileSystem.Smuggler
 
                 var countOfConfigurations = (await exportStore.AsyncFilesCommands.Configuration.GetKeyNamesAsync(0, 200)).Length;
 
-                var smuggler = new FileSystemSmuggler(new FileSystemSmugglerOptions()
-                                                      {
-                                                          BatchSize = 5
-                                                      });
+                var options = new SmugglerBetweenOptions<FilesConnectionStringOptions>()
+                {
+                    From = new FilesConnectionStringOptions()
+                    {
+                        Url = exportStore.Url,
+                        DefaultFileSystem = exportStore.DefaultFileSystem
+                    },
+                    To = new FilesConnectionStringOptions()
+                    {
+                        Url = importStore.Url,
+                        DefaultFileSystem = importStore.DefaultFileSystem
+                    }
+                };
 
-                await smuggler.ExecuteAsync(new RemoteSmugglingSource(new FilesConnectionStringOptions()
-                {
-                    Url = exportStore.Url,
-                    DefaultFileSystem = exportStore.DefaultFileSystem
-                }), 
-                new RemoteSmugglingDestination(new FilesConnectionStringOptions()
-                {
-                    Url = importStore.Url,
-                    DefaultFileSystem = importStore.DefaultFileSystem
-                }));
+                var smugglerFilesApi = new SmugglerFilesApi();
+
+                smugglerFilesApi.Options.BatchSize = 5;
+
+                await smugglerFilesApi.Between(options);
 
                 Assert.Equal(countOfConfigurations, (await importStore.AsyncFilesCommands.Configuration.GetKeyNamesAsync(0, 200)).Length);
 
@@ -142,23 +150,31 @@ namespace Raven.Tests.FileSystem.Smuggler
                     Enabled = true
                 });
 
-                await new FileSystemSmuggler(new FileSystemSmugglerOptions())
-                    .ExecuteAsync(new RemoteSmugglingSource(new FilesConnectionStringOptions
+                var exportOptions = new SmugglerExportOptions<FilesConnectionStringOptions>
+                {
+                    From = new FilesConnectionStringOptions
                     {
                         Url = exportStore.Url,
                         DefaultFileSystem = exportStore.DefaultFileSystem
-                    }), 
-                    new StreamSmugglingDestination(exportStream, true));
+                    },
+                    ToStream = exportStream
+                };
+
+                await new SmugglerFilesApi().ExportData(exportOptions);
 
                 exportStream.Position = 0;
 
-                await new FileSystemSmuggler(new FileSystemSmugglerOptions())
-                    .ExecuteAsync(new StreamSmugglingSource(exportStream, true),
-                    new RemoteSmugglingDestination(new FilesConnectionStringOptions()
+                var importOptions = new SmugglerImportOptions<FilesConnectionStringOptions>
+                {
+                    FromStream = exportStream,
+                    To = new FilesConnectionStringOptions()
                     {
                         Url = importStore.Url,
                         DefaultFileSystem = importStore.DefaultFileSystem
-                    }));
+                    }
+                };
+
+                await new SmugglerFilesApi().ImportData(importOptions);
 
                 var destinations = await importStore.AsyncFilesCommands.Synchronization.GetDestinationsAsync();
 
@@ -182,17 +198,21 @@ namespace Raven.Tests.FileSystem.Smuggler
                     Enabled = true
                 });
 
-                await new FileSystemSmuggler(new FileSystemSmugglerOptions())
-                    .ExecuteAsync(new RemoteSmugglingSource(new FilesConnectionStringOptions()
+                var options = new SmugglerBetweenOptions<FilesConnectionStringOptions>()
+                {
+                    From = new FilesConnectionStringOptions()
                     {
                         Url = exportStore.Url,
                         DefaultFileSystem = exportStore.DefaultFileSystem
-                    }), 
-                    new RemoteSmugglingDestination(new FilesConnectionStringOptions()
+                    },
+                    To = new FilesConnectionStringOptions()
                     {
                         Url = importStore.Url,
                         DefaultFileSystem = importStore.DefaultFileSystem
-                    }));
+                    }
+                };
+
+                await new SmugglerFilesApi().Between(options);
 
                 var destinations = await importStore.AsyncFilesCommands.Synchronization.GetDestinationsAsync();
 

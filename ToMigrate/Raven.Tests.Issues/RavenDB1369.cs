@@ -71,11 +71,11 @@ namespace Raven.Tests.Issues
                     sesion.SaveChanges();
                 }
 
-                store.SystemDatabase.Maintenance.StartBackup(backupDir, false, new DatabaseDocument());
+                store.SystemDatabase.Maintenance.StartBackup(backupDir, false, new DatabaseDocument(), new ResourceBackupState());
                 WaitForBackup(store.SystemDatabase, true);
             }
 
-            MaintenanceActions.Restore(new AppSettingsBasedConfiguration(), new DatabaseRestoreRequest
+            MaintenanceActions.Restore(new RavenConfiguration(), new DatabaseRestoreRequest
             {
                 BackupLocation = backupDir,
                 DatabaseLocation = dataDir,
@@ -86,9 +86,10 @@ namespace Raven.Tests.Issues
 
             using (var store = NewDocumentStore(runInMemory: false, configureStore: documentStore =>
             {
-                documentStore.Configuration.Core.DataDirectory = dataDir;
-                documentStore.Configuration.Core.IndexStoragePath = indexesDir;
-                documentStore.Configuration.Storage.JournalsStoragePath = jouranlDir;
+                documentStore.Configuration.DataDirectory = dataDir;
+                documentStore.Configuration.IndexStoragePath = indexesDir;
+                documentStore.Configuration.Storage.Esent.JournalsStoragePath = jouranlDir;
+                documentStore.Configuration.Storage.Voron.JournalsStoragePath = jouranlDir;
             }))
             {
                 using (var sesion = store.OpenSession())
@@ -104,6 +105,8 @@ namespace Raven.Tests.Issues
             string storage;
             using (var store = NewDocumentStore(runInMemory: false))
             {
+                storage = store.Configuration.DefaultStorageTypeName;
+
                 new User_ByName().Execute(store);
 
                 using (var sesion = store.OpenSession())
@@ -114,11 +117,11 @@ namespace Raven.Tests.Issues
 
                 WaitForIndexing(store);
 
-                store.SystemDatabase.Maintenance.StartBackup(backupDir, false, new DatabaseDocument());
+                store.SystemDatabase.Maintenance.StartBackup(backupDir, false, new DatabaseDocument(), new ResourceBackupState());
                 WaitForBackup(store.SystemDatabase, true);
             }
 
-            MaintenanceActions.Restore(new AppSettingsBasedConfiguration(), new DatabaseRestoreRequest
+            MaintenanceActions.Restore(new RavenConfiguration(), new DatabaseRestoreRequest
             {
                 BackupLocation = backupDir,
                 DatabaseLocation = dataDir,
@@ -127,16 +130,15 @@ namespace Raven.Tests.Issues
                 JournalsLocation = jouranlDir
             }, Console.WriteLine);
 
-            var ravenConfiguration = new AppSettingsBasedConfiguration
+            var ravenConfiguration = new RavenConfiguration
             {
-                Core =
-                {
-                    DataDirectory = dataDir,
-                    IndexStoragePath = indexesDir
-                }
+                DefaultStorageTypeName = storage,
+                DataDirectory = dataDir,
+                IndexStoragePath = indexesDir
             };
 
-            ravenConfiguration.Storage.JournalsStoragePath = jouranlDir;
+            ravenConfiguration.Storage.Esent.JournalsStoragePath = jouranlDir;
+            ravenConfiguration.Storage.Voron.JournalsStoragePath = jouranlDir;
 
             using (var db = new DocumentDatabase(ravenConfiguration, null))
             {
@@ -171,8 +173,7 @@ namespace Raven.Tests.Issues
                     sesion.SaveChanges();
                 }
 
-                store.DatabaseCommands.GlobalAdmin.StartBackup(backupDir, new DatabaseDocument(), false, "DB1");
-                WaitForBackup(store.DatabaseCommands.ForDatabase("DB1"), true);
+                store.DatabaseCommands.GlobalAdmin.StartBackup(backupDir, new DatabaseDocument(), false, "DB1").WaitForCompletion();
 
                 store.DatabaseCommands.GlobalAdmin.StartRestore(new DatabaseRestoreRequest
                 {
@@ -208,7 +209,8 @@ namespace Raven.Tests.Issues
                     Settings =
                     {
                         {"Raven/DataDir", "~\\Databases\\db1"},
-                        {RavenConfiguration.GetKey(x => x.Storage.AllowIncrementalBackups), "true"}
+                        {Constants.Esent.CircularLog, "false"},
+                        {Constants.Voron.AllowIncrementalBackups, "true"}
                     }
                 });
 
@@ -220,8 +222,7 @@ namespace Raven.Tests.Issues
                         sesion.SaveChanges();
                     }
 
-                    store.DatabaseCommands.GlobalAdmin.StartBackup(backupDir, new DatabaseDocument(), true, "DB1");
-                    WaitForBackup(store.DatabaseCommands.ForDatabase("DB1"), true);
+                    store.DatabaseCommands.GlobalAdmin.StartBackup(backupDir, new DatabaseDocument(), true, "DB1").WaitForCompletion();
                     
                     Thread.Sleep(1000); // incremental tag has seconds precision
                 }
@@ -273,8 +274,7 @@ namespace Raven.Tests.Issues
 
                 new User_ByName().Execute(store.DatabaseCommands.ForDatabase("DB1"), store.Conventions);
 
-                store.DatabaseCommands.GlobalAdmin.StartBackup(backupDir, new DatabaseDocument(), false, "DB1");
-                WaitForBackup(store.DatabaseCommands.ForDatabase("DB1"), true);
+                store.DatabaseCommands.GlobalAdmin.StartBackup(backupDir, new DatabaseDocument(), false, "DB1").WaitForCompletion();
 
                 store.DatabaseCommands.GlobalAdmin.StartRestore(new DatabaseRestoreRequest
                 {
@@ -283,9 +283,8 @@ namespace Raven.Tests.Issues
                     IndexesLocation = indexesDir,
                     JournalsLocation = jouranlDir,
                     DatabaseName = "DB2"
-                });
+                }).WaitForCompletion();
 
-                WaitForRestore(store.DatabaseCommands);
                 Assert.NotNull(store.DatabaseCommands.ForDatabase("DB2").GetIndex("User/ByName"));
             }
         }

@@ -13,10 +13,10 @@ namespace Raven.Tests.Bundles.UniqueConstraints
         protected UniqueConstraintsTest()
         {
             DocumentStore = NewDocumentStore(port: 8079, configureStore: store =>
-            {
+            {                
                 store.Configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(UniqueConstraintsPutTrigger).Assembly));
                 store.RegisterListener(new UniqueConstraintsStoreListener());
-            });
+            },activeBundles: "Unique Constraints");
         }
 
         protected EmbeddableDocumentStore DocumentStore { get; set; }

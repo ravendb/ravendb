@@ -47,8 +47,6 @@ namespace Raven.NewClient.Client.Document
 
         private readonly ConcurrentDictionary<string, Lazy<RequestExecuter>> _requestExecuters = new ConcurrentDictionary<string, Lazy<RequestExecuter>>(StringComparer.OrdinalIgnoreCase);
 
-        private MultiDatabaseHiLoGenerator _multiDbHiLo;
-
         private AsyncMultiDatabaseHiLoKeyGenerator _asyncMultiDbHiLo;
 
         /// <summary>
@@ -183,8 +181,7 @@ namespace Raven.NewClient.Client.Document
             // if this is still going, we continue with disposal, it is for graceful shutdown only, anyway
 
             //return unused hilo keys
-            _multiDbHiLo?.ReturnUnusedRange();
-            _asyncMultiDbHiLo?.ReturnUnusedRange().ConfigureAwait(false).GetAwaiter().GetResult();
+            AsyncHelpers.RunSync(() => _asyncMultiDbHiLo?.ReturnUnusedRange());
 
             Subscriptions?.Dispose();
 
@@ -281,14 +278,7 @@ namespace Raven.NewClient.Client.Document
 
                 InitializeInternal();
 
-                if (Conventions.DocumentKeyGenerator == null)// don't overwrite what the user is doing
-                {
-                    var generator = new MultiDatabaseHiLoGenerator(this, Conventions);
-                    _multiDbHiLo = generator;
-                    Conventions.DocumentKeyGenerator = (dbName, entity) => generator.GenerateDocumentKey(dbName, entity);
-                }
-
-                if (Conventions.AsyncDocumentKeyGenerator == null )
+                if (Conventions.AsyncDocumentKeyGenerator == null) // don't overwrite what the user is doing
                 {
                     var generator = new AsyncMultiDatabaseHiLoKeyGenerator(this, Conventions);
                     _asyncMultiDbHiLo = generator;

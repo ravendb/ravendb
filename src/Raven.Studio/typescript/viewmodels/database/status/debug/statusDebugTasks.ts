@@ -1,4 +1,4 @@
-import getStatusDebugTasksSummaryCommand = require("commands/getStatusDebugTasksSummaryCommand");
+import getStatusDebugTasksSummaryCommand = require("commands/database/debug/getStatusDebugTasksSummaryCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
 

@@ -5,9 +5,8 @@ using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Database.FileSystem.Infrastructure;
 using Raven.Database.FileSystem.Plugins;
-using Raven.Database.FileSystem.Storage.Voron;
+using Raven.Database.FileSystem.Storage.Esent;
 using Raven.Database.Plugins;
-
 
 namespace Raven.Tests.FileSystem
 {
@@ -17,8 +16,9 @@ namespace Raven.Tests.FileSystem
 
         public StorageTest()
         {
-            var configuration = new RavenConfiguration
+            var configuration = new InMemoryRavenConfiguration
                                 {
+                                    Settings = new NameValueCollection(), 
                                     FileSystem =
                                     {
                                         DataDirectory = "test"

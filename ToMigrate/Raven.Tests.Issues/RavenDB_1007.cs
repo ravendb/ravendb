@@ -37,18 +37,17 @@ namespace Raven.Tests.Issues
         [PropertyData("Storages")]
         public void AfterFailedRestoreOfIndex_ShouldGenerateWarningAndResetIt(string storageName)
         {
-            using (var db = new DocumentDatabase(new AppSettingsBasedConfiguration
+            using (var db = new DocumentDatabase(new RavenConfiguration
             {
-                Core =
-                {
-                    DataDirectory = DataDir
-                },
+                DataDirectory = DataDir,				
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
-                Storage =
+                DefaultStorageTypeName = storageName,
+                Settings =
                 {
-                    AllowIncrementalBackups = true
+                    {Constants.Esent.CircularLog, "false"},
+                    {Constants.Voron.AllowIncrementalBackups, "true"}
                 }
-            }, null))
+            }.Initialize(), null))
             {
                 db.SpinBackgroundWorkers();
                 db.Indexes.PutIndex(new RavenDocumentsByEntityName().IndexName, new RavenDocumentsByEntityName().CreateIndexDefinition());
@@ -59,14 +58,14 @@ namespace Raven.Tests.Issues
                 WaitForIndexing(db);
 
                 var databaseDocument = new DatabaseDocument();
-                db.Maintenance.StartBackup(BackupDir, false, databaseDocument);
+                db.Maintenance.StartBackup(BackupDir, false, databaseDocument, new ResourceBackupState());
                 WaitForBackup(db, true);
 
                 db.Documents.Put("users/3", null, RavenJObject.Parse("{'Name':'Daniel'}"), RavenJObject.Parse("{'Raven-Entity-Name':'Users'}"), null);
 
                 WaitForIndexing(db);
 
-                db.Maintenance.StartBackup(BackupDir, true, databaseDocument);
+                db.Maintenance.StartBackup(BackupDir, true, databaseDocument, new ResourceBackupState());
                 WaitForBackup(db, true);
 
             }
@@ -80,7 +79,7 @@ namespace Raven.Tests.Issues
 
             var sb = new StringBuilder();
 
-            MaintenanceActions.Restore(new AppSettingsBasedConfiguration(), new DatabaseRestoreRequest
+            MaintenanceActions.Restore(new RavenConfiguration(), new DatabaseRestoreRequest
             {
                 BackupLocation = BackupDir,
                 DatabaseLocation = DataDir
@@ -91,12 +90,7 @@ namespace Raven.Tests.Issues
                 " Index will be recreated after launching Raven instance",
                 sb.ToString());
 
-            using (var db = new DocumentDatabase(new AppSettingsBasedConfiguration {
-                Core =
-                {
-                    DataDirectory = DataDir
-                },
-            }, null))
+            using (var db = new DocumentDatabase(new RavenConfiguration {DataDirectory = DataDir}, null))
             {				
                 db.SpinBackgroundWorkers();
                 QueryResult queryResult;
@@ -128,12 +122,10 @@ namespace Raven.Tests.Issues
         [PropertyData("Storages")]
         public void AfterFailedRestoreOfIndex_ShouldGenerateWarningAndResetIt(string storageName)
         {
-            using (var db = new DocumentDatabase(new AppSettingsBasedConfiguration
+            using (var db = new DocumentDatabase(new RavenConfiguration
             {
-                Core =
-                {
-                    DataDirectory = DataDir
-                },
+                DefaultStorageTypeName = storageName,
+                DataDirectory = DataDir,
                 RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
             }, null))
             {
@@ -146,7 +138,7 @@ namespace Raven.Tests.Issues
 
                 WaitForIndexing(db);
 
-                db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument());
+                db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument(), new ResourceBackupState());
                 WaitForBackup(db, true);
             }
             IOExtensions.DeleteDirectory(DataDir);
@@ -157,7 +149,7 @@ namespace Raven.Tests.Issues
             {
                 var sb = new StringBuilder();
 
-                MaintenanceActions.Restore(new AppSettingsBasedConfiguration(), new DatabaseRestoreRequest
+                MaintenanceActions.Restore(new RavenConfiguration(), new DatabaseRestoreRequest
                 {
                     BackupLocation = BackupDir,
                     DatabaseLocation = DataDir
@@ -169,7 +161,7 @@ namespace Raven.Tests.Issues
                     sb.ToString());
             }
 
-            using (var db = new DocumentDatabase(new AppSettingsBasedConfiguration { Core = { DataDirectory = DataDir }}, null))
+            using (var db = new DocumentDatabase(new RavenConfiguration {DataDirectory = DataDir}, null))
             {
                 db.SpinBackgroundWorkers();
                 QueryResult queryResult;

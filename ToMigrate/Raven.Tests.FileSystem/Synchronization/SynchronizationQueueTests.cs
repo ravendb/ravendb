@@ -18,11 +18,11 @@ namespace Raven.Tests.FileSystem.Synchronization
 
         private readonly SynchronizationQueue queue;
 
-        private RavenConfiguration configuration;
+        private InMemoryRavenConfiguration configuration;
 
         public SynchronizationQueueTests()
         {
-            configuration = new RavenConfiguration();
+            configuration = new InMemoryRavenConfiguration();
             configuration.Initialize();
             queue = new SynchronizationQueue();
         }

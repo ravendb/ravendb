@@ -15,7 +15,6 @@ using Raven.Database.Actions;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
 using Raven.Tests.Common;
-using Raven.Tests.Helpers.Util;
 
 using Xunit;
 using Xunit.Extensions;
@@ -42,11 +41,11 @@ namespace Raven.Tests.Issues
             IOExtensions.DeleteDirectory(DataDir);
         }
 
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
+        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
         {
-            configuration.Modify(x => x.Storage.AllowIncrementalBackups, true); //for now all tests run under Voron - so this is needed
-            configuration.Get().RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
-            configuration.Modify(x => x.Core.RunInMemory, false);
+            configuration.Settings[Constants.Esent.CircularLog] = "false";
+            configuration.Settings[Constants.Voron.AllowIncrementalBackups] = "true"; //for now all tests run under Voron - so this is needed
+            configuration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false;
         }
 
         public class Users_ByName : AbstractIndexCreationTask<User> 
@@ -65,11 +64,10 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Theory]
-        [PropertyData("Storages")]
-        public void AfterRestoreOfIncrementalBackupAllIndexesShouldWork(string storage)
+        [Fact]
+        public void AfterRestoreOfIncrementalBackupAllIndexesShouldWork()
         {
-            using(var store = NewDocumentStore(requestedStorage: storage))
+            using(var store = NewDocumentStore(requestedStorage: "esent"))
             {
                 new Users_ByName().Execute(store);
 
@@ -81,7 +79,7 @@ namespace Raven.Tests.Issues
 
                 WaitForIndexing(store);
 
-                store.SystemDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument());
+                store.SystemDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument(), new ResourceBackupState());
                 WaitForBackup(store.SystemDatabase, true);
 
                 Thread.Sleep(1000); // incremental tag has seconds precision
@@ -94,7 +92,7 @@ namespace Raven.Tests.Issues
 
                 WaitForIndexing(store);
 
-                store.SystemDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument());
+                store.SystemDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument(), new ResourceBackupState());
                 WaitForBackup(store.SystemDatabase, true);
 
                 Thread.Sleep(1000); // incremental tag has seconds precision
@@ -103,24 +101,36 @@ namespace Raven.Tests.Issues
 
                 WaitForIndexing(store);
 
-                store.SystemDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument());
+                store.SystemDatabase.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument(), new ResourceBackupState());
                 WaitForBackup(store.SystemDatabase, true);
 
                 var output = new StringBuilder();
 
-                MaintenanceActions.Restore(new AppSettingsBasedConfiguration
-                    {
-                        Storage = { AllowIncrementalBackups = true }
-                    }, new DatabaseRestoreRequest
-                    {
-                        BackupLocation = BackupDir,
-                        Defrag = true,
-                        DatabaseLocation = DataDir
-                    }, s => output.Append(s));
+                MaintenanceActions.Restore(new RavenConfiguration
+                {
+                    Settings =
+                {
+                    {Constants.Esent.CircularLog, "false"},
+                    {Constants.Voron.AllowIncrementalBackups, "true"}
+                }
+
+                }, new DatabaseRestoreRequest
+                {
+                    BackupLocation = BackupDir,
+                    Defrag = true,
+                    DatabaseLocation = DataDir
+                }, s => output.Append(s));
 
                 Assert.DoesNotContain("error", output.ToString().ToLower());
 
-                using (var db = new DocumentDatabase(new AppSettingsBasedConfiguration { Core = { DataDirectory = DataDir }}, null))
+                using (var db = new DocumentDatabase(new RavenConfiguration
+                {
+                    DataDirectory = DataDir,
+                    Settings =
+                    {
+                        {Constants.Esent.CircularLog, "false"}
+                    }
+                }, null))
                 {
                     var indexStats = db.Statistics.Indexes;
 

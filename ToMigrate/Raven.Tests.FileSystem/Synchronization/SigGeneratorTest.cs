@@ -15,11 +15,11 @@ namespace Raven.Tests.FileSystem.Synchronization
     {
         private readonly Stream _stream = new MemoryStream();
 
-        private RavenConfiguration configuration;
+        private InMemoryRavenConfiguration configuration;
 
         public SigGeneratorTest()
         {
-            configuration = new RavenConfiguration();
+            configuration = new InMemoryRavenConfiguration();
             configuration.Initialize();
 
             TestDataGenerators.WriteNumbers(_stream, 10000);
@@ -49,11 +49,11 @@ namespace Raven.Tests.FileSystem.Synchronization
                 Assert.Equal(2, result.Count);
                 using (var content = signatureRepository.GetContentForReading(result[0].Name))
                 {
-                    Assert.Equal("91b64180c75ef27213398979cc20bfb7", content.GetHashAsHex());
+                    Assert.Equal("91b64180c75ef27213398979cc20bfb7", content.GetMD5Hash());
                 }
                 using (var content = signatureRepository.GetContentForReading(result[1].Name))
                 {
-                    Assert.Equal("9fe9d408aed35769e25ece3a56f2d12f", content.GetHashAsHex());
+                    Assert.Equal("9fe9d408aed35769e25ece3a56f2d12f", content.GetMD5Hash());
                 }
             }
         }
@@ -78,7 +78,7 @@ namespace Raven.Tests.FileSystem.Synchronization
                 {
                     using (var content = signatureRepository.GetContentForReading(signatureInfo.Name))
                     {
-                        firstSigContentHashes.Add(content.GetHashAsHex());
+                        firstSigContentHashes.Add(content.GetMD5Hash());
                     }
                 }
             }
@@ -96,7 +96,7 @@ namespace Raven.Tests.FileSystem.Synchronization
                 {
                     using (var content = signatureRepository.GetContentForReading(signatureInfo.Name))
                     {
-                        secondSigContentHashes.Add(content.GetHashAsHex());
+                        secondSigContentHashes.Add(content.GetMD5Hash());
                     }
                 }
             }
@@ -119,23 +119,26 @@ namespace Raven.Tests.FileSystem.Synchronization
             randomStream.Read(buffer, 0, size);
             var stream = new MemoryStream(buffer);
 
-            using (var signatureRepository = new VolatileSignatureRepository("test", configuration))
-            using (var rested = new SigGenerator())
+            foreach (var fileName in new [] { "test", "content/test", "/content/test"})
             {
-                var signatures = signatureRepository.GetByFileName();
-                Assert.Equal(0, signatures.Count());
+                using (var signatureRepository = new VolatileSignatureRepository(fileName, configuration))
+                using (var rested = new SigGenerator())
+                {
+                    var signatures = signatureRepository.GetByFileName();
+                    Assert.Equal(0, signatures.Count());
 
-                stream.Position = 0;
-                var result = rested.GenerateSignatures(stream, "test", signatureRepository);
+                    stream.Position = 0;
+                    var result = rested.GenerateSignatures(stream, fileName, signatureRepository);
 
-                signatures = signatureRepository.GetByFileName();
-                Assert.Equal(2, signatures.Count());
+                    signatures = signatureRepository.GetByFileName();
+                    Assert.Equal(2, signatures.Count());
 
-                stream.Position = 0;
-                result = rested.GenerateSignatures(stream, "test", signatureRepository);
+                    stream.Position = 0;
+                    result = rested.GenerateSignatures(stream, fileName, signatureRepository);
 
-                signatures = signatureRepository.GetByFileName();
-                Assert.Equal(2, signatures.Count());
+                    signatures = signatureRepository.GetByFileName();
+                    Assert.Equal(2, signatures.Count());
+                }
             }
         }
     }

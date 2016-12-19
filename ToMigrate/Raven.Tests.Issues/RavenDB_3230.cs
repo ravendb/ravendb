@@ -15,8 +15,6 @@ using Raven.Database.Server;
 using Raven.Database.Server.Security;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
-using Raven.Tests.Helpers.Util;
-
 using Xunit;
 
 namespace Raven.Tests.Issues
@@ -29,11 +27,11 @@ namespace Raven.Tests.Issues
         {
             store = NewRemoteDocumentStore(enableAuthentication:true);
         }
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
+        protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)
         {
             Authentication.EnableOnce();
-            configuration.Modify(x => x.Core.AnonymousUserAccessMode, AnonymousUserAccessMode.None);
-            configuration.Get().Catalog.Catalogs.Add(new TypeCatalog(typeof(AdminOnlyPutTrigger)));  
+            configuration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
+            configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof(AdminOnlyPutTrigger)));  
         }
         public override void Dispose()
         {
@@ -63,10 +61,10 @@ namespace Raven.Tests.Issues
         }
         public class AdminOnlyPutTrigger : AbstractPutTrigger
         {
-            public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata)
+            public override VetoResult AllowPut(string key, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation)
             {
                 var principal = CurrentOperationContext.User.Value;
-                var isAdmin = principal.IsAdministrator(Database.Configuration.Core.AnonymousUserAccessMode) || principal.IsAdministrator(Database);
+                var isAdmin = principal.IsAdministrator(Database.Configuration.AnonymousUserAccessMode) || principal.IsAdministrator(Database);
                 return isAdmin ? VetoResult.Allowed : VetoResult.Deny("Only admin may put document into the database");
             }
         }

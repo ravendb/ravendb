@@ -32,7 +32,7 @@ namespace Bug
         {
             using (var store = new EmbeddableDocumentStore())
             {
-                store.Configuration.Core.RunInMemory = true;
+                store.Configuration.RunInMemory = true;
                 store.Initialize();
                 store.DatabaseCommands.PutIndex("TagsIndex", new TagsIndex().CreateIndexDefinition());
 

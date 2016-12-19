@@ -148,7 +148,7 @@ namespace Raven.Tests.Issues
                 var reason = results.Reason;
                 var reasonForLowMemoryCall = results.LowMemoryCallsRecords.First().Reason;
                 var lowMemoryRecords = results.LowMemoryCallsRecords.First().Operations;
-
+                //System notification, low memory
                 Assert.Equal("System detected low memory", reasonForLowMemoryCall);
 
             }

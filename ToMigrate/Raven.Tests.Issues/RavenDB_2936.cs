@@ -52,13 +52,13 @@ namespace Raven.Tests.Issues
                     {
                         Script = @"this.LastName = 'Smith'"
                     })
-                    .WaitForCompletion();
+                    .WaitForCompletion().Value<RavenJArray>("Batch");
 
-                Assert.Empty((RavenJArray)result);
+                Assert.Empty(result);
 
                 WaitForIndexing(store);
 
-                result = store.DatabaseCommands.UpdateByIndex("Users/ByName", 
+                result = store.DatabaseCommands.UpdateByIndex("Users/ByName",
                     new IndexQuery(),
                     new[]
                     {
@@ -68,14 +68,14 @@ namespace Raven.Tests.Issues
                             Name = "NewProp",
                             Value = "Value"
                         }
-                    }).WaitForCompletion();
+                    }).WaitForCompletion().Value<RavenJArray>("Batch");
 
-                Assert.Empty((RavenJArray)result);
+                Assert.Empty(result);
 
                 WaitForIndexing(store);
 
                 result = store.DatabaseCommands.DeleteByIndex("Users/ByName", new IndexQuery())
-                    .WaitForCompletion();
+                    .WaitForCompletion().Value<RavenJArray>("Batch");
 
                 WaitForIndexing(store);
 

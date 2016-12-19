@@ -5,7 +5,6 @@ using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
 using Raven.Database.Config;
 using Raven.Tests.Common;
-using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -34,10 +33,11 @@ namespace Raven.Tests.Bundles.Replication.Issues
             }
         }
 
-        protected override void ModifyConfiguration(ConfigurationModification serverConfiguration)
+        protected override void ModifyConfiguration(InMemoryRavenConfiguration serverConfiguration)
         {
-            serverConfiguration.Modify(x => x.Core.RunInMemory, false);
-            serverConfiguration.Get().RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true;
+            serverConfiguration.RunInMemory = false;
+            serverConfiguration.RunInUnreliableYetFastModeThatIsNotSuitableForProduction = true;
+            serverConfiguration.DefaultStorageTypeName = "esent";
         }
 
         [Fact]

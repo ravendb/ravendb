@@ -268,6 +268,20 @@ namespace Raven.Tests.Storage
             });
         }
 
-        
+        [Fact]
+        public void check_alerts_document()
+        {
+            db.TransactionalStorage.Batch(actions =>
+            {
+                Assert.DoesNotThrow(() =>
+                {
+                    var doc = actions.Documents.DocumentByKey(Constants.RavenAlerts);
+                    if (doc == null)
+                        return;
+
+                    throw new InvalidOperationException("Alerts document data: " + doc.DataAsJson);
+                });
+            });
+        }
     }
 }

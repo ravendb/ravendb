@@ -91,7 +91,7 @@ namespace Voron.Platform.Posix
                     var err = Marshal.GetLastWin32Error();
                     ThrowLastError(err, "fsync " + path);
                 }
-                if (SyncDirectory(path) == -1)
+                if (CheckSyncDirectoryAllowed(path) && SyncDirectory(path) == -1)
                 {
                     var err = Marshal.GetLastWin32Error();
                     ThrowLastError(err, "fsync dir " + path);

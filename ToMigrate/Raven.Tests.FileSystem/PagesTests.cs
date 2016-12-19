@@ -1,15 +1,16 @@
-using Raven.Abstractions.Data;
+using System;
+using System.Collections.Specialized;
 using Raven.Abstractions.MEF;
 using Raven.Database.Config;
 using Raven.Database.Extensions;
+using Raven.Database.FileSystem.Extensions;
 using Raven.Database.FileSystem.Infrastructure;
 using Raven.Database.FileSystem.Plugins;
-using Raven.Database.FileSystem.Storage.Voron;
-using Raven.Json.Linq;
-using System;
-using System.Collections.Specialized;
-using Xunit;
+using Raven.Database.FileSystem.Storage.Esent;
 
+using Xunit;
+using Raven.Json.Linq;
+using Raven.Abstractions.Data;
 
 namespace Raven.Tests.FileSystem
 {
@@ -20,12 +21,16 @@ namespace Raven.Tests.FileSystem
         private readonly RavenJObject metadataWithEtag = new RavenJObject();
         public PagesTests()
         {
-            var configuration = new RavenConfiguration
+            var configuration = new InMemoryRavenConfiguration
             {
                 FileSystem =
                 {
                     DataDirectory = "test"
-                }
+                },
+                Settings = new NameValueCollection
+                           {
+                               { Constants.MetadataEtagField, Guid.Empty.ToString() }
+                           }
             };
 
             IOExtensions.DeleteDirectory("test");

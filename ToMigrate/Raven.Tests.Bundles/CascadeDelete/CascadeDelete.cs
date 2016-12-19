@@ -23,9 +23,9 @@ namespace Raven.Tests.Bundles.CascadeDelete
 
         public CascadeDelete()
         {
-            var ravenDbServer = GetNewServer(databaseName: Constants.SystemDatabase, configureConfig: configuration =>
+            var ravenDbServer = GetNewServer(activeBundles: "Cascade Delete", databaseName: Constants.SystemDatabase, configureConfig: configuration =>
             {
-                configuration.Get().Catalog.Catalogs.Add(new AssemblyCatalog(typeof (CascadeDeleteTrigger).Assembly));
+                configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof (CascadeDeleteTrigger).Assembly));
             });
 
             documentStore = NewRemoteDocumentStore(ravenDbServer: ravenDbServer, databaseName: Constants.SystemDatabase);
@@ -70,6 +70,7 @@ namespace Raven.Tests.Bundles.CascadeDelete
             {
                 session.Store(master);
                 session.Advanced.GetMetadataFor(master)[MetadataKeys.DocumentsToCascadeDelete] = new RavenJArray {"I_Dont_Exist"};
+                session.Advanced.GetMetadataFor(master)[MetadataKeys.AttachmentsToCascadeDelete] = new RavenJArray {"Neither_Do_I"};
                 session.SaveChanges();
             }
 
@@ -156,6 +157,7 @@ namespace Raven.Tests.Bundles.CascadeDelete
                 Assert.NotNull(session.Load<CascadeTester>(child2.Id));
             }
 
+
             using (var session = documentStore.OpenSession())
             {
                 session.Delete<CascadeTester>(session.Load<CascadeTester>(master.Id));
@@ -167,7 +169,147 @@ namespace Raven.Tests.Bundles.CascadeDelete
                 // assert child 2 deleted
                 Assert.Null(session.Load<CascadeTester>(child1.Id));
             }
-        }	
+
+        }
+
+
+        [Fact]
+        public void Can_cascade_delete_single_referenced_attachment()
+        {
+            var master = new CascadeTester {Name="Master"};
+            
+            using (var session = documentStore.OpenSession())
+            {
+                session.Store(master);
+                documentStore.DatabaseCommands.PutAttachment("Cascade-Delete-Me", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
+                session.Advanced.GetMetadataFor(master)[MetadataKeys.AttachmentsToCascadeDelete] = new RavenJArray{"Cascade-Delete-Me"};
+                session.SaveChanges();
+            }
+
+
+
+            // assert initial creation
+            using (var session = documentStore.OpenSession())
+            {
+                // assert master created
+                Assert.NotNull(session.Load<CascadeTester>(master.Id));
+                // assert attachment created
+                Assert.NotNull(documentStore.DatabaseCommands.GetAttachment("Cascade-Delete-Me"));
+            }
+
+
+            using (var session = documentStore.OpenSession())
+            {
+                session.Delete<CascadeTester>(session.Load<CascadeTester>(master.Id));
+                session.SaveChanges();
+                // assert master deleted
+                Assert.Null(session.Load<CascadeTester>(master.Id));
+                // assert attachment deleted
+                Assert.Null(documentStore.DatabaseCommands.GetAttachment("Cascade-Delete-Me"));
+            }
+
+        }
+
+        [Fact]
+        public void Can_cascade_delete_multiple_referenced_attachments()
+        {
+            var master = new CascadeTester {Name="Master"};
+            
+            using (var session = documentStore.OpenSession())
+            {
+                session.Store(master);
+                documentStore.DatabaseCommands.PutAttachment("Cascade-Delete-Me-1", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
+                documentStore.DatabaseCommands.PutAttachment("Cascade-Delete-Me-2", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
+                session.Advanced.GetMetadataFor(master)[MetadataKeys.AttachmentsToCascadeDelete] = new RavenJArray("Cascade-Delete-Me-1","Cascade-Delete-Me-2");
+                session.SaveChanges();
+            }
+
+
+
+            // assert initial creation
+            using (var session = documentStore.OpenSession())
+            {
+                // assert master created
+                Assert.NotNull(session.Load<CascadeTester>(master.Id));
+                // assert attachment 1 created
+                Assert.NotNull(documentStore.DatabaseCommands.GetAttachment("Cascade-Delete-Me-1"));
+                // assert attachment 2 created
+                Assert.NotNull(documentStore.DatabaseCommands.GetAttachment("Cascade-Delete-Me-2"));
+
+            }
+
+
+            using (var session = documentStore.OpenSession())
+            {
+                session.Delete<CascadeTester>(session.Load<CascadeTester>(master.Id));
+                session.SaveChanges();
+                // assert master deleted
+                Assert.Null(session.Load<CascadeTester>(master.Id));
+                // assert attachment 1 deleted
+                Assert.Null(documentStore.DatabaseCommands.GetAttachment("Cascade-Delete-Me-1"));
+                // assert attachment 2 deleted
+                Assert.Null(documentStore.DatabaseCommands.GetAttachment("Cascade-Delete-Me-2"));
+
+            }
+
+        }
+
+        [Fact]
+        public void Can_cascade_delete_multiple_referenced_documents_and_attachments()
+        {
+            var master = new CascadeTester {Name="Master"};
+            var child1 = new CascadeTester {Name="Child 1"};
+            var child2 = new CascadeTester {Name="Child 2"}; 
+
+            using (var session = documentStore.OpenSession())
+            {
+                session.Store(master);
+                session.Store(child1);
+                session.Store(child2);
+                session.Advanced.GetMetadataFor(master)[MetadataKeys.DocumentsToCascadeDelete] = new RavenJArray(child1.Id, child2.Id);
+                documentStore.DatabaseCommands.PutAttachment("Cascade-Delete-Me-1", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
+                documentStore.DatabaseCommands.PutAttachment("Cascade-Delete-Me-2", null, new MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
+                session.Advanced.GetMetadataFor(master)[MetadataKeys.AttachmentsToCascadeDelete] = new RavenJArray("Cascade-Delete-Me-1", "Cascade-Delete-Me-2");
+                session.SaveChanges();
+            }
+
+
+
+            // assert initial creation
+            using (var session = documentStore.OpenSession())
+            {
+                // assert master created
+                Assert.NotNull(session.Load<CascadeTester>(master.Id));
+                // assert child 1 created
+                Assert.NotNull(session.Load<CascadeTester>(child1.Id));
+                // assert child 2 created
+                Assert.NotNull(session.Load<CascadeTester>(child2.Id)); 
+                // assert attachment 1 created
+                Assert.NotNull(documentStore.DatabaseCommands.GetAttachment("Cascade-Delete-Me-1"));
+                // assert attachment 2 created
+                Assert.NotNull(documentStore.DatabaseCommands.GetAttachment("Cascade-Delete-Me-2"));
+
+            }
+
+
+            using (var session = documentStore.OpenSession())
+            {
+                session.Delete<CascadeTester>(session.Load<CascadeTester>(master.Id));
+                session.SaveChanges();
+                // assert master deleted
+                Assert.Null(session.Load<CascadeTester>(master.Id));
+                // assert child 1 deleted
+                Assert.Null(session.Load<CascadeTester>(child1.Id));
+                // assert child 2 deleted
+                Assert.Null(session.Load<CascadeTester>(child2.Id)); 
+                // assert attachment 1 deleted
+                Assert.Null(documentStore.DatabaseCommands.GetAttachment("Cascade-Delete-Me-1"));
+                // assert attachment 2 deleted
+                Assert.Null(documentStore.DatabaseCommands.GetAttachment("Cascade-Delete-Me-2"));
+
+            }
+
+        }
 
         [Fact]
         public void Can_cascade_delete_documents_that_specify_each_other_as_cascade_deletes()

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Raven.Abstractions.Counters;
 using Raven.Abstractions.Replication;
@@ -45,7 +45,7 @@ namespace Raven.Tests.Counters
             using (var serverA = GetNewServer(8077))
             using (var serverB = GetNewServer(8076))
             {
-                using (var ravenStoreB = NewRemoteDocumentStore(ravenDbServer: serverB))
+                using (NewRemoteDocumentStore(ravenDbServer: serverB))
                 {
                     using (var storeA = NewRemoteCountersStore(DefaultCounterStorageName, ravenServer: serverA))
                     using (var storeB = NewRemoteCountersStore(DefaultCounterStorageName, ravenServer: serverB))
@@ -58,13 +58,13 @@ namespace Raven.Tests.Counters
                         serverA.Dispose();
 
                         var total = await storeA.GetOverallTotalAsync("group", "counter");
-                        Assert.Equal(2, total);
+                        Assert.Equal(2, total.Total);
                     }
                 }
             }
         }
 
-        private void SetDisabledStateOnCounter(string name, IDocumentStore store, bool value)
+        private void SetDisabledStateOnCounter(string name,IDocumentStore store, bool value)
         {
             var counterDocumentKey = "Raven/Counters/" + name;
             var document = store.DatabaseCommands.ForSystemDatabase().Get(counterDocumentKey);
@@ -97,7 +97,7 @@ namespace Raven.Tests.Counters
                 SetDisabledStateOnCounter(storeA.Name, ravenStoreA, true);
 
                 var total = await storeA.GetOverallTotalAsync("group", "counter");
-                Assert.Equal(3, total);
+                Assert.Equal(3, total.Total);
 
                 SetDisabledStateOnCounter(storeA.Name, ravenStoreA, false);
                 SetDisabledStateOnCounter(storeB.Name, ravenStoreB, true);
@@ -105,7 +105,7 @@ namespace Raven.Tests.Counters
                 storeA.ReplicationInformer.RefreshReplicationInformation();
 
                 total = await storeA.GetOverallTotalAsync("group", "counter");
-                Assert.Equal(3, total);
+                Assert.Equal(3, total.Total);
 
                 SetDisabledStateOnCounter(storeB.Name, ravenStoreB, false);
             }
@@ -132,12 +132,12 @@ namespace Raven.Tests.Counters
                 Assert.True(await WaitForReplicationBetween(storeA, storeC, "group", "counter"));
 
                 SetDisabledStateOnCounter(storeA.Name, ravenStoreA, true);
-
+                
                 storeA.ReplicationInformer.RefreshReplicationInformation();
-
+                
                 //A is dead -> checking if we can fall back to B or C
                 var total = await storeA.GetOverallTotalAsync("group", "counter");
-                Assert.Equal(2, total);
+                Assert.Equal(2, total.Total);
 
                 SetDisabledStateOnCounter(storeB.Name, ravenStoreB, true);
 
@@ -145,7 +145,7 @@ namespace Raven.Tests.Counters
 
                 //now B is also dead, make sure we can fall back on C
                 total = await storeA.GetOverallTotalAsync("group", "counter");
-                Assert.Equal(2, total);
+                Assert.Equal(2, total.Total);
             }
         }
 
@@ -172,20 +172,20 @@ namespace Raven.Tests.Counters
                 Assert.True(await WaitForReplicationBetween(storeA, storeB, "group", "counter"));
                 Assert.True(await WaitForReplicationBetween(storeA, storeC, "group", "counter"));
 
-                storeA.ReplicationInformer.MaxIntervalBetweenUpdatesInMilliseconds = 0;
+                storeA.ReplicationInformer.MaxIntervalBetweenUpdatesInMilliseconds = 0; 
 
                 SetDisabledStateOnCounter(storeA.Name, ravenStoreA, true);
 
 
                 //A is dead -> checking if we can fall back to B or C
                 var total = await storeA.GetOverallTotalAsync("group", "counter");
-                Assert.Equal(2, total);
+                Assert.Equal(2, total.Total);
 
                 SetDisabledStateOnCounter(storeB.Name, ravenStoreB, true);
 
                 //now B is also dead, make sure we can fall back on C
                 total = await storeA.GetOverallTotalAsync("group", "counter");
-                Assert.Equal(2, total);
+                Assert.Equal(2, total.Total);
             }
         }
     }

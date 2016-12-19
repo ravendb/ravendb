@@ -42,13 +42,11 @@ var paths = {
         'wwwroot/lib/Durandal/css/durandal.css',
         //'wwwroot/lib/jquery-ui/themes/base-wo-comments/all.css',
         //'wwwroot/lib/jquery.dynatree/dist/skin/ui.dynatree.css',
-        'wwwroot/lib/nvd3/build/nv.d3.css',
         'wwwroot/lib/animate.css/animate.css',
         'wwwroot/Content/css/styles.css',
         'wwwroot/Content/css/legacy_styles.css'
     ],
     externalLibs: [
-        "d3/d3.js",
         "jquery/dist/jquery.js",
         'lodash/dist/lodash.js',
         "blockUI/jquery.blockUI.js",

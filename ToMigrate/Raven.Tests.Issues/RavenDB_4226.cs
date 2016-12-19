@@ -32,7 +32,7 @@ namespace Raven.Tests.Issues
             {
                 TransformResults = entities => from entity in entities
                                                let idAsStr = entity.Id.ToString()
-                                               select new { Id = idAsStr.Remove(0,3), Name = entity.Name.Reverse() };
+                                               select new { Id = idAsStr.Remove(0, 3), Name = entity.Name.Reverse() };
             }
 
         }
@@ -45,17 +45,17 @@ namespace Raven.Tests.Issues
                 store.ExecuteTransformer(new A2B());
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new A {Id=7,Name="Shmulick"});
+                    session.Store(new A { Id = 7, Name = "Shmulick" });
                     session.Store(new A { Id = 2, Name = "Itzik" });
                     session.Store(new A { Id = 11, Name = "Shalom" });
                     session.SaveChanges();
                 }
-                
+
                 using (var session = store.OpenSession())
                 {
                     var res = session.Query<A>().Where(x => x.Id.In(ids)).TransformWith<A2B, B>()
-                        .Customize(x=>x.WaitForNonStaleResults()).Customize(x=>x.NoCaching()).Single();
-                    Assert.Equal("kiztI",res.Name);
+                        .Customize(x => x.WaitForNonStaleResults()).Customize(x => x.NoCaching()).Single();
+                    Assert.Equal("kiztI", res.Name);
                 }
             }
         }

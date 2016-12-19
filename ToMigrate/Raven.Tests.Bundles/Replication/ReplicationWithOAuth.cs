@@ -4,11 +4,11 @@ using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
+using Raven.Database.Config;
 using Raven.Database.Server;
 using Raven.Database.Server.Security;
 using Raven.Json.Linq;
 using Raven.Tests.Common;
-using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -16,9 +16,9 @@ namespace Raven.Tests.Bundles.Replication
 {
     public class ReplicationWithOAuth : ReplicationBase
     {
-        protected override void ModifyConfiguration(ConfigurationModification serverConfiguration)
+        protected override void ModifyConfiguration(InMemoryRavenConfiguration serverConfiguration)
         {
-            serverConfiguration.Modify(x => x.Core.AnonymousUserAccessMode, AnonymousUserAccessMode.None);
+            serverConfiguration.AnonymousUserAccessMode = AnonymousUserAccessMode.None;
             Authentication.EnableOnce();
         }
 
@@ -47,7 +47,7 @@ namespace Raven.Tests.Bundles.Replication
                         Enabled = true,
                         Name = "Ayende",
                         Secret = "abc"
-                    }), new RavenJObject());
+                    }), new RavenJObject(), null);
             }
 
             TellFirstInstanceToReplicateToSecondInstance();

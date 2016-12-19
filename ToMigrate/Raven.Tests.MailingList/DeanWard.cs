@@ -5,8 +5,6 @@ using Raven.Tests.Common;
 using Xunit;
 using System.Linq;
 
-using Raven.Tests.Helpers.Util;
-
 namespace Raven.Tests.MailingList
 {
     using Raven.Abstractions.Indexing;
@@ -16,7 +14,7 @@ namespace Raven.Tests.MailingList
     {
         public class FilterEverything : AbstractReadTrigger
         {
-            public override ReadVetoResult AllowRead(string key, Raven.Json.Linq.RavenJObject metadata, ReadOperation operation)
+            public override ReadVetoResult AllowRead(string key, Raven.Json.Linq.RavenJObject metadata, ReadOperation operation, Raven.Abstractions.Data.TransactionInformation transactionInformation)
             {
                 if (operation == ReadOperation.Query)
                     return ReadVetoResult.Ignore;
@@ -24,9 +22,9 @@ namespace Raven.Tests.MailingList
             }
         }
 
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
+        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
         {
-            configuration.Get().Catalog.Catalogs.Add(new TypeCatalog(typeof(FilterEverything)));
+            configuration.Catalog.Catalogs.Add(new TypeCatalog(typeof(FilterEverything)));
         }
 
         [Fact]

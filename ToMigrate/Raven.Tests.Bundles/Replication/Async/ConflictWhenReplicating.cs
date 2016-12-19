@@ -29,7 +29,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 
             using (var session = store2.OpenAsyncSession())
             {
-                await session.StoreAsync(new Company());
+                await session.StoreAsync(new Company {Name = "Company2"});
                 await session.SaveChangesAsync();
             }
 
@@ -64,7 +64,7 @@ namespace Raven.Tests.Bundles.Replication.Async
 
             using (var session = store2.OpenAsyncSession())
             {
-                await session.StoreAsync(new Company());
+                await session.StoreAsync(new Company { Name = "Company2" });
                 await session.SaveChangesAsync();
             }
 

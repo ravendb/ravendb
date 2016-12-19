@@ -12,6 +12,8 @@ using System.Net;
 using System.Reflection;
 
 using Raven.Client;
+using Raven.Client.Document;
+using Raven.Database.Config;
 using Raven.Json.Linq;
 
 namespace Raven.Tests.Helpers.Util
@@ -105,17 +107,17 @@ namespace Raven.Tests.Helpers.Util
             }
         }
 
-        public static void ApplySettingsToConfiguration(ConfigurationModification configuration)
+        public static void ApplySettingsToConfiguration(InMemoryRavenConfiguration configuration)
         {
             var settings = ServerSettings;
             foreach (var setting in settings)
             {
                 Console.WriteLine("Applying external server setting: " + setting.Key);
 
-                configuration.Get().SetSetting(setting.Key, setting.Value);
+                configuration.Settings[setting.Key] = setting.Value;
             }
 
-            configuration.Get().Initialize();
+            configuration.Initialize();
         }
 
         public static void ApplySettingsToConventions(ConventionBase conventions)

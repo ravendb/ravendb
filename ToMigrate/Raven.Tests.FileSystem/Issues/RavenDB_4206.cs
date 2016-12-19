@@ -14,7 +14,7 @@ namespace Raven.Tests.FileSystem.Issues
     public class RavenDB_4206 : RavenFilesTestWithLogs
     {
         [Fact]
-        public async Task can_stream_more_than_1024_files()
+        public async Task can_stream_more_than_1024_docs()
         {
             using (var store = NewStore())
             {
