@@ -37,7 +37,8 @@ namespace Raven.NewClient.Client.Commands
             return new BatchCommand()
             {
                 Commands = result.Commands,
-                Context = _session.Context
+                Context = _session.Context,
+                IsReadRequest = false
             };
         }
 
