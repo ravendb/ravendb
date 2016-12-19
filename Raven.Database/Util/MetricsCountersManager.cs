@@ -7,6 +7,8 @@ using System;
 using System.Linq;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
+using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -58,9 +60,10 @@ namespace Raven.Database.Util
             StaleIndexReduces = dbMetrics.Histogram("metrics", "stale index reduces");
 
             ConcurrentRequests = dbMetrics.Meter("metrics", "req/sec", "Concurrent Requests Meter", TimeUnit.Seconds);
-            MetricsTicker.Instance.AddMeterMetric(ConcurrentRequests);
+            MetricsTicker.Instance.AddFiveSecondsIntervalMeterMetric(ConcurrentRequests);
 
             RequestDurationLastMinute = new OneMinuteMetric();
+            MetricsTicker.Instance.AddFifteenSecondsIntervalMeterMetric(RequestDurationLastMinute);
 
             RequestDurationMetric = dbMetrics.Histogram("metrics", "req duration");
 
@@ -114,10 +117,10 @@ namespace Raven.Database.Util
         {
             dbMetrics.Dispose();
 
-            MetricsTicker.Instance.RemoveMeterMetric(ConcurrentRequests);
+            MetricsTicker.Instance.RemoveFiveSecondsIntervalMeterMetric(ConcurrentRequests);
             foreach (var batchSizeMeter in ReplicationBatchSizeMeter)
             {
-                MetricsTicker.Instance.RemoveMeterMetric(batchSizeMeter.Value);
+                MetricsTicker.Instance.RemoveFiveSecondsIntervalMeterMetric(batchSizeMeter.Value);
             }
 
             MetricsTicker.Instance.RemovePerSecondCounterMetric(DocsPerSecond);
@@ -126,6 +129,7 @@ namespace Raven.Database.Util
             MetricsTicker.Instance.RemovePerSecondCounterMetric(RequestsPerSecondTimeSeries);
             MetricsTicker.Instance.RemovePerSecondCounterMetric(ReducedPerSecond);
             MetricsTicker.Instance.RemovePerSecondCounterMetric(IndexedPerSecond);
+            MetricsTicker.Instance.RemoveFifteenSecondsIntervalMeterMetric(RequestDurationLastMinute);
         }
 
         public MeterMetric GetReplicationBatchSizeMetric(ReplicationStrategy destination)
@@ -134,7 +138,7 @@ namespace Raven.Database.Util
                 s =>
                 {
                     var newMetric = dbMetrics.Meter("metrics", "docs/min for " + s, "Replication docs/min Counter", TimeUnit.Minutes);
-                    MetricsTicker.Instance.AddMeterMetric(newMetric);
+                    MetricsTicker.Instance.AddFiveSecondsIntervalMeterMetric(newMetric);
                     return newMetric;
                 });
         }
@@ -158,7 +162,7 @@ namespace Raven.Database.Util
         }
     }
 
-    public class OneMinuteMetric
+    public class OneMinuteMetric: ICounterMetric
     {
         private readonly ConcurrentQueue<OneMinuteMetricRecord> records;
 
@@ -172,14 +176,6 @@ namespace Raven.Database.Util
         public OneMinuteMetric()
         {
             records = new ConcurrentQueue<OneMinuteMetricRecord>();
-            Task.Factory.StartNew(async () =>
-            {
-                while (true)
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(15)).ConfigureAwait(false);
-                    CleanupQueue();
-                }
-            });
         }
 
         private void CleanupQueue()
@@ -226,6 +222,25 @@ namespace Raven.Database.Util
                 avg = sum / (double)values.Count;
 
             return new OneMinuteMetricData { Count = values.Count, Min = min, Max = max, Avg = avg };
+        }
+
+        [IgnoreDataMember]
+        public IMetric Copy
+        {
+            get
+            {
+              return new OneMinuteMetric();  
+            } 
+        }
+
+        public void LogJson(StringBuilder sb)
+        {
+            sb.Append("{\"count\":").Append(GetData().Count).Append("}");
+        }
+
+        public void Tick()
+        {
+            CleanupQueue();
         }
     }
 }

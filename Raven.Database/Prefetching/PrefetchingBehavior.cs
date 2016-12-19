@@ -83,11 +83,11 @@ namespace Raven.Database.Prefetching
 
             ingestMeter = context.MetricsCounters.DbMetrics.Meter(MeterContext,
                 ingestMeterName, "In memory documents held by this prefetcher", TimeUnit.Seconds);
-            MetricsTicker.Instance.AddMeterMetric(ingestMeter);
+            MetricsTicker.Instance.AddFiveSecondsIntervalMeterMetric(ingestMeter);
 
             returnedDocsMeter = context.MetricsCounters.DbMetrics.Meter(MeterContext,
                   returnedDocsMeterName, "Documents being served by this prefetcher", TimeUnit.Seconds);
-            MetricsTicker.Instance.AddMeterMetric(returnedDocsMeter);
+            MetricsTicker.Instance.AddFiveSecondsIntervalMeterMetric(returnedDocsMeter);
 
 
             if (isDefault)
@@ -134,8 +134,8 @@ namespace Raven.Database.Prefetching
 
         public void Dispose()
         {
-            MetricsTicker.Instance.RemoveMeterMetric(ingestMeter);
-            MetricsTicker.Instance.RemoveMeterMetric(returnedDocsMeter);
+            MetricsTicker.Instance.RemoveFiveSecondsIntervalMeterMetric(ingestMeter);
+            MetricsTicker.Instance.RemoveFiveSecondsIntervalMeterMetric(returnedDocsMeter);
             context.MetricsCounters.DbMetrics.RemoveMeter(MeterContext, ingestMeterName);
             context.MetricsCounters.DbMetrics.RemoveMeter(MeterContext, returnedDocsMeterName);
 
