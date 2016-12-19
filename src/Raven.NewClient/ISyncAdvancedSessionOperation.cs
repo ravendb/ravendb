@@ -143,7 +143,7 @@ namespace Raven.NewClient.Client.Document
         ///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
         /// </summary>
         /// <param name="query">Query to stream results for</param>
-        IEnumerator<StreamResult> Stream<T>(IQueryable<T> query);
+        IEnumerator<object> Stream<T>(IQueryable<T> query);
 
         /// <summary>
         ///     Stream the results on the query to the client, converting them to
@@ -151,25 +151,7 @@ namespace Raven.NewClient.Client.Document
         ///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
         /// </summary>
         /// <param name="query">Query to stream results for</param>
-        /// <param name="queryHeaderInformation">Information about performed query</param>
-        IEnumerator<StreamResult> Stream<T>(IQueryable<T> query, out QueryHeaderInformation queryHeaderInformation);
-
-        /// <summary>
-        ///     Stream the results on the query to the client, converting them to
-        ///     CLR types along the way.
-        ///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
-        /// </summary>
-        /// <param name="query">Query to stream results for</param>
-        IEnumerator<StreamResult> Stream<T>(IDocumentQuery<T> query);
-
-        /// <summary>
-        ///     Stream the results on the query to the client, converting them to
-        ///     CLR types along the way.
-        ///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
-        /// </summary>
-        /// <param name="query">Query to stream results for</param>
-        /// <param name="queryHeaderInformation">Information about performed query</param>
-        IEnumerator<StreamResult> Stream<T>(IDocumentQuery<T> query, out QueryHeaderInformation queryHeaderInformation);
+        IEnumerator<object> Stream<T>(IDocumentQuery<T> query);
 
         /// <summary>
         ///     Stream the results of documents search to the client, converting them to CLR types along the way.
