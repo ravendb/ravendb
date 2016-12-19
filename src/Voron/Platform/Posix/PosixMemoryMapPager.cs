@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using Sparrow;
@@ -16,7 +17,8 @@ namespace Voron.Platform.Posix
         private readonly bool _isSyncDirAllowed;
         private bool _copyOnWriteMode;
         
-        public PosixMemoryMapPager(StorageEnvironmentOptions options,string file, long? initialFileSize = null):base(options)
+        public PosixMemoryMapPager(StorageEnvironmentOptions options,string file, long? initialFileSize = null,
+            bool usePageProtection = false) : base(options, usePageProtection)
         {
             FileName = file;
             _copyOnWriteMode = options.CopyOnWriteMode && file.EndsWith(Constants.DatabaseFilename);
@@ -200,6 +202,46 @@ namespace Voron.Platform.Posix
             }
             NativeMemory.UnregisterFileMapping(FileName, ptr, size);
         }
+
+        internal override void ProtectPageRange(byte* start, ulong size, bool force = false)
+        {
+            if (size == 0)
+                return;
+
+            Console.WriteLine("Protect");
+
+            if (UsePageProtection || force)
+            {
+                Console.WriteLine($"Protect \t {new IntPtr(start)} \t {size}");
+
+                if (Syscall.mprotect(new IntPtr(start), size, ProtFlag.PROT_READ) != 0)
+                {
+                    var err = Marshal.GetLastWin32Error();
+                    Debugger.Break();
+                }
+            }
+        }
+
+        internal override void UnprotectPageRange(byte* start, ulong size, bool force = false)
+        {
+            if (size == 0)
+                return;
+
+
+            Console.WriteLine($"UnProtect");
+
+            if (UsePageProtection || force)
+            {
+                Console.WriteLine($"UnProtect \t {new IntPtr(start)} \t {size}");
+
+                if (Syscall.mprotect(new IntPtr(start), size, ProtFlag.PROT_READ | ProtFlag.PROT_WRITE) != 0)
+                {
+                    var err = Marshal.GetLastWin32Error();
+                    Debugger.Break();
+                }
+            }
+        }
+
 
         public override void Dispose()
         {

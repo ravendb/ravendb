@@ -194,13 +194,13 @@ namespace Voron.Impl.Paging
         [Conditional("VALIDATE")]
         internal virtual void ProtectPageRange(byte* start, ulong size, bool force = false)
         {
-            // This method is currently implemented only in Win32MemoryMapPager, there is no POSIX support
+            // This method is currently implemented only in Win32MemoryMapPager and POSIX
         }
 
         [Conditional("VALIDATE")]
         internal virtual void UnprotectPageRange(byte* start, ulong size, bool force = false)
         {
-            // This method is currently implemented only in Win32MemoryMapPager, there is no POSIX support
+            // This method is currently implemented only in Win32MemoryMapPager and POSIX
         }
 
         public bool Disposed { get; private set; }
