@@ -41,7 +41,7 @@ namespace Raven.Server.Commercial
             using (contextPool.AllocateOperationContext(out context))
             using (var tx = _environment.WriteTransaction(context.PersistentContext))
             {
-                _licenseStorageSchema.Create(tx, LicenseInfoSchema.LicenseTree);
+                _licenseStorageSchema.Create(tx, LicenseInfoSchema.LicenseTree,16);
 
                 tx.Commit();
             }

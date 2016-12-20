@@ -251,7 +251,7 @@ namespace Voron.Impl.Compaction
                 {
                     long transactionSize = 0L;
 
-                    schema.Create(txw, treeName);
+                    schema.Create(txw, treeName, Math.Max((ushort)inputTable.ActiveDataSmallSection.NumberOfPages, ushort.MaxValue));
                     var outputTable = txw.OpenTable(schema, treeName);
 
                     if (schema.Key == null)

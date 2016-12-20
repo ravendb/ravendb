@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Versioning
 
             using (var tx = database.DocumentsStorage.Environment.WriteTransaction())
             {
-                DocsSchema.Create(tx, RevisionDocuments);
+                DocsSchema.Create(tx, RevisionDocuments, 16);
 
                 tx.CreateTree(RevisionsCount);
 

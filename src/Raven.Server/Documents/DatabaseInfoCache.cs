@@ -44,7 +44,7 @@ namespace Raven.Server.Documents
             using (contextPool.AllocateOperationContext(out context))
             using (var tx = _environment.WriteTransaction(context.PersistentContext))
             {
-                _databaseInfoSchema.Create(tx, DatabaseInfoSchema.DatabaseInfoTree);
+                _databaseInfoSchema.Create(tx, DatabaseInfoSchema.DatabaseInfoTree,16);
 
                 tx.Commit();
             }

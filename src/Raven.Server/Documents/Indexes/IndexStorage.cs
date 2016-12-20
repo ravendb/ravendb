@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Indexes
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenWriteTransaction())
             {
-                _errorsSchema.Create(tx.InnerTransaction, "Errors");
+                _errorsSchema.Create(tx.InnerTransaction, "Errors", 16);
 
                 var typeInt = (int)_index.Type;
 

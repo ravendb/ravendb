@@ -234,8 +234,8 @@ namespace Raven.Server.Documents
                     tx.CreateTree("LastReplicatedEtags");
                     tx.CreateTree("Identities");
                     tx.CreateTree("ChangeVector");
-                    ConflictsSchema.Create(tx, "Conflicts");
-                    CollectionsSchema.Create(tx, "Collections");
+                    ConflictsSchema.Create(tx, "Conflicts", 32);
+                    CollectionsSchema.Create(tx, "Collections", 32);
 
                     _hasConflicts = tx.OpenTable(ConflictsSchema, "Conflicts").NumberOfEntries;
 
@@ -1859,9 +1859,9 @@ namespace Raven.Server.Documents
                 };
                 collections.Set(tvr);
 
-                DocsSchema.Create(context.Transaction.InnerTransaction, name.GetTableName(CollectionTableType.Documents));
+                DocsSchema.Create(context.Transaction.InnerTransaction, name.GetTableName(CollectionTableType.Documents), 16);
                 TombstonesSchema.Create(context.Transaction.InnerTransaction,
-                    name.GetTableName(CollectionTableType.Tombstones));
+                    name.GetTableName(CollectionTableType.Tombstones), 16);
 
                 // Add to cache ONLY if the transaction was committed. 
                 // this would prevent NREs next time a PUT is run,since if a transaction
