@@ -3,9 +3,9 @@ import resource = require("models/resources/resource");
 
 class deleteDatabaseCommand extends commandBase {
     private oneDatabasePath = "/admin/databases/";
-    private multipleDatabasesPath = "/admin/databases/batch-delete";
+    private multipleDatabasesPath = "/admin/databases-batch-delete";
     private oneFileSystemPath = "/admin/fs/";
-    private multipleFileSystemsPath = "/admin/fs/batch-delete";
+    private multipleFileSystemsPath = "/admin/fs-batch-delete";
     private oneCounterStoragePath = "/admin/cs/";
     private multipleCounterStoragesPath = "/admin/cs/batch-delete";
     private oneTimeSeriesPath = "/admin/ts/";

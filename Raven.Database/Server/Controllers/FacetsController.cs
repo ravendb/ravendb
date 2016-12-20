@@ -68,6 +68,11 @@ namespace Raven.Database.Server.Controllers
         [RavenRoute("databases/{databaseName}/facets/{*id}")]
         public async Task<HttpResponseMessage> FacetsPost(string id)
         {
+            if (id == "multisearch")
+            {
+                return await MultiSearch().ConfigureAwait(false);
+            }
+
             List<Facet> facets;
             var facetsJson = await ReadStringAsync().ConfigureAwait(false);
             var msg = TryGetFacetsFromString(facetsJson, out facets);
@@ -84,8 +89,8 @@ namespace Raven.Database.Server.Controllers
         }
 
         [HttpPost]
-        [RavenRoute("facets/multisearch")]
-        [RavenRoute("databases/{databaseName}/facets/multisearch")]
+        [RavenRoute("facets-multisearch")]
+        [RavenRoute("databases/{databaseName}/facets-multisearch")]
         public async Task<HttpResponseMessage> MultiSearch()
         {
             var str = await ReadStringAsync().ConfigureAwait(false);

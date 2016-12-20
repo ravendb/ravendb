@@ -15,35 +15,49 @@ namespace Raven.Database.Util
 
         private MetricsTicker()
         {
-            perSecondCounterMetricsTask = CreateTask(1000, perSecondCounterMetrics);
-            meterMetricsTask = CreateTask(5000, meterMetrics);
+            perSecondCounterMetricsTask = CreateTask(1000, oneSecondIntervalMetrics);
+            fiveSecondsTickCounterMetricsTask = CreateTask(5000, fiveSecondsTickIntervalMetrics);
+            fifteenSecondsTickCounterMetricsTask = CreateTask(15000, fifteenSecondsIntervalMeterMetrics);
         }
 
         private Task perSecondCounterMetricsTask;
-        private Task meterMetricsTask;
-        private readonly ConcurrentSet<ICounterMetric> perSecondCounterMetrics =
-            new ConcurrentSet<ICounterMetric>();
-        private readonly ConcurrentSet<ICounterMetric> meterMetrics = new ConcurrentSet<ICounterMetric>();
+        private Task fiveSecondsTickCounterMetricsTask;
+        private Task fifteenSecondsTickCounterMetricsTask;
+
+        private readonly ConcurrentSet<ICounterMetric> oneSecondIntervalMetrics = new ConcurrentSet<ICounterMetric>();
+        private readonly ConcurrentSet<ICounterMetric> fiveSecondsTickIntervalMetrics = new ConcurrentSet<ICounterMetric>();
+        private readonly ConcurrentSet<ICounterMetric> fifteenSecondsIntervalMeterMetrics = new ConcurrentSet<ICounterMetric>();
+        
         private readonly CancellationTokenSource cts = new CancellationTokenSource();
 
-        public void AddPerSecondCounterMetric(PerSecondCounterMetric newPerSecondCounterMetric)
+        public void AddPerSecondCounterMetric(ICounterMetric newPerSecondCounterMetric)
         {
-            perSecondCounterMetrics.Add(newPerSecondCounterMetric);
+            oneSecondIntervalMetrics.Add(newPerSecondCounterMetric);
         }
 
-        public void RemovePerSecondCounterMetric(PerSecondCounterMetric perSecondCounterMetricToRemove)
+        public void RemovePerSecondCounterMetric(ICounterMetric perSecondCounterMetricToRemove)
         {
-            perSecondCounterMetrics.TryRemove(perSecondCounterMetricToRemove);
+            oneSecondIntervalMetrics.TryRemove(perSecondCounterMetricToRemove);
         }
 
-        public void AddMeterMetric(MeterMetric newMeterMetric)
+        public void AddFiveSecondsIntervalMeterMetric(ICounterMetric newMeterMetric)
         {
-            meterMetrics.Add(newMeterMetric);
+            fiveSecondsTickIntervalMetrics.Add(newMeterMetric);
         }
 
-        public void RemoveMeterMetric(MeterMetric meterMetricToRemove)
+        public void RemoveFiveSecondsIntervalMeterMetric(ICounterMetric meterMetricToRemove)
         {
-            meterMetrics.TryRemove(meterMetricToRemove);
+            fiveSecondsTickIntervalMetrics.TryRemove(meterMetricToRemove);
+        }
+
+        public void AddFifteenSecondsIntervalMeterMetric(ICounterMetric newMeterMetric)
+        {
+            fifteenSecondsIntervalMeterMetrics.Add(newMeterMetric);
+        }
+
+        public void RemoveFifteenSecondsIntervalMeterMetric(ICounterMetric meterMetricToRemove)
+        {
+            fifteenSecondsIntervalMeterMetrics.TryRemove(meterMetricToRemove);
         }
 
         private Task CreateTask(int baseInterval, ConcurrentSet<ICounterMetric> concurrentSet)

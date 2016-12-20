@@ -66,8 +66,9 @@
             <div class="form-group">
                 <div class="col-sm-7 col-sm-offset-4">
                     <div class="checkbox">
-                        <input type="checkbox" id="votingNode" class="form-control" data-bind="checked: isVoting" />
+                        <input type="checkbox" id="votingNode" class="form-control" data-bind="checked: isVoting" />                        
                         <label for="votingNode">Voting node</label>
+                        <h3 class="text-danger" data-bind="visible: !isVoting()">Careful removing voting mode from a node may lead to losing the cluster quorum.</h3>
                     </div>
                 </div>
             </div>

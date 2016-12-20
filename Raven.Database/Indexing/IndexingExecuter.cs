@@ -41,7 +41,8 @@ namespace Raven.Database.Indexing
         {
             autoTuner = new IndexBatchSizeAutoTuner(context);
             this.prefetcher = prefetcher;
-            defaultPrefetchingBehavior = prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, autoTuner, "Default Prefetching behavior", true);
+            defaultPrefetchingBehavior = prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, 
+                autoTuner, "Default Prefetching behavior", isDefault: true, entityNames: null);
             defaultPrefetchingBehavior.ShouldHandleUnusedDocumentsAddedAfterCommit = true;
             prefetchingBehaviors.TryAdd(defaultPrefetchingBehavior);
         }
@@ -313,6 +314,7 @@ namespace Raven.Database.Indexing
             public void ReleaseIndexingGroupFinished()
             {
                 IndexingGroupProcessingFinished = null;
+                Indexes.Clear();
             }
 
             public void PrefetchDocuments()
@@ -320,10 +322,8 @@ namespace Raven.Database.Indexing
                 /*prefetchDisposable = new WeakReference<IDisposable>(
                     PrefetchingBehavior.DocumentBatchFrom(LastIndexedEtag, out JsonDocs));*/
 
-                var entityNamesToIndex = GetEntityNamesToIndex(Indexes, Context.Database);
-
                 prefetchDisposable =
-                    PrefetchingBehavior.DocumentBatchFrom(LastIndexedEtag, out JsonDocs, entityNamesToIndex);
+                    PrefetchingBehavior.DocumentBatchFrom(LastIndexedEtag, out JsonDocs);
             }
 
             ~IndexingGroup()
@@ -431,9 +431,15 @@ namespace Raven.Database.Indexing
         {
             var entityNamesToIndex = GetEntityNamesToIndex(groupIndex.Indexes, context.Database);
             groupIndex.PrefetchingBehavior = TryGetPrefetcherFor(groupIndex.LastIndexedEtag, usedPrefetchers, entityNamesToIndex) ??
-                                      TryGetDefaultPrefetcher(groupIndex.LastIndexedEtag, usedPrefetchers) ??
-                                      GetPrefetcherFor(groupIndex.LastIndexedEtag, usedPrefetchers);
+                                      TryGetDefaultPrefetcher(groupIndex.LastIndexedEtag, usedPrefetchers, entityNamesToIndex) ??
+                                      GetPrefetcherFor(groupIndex.LastIndexedEtag, usedPrefetchers, entityNamesToIndex);
 
+            if (groupIndex.PrefetchingBehavior.IsDefault == false)
+            {
+                // the default one is always for "all collections"
+                groupIndex.PrefetchingBehavior.SetEntityNames(entityNamesToIndex);
+            }
+            
             groupIndex.PrefetchingBehavior.Indexes = groupIndex.Indexes;
             groupIndex.PrefetchingBehavior.LastIndexedEtag = groupIndex.LastIndexedEtag;
         }
@@ -453,6 +459,38 @@ namespace Raven.Database.Indexing
             return null;
         }
 
+        private PrefetchingBehavior TryGetDefaultPrefetcher(Etag fromEtag,
+            ConcurrentSet<PrefetchingBehavior> usedPrefetchers, HashSet<string> entityNames)
+        {
+            if (defaultPrefetchingBehavior.CanUseDefaultPrefetcher(fromEtag, entityNames) &&
+                usedPrefetchers.TryAdd(defaultPrefetchingBehavior))
+            {
+                return defaultPrefetchingBehavior;
+            }
+
+            return null;
+        }
+
+        private PrefetchingBehavior GetPrefetcherFor(Etag fromEtag,
+            ConcurrentSet<PrefetchingBehavior> usedPrefetchers, HashSet<string> entityNames)
+        {
+            foreach (var prefetchingBehavior in prefetchingBehaviors)
+            {
+                // at this point we've already verified that we can't use the default prefetcher
+                // even if the deafult is empty, we don't need to use it
+                if (prefetchingBehavior.IsDefault == false && prefetchingBehavior.IsEmpty() && usedPrefetchers.TryAdd(prefetchingBehavior))
+                    return prefetchingBehavior;
+            }
+
+            var newPrefetcher = prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer,
+                autoTuner, $"Etags from: {fromEtag}", entityNames: entityNames);
+
+            prefetchingBehaviors.Add(newPrefetcher);
+            usedPrefetchers.Add(newPrefetcher);
+
+            return newPrefetcher;
+        }
+
         private void ReleasePrefetchersAndUpdateStatistics(IndexingGroup indexingGroup, TimeSpan elapsedTimeSpan)
         {
             if (indexingGroup.JsonDocs != null && indexingGroup.JsonDocs.Count > 0)
@@ -464,17 +502,6 @@ namespace Raven.Database.Indexing
                 context.ReportIndexingBatchCompleted(indexingGroup.BatchInfo);
             }
             indexingGroup.ReleaseIndexingGroupFinished();
-        }
-
-        private PrefetchingBehavior TryGetDefaultPrefetcher(Etag fromEtag, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
-        {
-            if (defaultPrefetchingBehavior.CanUseDefaultPrefetcher(fromEtag) &&
-                usedPrefetchers.TryAdd(defaultPrefetchingBehavior))
-            {
-                return defaultPrefetchingBehavior;
-            }
-
-            return null;
         }
 
         private bool PerformIndexingOnIndexBatches(ConcurrentDictionary<IndexingBatchOperation, object> indexBatchOperations)
@@ -518,7 +545,8 @@ namespace Raven.Database.Indexing
             return operationWasCancelled;
         }
 
-        private bool GenerateIndexingBatchesAndPrefetchDocuments(List<IndexingGroup> groupedIndexes, ConcurrentDictionary<IndexingBatchOperation, object> indexBatchOperations)
+        private bool GenerateIndexingBatchesAndPrefetchDocuments(List<IndexingGroup> groupedIndexes, 
+            ConcurrentDictionary<IndexingBatchOperation, object> indexBatchOperations)
         {
             bool operationWasCancelled = false;
 
@@ -643,24 +671,6 @@ namespace Raven.Database.Indexing
             }
             indexingGroups = indexingGroups.OrderByDescending(x => x.LastQueryTime).ToList();
             return false;
-        }
-
-        private PrefetchingBehavior GetPrefetcherFor(Etag fromEtag, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
-        {
-            foreach (var prefetchingBehavior in prefetchingBehaviors)
-            {
-                // at this point we've already verified that we can't use the default prefetcher
-                // if it's empty, we don't need to use it
-                if (prefetchingBehavior.IsDefault == false && prefetchingBehavior.IsEmpty() && usedPrefetchers.TryAdd(prefetchingBehavior))
-                    return prefetchingBehavior;
-            }
-
-            var newPrefetcher = prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Indexer, autoTuner, string.Format("Etags from: {0}", fromEtag));
-
-            prefetchingBehaviors.Add(newPrefetcher);
-            usedPrefetchers.Add(newPrefetcher);
-
-            return newPrefetcher;
         }
 
         private void RemoveUnusedPrefetchers(IEnumerable<PrefetchingBehavior> usedPrefetchingBehaviors)
@@ -905,11 +915,11 @@ namespace Raven.Database.Indexing
                                     // (if we discover that the last indexed etag is different from the last commited one)
                                     // we already flush the last indexed etag when we pass a certain size in ram,
                                     // however we don't do that if we only have a few of them
-                                    // it's also limited to flushing for every 10 minutes if don't have any results
+                                    // it's also limited to flushing for every 10 minutes if we don't have any results
                                     actions.BeforeStorageCommit += () =>
                                     {
                                         batchForIndex.Index.EnsureIndexWriter();
-                                        // we don't to flush to disk too often
+                                        // we don't want to flush to disk too often
                                         batchForIndex.Index.Flush(lastEtag, considerLastCommitedTime: true);
                                     };
                                 });

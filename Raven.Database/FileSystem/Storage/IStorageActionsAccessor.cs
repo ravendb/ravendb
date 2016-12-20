@@ -7,7 +7,6 @@ using Raven.Database.FileSystem.Synchronization.Rdc;
 using Raven.Json.Linq;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.FileSystem.Storage
 {
@@ -23,7 +22,7 @@ namespace Raven.Database.FileSystem.Storage
 
         FileUpdateResult PutFile(string filename, long? totalSize, RavenJObject metadata, bool tombstone = false);
 
-        void AssociatePage(string filename, int pageId, int pagePositionInFile, int pageSize);
+        void AssociatePage(string filename, int pageId, int pagePositionInFile, int pageSize, bool incrementUsageCount = false);
 
         int ReadPage(int pageId, byte[] buffer);
 

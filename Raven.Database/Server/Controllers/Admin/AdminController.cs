@@ -361,7 +361,7 @@ namespace Raven.Database.Server.Controllers.Admin
                             restoreStatus.Messages.Add(msg);
                             DatabasesLandlord.SystemDatabase.Documents.Put(RestoreStatus.RavenRestoreStatusDocumentKey, null,
                                 RavenJObject.FromObject(restoreStatus), new RavenJObject(), null);
-                        });
+                        }, SystemConfiguration);
 
                     if (databaseDocument == null)
                         return;

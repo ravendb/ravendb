@@ -103,6 +103,9 @@ namespace Raven.Storage.Voron
 
                 exceptionAggregator.Execute(() => current.Dispose());
 
+                if (documentCacher != null)
+                    exceptionAggregator.Execute(documentCacher.Dispose);
+
                 if (tableStorage != null)
                     exceptionAggregator.Execute(() => tableStorage.Dispose());
 
@@ -220,12 +223,6 @@ namespace Raven.Storage.Voron
 
         public Guid Id { get; private set; }
         public IDocumentCacher DocumentCacher { get { return documentCacher; }}
-
-        public IDisposable WriteLock()
-        {
-            Monitor.Enter(this);
-            return exitLockDisposable;
-        }
 
         /// <summary>
         /// Force current operations inside context to be performed directly
@@ -504,9 +501,9 @@ namespace Raven.Storage.Voron
             });
         }       
 
-        public void Restore(DatabaseRestoreRequest restoreRequest, Action<string> output)
+        public void Restore(DatabaseRestoreRequest restoreRequest, Action<string> output, InMemoryRavenConfiguration globalConfiguration)
         {
-            new RestoreOperation(restoreRequest, configuration, output).Execute();
+            new RestoreOperation(restoreRequest, configuration, globalConfiguration, output).Execute();
         }
 
         public DatabaseSizeInformation GetDatabaseSize()

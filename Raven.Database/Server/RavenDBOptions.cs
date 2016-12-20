@@ -67,7 +67,14 @@ namespace Raven.Database.Server
                 foreach (var task in serverStartupTasks)
                 {
                     toDispose.Add(task);
-                    task.Execute(this);
+                    try
+                    {
+                        task.Execute(this);
+                    }
+                    catch (Exception e)
+                    {
+                        systemDatabase.LogErrorAndAddAlertOnStartupTaskException(task.GetType().FullName, e);
+                    }
                 }
             }
             catch (Exception)

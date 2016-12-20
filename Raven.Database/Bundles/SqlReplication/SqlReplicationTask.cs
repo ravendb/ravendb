@@ -73,14 +73,10 @@ namespace Raven.Database.Bundles.SqlReplication
 
         private readonly ConcurrentSet<PrefetchingBehavior> prefetchingBehaviors = new ConcurrentSet<PrefetchingBehavior>();
 
-        private PrefetchingBehavior defaultPrefetchingBehavior;
         private ConcurrentDictionary<string, bool> resetRequested = new ConcurrentDictionary<string, bool>();
 
         public void Execute(DocumentDatabase database)
         {
-            defaultPrefetchingBehavior = database.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.SqlReplicator, null, "SqlReplication", true);
-            prefetchingBehaviors.TryAdd(defaultPrefetchingBehavior);
-
             Database = database;
             Database.Notifications.OnDocumentChange += (sender, notification, metadata) =>
             {
@@ -247,8 +243,7 @@ namespace Raven.Database.Bundles.SqlReplication
                         var configsToWorkOn = sqlConfigGroup.ConfigsToWorkOn;
 
                         List<JsonDocument> documents;
-                        var entityNamesToIndex = new HashSet<string>(configsToWorkOn.Select(x => x.RavenEntityName), StringComparer.OrdinalIgnoreCase);
-                        using (prefetchingBehavior.DocumentBatchFrom(sqlConfigGroup.LastReplicatedEtag, out documents, entityNamesToIndex))
+                        using (prefetchingBehavior.DocumentBatchFrom(sqlConfigGroup.LastReplicatedEtag, out documents))
                         {
                             Etag latestEtag = null, lastBatchEtag = null;
                             if (documents.Count != 0)
@@ -468,14 +463,13 @@ namespace Raven.Database.Bundles.SqlReplication
         {
             var entityNames = new HashSet<string>(sqlConfig.ConfigsToWorkOn.Select(x => x.RavenEntityName), StringComparer.OrdinalIgnoreCase);
             sqlConfig.PrefetchingBehavior = TryGetPrefetcherFor(sqlConfig.LastReplicatedEtag, usedPrefetchers, entityNames) ??
-                                      TryGetDefaultPrefetcher(sqlConfig.LastReplicatedEtag, usedPrefetchers) ??
-                                      GetPrefetcherFor(sqlConfig.LastReplicatedEtag, usedPrefetchers);
+                                            GetPrefetcherFor(sqlConfig.LastReplicatedEtag, usedPrefetchers, entityNames);
+
+            sqlConfig.PrefetchingBehavior.SetEntityNames(entityNames);
 
             sqlConfig.PrefetchingBehavior.AdditionalInfo =
-                string.Format("Default prefetcher: {0}. For sql config group: [Configs: {1}, LastReplicatedEtag: {2}]",
-                sqlConfig.PrefetchingBehavior == defaultPrefetchingBehavior,
-                string.Join(", ", sqlConfig.ConfigsToWorkOn.Select(y => y.Name)),
-                sqlConfig.LastReplicatedEtag);
+                $"For SQL config group: [Configs: {string.Join(", ", sqlConfig.ConfigsToWorkOn.Select(y => y.Name))}, " +
+                $"Last Replicated Etag: {sqlConfig.LastReplicatedEtag}], collections: {string.Join(", ", entityNames)}";
         }
 
         private PrefetchingBehavior TryGetPrefetcherFor(Etag fromEtag, 
@@ -493,28 +487,17 @@ namespace Raven.Database.Bundles.SqlReplication
             return null;
         }
 
-        private PrefetchingBehavior TryGetDefaultPrefetcher(Etag fromEtag, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
-        {
-            if (defaultPrefetchingBehavior.CanUseDefaultPrefetcher(fromEtag) &&
-                usedPrefetchers.TryAdd(defaultPrefetchingBehavior))
-            {
-                return defaultPrefetchingBehavior;
-            }
-
-            return null;
-        }
-
-        private PrefetchingBehavior GetPrefetcherFor(Etag fromEtag, ConcurrentSet<PrefetchingBehavior> usedPrefetchers)
+        private PrefetchingBehavior GetPrefetcherFor(Etag fromEtag, 
+            ConcurrentSet<PrefetchingBehavior> usedPrefetchers, HashSet<string> entityNames)
         {
             foreach (var prefetchingBehavior in prefetchingBehaviors)
             {
-                // at this point we've already verified that we can't use the default prefetcher
-                // if it's empty, we don't need to use it
-                if (prefetchingBehavior.IsDefault == false && prefetchingBehavior.IsEmpty() && usedPrefetchers.TryAdd(prefetchingBehavior))
+                if (prefetchingBehavior.IsEmpty() && usedPrefetchers.TryAdd(prefetchingBehavior))
                     return prefetchingBehavior;
             }
 
-            var newPrefetcher = Database.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.SqlReplicator, null, string.Format("SqlReplication, etags from: {0}", fromEtag));
+            var newPrefetcher = Database.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.SqlReplicator, 
+                null, $"SqlReplication, etags from: {fromEtag}", entityNames);
 
             prefetchingBehaviors.Add(newPrefetcher);
             usedPrefetchers.Add(newPrefetcher);
@@ -524,10 +507,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
         private void RemoveUnusedPrefetchers(IEnumerable<PrefetchingBehavior> usedPrefetchingBehaviors)
         {
-            var unused = prefetchingBehaviors.Except(usedPrefetchingBehaviors.Union(new[]
-            {
-                defaultPrefetchingBehavior
-            })).ToList();
+            var unused = prefetchingBehaviors.Except(usedPrefetchingBehaviors).ToList();
 
             if (unused.Count == 0)
                 return;

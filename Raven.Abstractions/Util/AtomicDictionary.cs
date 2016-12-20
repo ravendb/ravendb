@@ -69,16 +69,6 @@ namespace Raven.Abstractions.Util
             }
         }
 
-        public IDisposable WithLockFor(string key)
-        {
-            using (globalLocker.EnterReadLock())
-            {
-                var locker = locks.GetOrAdd(key, new object());
-                var release = new DisposableAction(() => Monitor.Exit(locker));
-                Monitor.Enter(locker);
-                return release;
-            }
-        }
 
         public void Set(string key, Func<string, TVal> valueGenerator)
         {

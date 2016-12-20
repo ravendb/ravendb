@@ -494,7 +494,7 @@ internal static object GetRequestTrackingForDebug(RequestManager requestManager,
             var totalLoadedDocuments = 0;
             var totalCanceledFutureBatches = 0;
             var totalFaultedFutureBatches = 0;
-            List<string> allindexes = new List<string>();
+            var allIndexes = new HashSet<string>();
             foreach (var prefetchingBehavior in database.IndexingExecuter.PrefetchingBehaviors)
             {
                 var prefetcherDocs = prefetchingBehavior.DebugGetDocumentsInPrefetchingQueue().ToArray();
@@ -523,7 +523,7 @@ internal static object GetRequestTrackingForDebug(RequestManager requestManager,
                 {
                     var indexes = prefetchingBehavior.Indexes.Select(y => y.Index.PublicName).ToList();
                     indexesText = string.Join(", ", indexes);
-                    allindexes.AddRange(indexes);
+                    allIndexes.UnionWith(indexes);
                 }
 
                 if (compareToCollection.Any(x => x.Value < 0))
@@ -531,6 +531,7 @@ internal static object GetRequestTrackingForDebug(RequestManager requestManager,
                     result.Add(new
                     {
                         Default = prefetchingBehavior.IsDefault,
+                        ForCollections = prefetchingBehavior.ForEntityNames == null ? "*" : string.Join(", ", prefetchingBehavior.ForEntityNames),
                         IOSummary = ioSummary,
                         Indexes = indexesText,
                         LastIndexedEtag = prefetchingBehavior.LastIndexedEtag,
@@ -557,6 +558,7 @@ internal static object GetRequestTrackingForDebug(RequestManager requestManager,
                     result.Add(new
                     {
                         Default = prefetchingBehavior.IsDefault,
+                        ForCollections = prefetchingBehavior.ForEntityNames == null ? "*" : string.Join(", ", prefetchingBehavior.ForEntityNames),
                         IOSummary = ioSummary,
                         Indexes = indexesText,
                         LastIndexedEtag = prefetchingBehavior.LastIndexedEtag,
@@ -580,7 +582,7 @@ internal static object GetRequestTrackingForDebug(RequestManager requestManager,
             {
                 TotalDocs = totalLoadedDocuments,
                 TotalPrefetchingBehaviours = database.IndexingExecuter.PrefetchingBehaviors.Count,
-                AllIndexes = allindexes.Count > 0 ? string.Join(", ", allindexes) : null,
+                AllIndexes = allIndexes.Count > 0 ? string.Join(", ", allIndexes) : null,
                 CanceledFutureBatches = totalCanceledFutureBatches,
                 FaultedFutureBatches = totalFaultedFutureBatches,
                 Prefetchers = result.OrderBy(x => ((dynamic)x).Age)

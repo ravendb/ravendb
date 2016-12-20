@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Rachis.Messages;
+using Rachis.Storage;
 using Rachis.Transport;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
@@ -29,6 +30,7 @@ namespace Rachis
             Messages = new ConcurrentQueue<MessageWithTimingInformation>();
             Elections = new ConcurrentQueue<ElectionInformation>();
             CommitTimes = new ConcurrentQueue<CommitInformation>();
+            CurrenTopology = engine.CurrentTopology;
         }
         private ConcurrentDictionary<long, DateTime> IndexesToAppendTimes = new ConcurrentDictionary<long, DateTime>(); 
         public ConcurrentQueue<TimeoutInformation> TimeOuts { get; }
@@ -37,6 +39,9 @@ namespace Rachis
         public ConcurrentQueue<MessageWithTimingInformation> Messages { get; }
         public ElectionInformation LastElectionInformation => Elections.LastOrDefault();
         public ConcurrentQueue<CommitInformation> CommitTimes { get; } 
+
+        public Topology CurrenTopology { get; private set; }
+
         public string Name { get; set; }
 
         public int MaxLogLengthBeforeCompaction { get; set; }

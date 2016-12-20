@@ -191,6 +191,19 @@ namespace Voron
             }
         }
 
+        public long PossibleOldestReadTransaction
+        {
+            get
+            {
+                var oldestActive = OldestTransaction;
+
+                if (oldestActive == 0)
+                    return CurrentReadTransactionId;
+
+                return Math.Min(CurrentReadTransactionId, oldestActive);
+            }
+        }
+
         public long NextPageNumber
         {
             get { return State.NextPageNumber; }

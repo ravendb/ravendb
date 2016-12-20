@@ -250,5 +250,9 @@ namespace Raven.Database.Server.Tenancy
                 return _lastRecentlyUsed;
             }
         }
+        public InMemoryRavenConfiguration GetSystemConfiguration()
+        {
+            return systemConfiguration;
+        }
     }
 }

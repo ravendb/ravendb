@@ -39,7 +39,8 @@ namespace Raven.Tests.Raft
             NodeConnectionInfo secondConnectionInfo;
             CreateServerWithOAuth(8078, "Marcin/cba", out secondConnectionInfo);
             Assert.True(leader.Options.ClusterManager.Value.Engine.AddToClusterAsync(secondConnectionInfo).Wait(3000));
-
+            //If we don't wait here we can cause two topology changes to happen at the same time and fail.
+            WaitForClusterToBecomeNonStale(2);
             NodeConnectionInfo thirdConnectionInfo;
             CreateServerWithOAuth(8077, "User3/pass", out thirdConnectionInfo);
             Assert.True(leader.Options.ClusterManager.Value.Engine.AddToClusterAsync(thirdConnectionInfo).Wait(3000));
@@ -77,7 +78,8 @@ namespace Raven.Tests.Raft
             NodeConnectionInfo secondConnectionInfo;
             CreateServerWithWindowsCredentials(8078, username, password, domain, out secondConnectionInfo);
             Assert.True(leader.Options.ClusterManager.Value.Engine.AddToClusterAsync(secondConnectionInfo).Wait(3000));
-
+            //If we don't wait here we can cause two topology changes to happen at the same time and fail.
+            WaitForClusterToBecomeNonStale(2);
             NodeConnectionInfo thirdConnectionInfo;
             CreateServerWithWindowsCredentials(8077, username, password, domain, out thirdConnectionInfo);
             Assert.True(leader.Options.ClusterManager.Value.Engine.AddToClusterAsync(thirdConnectionInfo).Wait(3000));
@@ -114,7 +116,8 @@ namespace Raven.Tests.Raft
             NodeConnectionInfo secondConnectionInfo;
             CreateServerWithOAuth(8078, "Marcin/cba", out secondConnectionInfo);
             Assert.True(leader.Options.ClusterManager.Value.Engine.AddToClusterAsync(secondConnectionInfo).Wait(3000));
-
+            //If we don't wait here we can cause two topology changes to happen at the same time and fail.
+            WaitForClusterToBecomeNonStale(2);
             NodeConnectionInfo thirdConnectionInfo;
             CreateServerWithOAuth(8077, "User3/pass", out thirdConnectionInfo);
             Assert.True(leader.Options.ClusterManager.Value.Engine.AddToClusterAsync(thirdConnectionInfo).Wait(3000));
@@ -154,7 +157,8 @@ namespace Raven.Tests.Raft
             NodeConnectionInfo secondConnectionInfo;
             CreateServerWithWindowsCredentials(8078, username, password, domain, out secondConnectionInfo);
             Assert.True(leader.Options.ClusterManager.Value.Engine.AddToClusterAsync(secondConnectionInfo).Wait(3000));
-
+            //If we don't wait here we can cause two topology changes to happen at the same time and fail.
+            WaitForClusterToBecomeNonStale(2);
             NodeConnectionInfo thirdConnectionInfo;
             CreateServerWithWindowsCredentials(8077, username, password, domain, out thirdConnectionInfo);
             Assert.True(leader.Options.ClusterManager.Value.Engine.AddToClusterAsync(thirdConnectionInfo).Wait(3000));

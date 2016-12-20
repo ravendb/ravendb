@@ -140,10 +140,17 @@ namespace Raven.Database.Server.Controllers.Admin
             return (etag == null) ? GetEmptyMessage() : GetMessageWithObject(putResult);
         }
 
+        private const string BatchDeleteUrl = "batch-delete";
+
         [HttpDelete]
         [RavenRoute("admin/databases/{*id}")]
         public async Task<HttpResponseMessage> Delete(string id)
         {
+            if (id == BatchDeleteUrl)
+            {
+                return await BatchDelete().ConfigureAwait(false);
+            }
+
             bool result;
             var hardDelete = bool.TryParse(GetQueryStringValue("hard-delete"), out result) && result;
 
@@ -157,7 +164,7 @@ namespace Raven.Database.Server.Controllers.Admin
         }
 
         [HttpDelete]
-        [RavenRoute("admin/databases/batch-delete")]
+        [RavenRoute("admin/databases-batch-delete")]
         public async Task<HttpResponseMessage> BatchDelete()
         {
             string[] databasesToDelete = GetQueryStringValues("ids");

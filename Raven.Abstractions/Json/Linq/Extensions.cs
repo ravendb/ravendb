@@ -381,9 +381,9 @@ namespace Raven.Json.Linq
             var changes = new DocumentsChanges
             {
                 FieldNewType = kvp.Value.Type.ToString(),
-                FieldOldType = token.Type.ToString(),
+                FieldOldType = token?.Type.ToString(),
                 FieldNewValue = kvp.Value.ToString(),
-                FieldOldValue = token.ToString(),
+                FieldOldValue = token?.ToString(),
                 Change = DocumentsChanges.ChangeType.FieldChanged,
                 FieldName = fieldName
             };

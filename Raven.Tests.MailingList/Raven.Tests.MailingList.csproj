@@ -141,6 +141,8 @@
     <Compile Include="..\Raven.Tests\Properties\TestAssemblyInfo.cs">
       <Link>Properties\TestAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="AggressiveCacheBeingIgnored.cs" />
+    <Compile Include="LoadAsyncValueTypeWithIncludes.cs" />
     <Compile Include="LoadAsyncWithHierarchicalIncludesTest.cs" />
     <Compile Include="PatchingWithNaNAndIsFinite.cs" />
     <Compile Include="PeterBalzli.cs" />

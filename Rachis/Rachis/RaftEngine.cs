@@ -391,6 +391,9 @@ namespace Rachis
 
         public Task UpdateNodeAsync(NodeConnectionInfo node)
         {
+            if (State == RaftEngineState.Leader && node.IsNoneVoter)
+                throw new InvalidOperationException("Can't change leader voting mode to none voter");
+
             var currentTopology = CurrentTopology;
 
             var allVotingNodes = currentTopology.AllVotingNodes.Select(n => n.Uri.AbsoluteUri == node.Uri.AbsoluteUri ? node : n).ToList();
