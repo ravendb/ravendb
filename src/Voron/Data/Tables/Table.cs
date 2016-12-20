@@ -163,7 +163,7 @@ namespace Voron.Data.Tables
             var pkTree = GetTree(_schema.Key);
             var readResult = pkTree?.Read(key);
             if (readResult == null)
-                return false;
+                  return false;
 
             id = readResult.Reader.ReadLittleEndianInt64();
             return true;

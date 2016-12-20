@@ -19,7 +19,7 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json.Parsing;
 using System.Linq;
-using Raven.Abstractions.Util;
+using Raven.Server.Documents.Patch;
 using ThreadState = System.Threading.ThreadState;
 
 namespace Raven.Server.Documents.Replication
@@ -570,6 +570,7 @@ namespace Raven.Server.Documents.Replication
                         }
                         ChangeVectorEntry[] conflictingVector;
                         var conflictStatus = GetConflictStatusForDocument(_documentsContext, doc.Id, _tempReplicatedChangeVector, out conflictingVector);
+
                         switch (conflictStatus)
                         {
                             case ConflictStatus.Update:
@@ -644,8 +645,55 @@ namespace Raven.Server.Documents.Replication
                 $"Reading past the size of buffer! TotalSize {totalSize} but position is {doc.Position} & size is {doc.DocumentSize}!");
         }
 
+        public void ResovleConflictManually(ReplicationDocumentsPositions docPosition,
+            ChangeVectorEntry[] conflictingVector,
+            BlittableJsonReaderObject doc)
+        {
+            IReadOnlyList<DocumentConflict> conflictedDocs = _documentsContext.DocumentDatabase.DocumentsStorage.GetConflictsFor(_documentsContext, docPosition.Id);        
 
-        private void HandleConflictForDocument(DocumentsOperationContext context, ReplicationDocumentsPositions docPosition, ChangeVectorEntry[] conflictingVector, BlittableJsonReaderObject doc)
+            var patch = new PatchConflict(_database, conflictedDocs, docPosition.Id);
+            var collection = CollectionName.GetCollectionName(docPosition.Id, doc);
+
+            ScriptResolver scriptResolver;
+            var hasScript = _parent.ManualConflictResolversCache.TryGetValue(collection, out scriptResolver);
+            if (!hasScript || scriptResolver == null)
+            {
+                throw new InvalidOperationException($"Script not found to resolve the {collection} collection");
+            }
+
+            PatchRequest request = new PatchRequest
+            {
+                Script = scriptResolver.Script
+            };
+            
+            var results = patch.Apply(_documentsContext,  request);
+            _documentsContext.DocumentDatabase.DocumentsStorage.DeleteConflictsFor(_documentsContext, docPosition.Id);
+            var merged = ReplicationUtils.MergeVectors(conflictingVector, _tempReplicatedChangeVector);
+            if (results.ModifiedDocument != null)
+            {
+                _database.DocumentsStorage.Put(
+                    _documentsContext,
+                    docPosition.Id,
+                    null,
+                    results.ModifiedDocument,
+                    merged);
+            }
+            else //resolving to tombstone
+            {
+                _database.DocumentsStorage.AddTombstoneOnReplicationIfRelevant(
+                    _documentsContext,
+                    docPosition.Id,
+                    merged,
+                    collection);
+            }
+
+        }
+
+        private void HandleConflictForDocument(
+            DocumentsOperationContext context,
+            ReplicationDocumentsPositions docPosition,
+            ChangeVectorEntry[] conflictingVector,
+            BlittableJsonReaderObject doc)
         {
             if (docPosition.Id.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase))
             {
@@ -702,6 +750,10 @@ namespace Raven.Server.Documents.Replication
                     {
                         ResolveConflictToLocal(docPosition, conflictingVector);
                     }
+                    break;
+                case StraightforwardConflictResolution.ResolveManually:
+                    _database.DocumentsStorage.AddConflict(_documentsContext, docPosition.Id, doc, _tempReplicatedChangeVector);    
+                    ResovleConflictManually(docPosition, conflictingVector, doc);
                     break;
                 default:
                     _database.DocumentsStorage.AddConflict(_documentsContext, docPosition.Id, doc, _tempReplicatedChangeVector);

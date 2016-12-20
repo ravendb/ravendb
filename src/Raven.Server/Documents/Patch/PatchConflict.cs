@@ -1,25 +1,31 @@
-using System;
+﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using Jint;
 using Jint.Native;
 using Jint.Parser;
+using Jint.Parser.Ast;
 using Jint.Runtime;
-using Raven.Abstractions.Logging;
+using Jint.Runtime.Descriptors;
+using Raven.Client.Replication.Messages;
 using Raven.Server.Extensions;
-using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
-using Voron.Exceptions;
 using Sparrow.Logging;
-using Voron;
+using Voron.Data.Tables;
+using Voron.Exceptions;
+using TypeExtensions = System.Reflection.TypeExtensions;
 
 namespace Raven.Server.Documents.Patch
 {
-    public class PatchDocument
+    public class PatchConflict
     {
+
         protected static Logger _logger;
         private const int MaxRecursionDepth = 128;
         private readonly int maxSteps;
@@ -29,138 +35,64 @@ namespace Raven.Server.Documents.Patch
         private static readonly ScriptsCache ScriptsCache = new ScriptsCache();
 
         private readonly DocumentDatabase _database;
+        private readonly List<DocumentConflict> _docs = new List<DocumentConflict>();
+        private readonly string _key;
+        private readonly bool _hasTombstone = false;
 
-        public PatchDocument(DocumentDatabase database)
+        public PatchConflict(DocumentDatabase database, IReadOnlyCollection<DocumentConflict> docs,
+            string key)
         {
             _database = database;
-            _logger = LoggingSource.Instance.GetLogger<PatchDocument>(database.Name);
+            foreach (var doc in docs)
+            {
+                if (doc.Doc != null)
+                {
+                    _docs.Add(doc);
+                }
+            }
+            _hasTombstone = docs.Any(doc => doc.Doc == null);
+
+            _key = key;
+            _logger = LoggingSource.Instance.GetLogger<PatchConflict>(database.Name);
             maxSteps = database.Configuration.Patching.MaxStepsForScript;
             additionalStepsPerSize = database.Configuration.Patching.AdditionalStepsForScriptBasedOnDocumentSize;
             allowScriptsToAdjustNumberOfSteps = database.Configuration.Patching.AllowScriptsToAdjustNumberOfSteps;
+           
         }
 
-        public virtual PatchResultData Apply(DocumentsOperationContext context, Document document, PatchRequest patch)
-        {
-            if (document == null)
-                return null;
-
+        public virtual PatchResultData Apply(DocumentsOperationContext context, PatchRequest patch)
+        {           
             if (string.IsNullOrEmpty(patch.Script))
                 throw new InvalidOperationException("Patch script must be non-null and not empty");
 
-            var scope = ApplySingleScript(context, document, true, patch);
-            var modifiedDocument = context.ReadObject(scope.ToBlittable(scope.PatchObject.AsObject()), document.Key); /* TODO: Should not use BlittableJsonDocumentBuilder.UsageMode.ToDisk? */
+            var scope = ApplySingleScript(context,  true, patch);
+            
+            var resolvedDocument = TryParse(context,scope);
             return new PatchResultData
             {
-                ModifiedDocument = modifiedDocument ?? document.Data,
-                DebugInfo = scope.DebugInfo,
+                ModifiedDocument = resolvedDocument,
+                DebugInfo = scope.DebugInfo
             };
         }
 
-        public unsafe PatchResultData Apply(DocumentsOperationContext context,
-            string documentKey,
-            long? etag,
-            PatchRequest patch,
-            PatchRequest patchIfMissing,
-            bool isTestOnly = false,
-            bool skipPatchIfEtagMismatch = false)
-        {
-            var document = _database.DocumentsStorage.Get(context, documentKey);
-            if (_logger.IsInfoEnabled)
-                _logger.Info(string.Format("Preparing to apply patch on ({0}). Document found?: {1}.", documentKey, document != null));
-
-            if (etag.HasValue && document != null && document.Etag != etag.Value)
+        private BlittableJsonReaderObject TryParse(DocumentsOperationContext context, PatcherOperationScope scope)
+        {            
+            try
             {
-                System.Diagnostics.Debug.Assert(document.Etag > 0);
-
-                if (skipPatchIfEtagMismatch)
+                var obj = scope.ActualPatchResult.AsObject();
+                return context.ReadObject(scope.ToBlittable(obj), _key);
+            }
+            catch (ArgumentException ex)
+            {
+                if (scope.ActualPatchResult == JsValue.Null)
                 {
-                    return new PatchResultData
-                    {
-                        PatchResult = PatchResult.Skipped
-                    };
+                    return null;
                 }
-
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Got concurrent exception while tried to patch the following document: {documentKey}");
-                throw new ConcurrencyException($"Could not patch document '{documentKey}' because non current etag was used")
-                {
-                    ActualETag = document.Etag,
-                    ExpectedETag = etag.Value,
-                };
+                throw ex;
             }
-
-            var patchRequest = patch;
-            if (document == null)
-            {
-                if (patchIfMissing == null)
-                {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Tried to patch a not exists document and patchIfMissing is null");
-
-                    return new PatchResultData
-                    {
-                        PatchResult = PatchResult.DocumentDoesNotExists
-                    };
-                }
-                patchRequest = patchIfMissing;
-            }
-            var scope = ApplySingleScript(context, document, isTestOnly, patchRequest);
-            var modifiedDocument = context.ReadObject(scope.ToBlittable(scope.PatchObject.AsObject()),
-                documentKey, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-
-            var result = new PatchResultData
-            {
-                PatchResult = PatchResult.NotModified,
-                OriginalDocument = document?.Data,
-                DebugInfo = scope.DebugInfo,
-            };
-
-            if (modifiedDocument == null)
-            {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"After applying patch, modifiedDocument is null and document is null? {document == null}");
-
-                result.PatchResult = PatchResult.Skipped;
-                return result;
-            }
-
-            if (isTestOnly)
-            {
-                return new PatchResultData
-                {
-                    PatchResult = PatchResult.Tested,
-                    OriginalDocument = document?.Data,
-                    ModifiedDocument = modifiedDocument,
-                    DebugActions = scope.DebugActions.GetDebugActions(),
-                    DebugInfo = scope.DebugInfo,
-                };
-            }
-
-            if (document == null)
-            {
-                _database.DocumentsStorage.Put(context, documentKey, null, modifiedDocument);
-            }
-            else
-            {
-                var isModified = document.Data.Size != modifiedDocument.Size;
-                if (isModified == false) // optimization, if size different, no need to compute hash to check
-                {
-                    var originHash = Hashing.XXHash64.Calculate(document.Data.BasePointer, (ulong)document.Data.Size);
-                    var modifiedHash = Hashing.XXHash64.Calculate(modifiedDocument.BasePointer, (ulong)modifiedDocument.Size);
-                    isModified = originHash != modifiedHash;
-                }
-
-                if (isModified)
-                {
-                    _database.DocumentsStorage.Put(context, document.Key, document.Etag, modifiedDocument);
-                    result.PatchResult = PatchResult.Patched;
-                }
-            }
-
-            return result;
         }
 
-        protected PatcherOperationScope ApplySingleScript(DocumentsOperationContext context, Document document, bool isTestOnly, PatchRequest patch)
+        protected PatcherOperationScope ApplySingleScript(DocumentsOperationContext context, bool isTestOnly, PatchRequest patch)
         {
             var scope = new PatcherOperationScope(_database, context, isTestOnly)
             {
@@ -188,9 +120,8 @@ namespace Raven.Server.Documents.Patch
 
             try
             {
-                PrepareEngine(patch, document, scope, jintEngine);
+                PrepareEngine(patch, scope, jintEngine);
 
-                scope.PatchObject = scope.ToJsObject(jintEngine, document.Data);
                 scope.ActualPatchResult = jintEngine.Invoke("ExecutePatchScript", scope.PatchObject);
 
                 CleanupEngine(patch, jintEngine, scope);
@@ -240,29 +171,20 @@ namespace Raven.Server.Documents.Patch
                 foreach (var name in patch.Values.GetPropertyNames())
                     jintEngine.Global.Delete(name, true);
             }
-
-            jintEngine.Global.Delete("__document_id", true);
+          
             RemoveEngineCustomizations(jintEngine, scope);
         }
 
-        private void PrepareEngine(PatchRequest patch, Document document, PatcherOperationScope scope, Engine jintEngine)
+        private void PrepareEngine(PatchRequest patch, PatcherOperationScope scope, Engine jintEngine)
         {
             int totalScriptSteps = 0;
-            if (document.Data.Size != 0)
-            {
-                totalScriptSteps = maxSteps + (document.Data.Size * additionalStepsPerSize);
-                jintEngine.Options.MaxStatements(totalScriptSteps);
-            }
-
             
             jintEngine.Global.Delete("LoadDocument", false);
             jintEngine.Global.Delete("IncreaseNumberOfAllowedStepsBy", false);
 
             CustomizeEngine(jintEngine, scope);
-            
-            jintEngine.SetValue("LoadDocument", (Func<string, JsValue>)(key => scope.LoadDocument(key, jintEngine, ref totalScriptSteps)));
-            jintEngine.SetValue("__document_id", document.Key);
 
+            jintEngine.SetValue("LoadDocument", (Func<string, JsValue>)(key => scope.LoadDocument(key, jintEngine, ref totalScriptSteps)));
             jintEngine.SetValue("IncreaseNumberOfAllowedStepsBy", (Action<int>)(number =>
             {
                 if (allowScriptsToAdjustNumberOfSteps == false)
@@ -283,7 +205,7 @@ namespace Raven.Server.Documents.Patch
                     jintEngine.SetValue(prop.Name, scope.ToJsValue(jintEngine, prop.Value, prop.Token));
                 }
             }
-            
+
             jintEngine.ResetStatementsCount();
         }
 
@@ -292,8 +214,7 @@ namespace Raven.Server.Documents.Patch
             var scriptWithProperLines = patch.Script.NormalizeLineEnding();
             // NOTE: we merged few first lines of wrapping script to make sure {0} is at line 0.
             // This will all us to show proper line number using user lines locations.
-            var wrapperScript = string.Format(@"function ExecutePatchScript(docInner){{ return (function(doc){{ {0} }}).apply(docInner); }};", scriptWithProperLines);
-
+            
             var jintEngine = new Engine(cfg =>
             {
 #if DEBUG
@@ -309,14 +230,14 @@ namespace Raven.Server.Documents.Patch
             AddScript(jintEngine, "Raven.Server.Documents.Patch.lodash.js");
             AddScript(jintEngine, "Raven.Server.Documents.Patch.ToJson.js");
             AddScript(jintEngine, "Raven.Server.Documents.Patch.RavenDB.js");
-
+           
             jintEngine.Options.MaxStatements(maxSteps);
+            var wrapperScript = string.Format(@"function ExecutePatchScript(docs){{ {0} }}", scriptWithProperLines);
 
             jintEngine.Execute(wrapperScript, new ParserOptions
             {
                 Source = "main.js"
             });
-
             return jintEngine;
         }
 
@@ -330,10 +251,32 @@ namespace Raven.Server.Documents.Patch
 
         protected virtual void CustomizeEngine(Engine engine, PatcherOperationScope scope)
         {
-            engine.Global.Delete("PutDocument", false);
             engine.Global.Delete("DeleteDocument", false);
+            engine.Global.Delete("PutDocument", false);
+            engine.Global.Delete("HasTombstone", false);
+
             engine.SetValue("PutDocument", (Func<string, JsValue, JsValue, JsValue, string>)((key, data, metadata, etag) => scope.PutDocument(key, data, metadata, etag, engine)));
             engine.SetValue("DeleteDocument", (Action<string>)scope.DeleteDocument);
+            engine.SetValue("HasTombstone", _hasTombstone);
+
+            var docsArr = engine.Array.Construct(Arguments.Empty);
+            int index = 0;
+            foreach (var doc in _docs)
+            {
+                //TODO : add unit test that has a conflict here to make sure that it is ok
+                var jsVal = scope.ToJsObject(engine, doc.Doc, "doc" + index);
+                docsArr.FastAddProperty(index.ToString(), jsVal, true, true, true);
+                index++;
+            }
+            docsArr.FastSetProperty("length", new PropertyDescriptor
+            {
+                Value = new JsValue(index),
+                Configurable = true,
+                Enumerable = true,
+                Writable = true,
+            });
+           
+            scope.PatchObject = docsArr;
         }
 
         protected virtual void RemoveEngineCustomizations(Engine engine, PatcherOperationScope scope)
@@ -395,4 +338,6 @@ namespace Raven.Server.Documents.Patch
             }
         }
     }
+
 }
+
