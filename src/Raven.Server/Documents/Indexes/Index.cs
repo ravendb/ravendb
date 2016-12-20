@@ -1662,6 +1662,46 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public IndexEntriesQueryResult IndexEntries(IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        {
+            AssertIndexState();
+
+            if (State == IndexState.Idle)
+                SetState(IndexState.Normal);
+
+            MarkQueried(DocumentDatabase.Time.GetUtcNow());
+
+            AssertQueryDoesNotContainFieldsThatAreNotIndexed(query, query.SortedFields);
+
+            TransactionOperationContext indexContext;
+            using (var marker = MarkQueryAsRunning(query, token))
+            using (_contextPool.AllocateOperationContext(out indexContext))
+            using (var indexTx = indexContext.OpenReadTransaction())
+            using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
+            {
+                AssertIndexState();
+                marker.HoldLock();
+
+                var result = new IndexEntriesQueryResult();
+
+                using (documentsContext.OpenReadTransaction())
+                {
+                    var isStale = IsStale(documentsContext, indexContext, query.CutoffEtag);
+                    FillQueryResult(result, isStale, documentsContext, indexContext);
+                }
+
+                var totalResults = new Reference<int>();
+                foreach (var indexEntry in reader.IndexEntries(query, totalResults, documentsContext, token.Token))
+                {
+                    result.AddResult(indexEntry);
+                }
+
+                result.TotalResults = totalResults.Value;
+
+                return result;
+            }
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void AssertIndexState(bool assertState = true)
         {

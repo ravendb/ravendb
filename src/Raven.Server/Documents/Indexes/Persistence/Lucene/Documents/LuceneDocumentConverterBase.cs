@@ -70,14 +70,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         }
 
         // returned document needs to be written do index right after conversion because the same cached instance is used here
-        public IDisposable SetDocument(LazyStringValue key, object document, JsonOperationContext indexContext)
+        public IDisposable SetDocument(LazyStringValue key, object document, JsonOperationContext indexContext, out bool shouldSkip)
         {
             Document.GetFields().Clear();
 
+            var numberOfFields = 0;
             foreach (var field in GetFields(key, document, indexContext))
             {
                 Document.Add(field);
+                numberOfFields++;
             }
+
+            shouldSkip = numberOfFields <= 1; // there is always a key field, but we want to filter-out empty documents
 
             return Scope;
         }

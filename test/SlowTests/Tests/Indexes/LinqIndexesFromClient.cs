@@ -68,7 +68,8 @@ namespace SlowTests.Tests.Indexes
                 {
                     using (var lazyStringValue = context.GetLazyString("docs/1"))
                     {
-                        converter.SetDocument(lazyStringValue, result, context);
+                        bool shouldSkip;
+                        converter.SetDocument(lazyStringValue, result, context, out shouldSkip);
                         Assert.Equal("docs/1", converter.Document.Get("__document_id"));
                     }
                 }

@@ -3,9 +3,9 @@ using Raven.Client.Data.Queries;
 
 namespace Raven.Server.Documents.Queries
 {
-    public abstract class QueryResultServerSide : QueryResult<Document>
+    public abstract class QueryResultServerSide<T> : QueryResult<T>
     {
-        public abstract void AddResult(Document result);
+        public abstract void AddResult(T result);
 
         public abstract void HandleException(Exception e);
 
@@ -14,5 +14,9 @@ namespace Raven.Server.Documents.Queries
         public abstract bool SupportsInclude { get; }
 
         public bool NotModified { get; protected set; }
+    }
+
+    public abstract class QueryResultServerSide : QueryResultServerSide<Document>
+    {
     }
 }
