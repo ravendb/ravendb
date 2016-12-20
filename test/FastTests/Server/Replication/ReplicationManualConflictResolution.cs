@@ -73,8 +73,6 @@ namespace FastTests.Server.Documents.Replication
                         //slave.DatabaseCommands.Put("users/1", null, resolved.DataAsJson, resolved.Metadata);
                     }
                 }
-
-
             }
         }
     }

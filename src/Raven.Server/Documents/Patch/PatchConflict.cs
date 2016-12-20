@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -16,6 +17,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Voron.Data.Tables;
 using Voron.Exceptions;
 using TypeExtensions = System.Reflection.TypeExtensions;
 
@@ -33,41 +35,64 @@ namespace Raven.Server.Documents.Patch
         private static readonly ScriptsCache ScriptsCache = new ScriptsCache();
 
         private readonly DocumentDatabase _database;
-        private readonly ChangeVectorEntry[] _changeVectors;
-        private readonly IReadOnlyCollection<DocumentConflict> _docs;
-
-        private readonly FieldInfo[] _fields = TypeExtensions.GetFields(typeof(ChangeVectorEntry),
-            BindingFlags.Instance |
-            BindingFlags.NonPublic |
-            BindingFlags.Public);
+        private readonly List<DocumentConflict> _docs = new List<DocumentConflict>();
+        private readonly string _key;
+        private readonly bool _hasTombstone = false;
 
         public PatchConflict(DocumentDatabase database, IReadOnlyCollection<DocumentConflict> docs,
-            ChangeVectorEntry[] changeVectors)
+            string key)
         {
             _database = database;
-            _changeVectors = changeVectors;
-            _docs = docs;
+            foreach (var doc in docs)
+            {
+                if (doc.Doc != null)
+                {
+                    _docs.Add(doc);
+                }
+            }
+            _hasTombstone = docs.Any(doc => doc.Doc == null);
 
+            _key = key;
             _logger = LoggingSource.Instance.GetLogger<PatchConflict>(database.Name);
             maxSteps = database.Configuration.Patching.MaxStepsForScript;
             additionalStepsPerSize = database.Configuration.Patching.AdditionalStepsForScriptBasedOnDocumentSize;
             allowScriptsToAdjustNumberOfSteps = database.Configuration.Patching.AllowScriptsToAdjustNumberOfSteps;
+           
         }
 
-        public virtual PatchResultData Apply(DocumentsOperationContext context, PatchRequest patch)
-        {
-           
+        public virtual PatchResultData Apply(DocumentsOperationContext context, PatchRequest patch, string collection)
+        {           
             if (string.IsNullOrEmpty(patch.Script))
                 throw new InvalidOperationException("Patch script must be non-null and not empty");
 
-            var scope = ApplySingleScript(context,  true, patch);
+            var scope = ApplySingleScript(context,  true, patch,collection);
+            
+            var resolvedDocument = TryParse(context,scope);
             return new PatchResultData
             {
-                DebugInfo = scope.DebugInfo,
+                ModifiedDocument = resolvedDocument,
+                DebugInfo = scope.DebugInfo
             };
         }
 
-        protected PatcherOperationScope ApplySingleScript(DocumentsOperationContext context, bool isTestOnly, PatchRequest patch)
+        private BlittableJsonReaderObject TryParse(DocumentsOperationContext context, PatcherOperationScope scope)
+        {            
+            try
+            {
+                var obj = scope.ActualPatchResult.AsObject();
+                return context.ReadObject(scope.ToBlittable(obj), _key);
+            }
+            catch (ArgumentException ex)
+            {
+                if (scope.ActualPatchResult == JsValue.Null)
+                {
+                    return null;
+                }
+                throw ex;
+            }
+        }
+
+        protected PatcherOperationScope ApplySingleScript(DocumentsOperationContext context, bool isTestOnly, PatchRequest patch, string collection)
         {
             var scope = new PatcherOperationScope(_database, context, isTestOnly)
             {
@@ -98,7 +123,7 @@ namespace Raven.Server.Documents.Patch
                 PrepareEngine(patch, scope, jintEngine);
 
                 //scope.PatchObject = scope.ToJsObject(jintEngine, document.Data);
-                scope.ActualPatchResult = jintEngine.Invoke("ExecutePatchScript", scope.PatchObject);
+                scope.ActualPatchResult = jintEngine.Invoke("Merge" + collection, scope.PatchObject);
 
                 CleanupEngine(patch, jintEngine, scope);
 
@@ -190,11 +215,7 @@ namespace Raven.Server.Documents.Patch
             var scriptWithProperLines = patch.Script.NormalizeLineEnding();
             // NOTE: we merged few first lines of wrapping script to make sure {0} is at line 0.
             // This will all us to show proper line number using user lines locations.
-            var wrapperScript = string.Format(
-                @"function ExecutePatchScript(docInner,collectionInner){{ 
-                    return (function(doc,collection){{ {0} }}).apply(docInner,collectionInner); 
-                }};", scriptWithProperLines);
-
+            
             var jintEngine = new Engine(cfg =>
             {
 #if DEBUG
@@ -210,14 +231,12 @@ namespace Raven.Server.Documents.Patch
             AddScript(jintEngine, "Raven.Server.Documents.Patch.lodash.js");
             AddScript(jintEngine, "Raven.Server.Documents.Patch.ToJson.js");
             AddScript(jintEngine, "Raven.Server.Documents.Patch.RavenDB.js");
-
+           
             jintEngine.Options.MaxStatements(maxSteps);
-
-            jintEngine.Execute(wrapperScript, new ParserOptions
+            jintEngine.Execute(patch.Script, new ParserOptions
             {
                 Source = "main.js"
             });
-
             return jintEngine;
         }
 
@@ -232,16 +251,19 @@ namespace Raven.Server.Documents.Patch
         protected virtual void CustomizeEngine(Engine engine, PatcherOperationScope scope)
         {
             engine.Global.Delete("DeleteDocument", false);
-            engine.Global.Delete("ResolveDocument", false);
-            
-            engine.SetValue("ResolveDocument", (Func<string, JsValue, JsValue, JsValue, string>)((key, data, metadata, etag) => scope.PutDocument(key, data, metadata, etag, engine)));
+            engine.Global.Delete("PutDocument", false);
+            engine.Global.Delete("HasTombstone", false);
+
+            engine.SetValue("PutDocument", (Func<string, JsValue, JsValue, JsValue, string>)((key, data, metadata, etag) => scope.PutDocument(key, data, metadata, etag, engine)));
             engine.SetValue("DeleteDocument", (Action<string>)scope.DeleteDocument);
-            
+            engine.SetValue("HasTombstone", _hasTombstone);
+
             var docsArr = engine.Array.Construct(Arguments.Empty);
             var docs = _docs.ToArray();
             for (var i = 0; i < docs.Length; i++)
             {
                 var doc = docs[i];
+                //TODO : add unit test that has a conflict here to make sure that it is ok
                 var jsVal = scope.ToJsObject(engine, doc.Doc, "doc" + i);
                 docsArr.FastAddProperty(i.ToString(), jsVal, true, true, true);
             }
@@ -252,6 +274,7 @@ namespace Raven.Server.Documents.Patch
                 Enumerable = true,
                 Writable = true,
             });
+           
             scope.PatchObject = docsArr;
         }
 

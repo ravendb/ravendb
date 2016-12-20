@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Exceptions;
 using Raven.Server.Extensions;
@@ -32,6 +34,7 @@ namespace Raven.Server.Documents
         private static readonly Slice AllDocsEtagsSlice;
         private static readonly Slice TombstonesSlice;
         private static readonly Slice KeyAndChangeVectorSlice;
+        private static readonly Slice ScriptKeySlice;
 
         private static readonly TableSchema DocsSchema = new TableSchema();
         private static readonly Slice TombstonesPrefix;
@@ -39,6 +42,8 @@ namespace Raven.Server.Documents
         private static readonly TableSchema ConflictsSchema = new TableSchema();
         private static readonly TableSchema TombstonesSchema = new TableSchema();
         private static readonly TableSchema CollectionsSchema = new TableSchema();
+        private static readonly TableSchema ReplicationResolverSchema = new TableSchema();
+        
 
         private readonly DocumentDatabase _documentDatabase;
 
@@ -50,12 +55,22 @@ namespace Raven.Server.Documents
             Slice.From(StorageEnvironment.LabelsContext, "LastEtag", ByteStringType.Immutable, out LastEtagSlice);
             Slice.From(StorageEnvironment.LabelsContext, "Key", ByteStringType.Immutable, out KeySlice);
             Slice.From(StorageEnvironment.LabelsContext, "Docs", ByteStringType.Immutable, out DocsSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "ScriptKey", ByteStringType.Immutable, out ScriptKeySlice);
             Slice.From(StorageEnvironment.LabelsContext, "CollectionEtags", ByteStringType.Immutable, out CollectionEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "AllDocsEtags", ByteStringType.Immutable, out AllDocsEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "Tombstones", ByteStringType.Immutable, out TombstonesSlice);
             Slice.From(StorageEnvironment.LabelsContext, "KeyAndChangeVector", ByteStringType.Immutable, out KeyAndChangeVectorSlice);
             Slice.From(StorageEnvironment.LabelsContext, CollectionName.GetTablePrefix(CollectionTableType.Tombstones), ByteStringType.Immutable, out TombstonesPrefix);
             Slice.From(StorageEnvironment.LabelsContext, "DeletedEtags", ByteStringType.Immutable, out DeletedEtagsSlice);
+
+            ReplicationResolverSchema.DefineKey(new TableSchema.SchemaIndexDef()
+            {
+                StartIndex = 0,
+                Count = 1,
+                IsGlobal = false,
+                Name = ScriptKeySlice
+            });
+
             /*
              Collection schema is:
              full name
@@ -66,7 +81,7 @@ namespace Raven.Server.Documents
                 StartIndex = 0,
                 Count = 1,
                 IsGlobal = false,
-            });
+            }); 
 
             /*
              The structure of conflicts table starts with the following fields:
@@ -236,6 +251,7 @@ namespace Raven.Server.Documents
                     tx.CreateTree("ChangeVector");
                     ConflictsSchema.Create(tx, "Conflicts");
                     CollectionsSchema.Create(tx, "Collections");
+                    ReplicationResolverSchema.Create(tx, "Scripts");
 
                     _hasConflicts = tx.OpenTable(ConflictsSchema, "Conflicts").NumberOfEntries;
 
@@ -253,6 +269,101 @@ namespace Raven.Server.Documents
                 options.Dispose();
                 Dispose();
                 throw;
+            }
+        }
+
+        public enum ReplicationResolverEntry
+        {
+           LoweredKey,
+           Key,
+           Script 
+        }
+
+        public void AddOrUpdateScript(DocumentsOperationContext context, string collection, string script)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(ReplicationResolverSchema, "Scripts");
+
+            byte* lowerKey;
+            int lowerSize;
+
+            byte* keyPtr;
+            int keySize;
+            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, collection, out lowerKey, out lowerSize, out keyPtr,
+                out keySize);
+            Slice scriptAsSlice;
+            using (DocumentKeyWorker.GetSliceFromKey(context, script, out scriptAsSlice))
+            {
+                table.Set(new TableValueBuilder
+                {
+                    {lowerKey, lowerSize},
+                    {keyPtr, keySize},
+                    {scriptAsSlice.Content.Ptr, scriptAsSlice.Content.Length }
+                });
+            }
+
+            foreach (var tvr in table.SeekByPrimaryKey(Slices.BeforeAllKeys))
+            {
+                int size;
+                var ptr = tvr.Read(0, out size);
+                int size2;
+                var ptr2 = tvr.Read(1, out size2);
+                int size3;
+                var ptr3 = tvr.Read(2, out size3);
+                var col = new LazyStringValue(null, ptr, size, context);
+                var col2 = new LazyStringValue(null, ptr2, size2, context);
+                var col3 = new LazyStringValue(null, ptr3, size3, context);
+            }
+
+        }
+
+        public string GetScript(DocumentsOperationContext context, string collection)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(ReplicationResolverSchema, "Scripts");
+
+
+            foreach (var tvr in table.SeekByPrimaryKey(Slices.BeforeAllKeys))
+            {
+                int size;
+                var ptr = tvr.Read(0, out size);
+                int size2;
+                var ptr2 = tvr.Read(1, out size2);
+                int size3;
+                var ptr3 = tvr.Read(2, out size3);
+                var col = new LazyStringValue(null, ptr, size, context);
+                var col2 = new LazyStringValue(null, ptr2, size2, context);
+                var col3 = new LazyStringValue(null, ptr3, size3, context);
+            }
+
+
+            byte* lowerKey;
+            int lowerSize;
+
+            byte* keyPtr;
+            int keySize;
+            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, collection, out lowerKey, out lowerSize, out keyPtr,
+                out keySize);
+            Slice collectionNameAsSlice;
+
+
+
+           
+
+            using (Slice.External(context.Allocator,lowerKey,lowerSize,out collectionNameAsSlice))
+            {
+                //var a = table.GetTree(collectionNameAsSlice);
+                var b = table.VerifyKeyExists(collectionNameAsSlice);
+                
+                var tvr = table.ReadByKey(collectionNameAsSlice);
+                if (tvr == null)
+                {
+                    throw new ArgumentException("Resolution script for the given collection does not exist", collection);
+                }
+
+                int size;
+                var ptr = tvr.Read((int)ReplicationResolverEntry.Script, out size);
+
+                //note : this will work due to implicit casting of LazyStringValue to string
+                return new LazyStringValue(null, ptr, size, context);
             }
         }
 
@@ -340,6 +451,7 @@ namespace Raven.Server.Documents
             Slice prefixSlice;
             using (DocumentKeyWorker.GetSliceFromKey(context, prefix, out prefixSlice))
             {
+                
                 // ReSharper disable once LoopCanBeConvertedToQuery
                 foreach (var result in table.SeekByPrimaryKey(prefixSlice, startsWith: true))
                 {
@@ -369,7 +481,7 @@ namespace Raven.Server.Documents
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekBackwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], long.MaxValue))
+            foreach (var result in table.SeekBackwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], Int64.MaxValue))
             {
                 if (start > 0)
                 {
@@ -396,7 +508,7 @@ namespace Raven.Server.Documents
                 yield break;
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekBackwardFrom(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice], long.MaxValue))
+            foreach (var result in table.SeekBackwardFrom(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice], Int64.MaxValue))
             {
                 if (start > 0)
                 {
@@ -432,7 +544,7 @@ namespace Raven.Server.Documents
         public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, long etag)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
-
+            
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], etag))
             {
@@ -498,7 +610,7 @@ namespace Raven.Server.Documents
                 if (take <= 0)
                     yield break;
 
-                foreach (var document in GetDocumentsFrom(context, collection, etag, 0, int.MaxValue))
+                foreach (var document in GetDocumentsFrom(context, collection, etag, 0, Int32.MaxValue))
                 {
                     if (take-- <= 0)
                         yield break;
@@ -510,7 +622,7 @@ namespace Raven.Server.Documents
 
         public Tuple<Document, DocumentTombstone> GetDocumentOrTombstone(DocumentsOperationContext context, string key, bool throwOnConflict = true)
         {
-            if (string.IsNullOrWhiteSpace(key))
+            if (String.IsNullOrWhiteSpace(key))
                 throw new ArgumentException("Argument is null or whitespace", nameof(key));
             if (context.Transaction == null)
                 throw new ArgumentException("Context must be set with a valid transaction before calling Put", nameof(context));
@@ -547,7 +659,7 @@ namespace Raven.Server.Documents
 
         public Document Get(DocumentsOperationContext context, string key)
         {
-            if (string.IsNullOrWhiteSpace(key))
+            if (String.IsNullOrWhiteSpace(key))
                 throw new ArgumentException("Argument is null or whitespace", nameof(key));
             if (context.Transaction == null)
                 throw new ArgumentException("Context must be set with a valid transaction before calling Get", nameof(context));
@@ -651,7 +763,7 @@ namespace Raven.Server.Documents
                 return 0;
 
             var result = table
-                        .SeekBackwardFrom(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice], long.MaxValue)
+                        .SeekBackwardFrom(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice], Int64.MaxValue)
                         .FirstOrDefault();
 
             if (result == null)
@@ -677,7 +789,7 @@ namespace Raven.Server.Documents
                 return 0;
 
             var result = table
-                .SeekBackwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], long.MaxValue)
+                .SeekBackwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], Int64.MaxValue)
                 .FirstOrDefault();
 
             if (result == null)
@@ -757,7 +869,10 @@ namespace Raven.Server.Documents
             size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out offset);
             result.Key = new LazyStringValue(null, ptr + offset, size, context);
             result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(tvr, 1);
-            result.Doc = new BlittableJsonReaderObject(tvr.Read(3, out size), size, context);
+            var read = tvr.Read(3, out size);
+            if(size > 0)
+                result.Doc = new BlittableJsonReaderObject(read, size, context);
+            //otherwise this is a tombstone conflict and should be treated as such
 
             return result;
         }
@@ -1005,7 +1120,8 @@ namespace Raven.Server.Documents
             var collectionName = GetCollection(tombstone.Collection, throwIfDoesNotExist: true);
 
             tombstone.ChangeVector = changeVector;
-            var tombstoneTables = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
+            var tombstoneTables = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
+                collectionName.GetTableName(CollectionTableType.Tombstones));
             var newEtag = ++_lastEtag;
             var newEtagBigEndian = Bits.SwapBytes(newEtag);
             var documentEtag = tombstone.DeletedEtag;
@@ -1107,21 +1223,26 @@ namespace Raven.Server.Documents
                 deleted = false;
                 // deleting a value might cause other ids to change, so we can't just pass the list
                 // of ids to be deleted, because they wouldn't remain stable during the deletions
-                foreach (var tvr in conflictsTable.SeekByPrimaryKey(loweredKey, startsWith: true))
+                foreach (var result in conflictsTable.SeekForwardFrom(
+                    ConflictsSchema.Indexes[KeyAndChangeVectorSlice],
+                    loweredKey, true))
                 {
-                    deleted = true;
-
-                    int size;
-                    var cve = tvr.Read(1, out size);
-                    var vector = new ChangeVectorEntry[size / sizeof(ChangeVectorEntry)];
-                    fixed (ChangeVectorEntry* pVector = vector)
+                    foreach (var tvr in result.Results)
                     {
-                        Memory.Copy((byte*)pVector, cve, size);
-                    }
-                    list.Add(vector);
+                        deleted = true;
 
-                    conflictsTable.Delete(tvr.Id);
-                    break;
+                        int size;
+                        var cve = tvr.Read(1, out size);
+                        var vector = new ChangeVectorEntry[size/sizeof(ChangeVectorEntry)];
+                        fixed (ChangeVectorEntry* pVector = vector)
+                        {
+                            Memory.Copy((byte*) pVector, cve, size);
+                        }
+                        list.Add(vector);
+
+                        conflictsTable.Delete(tvr.Id);
+                        break;
+                    }
                 }
             }
 
@@ -1180,12 +1301,14 @@ namespace Raven.Server.Documents
                         if (currentChangeVector.Equals(changeVector))
                         {
                             int size;
+                            var dataPtr = tvr.Read(3, out size);
                             return new DocumentConflict
                             {
                                 ChangeVector = currentChangeVector,
                                 Key = new LazyStringValue(key, tvr.Read(2, out size), size, context),
                                 StorageId = tvr.Id,
-                                Doc = new BlittableJsonReaderObject(tvr.Read(3, out size), size, context)
+                                //size == 0 --> this is a tombstone conflict
+                                Doc = (size == 0) ? null : new BlittableJsonReaderObject(dataPtr, size, context)
                             };
                         }
                     }
@@ -1337,7 +1460,7 @@ namespace Raven.Server.Documents
             var collectionName = ExtractCollectionName(context, key, document);
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
-            if (string.IsNullOrWhiteSpace(key))
+            if (String.IsNullOrWhiteSpace(key))
                 key = Guid.NewGuid().ToString();
 
             if (key[key.Length - 1] == '/')
@@ -1608,7 +1731,7 @@ namespace Raven.Server.Documents
 
             var lastKnownBusy = nextIdentityValue;
             var maybeFree = nextIdentityValue * 2;
-            var lastKnownFree = long.MaxValue;
+            var lastKnownFree = Int64.MaxValue;
             while (true)
             {
                 finalKey = key + maybeFree;
@@ -1763,7 +1886,7 @@ namespace Raven.Server.Documents
             if (table == null)
                 return;
 
-            var deleteCount = table.DeleteBackwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], etag, long.MaxValue);
+            var deleteCount = table.DeleteBackwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], etag, Int64.MaxValue);
             if (_logger.IsInfoEnabled && deleteCount > 0)
                 _logger.Info($"Deleted {deleteCount:#,#;;0} tombstones earlier than {etag} in {collection}");
 
