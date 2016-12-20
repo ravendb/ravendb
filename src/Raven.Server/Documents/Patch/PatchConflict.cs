@@ -60,12 +60,12 @@ namespace Raven.Server.Documents.Patch
            
         }
 
-        public virtual PatchResultData Apply(DocumentsOperationContext context, PatchRequest patch, string collection)
+        public virtual PatchResultData Apply(DocumentsOperationContext context, PatchRequest patch)
         {           
             if (string.IsNullOrEmpty(patch.Script))
                 throw new InvalidOperationException("Patch script must be non-null and not empty");
 
-            var scope = ApplySingleScript(context,  true, patch,collection);
+            var scope = ApplySingleScript(context,  true, patch);
             
             var resolvedDocument = TryParse(context,scope);
             return new PatchResultData
@@ -92,7 +92,7 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        protected PatcherOperationScope ApplySingleScript(DocumentsOperationContext context, bool isTestOnly, PatchRequest patch, string collection)
+        protected PatcherOperationScope ApplySingleScript(DocumentsOperationContext context, bool isTestOnly, PatchRequest patch)
         {
             var scope = new PatcherOperationScope(_database, context, isTestOnly)
             {

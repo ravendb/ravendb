@@ -666,7 +666,7 @@ namespace Raven.Server.Documents.Replication
                 Script = scriptResolver.Script
             };
             
-            var results = patch.Apply(_documentsContext,  request, collection);
+            var results = patch.Apply(_documentsContext,  request);
             _documentsContext.DocumentDatabase.DocumentsStorage.DeleteConflictsFor(_documentsContext, docPosition.Id);
             var merged = ReplicationUtils.MergeVectors(conflictingVector, _tempReplicatedChangeVector);
             if (results.ModifiedDocument != null)
