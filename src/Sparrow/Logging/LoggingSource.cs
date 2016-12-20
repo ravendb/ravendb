@@ -429,7 +429,10 @@ namespace Sparrow.Logging
 
         public void DisableConsoleLogging()
         {
-            _additionalOutput = null;
+            using (_additionalOutput)
+            {
+                _additionalOutput = null;
+            }
         }
 
         private class LocalThreadWriterState
