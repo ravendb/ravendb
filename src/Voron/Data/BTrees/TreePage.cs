@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Sparrow;
+using Voron.Data.Compression;
 using Voron.Debugging;
 using Voron.Global;
 using Voron.Impl;
@@ -193,6 +194,18 @@ namespace Voron.Data.BTrees
             get{ return (Header->Flags & PageFlags.Overflow) == PageFlags.Overflow; }
         }
 
+        public bool IsCompressed
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return (Header->Flags & PageFlags.Compressed) == PageFlags.Compressed; }
+        }
+
+        public CompressedNodesHeader* CompressionHeader
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return (CompressedNodesHeader*)(Base + PageSize - Constants.Compression.HeaderSize); }
+        }
+
         public ushort NumberOfEntries
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -250,6 +263,12 @@ namespace Voron.Data.BTrees
             node->DataSize = dataSize;
 
             return (byte*)node + Constants.NodeHeaderSize + key.Size;
+        }
+
+        public void AddCompressionTombstoneNode(int index, Slice key)
+        {
+            var node = CreateNode(index, key, TreeNodeFlags.CompressionTombstone, 0, 0);
+            node->PageNumber = 0;
         }
 
         public void ChangeImplicitRefPageNode(long implicitRefPageNumber)
@@ -338,7 +357,14 @@ namespace Voron.Data.BTrees
 
             TreePageHeader* header = Header;
 
-            var newNodeOffset = (ushort)(header->Upper - nodeSize);
+            int upper;
+
+            if (Upper == ushort.MaxValue && PageSize == Constants.Storage.MaxPageSize)
+                upper = Constants.Storage.MaxPageSize;
+            else
+                upper = header->Upper;
+            
+            var newNodeOffset = (ushort)(upper - nodeSize);
             Debug.Assert(newNodeOffset >= header->Lower + Constants.NodeOffsetSize);
 
             var node = (TreeNodeHeader*)(Base + newNodeOffset);
@@ -388,7 +414,9 @@ namespace Voron.Data.BTrees
             // this has the effect of compacting the page data and avoiding
             // internal page fragmentation
             TemporaryPage tmp;
-            using (tx.Environment.GetTemporaryPage(tx, out tmp))
+            using (PageSize <= tx.Environment.Options.PageSize ? 
+                tx.Environment.GetTemporaryPage(tx, out tmp) : 
+                tx.Environment.DecompressionBuffers.GetTemporaryPage(tx, PageSize, out tmp))
             {
                 var copy = tmp.GetTempPage();
                 copy.TreeFlags = TreeFlags;
@@ -438,7 +466,12 @@ namespace Voron.Data.BTrees
 
         public override string ToString()
         {
-            return "#" + PageNumber + " (count: " + NumberOfEntries + ") " + TreeFlags;
+            var result = $"#{PageNumber} (count: {NumberOfEntries}) {TreeFlags}";
+
+            if (IsCompressed)
+                result += $" Compressed ({CompressionHeader->NumberOfCompressedEntries} entries [uncompressed/compressed: {CompressionHeader->UncompressedSize}/{CompressionHeader->CompressedSize}]";
+
+            return result;
         }
 
         public string Dump()
@@ -469,17 +502,24 @@ namespace Voron.Data.BTrees
             return true;
         }
 
-        private void Defrag(LowLevelTransaction tx)
+        internal void Defrag(LowLevelTransaction tx)
         {
             TemporaryPage tmp;
-            using (tx.Environment.GetTemporaryPage(tx, out tmp))
+            using (PageSize <= tx.Environment.Options.PageSize ?
+               tx.Environment.GetTemporaryPage(tx, out tmp) :
+               tx.Environment.DecompressionBuffers.GetTemporaryPage(tx, PageSize, out tmp))
             {
                 var tempPage = tmp.GetTempPage();
                 Memory.Copy(tempPage.Base, Base, PageSize);
 
                 var numberOfEntries = NumberOfEntries;
 
-                Upper = (ushort)PageSize;
+                int upper;
+
+                if (IsCompressed)
+                    upper = PageSize - Constants.Compression.HeaderSize - CompressionHeader->SectionSize;
+                else
+                    upper = PageSize;
 
                 ushort* offsets = KeysOffsets;
                 for (int i = 0; i < numberOfEntries; i++)
@@ -487,10 +527,12 @@ namespace Voron.Data.BTrees
                     var node = tempPage.GetNode(i);
                     var size = node->GetNodeSize() - Constants.NodeOffsetSize;
                     size += size & 1;
-                    Memory.Copy(Base + Upper - size, (byte*)node, size);
-                    Upper -= (ushort)size;
-                    offsets[i] = Upper;
+                    Memory.Copy(Base + upper - size, (byte*)node, size);
+                    upper -= size;
+                    offsets[i] = (ushort)upper;
                 }
+
+                Upper = (ushort)upper;
             }
         }
 
@@ -640,6 +682,9 @@ namespace Voron.Data.BTrees
                 var nodeSize = node->GetNodeSize();
                 size += nodeSize + (nodeSize & 1);
             }
+
+            if (IsCompressed)
+                size += CompressionHeader->SectionSize + Constants.Compression.HeaderSize;
 
             Debug.Assert(size <= PageSize);
             Debug.Assert(SizeUsed >= size);

@@ -201,8 +201,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             {
                 if (gotLock == false)
                 {
-                    stats.RecordMapCompletedReason(
-                        $"Map duration of ({stats.Duration}) exceeded configured limit ({_configuration.MapTimeoutAfterEtagReached.AsTimeSpan}) and environment flush is waiting for us");
+                    stats.RecordMapCompletedReason("Environment flush was waiting for us");
                     return true;
                 }
             }

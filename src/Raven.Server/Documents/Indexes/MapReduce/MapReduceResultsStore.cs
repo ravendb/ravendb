@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
+using Sparrow.Binary;
 using Sparrow.Json;
 using Voron;
 using Voron.Data.BTrees;
+using Voron.Data.Compression;
 using Voron.Impl;
 using Voron.Util;
 
@@ -58,7 +60,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             //TODO: Need better way to handle tree names
 
             var treeName = ReduceTreePrefix + _reduceKeyHash;
-            Tree = create ? _tx.CreateTree(treeName, pageLocator: _pageLocator) : _tx.ReadTree(treeName, pageLocator: _pageLocator);
+            Tree = create ? _tx.CreateTree(treeName, flags: TreeFlags.LeafsCompressed, pageLocator: _pageLocator) : _tx.ReadTree(treeName, pageLocator: _pageLocator);
 
             ModifiedPages = new HashSet<long>();
             FreedPages = new HashSet<long>();
@@ -94,8 +96,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 default:
                     throw new ArgumentOutOfRangeException(Type.ToString());
             }
-            
-            _mapReduceContext.EntryDeleted(id);
         }
 
         public void Add(long id, BlittableJsonReaderObject result)
@@ -104,6 +104,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             {
                 case MapResultsStorageType.Tree:
                     Slice entrySlice;
+                    
                     using (Slice.External(_indexContext.Allocator, (byte*) &id, sizeof(long), out entrySlice))
                     {
                         var pos = Tree.DirectAdd(entrySlice, result.Size);
@@ -130,7 +131,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
         }
 
-        public PtrSize Get(long id)
+        public ReadMapEntryScope Get(long id)
         {
             switch (Type)
             {
@@ -138,16 +139,16 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     Slice entrySlice;
                     using (Slice.External(_indexContext.Allocator, (byte*)&id, sizeof(long), out entrySlice))
                     {
-                        var read = Tree.Read(entrySlice);
+                        var read = Tree.ReadDecompressed(entrySlice);
 
                         if (read == null)
-                            throw new InvalidOperationException($"Could not find a map result wit id '{id}' in '{Tree.Name}' tree");
+                            throw new InvalidOperationException($"Could not find a map result with id '{id}' in '{Tree.Name}' tree");
 
-                        return PtrSize.Create(read.Reader.Base, read.Reader.Length);
+                        return new ReadMapEntryScope(read);
                     }
                 case MapResultsStorageType.Nested:
                     var section = GetNestedResultsSection();
-                    return section.Get(id);
+                    return new ReadMapEntryScope(section.Get(id));
                 default:
                     throw new ArgumentOutOfRangeException(Type.ToString());
             }
