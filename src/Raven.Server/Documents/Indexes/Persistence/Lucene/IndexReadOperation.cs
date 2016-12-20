@@ -21,6 +21,9 @@ using Raven.Server.Documents.Queries.Sorting;
 using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron.Impl;
 
@@ -37,7 +40,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly IndexType _indexType;
         private readonly int? _actualMaxIndexOutputsPerDocument;
         private readonly int _maxIndexOutputsPerDocument;
-        bool _indexHasBoostedFields;
+        private readonly bool _indexHasBoostedFields;
 
         private readonly IndexSearcher _searcher;
         private readonly RavenPerFieldAnalyzerWrapper _analyzer;
@@ -237,10 +240,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 return noSortingCollector.ToTopDocs();
             }
-            
+
             var absFullPage = Math.Abs(pageSize + start); // need to protect against ridiculously high values of pageSize + start that overflow
             var minPageSize = Math.Max(absFullPage, 1);
-            
+
             if (sort != null)
             {
                 _searcher.SetDefaultFieldSortScoring(true, false);
@@ -418,6 +421,30 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     continue;
 
                 yield return retriever.Get(doc, hit.Score);
+            }
+        }
+
+        public IEnumerable<BlittableJsonReaderObject> IndexEntries(IndexQueryServerSide query, Reference<int> totalResults, DocumentsOperationContext documentsContext, CancellationToken token)
+        {
+            var docsToGet = query.PageSize;
+            var position = query.Start;
+
+            var luceneQuery = GetLuceneQuery(query.Query, query.DefaultOperator, query.DefaultField, _analyzer);
+            var sort = GetSort(query.SortedFields);
+
+            var search = ExecuteQuery(luceneQuery, query.Start, docsToGet, sort);
+            var termsDocs = IndexedTerms.ReadAllEntriesFromIndex(_searcher.IndexReader, documentsContext);
+
+            totalResults.Value = search.TotalHits;
+
+            for (var index = position; index < search.ScoreDocs.Length; index++)
+            {
+                token.ThrowIfCancellationRequested();
+
+                var scoreDoc = search.ScoreDocs[index];
+                var document = termsDocs[scoreDoc.Doc];
+
+                yield return document;
             }
         }
 

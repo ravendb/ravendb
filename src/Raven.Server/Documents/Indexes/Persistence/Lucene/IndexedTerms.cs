@@ -11,7 +11,10 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Lucene.Net.Index;
 using Lucene.Net.Util;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.LowMemoryNotification;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
@@ -80,6 +83,73 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 return info.Results;
             }
+        }
+
+        public static BlittableJsonReaderObject[] ReadAllEntriesFromIndex(IndexReader reader, JsonOperationContext context)
+        {
+            if (reader.MaxDoc > 512 * 1024)
+            {
+                throw new InvalidOperationException("Refusing to extract all index entires from an index with " + reader.MaxDoc +
+                                                    " entries, because of the probable time / memory costs associated with that." +
+                                                    Environment.NewLine +
+                                                    "Viewing Index Entries are a debug tool, and should not be used on indexes of this size. You might want to try Luke, instead.");
+            }
+
+            var results = new DynamicJsonValue[reader.MaxDoc];
+            using (var termDocs = reader.TermDocs())
+            using (var termEnum = reader.Terms())
+            {
+                while (termEnum.Next())
+                {
+                    var term = termEnum.Term;
+                    if (term == null)
+                        break;
+
+                    var text = term.Text;
+
+                    termDocs.Seek(termEnum);
+                    for (var i = 0; i < termEnum.DocFreq() && termDocs.Next(); i++)
+                    {
+                        var result = results[termDocs.Doc];
+                        if (result == null)
+                            results[termDocs.Doc] = result = new DynamicJsonValue();
+
+                        var propertyName = term.Field;
+                        if (propertyName.EndsWith("_ConvertToJson") ||
+                            propertyName.EndsWith("_IsArray") ||
+                            propertyName.EndsWith(Raven.Abstractions.Data.Constants.Indexing.Fields.RangeFieldSuffix))
+                            continue;
+
+                        var oldValue = result[propertyName];
+                        if (oldValue != null)
+                        {
+                            var oldValueAsArray = oldValue as DynamicJsonArray;
+                            if (oldValueAsArray != null)
+                            {
+                                oldValueAsArray.Add(text);
+                                continue;
+                            }
+
+                            var oldValueAsString = oldValue as string;
+                            if (oldValueAsString != null)
+                            {
+                                result[propertyName] = oldValueAsArray = new DynamicJsonArray();
+                                oldValueAsArray.Add(oldValueAsString);
+                                oldValueAsArray.Add(text);
+                                continue;
+                            }
+
+                            throw new ArgumentException("No idea how to handle " + oldValue.GetType());
+                        }
+
+                        result[propertyName] = text;
+                    }
+                }
+            }
+
+            return results
+                .Select(x => context.ReadObject(x, "index/entries"))
+                .ToArray();
         }
 
         private static Dictionary<string, int[]> FillCache(IndexReader reader, int docBase, string field)

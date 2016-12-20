@@ -207,6 +207,27 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
+        public static void WriteIndexEntriesQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexEntriesQueryResult result)
+        {
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(nameof(result.TotalResults));
+            writer.WriteInteger(result.TotalResults);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.SkippedResults));
+            writer.WriteInteger(result.SkippedResults);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.DurationMilliseconds));
+            writer.WriteInteger(result.DurationMilliseconds);
+            writer.WriteComma();
+
+            writer.WriteQueryResult(context, result, metadataOnly: false, partial: true);
+
+            writer.WriteEndObject();
+        }
+
         public static void WriteDocumentQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, DocumentQueryResult result, bool metadataOnly)
         {
             writer.WriteStartObject();
@@ -228,22 +249,38 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, QueryResultBase<Document> result, bool metadataOnly, bool partial = false)
+        public static void WriteQueryResult<T>(this BlittableJsonTextWriter writer, JsonOperationContext context, QueryResultBase<T> result, bool metadataOnly, bool partial = false)
         {
             if (partial == false)
                 writer.WriteStartObject();
 
-            writer.WritePropertyName((nameof(result.IndexName)));
-            writer.WriteString((result.IndexName));
+            writer.WritePropertyName(nameof(result.IndexName));
+            writer.WriteString(result.IndexName);
             writer.WriteComma();
 
-            writer.WritePropertyName((nameof(result.Results)));
-            writer.WriteDocuments(context, result.Results, metadataOnly);
-            writer.WriteComma();
+            var type = typeof(T);
+            if (type == typeof(Document))
+            {
+                writer.WritePropertyName(nameof(result.Results));
+                writer.WriteDocuments(context, (List<Document>)(object)result.Results, metadataOnly);
+                writer.WriteComma();
 
-            writer.WritePropertyName(nameof(result.Includes));
-            writer.WriteDocuments(context, result.Includes, metadataOnly);
-            writer.WriteComma();
+                writer.WritePropertyName(nameof(result.Includes));
+                writer.WriteDocuments(context, (List<Document>)(object)result.Includes, metadataOnly);
+                writer.WriteComma();
+            }
+            else if (type == typeof(BlittableJsonReaderObject))
+            {
+                writer.WritePropertyName(nameof(result.Results));
+                writer.WriteObjects(context, (List<BlittableJsonReaderObject>)(object)result.Results);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(result.Includes));
+                writer.WriteObjects(context, (List<BlittableJsonReaderObject>)(object)result.Includes);
+                writer.WriteComma();
+            }
+            else
+                throw new NotSupportedException($"Cannot write query result of '{type.Name}' type.");
 
             writer.WritePropertyName((nameof(result.IndexTimestamp)));
             writer.WriteString((result.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite)));
@@ -963,6 +1000,29 @@ namespace Raven.Server.Json
                         writer.WriteDocument(context, document);
                     else
                         writer.WriteDocumentMetadata(context, document);
+                }
+            }
+
+            writer.WriteEndArray();
+        }
+
+        public static void WriteObjects(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<BlittableJsonReaderObject> objects)
+        {
+            writer.WriteStartArray();
+
+            var first = true;
+            foreach (var o in objects)
+            {
+                if (o == null)
+                    continue;
+
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+
+                using (o)
+                {
+                    writer.WriteObject(o);
                 }
             }
 
