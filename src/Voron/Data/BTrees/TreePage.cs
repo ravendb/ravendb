@@ -514,10 +514,12 @@ namespace Voron.Data.BTrees
 
                 var numberOfEntries = NumberOfEntries;
 
+                int upper;
+
                 if (IsCompressed)
-                    Upper = (ushort)(PageSize - Constants.Compression.HeaderSize - CompressionHeader->SectionSize);
+                    upper = PageSize - Constants.Compression.HeaderSize - CompressionHeader->SectionSize;
                 else
-                    Upper = (ushort)PageSize;
+                    upper = PageSize;
 
                 ushort* offsets = KeysOffsets;
                 for (int i = 0; i < numberOfEntries; i++)
@@ -525,10 +527,12 @@ namespace Voron.Data.BTrees
                     var node = tempPage.GetNode(i);
                     var size = node->GetNodeSize() - Constants.NodeOffsetSize;
                     size += size & 1;
-                    Memory.Copy(Base + Upper - size, (byte*)node, size);
-                    Upper -= (ushort)size;
-                    offsets[i] = Upper;
+                    Memory.Copy(Base + upper - size, (byte*)node, size);
+                    upper -= size;
+                    offsets[i] = (ushort)upper;
                 }
+
+                Upper = (ushort)upper;
             }
         }
 
