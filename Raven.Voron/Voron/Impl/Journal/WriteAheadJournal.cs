@@ -419,7 +419,7 @@ namespace Voron.Impl.Journal
                 });
             }
 
-            public void ApplyLogsToDataFile(long oldestActiveTransaction, CancellationToken token, Transaction transaction = null, bool allowToFlushOverwrittenPages = false)
+            public void ApplyLogsToDataFile(CancellationToken token, Transaction transaction = null, bool allowToFlushOverwrittenPages = false)
             {
                 if (token.IsCancellationRequested)
                     return;
@@ -450,6 +450,8 @@ namespace Voron.Impl.Journal
                     long previousJournalMaxTransactionId = -1;
 
                     long lastFlushedTransactionId = -1;
+
+                    long oldestActiveTransaction = _waj._env.OldestTransaction;
 
                     foreach (var journalFile in jrnls.Where(x => x.Number >= _lastSyncedJournal))
                     {
@@ -529,7 +531,7 @@ namespace Voron.Impl.Journal
 
                             using (ForceFlushingPagesOlderThan(oldestActiveTransaction))
                             {
-                                ApplyLogsToDataFile(oldestActiveTransaction, token, transaction, false);
+                                ApplyLogsToDataFile(token, transaction, false);
                             }
                         }
 
@@ -578,7 +580,7 @@ namespace Voron.Impl.Journal
                     if (_totalWrittenButUnsyncedBytes > DelayedDataFileSynchronizationBytesLimit ||
                         DateTime.UtcNow - _lastDataFileSyncTime > _delayedDataFileSynchronizationTimeLimit)
                     {
-                        SyncDataFile(oldestActiveTransaction);
+                        SyncDataFile();
                     }
 
                 }
@@ -589,11 +591,11 @@ namespace Voron.Impl.Journal
                 }
             }
 
-            internal void SyncDataFile(long oldestActiveTransaction)
+            internal void SyncDataFile()
             {
                 _waj._dataPager.Sync();
 
-                UpdateFileHeaderAfterDataFileSync(_lastFlushedJournal, oldestActiveTransaction);
+                UpdateFileHeaderAfterDataFileSync(_lastFlushedJournal, _lastSyncedTransactionId);
 
                 foreach (var toDelete in _journalsToDelete.Values)
                 {
@@ -684,17 +686,22 @@ namespace Voron.Impl.Journal
 
             private void FreeScratchPages(IEnumerable<JournalFile> unusedJournalFiles, Transaction txw)
             {
+                // we release up to the last read transaction, because there might be new read transactions that are currently
+                // running, that started after the flush
+                var lastSyncedTransactionId = Math.Min(_lastSyncedTransactionId, _waj._env.CurrentReadTransactionId - 1);
+
                 // we have to free pages of the unused journals before the remaining ones that are still in use
                 // to prevent reading from them by any read transaction (read transactions search journals from the newest
                 // to read the most updated version)
+
                 foreach (var journalFile in unusedJournalFiles.OrderBy(x => x.Number))
                 {
-                    journalFile.FreeScratchPagesOlderThan(txw, _lastSyncedTransactionId, forceToFreeAllPages: forcedFlushOfOldPages);
+                    journalFile.FreeScratchPagesOlderThan(txw, lastSyncedTransactionId, forceToFreeAllPages: forcedFlushOfOldPages);
                 }
 
                 foreach (var jrnl in _waj._files.OrderBy(x => x.Number))
                 {
-                    jrnl.FreeScratchPagesOlderThan(txw, _lastSyncedTransactionId, forceToFreeAllPages: forcedFlushOfOldPages);
+                    jrnl.FreeScratchPagesOlderThan(txw, lastSyncedTransactionId, forceToFreeAllPages: forcedFlushOfOldPages);
                 }
             }
 
@@ -716,7 +723,7 @@ namespace Voron.Impl.Journal
                 return unusedJournalFiles;
             }
 
-            public void UpdateFileHeaderAfterDataFileSync(JournalFile file, long oldestActiveTransaction)
+            public void UpdateFileHeaderAfterDataFileSync(JournalFile file, long maxTransactionId)
             {
                 var txHeaders = stackalloc TransactionHeader[2];
                 var readTxHeader = &txHeaders[0];
@@ -729,7 +736,7 @@ namespace Voron.Impl.Journal
                         break;
                     if (readTxHeader->HeaderMarker != Constants.TransactionHeaderMarker)
                         break;
-                    if (readTxHeader->TransactionId + 1 == oldestActiveTransaction)
+                    if (readTxHeader->TransactionId > maxTransactionId)
                         break;
 
                     lastReadTxHeader = *readTxHeader;

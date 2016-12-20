@@ -273,6 +273,7 @@
     <Compile Include="DistinctFacets\FromUser.cs" />
     <Compile Include="Faceted\LargeFacets.cs" />
     <Compile Include="Indexes\IndexReplacement.cs" />
+    <Compile Include="Indexes\TransformerParameterTest.cs" />
     <Compile Include="IndexMerging\SimpleIndexMerging.cs" />
     <Compile Include="Embedded\EmbeddedTests.cs" />
     <Compile Include="Bugs\WhenStoringADocumentWithAsyncSessionAndZipCompressionOn.cs" />

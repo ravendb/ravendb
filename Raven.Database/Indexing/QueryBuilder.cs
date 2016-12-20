@@ -66,7 +66,7 @@ namespace Raven.Database.Indexing
                 query = PreProcessSearchTerms(query);
                 query = PreProcessDateTerms(query, queryParser);
                 var generatedQuery = queryParser.Parse(query);
-                generatedQuery = HandleMethods(generatedQuery, analyzer);
+                generatedQuery = HandleMethods(generatedQuery, analyzer, indexQuery.DefaultOperator);
                 return generatedQuery;
             }
             catch (ParseException pe)
@@ -105,7 +105,7 @@ namespace Raven.Database.Indexing
             return q.ToString();
         }
 
-        internal static Query HandleMethods(Query query, RavenPerFieldAnalyzerWrapper analyzer)
+        internal static Query HandleMethods(Query query, RavenPerFieldAnalyzerWrapper analyzer, QueryOperator defaultOperator = QueryOperator.Or)
         {
             var termQuery = query as TermQuery;
             if (termQuery != null && termQuery.Term.Field.StartsWith("@"))
@@ -131,13 +131,13 @@ namespace Raven.Database.Indexing
             {
                 foreach (var c in booleanQuery.Clauses)
                 {
-                    c.Query = HandleMethods(c.Query, analyzer);
+                    c.Query = HandleMethods(c.Query, analyzer, defaultOperator);
                 }
                 if (booleanQuery.Clauses.Count == 0)
                     return booleanQuery;
             
                 //merge only clauses that have "OR" operator between them
-                var mergeGroups = booleanQuery.Clauses.Where(clause => clause.Occur == Occur.SHOULD)
+                var mergeGroups = booleanQuery.Clauses.Where(clause => defaultOperator == QueryOperator.Or? clause.Occur == Occur.SHOULD:true)
                                                       .Select(x=>x.Query)													  
                                                       .OfType<IRavenLuceneMethodQuery>()
                                                       .GroupBy(x => x.Field)

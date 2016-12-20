@@ -2022,6 +2022,9 @@ namespace Raven.Database.Indexing
 
         public void HandleLowMemory()
         {
+            if (disposed)
+                return;
+
             bool tryEnter = false;
             try
             {

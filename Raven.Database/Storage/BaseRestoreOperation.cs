@@ -20,17 +20,33 @@ namespace Raven.Database.Storage
 
         protected readonly DatabaseRestoreRequest _restoreRequest;
         protected readonly InMemoryRavenConfiguration Configuration;
-        protected readonly string databaseLocation, indexLocation, journalLocation;
+        protected readonly string databaseLocation, indexLocation, indexDefinitionLocation, journalLocation;
 
-        protected BaseRestoreOperation(DatabaseRestoreRequest restoreRequest, InMemoryRavenConfiguration configuration, Action<string> output)
+        protected BaseRestoreOperation(DatabaseRestoreRequest restoreRequest, InMemoryRavenConfiguration configuration, InMemoryRavenConfiguration globalConfiguration, Action<string> output)
         {
             _restoreRequest = restoreRequest;
             backupLocation = restoreRequest.BackupLocation;
             databaseLocation = _restoreRequest.DatabaseLocation.ToFullPath();
-            indexLocation = (_restoreRequest.IndexesLocation ?? Path.Combine(_restoreRequest.DatabaseLocation, "Indexes")).ToFullPath();
+            indexLocation = GenerateIndexLocation(_restoreRequest, configuration, globalConfiguration).ToFullPath();
             journalLocation = (_restoreRequest.JournalsLocation ?? _restoreRequest.DatabaseLocation).ToFullPath();
             Configuration = configuration;
-            this.output = output;			
+            this.output = output;
+        }
+
+        private string GenerateIndexLocation(DatabaseRestoreRequest databaseRestoreRequest, InMemoryRavenConfiguration configuration, InMemoryRavenConfiguration globalConfiguration)
+        {
+            //If we got the index location in the request use that.
+            if (databaseRestoreRequest.IndexesLocation != null)
+                return databaseRestoreRequest.IndexesLocation;
+            //If the system database uses the <database-name>\Indexes\ folder then we did not change the global index folder
+            //We can safly create the index folder under the path of the database because this is where it is going to be looked for
+            if (globalConfiguration.IndexStoragePath.EndsWith("\\System\\Indexes"))
+                return Path.Combine(_restoreRequest.DatabaseLocation, "Indexes");
+            //system database restore with global config
+            if (string.IsNullOrEmpty(configuration.DatabaseName))
+                return globalConfiguration.IndexStoragePath;
+            //If we got here than the global config has a value for index storage path, will just use that folder
+            return String.Format("{0}\\Databases\\{1}", globalConfiguration.IndexStoragePath, configuration.DatabaseName);
         }
 
         public abstract void Execute();

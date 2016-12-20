@@ -101,6 +101,9 @@ namespace Raven.Storage.Voron
 
                 exceptionAggregator.Execute(() => current.Dispose());
 
+                if (documentCacher != null)
+                    exceptionAggregator.Execute(documentCacher.Dispose);
+
                 if (tableStorage != null)
                     exceptionAggregator.Execute(() => tableStorage.Dispose());
 
@@ -406,11 +409,11 @@ namespace Raven.Storage.Voron
                 using(backupOperation)
                     backupOperation.Execute();
             });
-        }       
+        }
 
-        public void Restore(DatabaseRestoreRequest restoreRequest, Action<string> output)
+        public void Restore(DatabaseRestoreRequest restoreRequest, Action<string> output, InMemoryRavenConfiguration globalConfiguration)
         {
-            new RestoreOperation(restoreRequest, configuration, output).Execute();
+            new RestoreOperation(restoreRequest, configuration, globalConfiguration, output).Execute();
         }
 
         public DatabaseSizeInformation GetDatabaseSize()

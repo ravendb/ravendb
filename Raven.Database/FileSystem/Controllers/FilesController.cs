@@ -4,7 +4,6 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Logging;
 using Raven.Database.FileSystem.Actions;
-using Raven.Database.FileSystem.Extensions;
 using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Storage;
 using Raven.Database.FileSystem.Storage.Exceptions;
@@ -22,6 +21,9 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Database.FileSystem.Bundles.Versioning;
+using Raven.Database.FileSystem.Extensions;
+using Raven.Json.Linq;
 
 namespace Raven.Database.FileSystem.Controllers
 {
@@ -131,7 +133,7 @@ namespace Raven.Database.FileSystem.Controllers
 
             var readingStream = StorageStream.Reading(Storage, name);
 
-            var filename = Path.GetFileName(name);
+            var filename = GetFileName(name, fileAndPages.Metadata);
             var result = StreamResult(filename, readingStream);
 
             var etag = new Etag(fileAndPages.Metadata.Value<string>(Constants.MetadataEtagField));
@@ -141,6 +143,23 @@ namespace Raven.Database.FileSystem.Controllers
             log.Debug("File '{0}' with etag {1} is being retrieved.", name, etag);
 
             return result.WithNoCache();
+        }
+
+        private static string GetFileName(string name, RavenJObject metadata)
+        {
+            var revisionStatus = metadata.Value<string>(VersioningUtil.RavenFileRevisionStatus);
+            if (revisionStatus == "Historical")
+            {
+                var stringSeparators = new[] { "/revisions/" };
+                var nameSplitted = name.Split(stringSeparators, StringSplitOptions.None);
+                if (nameSplitted.Length >= 2)
+                {
+                    var fileName = Path.GetFileName(nameSplitted[nameSplitted.Length - 2]);
+                    return string.Format("Revision {0}, {1}", nameSplitted[nameSplitted.Length - 1], fileName);
+                }
+            }
+        
+            return Path.GetFileName(name);
         }
 
         [HttpDelete]

@@ -42,7 +42,7 @@ namespace Voron.Impl.Compaction
 
                 compactedEnv.FlushLogToDataFile(allowToFlushOverwrittenPages: true);
 
-                compactedEnv.Journal.Applicator.SyncDataFile(compactedEnv.OldestTransaction);
+                compactedEnv.Journal.Applicator.SyncDataFile();
                 compactedEnv.Journal.Applicator.DeleteCurrentAlreadyFlushedJournal();
 
                 minimalCompactedDataFileSize = compactedEnv.NextPageNumber*AbstractPager.PageSize;

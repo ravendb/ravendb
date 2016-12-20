@@ -177,7 +177,7 @@ namespace Raven.Tests.Common
             serverConfiguration.RunInMemory = previousServer.SystemDatabase.Configuration.RunInMemory;
             serverConfiguration.Port = previousServer.SystemDatabase.Configuration.Port;
             serverConfiguration.DefaultStorageTypeName = GetDefaultStorageType();
-
+            serverConfiguration.MaxSecondsForTaskToWaitForDatabaseToLoad = 20;
             serverConfiguration.Encryption.UseFips = ConfigurationHelper.UseFipsEncryptionAlgorithms;
 
             ModifyConfiguration(serverConfiguration);

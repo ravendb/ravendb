@@ -53,7 +53,7 @@ namespace Voron.Tests.ScratchBuffer
                 if (i++ % 4 == 0)
                     Env.FlushLogToDataFile();
 
-                size += 1024;
+                size += 512;
             }
         }
 
