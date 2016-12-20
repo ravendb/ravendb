@@ -758,7 +758,7 @@ Configuration databaseOptions:
                     BackupLocation = backupLocation,
                     DatabaseLocation = databaseLocation,
                     Defrag = defrag
-                }, Console.WriteLine);
+                }, Console.WriteLine, ravenConfiguration);
             }
             catch (Exception e)
             {
