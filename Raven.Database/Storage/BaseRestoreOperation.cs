@@ -37,15 +37,21 @@ namespace Raven.Database.Storage
             //If we got the index location in the request use that.
             if (databaseRestoreRequest.IndexesLocation != null)
                 return databaseRestoreRequest.IndexesLocation;
-            //If the system database uses the <database-name>\Indexes\ folder then we did not change the global index folder
-            //We can safly create the index folder under the path of the database because this is where it is going to be looked for
-            if (globalConfiguration.IndexStoragePath.EndsWith("\\System\\Indexes"))
-                return Path.Combine(_restoreRequest.DatabaseLocation, "Indexes");
-            //system database restore with global config
-            if (string.IsNullOrEmpty(configuration.DatabaseName))
-                return globalConfiguration.IndexStoragePath;
-            //If we got here than the global config has a value for index storage path, will just use that folder
-            return $"{globalConfiguration.IndexStoragePath}\\Databases\\{configuration.DatabaseName}";
+
+            if (globalConfiguration != null)
+            {
+                //If the system database uses the <database-name>\Indexes\ folder then we did not change the global index folder
+                //We can safly create the index folder under the path of the database because this is where it is going to be looked for
+                if (globalConfiguration.IndexStoragePath.EndsWith("\\System\\Indexes"))
+                    return Path.Combine(_restoreRequest.DatabaseLocation, "Indexes");
+                //system database restore with global config
+                if (string.IsNullOrEmpty(configuration.DatabaseName))
+                    return globalConfiguration.IndexStoragePath;
+                //If we got here than the global config has a value for index storage path, will just use that folder
+                return $"{globalConfiguration.IndexStoragePath}\\Databases\\{configuration.DatabaseName}";
+            }
+
+            return Path.Combine(_restoreRequest.DatabaseLocation, "Indexes");
         }
 
         public abstract void Execute();
