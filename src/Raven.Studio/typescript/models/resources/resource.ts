@@ -6,13 +6,13 @@ abstract class resource {
     isAdminCurrentTenant = ko.observable<boolean>(false);
     activeBundles = ko.observableArray<string>();
     name: string;
-    disabled: boolean;
+    disabled = ko.observable<boolean>(false);
 
     protected constructor(name: string, isAdminCurrentTenant: boolean, disabled: boolean, activeBundles: string[]) {
         this.name = name;
         this.isAdminCurrentTenant(isAdminCurrentTenant);
         this.activeBundles(activeBundles);
-        this.disabled = disabled;
+        this.disabled(disabled);
     }
 
     activate() {
@@ -34,6 +34,7 @@ abstract class resource {
         this.isAdminCurrentTenant = incomingCopy.isAdminCurrentTenant;
         this.activeBundles = incomingCopy.activeBundles;
         this.name = incomingCopy.name;
+        this.disabled(incomingCopy.disabled());
     }
 
     get qualifiedName() {
