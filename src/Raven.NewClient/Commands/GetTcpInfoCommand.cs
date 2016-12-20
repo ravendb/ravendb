@@ -10,7 +10,6 @@ namespace Raven.NewClient.Client.Commands
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
             url = $"{node.Url}/info/tcp";
-            IsReadRequest = false;
 
             var request = new HttpRequestMessage
             {

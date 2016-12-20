@@ -29,6 +29,7 @@ namespace Raven.NewClient.Client.Commands
                 }),
             };
 
+            IsReadRequest = false;
             return request;
         }
 

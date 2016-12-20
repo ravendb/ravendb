@@ -273,7 +273,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         ///     Called externally to raise the after query executed callback
         /// </summary>
-        void InvokeAfterStreamExecuted(ref StreamResult result);
+        void InvokeAfterStreamExecuted(ref object result);
 
         /// <summary>
         ///     Negate the next operation

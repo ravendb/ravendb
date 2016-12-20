@@ -1,7 +1,5 @@
-using System;
 using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -20,7 +18,6 @@ namespace Raven.NewClient.Client.Commands
 
         protected void LogPatchByCollection(string collectionName)
         {
-            //TODO - Better log info
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Patch by '{collectionName}' collecion");
         }

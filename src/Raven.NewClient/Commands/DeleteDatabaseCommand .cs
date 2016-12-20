@@ -16,7 +16,8 @@ namespace Raven.NewClient.Client.Commands
             {
                 Method = HttpMethod.Delete,
             };
-            
+
+            IsReadRequest = false;
             return request;
         }
 
