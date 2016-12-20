@@ -21,9 +21,9 @@ using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data;
 using Voron.Data.BTrees;
+using Voron.Data.Compression;
 using Voron.Data.Fixed;
 using Voron.Data.Tables;
-using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Debugging
 {
@@ -206,42 +206,45 @@ namespace Raven.Server.Documents.Indexes.Debugging
 
                 if (page.NumberOfEntries == 0 && page != rootPage)
                     throw new InvalidOperationException($"The page {page.PageNumber} is empty");
-                
-                for (var i = 0; i < page.NumberOfEntries; i++)
+
+                using (page.IsCompressed ? (DecompressedLeafPage)(page = tree.DecompressPage(page, DecompressionUsage.Read, true)) : null)
                 {
-                    if (page.IsBranch)
+                    for (var i = 0; i < page.NumberOfEntries; i++)
                     {
-                        var p = page.GetNode(i)->PageNumber;
-
-                        var childNode = new ReduceTreePage(tree.GetReadOnlyTreePage(p));
-
-                        node.Children.Add(childNode);
-
-                        stack.Push(childNode);
-                    }
-                    else
-                    {
-                        var entry = new MapResultInLeaf();
-
-                        var valueReader = TreeNodeHeader.Reader(tx, page.GetNode(i));
-                        entry.Data = new BlittableJsonReaderObject(valueReader.Base, valueReader.Length, context);
-
-                        Slice s;
-                        using (page.GetNodeKey(tx, i, out s))
+                        if (page.IsBranch)
                         {
-                            var mapEntryId = *(long*) s.Content.Ptr;
+                            var p = page.GetNode(i)->PageNumber;
 
-                            foreach (var mapEntry in mapEntries)
+                            var childNode = new ReduceTreePage(tree.GetReadOnlyTreePage(p));
+
+                            node.Children.Add(childNode);
+
+                            stack.Push(childNode);
+                        }
+                        else
+                        {
+                            var entry = new MapResultInLeaf();
+
+                            var valueReader = TreeNodeHeader.Reader(tx, page.GetNode(i));
+                            entry.Data = new BlittableJsonReaderObject(valueReader.Base, valueReader.Length, context);
+
+                            Slice s;
+                            using (page.GetNodeKey(tx, i, out s))
                             {
-                                if (mapEntryId == mapEntry.Id)
+                                var mapEntryId = *(long*)s.Content.Ptr;
+
+                                foreach (var mapEntry in mapEntries)
                                 {
-                                    entry.Source = sourceDocId;
-                                    break;
+                                    if (mapEntryId == mapEntry.Id)
+                                    {
+                                        entry.Source = sourceDocId;
+                                        break;
+                                    }
                                 }
                             }
+
+                            node.Entries.Add(entry);
                         }
-                        
-                        node.Entries.Add(entry);
                     }
                 }
 

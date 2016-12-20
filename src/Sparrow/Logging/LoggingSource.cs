@@ -35,6 +35,7 @@ namespace Sparrow.Logging
         private DateTime _today;
         public bool IsInfoEnabled;
         public bool IsOperationsEnabled;
+        private Stream _additionalOutput;
 
         public static LoggingSource Instance = new LoggingSource(Path.GetTempPath(), LogMode.None);
 
@@ -356,8 +357,9 @@ namespace Sparrow.Logging
                                     if (threadState.Full.Dequeue(out item) == false)
                                         break;
                                     foundEntry = true;
-                                    if (_listeners.Count != 0)
-                                        sizeWritten += WriteToListeningWebSockets(item, currentFile);
+
+                                    sizeWritten += ActualWriteToLogTargets(item, currentFile);
+
                                     threadState.Free.Enqueue(item);
                                 }
                             }
@@ -381,38 +383,56 @@ namespace Sparrow.Logging
             }
         }
 
-        private int WriteToListeningWebSockets(WebSocketMessageEntry item, Stream file)
+        private int ActualWriteToLogTargets(WebSocketMessageEntry item, Stream file)
         {
             ArraySegment<byte> bytes;
             item.Data.TryGetBuffer(out bytes);
             file.Write(bytes.Array, bytes.Offset, bytes.Count);
+            _additionalOutput?.Write(bytes.Array, bytes.Offset, bytes.Count);
 
-            foreach (var socket in item.WebSocketsList)
-            {
-                try
+            if (_listeners.Count != 0)
+            { 
+                foreach (var socket in item.WebSocketsList)
                 {
-                    socket.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None).Wait();
-                }
-                catch (Exception)
-                {
-                    WebSocketContext value;
-                    _listeners.TryRemove(socket, out value);
-                    if (_listeners.Count == 0)
+                    try
                     {
-                        lock (this)
+                        socket.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None).Wait();
+                    }
+                    catch (Exception)
+                    {
+                        WebSocketContext value;
+                        _listeners.TryRemove(socket, out value);
+                        if (_listeners.Count == 0)
                         {
-                            if (_listeners.Count == 0)
+                            lock (this)
                             {
-                                SetupLogMode(_oldLogMode, _path);
+                                if (_listeners.Count == 0)
+                                {
+                                    SetupLogMode(_oldLogMode, _path);
+                                }
                             }
                         }
                     }
                 }
             }
+
             item.Data.SetLength(0);
             item.WebSocketsList.Clear();
 
             return bytes.Count;
+        }
+
+        public void EnableConsoleLogging()
+        {
+            _additionalOutput = Console.OpenStandardOutput();
+        }
+
+        public void DisableConsoleLogging()
+        {
+            using (_additionalOutput)
+            {
+                _additionalOutput = null;
+            }
         }
 
         private class LocalThreadWriterState
@@ -432,6 +452,7 @@ namespace Sparrow.Logging
                 ForwardingStream = new ForwardingStream();
                 Writer = new StreamWriter(ForwardingStream);
             }
+
         }
 
 

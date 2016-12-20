@@ -38,7 +38,7 @@ namespace Raven.Server.Alerts
             using (contextPool.AllocateOperationContext(out context))
             using (var tx = _environment.WriteTransaction(context.PersistentContext))
             {
-                _alertsSchema.Create(tx, AlertsSchema.AlertsTree);
+                _alertsSchema.Create(tx, AlertsSchema.AlertsTree, 16);
 
                 tx.Commit();
             }

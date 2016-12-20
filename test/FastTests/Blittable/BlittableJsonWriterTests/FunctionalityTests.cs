@@ -84,15 +84,13 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             int compressedSize;
             byte* encodeOutput;
 
-            var lz4 = new LZ4();
-
             var originStr = string.Join("", Enumerable.Repeat(1, size).Select(x => "sample"));
             var bytes = Encoding.UTF8.GetBytes(originStr);
             var maximumOutputLength = LZ4.MaximumOutputLength(bytes.Length);
             fixed (byte* pb = bytes)
             {
                 encodeOutput = NativeMemory.AllocateMemory((int)maximumOutputLength);
-                compressedSize = lz4.Encode64(pb, encodeOutput, bytes.Length, (int)maximumOutputLength);
+                compressedSize = LZ4.Encode64(pb, encodeOutput, bytes.Length, (int)maximumOutputLength);
             }
 
             Array.Clear(bytes, 0, bytes.Length);

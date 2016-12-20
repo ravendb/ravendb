@@ -14,7 +14,7 @@ namespace FastTests.Voron.Tables
         {
             using (var tx = Env.WriteTransaction())
             {
-                DocsSchema.Create(tx, "docs");
+                DocsSchema.Create(tx, "docs", 16);
 
                 tx.Commit();
             }
@@ -62,7 +62,7 @@ namespace FastTests.Voron.Tables
         {
             using (var tx = Env.WriteTransaction())
             {
-                DocsSchema.Create(tx, "docs");
+                DocsSchema.Create(tx, "docs", 16);
 
                 tx.Commit();
             }
@@ -102,7 +102,7 @@ namespace FastTests.Voron.Tables
         {
             using (var tx = Env.WriteTransaction())
             {
-                DocsSchema.Create(tx, "docs");
+                DocsSchema.Create(tx, "docs", 16);
 
                 tx.Commit();
             }

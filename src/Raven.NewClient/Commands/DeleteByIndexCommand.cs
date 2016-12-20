@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Net.Http;
 using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Http;
@@ -12,7 +11,6 @@ namespace Raven.NewClient.Client.Commands
 {
     public class DeleteByIndexCommand : RavenCommand<DeleteResult>
     {
-        public JsonOperationContext Context;
         public string IndexName;
         public IndexQuery QueryToDelete;
         public QueryOperationOptions Options;
@@ -29,6 +27,7 @@ namespace Raven.NewClient.Client.Commands
             if (notNullOptions.StaleTimeout != null)
                 url += "&staleTimeout=" + notNullOptions.StaleTimeout;
 
+            IsReadRequest = false;
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Delete,

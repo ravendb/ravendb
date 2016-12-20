@@ -158,7 +158,8 @@ namespace Voron.Data.BTrees
                     Lower = (ushort)Constants.TreePageHeaderSize,
                     Upper = newSize,
                     TreeFlags = TreePageFlags.Leaf,
-                    PageNumber = -1L // mark as invalid page number
+                    PageNumber = -1L, // mark as invalid page number
+                    Flags = 0
                 };
 
                 ByteStringContext allocator = _llt.Allocator;
@@ -205,6 +206,7 @@ namespace Voron.Data.BTrees
                 Lower = (ushort)Constants.TreePageHeaderSize,
                 Upper = actualPageSize,
                 TreeFlags = TreePageFlags.Leaf,
+                Flags = 0
             };
 
             CheckConcurrency(key, value, version, 0, TreeActionType.Add);

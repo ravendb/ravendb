@@ -1773,7 +1773,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         /// Called externally to raise the after stream executed callback
         /// </summary>
-        public void InvokeAfterStreamExecuted(ref StreamResult result)
+        public void InvokeAfterStreamExecuted(ref object result)
         {
             var streamExecuted = afterStreamExecutedCallback;
             if (streamExecuted != null)

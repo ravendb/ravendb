@@ -85,6 +85,11 @@ namespace Voron.Data.BTrees
                 if (page.TreeFlags != sibling.TreeFlags)
                     return null;
 
+                if (sibling.IsCompressed)
+                    return null;
+                
+                Debug.Assert(page.IsCompressed == false);
+
                 minKeys = sibling.IsBranch ? 2 : 1; // branch must have at least 2 keys
                 if (sibling.UseMoreSizeThan(_tx.DataPager.PageMinSpace) &&
                     sibling.NumberOfEntries > minKeys)
@@ -97,7 +102,7 @@ namespace Voron.Data.BTrees
 
                     return parentPage;
                 }
-
+                
                 if (page.LastSearchPosition == 0) // this is the right page, merge left
                 {
                     if (TryMergePages(parentPage, sibling, page) == false)
@@ -207,8 +212,6 @@ namespace Voron.Data.BTrees
             Slice originalFromKeyStart;
             using (GetActualKey(from, from.LastSearchPositionOrLastEntry, out originalFromKeyStart))
             {
-
-
                 var fromNode = from.GetNode(from.LastSearchPosition);
                 byte* val = @from.Base + @from.KeysOffsets[@from.LastSearchPosition] + Constants.NodeHeaderSize +
                             originalFromKeyStart.Size;

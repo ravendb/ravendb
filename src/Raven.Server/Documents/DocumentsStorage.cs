@@ -82,7 +82,7 @@ namespace Raven.Server.Documents
                 StartIndex = 0,
                 Count = 1,
                 IsGlobal = false,
-            }); 
+            });
 
             /*
              The structure of conflicts table starts with the following fields:
@@ -250,9 +250,9 @@ namespace Raven.Server.Documents
                     tx.CreateTree("LastReplicatedEtags");
                     tx.CreateTree("Identities");
                     tx.CreateTree("ChangeVector");
-                    ConflictsSchema.Create(tx, "Conflicts");
-                    CollectionsSchema.Create(tx, "Collections");
-                    ReplicationResolverSchema.Create(tx, "Scripts");
+                    ConflictsSchema.Create(tx, "Conflicts", 32);
+                    CollectionsSchema.Create(tx, "Collections", 32);
+                    ReplicationResolverSchema.Create(tx, "Scripts", 32);
 
                     _hasConflicts = tx.OpenTable(ConflictsSchema, "Conflicts").NumberOfEntries;
 
@@ -475,7 +475,7 @@ namespace Raven.Server.Documents
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekBackwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], Int64.MaxValue))
+            foreach (var result in table.SeekBackwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], long.MaxValue))
             {
                 if (start > 0)
                 {
@@ -502,7 +502,7 @@ namespace Raven.Server.Documents
                 yield break;
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekBackwardFrom(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice], Int64.MaxValue))
+            foreach (var result in table.SeekBackwardFrom(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice], long.MaxValue))
             {
                 if (start > 0)
                 {
@@ -538,7 +538,7 @@ namespace Raven.Server.Documents
         public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, long etag)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
-            
+
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], etag))
             {
@@ -604,7 +604,7 @@ namespace Raven.Server.Documents
                 if (take <= 0)
                     yield break;
 
-                foreach (var document in GetDocumentsFrom(context, collection, etag, 0, Int32.MaxValue))
+                foreach (var document in GetDocumentsFrom(context, collection, etag, 0, int.MaxValue))
                 {
                     if (take-- <= 0)
                         yield break;
@@ -616,7 +616,7 @@ namespace Raven.Server.Documents
 
         public Tuple<Document, DocumentTombstone> GetDocumentOrTombstone(DocumentsOperationContext context, string key, bool throwOnConflict = true)
         {
-            if (String.IsNullOrWhiteSpace(key))
+            if (string.IsNullOrWhiteSpace(key))
                 throw new ArgumentException("Argument is null or whitespace", nameof(key));
             if (context.Transaction == null)
                 throw new ArgumentException("Context must be set with a valid transaction before calling Put", nameof(context));
@@ -653,7 +653,7 @@ namespace Raven.Server.Documents
 
         public Document Get(DocumentsOperationContext context, string key)
         {
-            if (String.IsNullOrWhiteSpace(key))
+            if (string.IsNullOrWhiteSpace(key))
                 throw new ArgumentException("Argument is null or whitespace", nameof(key));
             if (context.Transaction == null)
                 throw new ArgumentException("Context must be set with a valid transaction before calling Get", nameof(context));
@@ -757,7 +757,7 @@ namespace Raven.Server.Documents
                 return 0;
 
             var result = table
-                        .SeekBackwardFrom(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice], Int64.MaxValue)
+                        .SeekBackwardFrom(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice], long.MaxValue)
                         .FirstOrDefault();
 
             if (result == null)
@@ -783,7 +783,7 @@ namespace Raven.Server.Documents
                 return 0;
 
             var result = table
-                .SeekBackwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], Int64.MaxValue)
+                .SeekBackwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], long.MaxValue)
                 .FirstOrDefault();
 
             if (result == null)
@@ -1454,7 +1454,7 @@ namespace Raven.Server.Documents
             var collectionName = ExtractCollectionName(context, key, document);
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
-            if (String.IsNullOrWhiteSpace(key))
+            if (string.IsNullOrWhiteSpace(key))
                 key = Guid.NewGuid().ToString();
 
             if (key[key.Length - 1] == '/')
@@ -1725,7 +1725,7 @@ namespace Raven.Server.Documents
 
             var lastKnownBusy = nextIdentityValue;
             var maybeFree = nextIdentityValue * 2;
-            var lastKnownFree = Int64.MaxValue;
+            var lastKnownFree = long.MaxValue;
             while (true)
             {
                 finalKey = key + maybeFree;
@@ -1880,7 +1880,7 @@ namespace Raven.Server.Documents
             if (table == null)
                 return;
 
-            var deleteCount = table.DeleteBackwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], etag, Int64.MaxValue);
+            var deleteCount = table.DeleteBackwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], etag, long.MaxValue);
             if (_logger.IsInfoEnabled && deleteCount > 0)
                 _logger.Info($"Deleted {deleteCount:#,#;;0} tombstones earlier than {etag} in {collection}");
 
@@ -1976,9 +1976,9 @@ namespace Raven.Server.Documents
                 };
                 collections.Set(tvr);
 
-                DocsSchema.Create(context.Transaction.InnerTransaction, name.GetTableName(CollectionTableType.Documents));
+                DocsSchema.Create(context.Transaction.InnerTransaction, name.GetTableName(CollectionTableType.Documents), 16);
                 TombstonesSchema.Create(context.Transaction.InnerTransaction,
-                    name.GetTableName(CollectionTableType.Tombstones));
+                    name.GetTableName(CollectionTableType.Tombstones), 16);
 
                 // Add to cache ONLY if the transaction was committed. 
                 // this would prevent NREs next time a PUT is run,since if a transaction

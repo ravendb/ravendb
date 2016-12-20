@@ -33,7 +33,7 @@ namespace Raven.NewClient.Client.Linq
         /// Callback to get the results of the stream
         /// </summary>
 
-        void AfterStreamExecuted(Action<StreamResult> afterStreamExecuted);
+        void AfterStreamExecuted(Action<object> afterStreamExecuted);
 
         /// <summary>
         /// Customizes the query using the specified action

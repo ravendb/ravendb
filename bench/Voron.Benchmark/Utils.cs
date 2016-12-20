@@ -227,7 +227,7 @@ namespace Voron.Benchmark
                 using (var tx = env.WriteTransaction())
                 {
                     var values = new List<Tuple<Slice, Slice>>();
-                    schema.Create(tx, tableNameSlice);
+                    schema.Create(tx, tableNameSlice, 16);
                     var table = tx.OpenTable(schema, tableNameSlice);
 
                     while (table.NumberOfEntries < generationTableSize)

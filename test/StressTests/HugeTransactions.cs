@@ -158,8 +158,7 @@ namespace StressTests
                 }
 
                 // encode inputBuffer into outputBuffer
-                var lz4 = new LZ4();
-                compressedLen = lz4.Encode64LongBuffer(inputBuffer, outputBuffer, inputSize, outputBufferSize);
+                compressedLen = LZ4.Encode64LongBuffer(inputBuffer, outputBuffer, inputSize, outputBufferSize);
 
                 // decode outputBuffer into checkedBuffer
                 var totalOutputSize = LZ4.Decode64LongBuffers(outputBuffer, compressedLen, checkedBuffer, inputSize, true);

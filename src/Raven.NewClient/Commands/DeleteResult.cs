@@ -4,12 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Raven.NewClient.Client.Connection;
-
 namespace Raven.NewClient.Client.Commands
 {
     /// <summary>
-    /// The result of a PatchResult operation
+    /// The result of a DeleteResult operation
     /// </summary>
     public class DeleteResult
     {

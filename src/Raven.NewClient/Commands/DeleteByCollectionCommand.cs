@@ -12,12 +12,12 @@ namespace Raven.NewClient.Client.Commands
 {
     public class DeleteByCollectionCommand : RavenCommand<DeleteResult>
     {
-        public JsonOperationContext Context;
         public string CollectionName;
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/collections/docs?name={CollectionName}";
+            IsReadRequest = false;
 
             var request = new HttpRequestMessage
             {

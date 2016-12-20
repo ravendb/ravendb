@@ -117,7 +117,7 @@ namespace Raven.Server.ServerWide
                 using (var tx = _env.WriteTransaction())
                 {
                     tx.DeleteTree("items");// note the different casing, we remove the old items tree 
-                    _itemsSchema.Create(tx, "Items");
+                    _itemsSchema.Create(tx, "Items", 16);
                     tx.Commit();
                 }
 

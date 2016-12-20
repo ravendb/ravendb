@@ -27,7 +27,7 @@ namespace SlowTests.Voron
                 {
                     tx.CreateTree("Fields");
                     tx.CreateTree("Options");
-                    _entriesSchema.Create(tx, "IndexEntries");
+                    _entriesSchema.Create(tx, "IndexEntries", 16);
                     tx.Commit();
                 }
 

@@ -99,8 +99,8 @@ namespace Raven.Server.Documents
             using (contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenWriteTransaction())
             {
-                IndexesTableSchema.Create(tx.InnerTransaction, SchemaNameConstants.IndexMetadataTable);
-                ConflictsTableSchema.Create(tx.InnerTransaction, SchemaNameConstants.ConflictMetadataTable);
+                IndexesTableSchema.Create(tx.InnerTransaction, SchemaNameConstants.IndexMetadataTable, 16);
+                ConflictsTableSchema.Create(tx.InnerTransaction, SchemaNameConstants.ConflictMetadataTable, 16);
 
                 tx.InnerTransaction.CreateTree(SchemaNameConstants.GlobalChangeVectorTree);
                 tx.InnerTransaction.CreateTree(SchemaNameConstants.LastReplicatedEtagsTree);

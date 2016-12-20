@@ -288,7 +288,7 @@ select new
                 Assert.Equal(IndexPriority.Normal, indexes[0].Priority);
                 Assert.Equal(IndexDefinitionCompareDifferences.None, indexes[0].Definition.Compare(defOne));
                 Assert.True(defOne.Equals(indexes[0].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false));
-                Assert.Equal(0, indexes[0].MapReduceWorkContext.LastMapResultId);
+                Assert.Equal(1, indexes[0].MapReduceWorkContext.NextMapResultId);
 
                 Assert.Equal(2, indexes[1].IndexId);
                 Assert.Equal(IndexType.MapReduce, indexes[1].Type);
@@ -304,7 +304,7 @@ select new
                 Assert.Equal(IndexPriority.Normal, indexes[1].Priority);
                 Assert.Equal(IndexDefinitionCompareDifferences.None, indexes[1].Definition.Compare(defTwo));
                 Assert.True(defTwo.Equals(indexes[1].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false));
-                Assert.Equal(-1, indexes[1].MapReduceWorkContext.LastMapResultId);
+                Assert.Equal(0, indexes[1].MapReduceWorkContext.NextMapResultId);
             }
         }
     }

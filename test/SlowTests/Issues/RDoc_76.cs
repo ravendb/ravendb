@@ -3,18 +3,18 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Util;
 using Raven.Client;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RDoc_76 : RavenTest
+    public class RDoc_76 : RavenTestBase
     {
         private class Room
         {
@@ -40,7 +40,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void RegisterIdConventionShouldWorkProperlyForDerivedTypes()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.RegisterIdConvention<Bedroom>((dbName, cmds, r) => "b/" + r.Sth);
                 store.Conventions.RegisterIdConvention<Guestroom>((dbName, cmds, r) => "gr/" + r.Sth);
@@ -77,7 +77,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public async Task RegisterIdConventionShouldWorkProperlyForDerivedTypesAsync()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.RegisterAsyncIdConvention<Bedroom>((dbName, cmds, r) => new CompletedTask<string>("b/" + r.Sth));
                 store.Conventions.RegisterAsyncIdConvention<Guestroom>((dbName, cmds, r) => new CompletedTask<string>("gr/" + r.Sth));
@@ -116,7 +116,7 @@ namespace Raven.Tests.Issues
         {
             var exception = Assert.Throws<InvalidOperationException>(() =>
             {
-                using (var store = NewRemoteDocumentStore())
+                using (var store = GetDocumentStore())
                 {
                     store.Conventions.RegisterAsyncIdConvention<Bedroom>((dbName, cmds, r) => new CompletedTask<string>("b/" + r.Sth));
 
@@ -129,11 +129,11 @@ namespace Raven.Tests.Issues
                 }
             });
 
-            Assert.Equal("Id convention for synchronous operation was not found for entity Raven.Tests.Issues.RDoc_76+Bedroom, but convention for asynchronous operation exists.", exception.Message);
+            Assert.Equal("Id convention for synchronous operation was not found for entity SlowTests.Issues.RDoc_76+Bedroom, but convention for asynchronous operation exists.", exception.Message);
 
-            exception = await AssertAsync.Throws<InvalidOperationException>(async () =>
+            exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             {
-                using (var store = NewRemoteDocumentStore())
+                using (var store = GetDocumentStore())
                 {
                     store.Conventions.RegisterIdConvention<Bedroom>((dbName, cmds, r) => "b/" + r.Sth);
 
@@ -146,13 +146,13 @@ namespace Raven.Tests.Issues
                 }
             });
 
-            Assert.Equal("Id convention for asynchronous operation was not found for entity Raven.Tests.Issues.RDoc_76+Bedroom, but convention for synchronous operation exists.", exception.Message);
+            Assert.Equal("Id convention for asynchronous operation was not found for entity SlowTests.Issues.RDoc_76+Bedroom, but convention for synchronous operation exists.", exception.Message);
         }
 
         [Fact]
         public void RegisteringConventionForSameTypeShouldOverrideOldOne()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.RegisterIdConvention<MasterBedroom>((dbName, cmds, r) => "a/" + r.Sth);
                 store.Conventions.RegisterIdConvention<MasterBedroom>((dbName, cmds, r) => "mb/" + r.Sth);
@@ -178,7 +178,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public async Task RegisteringConventionForSameTypeShouldOverrideOldOneAsync()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.RegisterAsyncIdConvention<MasterBedroom>((dbName, cmds, r) => new CompletedTask<string>("a/" + r.Sth));
                 store.Conventions.RegisterAsyncIdConvention<MasterBedroom>((dbName, cmds, r) => new CompletedTask<string>("mb/" + r.Sth));

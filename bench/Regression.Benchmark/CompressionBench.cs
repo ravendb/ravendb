@@ -35,15 +35,13 @@ namespace Regression
             var maximumOutputLength = LZ4.MaximumOutputLength(input.Length);
             byte[] encodedOutput = new byte[maximumOutputLength];
 
-            LZ4 lz4 = new LZ4();
-
             ExecuteBenchmark(() => 
             {
                 fixed (byte* inputPtr = input)
                 fixed (byte* encodedOutputPtr = encodedOutput)
                 fixed (byte* outputPtr = input)
                 {
-                    int compressedSize = lz4.Encode64(inputPtr, encodedOutputPtr, input.Length, (int)maximumOutputLength);
+                    int compressedSize = LZ4.Encode64(inputPtr, encodedOutputPtr, input.Length, (int)maximumOutputLength);
                     int uncompressedSize = LZ4.Decode64(encodedOutputPtr, compressedSize, outputPtr, input.Length, true);
                 }
             });
@@ -60,15 +58,13 @@ namespace Regression
             var maximumOutputLength = LZ4.MaximumOutputLength(input.Length);
             byte[] encodedOutput = new byte[maximumOutputLength];
 
-            LZ4 lz4 = new LZ4();
-            
             ExecuteBenchmark(() => 
             {
                 fixed (byte* inputPtr = input)
                 fixed (byte* encodedOutputPtr = encodedOutput)
                 fixed (byte* outputPtr = input)
                 {
-                    int compressedSize = lz4.Encode64(inputPtr, encodedOutputPtr, input.Length, (int)maximumOutputLength);
+                    int compressedSize = LZ4.Encode64(inputPtr, encodedOutputPtr, input.Length, (int)maximumOutputLength);
                     int uncompressedSize = LZ4.Decode64(encodedOutputPtr, compressedSize, outputPtr, input.Length, true);
                 }
             });
