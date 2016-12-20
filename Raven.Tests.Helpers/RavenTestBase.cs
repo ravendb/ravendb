@@ -379,7 +379,7 @@ namespace Raven.Tests.Helpers
             return servers.First(x => x.SystemDatabase.Configuration.Port == port);
         }
 
-        private static string GetServerUrl(bool fiddler, string serverUrl)
+        public static string GetServerUrl(bool fiddler, string serverUrl)
         {
             if (fiddler)
             {

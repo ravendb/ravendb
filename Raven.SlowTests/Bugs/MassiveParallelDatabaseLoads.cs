@@ -76,7 +76,7 @@ namespace Raven.SlowTests.Bugs
 
                     await defaultStore.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
                        defaultStore.Url + "/admin/databases-toggle-disable?id=" + dbName + "&isSettingDisabled=true",
-                       HttpMethod.Post,
+                       "POST",
                        null,
                        defaultStore.Conventions,
                        null)).ExecuteRequestAsync().ConfigureAwait(false);
@@ -90,7 +90,7 @@ namespace Raven.SlowTests.Bugs
                     var dbName = "Database" + i;
                     defaultStore.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
                         defaultStore.Url + "/admin/databases-toggle-disable?id=" + dbName + "&isSettingDisabled=false",
-                        HttpMethod.Post,
+                        "POST",
                         null,
                         defaultStore.Conventions,
                         null)).ExecuteRequest();
@@ -167,7 +167,7 @@ namespace Raven.SlowTests.Bugs
 
                     await defaultStore.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
                        defaultStore.Url + "/admin/databases-toggle-disable?id=" + dbName + "&isSettingDisabled=true",
-                       HttpMethod.Post,
+                       "POST",
                        null,
                        defaultStore.Conventions,
                        null)).ExecuteRequestAsync().ConfigureAwait(false);
@@ -181,7 +181,7 @@ namespace Raven.SlowTests.Bugs
                     var dbName = "Database" + i;
                     defaultStore.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
                         defaultStore.Url + "/admin/databases-toggle-disable?id=" + dbName + "&isSettingDisabled=false",
-                        HttpMethod.Post,
+                        "POST",
                         null,
                         defaultStore.Conventions,
                         null)).ExecuteRequest();
@@ -255,7 +255,7 @@ namespace Raven.SlowTests.Bugs
                     var dbName = "Database" + i;
                     defaultStore.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
                         defaultStore.Url + "/admin/databases-toggle-disable?id=" + dbName + "&isSettingDisabled=true",
-                        HttpMethod.Post,
+                        "POST",
                         null,
                         defaultStore.Conventions,
                         null)).ExecuteRequest();
@@ -266,14 +266,14 @@ namespace Raven.SlowTests.Bugs
                     MaxDegreeOfParallelism = 20
                 }, i =>
                 {
-                    while (sp.ElapsedMilliseconds<60)
+                    while (sp.ElapsedMilliseconds<6000)
                     {
                         try
                         {
                             var dbName = "Database" + i;
                             defaultStore.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
                                 defaultStore.Url + "/admin/databases-toggle-disable?id=" + dbName + "&isSettingDisabled=false",
-                                HttpMethod.Post,
+                                "POST",
                                 null,
                                 defaultStore.Conventions,
                                 null)).ExecuteRequest();
@@ -288,7 +288,7 @@ namespace Raven.SlowTests.Bugs
 
                             defaultStore.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
                                 defaultStore.Url + "/admin/databases-toggle-disable?id=" + dbName + "&isSettingDisabled=true",
-                                HttpMethod.Post,
+                                "POST",
                                 null,
                                 defaultStore.Conventions,
                                 null)).ExecuteRequest();
@@ -307,7 +307,7 @@ namespace Raven.SlowTests.Bugs
                     var dbName = "Database" + i;
                     defaultStore.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
                         defaultStore.Url + "/admin/databases-toggle-disable?id=" + dbName + "&isSettingDisabled=false",
-                        HttpMethod.Post,
+                        "POST",
                         null,
                         defaultStore.Conventions,
                         null)).ExecuteRequest();
