@@ -41,7 +41,7 @@ namespace Raven.Database.Actions
             return backupPath ?? Path.Combine(rootBackupPath, Constants.DatabaseDocumentFilename);
         }
 
-        public static void Restore(RavenConfiguration configuration, DatabaseRestoreRequest restoreRequest, Action<string> output)
+        public static void Restore(RavenConfiguration configuration, DatabaseRestoreRequest restoreRequest, Action<string> output, InMemoryRavenConfiguration globalConfiguration = null)
         {
             var databaseDocumentPath = FindDatabaseDocument(restoreRequest.BackupLocation);
             if (File.Exists(databaseDocumentPath) == false)
@@ -70,7 +70,7 @@ namespace Raven.Database.Actions
 
             using (var transactionalStorage = configuration.CreateTransactionalStorage(storage, () => { }, () => { }))
             {
-                transactionalStorage.Restore(restoreRequest, output);
+                transactionalStorage.Restore(restoreRequest, output, globalConfiguration);
             }
         }
 
