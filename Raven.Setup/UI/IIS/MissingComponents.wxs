@@ -4,7 +4,7 @@
 		<UI>
 			<Dialog Id="MissingIISComponentsDlg" Width="370" Height="270" Title="[ProductName] Setup" NoMinimize="yes">
 				<Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back" />
-				<Control Id="Exit" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Cancel" />
+				<Control Id="Exit" Type="PushButton" X="304" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Cancel" />
 				<Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
 				<Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes">
 					<Text>Please install the following IIS components:</Text>
