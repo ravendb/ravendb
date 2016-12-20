@@ -79,6 +79,18 @@ namespace Raven.Tests.Helpers
             pathsToDelete.Add(dataFolder);
         }
 
+        public static IEnumerable<object[]> Storages
+        {
+            get
+            {
+                return new[]
+                {
+                    new object[] {"voron"},
+                    new object[] {"esent"}
+                };
+            }
+        }
+
         private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
         {
             if (assembly == null) throw new ArgumentNullException("assembly");
