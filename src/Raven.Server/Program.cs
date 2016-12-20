@@ -123,27 +123,7 @@ namespace Raven.Server
                         LoggingSource.Instance.SetupLogMode(LogMode.None,
                             Path.Combine(AppContext.BaseDirectory, configuration.Core.LogsDirectory));
 
-                        Console.WriteLine("Showing stats, press ESC to close...");
-                        Console.WriteLine(
-                            "  Working Set   UnmanagedAllocations  ManagedAllocations  MemoryMapped  Requests/Sec");
-                        var i = 0;
-                        while (Console.KeyAvailable == false || Console.ReadKey(true).Key != ConsoleKey.Escape)
-                        {
-                            var json = MemoryStatsHandler.MemoryStatsInternal();
-                            var humaneProp = (json["Humane"] as DynamicJsonValue);
-                            var workingSet = humaneProp?["WorkingSet"];
-                            var totalUnmanaged = humaneProp?["TotalUnmanagedAllocations"];
-                            var managedMemory = humaneProp?["ManagedAllocations"];
-                            var totalMapping = humaneProp?["TotalMemoryMapped"];
-                            var reqCounter = server.Metrics.RequestsPerSecondCounter.Count;
-
-                            Console.Write(
-                                $"{(i++%2 == 0 ? '*' : '+')} {workingSet,-15} {totalUnmanaged,-20} {managedMemory,-19} {totalMapping,-15} {reqCounter,-15}\r");
-
-                            Thread.Sleep(1000);
-                        }
-                        Console.WriteLine();
-                        Console.WriteLine("Stats halted");
+                        WriteServerStatsAndWaitForEsc(server);
 
                         break;
 
@@ -165,11 +145,39 @@ namespace Raven.Server
                         break;
 
                     default:
-                        Console.WriteLine("Unknown command, type 'help' to get all of the avaliable commands");
-                        break;
+                        Console.WriteLine("Unknown command...");
+                        goto case "help";
                 }
             }
         }
 
+        private static void WriteServerStatsAndWaitForEsc(RavenServer server)
+        {
+            Console.WriteLine("Showing stats, press ESC to close...");
+            Console.WriteLine("    working set   | native mem    | managed mem   | mmap size       | reqs/sec ");
+            var i = 0;
+            while (Console.KeyAvailable == false || Console.ReadKey(true).Key != ConsoleKey.Escape)
+            {
+                var json = MemoryStatsHandler.MemoryStatsInternal();
+                var humaneProp = (json["Humane"] as DynamicJsonValue);
+                var reqCounter = server.Metrics.RequestsPerSecondCounter.OneSecondRate;
+
+                Console.Write($"\r {((i++%2) == 0 ? "*" : "+")} ");
+
+                Console.Write($" {humaneProp?["WorkingSet"],-12} ");
+                Console.Write($" | {humaneProp?["TotalUnmanagedAllocations"],-12} ");
+                Console.Write($" | {humaneProp?["ManagedAllocations"],-12} ");
+                Console.Write($" | {humaneProp?["TotalMemoryMapped"],-15} ");
+
+                Console.Write($"| {Math.Round(reqCounter, 1),-12}  ");
+
+                for (int j = 0; j < 5 && Console.KeyAvailable == false; j++)
+                {
+                    Thread.Sleep(100);
+                }
+            }
+            Console.WriteLine();
+            Console.WriteLine("Stats halted");
+        }
     }
 }
