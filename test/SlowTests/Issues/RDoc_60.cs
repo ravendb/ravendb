@@ -3,16 +3,15 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Tests.Common;
 
-namespace Raven.Tests.Issues
+using System.Collections.Generic;
+using System.Linq;
+using FastTests;
+using Xunit;
+
+namespace SlowTests.Issues
 {
-    using System.Collections.Generic;
-    using System.Linq;
-
-    using Xunit;
-
-    public class RDoc_60 : RavenTest
+    public class RDoc_60 : RavenTestBase
     {
         private class Order
         {
@@ -38,14 +37,14 @@ namespace Raven.Tests.Issues
         [Fact]
         public void IncludeShouldWorkForStringIdentifiers()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
                     var order = new Order
-                                {
-                                    Id = "orders/1",
-                                    LineItems = new List<LineItem>
+                    {
+                        Id = "orders/1",
+                        LineItems = new List<LineItem>
                                                 {
                                                     new LineItem
                                                     {
@@ -53,13 +52,13 @@ namespace Raven.Tests.Issues
                                                         ProductId = "products/1"
                                                     }
                                                 }
-                                };
+                    };
 
                     var product = new Product
-                                  {
-                                      Id = "products/1",
-                                      Name = "Product 1"
-                                  };
+                    {
+                        Id = "products/1",
+                        Name = "Product 1"
+                    };
 
                     session.Store(product);
                     session.Store(order);

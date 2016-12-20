@@ -3,27 +3,25 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Tests.Common;
 
-namespace Raven.Tests.Issues
+using System.Collections.Generic;
+using System.Linq;
+using FastTests;
+using Raven.Client;
+using Raven.Client.Data;
+using Raven.Client.Indexes;
+using Xunit;
+
+namespace SlowTests.Issues
 {
-    using System.Collections.Generic;
-    using System.Linq;
-
-    using Raven.Abstractions.Data;
-    using Raven.Client;
-    using Raven.Client.Indexes;
-
-    using Xunit;
-
-    public class RDoc_56 : RavenTest
+    public class RDoc_56 : RavenTestBase
     {
-        public class Post
+        private class Post
         {
             public Post()
             {
-                this.Comments = new List<Comment>();
-                this.CommentsSet = new HashSet<Comment>();
+                Comments = new List<Comment>();
+                CommentsSet = new HashSet<Comment>();
             }
 
             public string Id { get; set; }
@@ -35,12 +33,12 @@ namespace Raven.Tests.Issues
             public ISet<Comment> CommentsSet { get; set; }
         }
 
-        public class Comment
+        private class Comment
         {
             public Comment()
             {
-                this.Comments = new List<Comment>();
-                this.CommentsSet = new HashSet<Comment>();
+                Comments = new List<Comment>();
+                CommentsSet = new HashSet<Comment>();
             }
 
             public string Id { get; set; }
@@ -61,9 +59,9 @@ namespace Raven.Tests.Issues
                 Map = posts => from post in posts
                                from comment in Recurse(post, x => x.Comments)
                                select new
-                                      {
-                                          comment.Text
-                                      };
+                               {
+                                   comment.Text
+                               };
             }
         }
 
@@ -161,7 +159,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void IndexesShouldGetCreated()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var array = new RecurseIndexWithArray();
                 var hashSet = new RecurseIndexWithHashSet();
@@ -218,7 +216,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        private void AssertIndexEntries(IDocumentStore store, string indexName, int expectedNumberOfResults)
+        private static void AssertIndexEntries(IDocumentStore store, string indexName, int expectedNumberOfResults)
         {
             using (var session = store.OpenSession())
             {
@@ -226,7 +224,7 @@ namespace Raven.Tests.Issues
                         .Customize(x => x.WaitForNonStaleResults())
                         .ToList();
 
-                var arrayResult = store.DatabaseCommands.Query(indexName, new IndexQuery(), null, metadataOnly: false, indexEntriesOnly: true);
+                var arrayResult = store.DatabaseCommands.Query(indexName, new IndexQuery(), metadataOnly: false, indexEntriesOnly: true);
 
                 Assert.Equal(expectedNumberOfResults, arrayResult.Results.Count);
             }
