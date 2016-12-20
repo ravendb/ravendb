@@ -65,12 +65,13 @@ namespace Voron.Data.Compression
                     {
                         var oldSize = _pool.Length;
 
-                        Array.Resize(ref _pool, index + 1);
-
-                        for (var i = oldSize; i < _pool.Length; i++)
+                        var newPool = new ConcurrentQueue<DecompressionBuffer>[index + 1];
+                        Array.Copy(_pool, newPool, _pool.Length);
+                        for (var i = oldSize; i < newPool.Length; i++)
                         {
-                            _pool[i] = new ConcurrentQueue<DecompressionBuffer>();
+                            newPool[i] = new ConcurrentQueue<DecompressionBuffer>();
                         }
+                        _pool = newPool;
                     }
                 }
             }
