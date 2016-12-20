@@ -1,7 +1,7 @@
 $NETSTANDARD13 = 'netstandard1.3'
 $NET46 = 'net46'
-$SUPPORTED_CLIENT_FRAMEWORKS = @( $NETSTANDARD13 ) 
-$SUPPORTED_NEW_CLIENT_FRAMEWORKS = @( $NETSTANDARD13 ) 
+$SUPPORTED_CLIENT_FRAMEWORKS = @( $NETSTANDARD13 )
+$SUPPORTED_NEW_CLIENT_FRAMEWORKS = @( $NETSTANDARD13 )
 
 function CreateArchiveFromDir ( $targetFilename, $dir, $spec ) {
     if ($spec.PkgType -eq "zip") {
@@ -73,20 +73,43 @@ function GetRavenArchiveFileName ( $version, $spec ) {
 }
 
 function CreatePackageLayout ( $packageDir, $projectDir, $outDirs, $spec ) {
+    if ($spec.Name.Contains('raspberry-pi') -eq $False) {
+        LayoutRegularPackage $packageDir $projectDir $outDirs $spec
+    } else {
+        LayoutRaspberryPiPackage $packageDir $projectDir $outDirs $spec
+    }
+}
+
+function LayoutRegularPackage ( $packageDir, $projectDir, $outDirs, $spec ) {
     CopyStudioPackage $outDirs
     CopyLicenseFile $packageDir
     CopyAckFile $packageDir
-    CreatePackageServerLayout $($outDirs.Server) $packageDir $projectDir $spec
+    CreatePackageServerLayout $projectDir $($outDirs.Server) $packageDir $spec
+    CreatePackageClientLayout $outDirs $packageDir $projectDir $spec
+    CopyClientReadMe $(Join-Path $packageDir -ChildPath 'Client')
+}
+
+function LayoutRaspberryPiPackage ( $packageDir, $projectDir, $outDirs, $spec ) {
+    CopyStudioPackage $outDirs
+    CopyLicenseFile $packageDir
+    CopyAckFile $packageDir
+    CreatePackageServerLayout $projectDir $($outDirs.Server) $packageDir $spec
     CreatePackageClientLayout $outDirs $packageDir $projectDir $spec
 
-    if ($spec.Name.Contains('raspberry-pi') -eq $False) {
-        CopyClientReadMe $(Join-Path $packageDir -ChildPath 'Client')
-    } else {
-        CopyDaemonScripts $projectDir $packageDir
-        CopyLinuxScripts $projectDir $packageDir
-        CopyDotnetTarForRaspberryPi $packageDir
-        CreateRavenDBTarForRaspberryPi $projectDir $packageDir
+    CopyDaemonScripts $projectDir $packageDir
+    CopyLinuxScripts $projectDir $packageDir
+    CreateRavenDBTarForRaspberryPi $projectDir $packageDir
+    CopyDotnetTarForRaspberryPi $packageDir
+    $wrapperDir = Join-Path $packageDir -ChildPath "RavenDB.4.0"
+    $rpiPkgContents = Get-ChildItem -Path $packageDir;
+    New-Item -ItemType Directory -Path $wrapperDir
+
+    Push-Location
+    cd $packageDir
+    foreach ($item in $rpiPkgContents) {
+        Move-Item $item $wrapperDir
     }
+    Pop-Location
 }
 
 function CopyStudioPackage ( $outDirs ) {
@@ -130,8 +153,13 @@ function CopyDaemonScripts ( $projectDir, $packageDir ) {
     }
 }
 
-function CreatePackageServerLayout ( $serverOutDir, $packageDir, $projectDir ) {
+function CreatePackageServerLayout ( $projectDir, $serverOutDir, $packageDir, $spec ) {
     write-host "Create package server directory layout..."
+
+    $settingsFileName = If ($spec.IsUnix) { "settings_posix.json" } Else { "settings_windows.json" }
+    $settingsFilePath = [io.path]::combine($projectDir, 'src', 'Raven.Server', $settingsFileName)
+
+    Copy-Item "$settingsFilePath" $serverOutDir
 
     if ($spec.Name -eq "raspberry-pi") {
         del $([io.path]::combine($serverOutDir, "*.so"))
@@ -171,19 +199,28 @@ function CopyDotnetTarForRaspberryPi ( $packageDir ) {
 
 function CreateRavenDBTarForRaspberryPi ( $projectDir, $packageDir ) {
     $targetFilename = "ravendb.4.0"
-    Push-Location
 
+    $wrapperDir = Join-Path $packageDir -ChildPath $targetFilename
+    New-Item -ItemType Directory -Path $wrapperDir
+
+    Push-Location
     cd $packageDir
+
+    $rpiRdbTarContents = ( "Client", "Server", "acknowledgements.txt", "license.txt", "ravendbd", "ravendb.watchdog.sh" )
+
+    foreach ($item in $rpiRdbTarContents) {
+        Move-Item $item $wrapperDir
+    }
 
     if ($($IsWindows -eq $False) -and $(Get-Command "tar" -ErrorAction SilentlyContinue))
     {
-        & tar -cjvf "$targetFilename.tar.bz2" "Client" "Server" "acknowledgements.txt" "license.txt" "ravendbd" "ravendb.watchdog.sh"
+        & tar -cjvf "$targetFilename.tar.bz2" "$targetFilename"
         CheckLastExitCode
     }
     else
     {
         $7za = [io.path]::combine($projectDir, "scripts", "assets", "bin", "7za.exe")
-        & "$7za" a -ttar "$targetFilename.tar" "Client" "Server" "acknowledgements.txt" "license.txt" "ravendbd" "ravendb.watchdog.sh"
+        & "$7za" a -ttar "$targetFilename.tar" "$targetFilename"
         CheckLastExitCode
 
         & "$7za" a -tbzip2 "$targetFilename.tar.bz2" "$targetFilename.tar"
@@ -192,12 +229,7 @@ function CreateRavenDBTarForRaspberryPi ( $projectDir, $packageDir ) {
         Remove-Item "$targetFilename.tar"
     }
 
-    Remove-Item -Recurse "Client"
-    Remove-Item -Recurse "Server"
-    Remove-Item "acknowledgements.txt"
-    Remove-Item "license.txt"
-    Remove-Item "ravendbd"
-    Remove-Item "ravendb.watchdog.sh"
+    Remove-Item -Recurse "$targetFilename"
     Pop-Location
 }
 
@@ -222,7 +254,7 @@ function CreateRegularPackageClientLayout( $outDirs, $packageDir, $projectDir) {
         $frameworkOutDir = [io.path]::combine($outDirs.Sparrow, $framework)
         CopySparrow $frameworkOutDir $packageDir $assetsDir $framework
     }
-    
+
 }
 
 function CopyClient ( $clientOutDir, $packageDir, $assetsDir, $framework ) {

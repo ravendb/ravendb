@@ -60,27 +60,20 @@ class viewModelBase {
         eventsCollector.default.reportViewModel(this);
     }
 
+    protected bindToCurrentInstance(...methods: Array<keyof this>) {
+        _.bindAll(this, ...methods);
+    }
+
     canActivate(args: any): boolean | JQueryPromise<canActivateResultDto> {
         var self = this;
         setTimeout(() => viewModelBase.showSplash(self.isAttached === false), 700);
         this.downloader.reset();
 
-        const resource = this.activeResource();
-        if (resource && resource.disabled) {
-            messagePublisher.reportError(`${resource.fullTypeName} '${resource.name}' is disabled!`,
-                `You can't access any section of the ${resource.fullTypeName.toLowerCase()} while it's disabled.`);
-
-            return false;
-        }
-
+        this.resourcesManager.activateBasedOnCurrentUrl();
         return true;
     }
 
     activate(args: any, isShell = false) {
-        if (!isShell) {
-            this.resourcesManager.activateBasedOnCurrentUrl();    
-        }
-    
         // create this ko.computed once to avoid creation and subscribing every 50 ms - thus creating memory leak.
         var adminArea = this.appUrls.isAreaActive("admin");
 
@@ -91,7 +84,7 @@ class viewModelBase {
             this.changesContext
                 .afterConnection
                 .done(() => {
-                    this.notifications.pushAll(this.createNotifications());
+                    this.notifications.push(...this.createNotifications());
                 });
         });
 
@@ -180,7 +173,7 @@ class viewModelBase {
     }
 
     removeNotification(subscription: changeSubscription) {
-        this.notifications.remove(subscription);
+        _.pull(this.notifications, subscription);
     }
 
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
@@ -203,7 +196,7 @@ class viewModelBase {
             handler();
         }, this, elementSelector);
 
-        if (!this.keyboardShortcutDomContainers.contains(elementSelector)) {
+        if (!_.includes(this.keyboardShortcutDomContainers, elementSelector)) {
             this.keyboardShortcutDomContainers.push(elementSelector);
         }
     }
@@ -265,7 +258,7 @@ class viewModelBase {
 
         app.showBootstrapDialog(new confirmationDialog(confirmationMessage, title, options))
             .done((answer) => {
-                var isConfirmed = answer === options.last();
+                var isConfirmed = answer === _.last(options);
                 if (isConfirmed) {
                     viewTask.resolve({ can: true });
                 } else if (!forceRejectWithResolve) {

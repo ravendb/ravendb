@@ -1,6 +1,5 @@
 /// <reference path="../../../typings/tsd.d.ts" />
 import composition = require("durandal/composition");
-import ace = require("ace/ace");
 
 /*
  * A custom Knockout binding handler transforms the target element (usually a <pre>) into a code editor, powered by Ace. http://ace.c9.io
@@ -19,8 +18,8 @@ class aceEditorBindingHandler {
         bubbleEnterKey: false
     }
 
-    static dom = require("ace/lib/dom");
-    static commands = require("ace/commands/default_commands").commands;
+    static dom = ace.require("ace/lib/dom");
+    static commands = ace.require("ace/commands/default_commands").commands;
     static isInFullScreeenMode = ko.observable<boolean>(false);
     static goToFullScreenText = "Press Shift + F11  to enter full screen mode";
     static leaveFullScreenText = "Press Shift + F11 or Esc to leave full screen mode";
@@ -46,8 +45,8 @@ class aceEditorBindingHandler {
             composition.addBindingHandler("aceEditor");
 
 
-            var Editor = require("ace/editor").Editor;
-            require("ace/config").defineOptions(Editor.prototype, "editor", {
+            var Editor = ace.require("ace/editor").Editor;
+            ace.require("ace/config").defineOptions(Editor.prototype, "editor", {
                 editorType: {
                     set: function (val :any) {
                     },
@@ -107,7 +106,7 @@ class aceEditorBindingHandler {
 
     static autoCompleteHub(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void): void {
         var curEditorType = editor.getOption("editorType");
-        var completerThreesome = aceEditorBindingHandler.customCompleters.first(x=> x.editorType === curEditorType);
+        var completerThreesome = aceEditorBindingHandler.customCompleters.find(x=> x.editorType === curEditorType);
 
         if (!!completerThreesome) {
             completerThreesome.completer.call(completerThreesome.completerHostObject, editor, session, pos, prefix, callback);
@@ -193,12 +192,12 @@ class aceEditorBindingHandler {
             aceEditor.setOption("editorType", typeName);
 
             if (!!langTools) {
-                if (!aceEditorBindingHandler.customCompleters.first(x=> x.editorType === typeName)) {
+                if (!aceEditorBindingHandler.customCompleters.find(x=> x.editorType === typeName)) {
                     aceEditorBindingHandler.customCompleters.push({ editorType: typeName, completerHostObject: completerHostObject, completer: bindingValues.completer });
                 }
                 if (!!aceEditor.completers) {
                     var completersList: { getComplitions: any; moduleId?: string }[] = aceEditor.completers;
-                    if (!completersList.first(x=> x.moduleId === "aceEditoBindingHandler")) {
+                    if (!completersList.find(x=> x.moduleId === "aceEditoBindingHandler")) {
                         langTools.addCompleter({ moduleId: "aceEditoBindingHandler", getCompletions: aceEditorBindingHandler.autoCompleteHub });
                     }
                 }

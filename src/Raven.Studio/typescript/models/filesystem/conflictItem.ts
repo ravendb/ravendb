@@ -35,10 +35,12 @@ class conflictItem {
     static fromConflictItemDto(dto: filesystemConflictItemDto) : conflictItem {
         var item = new conflictItem(dto.FileName, dto.RemoteServerUrl, dto.ResolveUsingRemote);
         if (dto.RemoteHistory != null) {
-            item.remoteHistory.pushAll(dto.RemoteHistory.map(x => new conflictHistory(x.Version, x.ServerId)));
+            const remoteHistory = dto.RemoteHistory.map(x => new conflictHistory(x.Version, x.ServerId));
+            item.remoteHistory.push(...remoteHistory);
         }
         if (dto.CurrentHistory != null) {
-            item.currentHistory.pushAll(dto.CurrentHistory.map(x => new conflictHistory(x.Version, x.ServerId)));
+            const currentHistory = dto.CurrentHistory.map(x => new conflictHistory(x.Version, x.ServerId))
+            item.currentHistory.push(...currentHistory);
         }
         return item;
     }

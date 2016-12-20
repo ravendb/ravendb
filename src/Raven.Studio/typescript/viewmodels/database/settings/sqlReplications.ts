@@ -79,7 +79,7 @@ class sqlReplications extends viewModelBase {
     private toggleDisable(disable: boolean) {
         var self = this;
         var action = disable ? "disable" : "enable";
-        var actionCapitalized = action.capitalizeFirstLetter();
+        var actionCapitalized = _.upperFirst(action);
         app.showBootstrapMessage("Are you sure that you want to " + action + " all SQL Replications?", 
                 actionCapitalized + " SQL Replications", ["Cancel", actionCapitalized])
             .then((dialogResult: string) => {

@@ -3,7 +3,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
-
+using Raven.Tests.Core.ChangesApi;
 using Xunit;
 
 namespace Raven.Tests.Core.BulkInsert
@@ -30,11 +30,12 @@ namespace Raven.Tests.Core.BulkInsert
             var bulkInsertStartsCounter = 0;
             using (var store = GetDocumentStore())
             {
-                store.Changes().Task.Result.ForBulkInsert().Task.Result.Subscribe(x =>
-                {
-                    if (x.Type == DocumentChangeTypes.BulkInsertStarted)
-                        Interlocked.Increment(ref bulkInsertStartsCounter);
-                });
+                store.Changes().Task.Result.ForBulkInsert().Task.Result
+                    .Subscribe(new ActionObserver<BulkInsertChangeNotification>(x =>
+                    {
+                        if (x.Type == DocumentChangeTypes.BulkInsertStarted)
+                            Interlocked.Increment(ref bulkInsertStartsCounter);
+                    }));
 
                 using (var bulkInsert = store.BulkInsert(options: new BulkInsertOptions
                 {
@@ -70,12 +71,13 @@ namespace Raven.Tests.Core.BulkInsert
             var bulkInsertStartsCounter = 0;
             using (var store = GetDocumentStore())
             {
-                store.Changes().Task.Result.ForBulkInsert().Task.Result.Subscribe(x =>
-                {
-                    if (x.Type == DocumentChangeTypes.BulkInsertStarted)
-                        Interlocked.Increment(ref bulkInsertStartsCounter);
-                });
-
+                store.Changes().Task.Result.ForBulkInsert().Task.Result
+                    .Subscribe(new ActionObserver<BulkInsertChangeNotification>(x =>
+                    {
+                        if (x.Type == DocumentChangeTypes.BulkInsertStarted)
+                            Interlocked.Increment(ref bulkInsertStartsCounter);
+                    }));
+                
                 using (var bulkInsert = store.BulkInsert(options: new Abstractions.Data.BulkInsertOptions
                 {
                     ChunkedBulkInsertOptions = new ChunkedBulkInsertOptions
@@ -110,13 +112,13 @@ namespace Raven.Tests.Core.BulkInsert
             var bulkInsertStartsCounter = 0;
             using (var store = GetDocumentStore())
             {
-                store.Changes().Task.Result.ForBulkInsert().Task.Result.Subscribe(x =>
-                {
-                    if (x.Type == DocumentChangeTypes.BulkInsertStarted)
-                        Interlocked.Increment(ref bulkInsertStartsCounter);
-                });
-
-
+                store.Changes().Task.Result.ForBulkInsert().Task.Result
+                     .Subscribe(new ActionObserver<BulkInsertChangeNotification>(x =>
+                     {
+                         if (x.Type == DocumentChangeTypes.BulkInsertStarted)
+                             Interlocked.Increment(ref bulkInsertStartsCounter);
+                     }));
+                
                 using (var bulkInsert = store.BulkInsert(options: new Abstractions.Data.BulkInsertOptions
                 {
                     ChunkedBulkInsertOptions = new ChunkedBulkInsertOptions
@@ -151,14 +153,15 @@ namespace Raven.Tests.Core.BulkInsert
             var mre = new ManualResetEventSlim();
             using (var store = GetDocumentStore())
             {
-                store.Changes().Task.Result.ForBulkInsert().Task.Result.Subscribe(x =>
-                {
-                    if (x.Type == DocumentChangeTypes.BulkInsertStarted)
-                    {
-                        Interlocked.Increment(ref bulkInsertStartsCounter);
-                        mre.Set();
-                    }
-                });
+                store.Changes().Task.Result.ForBulkInsert().Task.Result
+                     .Subscribe(new ActionObserver<BulkInsertChangeNotification>(x =>
+                     {
+                         if (x.Type == DocumentChangeTypes.BulkInsertStarted)
+                         {
+                             Interlocked.Increment(ref bulkInsertStartsCounter);
+                             mre.Set();
+                         }
+                     }));
 
                 using (var bulkInsert = store.BulkInsert(options: new Abstractions.Data.BulkInsertOptions
                 {
@@ -192,12 +195,13 @@ namespace Raven.Tests.Core.BulkInsert
             var bulkInsertStartsCounter = new ConcurrentDictionary<Guid, BulkInsertChangeNotification>();
             using (var store = GetDocumentStore())
             {
-                store.Changes().Task.Result.ForBulkInsert().Task.Result.Subscribe(x =>
-                {
-                    if (x.Type == DocumentChangeTypes.BulkInsertStarted)
-                        Assert.True(bulkInsertStartsCounter.TryAdd(x.OperationId, x));
-                });
-
+                store.Changes().Task.Result.ForBulkInsert().Task.Result
+                    .Subscribe(new ActionObserver<BulkInsertChangeNotification>(x =>
+                    {
+                        if (x.Type == DocumentChangeTypes.BulkInsertStarted)
+                            Assert.True(bulkInsertStartsCounter.TryAdd(x.OperationId, x));
+                    }));
+                
                 for (var i = 0; i < 10; i++)
                 {
                     using (var bulkInsert = store.BulkInsert())
@@ -212,7 +216,6 @@ namespace Raven.Tests.Core.BulkInsert
             }
 
             Assert.Equal(10, bulkInsertStartsCounter.Count);
-
         }
     }
 }

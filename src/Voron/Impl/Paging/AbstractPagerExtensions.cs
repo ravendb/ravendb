@@ -11,12 +11,12 @@ namespace Voron.Impl.Paging
 {
     public static unsafe class VirtualPagerLegacyExtensions
     {
-        public static Page ReadPage(this AbstractPager pager, LowLevelTransaction tx, long pageNumber, PagerState pagerState = null)
+        public static Page ReadPage(this AbstractPager pager, IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)
         {
             return new Page(pager.AcquirePagePointer(tx, pageNumber, pagerState));
         }
 
-        public static TreePage Read(this AbstractPager pager, LowLevelTransaction tx, long pageNumber, PagerState pagerState = null)
+        public static TreePage Read(this AbstractPager pager, IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)
         {
             return new TreePage(pager.AcquirePagePointer(tx, pageNumber, pagerState), pager.PageSize);
         }
@@ -32,22 +32,15 @@ namespace Voron.Impl.Paging
             try
             {
                 long total = 0;
+                var writer = pager.BatchWrites;
                 foreach (var page in pages)
                 {
-                    var startPage = page.PageNumber;
+                    var numberOfPages = pager.GetNumberOfPages(page);
 
-                    var toWrite = pager.GetNumberOfPages(page) * pager.PageSize;
-                    total += toWrite;
-                    byte* destination = pagerState.MapBase + startPage * pager.PageSize;
-
-                    pager.UnprotectPageRange(destination, (ulong)toWrite);
-
-                    Memory.BulkCopy(destination,
-                        page.Pointer,
-                        toWrite);
-
-                    pager.ProtectPageRange(destination, (ulong)toWrite);
+                    writer.Write(page.PageNumber, numberOfPages, page.Pointer, pagerState);
+                    total += numberOfPages*pager.PageSize;
                 }
+                writer.Flush();
                 return total;
             }
             finally
@@ -55,6 +48,8 @@ namespace Voron.Impl.Paging
                 pagerState.Release();
             }
         }
+
+
 
         public static int GetNumberOfPages(this AbstractPager pager, Page page)
         {

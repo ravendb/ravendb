@@ -12,7 +12,8 @@
     "warningsAsErrors": true,
     "compile": {
       "include": [ "**/*.cs", "../CommonAssemblyInfo.cs" ]
-    }
+    },
+    "define": []
   },
 
   "configurations": {

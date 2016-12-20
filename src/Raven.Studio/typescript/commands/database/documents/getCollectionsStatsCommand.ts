@@ -6,9 +6,6 @@ import endpoints = require("endpoints");
 
 class getCollectionsStatsCommand extends commandBase {
 
-    /**
-    * @param ownerDb The database the collections will belong to.
-    */
     constructor(private ownerDb: database) {
         super();
 

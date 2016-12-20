@@ -121,7 +121,7 @@ class editCounter extends viewModelBase {
 
     removeFromTopRecentCounters(groupName: string, counterName: string) {
         var currentFilesystemName = this.activeFilesystem().name;
-        var recentFilesForCurFilesystem = editCounter.recentCountersInCounterStorage().first(x => x.counterStorageName === currentFilesystemName);
+        var recentFilesForCurFilesystem = editCounter.recentCountersInCounterStorage().find(x => x.counterStorageName === currentFilesystemName);
         if (recentFilesForCurFilesystem) {
             var counter = {
                 groupName: groupName,
@@ -133,7 +133,7 @@ class editCounter extends viewModelBase {
 
     getTopRecentCounters() {
         var cs = this.activeCounterStorage();
-        var recentFilesForCurFilesystem = editCounter.recentCountersInCounterStorage().first(x => x.counterStorageName === cs.name);
+        var recentFilesForCurFilesystem = editCounter.recentCountersInCounterStorage().find(x => x.counterStorageName === cs.name);
         if (recentFilesForCurFilesystem) {
             var value = recentFilesForCurFilesystem
                 .recentCounters()
@@ -158,9 +158,9 @@ class editCounter extends viewModelBase {
 
     appendRecentCounter(groupName: string, counterName: string) {
         var csName = this.activeCounterStorage().name;
-        var existingRecentCounters = editCounter.recentCountersInCounterStorage.first(x => x.counterStorageName === csName);
+        var existingRecentCounters = editCounter.recentCountersInCounterStorage().find(x => x.counterStorageName === csName);
         if (existingRecentCounters) {
-            var existingCounter = existingRecentCounters.recentCounters.first((x: IGroupAndCounterName) => x.groupName === groupName && x.counterName === counterName);
+            var existingCounter = existingRecentCounters.recentCounters().find((x: IGroupAndCounterName) => x.groupName === groupName && x.counterName === counterName);
             if (!existingCounter) {
                 if (existingRecentCounters.recentCounters().length === 5) {
                     existingRecentCounters.recentCounters.pop();

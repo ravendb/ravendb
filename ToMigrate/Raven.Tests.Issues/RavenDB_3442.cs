@@ -36,24 +36,5 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
-        public void WhereEqualsShouldSendSortHintsAndDynamicIndexesShouldSetAppropriateSortOptionsThen2()
-        {
-            using (var store = NewDocumentStore())
-            {
-                using (var session = store.OpenSession())
-                {
-                    session.Query<User>()
-                        .Where(x => x.Name == "John")
-                        .ToList();
-                }
-
-                var indexes = store.DatabaseCommands.GetIndexes(0, 10);
-                var index = indexes.Single(x => x.Name.StartsWith("Auto/"));
-
-                Assert.Equal(1, index.SortOptions.Count);
-                Assert.Equal(SortOptions.String, index.SortOptions["Name"]);
-            }
-        }
     }
 }

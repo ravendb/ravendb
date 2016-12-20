@@ -53,7 +53,7 @@ class settings extends viewModelBase {
 
         this.activeSubViewTitle = ko.computed(() => {
             // Is there a better way to get the active route?
-            var activeRoute = this.router.navigationModel().first(r=> r.isActive());
+            var activeRoute = this.router.navigationModel().find(r=> r.isActive());
             return activeRoute != null ? activeRoute.title : "";
         });
     }
@@ -79,7 +79,7 @@ class settings extends viewModelBase {
     }
 
     isEditingSqlReplication(navigationalModel: DurandalRouteConfiguration[], curNavHash: any) {
-        var activeRoute = navigationalModel.first(r => r.isActive());
+        var activeRoute = navigationalModel.find(r => r.isActive());
         if (!!activeRoute && !!curNavHash && !!activeRoute.hash) {
             return curNavHash.indexOf('databases/settings/sqlReplication') >= 0 &&
                 (activeRoute.route.indexOf('databases/settings/editSqlReplication') >= 0 ||

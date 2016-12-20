@@ -6,9 +6,8 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
-
+using Raven.Client.FileSystem;
 using Raven.Database.Extensions;
-
 using Xunit;
 using Xunit.Extensions;
 
@@ -26,7 +25,7 @@ namespace Raven.Tests.FileSystem.Issues
             r.NextBytes(bytes);
 
             var ms = new MemoryStream(bytes);
-            var expectedHash = ms.GetHashAsHex();
+            var expectedHash = ms.GetMD5Hash();
 
             var client = NewAsyncClient(requestedStorage: storage);
             for (int i = 0; i < 500; i++)
@@ -37,7 +36,7 @@ namespace Raven.Tests.FileSystem.Issues
             
             var stream = await client.DownloadAsync("abc.bin");
             
-            Assert.Equal(expectedHash, stream.GetHashAsHex());
+            Assert.Equal(expectedHash, stream.GetMD5Hash());
         }
     }
 }

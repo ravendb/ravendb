@@ -10,6 +10,7 @@ using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Errors;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
@@ -26,8 +27,8 @@ namespace Raven.Server.Documents.Indexes
 {
     public class IndexStore : IDisposable
     {
-
         private static Logger _logger;
+
         private readonly DocumentDatabase _documentDatabase;
 
         private readonly CollectionOfIndexes _indexes = new CollectionOfIndexes();
@@ -110,7 +111,18 @@ namespace Raven.Server.Documents.Indexes
                     case IndexCreationOptions.Noop:
                         return existingIndex.IndexId;
                     case IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex:
-                        throw new NotImplementedException(); // TODO [ppekrol]
+                        switch (definition.Type)
+                        {
+                            case IndexType.Map:
+                                MapIndex.Update(existingIndex, definition, _documentDatabase);
+                                break;
+                            case IndexType.MapReduce:
+                                MapReduceIndex.Update(existingIndex, definition, _documentDatabase);
+                                break;
+                            default:
+                                throw new NotSupportedException($"Cannot update {definition.Type} index from IndexDefinition");
+                        }
+                        return existingIndex.IndexId;
                     case IndexCreationOptions.Update:
                         DeleteIndex(existingIndex.IndexId);
                         break;
@@ -141,6 +153,9 @@ namespace Raven.Server.Documents.Indexes
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
 
+            if (definition is MapIndexDefinition)
+                return CreateIndex(((MapIndexDefinition)definition).IndexDefinition);
+
             lock (_locker)
             {
                 Index existingIndex;
@@ -153,7 +168,7 @@ namespace Raven.Server.Documents.Indexes
                     case IndexCreationOptions.Noop:
                         return existingIndex.IndexId;
                     case IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex:
-                        throw new NotImplementedException(); // TODO [ppekrol]
+                        throw new NotSupportedException();
                     case IndexCreationOptions.Update:
                         DeleteIndex(existingIndex.IndexId);
                         break;
@@ -167,19 +182,6 @@ namespace Raven.Server.Documents.Indexes
                     index = AutoMapIndex.CreateNew(indexId, (AutoMapIndexDefinition)definition, _documentDatabase);
                 else if (definition is AutoMapReduceIndexDefinition)
                     index = AutoMapReduceIndex.CreateNew(indexId, (AutoMapReduceIndexDefinition)definition, _documentDatabase);
-                else if (definition is MapIndexDefinition)
-                {
-                    var mapReduceIndexDef = definition as MapReduceIndexDefinition;
-
-                    if (mapReduceIndexDef != null)
-                    {
-                        index = MapReduceIndex.CreateNew(indexId, ((MapReduceIndexDefinition)definition).IndexDefinition, _documentDatabase);
-                    }
-                    else
-                    {
-                        index = MapIndex.CreateNew(indexId, ((MapIndexDefinition)definition).IndexDefinition, _documentDatabase);
-                    }
-                }
                 else
                     throw new NotImplementedException($"Unknown index definition type: {definition.GetType().FullName}");
 
@@ -210,7 +212,7 @@ namespace Raven.Server.Documents.Indexes
             return indexId;
         }
 
-        private static IndexCreationOptions GetIndexCreationOptions(object indexDefinition, Index existingIndex)
+        internal IndexCreationOptions GetIndexCreationOptions(object indexDefinition, Index existingIndex)
         {
             if (existingIndex == null)
                 return IndexCreationOptions.Create;
@@ -218,29 +220,55 @@ namespace Raven.Server.Documents.Indexes
             //if (existingIndex.Definition.IsTestIndex) // TODO [ppekrol]
             //    return IndexCreationOptions.Update;
 
+            var result = IndexDefinitionCompareDifferences.None;
+
             var indexDef = indexDefinition as IndexDefinition;
             if (indexDef != null)
-            {
-                if (existingIndex.Definition.Equals(indexDef, ignoreFormatting: true, ignoreMaxIndexOutputs: true))
-                    return IndexCreationOptions.Noop;
-
-                return existingIndex.Definition.Equals(indexDef, ignoreFormatting: true, ignoreMaxIndexOutputs: true)
-                           ? IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex
-                           : IndexCreationOptions.Update;
-            }
+                result = existingIndex.Definition.Compare(indexDef);
 
             var indexDefBase = indexDefinition as IndexDefinitionBase;
             if (indexDefBase != null)
-            {
-                if (existingIndex.Definition.Equals(indexDefBase, ignoreFormatting: true, ignoreMaxIndexOutputs: true))
-                    return IndexCreationOptions.Noop;
+                result = existingIndex.Definition.Compare(indexDefBase);
 
-                return existingIndex.Definition.Equals(indexDefBase, ignoreFormatting: true, ignoreMaxIndexOutputs: true)
-                           ? IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex
-                           : IndexCreationOptions.Update;
+            if (result == IndexDefinitionCompareDifferences.All)
+                return IndexCreationOptions.Update;
+
+            result &= ~IndexDefinitionCompareDifferences.IndexId; // we do not care about IndexId
+
+            if (result == IndexDefinitionCompareDifferences.None)
+                return IndexCreationOptions.Noop;
+
+            if (result.HasFlag(IndexDefinitionCompareDifferences.Maps) || result.HasFlag(IndexDefinitionCompareDifferences.Reduce))
+                return IndexCreationOptions.Update;
+
+            if (result.HasFlag(IndexDefinitionCompareDifferences.Fields))
+                return IndexCreationOptions.Update;
+
+            if (result.HasFlag(IndexDefinitionCompareDifferences.Configuration))
+            {
+                var currentConfiguration = existingIndex.Configuration as SingleIndexConfiguration;
+                if (currentConfiguration == null) // should not happen
+                    return IndexCreationOptions.Update;
+
+                var newConfiguration = new SingleIndexConfiguration(indexDef.Configuration, _documentDatabase.Configuration);
+                var configurationResult = currentConfiguration.CalculateUpdateType(newConfiguration);
+                switch (configurationResult)
+                {
+                    case IndexUpdateType.None:
+                        break;
+                    case IndexUpdateType.Refresh:
+                        return IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex;
+                    case IndexUpdateType.Reset:
+                        return IndexCreationOptions.Update;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
             }
 
-            throw new NotSupportedException($"Not supported index definition type: {indexDefinition.GetType()}");
+            if (result.HasFlag(IndexDefinitionCompareDifferences.MapsFormatting) || result.HasFlag(IndexDefinitionCompareDifferences.ReduceFormatting))
+                return IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex;
+
+            return IndexCreationOptions.Update;
         }
 
         private IndexLockMode ValidateIndexDefinition(string name, out Index existingIndex)
@@ -483,10 +511,10 @@ namespace Raven.Server.Documents.Indexes
             if (Directory.Exists(path) == false)
                 return;
 
-            if(_logger.IsInfoEnabled)
+            if (_logger.IsInfoEnabled)
                 _logger.Info($"Starting to load indexes from {path}");
 
-            var indexes = new SortedList<int, Tuple<string,string>>();
+            var indexes = new SortedList<int, Tuple<string, string>>();
             foreach (var indexDirectory in new DirectoryInfo(path).GetDirectories())
             {
                 if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)

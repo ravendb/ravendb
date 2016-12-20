@@ -4,9 +4,6 @@ import database = require("models/resources/database");
 
 class getIdentitiesCommand extends commandBase {
 
-    /**
-    * @param ownerDb The database the collections will belong to.
-    */
     constructor(private ownerDb: database, private skip: number, private take: number) {
         super();
 

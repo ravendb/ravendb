@@ -50,7 +50,7 @@ class indexAceAutoCompleteProvider {
             = this.getCollectionAliasesInsideIndexText(session);
         // find the matching alias and get list of fields
         if (collectionAliases.length > 0) {
-            var matchingAliasKeyValue = collectionAliases.first(x => x.aliasKey.replace('.', '').trim() === currentToken.value.replace('.', '').trim());
+            var matchingAliasKeyValue = collectionAliases.find(x => x.aliasKey.replace('.', '').trim() === currentToken.value.replace('.', '').trim());
             if (!!matchingAliasKeyValue) {
                 // get list of fields according to it's collection's first row
                 if (matchingAliasKeyValue.aliasValuePrefix.toLowerCase() === "docs") {

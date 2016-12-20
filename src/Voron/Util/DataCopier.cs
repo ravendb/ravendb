@@ -7,6 +7,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using Sparrow;
 using Voron.Impl;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
@@ -33,6 +34,29 @@ namespace Voron.Util
                 }
             }
         }
+
+        public void ToStream(AbstractPager src, long startPage, long numberOfPages, Stream output)
+        {
+            if((_buffer.Length % src.PageSize) != 0)
+                throw new ArgumentException("The buffer length must be a multiple of the page size");
+
+            var steps = _buffer.Length/src.PageSize;
+
+            using(var tempTx = new TempPagerTransaction())
+            fixed (byte* pBuffer = _buffer)
+            {
+                for (long i = startPage; i < numberOfPages; i += steps)
+                {
+                    var pagesToCopy = (int) (i + steps > numberOfPages ? numberOfPages - i : steps);
+                    src.EnsureMapped(tempTx, i, pagesToCopy);
+                    var ptr = src.AcquirePagePointer(tempTx, i);
+                    Memory.Copy(pBuffer, ptr, pagesToCopy*src.PageSize);
+                    output.Write(_buffer, 0, pagesToCopy * src.PageSize);
+
+                }
+            }
+        }
+
 
         public void ToStream(StorageEnvironment env, JournalFile journal, long startPage, long pagesToCopy, Stream output)
         {

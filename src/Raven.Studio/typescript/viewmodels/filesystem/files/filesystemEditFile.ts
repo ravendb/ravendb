@@ -149,7 +149,7 @@ class filesystemEditFile extends viewModelBase {
 
     removeFromTopRecentFiles(fileName: string) {
         var currentFilesystemName = this.activeFilesystem().name;
-        var recentFilesForCurFilesystem = filesystemEditFile.recentDocumentsInFilesystem().first(x => x.filesystemName === currentFilesystemName);
+        var recentFilesForCurFilesystem = filesystemEditFile.recentDocumentsInFilesystem().find(x => x.filesystemName === currentFilesystemName);
         if (recentFilesForCurFilesystem) {
             recentFilesForCurFilesystem.recentFiles.remove(fileName);
         }
@@ -157,7 +157,7 @@ class filesystemEditFile extends viewModelBase {
 
     getTopRecentFiles() {
         var currentFilesystemName = this.activeFilesystem().name;
-        var recentFilesForCurFilesystem = filesystemEditFile.recentDocumentsInFilesystem().first(x => x.filesystemName === currentFilesystemName);
+        var recentFilesForCurFilesystem = filesystemEditFile.recentDocumentsInFilesystem().find(x => x.filesystemName === currentFilesystemName);
         if (recentFilesForCurFilesystem) {
             var value = recentFilesForCurFilesystem
                 .recentFiles()
@@ -187,7 +187,7 @@ class filesystemEditFile extends viewModelBase {
             var metaPropsToRemove = ["Raven-Last-Modified", "Raven-Creation-Date", "Last-Modified", "Creation-Date", "ETag", "RavenFS-Size" ];
 
             for (var property in metaDto) {
-                if (metaDto.hasOwnProperty(property) && metaPropsToRemove.contains(property)) {
+                if (metaDto.hasOwnProperty(property) && _.includes(metaPropsToRemove, property)) {
                     var value = metaDto[property];
                     if (typeof (value) != "string" && typeof (value) != "number") {
                         this.metaPropsToRestoreOnSave.push({ name: property, value: JSON.stringify(value) });
@@ -205,9 +205,9 @@ class filesystemEditFile extends viewModelBase {
     }
 
     appendRecentFile(fileId: string) {
-        var existingRecentFilesStore = filesystemEditFile.recentDocumentsInFilesystem.first(x=> x.filesystemName === this.filesystemForEditedFile.name);
+        var existingRecentFilesStore = filesystemEditFile.recentDocumentsInFilesystem().find(x => x.filesystemName === this.filesystemForEditedFile.name);
         if (existingRecentFilesStore) {
-            var existingDocumentInStore = existingRecentFilesStore.recentFiles.first(x=> x === fileId);
+            var existingDocumentInStore = existingRecentFilesStore.recentFiles().find(x => x === fileId);
             if (!existingDocumentInStore) {
                 if (existingRecentFilesStore.recentFiles().length === 5) {
                     existingRecentFilesStore.recentFiles.pop();

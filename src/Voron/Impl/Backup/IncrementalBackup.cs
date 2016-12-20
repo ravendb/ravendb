@@ -298,11 +298,11 @@ namespace Voron.Impl.Backup
         {
             using (env.Journal.Applicator.TakeFlushingLock())
             {
+                env.FlushLogToDataFile();
+
                 var transactionPersistentContext = new TransactionPersistentContext(true);
                 using (var txw = env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
                 {
-                    env.FlushLogToDataFile(txw);
-
                     using (var package = ZipFile.Open(singleBackupFile, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
                     {
                         if (package.Entries.Count == 0)
@@ -322,10 +322,11 @@ namespace Voron.Impl.Backup
         {
             using (env.Journal.Applicator.TakeFlushingLock())
             {
+                env.FlushLogToDataFile();
+
                 var transactionPersistentContext = new TransactionPersistentContext(true);
                 using (var txw = env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
                 {
-                    env.FlushLogToDataFile(txw);
 
                     var toDispose = new List<IDisposable>();
 
@@ -372,11 +373,14 @@ namespace Voron.Impl.Backup
                                     env.Options.InitialFileSize ?? env.Options.InitialLogFileSize);
                             toDispose.Add(recoveryPager);
 
-                            var reader = new JournalReader(pager, env.Options.DataPager, recoveryPager, 0, lastTxHeader);
-
-                            while (reader.ReadOneTransactionToDataFile(env.Options))
+                            using (
+                                var reader = new JournalReader(pager, env.Options.DataPager, recoveryPager, 0,
+                                    lastTxHeader))
                             {
-                                lastTxHeader = reader.LastTransactionHeader;
+                                while (reader.ReadOneTransactionToDataFile(env.Options))
+                                {
+                                    lastTxHeader = reader.LastTransactionHeader;
+                                }
                             }
                             break;
 

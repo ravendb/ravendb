@@ -156,33 +156,38 @@ namespace Voron.Impl.Journal
                     RecoverCurrentJournalSize(pager);
 
                     var transactionHeader = txHeader->TransactionId == 0 ? null : txHeader;
-                    var journalReader = new JournalReader(pager, _dataPager, recoveryPager, lastSyncedTransactionId, transactionHeader);
-                    journalReader.RecoverAndValidate(_env.Options);
-
-                    var lastReadHeaderPtr = journalReader.LastTransactionHeader;
-
-                    if (lastReadHeaderPtr != null)
+                    using (
+                        var journalReader = new JournalReader(pager, _dataPager, recoveryPager, lastSyncedTransactionId,
+                            transactionHeader))
                     {
-                        *txHeader = *lastReadHeaderPtr;
-                        lastSyncedTxId = txHeader->TransactionId;
-                        lastSyncedJournal = journalNumber;
-                    }
+                        journalReader.RecoverAndValidate(_env.Options);
 
-                    if (lastSyncedTxId != -1 && (journalReader.RequireHeaderUpdate || journalNumber == logInfo.CurrentJournal))
-                    {
-                        var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, pager.NumberOfAllocatedPages * _dataPager.PageSize);
-                        var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber);
-                        jrnlFile.InitFrom(journalReader);
-                        jrnlFile.AddRef(); // creator reference - write ahead log
+                        var lastReadHeaderPtr = journalReader.LastTransactionHeader;
 
-                        journalFiles.Add(jrnlFile);
-                    }
+                        if (lastReadHeaderPtr != null)
+                        {
+                            *txHeader = *lastReadHeaderPtr;
+                            lastSyncedTxId = txHeader->TransactionId;
+                            lastSyncedJournal = journalNumber;
+                        }
 
-                    if (journalReader.RequireHeaderUpdate) //this should prevent further loading of transactions
-                    {
-                        requireHeaderUpdate = true;
-                        break;
+                        if (lastSyncedTxId != -1 && (journalReader.RequireHeaderUpdate || journalNumber == logInfo.CurrentJournal))
+                        {
+                            var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, pager.NumberOfAllocatedPages * _dataPager.PageSize);
+                            var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber);
+                            jrnlFile.InitFrom(journalReader);
+                            jrnlFile.AddRef(); // creator reference - write ahead log
+
+                            journalFiles.Add(jrnlFile);
+                        }
+
+                        if (journalReader.RequireHeaderUpdate) //this should prevent further loading of transactions
+                        {
+                            requireHeaderUpdate = true;
+                            break;
+                        }
                     }
+                    
                 }
             }
 
@@ -430,7 +435,7 @@ namespace Voron.Impl.Journal
             }
 
 
-            public void ApplyLogsToDataFile(CancellationToken token, TimeSpan timeToWait, LowLevelTransaction transaction = null)
+            public void ApplyLogsToDataFile(CancellationToken token, TimeSpan timeToWait)
             {
                 if (token.IsCancellationRequested)
                     return;
@@ -457,8 +462,6 @@ namespace Voron.Impl.Journal
                     if (_waj._env.Disposed)
                         return;
 
-
-                    var alreadyInWriteTx = transaction != null && transaction.Flags == TransactionFlags.ReadWrite;
 
                     var jrnls = GetJournalSnapshots();
 
@@ -529,9 +532,9 @@ namespace Voron.Impl.Journal
 
                     try
                     {
-                        ApplyPagesToDataFileFromScratch(pagesToWrite, transaction, alreadyInWriteTx);
+                        ApplyPagesToDataFileFromScratch(pagesToWrite);
                     }
-                    catch(OutOfMemoryException e)
+                    catch (OutOfMemoryException e)
                     {
                         if (_waj._logger.IsOperationsEnabled)
                         {
@@ -553,15 +556,13 @@ namespace Voron.Impl.Journal
 
                     var unusedJournals = GetUnusedJournalFiles(jrnls, lastProcessedJournal, lastFlushedTransactionId);
 
-                    if (alreadyInWriteTx == false)
-                        _waj._env.FlushInProgressLock.EnterWriteLock();
+                    _waj._env.FlushInProgressLock.EnterWriteLock();
                     try
                     {
                         var transactionPersistentContext = new TransactionPersistentContext(true);
-                        using (var txw = alreadyInWriteTx ? null : _waj._env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
+                        using (var txw = _waj._env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
                         {
-                            if (alreadyInWriteTx == false)
-                                txw.JournalApplicatorTransaction();
+                            txw.JournalApplicatorTransaction();
 
                             _lastFlushedJournalId = lastProcessedJournal;
                             _lastFlushedTransactionId = lastFlushedTransactionId;
@@ -581,7 +582,7 @@ namespace Voron.Impl.Journal
                             if (_waj._files.Count == 0)
                                 _waj.CurrentFile = null;
 
-                            FreeScratchPages(unusedJournals, txw ?? transaction);
+                            FreeScratchPages(unusedJournals, txw);
 
                             if (txw != null)
                             {
@@ -596,8 +597,7 @@ namespace Voron.Impl.Journal
                     }
                     finally
                     {
-                        if (alreadyInWriteTx == false)
-                            _waj._env.FlushInProgressLock.ExitWriteLock();
+                        _waj._env.FlushInProgressLock.ExitWriteLock();
                     }
 
                     QueueDataFileSync();
@@ -793,50 +793,45 @@ namespace Voron.Impl.Journal
                 }
             }
 
-            private void ApplyPagesToDataFileFromScratch(Dictionary<long, PagePosition> pagesToWrite, LowLevelTransaction transaction, bool alreadyInWriteTx)
+            private void ApplyPagesToDataFileFromScratch(Dictionary<long, PagePosition> pagesToWrite)
             {
                 var scratchBufferPool = _waj._env.ScratchBufferPool;
                 var scratchPagerStates = new Dictionary<int, PagerState>();
 
                 try
                 {
-                    var totalPages = 0L;
-                    Page? last = null;
-                    var sortedPages = new List<Page>();
-                    foreach (var pagePosition in pagesToWrite.Values)
-                    {
-                        var scratchNumber = pagePosition.ScratchNumber;
-                        PagerState pagerState;
-                        if (scratchPagerStates.TryGetValue(scratchNumber, out pagerState) == false)
-                        {
-                            pagerState = scratchBufferPool.GetPagerState(scratchNumber);
-                            pagerState.AddRef();
-
-                            scratchPagerStates.Add(scratchNumber, pagerState);
-                        }
-
-                        var readPage = scratchBufferPool.ReadPage(transaction, scratchNumber, pagePosition.ScratchPos, pagerState);
-                        totalPages += _waj._dataPager.GetNumberOfPages(readPage);
-                        sortedPages.Add(readPage);
-                        if (last == null)
-                            last = readPage;
-                        if (last.Value.PageNumber < readPage.PageNumber)
-                            last = readPage;
-                    }
-                    Debug.Assert(last != null);
-
-                    var numberOfPagesInLastPage = last.Value.IsOverflow == false ? 1 :
-                        _waj._env.Options.DataPager.GetNumberOfOverflowPages(last.Value.OverflowSize);
-
-                    EnsureDataPagerSpacing(transaction, last.Value, numberOfPagesInLastPage, alreadyInWriteTx);
-
                     long written = 0;
-                    using (_waj._dataPager.Options.IoMetrics.MeterIoRate(_waj._dataPager.FileName, IoMetrics.MeterType.DataFlush,
-                            totalPages * _waj._dataPager.PageSize))
+                    using (var meter = _waj._dataPager.Options.IoMetrics.MeterIoRate(_waj._dataPager.FileName, IoMetrics.MeterType.DataFlush, 0))
                     {
-                        written += _waj._dataPager.Write(sortedPages);
-                    }
+                        var batchWrites = _waj._dataPager.BatchWrites;
+                        {
+                            foreach (var pagePosition in pagesToWrite.Values)
+                            {
+                                var scratchNumber = pagePosition.ScratchNumber;
+                                PagerState pagerState;
+                                if (scratchPagerStates.TryGetValue(scratchNumber, out pagerState) == false)
+                                {
+                                    pagerState = scratchBufferPool.GetPagerState(scratchNumber);
+                                    pagerState.AddRef();
 
+                                    scratchPagerStates.Add(scratchNumber, pagerState);
+                                }
+
+                                var numberOfPages = scratchBufferPool.CopyPage(
+                                    _waj._dataPager,
+                                    batchWrites,
+                                    scratchNumber,
+                                    pagePosition.ScratchPos,
+                                    pagerState);
+
+                                written += numberOfPages * _waj._dataPager.PageSize;
+                            }
+                        }
+                        batchWrites.Flush();
+
+                        meter.IncrementSize(written);
+
+                    }
 
                     _totalWrittenButUnsyncedBytes += written;
                 }
@@ -845,30 +840,6 @@ namespace Voron.Impl.Journal
                     foreach (var scratchPagerState in scratchPagerStates.Values)
                     {
                         scratchPagerState.Release();
-                    }
-                }
-            }
-
-            private void EnsureDataPagerSpacing(LowLevelTransaction transaction, Page last, int numberOfPagesInLastPage,
-                    bool alreadyInWriteTx)
-            {
-                if (_waj._dataPager.WillRequireExtension(last.PageNumber, numberOfPagesInLastPage) == false)
-                    return;
-
-                if (alreadyInWriteTx)
-                {
-                    var pagerState = _waj._dataPager.EnsureContinuous(last.PageNumber, numberOfPagesInLastPage);
-                    transaction.EnsurePagerStateReference(pagerState);
-                }
-                else
-                {
-                    var transactionPersistentContext = new TransactionPersistentContext();
-                    using (var tx = _waj._env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite).JournalApplicatorTransaction())
-                    {
-                        var pagerState = _waj._dataPager.EnsureContinuous(last.PageNumber, numberOfPagesInLastPage);
-                        tx.EnsurePagerStateReference(pagerState);
-
-                        tx.Commit();
                     }
                 }
             }
@@ -1111,6 +1082,7 @@ namespace Voron.Impl.Journal
             var pagerState = compressionPager.EnsureContinuous(0, pagesRequired);
             tx.EnsurePagerStateReference(pagerState);
 
+            compressionPager.EnsureMapped(tx, 0, pagesRequired);
             var outputBuffer = compressionPager.AcquirePagePointer(tx, 0);
 
             var pagesInfo = (TransactionHeaderPageInfo*)outputBuffer;

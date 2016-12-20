@@ -25,7 +25,7 @@ namespace Voron.Impl.Paging
             return "FragmentedPureMemoryPager";
         }
 
-        public override unsafe byte* AcquirePagePointer(LowLevelTransaction tx, long pageNumber, PagerState pagerState = null)
+        public override unsafe byte* AcquirePagePointer(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)
         {
             long page = 0;
             foreach (var buffer in _buffers)
@@ -67,8 +67,5 @@ namespace Voron.Impl.Paging
         {
         }
 
-        public override void MaybePrefetchMemory(List<TreePage> sortedPagesToWrite)
-        {
-        }
     }
 }

@@ -89,7 +89,7 @@ namespace Raven.Server.Smuggler.Documents
                                 operateOnType = null;
                                 break;
                             }
-
+                            context.CachedProperties.NewDocument();
                             var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "ImportObject", parser, state);
                             builder.ReadNestedObject();
                             while (builder.Read() == false)

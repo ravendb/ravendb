@@ -14,7 +14,6 @@ namespace Raven.Tests.Issues
     using Raven.Client.Document;
 
     using Xunit;
-    using Xunit.Extensions;
 
     public class RavenDB_1333 : RavenTest
     {
@@ -333,11 +332,10 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Theory]
-        [PropertyData("Storages")]
-        public void ForDocumentsOfTypeRemote1(string storage)
+        [Fact]
+        public void ForDocumentsOfTypeRemote1()
         {
-            using (var store = NewRemoteDocumentStore(requestedStorage: storage))
+            using (var store = NewRemoteDocumentStore(requestedStorage:"esent",fiddler:true))
             {
                 var list = new BlockingCollection<DocumentChangeNotification>();
 

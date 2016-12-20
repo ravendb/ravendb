@@ -1,7 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import getIndexingBatchStatsCommand = require("commands/database/debug/getIndexingBatchStatsCommand");
 import d3 = require('d3');
-import nv = require('nvd3');
 
 class metricsIndexBatchSize extends viewModelBase {
     /*

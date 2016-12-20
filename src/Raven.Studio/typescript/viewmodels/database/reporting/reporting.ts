@@ -116,10 +116,10 @@ class reporting extends viewModelBase {
     }
 
     selectInitialIndex(indexToActivateOrNull: string) {
-        if (indexToActivateOrNull && this.indexNames.contains(indexToActivateOrNull)) {
+        if (indexToActivateOrNull && _.includes(this.indexNames(), indexToActivateOrNull)) {
             this.setSelectedIndex(indexToActivateOrNull);
         } else if (this.indexNames().length > 0) {
-            this.setSelectedIndex(this.indexNames.first());
+            this.setSelectedIndex(_.first(this.indexNames()));
         }
     }
 
@@ -188,7 +188,7 @@ class reporting extends viewModelBase {
         var facets = this.addedValues().map(v => v.toDto());
         var groupedFacets: facetDto[] = [];
         facets.forEach((curFacet) => {
-            var foundFacet = groupedFacets.first(x => x.AggregationField == curFacet.AggregationField);
+            var foundFacet = groupedFacets.find(x => x.AggregationField == curFacet.AggregationField);
 
             if (foundFacet) {
                 foundFacet.Aggregation += curFacet.Aggregation;

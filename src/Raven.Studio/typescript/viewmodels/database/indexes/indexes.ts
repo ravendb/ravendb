@@ -49,17 +49,25 @@ class indexes extends viewModelBase {
     constructor() {
         super();
         this.initObservables();
+        this.bindToCurrentInstance(
+            "lowPriority", "highPriority", "normalPriority",
+            "resetIndex", "deleteIndex",
+            "unlockIndex", "lockIndex", "lockErrorIndex", "lockSideBySide",
+            "enableIndex", "disableIndex",
+            "unlockSelectedIndexes", "lockSelectedIndexes", "lockSideBySideSelectedIndexes", "lockErrorSelectedIndexes",
+            "deleteSelectedIndexes", "startIndexing", "stopIndexing", "resumeIndexing", "pauseUntilRestart", "toggleSelectAll"
+        );
     }
 
     private getAllIndexes(): index[] {
         const all: index[] = [];
-        this.indexGroups().forEach(g => all.pushAll(g.indexes()));
-        return all.distinct();
+        this.indexGroups().forEach(g => all.push(...g.indexes()));
+        return _.uniq(all);
     }
 
     private getSelectedIndexes(): Array<index> {
         const selectedIndexes = this.selectedIndexesName();
-        return this.getAllIndexes().filter(x => selectedIndexes.contains(x.name));
+        return this.getAllIndexes().filter(x => _.includes(selectedIndexes, x.name));
     }
 
     private initObservables() {
@@ -124,21 +132,18 @@ class indexes extends viewModelBase {
             .done(([stats]: [Array<Raven.Client.Data.Indexes.IndexStats>], [replacements]: [indexReplaceDocument[]], [statuses]: [Raven.Client.Data.Indexes.IndexingStatus]) => this.processData(stats, replacements, statuses));
     }
 
-    processData(stats: Array<Raven.Client.Data.Indexes.IndexStats>, replacements: indexReplaceDocument[], statuses: Raven.Client.Data.Indexes.IndexingStatus) {
+    private processData(stats: Array<Raven.Client.Data.Indexes.IndexStats>, replacements: indexReplaceDocument[], statuses: Raven.Client.Data.Indexes.IndexingStatus) {
         //TODO: handle replacements
 
-        const pausedStatus = "Paused" as Raven.Client.Data.Indexes.IndexRunningStatus;
-
-        this.indexingEnabled(statuses.Status !== pausedStatus);
+        this.indexingEnabled(statuses.Status !== "Paused");
 
         stats
             .map(i => new index(i))
             .forEach(i => {
-                const paused = !!statuses.Indexes.find(x => x.Name === i.name && x.Status === pausedStatus);
+                const paused = !!statuses.Indexes.find(x => x.Name === i.name && x.Status === "Paused");
                 i.pausedUntilRestart(paused);
                 this.putIndexIntoGroups(i);
             });
-                 
     }
 
     private putIndexIntoGroups(i: index): void {
@@ -146,9 +151,9 @@ class indexes extends viewModelBase {
     }
 
     private putIndexIntoGroupNamed(i: index, groupName: string): void {
-        const group = this.indexGroups.first(g => g.entityName === groupName);
+        const group = this.indexGroups().find(g => g.entityName === groupName);
         if (group) {
-            const oldIndex = group.indexes.first((cur: index) => cur.name === i.name);
+            const oldIndex = group.indexes().find((cur: index) => cur.name === i.name);
             if (oldIndex) {
                 group.indexes.replace(oldIndex, i);
             } else {
@@ -209,7 +214,7 @@ class indexes extends viewModelBase {
         this.resetsInProgress.delete(i.name);
     }
 
-    processIndexEvent(e: Raven.Abstractions.Data.IndexChangeNotification) {
+    private processIndexEvent(e: Raven.Abstractions.Data.IndexChangeNotification) {
         const indexRemovedEvent = "IndexRemoved" as Raven.Abstractions.Data.IndexChangeTypes;
         if (e.Type === indexRemovedEvent) {
             if (!this.resetsInProgress.has(e.Name)) {
@@ -359,7 +364,7 @@ class indexes extends viewModelBase {
         ];
     }
 
-    processReplaceEvent() {
+    private processReplaceEvent() {
         setTimeout(() => this.fetchIndexes(), 10);
     }
 
@@ -384,7 +389,23 @@ class indexes extends viewModelBase {
         new forceIndexReplace(idx.name, this.activeDatabase()).execute();
     }
 
-    setLockModeSelectedIndexes(lockModeString: Raven.Abstractions.Indexing.IndexLockMode, lockModeStrForTitle: string) {
+    unlockSelectedIndexes() {
+        this.setLockModeSelectedIndexes("Unlock", "Unlock");
+    }
+
+    lockSelectedIndexes() {
+        this.setLockModeSelectedIndexes("LockedIgnore", "Lock");
+    }
+
+    lockSideBySideSelectedIndexes() {
+        this.setLockModeSelectedIndexes("SideBySide", "Lock (Side By Side)");
+    }
+
+    lockErrorSelectedIndexes() {
+        this.setLockModeSelectedIndexes("LockedError", "Lock (Error)");
+    }
+
+    private setLockModeSelectedIndexes(lockModeString: Raven.Abstractions.Indexing.IndexLockMode, lockModeStrForTitle: string) {
         if (this.lockModeCommon() === lockModeString)
             return;
 
@@ -480,7 +501,7 @@ class indexes extends viewModelBase {
             this.indexGroups().forEach(indexGroup => {
                 if (!indexGroup.groupHidden()) {
                     indexGroup.indexes().forEach(index => {
-                        if (!index.filteredOut() && !namesToSelect.contains(index.name)) {
+                        if (!index.filteredOut() && !_.includes(namesToSelect, index.name)) {
                             namesToSelect.push(index.name);
                         }
                     });

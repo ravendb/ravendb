@@ -29,6 +29,11 @@ class transformers extends viewModelBase {
 
     constructor() {
         super();
+
+        this.bindToCurrentInstance("deleteTransformer", "deleteSelectedTransformers",
+            "unlockTransformer", "lockTransformer",
+            "unlockSelectedTransformers", "lockSelectedTransformers");
+
         this.initObservables();
     }
 
@@ -118,7 +123,7 @@ class transformers extends viewModelBase {
         }
     }
 
-    findTransformerByName(transformerName: string): transformer {
+    private findTransformerByName(transformerName: string): transformer {
         const transformsGroups = this.transformersGroups();
         for (let i = 0; i < transformsGroups.length; i++) {
             const group = transformsGroups[i];
@@ -134,14 +139,14 @@ class transformers extends viewModelBase {
         return null;
     }
 
-    putTransformerIntoGroup(trans: transformer) {
+    private putTransformerIntoGroup(trans: transformer) {
         eventsCollector.default.reportEvent("transformers", "put-into-group");
 
         const groupName = trans.name().split("/")[0];
-        const group = this.transformersGroups.first(g => g.entityName === groupName);
+        const group = this.transformersGroups().find(g => g.entityName === groupName);
 
         if (group) {
-            const existingTrans = group.transformers.first((cur: transformer) => cur.name() === trans.name());
+            const existingTrans = group.transformers().find((cur: transformer) => cur.name() === trans.name());
 
             if (!existingTrans) {
                 group.transformers.push(trans);
@@ -162,13 +167,13 @@ class transformers extends viewModelBase {
 
     private getAllTransformers(): transformer[] {
         var all: transformer[] = [];
-        this.transformersGroups().forEach(g => all.pushAll(g.transformers()));
-        return all.distinct();
+        this.transformersGroups().forEach(g => all.push(...g.transformers()));
+        return _.uniq(all);
     }
 
     private getSelectedTransformers(): Array<transformer> {
         const selectedTransformers = this.selectedTransformersName();
-        return this.getAllTransformers().filter(x => selectedTransformers.contains(x.name()));
+        return this.getAllTransformers().filter(x => _.includes(selectedTransformers, x.name()));
     }
 
     deleteTransformer(transformerToDelete: transformer) {
@@ -188,7 +193,15 @@ class transformers extends viewModelBase {
         this.transformersGroups.remove((item: transformerGroup) => item.transformers().length === 0);
     }
 
-    setLockModeSelectedTransformers(lockModeString: Raven.Abstractions.Indexing.TransformerLockMode,
+    unlockSelectedTransformers() {
+        this.setLockModeSelectedTransformers("Unlock", "Unlock");
+    }
+
+    lockSelectedTransformers() {
+        this.setLockModeSelectedTransformers("LockedIgnore", "Lock");
+    }
+
+    private setLockModeSelectedTransformers(lockModeString: Raven.Abstractions.Indexing.TransformerLockMode,
         localModeString: string) {
 
         if (this.lockModeCommon() === lockModeString)

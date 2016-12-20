@@ -21,10 +21,24 @@ namespace Raven.Server.Documents.Indexes
         private volatile IndexingPerformanceStats _performanceStats;
         private bool _completed;
 
-        public IndexingStatsAggregator(int id)
+        public IndexingStatsAggregator(int id, IndexingStatsAggregator lastStats)
         {
             Id = id;
-            StartTime = SystemTime.UtcNow;
+
+            var now = SystemTime.UtcNow;
+            if (lastStats == null)
+                StartTime = now;
+            else
+            {
+                var lastCompleted = lastStats.StartTime.Add(lastStats._scope.Duration);
+
+                // due to different precision of DateTimes and Stopwatches we might have current date 
+                // smaller than completed one of the latest batch
+                // let us adjust current start to avoid overlapping on the performance graph
+
+                StartTime = lastCompleted > now ? lastCompleted : now;
+            }
+            
             _stats = new IndexingRunStats();
         }
 
@@ -99,7 +113,7 @@ namespace Raven.Server.Documents.Indexes
             return new IndexingPerformanceStats(_scope.Duration)
             {
                 Started = StartTime,
-                Completed = completed ? StartTime.AddMilliseconds(_scope.Duration.TotalMilliseconds) : (DateTime?)null,
+                Completed = completed ? StartTime.Add(_scope.Duration) : (DateTime?)null,
                 Details = _scope.ToIndexingPerformanceOperation("Indexing"),
                 InputCount = _stats.MapAttempts,
                 SuccessCount = _stats.MapSuccesses,

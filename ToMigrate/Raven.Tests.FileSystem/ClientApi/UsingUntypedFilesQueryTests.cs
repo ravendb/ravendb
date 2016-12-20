@@ -43,7 +43,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         public void CanUnderstandParamArrayContains()
         {
             var q = CreateUserQuery().WhereIn("Name", new[] { "file.csv", "file.txt" });
-            Assert.Equal("@in<__fileName>:(file.csv,file.txt)", q.ToString());
+            Assert.Equal("@in<__fileName>:(file.csv , file.txt)", q.ToString());
         }
 
         [Fact]
@@ -51,7 +51,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         {
             var array = new[] { "file.csv", "file.txt" };
             var q = CreateUserQuery().WhereIn("Name", array);
-            Assert.Equal("@in<__fileName>:(file.csv,file.txt)", q.ToString());
+            Assert.Equal("@in<__fileName>:(file.csv , file.txt)", q.ToString());
         }
 
         [Fact]
@@ -75,7 +75,7 @@ namespace Raven.Tests.FileSystem.ClientApi
         {
             IEnumerable<string> list = new[] { "file.csv", "file.txt" };
             var q = CreateUserQuery().WhereIn("Name", list);
-            Assert.Equal("@in<__fileName>:(file.csv,file.txt)", q.ToString());
+            Assert.Equal("@in<__fileName>:(file.csv , file.txt)", q.ToString());
         }
 
         [Fact]

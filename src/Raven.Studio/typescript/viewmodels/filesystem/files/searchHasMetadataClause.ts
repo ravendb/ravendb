@@ -29,7 +29,7 @@ class searchHasMetadataClause extends searchDialogViewModel {
                 {
                     x = x.filter((item: string, pos: number, arr: string[]) =>
                         { 
-                            return item[0] != ("_") && !searchHasMetadataClause.ExcludedMetadataFields.contains(item)
+                            return item[0] != ("_") && !_.includes(searchHasMetadataClause.ExcludedMetadataFields, item)
                         });
                     this.keySearchResults(x); 
                 });

@@ -104,7 +104,7 @@ class cluster extends viewModelBase {
 
     updateNodesStatus(status: Array<clusterNodeStatusDto>) {
         status.forEach(nodeStatus => {
-            var nci = this.topology().allNodes().first(n => n.uri() === nodeStatus.Uri);
+            var nci = this.topology().allNodes().find(n => n.uri() === nodeStatus.Uri);
             if (nci) {
                 nci.status(nodeStatus.Status);
             }

@@ -6,6 +6,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow;
+using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron.Global;
 using Voron.Impl.FileHeaders;
@@ -22,6 +23,7 @@ namespace Voron
         public string TempPath { get; }
 
         public event EventHandler<RecoveryErrorEventArgs> OnRecoveryError;
+        public event EventHandler<NonDurabalitySupportEventArgs> OnNonDurabaleFileSystemError;
 
         public abstract override string ToString();
 
@@ -35,6 +37,18 @@ namespace Voron
             }
 
             handler(this, new RecoveryErrorEventArgs(message, e));
+        }
+
+        public void InvokeNonDurabaleFileSystemError(object sender, string message, Exception e)
+        {
+            var handler = OnNonDurabaleFileSystemError;
+            if (handler == null)
+            {
+                throw new InvalidDataException(message + Environment.NewLine +
+                    "An exception has been thrown because there isn't a listener to the OnNonDurabaleFileSystemError event on the storage options.", e);
+            }
+
+            handler(this, new NonDurabalitySupportEventArgs(message, e));
         }
 
         public long? InitialFileSize { get; set; }
@@ -138,6 +152,8 @@ namespace Voron
             IncrementalBackupEnabled = false;
 
             IoMetrics = new IoMetrics(256, 256);
+
+            _log = LoggingSource.Instance.GetLogger<StorageEnvironment>(tempPath);
         }
 
         public int ScratchBufferOverflowTimeout { get; set; }
@@ -189,9 +205,10 @@ namespace Voron
                 {
                     FilePath = Path.Combine(_basePath, Constants.DatabaseFilename);
                     if (RunningOnPosix)
-                        return new PosixMemoryMapPager(this, FilePath, InitialFileSize);
+                        return new PosixMemoryMapPager(this, FilePath, InitialFileSize, usePageProtection: true);
 
                     return new Win32MemoryMapPager(this, FilePath, InitialFileSize, usePageProtection: true);
+                    //return new SparseMemoryMappedPager(this, FilePath, InitialFileSize);
                 });
             }
 
@@ -326,6 +343,7 @@ namespace Voron
                         DeleteOnClose = true
                     };
                 }
+                //return new SparseMemoryMappedPager(this, scratchFile,initialSize, (Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary));
                 return new Win32MemoryMapPager(this, scratchFile, initialSize, (Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary));
             }
 
@@ -341,6 +359,9 @@ namespace Voron
                     fileAttributes: Win32NativeFileAttributes.SequentialScan);
                 win32MemoryMapPager.TryPrefetchingWholeFile();
                 return win32MemoryMapPager;
+                //return new SparseMemoryMappedPager(this, path,
+                //    access: Win32NativeFileAccess.GenericRead,
+                //    fileAttributes: Win32NativeFileAttributes.SequentialScan);
             }
         }
 
@@ -370,6 +391,7 @@ namespace Voron
                     if (RunningOnPosix)
                         return new PosixTempMemoryMapPager(this, Path.Combine(TempPath, filename), InitialFileSize);
                     return new Win32MemoryMapPager(this, Path.Combine(TempPath, filename), InitialFileSize, Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
+                    //return new SparseMemoryMappedPager(this, Path.Combine(TempPath, filename), InitialFileSize);
                 }, true);
             }
 
@@ -464,6 +486,8 @@ namespace Voron
                 if (RunningOnPosix)
                     return new PosixTempMemoryMapPager(this, Path.Combine(TempPath, filename), intialSize);
 
+                //return new SparseMemoryMappedPager(this, Path.Combine(TempPath, filename), intialSize,
+                //     Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
                 return new Win32MemoryMapPager(this, Path.Combine(TempPath, filename), intialSize,
                         Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
             }
@@ -473,6 +497,7 @@ namespace Voron
                 if (RunningOnPosix)
                     return new PosixMemoryMapPager(this, filename);
                 return new Win32MemoryMapPager(this, filename);
+                //return new SparseMemoryMappedPager(this, filename);
             }
 
             public override AbstractPager OpenJournalPager(long journalNumber)
@@ -521,12 +546,13 @@ namespace Voron
                RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
 
         public TransactionsMode TransactionsMode { get; set; }
-        public OpenFlags PosixOpenFlags = SafePosixOpenFlags;
+        public OpenFlags PosixOpenFlags;
         public Win32NativeFileAttributes WinOpenFlags = SafeWin32OpenFlags;
         public DateTime? NonSafeTransactionExpiration { get; set; }
 
 
         public const Win32NativeFileAttributes SafeWin32OpenFlags = Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering;
-        public static OpenFlags SafePosixOpenFlags = OpenFlags.O_DSYNC | OpenFlagsThatAreDifferentBetweenPlatforms.O_DIRECT;
+        public OpenFlags SafePosixOpenFlags = OpenFlags.O_DSYNC | OpenFlagsThatAreDifferentBetweenPlatforms.O_DIRECT;
+        private readonly Logger _log;
     }
 }

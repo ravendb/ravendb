@@ -55,18 +55,6 @@ namespace Voron.Platform.Posix
             PrefetchRanges(range);
         }
 
-        public override void MaybePrefetchMemory(List<TreePage> sortedPages)
-        {
-            if (Sparrow.Platform.CanPrefetch == false)
-                return; // not supported
-
-            if (sortedPages.Count == 0)
-                return;
-
-            var ranges = SortedPagesToList(sortedPages);
-            PrefetchRanges(ranges);
-        }
-
         public override unsafe void MaybePrefetchMemory(List<long> pagesToPrefetch)
         {
             if (Sparrow.Platform.CanPrefetch == false)
@@ -106,7 +94,7 @@ namespace Voron.Platform.Posix
             PrefetchRanges(range);
         }
 
-        public PosixAbstractPager(StorageEnvironmentOptions options) : base(options)
+        protected PosixAbstractPager(StorageEnvironmentOptions options, bool usePageProtection = false) : base(options, usePageProtection: usePageProtection)
         {
         }
     }

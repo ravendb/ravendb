@@ -10,7 +10,7 @@ namespace FastTests.Client.Queries
         void CanDoPrefixQueryOnAnalyzedFields()
         {
             using (var store = GetDocumentStore())
-            using (var session = store.OpenNewSession())
+            using (var session = store.OpenSession())
             {
                 new FooBarIndex().Execute(store);
                 session.Store(new Foo { Bar = "Shalom" });

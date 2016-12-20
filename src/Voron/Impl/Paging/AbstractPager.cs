@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Utils;
+using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Exceptions;
 using Voron.Platform.Win32;
@@ -28,6 +29,7 @@ namespace Voron.Impl.Paging
 
         private long _increaseSize;
         private DateTime _lastIncrease;
+        protected IPagerBatchWrites _batchWrites;
         private readonly int _pageSize;
         private readonly object _pagerStateModificationLocker = new object();
         public bool UsePageProtection { get; } = false;
@@ -85,7 +87,7 @@ namespace Voron.Impl.Paging
             _options = options;
             _pageSize = _options.PageSize;
             UsePageProtection = usePageProtection;
-
+            _batchWrites = new PagerBatchWrites(this);
             Debug.Assert((_pageSize - Constants.TreePageHeaderSize) / Constants.MinKeysInPage >= 1024);
 
 
@@ -151,13 +153,13 @@ namespace Voron.Impl.Paging
 
         protected abstract string GetSourceName();
 
-        public virtual byte* AcquirePagePointer(LowLevelTransaction tx, long pageNumber, PagerState pagerState = null)
+        public virtual byte* AcquirePagePointer(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)
         {
             if (Disposed)
                 ThrowAlreadyDisposedException();
 
             if (pageNumber > NumberOfAllocatedPages || pageNumber < 0)
-                ThrowOnInvalidPageNumber(pageNumber, tx.Environment);
+                ThrowOnInvalidPageNumber(pageNumber, tx?.Environment);
 
             var state = pagerState ?? _pagerState;
 
@@ -192,13 +194,13 @@ namespace Voron.Impl.Paging
         [Conditional("VALIDATE")]
         internal virtual void ProtectPageRange(byte* start, ulong size, bool force = false)
         {
-            // This method is currently implemented only in Win32MemoryMapPager, there is no POSIX support
+            // This method is currently implemented only in Win32MemoryMapPager and POSIX
         }
 
         [Conditional("VALIDATE")]
         internal virtual void UnprotectPageRange(byte* start, ulong size, bool force = false)
         {
-            // This method is currently implemented only in Win32MemoryMapPager, there is no POSIX support
+            // This method is currently implemented only in Win32MemoryMapPager and POSIX
         }
 
         public bool Disposed { get; private set; }
@@ -299,66 +301,73 @@ namespace Voron.Impl.Paging
             return true;
         }
 
-        protected List<Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY> SortedPagesToList(List<TreePage> sortedPages)
-        {
-            var rangesList = new List<Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY>();
-
-            long lastPage = -1;
-            int numberOfPagesInBatch = Sparrow.Platform.RunningOnPosix ? 32 : 8; // 128k in linux, 32k in windows - when you touch a page, let us reuse this
-
-            var sizeInPages = numberOfPagesInBatch;
-            foreach (var page in sortedPages)
-            {
-                if (lastPage == -1)
-                {
-                    lastPage = page.PageNumber;
-                }
-
-                var numberOfPagesInLastPage = page.IsOverflow == false
-                    ? 1
-                    : this.GetNumberOfOverflowPages(page.OverflowSize);
-
-                var endPage = page.PageNumber + numberOfPagesInLastPage - 1;
-
-                if (endPage <= lastPage + sizeInPages)
-                    continue; // already within the allocation granularity we have
-
-                if (page.PageNumber <= lastPage + sizeInPages + numberOfPagesInBatch)
-                {
-                    while (endPage > lastPage + sizeInPages)
-                    {
-                        sizeInPages += numberOfPagesInBatch;
-                    }
-
-                    continue;
-                }
-
-                rangesList.Add(new Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY
-                {
-                    VirtualAddress = AcquirePagePointer(null, lastPage),
-                    NumberOfBytes = (IntPtr)(sizeInPages * PageSize)
-                });
-
-                lastPage = page.PageNumber;
-                sizeInPages = numberOfPagesInBatch;
-                while (endPage > lastPage + sizeInPages)
-                {
-                    sizeInPages += numberOfPagesInBatch;
-                }
-            }
-
-            rangesList.Add(new Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY
-            {
-                VirtualAddress = AcquirePagePointer(null, lastPage),
-                NumberOfBytes = (IntPtr)(sizeInPages * PageSize)
-            });
-
-            return rangesList;
-        }
+        public IPagerBatchWrites BatchWrites => _batchWrites;
 
         public abstract void TryPrefetchingWholeFile();
         public abstract void MaybePrefetchMemory(List<long> pagesToPrefetch);
-        public abstract void MaybePrefetchMemory(List<TreePage> sortedPagesToWrite);
+
+        public virtual void EnsureMapped(IPagerLevelTransactionState tx, long page, int numberOfPages)
+        {
+            // nothing to do
+        }
+
+        public virtual int CopyPage(AbstractPager dest, IPagerBatchWrites destwPagerBatchWrites, long p, PagerState pagerState)
+        {
+            var src = AcquirePagePointer(null, p, pagerState);
+            var pageHeader = (PageHeader*)src;
+            int numberOfPages = 1;
+            if ((pageHeader->Flags & PageFlags.Overflow) == PageFlags.Overflow)
+            {
+                numberOfPages = this.GetNumberOfOverflowPages(pageHeader->OverflowSize);
+            }
+
+            dest.EnsureContinuous(pageHeader->PageNumber, numberOfPages);
+
+            destwPagerBatchWrites.Write(pageHeader->PageNumber, numberOfPages, src, null);
+            return numberOfPages;
+        }
+    }
+
+    public interface IPagerBatchWrites
+    {
+        unsafe void Write(long pageNumber, int numberOfPages, byte* source, PagerState pagerState);
+
+        void Flush();
+
+        void Clear();
+    }
+
+    public unsafe class PagerBatchWrites : IPagerBatchWrites
+    {
+        private readonly AbstractPager _abstractPager;
+
+        public PagerBatchWrites(AbstractPager abstractPager)
+        {
+            _abstractPager = abstractPager;
+        }
+
+        public  void Write(long pageNumber, int numberOfPages, byte* source, PagerState pagerState)
+        {
+            var toWrite = numberOfPages * _abstractPager.PageSize;
+            byte* destination = (pagerState ?? _abstractPager.PagerState).MapBase + pageNumber * _abstractPager.PageSize;
+
+            _abstractPager.UnprotectPageRange(destination, (ulong)toWrite);
+
+            Memory.BulkCopy(destination,
+                source,
+                toWrite);
+
+            _abstractPager.ProtectPageRange(destination, (ulong)toWrite);
+        }
+
+        public void Flush()
+        {
+        }
+
+        public void Clear()
+        {
+            
+        }
     }
 }
 

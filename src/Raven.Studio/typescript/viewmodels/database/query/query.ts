@@ -35,6 +35,7 @@ import recentQueriesStorage = require("common/recentQueriesStorage");
 import virtualTable = require("widgets/virtualTable/viewModel");
 import queryUtil = require("common/queryUtil");
 import eventsCollector = require("common/eventsCollector");
+import genUtils = require("common/generalUtils");
 
 class query extends viewModelBase {
     isTestIndex = ko.observable<boolean>(false);
@@ -105,7 +106,7 @@ class query extends viewModelBase {
         this.hasEditableIndex = ko.computed(() => this.selectedIndex() != null && this.selectedIndex().indexOf("dynamic/") !== 0);
         this.rawJsonUrl.subscribe((value: string) => ko.postbox.publish("SetRawJSONUrl", value));
         this.selectedIndexLabel = ko.computed(() => this.selectedIndex() === "dynamic" ? "All Documents" : this.selectedIndex());
-        this.containsAsterixQuery = ko.computed(() => this.queryText().contains("*.*"));
+        this.containsAsterixQuery = ko.computed(() => this.queryText().includes("*.*"));
         this.isStaticIndexSelected = ko.computed(() => this.selectedIndex() == null || this.selectedIndex().indexOf(this.dynamicPrefix) == -1);
         this.selectedIndexEditUrl = ko.computed(() => {
             if (this.queryStats()) {
@@ -159,17 +160,17 @@ class query extends viewModelBase {
         });
 
         this.isIndexMapReduce = ko.computed(() => {
-            var currentIndex = this.indexes.first(i=> i.name == this.selectedIndex());
+            var currentIndex = this.indexes().find(i=> i.name === this.selectedIndex());
             return !!currentIndex && currentIndex.hasReduce;
         });
 
         this.isDynamicIndex = ko.computed(() => {
-            var currentIndex = this.indexes.first(i=> i.name == this.selectedIndex());
+            var currentIndex = this.indexes().find(i=> i.name === this.selectedIndex());
             return !!currentIndex && currentIndex.name.startsWith("Auto/");
         });
 
         this.enableDeleteButton = ko.computed(() => {
-            var currentIndex = this.indexes.first(i=> i.name == this.selectedIndex());
+            var currentIndex = this.indexes().find(i=> i.name === this.selectedIndex());
             var isMapReduce = this.isIndexMapReduce();
             var isDynamic = this.isDynamicIndex();
             return !!currentIndex && !isMapReduce && !isDynamic;
@@ -179,8 +180,11 @@ class query extends viewModelBase {
 
         // Refetch the index fields whenever the selected index name changes.
         this.selectedIndex
-            .where(indexName => indexName != null)
-            .subscribe(indexName => this.fetchIndexFields(indexName));
+            .subscribe(indexName => {
+                if (indexName) {
+                    this.fetchIndexFields(indexName);
+                }
+            });
     }
 
     openQueryStats() {
@@ -334,20 +338,20 @@ class query extends viewModelBase {
 
     selectInitialQuery(indexNameOrRecentQueryHash: string) {
         if (!indexNameOrRecentQueryHash && this.indexes().length > 0) {
-            var firstIndexName = this.indexes.first().name;
+            var firstIndexName = _.first(this.indexes()).name;
             this.setSelectedIndex(firstIndexName);
         }
         else if (!indexNameOrRecentQueryHash) {
              // if no index exists ==> use the default dynamic/All Documents
              this.setSelectedIndex("dynamic");
         }
-        else if (this.indexes.first(i => i.name === indexNameOrRecentQueryHash) ||
+        else if (this.indexes().find(i => i.name === indexNameOrRecentQueryHash) ||
              indexNameOrRecentQueryHash.startsWith("dynamic")) {
              this.setSelectedIndex(indexNameOrRecentQueryHash);
         }
         else if (indexNameOrRecentQueryHash.indexOf("recentquery-") === 0) {
              var hash = parseInt(indexNameOrRecentQueryHash.substr("recentquery-".length), 10);
-             var matchingQuery = this.recentQueries.first(q => q.Hash === hash);
+             var matchingQuery = this.recentQueries().find(q => q.Hash === hash);
              if (matchingQuery) {
                  this.runRecentQuery(matchingQuery);
              }
@@ -506,12 +510,12 @@ class query extends viewModelBase {
             Sorts: sorts,
             TransformerQuery: transformerQuery,
             UseAndOperator: useAndOperator,
-            Hash: (indexName + (queryText || "") +
+            Hash: genUtils.hashCode(indexName + (queryText || "") +
                 sorts.reduce((a, b) => a + b, "") +
                 (transformerQuery ? transformerQuery.toUrl() : "") +
                 showFields +
                 indexEntries +
-                useAndOperator).hashCode()
+                useAndOperator)
         };
 
         // Put the query into the URL, so that if the user refreshes the page, he's still got this query loaded.
@@ -519,7 +523,7 @@ class query extends viewModelBase {
         this.updateUrl(queryUrl);
 
         // Add this query to our recent queries list in the UI, or move it to the top of the list if it's already there.
-        var existing = this.recentQueries.first(q => q.Hash === newQuery.Hash);
+        var existing = this.recentQueries().find(q => q.Hash === newQuery.Hash);
         if (existing) {
             this.recentQueries.remove(existing);
             this.recentQueries.unshift(existing);
@@ -707,7 +711,7 @@ class query extends viewModelBase {
     }
 
     findTransformerByName(transformerName: string): Raven.Abstractions.Indexing.TransformerDefinition {
-        return this.allTransformers().first(x => x.Name === transformerName);
+        return this.allTransformers().find(x => x.Name === transformerName);
     }
 
     private getStoredQueryTransformerName(query: storedQueryDto): string {
@@ -754,7 +758,7 @@ class query extends viewModelBase {
     }
 
     getIndexSuggestions(indexName: string, info: queryFieldInfo) {
-        if (this.indexFields().contains(info.FieldName)) {
+        if (_.includes(this.indexFields(), info.FieldName)) {
             var task = new getIndexSuggestionsCommand(this.activeDatabase(), indexName, info.FieldName, info.FieldValue).execute();
             task.done((result: suggestionsDto) => {
                 for (var index = 0; index < result.Suggestions.length; index++) {

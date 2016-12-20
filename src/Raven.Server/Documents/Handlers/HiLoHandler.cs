@@ -6,6 +6,7 @@
 
 using System;
 using System.Globalization;
+using System.IO;
 using System.Threading.Tasks;
 using Raven.Server.Exceptions;
 using Raven.Server.Routing;
@@ -18,17 +19,15 @@ namespace Raven.Server.Documents.Handlers
 {
     public class HiLoHandler : DatabaseRequestHandler
     {
-        private const string ravenKeyGeneratorsHilo = "Raven/Hilo/";
-        private const string ravenKeyServerPrefix = "Raven/ServerPrefixForHilo";
+        private const string RavenKeyGeneratorsHilo = "Raven/Hilo/";
+        private const string RavenKeyServerPrefix = "Raven/ServerPrefixForHilo";
 
-        private static long CalculateCapacity(string lastSizeStr, string lastRangeAtStr)
+        private static long CalculateCapacity(long lastSize, string lastRangeAtStr)
         {
-            long lastSize;
             DateTime lastRangeAt;
-            if (long.TryParse(lastSizeStr, NumberStyles.Any, CultureInfo.InvariantCulture, out lastSize) == false ||
-                DateTime.TryParseExact(lastRangeAtStr, "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind,
-                    out lastRangeAt) == false)
-                return 32;
+            if (DateTime.TryParseExact(lastRangeAtStr, "o", CultureInfo.InvariantCulture,
+                DateTimeStyles.RoundtripKind,out lastRangeAt) == false)
+                return Math.Max(32, lastSize);
 
             var span = DateTime.UtcNow - lastRangeAt;
 
@@ -36,9 +35,10 @@ namespace Raven.Server.Documents.Handlers
             {
                 return Math.Min(Math.Max(32, Math.Max(lastSize, lastSize * 2)), 1024 * 1024);
             }
+
             if (span.TotalSeconds > 60)
             {
-                return Math.Max(lastSize / 2, 32);
+                return Math.Max(32, lastSize / 2);
             }
 
             return Math.Max(32, lastSize);
@@ -55,16 +55,12 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out context))
             {
                 var tag = GetQueryStringValueAndAssertIfSingleAndNotEmpty("tag");
-                var lastSize = GetStringQueryString("lastBatchSize", false);
+                var lastSize = GetLongQueryString("lastBatchSize", false) ?? 0;
                 var lastRangeAt = GetStringQueryString("lastRangeAt", false);
                 var identityPartsSeparator = GetStringQueryString("identityPartsSeparator", false) ?? "/";
-                var lastMaxSt = GetStringQueryString("lastMax", false);
+                var lastMax = GetLongQueryString("lastMax", false) ?? 0;
 
                 var capacity = CalculateCapacity(lastSize, lastRangeAt);
-
-                long lastMax;
-                if (long.TryParse(lastMaxSt, NumberStyles.Any, CultureInfo.InvariantCulture, out lastMax) == false)
-                    lastMax = 0;
 
                 var cmd = new MergedNextHiLoCommand
                 {
@@ -105,7 +101,7 @@ namespace Raven.Server.Documents.Handlers
 
             public override void Execute(DocumentsOperationContext context, RavenTransaction tx)
             {
-                var hiLoDocumentKey = ravenKeyGeneratorsHilo + Key;
+                var hiLoDocumentKey = RavenKeyGeneratorsHilo + Key;
                 var prefix = Key + Separator;
 
                 long oldMax = 0;
@@ -115,22 +111,15 @@ namespace Raven.Server.Documents.Handlers
                 {
                     try
                     {
-                        serverPrefixDocReader = Database.DocumentsStorage.Get(context, ravenKeyServerPrefix)?.Data;
+                        serverPrefixDocReader = Database.DocumentsStorage.Get(context, RavenKeyServerPrefix)?.Data;
                         hiloDocReader = Database.DocumentsStorage.Get(context, hiLoDocumentKey)?.Data;
                     }
                     catch (DocumentConflictException e)
                     {
-                        // resolving the conflict by selecting the document with the highest number
-                        long highestMax = 0;
-                        foreach (var conflict in e.Conflicts)
-                        {
-                            long tmpMax;
-                            if (conflict.Doc.TryGet("Max", out tmpMax) && tmpMax > highestMax)
-                            {
-                                highestMax = tmpMax;
-                                hiloDocReader = conflict.Doc;
-                            }
-                        }
+                        throw new InvalidDataException(@"Failed to fetch HiLo document due to a conflict 
+                                                            on the document. This shouldn't happen, since
+                                                            it this conflict should've been resolved during replication.
+                                                             This exception should not happen and is likely a bug.",e);
                     }
 
                     string serverPrefix;
@@ -207,7 +196,7 @@ namespace Raven.Server.Documents.Handlers
 
             public override void Execute(DocumentsOperationContext context, RavenTransaction tx)
             {
-                var hiLoDocumentKey = ravenKeyGeneratorsHilo + Key;
+                var hiLoDocumentKey = RavenKeyGeneratorsHilo + Key;
 
                 var document = Database.DocumentsStorage.Get(context, hiLoDocumentKey);
 

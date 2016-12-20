@@ -3,33 +3,19 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Client.Extensions;
-using Raven.Database.Config;
-using Raven.Database.Config.Settings;
 using Raven.Tests.Common;
 
 using Xunit;
 using Raven.Database.Extensions;
-using Raven.Tests.Helpers.Util;
-
 using Xunit.Extensions;
 
 namespace Raven.Tests.Bundles.Encryption
 {
     public class EncryptionBackupAndRestore : RavenTest
     {
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
-        {
-            configuration.Modify(x => x.Server.MaxTimeForTaskToWaitForDatabaseToLoad, new TimeSetting(10, TimeUnit.Seconds), "10");
-
-            base.ModifyConfiguration(configuration);
-        }
-
         [Theory]
         [PropertyData("Storages")]
         public async Task CanRestoreAnEncryptedDatabase(string storageEngineTypeName)
@@ -45,7 +31,7 @@ namespace Raven.Tests.Bundles.Encryption
                     Settings = new Dictionary<string, string>
                     {
                         {"Raven/DataDir", @"~\Databases\Db1"},
-                        { RavenConfiguration.GetKey(x => x.Core._ActiveBundlesString), "Encryption"}
+                        {Constants.ActiveBundles, "Encryption"}
                     },
                     SecuredSettings = new Dictionary<string, string>
                     {
@@ -67,8 +53,8 @@ namespace Raven.Tests.Bundles.Encryption
                 }
 
                 var backupFolderDb1 = NewDataPath("BackupFolderDb1");
-                await store.AsyncDatabaseCommands.ForDatabase("Db1").GlobalAdmin.StartBackupAsync(backupFolderDb1, db1,false ,"Db1");
-                WaitForBackup(store.DatabaseCommands.ForDatabase("Db1"), true);
+                var operation = await store.AsyncDatabaseCommands.ForDatabase("Db1").GlobalAdmin.StartBackupAsync(backupFolderDb1, db1, false, "Db1");
+                operation.WaitForCompletion();
 
                 await store.AsyncDatabaseCommands.GlobalAdmin.StartRestoreAsync(new DatabaseRestoreRequest
                 {

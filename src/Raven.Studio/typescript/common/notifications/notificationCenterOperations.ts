@@ -65,7 +65,7 @@ class notificationCenterOperations {
             .execute()
             .done((operations: Raven.Server.Documents.PendingOperation[]) => {
                 operationIds.forEach(operationId => {
-                    var matchedOp = operations.first(x => x.Id === operationId);
+                    var matchedOp = operations.find(x => x.Id === operationId);
                     if (matchedOp) {
                         this.subscribeForOperation(operationId, n => this.onStatus(rs, n.OperationId, n.State)); //TODO: shold we pass task and onProgres here?
                         this.onOperationInfo(rs, matchedOp, operationId, null, null); //TODO: pass task, and on progress here
@@ -133,7 +133,7 @@ class notificationCenterOperations {
     }
 
     private getWatchedOperationById(operationId: number) {
-        return this.watchedOperations.first(x => x.operationId === operationId);
+        return this.watchedOperations().find(x => x.operationId === operationId);
     }
 
     private onStatus<TProgress extends Raven.Client.Data.IOperationProgress, TResult extends Raven.Client.Data.IOperationResult>(

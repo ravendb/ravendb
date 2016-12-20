@@ -13,7 +13,6 @@ namespace Raven.Tests.Issues
     using Raven.Abstractions.Indexing;
 
     using Xunit;
-    using Xunit.Extensions;
 
     public class LongIndexAndTransformerNames : RavenTest
     {
@@ -105,9 +104,8 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Theory]
-        [PropertyData("Storages")]
-        public void QueryingSuperLongIndexName(string storage)
+        [Fact]
+        public void QueryingSuperLongIndexName()
         {
             using (var store = NewDocumentStore())
             {
@@ -145,7 +143,7 @@ namespace Raven.Tests.Issues
                 Assert.DoesNotThrow(() => store.DatabaseCommands.Query(name, new IndexQuery(), null));
             }
 
-            using (var store = NewRemoteDocumentStore(requestedStorage: storage))
+            using (var store = NewRemoteDocumentStore(requestedStorage: "esent"))
             {
                 var name = new string('a', 200);
 

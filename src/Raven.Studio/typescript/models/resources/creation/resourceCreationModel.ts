@@ -47,7 +47,7 @@ abstract class resourceCreationModel {
             validation: [
                 {
                     validator: resourceDoesntExist,
-                    message: this.resourceType.capitalizeFirstLetter() + " already exists"
+                    message: _.upperFirst(this.resourceType) + " already exists"
                 }, {
                     validator: (val: string) => rg1.test(val),
                     message: `The {0} name can't contain any of the following characters: \ / : * ? " < > |`,
@@ -95,7 +95,7 @@ abstract class resourceCreationModel {
     }
 
     protected fillEncryptionSettingsIfNeeded(securedSettings: dictionary<string | boolean>) {
-        if (this.activeBundles().contains("Encryption")) {
+        if (_.includes(this.activeBundles(), "Encryption")) {
             securedSettings[configuration.encryption.encryptionKey] = this.encryption.key();
             securedSettings[configuration.encryption.algorithmType] = this.getEncryptionAlgorithmFullName(this.encryption.algorithm());
             securedSettings[configuration.encryption.encryptionKeyBitsPreference] = this.encryption.keyBitsPreference().toString();

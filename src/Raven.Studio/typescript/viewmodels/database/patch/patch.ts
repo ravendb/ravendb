@@ -28,6 +28,7 @@ import getPatchesCommand = require('commands/database/patch/getPatchesCommand');
 import killOperationComamnd = require('commands/operations/killOperationCommand');
 import eventsCollector = require("common/eventsCollector");
 import notificationCenter = require("common/notifications/notificationCenter");
+import genUtils = require("common/generalUtils");
 
 type indexInfo = {
     name: string;
@@ -137,8 +138,11 @@ class patch extends viewModelBase {
 
         // Refetch the index fields whenever the selected index name changes.
         this.selectedIndex
-            .where(indexName => indexName != null)
-            .subscribe(indexName => this.fetchIndexFields(indexName));
+            .subscribe(indexName => {
+                if (indexName) {
+                    this.fetchIndexFields(indexName);
+                }
+            });
 
         this.indicesToSelect = ko.computed(() => {
             var indicies = this.indices();
@@ -196,7 +200,7 @@ class patch extends viewModelBase {
                 return false;
             }
             var indexName = this.selectedIndex();
-            var usedIndex = this.indices().first(x => x.name === indexName);
+            var usedIndex = this.indices().find(x => x.name === indexName);
             if (usedIndex) { 
                 return usedIndex.isMapReduce;
             }
@@ -214,7 +218,7 @@ class patch extends viewModelBase {
 
         this.selectedDocumentIndices.subscribe(list => {
             if (list.length === 1) {
-                var firstCheckedOnList = list.first();
+                var firstCheckedOnList = list[0];
                 this.currentCollectionPagedItems().getNthItem(firstCheckedOnList)
                     .done(document => {
                         // load document directly from server as documents on list are loaded using doc-preview endpoint, which doesn't display entire document
@@ -306,7 +310,7 @@ class patch extends viewModelBase {
     selectInitialPatch(recentPatchHash: string) {
         if (recentPatchHash.indexOf("recentpatch-") === 0) {
             var hash = parseInt(recentPatchHash.substr("recentpatch-".length), 10);
-            var matchingPatch = this.recentPatches.first(q => q.Hash === hash);
+            var matchingPatch = this.recentPatches().find(q => q.Hash === hash);
             if (matchingPatch) {
                 this.useRecentPatch(matchingPatch);
             } else {
@@ -366,12 +370,12 @@ class patch extends viewModelBase {
 
                 if (this.patchDocument().selectedItem()) {
                     var selected = this.patchDocument().selectedItem();
-                    currentlySelectedCollection = this.collections.first(c => c.name === selected);
+                    currentlySelectedCollection = this.collections().find(c => c.name === selected);
                 }
 
                 this.collections(colls);
                 if (this.collections().length > 0) {
-                    this.setSelectedCollection(currentlySelectedCollection || this.collections().first());
+                    this.setSelectedCollection(currentlySelectedCollection || this.collections()[0]);
                 }
             });
     }
@@ -395,7 +399,7 @@ class patch extends viewModelBase {
                     }
                 }));
                 if (this.indices().length > 0) {
-                    this.setSelectedIndex(this.indices().first().name);
+                    this.setSelectedIndex(this.indices()[0].name);
                 }
             });
     }
@@ -450,7 +454,7 @@ class patch extends viewModelBase {
         switch (this.patchDocument().patchOnOption()) {
             case "Collection":
                 this.fetchAllCollections().then(() => {
-                    this.setSelectedCollection(this.collections().filter(coll => (coll.name === selectedItem)).first());
+                    this.setSelectedCollection(this.collections().filter(coll => (coll.name === selectedItem))[0]);
                 });
                 break;
             case "Index":
@@ -517,12 +521,12 @@ class patch extends viewModelBase {
             stringForHash += newPatch.Query;
         }
 
-        newPatch.Hash = stringForHash.hashCode();
+        newPatch.Hash = genUtils.hashCode(stringForHash);
 
         this.updatePageUrl(newPatch.Hash);
 
         // Add this query to our recent patches list in the UI, or move it to the top of the list if it's already there.
-        var existing = this.recentPatches.first(q => q.Hash === newPatch.Hash);
+        var existing = this.recentPatches().find(q => q.Hash === newPatch.Hash);
         if (existing) {
             this.recentPatches.remove(existing);
             this.recentPatches.unshift(existing);
@@ -696,7 +700,7 @@ class patch extends viewModelBase {
         switch (this.patchDocument().patchOnOption()) {
             case "Collection":
                 this.fetchAllCollections().then(() => {
-                    this.setSelectedCollection(this.collections().filter(coll => (coll.name === this.patchDocument().selectedItem())).first());
+                    this.setSelectedCollection(this.collections().filter(coll => (coll.name === this.patchDocument().selectedItem()))[0]);
                 });
                 break;
             case "Index":

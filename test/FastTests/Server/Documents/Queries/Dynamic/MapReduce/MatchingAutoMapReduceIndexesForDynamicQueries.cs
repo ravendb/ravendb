@@ -523,5 +523,17 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         {
             return _documentDatabase.IndexStore.GetIndex(name);
         }
+
+        public override void Dispose()
+        {
+            try
+            {
+                _documentDatabase.Dispose();
+            }
+            finally
+            {
+                base.Dispose();
+            }
+        }
     }
 }

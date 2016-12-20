@@ -70,7 +70,7 @@ class gapFinder {
         if (this.domain.length > 0) {
             // since domain is not empty push gap
 
-            const lastEnd = this.domain.last();
+            const lastEnd = _.last(this.domain);
             const gapStart = region[0];
             this.gapsPositions.push({
                 start: lastEnd,
@@ -156,7 +156,7 @@ class gapFinder {
         // requested:                |------|
         // items:    |----|  |-----|
         // result:                   |------|
-        if (start.getTime() > domain.last().getTime()) {
+        if (start.getTime() > _.last(domain).getTime()) {
             result.push(start);
             result.push(end);
             return result;
@@ -201,7 +201,7 @@ class gapFinder {
             }
 
             // if last item or next item starts after requested end
-            const isLastMatchingItem = e.getTime() === domain.last().getTime() || end.getTime() < domain[2 * i + 2].getTime();
+            const isLastMatchingItem = e.getTime() === _.last(domain).getTime() || end.getTime() < domain[2 * i + 2].getTime();
 
             if (end.getTime() < e.getTime()) {
                 effectiveEnd = end;

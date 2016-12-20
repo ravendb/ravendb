@@ -129,12 +129,12 @@ class replicationDestination {
 
     isSelected(col: collection) {
         var cols = this.specifiedCollections();
-        return !!cols.first(c => c.collection() === col.name);
+        return !!cols.find(c => c.collection() === col.name);
     }
 
     hasScript(col: collection) {
         var cols = this.specifiedCollections();
-        var item = cols.first(c => c.collection() === col.name);
+        var item = cols.find(c => c.collection() === col.name);
         if (!item) {
             return false;
         }

@@ -83,7 +83,11 @@
                         <div class="scroller">
                             <section>
                                 <ul class="database-list" data-bind="foreach: filteredResources">
-                                    <li><a href="#" data-bind="click: $parent.selectResource.bind($parent, $data), text: name" class="database"></a></li>
+                                    <li>
+                                        <a href="#" data-bind="click: $parent.selectResource.bind($parent, $data)" class="database">
+                                            <span data-bind="text: name"></span> <span data-bind="visible: disabled" class="badge badge-info">Disabled</span>
+                                        </a>
+                                    </li>
                                 </ul>
                             </section>
                         </div>

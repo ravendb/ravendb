@@ -286,8 +286,8 @@ select new
                 Assert.Contains("Count", indexes[0].Definition.MapFields.Keys);
                 Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
                 Assert.Equal(IndexPriority.Normal, indexes[0].Priority);
-                Assert.True(indexes[0].Definition.Equals(defOne, ignoreFormatting: true, ignoreMaxIndexOutputs: false));
-                Assert.True(defOne.Equals(indexes[0].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false, ignoreMaxIndexOutputs: false));
+                Assert.Equal(IndexDefinitionCompareDifferences.None, indexes[0].Definition.Compare(defOne));
+                Assert.True(defOne.Equals(indexes[0].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false));
                 Assert.Equal(0, indexes[0].MapReduceWorkContext.LastMapResultId);
 
                 Assert.Equal(2, indexes[1].IndexId);
@@ -302,8 +302,8 @@ select new
                 Assert.Contains("Total", indexes[1].Definition.MapFields.Keys);
                 Assert.Equal(IndexLockMode.SideBySide, indexes[1].Definition.LockMode);
                 Assert.Equal(IndexPriority.Normal, indexes[1].Priority);
-                Assert.True(indexes[1].Definition.Equals(defTwo, ignoreFormatting: true, ignoreMaxIndexOutputs: false));
-                Assert.True(defTwo.Equals(indexes[1].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false, ignoreMaxIndexOutputs: false));
+                Assert.Equal(IndexDefinitionCompareDifferences.None, indexes[1].Definition.Compare(defTwo));
+                Assert.True(defTwo.Equals(indexes[1].GetIndexDefinition(), compareIndexIds: false, ignoreFormatting: false));
                 Assert.Equal(-1, indexes[1].MapReduceWorkContext.LastMapResultId);
             }
         }

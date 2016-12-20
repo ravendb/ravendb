@@ -43,6 +43,9 @@ class connectedDocuments {
     };
 
     constructor(document: KnockoutObservable<document>, db: KnockoutObservable<database>, loadDocument: (docId: string) => void) {
+
+        _.bindAll(this, "toggleStar" as keyof this);
+
         this.document = document;
         this.db = db;
         this.document.subscribe((doc) => this.onDocumentLoaded(doc));

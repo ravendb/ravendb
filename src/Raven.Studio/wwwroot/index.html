@@ -12,8 +12,7 @@
 
         <link rel="shortcut icon" href="favicon.ico" />
 
-        <!-- build:css App/styles.css -->
-            <link rel="stylesheet" href="lib/nvd3/build/nv.d3.css" />
+        <!-- build:css Content/css/styles.css -->
             <link rel="stylesheet" href="lib/Durandal/css/durandal.css" />
             <link rel="stylesheet" href="Content/css/bootstrap/bootstrap.css" />
             <link rel="stylesheet" href="Content/css/styles.css" />
@@ -46,8 +45,8 @@
     <iframe id="downloadFrame" style="display: none" name="hidden-form"></iframe>
 
     <!-- build:js App/external-libs.js -->
-        <script type="text/javascript" src="lib/d3/d3.js"></script>
         <script type="text/javascript" src="lib/jquery/dist/jquery.js"></script>
+        <script type="text/javascript" src="lib/lodash/dist/lodash.js"></script>
         <script type="text/javascript" src="lib/blockUI/jquery.blockUI.js"></script>
         <script type="text/javascript" src="lib/knockout/dist/knockout.debug.js"></script>
         <script type="text/javascript" src="lib/knockout-validation/dist/knockout.validation.js"></script>
@@ -70,11 +69,10 @@
     <script data-main="App/main"></script>
     <!-- build:js App/main.js -->
         <script type="text/javascript" src="lib/requirejs/require.js"></script>
+        <script type="text/javascript" src="Content/ace/ace.js"></script>
+        <script type="text/javascript" src="Content/ace/ext-language_tools.js"></script>
+        <script type="text/javascript" src="Content/ace/worker-json.js"></script>
     <!-- /build -->
-
-    <script type="text/javascript" src="Content/ace/ace.js"></script>
-    <script type="text/javascript" src="Content/ace/ext-language_tools.js"></script>
-    <script type="text/javascript" src="Content/ace/worker-json.js"></script>
 
 </body>
 </html>

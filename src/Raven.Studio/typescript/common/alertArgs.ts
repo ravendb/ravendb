@@ -1,6 +1,7 @@
 /// <reference path="../../typings/tsd.d.ts" />
 
 import alertType = require("common/alertType");
+import genUtils = require("common/generalUtils");
 
 class alertArgs {
     id: string;
@@ -11,11 +12,7 @@ class alertArgs {
     onClickAction: () => any = null;
 
     constructor(public type: alertType, public title: string, public details: string = "", public httpStatusText: string = "", public displayInRecentErrors: boolean = true) {
-        const hashString = (title + details)
-            .hashCode()
-            .toString();
-
-        this.id = "alert_" + hashString;
+        this.id = "alert_" + genUtils.hashCode(title + details);
     }
 
     setupButtton(buttonName: string, onClickAction: () => any) {

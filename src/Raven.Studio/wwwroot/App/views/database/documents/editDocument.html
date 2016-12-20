@@ -48,16 +48,11 @@
             </div>
             <div class="flex-window-scroll">
                 <div class="panel-body objects-list-container">
-                    <!--<ul class="objects-list" data-bind="foreach: filteredResultSet">
-                        <li><a href="#" class="document" data-bind="text: id, attr: { href: href }"></a></li>
-                    </ul>-->
-
                     <virtual-grid params="fetcher: fetchCurrentTabDocs.bind($data), 
                                   showColumns: false, 
                                   showRowSelectionCheckbox: false, 
                                   columns: columns,
                                   resetItems: currentTab">
-
                     </virtual-grid>
                 </div>
             </div>
@@ -84,7 +79,7 @@
 
                         </div>
                         <div data-bind="if: !isCreatingNewDocument()">
-                            <a class="reset-color btn-toggle markFavourite" data-bind="click: connectedDocuments.toggleStar.bind(connectedDocuments, $data)">
+                            <a class="reset-color btn-toggle markFavourite" data-bind="click: connectedDocuments.toggleStar">
                                 <span data-bind="attr: { class: connectedDocuments.currentDocumentIsStarred()?'icon-star-filled favorite':'icon-star' }"></span>
                             </a>
                             <span class="obj-name" data-bind="text: userSpecifiedId">corp/SetObjectName</span>
@@ -129,7 +124,12 @@
                             <span class="sr-only">Toggle Dropdown</span>
                         </button>
                         <ul class="dropdown-menu">
-                            <li><a href="#" data-bind="click: generateCode, enable: !isSaveEnabled()">Copy as C# class</a></li>
+                            <li>
+                                <!-- Temp line, until issue #5847 is fixed  -->
+                                <a href="#" class="btn-prerelease" data-bind=""><i class="icon-umbrella"></i> Copy as C# class</a>
+                                <!-- Original line -->
+                                <!--<a href="#" data-bind="click: generateCode, enable: !isSaveEnabled()">Copy as C# class</a>-->
+                            </li>
                         </ul>
                     </div>
                 </div>

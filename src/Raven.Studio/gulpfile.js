@@ -6,6 +6,7 @@ var gulp = require('gulp'),
     gulpLoadPlugins = require('gulp-load-plugins'),
     plugins = gulpLoadPlugins(),
     path = require('path'),
+    fs = require('fs'),
     del = require('del'),
     Map = require('es6-map'),
     runSequence = require('run-sequence'),
@@ -26,7 +27,6 @@ gulp.task('clean', ['clean:js'], function () {
     del.sync(PATHS.releaseTarget);
     del.sync(['./typings/*', '!./typings/_studio/**', '!./typings/tsd.d.ts']);
     del.sync([PATHS.bowerSource]);
-
 });
 
 gulp.task('clean:js', function() {
@@ -115,26 +115,25 @@ gulp.task('release:favicon', function() {
         .pipe(gulp.dest(PATHS.releaseTarget));
 });
 
+gulp.task('release:ace-workers', function () {
+    return gulp.src("wwwroot/Content/ace/worker*.js")
+        .pipe(gulp.dest(PATHS.releaseTarget));
+});
+
 gulp.task('release:images', function() {
     return gulp.src('wwwroot/Content/img/*', { base: 'wwwroot/Content' })
-       .pipe(gulp.dest(PATHS.releaseTarget));
+       .pipe(gulp.dest(PATHS.releaseTargetContent));
 });
 
 gulp.task('release:fonts', function() {
     return gulp.src('wwwroot/Content/css/fonts/**/*')
-       .pipe(gulp.dest(path.join(PATHS.releaseTarget, 'App/fonts')));
+       .pipe(gulp.dest(path.join(PATHS.releaseTargetContentCss, 'fonts')));
 });
 
-gulp.task('release:ace', function () {
-    return gulp.src('wwwroot/Content/ace/*')
-        .pipe(gulp.dest(path.join(PATHS.releaseTarget, 'Content/ace')));
-});
-
-gulp.task('release:customlibs', function () {
-    const libs = [ 'rbush', 'ace' ].join(',');
-    const src = `wwwroot/Content/{${ libs }}/**/*`;
-    return gulp.src(src, { base: 'wwwroot/Content' })
-        .pipe(gulp.dest(path.join(PATHS.releaseTarget, 'Content')));
+//TODO: delete this task once we remove font awesome
+gulp.task('release:temp-font-awesome', function () {
+    return gulp.src('wwwroot/lib/font-awesome/fonts/**/*')
+       .pipe(gulp.dest(path.join(PATHS.releaseTargetContent, 'fonts')));
 });
 
 gulp.task('release:html', function() {
@@ -158,7 +157,7 @@ gulp.task('release:css', ['fix-jquery-ui'], function () {
     return gulp.src(PATHS.cssToMerge)
         .pipe(plugins.concatCss('styles.css', { rebaseUrls: false }))
         .pipe(plugins.cssnano())
-        .pipe(gulp.dest(PATHS.releaseTargetApp));
+        .pipe(gulp.dest(PATHS.releaseTargetContentCss));
 });
 
 gulp.task('release:libs', function() {
@@ -171,10 +170,26 @@ gulp.task('release:libs', function() {
         .pipe(gulp.dest(PATHS.releaseTargetApp));
 });
 
-gulp.task('release:durandal', function() {
+gulp.task('release:durandal', function () {
+    var extraModules = [
+        'transitions/fadeIn',
+        'widgets/virtualTable/viewmodel'
+    ];
+
+    var aceFileNames = fs.readdirSync(PATHS.aceDir)
+        .filter(x => x !== "." && x !== ".." && x !== "ace.js" && !x.startsWith("worker"));
+
+    for (var i = 0; i < aceFileNames.length; i++) {
+        var fileName = aceFileNames[i];
+        if (fileName.endsWith(".js")) {
+            var moduleName = "ace/" + path.basename(fileName, ".js");
+            extraModules.push(moduleName);
+        }
+    }
+
     return plugins.durandal({
         baseDir: 'wwwroot/App',
-        extraModules: ['transitions/fadeIn', 'widgets/virtualTable/viewModel'],
+        extraModules: extraModules,
         almond: true,
         minify: true,
         rjsConfigAdapter: function (cfg) {
@@ -240,11 +255,12 @@ gulp.task('release', function (cb) {
         [
             'release:libs',
             'release:favicon',
+            'release:ace-workers',
             'release:images',
             'release:html',
             'release:css',
             'release:fonts',
-            'release:customlibs',
+            'release:temp-font-awesome', //TODO: temp fix: we won't have font-awesome in final
             'release:durandal'
         ],
         cb);

@@ -21,11 +21,11 @@ class replicationsSetup {
             }
         }
         this.showRequestTimeSlaThreshold = ko.computed(() => {
-            return this.clientFailoverBehaviour() && this.clientFailoverBehaviour().contains("AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached");
+            return this.clientFailoverBehaviour() && this.clientFailoverBehaviour().includes("AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached");
         });
 
         this.clientFailoverBehaviour.subscribe(newValue => {
-            if (!newValue.contains('AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached')) {
+            if (!newValue.includes('AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached')) {
                 this.requestTimeSlaThreshold(undefined);
             } else if (!this.requestTimeSlaThreshold()) {
                 this.requestTimeSlaThreshold(100);
@@ -66,7 +66,7 @@ class replicationsSetup {
             return false;
         }
         var tokens = behaviour.split(",").map(x => x.trim());
-        return tokens.contains("ReadFromAllServers") && tokens.contains("AllowReadsFromSecondariesAndWritesToSecondaries");
+        return _.includes(tokens, "ReadFromAllServers") && _.includes(tokens, "AllowReadsFromSecondariesAndWritesToSecondaries");
     });
 
     readFromAllButSwitchWhenRequestTimeSlaThresholdIsReached = ko.computed(() => {
@@ -75,7 +75,7 @@ class replicationsSetup {
             return false;
         }
         var tokens = behaviour.split(",").map(x => x.trim());
-        return tokens.contains("ReadFromAllServers") && tokens.contains("AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached");
+        return _.includes(tokens, "ReadFromAllServers") && _.includes(tokens, "AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached");
     });
 }
 

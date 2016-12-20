@@ -4,7 +4,6 @@ import fileDownloader = require("common/fileDownloader");
 import getGlobalReplicationTopology = require("commands/resources/getGlobalReplicationTopology");
 import getDocumentsLeftToReplicate = require("commands/database/replication/getDocumentsLeftToReplicate");
 import d3 = require('d3');
-import dagre = require('dagre');
 import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 import shell = require("viewmodels/shell");
 import database = require("models/resources/database");

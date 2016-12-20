@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using Sparrow.Compression;
 using Sparrow.Utils;
 using Voron.Global;
@@ -10,7 +11,7 @@ using Voron.Impl.Paging;
 
 namespace Voron.Impl.Journal
 {
-    public unsafe class JournalReader
+    public unsafe class JournalReader : IPagerLevelTransactionState
     {
         private readonly AbstractPager _journalPager;
         private readonly AbstractPager _dataPager;
@@ -18,7 +19,7 @@ namespace Voron.Impl.Journal
 
         private readonly long _lastSyncedTransactionId;
         private long _readingPage;
-        private DiffApplier _diffApplier = new DiffApplier();
+        private readonly DiffApplier _diffApplier = new DiffApplier();
 
 
         public bool RequireHeaderUpdate { get; private set; }
@@ -72,7 +73,8 @@ namespace Voron.Impl.Journal
             _readingPage += transactionSize;
             var numberOfPages = _recoveryPager.GetNumberOfOverflowPages(current->UncompressedSize);
             _recoveryPager.EnsureContinuous(0, numberOfPages);
-            var outputPage = _recoveryPager.AcquirePagePointer(null, 0);
+            _recoveryPager.EnsureMapped(this, 0, numberOfPages);
+            var outputPage = _recoveryPager.AcquirePagePointer(this, 0);
             UnmanagedMemory.Set(outputPage, 0, (long)numberOfPages * options.PageSize);
 
             try
@@ -89,20 +91,22 @@ namespace Voron.Impl.Journal
             }
 
             var pageInfoPtr = (TransactionHeaderPageInfo*)outputPage;
-            
-            long totalRead = sizeof(TransactionHeaderPageInfo)*current->PageCount;
+
+            long totalRead = sizeof(TransactionHeaderPageInfo) * current->PageCount;
             for (var i = 0; i < current->PageCount; i++)
             {
-                if(totalRead > current->UncompressedSize)
+                if (totalRead > current->UncompressedSize)
                     throw new InvalidDataException($"Attempted to read position {totalRead} from transaction data while the transaction is size {current->UncompressedSize}");
 
                 Debug.Assert(_journalPager.Disposed == false);
                 Debug.Assert(_recoveryPager.Disposed == false);
 
-                _dataPager.EnsureContinuous(pageInfoPtr[i].PageNumber, GetNumberOfPagesFromSize(options, pageInfoPtr[i].Size));
-                var pagePtr = _dataPager.AcquirePagePointer(null, pageInfoPtr[i].PageNumber);
+                var numberOfPagesOnDestination = GetNumberOfPagesFromSize(options, pageInfoPtr[i].Size);
+                _dataPager.EnsureContinuous(pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
+                _dataPager.EnsureMapped(this, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
+                var pagePtr = _dataPager.AcquirePagePointer(this, pageInfoPtr[i].PageNumber);
 
-                var diffPageNumber = *(long*) (outputPage + totalRead);
+                var diffPageNumber = *(long*)(outputPage + totalRead);
                 if (pageInfoPtr[i].PageNumber != diffPageNumber)
                     throw new InvalidDataException($"Expected a diff for page {pageInfoPtr[i].PageNumber} but got one for {diffPageNumber}");
                 totalRead += sizeof(long);
@@ -135,7 +139,7 @@ namespace Voron.Impl.Journal
         internal static int GetNumberOfPagesFromSize(StorageEnvironmentOptions options, long size)
         {
             var lastPage = (size % options.PageSize == 0 ? 0 : 1);
-            return checked((int)(size/options.PageSize) + lastPage);
+            return checked((int)(size / options.PageSize) + lastPage);
         }
 
         public void RecoverAndValidate(StorageEnvironmentOptions options)
@@ -152,7 +156,7 @@ namespace Voron.Impl.Journal
 
         private bool TryReadAndValidateHeader(StorageEnvironmentOptions options, out TransactionHeader* current)
         {
-            current = (TransactionHeader*)_journalPager.Read(null, _readingPage).Base;
+            current = (TransactionHeader*)_journalPager.AcquirePagePointer(this, _readingPage);
 
             if (current->HeaderMarker != Constants.TransactionHeaderMarker)
             {
@@ -172,6 +176,10 @@ namespace Voron.Impl.Journal
             }
 
             ValidateHeader(current, LastTransactionHeader);
+
+            _journalPager.EnsureMapped(this, _readingPage,
+                GetNumberOfPagesFromSize(options, sizeof(TransactionHeader) + current->CompressedSize));
+            current = (TransactionHeader*)_journalPager.AcquirePagePointer(this, _readingPage);
 
             if ((current->TxMarker & TransactionMarker.Commit) != TransactionMarker.Commit)
             {
@@ -209,7 +217,7 @@ namespace Voron.Impl.Journal
         private bool ValidatePagesHash(StorageEnvironmentOptions options, TransactionHeader* current)
         {
             // The location of the data is the base pointer, plus the space reserved for the transaction header if uncompressed. 
-            byte* dataPtr = _journalPager.AcquirePagePointer(null, _readingPage) + sizeof(TransactionHeader);
+            byte* dataPtr = _journalPager.AcquirePagePointer(this, _readingPage) + sizeof(TransactionHeader);
 
             if (current->CompressedSize < 0)
             {
@@ -219,7 +227,7 @@ namespace Voron.Impl.Journal
                 return false;
             }
             if (current->CompressedSize >
-                (_journalPager.NumberOfAllocatedPages - _readingPage)*_journalPager.PageSize)
+                (_journalPager.NumberOfAllocatedPages - _readingPage) * _journalPager.PageSize)
             {
                 // we can't read past the end of the journal
                 RequireHeaderUpdate = true;
@@ -242,5 +250,23 @@ namespace Voron.Impl.Journal
         {
             return _journalPager.ToString();
         }
+
+        public void Dispose()
+        {
+            OnDispose?.Invoke(this);
+        }
+
+        Dictionary<AbstractPager, SparseMemoryMappedPager.TransactionState> IPagerLevelTransactionState.
+            SparsePagerTransactionState
+        { get; set; }
+
+        public event Action<IPagerLevelTransactionState> OnDispose;
+
+        void IPagerLevelTransactionState.EnsurePagerStateReference(PagerState state)
+        {
+            //nothing to do
+        }
+
+        StorageEnvironment IPagerLevelTransactionState.Environment => null;// not setup yet
     }
 }

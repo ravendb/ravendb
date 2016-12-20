@@ -8,6 +8,7 @@ import d3 = require("d3");
 import rbush = require("rbush");
 import gapFinder = require("common/helpers/graph/gapFinder");
 import generalUtils = require("common/generalUtils");
+import rangeAggregator = require("common/helpers/graph/rangeAggregator");
 
 type rTreeLeaf = {
     minX: number;
@@ -86,7 +87,7 @@ class hitTest {
         const clickLocation = d3.mouse(this.container.node());
         const items = this.findItems(clickLocation[0], clickLocation[1]);
 
-        const currentItem = items.filter(x => x.actionType === "trackItem").map(x => x.arg as Raven.Client.Data.Indexes.IndexingPerformanceOperation).first();
+        const currentItem = items.filter(x => x.actionType === "trackItem").map(x => x.arg as Raven.Client.Data.Indexes.IndexingPerformanceOperation)[0];
         this.handleTooltip(currentItem, clickLocation[0], clickLocation[1]);
     }
 
@@ -105,7 +106,8 @@ class metrics extends viewModelBase {
     static readonly colors = {
         axis: "#546175",
         gaps: "#ca1c59",
-        brushChartColor: "#008cc9",
+        brushChartColor: "#37404b",
+        brushChartStrokeColor: "#008cc9",
         trackBackground: "#2c343a",
         trackNameBg: "rgba(57, 67, 79, 0.8)",
         trackNameFg: "#98a7b7",
@@ -147,6 +149,8 @@ class metrics extends viewModelBase {
     }
 
     static readonly brushSectionHeight = 40;
+    static readonly brushSectionIndexesWorkHeight = 22;
+    static readonly brushSectionLineWidth = 1;
     static readonly trackHeight = 16; // height used for callstack item
     static readonly stackPadding = 1; // space between call stacks
     static readonly trackMargin = 4;
@@ -171,6 +175,7 @@ class metrics extends viewModelBase {
     private brush: d3.svg.Brush<number>;
     private xBrushNumericScale: d3.scale.Linear<number, number>;
     private xBrushTimeScale: d3.time.Scale<number, number>;
+    private yBrushValueScale: d3.scale.Linear<number, number>;
     private xNumericScale: d3.scale.Linear<number, number>;
     private brushSection: HTMLCanvasElement; // virtual canvas for brush section
     private brushContainer: d3.Selection<any>;
@@ -330,40 +335,60 @@ class metrics extends viewModelBase {
     }
 
     private prepareBrushSection() {
-        const timeRanges = this.extractTimeRanges();
-
-        this.gapFinder = new gapFinder(timeRanges, metrics.minGapSize);
-
-        const collapsedTimeRanges = graphHelper.collapseTimeRanges(timeRanges);
-        //TODO: maybe instead of collaping time range we should graph area chart with # currently indexing as y-axis
+        const timeRanges = this.extractTimeRanges(); 
+        const aggregatedRanges = new rangeAggregator(timeRanges);
+        const workData = aggregatedRanges.aggregate();
+        const maxConcurrentIndexes = aggregatedRanges.maxConcurrentIndexes;
 
         this.brushSection = document.createElement("canvas");
         this.brushSection.width = this.totalWidth;
         this.brushSection.height = metrics.brushSectionHeight;
 
-        const context = this.brushSection.getContext("2d");
-
+        this.gapFinder = new gapFinder(timeRanges, metrics.minGapSize);
         this.xBrushTimeScale = this.gapFinder.createScale(this.totalWidth, 0);
+        
+        this.yBrushValueScale = d3.scale.linear()
+            .domain([0, maxConcurrentIndexes])
+            .range([0, metrics.brushSectionIndexesWorkHeight]); 
 
+        const context = this.brushSection.getContext("2d");
         this.drawXaxis(context, this.xBrushTimeScale, metrics.brushSectionHeight);
 
         context.strokeStyle = metrics.colors.axis;
         context.strokeRect(0.5, 0.5, this.totalWidth - 1, metrics.brushSectionHeight - 1);
 
-        context.fillStyle = metrics.colors.brushChartColor;
-        context.strokeStyle = metrics.colors.brushChartColor;
-        context.lineWidth = 1;
+        context.fillStyle = metrics.colors.brushChartColor;  
+        context.strokeStyle = metrics.colors.brushChartStrokeColor; 
+        context.lineWidth = metrics.brushSectionLineWidth;
 
-        for (var i = 0; i < collapsedTimeRanges.length; i++) {
-            const currentRange = collapsedTimeRanges[i];
-            const x1 = this.xBrushTimeScale(currentRange[0]);
-            const x2 = this.xBrushTimeScale(currentRange[1]);
-            context.fillRect(x1, 18, x2 - x1, 10);
-            context.strokeRect(x1, 18, x2 - x1, 10);
+        // Draw area chart showing indexes work
+        let x1: number, x2: number, y0: number = 0, y1: number;
+        for (let i = 0; i < workData.length - 1; i++) {
+
+            context.beginPath();
+            x1 = this.xBrushTimeScale(new Date(workData[i].pointInTime));
+            y1 = Math.round(this.yBrushValueScale(workData[i].numberOfIndexesWorking)) + 0.5;
+            x2 = this.xBrushTimeScale(new Date(workData[i + 1].pointInTime));
+            context.moveTo(x1, metrics.brushSectionHeight - y0);
+            context.lineTo(x1, metrics.brushSectionHeight - y1);
+
+            // Don't want to draw line -or- rect at level 0
+            if (y1 !== 0) {
+                context.lineTo(x2, metrics.brushSectionHeight - y1);
+                context.fillRect(x1, metrics.brushSectionHeight - y1, x2-x1, y1);
+            } 
+
+            context.stroke();
+            y0 = y1; 
         }
 
-        this.drawBrushGaps(context);
+        // Draw last line:
+        context.beginPath();
+        context.moveTo(x2, metrics.brushSectionHeight - y1);
+        context.lineTo(x2, metrics.brushSectionHeight);
+        context.stroke(); 
 
+        this.drawBrushGaps(context);
         this.prepareBrush();
     }
 
@@ -417,7 +442,7 @@ class metrics extends viewModelBase {
             domain.push(indexName);
             range.push(currentOffset);
 
-            const isOpened = this.expandedTracks.contains(indexName);
+            const isOpened = _.includes(this.expandedTracks(), indexName);
 
             const itemHeight = isOpened ? metrics.openedTrackHeight : metrics.closedTrackHeight;
 
@@ -581,7 +606,7 @@ class metrics extends viewModelBase {
             const yStart = this.yScale(perfStat.IndexName);
 
             perfStat.Performance.forEach(perf => {
-                const isOpened = this.expandedTracks.contains(perfStat.IndexName);
+                const isOpened = _.includes(this.expandedTracks(), perfStat.IndexName);
 
                 context.fillStyle = metrics.colors.trackBackground;
                 context.fillRect(0, yStart, this.totalWidth, isOpened ? metrics.openedTrackHeight : metrics.closedTrackHeight);
@@ -603,7 +628,7 @@ class metrics extends viewModelBase {
         const extentFunc = gapFinder.extentGeneratorForScaleWithGaps(xScale);
 
         this.data.forEach(perfStat => {
-            const isOpened = this.expandedTracks.contains(perfStat.IndexName);
+            const isOpened = _.includes(this.expandedTracks(), perfStat.IndexName);
             let yStart = this.yScale(perfStat.IndexName);
             yStart += isOpened ? metrics.openedTrackPadding : metrics.closedTrackPadding;
 
@@ -678,7 +703,7 @@ class metrics extends viewModelBase {
             context.fillStyle = metrics.colors.trackNameFg;
             context.fillText(indexName, textStart + 0.5, yScale(indexName) + textShift);
 
-            const isOpened = this.expandedTracks.contains(indexName);
+            const isOpened = _.includes(this.expandedTracks(), indexName);
             context.fillStyle = isOpened ? metrics.colors.openedTrackArrow : metrics.colors.closedTrackArrow;
             graphHelper.drawArrow(context, 5, yScale(indexName) + 6, !isOpened);
         });
@@ -699,7 +724,7 @@ class metrics extends viewModelBase {
     }
 
     private onToggleIndex(indexName: string) {
-        if (this.expandedTracks.contains(indexName)) {
+        if (_.includes(this.expandedTracks(), indexName)) {
             this.expandedTracks.remove(indexName);
         } else {
             this.expandedTracks.push(indexName);

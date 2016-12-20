@@ -9,6 +9,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
+using Voron.Data;
 using Voron.Impl.Paging;
 
 namespace Voron.Impl.Scratch
@@ -219,6 +221,11 @@ namespace Voron.Impl.Scratch
             }
         }
 
+        public int CopyPage(AbstractPager dest, IPagerBatchWrites destPagerBatchWrites, long p, PagerState pagerState)
+        {
+            return _scratchPager.CopyPage(dest, destPagerBatchWrites, p, pagerState);
+        }
+
         public Page ReadPage(LowLevelTransaction tx, long p, PagerState pagerState = null)
         {
             return new Page(_scratchPager.AcquirePagePointer(tx, p, pagerState));
@@ -265,6 +272,11 @@ namespace Voron.Impl.Scratch
                 _allocatedPages.Add(value.PositionInScratchBuffer + i,
                     new PageFromScratchBuffer(value.ScratchFileNumber, value.PositionInScratchBuffer + i, 0, 1));
             }
+        }
+
+        public void EnsureMapped(LowLevelTransaction tx, long p, int numberOfPages)
+        {
+            _scratchPager.EnsureMapped(tx, p, numberOfPages);
         }
     }
 }

@@ -50,7 +50,7 @@ class topology {
 
         var leader = this.currentLeader();
         if (leader) {
-            var leaderNode = this.allNodes.first(n => n.name() === leader);
+            const leaderNode = this.allNodes().find(n => n.name() === leader);
             if (leaderNode) {
                 leaderNode.state("leader");
             }

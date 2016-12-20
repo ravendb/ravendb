@@ -61,7 +61,7 @@ namespace Raven.Tests.Counters
             {
                 using (var counterStore = new CounterStore
                 {
-                    Url = $"{server.DocumentStore.Url}:{server.Configuration.Core.Port}",
+                    Url = $"{server.DocumentStore.Url}:{server.Configuration.Port}",
                     Name = DefaultCounterStorageName					
                 })
                 {
@@ -73,7 +73,7 @@ namespace Raven.Tests.Counters
 
                 using (var counterStore = new CounterStore
                 {
-                    Url = $"{server.DocumentStore.Url}:{server.Configuration.Core.Port}",
+                    Url = $"{server.DocumentStore.Url}:{server.Configuration.Port}",
                     Name = DefaultCounterStorageName
                 })
                 {
@@ -144,7 +144,7 @@ namespace Raven.Tests.Counters
 
                 var summaries = await store.Advanced
                     .GetCountersByPrefix(counterGroupName,
-                            counterNamePrefix: CounterName + "A",skip:1,take:1);
+                            counterNamePrefix: CounterName + "A",skip: 1,take: 1);
 
                 Assert.Equal(1, summaries.Count);
                 Assert.DoesNotContain(CounterName + "AA", summaries.Select(x => x.CounterName));
@@ -158,7 +158,7 @@ namespace Raven.Tests.Counters
         [Theory]
         [InlineData(2)]
         [InlineData(-2)]
-        public async Task CountersReset_should_work(int delta)
+        public async Task CountrsReset_should_work(int delta)
         {
             using (var store = NewRemoteCountersStore(CounterStorageName))
             {
@@ -166,12 +166,12 @@ namespace Raven.Tests.Counters
                 await store.ChangeAsync(counterGroupName, CounterName, delta);
 
                 var total = await store.GetOverallTotalAsync(counterGroupName, CounterName);
-                Assert.Equal(total, delta);
+                Assert.Equal(total.Total, delta);
                 
                 await store.ResetAsync(counterGroupName, CounterName);
 
                 total = await store.GetOverallTotalAsync(counterGroupName, CounterName);
-                Assert.Equal(0, total);
+                Assert.Equal(0, total.Total);
             }	
         }
 
@@ -188,8 +188,8 @@ namespace Raven.Tests.Counters
                 await store.ChangeAsync(counterGroupName, CounterName, delta);
 
                 var total = await store.GetOverallTotalAsync(counterGroupName, CounterName);
-                Assert.Equal(total, delta);
-
+                Assert.Equal(total.Total, delta);
+                
                 AsyncHelpers.RunSync(() => store.DeleteAsync(counterGroupName, CounterName));
             }
         }
@@ -204,12 +204,12 @@ namespace Raven.Tests.Counters
                 await store.IncrementAsync(CounterGroupName, CounterName);
 
                 var total = await store.GetOverallTotalAsync(CounterGroupName, CounterName);
-                Assert.Equal(1, total);
+                Assert.Equal(1, total.Total);
 
                 await store.IncrementAsync(CounterGroupName, CounterName);
 
                 total = await store.GetOverallTotalAsync(CounterGroupName, CounterName);
-                Assert.Equal(2, total);
+                Assert.Equal(2, total.Total);
             }
         }
 
@@ -223,12 +223,12 @@ namespace Raven.Tests.Counters
                 await store.ChangeAsync(CounterGroupName, CounterName, 5);
 
                 var total = await store.GetOverallTotalAsync(CounterGroupName, CounterName);
-                Assert.Equal(5, total);
+                Assert.Equal(5, total.Total);
 
                 await store.ChangeAsync(CounterGroupName, CounterName, -30);
 
                 total = await store.GetOverallTotalAsync(CounterGroupName, CounterName);
-                Assert.Equal(-25,total);
+                Assert.Equal(-25,total.Total);
             }
         }
     }

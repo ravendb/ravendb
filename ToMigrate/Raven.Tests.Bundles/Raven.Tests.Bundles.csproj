@@ -1,6 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="..\packages\xunit.runner.visualstudio.2.0.1\build\net20\xunit.runner.visualstudio.props" Condition="Exists('..\packages\xunit.runner.visualstudio.2.0.1\build\net20\xunit.runner.visualstudio.props')" />
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -15,7 +14,6 @@
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
     <TargetFrameworkProfile />
-    <NuGetPackageImportStamp>e0699658</NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -27,6 +25,7 @@
     <WarningLevel>4</WarningLevel>
     <NoWarn>618</NoWarn>
     <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>6</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -73,6 +72,10 @@
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Npgsql, Version=3.1.4.0, Culture=neutral, PublicKeyToken=5d8b90d52f46fda7, processorArchitecture=MSIL">
+      <HintPath>..\packages\Npgsql.3.1.4\lib\net45\Npgsql.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Owin, Version=1.0.0.0, Culture=neutral, PublicKeyToken=f0ebd12fd5e55cc5, processorArchitecture=MSIL">
@@ -154,12 +157,15 @@
     <Compile Include="MoreLikeThis\MoreLikeThisShouldSupportMapReduceIndexes.cs" />
     <Compile Include="MoreLikeThis\MoreLikeThisTests.cs" />
     <Compile Include="PeriodicExports\PeriodicBackupTests.cs" />
+    <Compile Include="Replication\Async\AttachmentReplication.cs" />
     <Compile Include="Replication\Async\ConflictWhenReplicating.cs" />
     <Compile Include="Replication\Async\FailoverBetweenTwoMultiTenantDatabases.cs" />
     <Compile Include="Replication\Async\FailureHandling.cs" />
     <Compile Include="Replication\Async\MultihopReplication.cs" />
     <Compile Include="Replication\Async\SimpleReplication.cs" />
     <Compile Include="Replication\Async\WritesDuringFailover.cs" />
+    <Compile Include="Replication\AttachmentReplication.cs" />
+    <Compile Include="Replication\AttachmentReplicationBugs.cs" />
     <Compile Include="Replication\Bugs\ApiKeysWithMultiTenancy.cs" />
     <Compile Include="Replication\Bugs\David.cs" />
     <Compile Include="Replication\Bugs\HiLoHanging.cs" />
@@ -169,6 +175,7 @@
     <Compile Include="Replication\Bugs\SameInstanceIdUsedForMultipleDatabases.cs" />
     <Compile Include="Replication\Bugs\Vlad.cs" />
     <Compile Include="Replication\CollectionSpecific.cs" />
+    <Compile Include="Replication\ConflictResolving.cs" />
     <Compile Include="Replication\ConflictsInEmbeddableStore.cs" />
     <Compile Include="Replication\ConflictWhenReplicating.cs" />
     <Compile Include="Replication\FailoverBetweenTwoMultiTenantDatabases.cs" />
@@ -191,6 +198,7 @@
     <Compile Include="ScriptedIndexResults\AnimalType.cs" />
     <Compile Include="ScriptedIndexResults\ScriptedIndexResultsTest.cs" />
     <Compile Include="SqlReplication\CanReplicate.cs" />
+    <Compile Include="SqlReplication\CanReplicateToArraysInPostgresSQL.cs" />
     <Compile Include="UniqueConstraints\Bugs\CaseInsensitive.cs" />
     <Compile Include="UniqueConstraints\Bugs\Concurrency.cs" />
     <Compile Include="UniqueConstraints\Bugs\EmptyValues.cs" />
@@ -202,6 +210,7 @@
     <Compile Include="UniqueConstraints\Bugs\Troy2.cs" />
     <Compile Include="UniqueConstraints\Bugs\Troy3.cs" />
     <Compile Include="UniqueConstraints\Bugs\TroyMapReduce.cs" />
+    <Compile Include="UniqueConstraints\Bugs\MyCustomDocumentSession.cs" />
     <Compile Include="UniqueConstraints\Bugs\ValerioBorioni.cs" />
     <Compile Include="UniqueConstraints\Bugs\viscious.cs" />
     <Compile Include="UniqueConstraints\CreateTests.cs" />
@@ -248,10 +257,6 @@
       <Project>{D185331D-2B7C-4251-8EBE-140EDE1FAB9F}</Project>
       <Name>Raven.Client.UniqueConstraints</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Raven.Abstractions.Database\Raven.Abstractions.Database.csproj">
-      <Project>{AE07B425-0EF2-4710-B747-67B8EC20FCB7}</Project>
-      <Name>Raven.Abstractions.Database</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Raven.Abstractions\Raven.Abstractions.csproj">
       <Project>{41AC479E-1EB2-4D23-AAF2-E4C8DF1BC2BA}</Project>
       <Name>Raven.Abstractions</Name>
@@ -293,5 +298,12 @@
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="'$(TasksTargetsImported)' == ''" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
   <Import Project="..\Imports\Tasks.targets" Condition="'$(TasksTargetsImported)' == ''" />
 </Project>

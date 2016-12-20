@@ -3,24 +3,23 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.IO;
-
-using Raven.Abstractions;
-using Raven.Abstractions.Database.Smuggler.Database;
-using Raven.Client;
-using Raven.Database.Extensions;
-using Raven.Json.Linq;
-using Raven.Smuggler.Database;
-using Raven.Smuggler.Database.Files;
-using Raven.Smuggler.Database.Remote;
 using Raven.Tests.Common;
-using Raven.Tests.Helpers.Util;
-
-using Xunit;
 
 namespace Raven.Tests.Issues
 {
+    using System;
+    using System.IO;
+
+    using Raven.Abstractions;
+    using Raven.Abstractions.Data;
+    using Raven.Abstractions.Smuggler;
+    using Raven.Client;
+    using Raven.Database.Extensions;
+    using Raven.Json.Linq;
+    using Raven.Smuggler;
+
+    using Xunit;
+
     public class RDBQA_11 : RavenTest
     {
         private class Product
@@ -28,9 +27,9 @@ namespace Raven.Tests.Issues
             public int Id { get; set; }
         }
 
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
+        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
         {
-            configuration.Modify(x => x.Core._ActiveBundlesString, "DocumentExpiration");
+            configuration.Settings["Raven/ActiveBundles"] = "DocumentExpiration";
         }
 
         [Fact, Trait("Category", "Smuggler")]
@@ -44,30 +43,16 @@ namespace Raven.Tests.Issues
                 {
                     Initialize(store);
 
-                    var smuggler = new DatabaseSmuggler(
-                        new DatabaseSmugglerOptions(),
-                        new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
-                        {
-                            Database = store.DefaultDatabase,
-                            Url = store.Url
-                        }),
-                        new DatabaseSmugglerFileDestination(path));
+                    var smuggler = new SmugglerDatabaseApi();
 
-                    smuggler.Execute();
+                    smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var store = NewRemoteDocumentStore())
                 {
-                    var smuggler = new DatabaseSmuggler(
-                        new DatabaseSmugglerOptions(),
-                        new DatabaseSmugglerFileSource(path),
-                        new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
-                        {
-                            Url = store.Url,
-                            Database = store.DefaultDatabase
-                        }));
+                    var smuggler = new SmugglerDatabaseApi();
 
-                    smuggler.Execute();
+                    smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
 
                     using (var session = store.OpenSession())
                     {
@@ -98,30 +83,14 @@ namespace Raven.Tests.Issues
                 {
                     Initialize(store);
 
-                    var smuggler = new DatabaseSmuggler(
-                        new DatabaseSmugglerOptions { ShouldExcludeExpired = true },
-                        new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
-                        {
-                            Database = store.DefaultDatabase,
-                            Url = store.Url
-                        }),
-                        new DatabaseSmugglerFileDestination(path));
-
-                    smuggler.Execute();
+                    var smuggler = new SmugglerDatabaseApi(new SmugglerDatabaseOptions { ShouldExcludeExpired = true });
+                    smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var store = NewRemoteDocumentStore())
                 {
-                    var smuggler = new DatabaseSmuggler(
-                        new DatabaseSmugglerOptions { ShouldExcludeExpired = true },
-                        new DatabaseSmugglerFileSource(path),
-                        new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
-                        {
-                            Url = store.Url,
-                            Database = store.DefaultDatabase
-                        }));
-
-                    smuggler.Execute();
+                    var smuggler = new SmugglerDatabaseApi(new SmugglerDatabaseOptions { ShouldExcludeExpired = true });
+                    smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
 
                     using (var session = store.OpenSession())
                     {
@@ -152,32 +121,16 @@ namespace Raven.Tests.Issues
                 {
                     Initialize(store);
 
-                    var smuggler = new DatabaseSmuggler(
-                        new DatabaseSmugglerOptions { ShouldExcludeExpired = true },
-                        new DatabaseSmugglerRemoteSource(new DatabaseSmugglerRemoteConnectionOptions
-                        {
-                            Database = store.DefaultDatabase,
-                            Url = store.Url
-                        }),
-                        new DatabaseSmugglerFileDestination(path));
-
-                    smuggler.Execute();
+                    var smuggler = new SmugglerDatabaseApi { Options = { ShouldExcludeExpired = true } };
+                    smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
                 }
 
                 using (var store = NewRemoteDocumentStore())
                 {
                     SystemTime.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
 
-                    var smuggler = new DatabaseSmuggler(
-                        new DatabaseSmugglerOptions { ShouldExcludeExpired = true },
-                        new DatabaseSmugglerFileSource(path),
-                        new DatabaseSmugglerRemoteDestination(new DatabaseSmugglerRemoteConnectionOptions
-                        {
-                            Url = store.Url,
-                            Database = store.DefaultDatabase
-                        }));
-
-                    smuggler.Execute();
+                    var smuggler = new SmugglerDatabaseApi { Options = { ShouldExcludeExpired = true } };
+                    smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
 
                     using (var session = store.OpenSession())
                     {

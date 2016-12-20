@@ -18,7 +18,7 @@ class typeChange {
             if (name.length > 255) {
                 return "Type name length can't exceed 255 characters";
             }
-            if (name.contains('\\')) {
+            if (name.includes('\\')) {
                 return "Type name cannot contain '\\' char";
             }
             return "";

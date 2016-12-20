@@ -30,7 +30,7 @@ namespace Raven.Tests.Issues
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Order { Company = "companies/1" });
+                    session.Store(new Order{ Company = "companies/1"});
                     session.SaveChanges();
                 }
 
@@ -104,7 +104,7 @@ namespace Raven.Tests.Issues
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Order { Company = "companies/1" });
+                    session.Store(new Order{ Company = "companies/1"});
                     session.SaveChanges();
                 }
 
@@ -216,8 +216,8 @@ namespace Raven.Tests.Issues
                     accessor.MapReduce.PutMappedResult(a, "a/3", "b", new RavenJObject());
                     accessor.MapReduce.PutMappedResult(a, "a/4", "b", new RavenJObject());
 
-                    accessor.MapReduce.ChangeReduceKeyCounterValue(a, "a", 2);
-                    accessor.MapReduce.ChangeReduceKeyCounterValue(a, "b", 2);
+                    accessor.MapReduce.IncrementReduceKeyCounter(a, "a", 2);
+                    accessor.MapReduce.IncrementReduceKeyCounter(a, "b", 2);
                 });
 
                 storage.Batch(accessor =>
@@ -279,8 +279,8 @@ namespace Raven.Tests.Issues
                     accessor.MapReduce.PutMappedResult(a, "a/3", "b", new RavenJObject());
                     accessor.MapReduce.PutMappedResult(a, "a/4", "b", new RavenJObject());
 
-                    accessor.MapReduce.ChangeReduceKeyCounterValue(a, "a", 2);
-                    accessor.MapReduce.ChangeReduceKeyCounterValue(a, "b", 2);
+                    accessor.MapReduce.IncrementReduceKeyCounter(a, "a", 2);
+                    accessor.MapReduce.IncrementReduceKeyCounter(a, "b", 2);
                 });
 
                 storage.Batch(accessor =>
@@ -305,9 +305,10 @@ namespace Raven.Tests.Issues
                     accessor.MapReduce.DeleteMappedResultsForDocumentId("a/4", a, removed);
                     accessor.MapReduce.UpdateRemovedMapReduceStats(a, removed, CancellationToken.None);
 
-                    foreach (var reduceKey in removed.Keys)
+                    var reduceKeys = removed.Keys;
+                    foreach (var reduceKey in reduceKeys)
                     {
-                        accessor.MapReduce.UpdatePerformedReduceType(a, reduceKey.ReduceKey,
+                        accessor.MapReduce.UpdatePerformedReduceType(a, reduceKey.ReduceKey, 
                             ReduceType.SingleStep, skipAdd: true);
                     }
                 });
@@ -328,7 +329,8 @@ namespace Raven.Tests.Issues
                     accessor.MapReduce.DeleteMappedResultsForDocumentId("a/2", a, removed);
                     accessor.MapReduce.UpdateRemovedMapReduceStats(a, removed, CancellationToken.None);
 
-                    foreach (var reduceKey in removed.Keys)
+                    var reduceKeys = removed.Keys;
+                    foreach (var reduceKey in reduceKeys)
                     {
                         accessor.MapReduce.UpdatePerformedReduceType(a, reduceKey.ReduceKey,
                             ReduceType.SingleStep, skipAdd: true);

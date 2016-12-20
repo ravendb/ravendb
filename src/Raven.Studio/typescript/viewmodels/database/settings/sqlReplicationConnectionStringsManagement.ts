@@ -110,8 +110,8 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
         });
     }
 
-    isSqlPredefinedConnectionNameExists(connectionName: string) :boolean {
-        if (this.connections().predefinedConnections().count(x => x.name() == connectionName) >1) {
+    isSqlPredefinedConnectionNameExists(connectionName: string): boolean {
+        if (this.connections().predefinedConnections().some(x => x.name() === connectionName)) {
             return true;
         }
         return false;
@@ -121,8 +121,8 @@ class sqlReplicationConnectionStringsManagement extends viewModelBase{
         if (event.originalEvent) {
             var curConnectionString = !!obj.connectionString() ? obj.connectionString().trim() : "";
             if (curConnectionString === "" ||
-                sqlReplicationConnections.sqlProvidersConnectionStrings.first(x => x.ConnectionString == curConnectionString)) {
-                var matchingConnectionStringPair: { ProviderName: string; ConnectionString: string; } = sqlReplicationConnections.sqlProvidersConnectionStrings.first(x => x.ProviderName === (<any>event.originalEvent.srcElement).selectedOptions[0].value);
+                sqlReplicationConnections.sqlProvidersConnectionStrings.find(x => x.ConnectionString == curConnectionString)) {
+                var matchingConnectionStringPair: { ProviderName: string; ConnectionString: string; } = sqlReplicationConnections.sqlProvidersConnectionStrings.find(x => x.ProviderName === (<any>event.originalEvent.srcElement).selectedOptions[0].value);
                 if (!!matchingConnectionStringPair) {
                     var matchingConnectionStringValue: string = matchingConnectionStringPair.ConnectionString;
                     obj.connectionString(matchingConnectionStringValue);

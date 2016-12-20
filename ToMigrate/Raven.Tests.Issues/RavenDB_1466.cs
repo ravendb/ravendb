@@ -12,11 +12,10 @@ using Raven.Tests.Common;
 using Raven.Tests.Helpers;
 
 using Xunit;
-using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
-    public class RavenDB_1466 : RavenTest
+    public class RavenDB_1466 : RavenTestBase
     {
         public enum Region
         {
@@ -42,21 +41,19 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Theory]
-        [PropertyData("Storages")]
-        public void CanSearchByMultiFacetQueries_Remote(string storage)
+        [Fact]
+        public void CanSearchByMultiFacetQueries_Remote()
         {
-            using (var store = NewRemoteDocumentStore(requestedStorage: storage))
+            using (var store = NewRemoteDocumentStore(requestedStorage:"esent"))
             {
                 DoTest(store);
             }
         }
 
-        [Theory]
-        [PropertyData("Storages")]
-        public void CanSearchByMultiFacetQueries_Embedded(string storage)
+        [Fact]
+        public void CanSearchByMultiFacetQueries_Embedded()
         {
-            using (var store = NewDocumentStore(requestedStorage: storage))
+            using (var store = NewDocumentStore(requestedStorage: "esent"))
             {
                 DoTest(store);
             }

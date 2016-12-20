@@ -9,8 +9,6 @@ import getReplicationTopology = require("commands/database/replication/getReplic
 import getReplicationPerfStatsCommand = require("commands/database/debug/getReplicationPerfStatsCommand");
 import getDocumentsLeftToReplicate = require("commands/database/replication/getDocumentsLeftToReplicate");
 import d3 = require("d3");
-import nv = require("nvd3");
-import dagre = require("dagre");
 import eventsCollector = require("common/eventsCollector");
 
 class replicationStats extends viewModelBase {
@@ -114,7 +112,7 @@ class replicationStats extends viewModelBase {
             var sourceServerUrl = currentServer.Source;
             var destinations = this.getAllReachableDestinationsFrom(sourceServerUrl, topology.Connections);
 
-            return destinations.contains(currentLink.Destination);
+            return _.includes(destinations, currentLink.Destination);
         });
 
         this.canExportDocumentsToReplicateCount = ko.computed(() => {

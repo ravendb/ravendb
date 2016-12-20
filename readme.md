@@ -35,7 +35,7 @@ How to build?
 Requirements:
 
 - .NET Core 1.0
-- TypeScript 1.8
+- TypeScript 2.1
 - WiX Toolset 3.7 or higher
 
 Want to contribute?

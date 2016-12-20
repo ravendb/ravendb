@@ -146,8 +146,12 @@ class resourcesManager {
                 return;
             }
 
-            if (rs) {
+            if (rs && !rs.disabled()) {
                 rs.activate(); //TODO: do we need this event right now?
+            } else if (rs) {
+                messagePublisher.reportError(`${rs.fullTypeName} '${rs.name}' is disabled!`,
+                    `You can't access any section of the ${rs.fullTypeName.toLowerCase()} while it's disabled.`);
+                router.navigate(urlIfNotFound());
             } else {
                 messagePublisher.reportError("The resource " + rsName + " doesn't exist!");
                 router.navigate(urlIfNotFound());
@@ -199,7 +203,7 @@ class resourcesManager {
                 var activeResource = this.activeResource();
                 var actualResourceObservableArray = resourceObservableArray();
 
-                if (!!activeResource && actualResourceObservableArray.contains(activeResource) === false) {
+                if (!!activeResource && !_.includes(actualResourceObservableArray(), activeResource)) {
                     if (actualResourceObservableArray.length > 0) {
                         resourceObservableArray().first().activate();
                     } else { //if (actualResourceObservableArray.length == 0)
@@ -215,9 +219,8 @@ class resourcesManager {
     private updateResources(incomingData: resourcesInfo) {
         const existingResources = this.resources;
         const incomingResources = incomingData.sortedResources().map(x => x.asResource());
-        const incomingResourcesQualified = incomingResources.map(x => x.qualifiedName);
 
-        const deletedResources = existingResources().filter(x => !incomingResourcesQualified.contains(x.qualifiedName));
+        const deletedResources = _.differenceBy(existingResources(), incomingResources, x => x.qualifiedName);
 
         existingResources.removeAll(deletedResources);
 

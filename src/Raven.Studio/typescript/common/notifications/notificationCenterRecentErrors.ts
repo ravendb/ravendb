@@ -36,7 +36,7 @@ class notificationCenterRecentErrors {
     }
 
     showAlert(alert: alertArgs) {
-        if (alert.displayInRecentErrors && !this.recordedErrors.contains(alert)) {
+        if (alert.displayInRecentErrors && !_.includes(this.recordedErrors(), alert)) {
             this.recordedErrors.unshift(alert);
         }
 

@@ -15,15 +15,17 @@ using Raven.Abstractions.FileSystem;
 using Raven.Database.FileSystem.Actions;
 using Raven.Tests.FileSystem.Synchronization.IO;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.FileSystem.Issues
 {
     public class RavenDB_4164 : RavenFilesTestWithLogs
     {
-        [Fact]
-        public async Task cleanup_deleted_files_task_deletes_specified_number_of_files_in_single_run()
+        [Theory]
+        [PropertyData("Storages")]
+        public async Task cleanup_deleted_files_task_deletes_specified_number_of_files_in_single_run(string storage)
         {
-            var client = NewAsyncClient();
+            var client = NewAsyncClient(requestedStorage: storage);
             var rfs = GetFileSystem();
 
             var random = new Random();

@@ -6,7 +6,6 @@ using Raven.Client.Indexes;
 using Raven.Json.Linq;
 using Raven.Tests.Bundles.ScriptedIndexResults;
 using Raven.Tests.Common;
-using Raven.Tests.Helpers.Util;
 
 using Xunit;
 
@@ -14,9 +13,9 @@ namespace Raven.Tests.Issues
 {
     public class RavenDB_3994 : RavenTest
     {
-        protected override void ModifyConfiguration(ConfigurationModification configuration)
+        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
         {
-            configuration.Modify(x => x.Core._ActiveBundlesString, "ScriptedIndexResults");
+            configuration.Settings["Raven/ActiveBundles"] = "ScriptedIndexResults";
         }
 
         [Fact]

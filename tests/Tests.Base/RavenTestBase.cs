@@ -184,14 +184,12 @@ namespace NewClientTests
             if (dbSuffixIdentifier != null)
                 name = $"{name}_{dbSuffixIdentifier}";
 
-            var hardDelete = true;
             var runInMemory = true;
 
             if (path == null)
                 path = NewDataPath(name);
             else
             {
-                hardDelete = false;
                 runInMemory = false;
             }
 

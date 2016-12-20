@@ -63,6 +63,7 @@ namespace Raven.Tests.Core.Replication
                         }
 
                         var resolved = list[0];
+                        resolved.Metadata.Remove(Constants.RavenReplicationConflictDocument);
                         slave.DatabaseCommands.Put("users/1", null, resolved.DataAsJson, resolved.Metadata);
                     }
                 }

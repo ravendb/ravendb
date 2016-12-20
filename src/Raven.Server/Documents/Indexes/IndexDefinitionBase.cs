@@ -186,9 +186,9 @@ namespace Raven.Server.Documents.Indexes
             return MapFields.TryGetValue(field, out value);
         }
 
-        public abstract bool Equals(IndexDefinitionBase indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs);
+        public abstract IndexDefinitionCompareDifferences Compare(IndexDefinitionBase indexDefinition);
 
-        public abstract bool Equals(IndexDefinition indexDefinition, bool ignoreFormatting, bool ignoreMaxIndexOutputs);
+        public abstract IndexDefinitionCompareDifferences Compare(IndexDefinition indexDefinition);
 
         public override int GetHashCode()
         {
@@ -227,8 +227,8 @@ namespace Raven.Server.Documents.Indexes
         public static bool TryReadIdFromDirectory(DirectoryInfo directory, out int indexId, out string indexName)
         {
             var index = directory.Name.IndexOf('-');
-            var maybeId = index >= 0 
-                ? directory.Name.Substring(0, index) 
+            var maybeId = index >= 0
+                ? directory.Name.Substring(0, index)
                 : directory.Name;
 
             if (int.TryParse(maybeId, out indexId) == false)

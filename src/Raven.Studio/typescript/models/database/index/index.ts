@@ -1,15 +1,6 @@
 import appUrl = require("common/appUrl");
 
 class index {
-    static readonly priorityLow: Raven.Client.Data.Indexes.IndexPriority = "Low";
-    static readonly priorityNormal: Raven.Client.Data.Indexes.IndexPriority = "Normal";
-    static readonly priorityHigh: Raven.Client.Data.Indexes.IndexPriority = "High";
-
-    static readonly stateDisabled: Raven.Client.Data.Indexes.IndexState = "Disabled";
-    static readonly stateError: Raven.Client.Data.Indexes.IndexState = "Error";
-    static readonly stateIdle: Raven.Client.Data.Indexes.IndexState = "Idle";
-    static readonly stateNormal: Raven.Client.Data.Indexes.IndexState = "Normal";
-
     static readonly SideBySideIndexPrefix = "ReplacementOf/";
     static readonly TestIndexPrefix = "Test/";
 
@@ -109,14 +100,14 @@ class index {
         this.queryUrl = urls.query(this.name);
         this.editUrl = urls.editIndex(this.name);
 
-        this.isNormalPriority = ko.pureComputed(() => this.priority() === index.priorityNormal);
-        this.isLowPriority = ko.pureComputed(() => this.priority() === index.priorityLow);
-        this.isHighPriority = ko.pureComputed(() => this.priority() === index.priorityHigh);
+        this.isNormalPriority = ko.pureComputed(() => this.priority() === "Normal");
+        this.isLowPriority = ko.pureComputed(() => this.priority() === "Low");
+        this.isHighPriority = ko.pureComputed(() => this.priority() === "High");
 
-        this.isIdleState = ko.pureComputed(() => this.state() === index.stateIdle);
-        this.isDisabledState = ko.pureComputed(() => this.state() === index.stateDisabled);
-        this.isErrorState = ko.pureComputed(() => this.state() === index.stateError);
-        this.isNormalState = ko.pureComputed(() => this.state() === index.stateNormal);
+        this.isIdleState = ko.pureComputed(() => this.state() === "Idle");
+        this.isDisabledState = ko.pureComputed(() => this.state() === "Disabled");
+        this.isErrorState = ko.pureComputed(() => this.state() === "Error");
+        this.isNormalState = ko.pureComputed(() => this.state() === "Normal");
 
         this.canBePaused = ko.pureComputed(() => {
             const disabled = this.isDisabledState();
@@ -190,14 +181,7 @@ class index {
     }
 
     private static extractCollectionNames(collections: { [index: string]: Raven.Client.Data.Indexes.CollectionStats; }): string[] {
-        const result = [] as Array<string>;
-
-        for (let collection in collections) {
-            if (collections.hasOwnProperty(collection)) {
-                result.push(collection);
-            }
-        }
-        return result;
+        return collections ? Object.keys(collections) : [];
     }
 
     getGroupName() {

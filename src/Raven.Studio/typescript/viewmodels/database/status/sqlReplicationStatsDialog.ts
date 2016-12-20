@@ -1,7 +1,7 @@
 import database = require("models/resources/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import dialog = require("plugins/dialog");
-import getSqlReplicationStatsCommand = require("commands/database/studio/getSqlReplicationStatsCommand");
+import getSqlReplicationStatsCommand = require("commands/database/sqlReplication/getSqlReplicationStatsCommand");
 
 class sqlReplicationStatsDialog extends dialogViewModelBase {
     repData = ko.observable<Raven.Server.Documents.SqlReplication.SqlReplicationStatistics>();

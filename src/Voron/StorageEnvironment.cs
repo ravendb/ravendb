@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
@@ -22,6 +23,7 @@ using Voron.Impl.FreeSpace;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
+using Voron.Platform.Posix;
 using Voron.Platform.Win32;
 using Voron.Util;
 using Voron.Util.Conversion;
@@ -97,6 +99,18 @@ namespace Voron
 
                 _scratchBufferPool = new ScratchBufferPool(this);
 
+                if (Sparrow.Platform.RunningOnPosix &&
+                    options.BasePath != null && 
+                    IsStorageSupportingO_Direct(options.BasePath) == false)
+                {
+                    options.SafePosixOpenFlags &= ~OpenFlagsThatAreDifferentBetweenPlatforms.O_DIRECT;
+                    var message = "Path " + options.BasePath +
+                                  " not supporting O_DIRECT writes. As a result - data durability is not guarenteed";
+                    _options.InvokeNonDurabaleFileSystemError(this, message, null);
+                }
+
+                options.PosixOpenFlags = options.SafePosixOpenFlags;
+
                 _journal = new WriteAheadJournal(this);
 
                 if (isNew)
@@ -112,6 +126,62 @@ namespace Voron
                 Dispose();
                 throw;
             }
+        }
+
+        private bool IsStorageSupportingO_Direct(string path)
+        {
+            var filename = Path.Combine(path, "test-" + Guid.NewGuid() + ".tmp");
+            var fd = Syscall.open(filename,
+                OpenFlags.O_WRONLY | OpenFlags.O_DSYNC | OpenFlagsThatAreDifferentBetweenPlatforms.O_DIRECT |
+                OpenFlags.O_CREAT, FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
+
+            int result;
+
+            try
+            {
+                if (fd == -1)
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info(
+                            $"Failed to create test file at \'{filename}\'. Cannot determine if O_DIRECT supported by the file system. Assuming it is");
+                    return true;
+                }
+
+                result = Syscall.posix_fallocate(fd, IntPtr.Zero, (UIntPtr)(64L * 1024));
+                if (result == (int)Errno.EINVAL)
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info(
+                            $"Cannot fallocate (rc = EINVAL) to a file \'{filename}\' opened using O_DIRECT. Assuming O_DIRECT is not supported by this file system");
+
+                    return false;
+                }
+
+                if (result != 0)
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info(
+                            $"Failed to fallocate test file at \'{filename}\'. (rc = {result}). Cannot determine if O_DIRECT supported by the file system. Assuming it is");
+                }
+               
+            }
+            finally 
+            {
+                result = Syscall.close(fd);
+                if (result != 0)
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info($"Failed to close test file at \'{filename}\'. (rc = {result}).");
+                }
+
+                result = Syscall.unlink(filename);
+                if (result != 0)
+                {
+                    _log.Info($"Failed to delete test file at \'{filename}\'. (rc = {result}).");
+                }
+            }
+
+            return true;
         }
 
         private async Task IdleFlushTimer()
@@ -621,19 +691,18 @@ namespace Voron
             }
         }
 
-        public void FlushLogToDataFile(LowLevelTransaction tx = null)
+        public void FlushLogToDataFile()
         {
             if (_options.ManualFlushing == false)
                 throw new NotSupportedException("Manual flushes are not set in the storage options, cannot manually flush!");
 
-            ForceLogFlushToDataFile(tx);
+            ForceLogFlushToDataFile();
         }
 
-        public void ForceLogFlushToDataFile(LowLevelTransaction tx)
+        public void ForceLogFlushToDataFile()
         {
             _journal.Applicator.ApplyLogsToDataFile(_cancellationTokenSource.Token,
-                Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30),
-                tx);
+                Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30));
         }
 
         internal void AssertNoCatastrophicFailure()
@@ -733,7 +802,7 @@ namespace Voron
                     case TransactionsMode.Safe:
                     case TransactionsMode.Lazy:
                         {
-                            Options.PosixOpenFlags = StorageEnvironmentOptions.SafePosixOpenFlags;
+                            Options.PosixOpenFlags = Options.SafePosixOpenFlags;
                             Options.WinOpenFlags = StorageEnvironmentOptions.SafeWin32OpenFlags;
                         }
                         break;

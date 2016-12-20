@@ -19,6 +19,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.FileSystem;
 using Raven.Client.FileSystem.Extensions;
+using Raven.Database.FileSystem.Extensions;
 
 namespace Raven.Tests.FileSystem.Synchronization
 {
@@ -64,11 +65,11 @@ namespace Raven.Tests.FileSystem.Synchronization
                 var metadata = await destinationClient.GetMetadataForAsync("test.txt");
                 
                 Assert.Equal("some-value", metadata.Value<string>("SomeTest-Metadata"));
-                resultMd5 = resultFileContent.GetHashAsHex();
+                resultMd5 = resultFileContent.GetMD5Hash();
             }
 
             sourceContent.Position = 0;
-            var sourceMd5 = sourceContent.GetHashAsHex();
+            var sourceMd5 = sourceContent.GetMD5Hash();
 
             Assert.True(resultMd5 == sourceMd5);
         }
@@ -107,11 +108,11 @@ namespace Raven.Tests.FileSystem.Synchronization
             string resultMd5;
             using (var resultFileContent = await destinationClient.DownloadAsync("test.txt"))
             {
-                resultMd5 = resultFileContent.GetHashAsHex();
+                resultMd5 = resultFileContent.GetMD5Hash();
             }
 
             sourceContent.Position = 0;
-            var sourceMd5 = sourceContent.GetHashAsHex();
+            var sourceMd5 = sourceContent.GetMD5Hash();
 
             Assert.True(resultMd5 == sourceMd5);
         }
@@ -137,11 +138,11 @@ namespace Raven.Tests.FileSystem.Synchronization
             string resultMd5;
             using (var resultFileContent = await destinationClient.DownloadAsync("test.txt"))
             {
-                resultMd5 = resultFileContent.GetHashAsHex();
+                resultMd5 = resultFileContent.GetMD5Hash();
             }
 
             sourceContent.Position = 0;
-            var sourceMd5 = sourceContent.GetHashAsHex();
+            var sourceMd5 = sourceContent.GetMD5Hash();
 
             Assert.Equal(sourceMd5, resultMd5);
         }
@@ -164,9 +165,9 @@ namespace Raven.Tests.FileSystem.Synchronization
             var destinationClient = NewAsyncClient(0);
             var sourceClient = NewAsyncClient(1);
 
-            var srcMd5 = sourceContent.GetHashAsHex();
+            var srcMd5 = sourceContent.GetMD5Hash();
             sourceContent.Position = 0;
-            var dstMd5 = (new RandomlyModifiedStream(new RandomStream(size, 1), 0.01, seed)).GetHashAsHex();
+            var dstMd5 = (new RandomlyModifiedStream(new RandomStream(size, 1), 0.01, seed)).GetMD5Hash();
 
 
             await destinationClient.UploadAsync("test.bin", destinationContent, new RavenJObject());
@@ -179,11 +180,11 @@ namespace Raven.Tests.FileSystem.Synchronization
             string resultMd5;
             using (var resultFileContent = await destinationClient.DownloadAsync("test.bin"))
             {
-                resultMd5 = resultFileContent.GetHashAsHex();
+                resultMd5 = resultFileContent.GetMD5Hash();
             }
 
             sourceContent.Position = 0;
-            var sourceMd5 = sourceContent.GetHashAsHex();
+            var sourceMd5 = sourceContent.GetMD5Hash();
 
             Assert.Equal(sourceMd5, resultMd5);
 
@@ -191,11 +192,11 @@ namespace Raven.Tests.FileSystem.Synchronization
 
             using (var resultFileContent = await destinationClient.DownloadAsync("test.bin"))
             {
-                resultMd5 = resultFileContent.GetHashAsHex();
+                resultMd5 = resultFileContent.GetMD5Hash();
             }
 
             sourceContent.Position = 0;
-            sourceMd5 = sourceContent.GetHashAsHex();
+            sourceMd5 = sourceContent.GetMD5Hash();
 
             Assert.Equal(sourceMd5, resultMd5);
 
@@ -463,7 +464,7 @@ namespace Raven.Tests.FileSystem.Synchronization
             var resultFileMetadata = sourceClient.GetMetadataForAsync("test.bin").Result;
 
             Assert.Contains("Content-MD5", resultFileMetadata.Keys);
-            Assert.Equal(sourceContent.GetHashAsHex(), resultFileMetadata.Value<string>("Content-MD5"));
+            Assert.Equal(sourceContent.GetMD5Hash(), resultFileMetadata.Value<string>("Content-MD5"));
         }
 
         [Fact]
@@ -486,7 +487,7 @@ namespace Raven.Tests.FileSystem.Synchronization
             var resultFileMetadata = destinationClient.GetMetadataForAsync("test.bin").Result;
 
             Assert.Contains("Content-MD5", resultFileMetadata.Keys);
-            Assert.Equal(sourceContent.GetHashAsHex(), resultFileMetadata.Value<string>("Content-MD5"));
+            Assert.Equal(sourceContent.GetMD5Hash(), resultFileMetadata.Value<string>("Content-MD5"));
         }
 
         [Fact]
@@ -505,7 +506,7 @@ namespace Raven.Tests.FileSystem.Synchronization
             var resultFileMetadata = sourceClient.GetMetadataForAsync("test.bin").Result;
 
             Assert.Contains("Content-MD5", resultFileMetadata.Keys);
-            Assert.Equal(sourceContent.GetHashAsHex(), resultFileMetadata.Value<string>("Content-MD5"));
+            Assert.Equal(sourceContent.GetMD5Hash(), resultFileMetadata.Value<string>("Content-MD5"));
         }
 
         [Fact]
@@ -650,7 +651,7 @@ namespace Raven.Tests.FileSystem.Synchronization
             Assert.Null(result.Exception);
             Assert.Equal(size5Mb, result.BytesTransfered + result.BytesCopied);
             sourceContent.Position = 0;
-            Assert.Equal(sourceContent.GetHashAsHex(), destination.GetMetadataForAsync("test.bin").Result.Value<string>("Content-MD5"));
+            Assert.Equal(sourceContent.GetMD5Hash(), destination.GetMetadataForAsync("test.bin").Result.Value<string>("Content-MD5"));
         }
 
         [Fact]
@@ -685,7 +686,7 @@ namespace Raven.Tests.FileSystem.Synchronization
             Assert.Null(result.Exception);
             Assert.Equal(size1Mb, result.BytesTransfered + result.BytesCopied);
             sourceContent.Position = 0;
-            Assert.Equal(sourceContent.GetHashAsHex(), destination.GetMetadataForAsync("test.bin").Result.Value<string>("Content-MD5"));
+            Assert.Equal(sourceContent.GetMD5Hash(), destination.GetMetadataForAsync("test.bin").Result.Value<string>("Content-MD5"));
         }
 
         [Fact]
@@ -719,7 +720,7 @@ namespace Raven.Tests.FileSystem.Synchronization
             Assert.Null(result.Exception);
             Assert.Equal(size1B, result.BytesTransfered);
             sourceContent.Position = 0;
-            Assert.Equal(sourceContent.GetHashAsHex(), destination.GetMetadataForAsync("test.bin").Result.Value<string>("Content-MD5"));
+            Assert.Equal(sourceContent.GetMD5Hash(), destination.GetMetadataForAsync("test.bin").Result.Value<string>("Content-MD5"));
         }
 
         [Fact]
@@ -745,7 +746,7 @@ namespace Raven.Tests.FileSystem.Synchronization
             Assert.True(destMetadata[SynchronizationConstants.RavenDeleteMarker] == null, "Metadata should not containt Raven-Delete-Marker");
 
             sourceContent.Position = 0;
-            Assert.Equal(sourceContent.GetHashAsHex(), destContent.GetHashAsHex());
+            Assert.Equal(sourceContent.GetMD5Hash(), destContent.GetMD5Hash());
         }
 
         [Fact]
@@ -774,8 +775,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
             var synchronizationReport = await source.Synchronization.StartAsync("test.bin", destination);
 
-            Assert.Equal(SynchronizationType.Delete, synchronizationReport.Type);
-            Assert.Null(synchronizationReport.Exception);
+            Assert.Equal(NoSyncReason.NoNeedToDeleteNonExistigFile.GetDescription(), synchronizationReport.Exception.Message);
         }
 
         [Fact]
@@ -814,7 +814,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
             var destinationStream  = await destination.DownloadAsync("test-copy.bin");
             var sourceStream = await destination.DownloadAsync("test-copy.bin");
-            Assert.Equal(sourceStream.GetHashAsHex(), destinationStream.GetHashAsHex());
+            Assert.Equal(sourceStream.GetMD5Hash(), destinationStream.GetMD5Hash());
     }
 
         [Fact]
@@ -834,7 +834,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
             var destinationStream = await destination.DownloadAsync("test-copy.bin");
             var sourceStream = await destination.DownloadAsync("test-copy.bin");
-            Assert.Equal(sourceStream.GetHashAsHex(), destinationStream.GetHashAsHex());
+            Assert.Equal(sourceStream.GetMD5Hash(), destinationStream.GetMD5Hash());
 
         }
     }

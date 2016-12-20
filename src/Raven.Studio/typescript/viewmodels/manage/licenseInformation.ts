@@ -33,7 +33,7 @@ class licenseInformation extends viewModelBase {
         return new getLicenseStatusCommand()
             .execute()
             .done((result: licenseStatusDto) => {
-            if (result.Status.contains("AGPL")) {
+            if (result.Status.includes("AGPL")) {
                 result.Status = "Development Only";
             }
             license.licenseStatus(result);

@@ -21,6 +21,7 @@ using Sparrow.Json.Parsing;
 using System.Linq;
 using Jint;
 using Raven.Server.Documents.Patch;
+using Raven.Abstractions.Util;
 using ThreadState = System.Threading.ThreadState;
 
 namespace Raven.Server.Documents.Replication
@@ -167,19 +168,23 @@ namespace Raven.Server.Documents.Replication
                                     if (!_cts.IsCancellationRequested && !(e is ObjectDisposedException))
                                     {
                                         //return negative ack
-                                        _documentsContext.Write(writer, new DynamicJsonValue
+                                        var returnValue = new DynamicJsonValue
                                         {
                                             [nameof(ReplicationMessageReply.Type)] = ReplicationMessageReply.ReplyType.Error.ToString(),
                                             [nameof(ReplicationMessageReply.MessageType)] = messageType,
                                             [nameof(ReplicationMessageReply.LastEtagAccepted)] = -1,
                                             [nameof(ReplicationMessageReply.LastIndexTransformerEtagAccepted)] = -1,
-                                            [nameof(ReplicationMessageReply.Exception)] = e.ToString()
-                                        });
+                                            [nameof(ReplicationMessageReply.Exception)] = e.SimplifyError()
+                                        };
+
+                                        _documentsContext.Write(writer, returnValue);
+                                        writer.Flush();
 
                                         exceptionLogged = true;
 
                                         if (_log.IsInfoEnabled)
                                             _log.Info($"Failed replicating documents from {FromToString}.", e);
+
                                         throw;
                                     }
                                 }
@@ -212,7 +217,7 @@ namespace Raven.Server.Documents.Replication
                 }
             }
         }
-
+        
         private void HandleReceivedIndexOrTransformerBatch(BlittableJsonReaderObject message, long lastIndexOrTransformerEtag)
         {
             int itemCount;
@@ -597,7 +602,7 @@ namespace Raven.Server.Documents.Replication
                                 if (_log.IsInfoEnabled)
                                     _log.Info(
                                         $"Conflict check resolved to Conflict operation, resolving conflict for doc = {doc.Id}, with change vector = {_tempReplicatedChangeVector.Format()}");
-                                HandleConflictForDocument(doc, conflictingVector, json);
+                                HandleConflictForDocument(_documentsContext,doc, conflictingVector, json);
                                 break;
                             case ConflictStatus.AlreadyMerged:
                                 if (_log.IsInfoEnabled)
@@ -734,6 +739,12 @@ output(docs);
             ChangeVectorEntry[] conflictingVector,
             BlittableJsonReaderObject doc)
         {
+            if (docPosition.Id.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase))
+            {
+                HandleHiloConflict(context, docPosition, doc);
+                return;
+            }
+
             switch (ReplicationDocument?.DocumentConflictResolution ?? StraightforwardConflictResolution.None)
             {
                 case StraightforwardConflictResolution.ResolveToLocal:
@@ -793,6 +804,42 @@ output(docs);
                     _database.DocumentsStorage.AddConflict(_documentsContext, docPosition.Id, doc, _tempReplicatedChangeVector);
                     break;
             }
+        }
+
+        private void HandleHiloConflict(DocumentsOperationContext context, ReplicationDocumentsPositions docPosition,
+            BlittableJsonReaderObject doc)
+        {
+            long highestMax;
+            if (!doc.TryGet("Max", out highestMax))
+            {
+                throw new InvalidDataException("Tried to resolve HiLo document conflict but failed. Missing property name'Max'");
+            }
+
+            var conflicts = _database.DocumentsStorage.GetConflictsFor(context, docPosition.Id);
+
+            var resolvedHiLoDoc = doc;
+            if (conflicts.Count == 0)
+            {
+                //conflict with another existing document
+                var localHiloDoc = _database.DocumentsStorage.Get(context, docPosition.Id);
+                double max;
+                if (localHiloDoc.Data.TryGet("Max", out max) && max > highestMax)
+                    resolvedHiLoDoc = localHiloDoc.Data;
+
+            }
+            else
+            {
+                foreach (var conflict in conflicts)
+                {
+                    long tmpMax;
+                    if (conflict.Doc.TryGet("Max", out tmpMax) && tmpMax > highestMax)
+                    {
+                        highestMax = tmpMax;
+                        resolvedHiLoDoc = conflict.Doc;
+                    }
+                }
+            }
+            _database.DocumentsStorage.Put(context, docPosition.Id, null, resolvedHiLoDoc);
         }
 
         private void ResolveConflictToRemote(ReplicationDocumentsPositions doc,

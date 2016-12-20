@@ -28,7 +28,7 @@ class getFilesystemFilesCommand extends commandBase {
     private fetchFiles(): JQueryPromise<searchResults> {
         var level = 1;
         if (this.directory) {
-            var slashMatches = this.directory.count("/");
+            var slashMatches = this.directory.match(/\//g).length;
             if (slashMatches) {
                 level = level + slashMatches;
             }

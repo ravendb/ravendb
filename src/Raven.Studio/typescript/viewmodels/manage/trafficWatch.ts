@@ -265,7 +265,8 @@ class trafficWatch extends viewModelBase {
         };
 
         if (logObject.CustomInfo) {
-            logObject.CustomInfo = decodeURIComponent(logObject.CustomInfo).replaceAll("\n", "<Br />").replaceAll("Inner Request", "<strong>Inner Request</strong>");
+            const withBr = _.replace(decodeURIComponent(logObject.CustomInfo), /\n/g, "<Br />");
+            logObject.CustomInfo = _.replace(withBr).replace(/Inner Request/g, "<strong>Inner Request</strong>");
         }
 
         if (e.InnerRequestsCount > 0) {
@@ -328,7 +329,11 @@ class trafficWatch extends viewModelBase {
 }
 
     formatLogRecord(logRecord: logNotificationDto) {
-        return 'Request #' + logRecord.RequestId.toString().paddingRight(' ', 4) + ' ' + logRecord.HttpMethod.paddingLeft(' ', 7) + ' - ' + logRecord.ElapsedMilliseconds.toString().paddingRight(' ', 5) + ' ms - ' + logRecord.TenantName.paddingLeft(' ', 10) + ' - ' + logRecord.ResponseStatusCode + ' - ' + logRecord.RequestUri;
+        return 'Request #' + _.padEnd(logRecord.RequestId.toString(), 4)
+            + ' ' + _.padStart(logRecord.HttpMethod.toString(), 7)
+            + ' - ' + _.padEnd(logRecord.ElapsedMilliseconds.toString(), 5) + ' ms - '
+            + _.padStart(logRecord.TenantName, 10) + ' - '
+            + logRecord.ResponseStatusCode + ' - ' + logRecord.RequestUri;
     }
 
     resetStats() {

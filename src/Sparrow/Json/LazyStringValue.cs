@@ -1,50 +1,56 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
-using System.Text;
+using System.Runtime.CompilerServices;
+using System.Threading;
+using Sparrow.Binary;
 
 namespace Sparrow.Json
 {
     public unsafe class LazyStringValue : IComparable<string>, IEquatable<string>,
         IComparable<LazyStringValue>, IEquatable<LazyStringValue>, IDisposable, IComparable
     {
-        public readonly JsonOperationContext Context;
-        public readonly byte* Buffer;
-        public readonly int Size;
-        public string String;
+        private readonly JsonOperationContext _context;
+        private string _string;
+
+        private readonly byte* _buffer;
+        public byte this[int index] => Buffer[index];
+        public byte* Buffer => _buffer;
+
+        private readonly int _size;
+        public int Size => _size;
+
+        private int _length = -1;
+        public int Length
+        {
+            get
+            {
+                // Lazily load the length from the buffer. This is an O(n)
+                if (_length == -1 && Buffer != null)
+                    _length = _context.Encoding.GetCharCount(Buffer, Size);
+                return _length;
+            }
+        }
+
+        [ThreadStatic]
+        private static char[] LazyStringTempBuffer;
+
+        [ThreadStatic]
+        private static byte[] LazyStringTempComparisonBuffer;
+
         public int[] EscapePositions;
         public AllocatedMemoryData AllocatedMemoryData;
         public int? LastFoundAt;
 
-        public byte this[int index] => Buffer[index];
-
-        public int Length => Size;
-
         public LazyStringValue(string str, byte* buffer, int size, JsonOperationContext context)
         {
-            String = str;
-            Size = size;
-            Context = context;
-            Buffer = buffer;
-        }
-
-
-        public int CompareTo(string other)
-        {
-            var sizeInBytes = Encoding.UTF8.GetMaxByteCount(other.Length);
-            var tmp = Context.GetNativeTempBuffer(sizeInBytes);
-            fixed (char* pOther = other)
-            {
-                var tmpSize = Context.Encoding.GetBytes(pOther, other.Length, tmp, sizeInBytes);
-                return Compare(tmp, tmpSize);
-            }
-        }
-
-        public int CompareTo(LazyStringValue other)
-        {
-            if (other.Buffer == Buffer && other.Size == Size)
-                return 0;
-            return Compare(other.Buffer, other.Size);
+            Debug.Assert(size >= 0);
+            Debug.Assert(context != null);
+            _size = size;
+            _context = context;
+            _buffer = buffer;
+            _string = str;
         }
 
         public bool Equals(string other)
@@ -57,6 +63,31 @@ namespace Sparrow.Json
             return CompareTo(other) == 0;
         }
 
+        public int CompareTo(string other)
+        {
+            if (_string != null)
+                return String.Compare(_string, other, StringComparison.Ordinal);
+
+            var sizeInBytes = _context.Encoding.GetMaxByteCount(other.Length);
+
+            if (LazyStringTempComparisonBuffer == null || LazyStringTempComparisonBuffer.Length < other.Length)
+                LazyStringTempComparisonBuffer = new byte[Bits.NextPowerOf2(sizeInBytes)];
+
+            fixed (char* pOther = other)
+            fixed (byte* pBuffer = LazyStringTempComparisonBuffer)
+            {
+                var tmpSize = _context.Encoding.GetBytes(pOther, other.Length, pBuffer, sizeInBytes);
+                return Compare(pBuffer, tmpSize);
+            }
+        }
+
+        public int CompareTo(LazyStringValue other)
+        {
+            if (other.Buffer == Buffer && other.Size == Size)
+                return 0;
+            return Compare(other.Buffer, other.Size);
+        }
+        
         public int Compare(byte* other, int otherSize)
         {
             var result = Memory.CompareInline(Buffer, other, Math.Min(Size, otherSize));
@@ -96,22 +127,10 @@ namespace Sparrow.Json
             if (self == null)
                 return null;
 
-            self.Materialize();
-            return self.String;
-        }
+            if (self._string == null)
+                self._string = self._context.Encoding.GetString(self._buffer, self._size);
 
-        private void Materialize()
-        {
-            if (String != null)
-                return;
-
-            var charCount = Context.Encoding.GetCharCount(Buffer, Size);
-            var str = new string(' ', charCount);
-            fixed (char* pStr = str)
-            {
-                Context.Encoding.GetChars(Buffer, Size, pStr, charCount);
-                String = str;
-            }
+            return self._string;
         }
 
         public override bool Equals(object obj)
@@ -133,7 +152,7 @@ namespace Sparrow.Json
         {
             return (int)Hashing.XXHash32.CalculateInline(Buffer, Size);
         }
-
+        
         public override string ToString()
         {
             return (string)this; // invoke the implicit string conversion
@@ -159,20 +178,45 @@ namespace Sparrow.Json
 
         public void Dispose()
         {
-            if (AllocatedMemoryData == null)
-                return;
-            Context.ReturnMemory(AllocatedMemoryData);
-            AllocatedMemoryData = null;
+            if (AllocatedMemoryData != null)
+            {
+                _context.ReturnMemory(AllocatedMemoryData);
+                AllocatedMemoryData = null;
+            }
         }
 
         public bool Contains(string value)
         {
+            if (_string != null)
+                return _string.Contains(value);
+
             return ToString().Contains(value);
         }
 
         public bool EndsWith(string value)
         {
-            return ToString().EndsWith(value);
+            if (_string != null)
+                return _string.EndsWith(value);
+
+            if (value == null)
+                throw new ArgumentNullException(nameof(value));
+            // Every UTF8 character uses at least 1 byte
+            if (value.Length > Size)
+                return false;
+            if (value.Length == 0)
+                return true;
+
+            // We are assuming these values are going to be relatively constant throughout the object lifespan
+            LazyStringValue converted = _context.GetLazyStringForFieldWithCaching(value);
+            return EndsWith(converted);
+        }
+
+        public bool EndsWith(LazyStringValue value)
+        {
+            if (value.Size > Size)
+                return false;
+
+            return Memory.Compare(Buffer + (Size - value.Size), value.Buffer, value.Size) == 0;
         }
 
         public bool EndsWith(string value, StringComparison comparisonType)
@@ -182,22 +226,52 @@ namespace Sparrow.Json
 
         public int IndexOf(char value)
         {
-            return ToString().IndexOf(value);
+            return IndexOf(value, 0, Length);
         }
 
         public int IndexOf(char value, int startIndex)
         {
-            return ToString().IndexOf(value, startIndex);
+            return IndexOf(value, startIndex, Length - startIndex);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ValidateIndexes(int startIndex, int count)
+        {
+            if (startIndex < 0 || count < 0)
+                throw new ArgumentOutOfRangeException("count or startIndex is negative.");
+
+            if (startIndex > Length)
+                throw new ArgumentOutOfRangeException(nameof(startIndex), "startIndex is greater than the length of this string.");
+
+            if (count > Length - startIndex)
+                throw new ArgumentOutOfRangeException("count is greater than the length of this string minus startIndex.");
         }
 
         public int IndexOf(char value, int startIndex, int count)
         {
-            return ToString().IndexOf(value, startIndex, count);
+            if (_string != null)
+                return _string.IndexOf(value, startIndex, count);
+
+            ValidateIndexes(startIndex, count);
+
+            if (LazyStringTempBuffer == null || LazyStringTempBuffer.Length < Length)
+                LazyStringTempBuffer = new char[Bits.NextPowerOf2(Length)];
+
+            fixed (char* pChars = LazyStringTempBuffer)
+                _context.Encoding.GetChars(Buffer, Size, pChars, Length);
+
+            for (int i = startIndex; i < startIndex + count; i++)
+            {
+                if (LazyStringTempBuffer[i] == value)
+                    return i;
+            }
+
+            return -1;
         }
 
         public int IndexOf(string value)
         {
-            return ToString().IndexOf(value);
+            return ToString().IndexOf(value, StringComparison.Ordinal);
         }
 
         public int IndexOf(string value, StringComparison comparisonType)
@@ -207,17 +281,34 @@ namespace Sparrow.Json
 
         public int IndexOfAny(char[] anyOf)
         {
-            return ToString().IndexOfAny(anyOf);
+            return IndexOfAny(anyOf, 0, Length);
         }
 
         public int IndexOfAny(char[] anyOf, int startIndex)
         {
-            return ToString().IndexOfAny(anyOf, startIndex);
+            return IndexOfAny(anyOf, startIndex, Length - startIndex);
         }
 
         public int IndexOfAny(char[] anyOf, int startIndex, int count)
         {
-            return ToString().IndexOfAny(anyOf, startIndex, count);
+            if (_string != null)
+                return _string.IndexOfAny(anyOf, startIndex, count);
+
+            ValidateIndexes(startIndex, count);
+
+            if (LazyStringTempBuffer == null || LazyStringTempBuffer.Length < Length)
+                LazyStringTempBuffer = new char[Bits.NextPowerOf2(Length)];
+
+            fixed (char* pChars = LazyStringTempBuffer)
+                _context.Encoding.GetChars(Buffer, Size, pChars, Length);
+
+            for (int i = startIndex; i < startIndex + count; i++)
+            {
+                if (anyOf.Contains(LazyStringTempBuffer[i]))
+                    return i;
+            }
+
+            return -1;
         }
 
         public string Insert(int startIndex, string value)
@@ -227,22 +318,42 @@ namespace Sparrow.Json
 
         public int LastIndexOf(char value)
         {
-            return ToString().LastIndexOf(value);
+            return LastIndexOf(value, Length, Length);
         }
 
         public int LastIndexOf(char value, int startIndex)
         {
-            return ToString().LastIndexOf(value, startIndex);
+            return LastIndexOf(value, startIndex, startIndex);
         }
 
         public int LastIndexOf(char value, int startIndex, int count)
         {
-            return ToString().LastIndexOf(value, startIndex, count);
+            if (_string != null)
+                return _string.LastIndexOf(value, startIndex, count);
+
+            ValidateIndexes(Length - startIndex, count);
+
+            if (LazyStringTempBuffer == null || LazyStringTempBuffer.Length < Length)
+                LazyStringTempBuffer = new char[Bits.NextPowerOf2(Length)];
+
+            fixed (char* pChars = LazyStringTempBuffer)
+                _context.Encoding.GetChars(Buffer, Size, pChars, Length);
+
+            for (int i = startIndex; i > startIndex - count; i++)
+            {
+                if (LazyStringTempBuffer[i] == value)
+                    return i;
+            }
+
+            return -1;
         }
 
         public int LastIndexOf(string value)
         {
-            return ToString().LastIndexOf(value);
+            if (_string != null)
+                return _string.LastIndexOf(value, StringComparison.Ordinal);
+
+            return ToString().LastIndexOf(value, StringComparison.Ordinal);
         }
 
         public int LastIndexOf(string value, StringComparison comparisonType)
@@ -252,17 +363,34 @@ namespace Sparrow.Json
 
         public int LastIndexOfAny(char[] anyOf)
         {
-            return ToString().LastIndexOfAny(anyOf);
+            return LastIndexOfAny(anyOf, Length, Length);
         }
 
         public int LastIndexOfAny(char[] anyOf, int startIndex)
         {
-            return ToString().LastIndexOfAny(anyOf, startIndex);
+            return LastIndexOfAny(anyOf, startIndex, startIndex);
         }
 
         public int LastIndexOfAny(char[] anyOf, int startIndex, int count)
         {
-            return ToString().LastIndexOfAny(anyOf, startIndex, count);
+            if (_string != null)
+                return _string.LastIndexOfAny(anyOf, startIndex, count);
+
+            ValidateIndexes(Length - startIndex, count);
+
+            if (LazyStringTempBuffer == null || LazyStringTempBuffer.Length < Length)
+                LazyStringTempBuffer = new char[Bits.NextPowerOf2(Length)];
+
+            fixed (char* pChars = LazyStringTempBuffer)
+                _context.Encoding.GetChars(Buffer, Size, pChars, Length);
+
+            for (int i = startIndex; i > startIndex - count; i++)
+            {
+                if (anyOf.Contains(LazyStringTempBuffer[i]))
+                    return i;
+            }
+
+            return -1;
         }
 
         public string PadLeft(int totalWidth)
@@ -341,12 +469,28 @@ namespace Sparrow.Json
 
         public bool StartsWith(string value)
         {
-            return ToString().StartsWith(value);
+            if (_string != null)
+                return _string.StartsWith(value);
+
+            if (value == null)
+                throw new ArgumentNullException(nameof(value));
+            // Every UTF8 character uses at least 1 byte
+            if (value.Length > Size)
+                return false;
+            if (value.Length == 0)
+                return true;
+
+            // We are assuming these values are going to be relatively constant throughout the object lifespan
+            LazyStringValue converted = _context.GetLazyStringForFieldWithCaching(value);
+            return StartsWith(converted);
         }
 
-        public bool StartsWith(string value, StringComparison comparisonType)
+        public bool StartsWith(LazyStringValue value)
         {
-            return ToString().StartsWith(value, comparisonType);
+            if (value.Size > Size)
+                return false;
+
+            return Memory.Compare(Buffer, value.Buffer, value.Size) == 0;
         }
 
         public char[] ToCharArray()

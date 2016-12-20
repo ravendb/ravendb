@@ -39,6 +39,8 @@ class visualizer extends viewModelBase {
     constructor() {
         super();
 
+        this.bindToCurrentInstance("setSelectedIndex", "selectDocKey", "addCurrentDocumentKey");
+
         this.initObservables();
     }
 
@@ -92,19 +94,23 @@ class visualizer extends viewModelBase {
         this.detailsGraph.reset();
     }
 
-    addDocKey(key: string) {
+    addCurrentDocumentKey() {
+        this.addDocKey(this.documents.docKey());
+    }
+
+    private addDocKey(key: string) {
         if (!key) {
             return;
         }
 
-        if (this.documents.docKeys.contains(key)) {
+        if (_.includes(this.documents.docKeys(), key)) {
             this.globalGraph.zoomToDocument(key);
         } else {
             //TODO: spinner
             new getIndexMapReduceTreeCommand(this.activeDatabase(), this.currentIndex(), key)
                 .execute()
                 .done((mapReduceTrees) => {
-                    if (!this.documents.docKeys.contains(key)) {
+                    if (!_.includes(this.documents.docKeys(), key)) {
                         this.documents.docKeys.push(key);
 
                         this.addDocument(key);

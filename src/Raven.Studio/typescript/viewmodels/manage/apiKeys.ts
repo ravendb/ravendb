@@ -104,7 +104,7 @@ class apiKeys extends viewModelBase {
         this.apiKeys().forEach((key: apiKey) => key.setIdFromName());
 
         var apiKeysNamesArray: Array<string> = this.apiKeys().map((key: apiKey) => key.name());
-        var deletedApiKeys = this.loadedApiKeys().filter((key: apiKey) => !apiKeysNamesArray.contains(key.name()));
+        var deletedApiKeys = this.loadedApiKeys().filter((key: apiKey) => !_.includes(apiKeysNamesArray, key.name()));
         deletedApiKeys.forEach((key: apiKey) => key.setIdFromName());
 
         new saveApiKeysCommand(this.apiKeys(), deletedApiKeys)
@@ -118,7 +118,7 @@ class apiKeys extends viewModelBase {
 
     updateKeys(serverKeys: bulkDocumentDto[]) {
         this.apiKeys().forEach(key => {
-            var serverKey = serverKeys.first(k => k.Key === key.getId());
+            var serverKey = serverKeys.find(k => k.Key === key.getId());
             if (serverKey) {
                 key.__metadata.etag = serverKey.Etag;
                 key.__metadata.lastModified = serverKey.Metadata["Last-Modified"]; //TODO last -modified is not longer used? use Raven-Last-Modified

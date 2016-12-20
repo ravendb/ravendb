@@ -37,23 +37,23 @@
 
 <div id="gridContextMenu">
     <ul class="dropdown-menu" role="menu" data-bind="visible: settings.contextMenuOptions.length > 0 ">
-        <li data-bind="visible: settings.contextMenuOptions.contains('EditItem') && settings.selectedIndices().length == 1">
+        <li data-bind="visible: _.includes(settings.contextMenuOptions, 'EditItem') && settings.selectedIndices().length == 1">
             <a tabindex="-1" href="#" data-bind="click: editItem">Edit Item</a>
         </li>
-        <li data-bind="visible: settings.contextMenuOptions.contains('CopyItems')">
+        <li data-bind="visible: _.includes(settings.contextMenuOptions, 'CopyItems')">
             <a tabindex="-1" href="#" data-bind="disable: isIndexMapReduce, click: copySelectedDocs, text: settings.selectedIndices().length === 1 ? 'Copy Item' : 'Copy Items'"></a>
         </li>
-        <li data-bind="visible: settings.contextMenuOptions.contains('CopyIDs')">
+        <li data-bind="visible: _.includes(settings.contextMenuOptions, 'CopyIDs')">
             <a tabindex="-1" href="#" data-bind="disable: isIndexMapReduce, click: copySelectedDocIds, text: settings.selectedIndices().length === 1 ? 'Copy ID' : 'Copy IDs'"></a>
         </li>
-        <li data-bind="visible: settings.contextMenuOptions.contains('ChangeValue') && settings.selectedIndices().length == 1">
+        <li data-bind="visible: _.includes(settings.contextMenuOptions, 'ChangeValue') && settings.selectedIndices().length == 1">
             <a tabindex="-1" href="#" data-bind="click: changeCounterValue">Change Value</a>
         </li>
-        <li data-bind="visible: settings.contextMenuOptions.contains('Reset') && settings.selectedIndices().length == 1">
+        <li data-bind="visible: _.includes(settings.contextMenuOptions, 'Reset') && settings.selectedIndices().length == 1">
             <a tabindex="-1" href="#" data-bind="click: resetCounter">Reset</a>
         </li>
-        <li data-bind="visible: settings.contextMenuOptions.contains('CopyItems') || (settings.contextMenuOptions.contains('Reset') && settings.selectedIndices().length == 1)" class="divider"></li>
-        <li data-bind="visible: !isIndexMapReduce() && settings.contextMenuOptions.contains('Delete')">
+        <li data-bind="visible: _.includes(settings.contextMenuOptions, 'CopyItems') || (_.includes(settings.contextMenuOptions, 'Reset') && settings.selectedIndices().length == 1)" class="divider"></li>
+        <li data-bind="visible: !isIndexMapReduce() && _.includes(settings.contextMenuOptions, 'Delete')">
             <a tabindex="-1" href="#" data-bind="click: deleteSelectedItems">Delete</a>
         </li>
     </ul>

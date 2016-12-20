@@ -116,7 +116,7 @@ class types extends viewModelBase {
         if (!grid)
             return;
 
-        var selectedType = <timeSeriesType>grid.getSelectedItems(1).first();
+        var selectedType = <timeSeriesType>grid.getSelectedItems(1)[0];
         var change = new typeChange(selectedType);
         var typeChangeVM = new editTypeDialog(change, false);
         typeChangeVM.updateTask.done((change: typeChange, isNew: boolean) => {

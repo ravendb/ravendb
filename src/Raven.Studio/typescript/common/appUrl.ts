@@ -111,7 +111,7 @@ class appUrl {
         statusStorageReport: ko.computed(() => appUrl.forStatusStorageReport(appUrl.currentDatabase())),
 
         isAreaActive: (routeRoot: string) => ko.pureComputed(() => appUrl.checkIsAreaActive(routeRoot)),
-        isActive: (routeTitle: string) => ko.pureComputed(() => router.navigationModel().first(m => m.isActive() && m.title === routeTitle) != null),
+        isActive: (routeTitle: string) => ko.pureComputed(() => router.navigationModel().find(m => m.isActive() && m.title === routeTitle) != null),
         resourcesManagement: ko.computed(() => appUrl.forResources()),
 
         filesystemFiles: ko.computed(() => appUrl.forFilesystemFiles(appUrl.currentFilesystem())),

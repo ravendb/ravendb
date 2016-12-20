@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using FastTests.Server.Basic;
 using FastTests.Server.Documents.Alerts;
@@ -14,11 +13,12 @@ namespace Tryouts
     {
         static void Main(string[] args)
         {
-            using (var store = new FastTests.Server.Documents.Replication.ManualConflictResolution())
+            using (var store = new FastTests.Server.Documents.Indexing.Auto.BasicAutoMapIndexing())
             {
-                store.CanManuallyResolveConflict();
+                store.IndexLoadErrorCreatesFaultyInMemoryIndexFakeAndAddsAlert();
             }
         }
     }
+
 }
 

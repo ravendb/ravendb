@@ -66,7 +66,7 @@ class etl extends viewModelBase {
         var deferred = $.Deferred();
         var db = this.activeDatabase();
         if (db) {
-            if (db.activeBundles.contains("Replication")) {
+            if (_.includes(db.activeBundles(), "Replication")) {
                 this.replicationEnabled(true);
                 this.fetchReplications(db)
                     .done(() => deferred.resolve({ can: true }))
