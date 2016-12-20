@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Exceptions;
 using Raven.Server.Extensions;
@@ -290,50 +291,22 @@ namespace Raven.Server.Documents
             int keySize;
             DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, collection, out lowerKey, out lowerSize, out keyPtr,
                 out keySize);
+
             Slice scriptAsSlice;
-            using (DocumentKeyWorker.GetSliceFromKey(context, script, out scriptAsSlice))
+            using (Slice.From(context.Allocator, script,ByteStringType.Immutable,out scriptAsSlice))
             {
                 table.Set(new TableValueBuilder
                 {
                     {lowerKey, lowerSize},
                     {keyPtr, keySize},
-                    {scriptAsSlice.Content.Ptr, scriptAsSlice.Content.Length }
+                    scriptAsSlice
                 });
             }
-
-            foreach (var tvr in table.SeekByPrimaryKey(Slices.BeforeAllKeys))
-            {
-                int size;
-                var ptr = tvr.Read(0, out size);
-                int size2;
-                var ptr2 = tvr.Read(1, out size2);
-                int size3;
-                var ptr3 = tvr.Read(2, out size3);
-                var col = new LazyStringValue(null, ptr, size, context);
-                var col2 = new LazyStringValue(null, ptr2, size2, context);
-                var col3 = new LazyStringValue(null, ptr3, size3, context);
-            }
-
         }
 
         public string GetScript(DocumentsOperationContext context, string collection)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(ReplicationResolverSchema, "Scripts");
-
-
-            foreach (var tvr in table.SeekByPrimaryKey(Slices.BeforeAllKeys))
-            {
-                int size;
-                var ptr = tvr.Read(0, out size);
-                int size2;
-                var ptr2 = tvr.Read(1, out size2);
-                int size3;
-                var ptr3 = tvr.Read(2, out size3);
-                var col = new LazyStringValue(null, ptr, size, context);
-                var col2 = new LazyStringValue(null, ptr2, size2, context);
-                var col3 = new LazyStringValue(null, ptr3, size3, context);
-            }
-
 
             byte* lowerKey;
             int lowerSize;
@@ -344,15 +317,8 @@ namespace Raven.Server.Documents
                 out keySize);
             Slice collectionNameAsSlice;
 
-
-
-           
-
             using (Slice.External(context.Allocator,lowerKey,lowerSize,out collectionNameAsSlice))
             {
-                //var a = table.GetTree(collectionNameAsSlice);
-                var b = table.VerifyKeyExists(collectionNameAsSlice);
-                
                 var tvr = table.ReadByKey(collectionNameAsSlice);
                 if (tvr == null)
                 {
@@ -365,6 +331,34 @@ namespace Raven.Server.Documents
                 //note : this will work due to implicit casting of LazyStringValue to string
                 return new LazyStringValue(null, ptr, size, context);
             }
+        }
+
+        public Dictionary<string, ScriptResolver> GetDictionaryOfScriptResolvers(Transaction tx)
+        {
+            var scripts = tx.OpenTable(ReplicationResolverSchema, "Scripts");
+
+            var result = new Dictionary<string, ScriptResolver>();
+
+            JsonOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                foreach (var tvr in scripts.SeekByPrimaryKey(Slices.BeforeAllKeys))
+                {
+                    int collectionSize;
+                    var collectionPtr = tvr.Read((int)ReplicationResolverEntry.LoweredKey, out collectionSize);
+                    var collection = new LazyStringValue(null, collectionPtr, collectionSize, context);
+
+                    int scriptSize;
+                    var scriptPtr = tvr.Read((int)ReplicationResolverEntry.Script, out scriptSize);
+                    var script = new LazyStringValue(null, scriptPtr, scriptSize, context);
+
+                    result.Add(collection, new ScriptResolver
+                    {
+                        Script = script
+                    });
+                }
+            }
+            return result;
         }
 
         private static void AssertTransaction(DocumentsOperationContext context)

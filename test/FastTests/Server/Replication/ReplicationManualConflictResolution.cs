@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Threading;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
@@ -26,36 +27,60 @@ namespace FastTests.Server.Documents.Replication
                     session.Store(new ReplicationDocument
                     {
                         Destinations = destinations,
-                        DocumentConflictResolution = StraightforwardConflictResolution.ResolveManually
+                        DocumentConflictResolution = StraightforwardConflictResolution.ResolveManually,
+
                     }, Constants.Replication.DocumentReplicationConfiguration);
+                    session.Store(new ReplicationManualResolver {
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>{
+                            { "Users", new ScriptResolver
+                                {
+                                    Script = @"
+return {Name:docs[0].Name + '123'};
+"
+                                }
+                            }
+                        }
+                    },Constants.Replication.DocumentReplicationResolvers);
                     session.SaveChanges();
                 }
 
                 SetupReplication(master, slave);
 
-                using (var session = slave.OpenSession())
-                {
-                    session.Store(new ReplicationConflictsTests.User()
-                    {
-                        Name = "local"
-                    }, "users/1");
-                    session.SaveChanges();
-                }
-
                 using (var session = master.OpenSession())
                 {
                     session.Store(new ReplicationConflictsTests.User()
                     {
-                        Name = "remote"
+                        Name = "Karmel"
                     }, "users/1");
                     session.SaveChanges();
                 }
+
+                var updated = WaitForDocument(slave, "users/1");
+                Assert.NotNull(updated);
+
+                using (var session = slave.OpenSession())
+                {
+                    session.Delete("users/1");
+                    session.SaveChanges();
+                }
+                using (var session = master.OpenSession())
+                {
+                    session.Store(new ReplicationConflictsTests.User()
+                    {
+                        Name = "Karmeli"
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+     
+                var updated2 = WaitForDocument(slave, "users/1");
+                Assert.NotNull(updated2);
 
                 using (var session = slave.OpenSession())
                 {
                     try
                     {
                         var item = session.Load<ReplicationConflictsTests.User>("users/1");
+                        Assert.Equal(item.Name, "Karmeli123");
                     }
                     catch (ErrorResponseException e)
                     {

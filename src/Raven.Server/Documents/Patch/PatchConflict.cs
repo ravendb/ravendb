@@ -122,8 +122,7 @@ namespace Raven.Server.Documents.Patch
             {
                 PrepareEngine(patch, scope, jintEngine);
 
-                //scope.PatchObject = scope.ToJsObject(jintEngine, document.Data);
-                scope.ActualPatchResult = jintEngine.Invoke("Merge" + collection, scope.PatchObject);
+                scope.ActualPatchResult = jintEngine.Invoke("ExecutePatchScript", scope.PatchObject);
 
                 CleanupEngine(patch, jintEngine, scope);
 
@@ -233,7 +232,9 @@ namespace Raven.Server.Documents.Patch
             AddScript(jintEngine, "Raven.Server.Documents.Patch.RavenDB.js");
            
             jintEngine.Options.MaxStatements(maxSteps);
-            jintEngine.Execute(patch.Script, new ParserOptions
+            var wrapperScript = string.Format(@"function ExecutePatchScript(docs){{ {0} }}", scriptWithProperLines);
+
+            jintEngine.Execute(wrapperScript, new ParserOptions
             {
                 Source = "main.js"
             });
@@ -259,17 +260,17 @@ namespace Raven.Server.Documents.Patch
             engine.SetValue("HasTombstone", _hasTombstone);
 
             var docsArr = engine.Array.Construct(Arguments.Empty);
-            var docs = _docs.ToArray();
-            for (var i = 0; i < docs.Length; i++)
+            int index = 0;
+            foreach (var doc in _docs)
             {
-                var doc = docs[i];
                 //TODO : add unit test that has a conflict here to make sure that it is ok
-                var jsVal = scope.ToJsObject(engine, doc.Doc, "doc" + i);
-                docsArr.FastAddProperty(i.ToString(), jsVal, true, true, true);
+                var jsVal = scope.ToJsObject(engine, doc.Doc, "doc" + index);
+                docsArr.FastAddProperty(index.ToString(), jsVal, true, true, true);
+                index++;
             }
             docsArr.FastSetProperty("length", new PropertyDescriptor
             {
-                Value = new JsValue(docs.Length),
+                Value = new JsValue(index),
                 Configurable = true,
                 Enumerable = true,
                 Writable = true,

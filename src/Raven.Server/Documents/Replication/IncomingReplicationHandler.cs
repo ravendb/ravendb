@@ -19,9 +19,7 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json.Parsing;
 using System.Linq;
-using Jint;
 using Raven.Server.Documents.Patch;
-using Raven.Abstractions.Util;
 using ThreadState = System.Threading.ThreadState;
 
 namespace Raven.Server.Documents.Replication
@@ -654,63 +652,20 @@ namespace Raven.Server.Documents.Replication
             IReadOnlyList<DocumentConflict> conflictedDocs = _documentsContext.DocumentDatabase.DocumentsStorage.GetConflictsFor(_documentsContext, docPosition.Id);        
 
             var patch = new PatchConflict(_database, conflictedDocs, docPosition.Id);
-            PatchRequest request = new PatchRequest
-            {
-                Script = @"
-                 function MergeProducts(docs){
-
-                    for(var i = 1; i < docs.length; i++) 
-                    {
-                        for(var j = 0; i < docs[i].ShoppingCart.length; j++){
-                            var currentLine = docs[i].ShoppingCart[j];
-                            var existingLine = docs[0].ShoppingCart.find(function(line) { 
-                                                 return line.ProductId == currentLine.ProductId
-                                        });
-                            if(existingLine)
-                                existingLine.Quantity += currentLine.Quantity;
-                            else
-                                docs[0].ShoppingCart.push(currentLine);
-                        }
-                    }
-output('MergeProducts was called');
-output(docs);
-                    return null;
-                }
-
-
-
-function MergeOrders(docs){
-
-                    for(var i = 1; i < docs.length; i++) 
-                    {
-                        for(var j = 0; i < docs[i].ShoppingCart.length; j++){
-                            var currentLine = docs[i].ShoppingCart[j];
-                            var existingLine = docs[0].ShoppingCart.find(function(line) { 
-                                                 return line.ProductId == currentLine.ProductId
-                                        });
-                            if(existingLine)
-                                existingLine.Quantity += currentLine.Quantity;
-                            else
-                                docs[0].ShoppingCart.push(currentLine);
-                        }
-                    }
-output('MergeOrders was called');
-output(docs);
-                    return {Name:'asd'};
-                }
-
-
-"
-            };
-
-            _documentsContext.DocumentDatabase.DocumentsStorage.AddOrUpdateScript(_documentsContext,"Orders","asdasdasd");
-            _documentsContext.DocumentDatabase.DocumentsStorage.AddOrUpdateScript(_documentsContext,"Products","123123");
-            var s = _documentsContext.DocumentDatabase.DocumentsStorage.GetScript(_documentsContext,"Products");
-            var s2 = _documentsContext.DocumentDatabase.DocumentsStorage.GetScript(_documentsContext, "Orders");
-
-
             var collection = CollectionName.GetCollectionName(docPosition.Id, doc);
 
+            ScriptResolver scriptResolver;
+            var hasScript = _parent.ManualConflictResolversCache.TryGetValue(collection, out scriptResolver);
+            if (!hasScript || scriptResolver == null)
+            {
+                throw new InvalidOperationException($"Script not found to resolve the {collection} collection");
+            }
+
+            PatchRequest request = new PatchRequest
+            {
+                Script = scriptResolver.Script
+            };
+            
             var results = patch.Apply(_documentsContext,  request, collection);
             _documentsContext.DocumentDatabase.DocumentsStorage.DeleteConflictsFor(_documentsContext, docPosition.Id);
             var merged = ReplicationUtils.MergeVectors(conflictingVector, _tempReplicatedChangeVector);
@@ -735,6 +690,7 @@ output(docs);
         }
 
         private void HandleConflictForDocument(
+            DocumentsOperationContext context,
             ReplicationDocumentsPositions docPosition,
             ChangeVectorEntry[] conflictingVector,
             BlittableJsonReaderObject doc)
@@ -796,7 +752,6 @@ output(docs);
                     }
                     break;
                 case StraightforwardConflictResolution.ResolveManually:
-                  
                     _database.DocumentsStorage.AddConflict(_documentsContext, docPosition.Id, doc, _tempReplicatedChangeVector);    
                     ResovleConflictManually(docPosition, conflictingVector, doc);
                     break;
