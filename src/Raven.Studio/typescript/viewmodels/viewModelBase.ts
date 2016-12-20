@@ -69,22 +69,11 @@ class viewModelBase {
         setTimeout(() => viewModelBase.showSplash(self.isAttached === false), 700);
         this.downloader.reset();
 
-        const resource = this.activeResource();
-        if (resource && resource.disabled) {
-            messagePublisher.reportError(`${resource.fullTypeName} '${resource.name}' is disabled!`,
-                `You can't access any section of the ${resource.fullTypeName.toLowerCase()} while it's disabled.`);
-
-            return false;
-        }
-
+        this.resourcesManager.activateBasedOnCurrentUrl();
         return true;
     }
 
     activate(args: any, isShell = false) {
-        if (!isShell) {
-            this.resourcesManager.activateBasedOnCurrentUrl();    
-        }
-    
         // create this ko.computed once to avoid creation and subscribing every 50 ms - thus creating memory leak.
         var adminArea = this.appUrls.isAreaActive("admin");
 

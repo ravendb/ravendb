@@ -55,7 +55,7 @@ class changesContext {
             this.disconnectFromResourceChangesApi();
         }
 
-        if (rs.disabled) { //TODO: or not licensed
+        if (rs.disabled()) { //TODO: or not licensed
             this.navigateToResourceSpecificPage(rs);
             return;
         }
