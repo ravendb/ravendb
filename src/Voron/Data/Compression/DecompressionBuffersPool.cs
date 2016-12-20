@@ -46,10 +46,10 @@ namespace Voron.Data.Compression
         public IDisposable GetTemporaryPage(LowLevelTransaction tx, int pageSize, out TemporaryPage tmp)
         {
             if (pageSize < _options.PageSize)
-                throw new ArgumentException($"Page cannot be smaller than {_options.PageSize} bytes while {pageSize} bytes were requested.");
+                ThrowInvalidPageSize(pageSize);
 
             if (pageSize > Constants.Storage.MaxPageSize)
-                throw new ArgumentException($"Max page size is {Constants.Storage.MaxPageSize} while you requested {pageSize} bytes");
+                ThrowPageSizeTooBig(pageSize);
 
             Debug.Assert(pageSize == Bits.NextPowerOf2(pageSize));
 
@@ -100,6 +100,17 @@ namespace Voron.Data.Compression
             }
             
             return tmp.ReturnTemporaryPageToPool;
+        }
+
+        private static void ThrowPageSizeTooBig(int pageSize)
+        {
+            throw new ArgumentException($"Max page size is {Constants.Storage.MaxPageSize} while you requested {pageSize} bytes");
+        }
+
+        private void ThrowInvalidPageSize(int pageSize)
+        {
+            throw new ArgumentException(
+                $"Page cannot be smaller than {_options.PageSize} bytes while {pageSize} bytes were requested.");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
