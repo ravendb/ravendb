@@ -23,13 +23,10 @@ namespace FastTests.Sparrow
             {
                 var diffPages = new DiffPages
                 {
-                    Size = 4096,
-                    Original = one,
-                    Modified = two,
                     Output = tmp,
                 };
 
-                diffPages.ComputeDiff();
+                diffPages.ComputeDiff(one, two, 4096);
 
                 Assert.Equal(0, diffPages.OutputSize);
             }
@@ -53,13 +50,10 @@ namespace FastTests.Sparrow
             {
                 var diffPages = new DiffPages
                 {
-                    Size = 4096,
-                    Original = one,
-                    Modified = two,
                     Output = tmp,
                 };
 
-                diffPages.ComputeDiff();
+                diffPages.ComputeDiff(one, two, 4096);
 
                 Assert.Equal(96, diffPages.OutputSize);
             }
@@ -79,12 +73,10 @@ namespace FastTests.Sparrow
             {
                 var diffPages = new DiffPages
                 {
-                    Size = 4096,
-                    Modified = one,
                     Output = tmp,
                 };
 
-                diffPages.ComputeNew();
+                diffPages.ComputeNew(one, 4096);
 
                 Assert.Equal(96, diffPages.OutputSize);
             }
@@ -110,13 +102,10 @@ namespace FastTests.Sparrow
             {
                 var diffPages = new DiffPages
                 {
-                    Size = 4096,
-                    Original = one,
-                    Modified = two,
                     Output = tmp,
                 };
 
-                diffPages.ComputeDiff();
+                diffPages.ComputeDiff(one, two, 4096);
 
                 Memory.Copy(tri, one, 4096);
                 new DiffApplier
@@ -146,13 +135,10 @@ namespace FastTests.Sparrow
             {
                 var diffPages = new DiffPages
                 {
-                    Size = 4096,
-                    Original = one,
-                    Modified = two,
                     Output = tmp,
                 };
 
-                diffPages.ComputeDiff();
+                diffPages.ComputeDiff(one, two, 4096);
 
                 Assert.False(diffPages.IsDiff);
             }
