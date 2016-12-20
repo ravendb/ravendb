@@ -83,7 +83,7 @@ namespace Raven.NewClient.Client.Document.Async
             {
                 Query = query.ToString()
             };
-            var deleteByIndexOperation = new DeleteByIndexOperation(Context);
+            var deleteByIndexOperation = new DeleteByIndexOperation();
             var command = deleteByIndexOperation.CreateRequest(indexName, indexQuery,
                 new QueryOperationOptions(), (DocumentStore)this.DocumentStore);
 

@@ -1,4 +1,3 @@
-using System;
 using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
@@ -20,7 +19,6 @@ namespace Raven.NewClient.Client.Commands
 
         protected void LogPatchByIndex(string indexName)
         {
-            //TODO - Better log info
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Patch by '{indexName}' index");
         }

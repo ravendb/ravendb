@@ -2,8 +2,6 @@
 using System.Net.Http;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Blittable;
-using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Json;
 using Sparrow.Json;
@@ -19,6 +17,7 @@ namespace Raven.NewClient.Client.Commands
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/collections/docs?name={CollectionName}";
+            IsReadRequest = false;
 
             var request = new HttpRequestMessage
             {

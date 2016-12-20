@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Net.Http;
-using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Json;
 using Sparrow.Json;

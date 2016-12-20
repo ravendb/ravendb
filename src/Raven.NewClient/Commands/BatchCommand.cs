@@ -13,7 +13,6 @@ namespace Raven.NewClient.Client.Commands
     {
         public JsonOperationContext Context;
         public List<DynamicJsonValue> Commands;
-        public List<object> Entities;
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
@@ -40,6 +39,7 @@ namespace Raven.NewClient.Client.Commands
             });
 
             url = $"{node.Url}/databases/{node.Database}/bulk_docs";
+            IsReadRequest = false;
             return request;
         }
 
