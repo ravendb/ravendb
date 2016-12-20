@@ -39,7 +39,6 @@ class resources extends viewModelBase {
     spinners = {
         globalToggleDisable: ko.observable<boolean>(false),
         itemTakedowns: ko.observableArray<string>([]),
-        resourceLoad: ko.observableArray<string>([]),
         disableIndexing: ko.observableArray<string>([]), //TODO: bind on UI
         toggleRejectMode: ko.observableArray<string>([]) //TODO: bind on UI
     }
@@ -52,7 +51,7 @@ class resources extends viewModelBase {
     constructor() {
         super();
 
-        this.bindToCurrentInstance("loadResource", "toggleResource", "toggleDatabaseIndexing", "deleteResource");
+        this.bindToCurrentInstance("toggleResource", "toggleDatabaseIndexing", "deleteResource");
 
         this.initObservables();
     }
@@ -268,15 +267,6 @@ class resources extends viewModelBase {
         if (matchedResource) {
             matchedResource.disabled(result.disabled);
         }
-    }
-
-    loadResource(rs: resourceInfo) {
-        this.spinners.resourceLoad.push(rs.qualifiedName);
-
-        new loadResourceCommand(rs.asResource())
-            .execute()
-            .done(() => this.fetchResources())
-            .always(() => this.spinners.resourceLoad.remove(rs.qualifiedName));
     }
 
     toggleDatabaseIndexing(db: databaseInfo) {
