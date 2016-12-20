@@ -150,7 +150,8 @@ namespace Raven.Server.Documents.Queries
         {
             if (DynamicQueryRunner.IsDynamicIndex(indexName))
             {
-                throw new NotImplementedException();
+                var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, token);
+                return runner.ExecuteIndexEntries(indexName, query, existingResultEtag);
             }
 
             var index = GetIndex(indexName);

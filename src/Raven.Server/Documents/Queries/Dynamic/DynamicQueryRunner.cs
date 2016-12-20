@@ -75,12 +75,29 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 return new CompletedTask<DocumentQueryResult>(result);
             }
 
-            var currentIndexEtag = index.GetIndexEtag();
-
-            if (existingResultEtag == currentIndexEtag)
-                return new CompletedTask<DocumentQueryResult>(DocumentQueryResult.NotModifiedResult);
+            if (existingResultEtag.HasValue)
+            {
+                var etag = index.GetIndexEtag();
+                if (etag == existingResultEtag)
+                    return new CompletedTask<DocumentQueryResult>(DocumentQueryResult.NotModifiedResult);
+            }
 
             return index.Query(query, _context, _token);
+        }
+
+        public IndexEntriesQueryResult ExecuteIndexEntries(string dynamicIndexName, IndexQueryServerSide query, long? existingResultEtag)
+        {
+            string collection;
+            var index = MatchIndex(dynamicIndexName, query, false, out collection);
+
+            if (existingResultEtag.HasValue)
+            {
+                var etag = index.GetIndexEtag();
+                if (etag == existingResultEtag)
+                    return IndexEntriesQueryResult.NotModifiedResult;
+            }
+
+            return index.IndexEntries(query, _context, _token);
         }
 
         private void ExecuteCollectionQuery(QueryResultServerSide resultToFill, IndexQueryServerSide query, string collection)
