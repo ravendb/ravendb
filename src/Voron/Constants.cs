@@ -1,5 +1,6 @@
 ﻿using Sparrow;
 using Voron.Data.BTrees;
+using Voron.Data.Compression;
 using Voron.Data.Fixed;
 
 namespace Voron.Global
@@ -13,6 +14,13 @@ namespace Voron.Global
         public static class Storage
         {
             public const int PageSize = 4 * Size.Kilobyte;
+
+            public const int MaxPageSize = 64 * Size.Kilobyte;
+        }
+
+        public static class Compression
+        {
+            public static readonly int HeaderSize = sizeof(CompressedNodesHeader);
         }
 
         public static class Size
@@ -44,7 +52,7 @@ namespace Voron.Global
 
         public const ushort SizeOfUInt = sizeof(uint);
 
-        public const int CurrentVersion = 8;
+        public const int CurrentVersion = 9;
 
         public const string RootTreeName = "$Root";
         public static readonly Slice RootTreeNameSlice;

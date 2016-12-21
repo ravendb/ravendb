@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Voron.Global;
 using Voron.Data.BTrees;
@@ -7,17 +8,23 @@ namespace Voron.Impl.Paging
 {
     public unsafe class TemporaryPage : IDisposable
     {
-        private readonly StorageEnvironmentOptions _options;
         private readonly byte[] _tempPageBuffer;
         private GCHandle _tempPageHandle;
-        private readonly IntPtr _tempPage;
+        private IntPtr _tempPage;
+        internal readonly int PageSize;
 
-        public TemporaryPage(StorageEnvironmentOptions options)
+        public TemporaryPage(StorageEnvironmentOptions options, int? pageSize = null)
         {
-            _options = options;
-            _tempPageBuffer = new byte[options.PageSize];
+            PageSize = pageSize ?? options.PageSize;
+            _tempPageBuffer = new byte[PageSize];
             _tempPageHandle = GCHandle.Alloc(_tempPageBuffer, GCHandleType.Pinned);
             _tempPage = _tempPageHandle.AddrOfPinnedObject();
+        }
+
+        public TemporaryPage(byte* ptr, int pageSize)
+        {
+            PageSize = pageSize;
+            SetPointer(ptr);
         }
 
         public void Dispose()
@@ -28,15 +35,33 @@ namespace Voron.Impl.Paging
             }
         }
 
+        public void SetPointer(byte* ptr)
+        {
+            _tempPage = new IntPtr(ptr);
+        }
+
         public byte[] TempPageBuffer => _tempPageBuffer;
 
         public byte* TempPagePointer => (byte*)_tempPage.ToPointer();
 
         public TreePage GetTempPage()
         {
-            return new TreePage((byte*)_tempPage.ToPointer(), _options.PageSize)
+            var upper = (ushort)PageSize;
+
+            if (upper < PageSize)
             {
-                Upper = (ushort)_options.PageSize,
+                // we have overflown Upper which is ushort 
+                // it means the page size is 64KB
+                // we have special handling for this in AllocateNewNode
+
+                Debug.Assert(PageSize == Constants.Storage.MaxPageSize);
+
+                upper = ushort.MaxValue;
+            }
+
+            return new TreePage((byte*)_tempPage.ToPointer(), PageSize)
+            {
+                Upper = upper,
                 Lower = (ushort) Constants.TreePageHeaderSize,
                 TreeFlags = TreePageFlags.None,
             };

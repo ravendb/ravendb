@@ -112,6 +112,13 @@ namespace Raven.Abstractions.Replication
 
         public bool Equals(ReplicationDestination other) => IsEqualTo(other);
 
+        public bool IsMatch(ReplicationDestination other)
+        {
+            return
+                string.Equals(Url, other.Url, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(Database, other.Database, StringComparison.OrdinalIgnoreCase);
+        }
+
         public bool IsEqualTo(ReplicationDestination other)
         {
             return string.Equals(Username, other.Username) && string.Equals(Password, other.Password) &&

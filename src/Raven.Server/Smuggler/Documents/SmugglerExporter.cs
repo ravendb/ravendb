@@ -80,7 +80,7 @@ namespace Raven.Server.Smuggler.Documents
                         if (document == null)
                             continue;
 
-                        if (Options.IncludeExpired == false && document.Expired())
+                        if (Options.IncludeExpired == false && document.Expired(_database.Time.GetUtcNow()))
                             continue;
 
                         var patchResult = patch?.Apply(context, document, patchRequest);

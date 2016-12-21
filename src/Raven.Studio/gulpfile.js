@@ -60,6 +60,11 @@ gulp.task('generate-typings', function (cb) {
     var debugPath = '../../tools/TypingsGenerator/bin/Debug/netcoreapp1.1/TypingsGenerator.dll';
     var releasePath = '../../tools/TypingsGenerator/bin/Release/netcoreapp1.1/TypingsGenerator.dll';
 
+    if (fileExists(releasePath) && fileExists(debugPath)) {
+        cb("Ambiguous TypingsGenerator lookup. Delete compiled TypingsGenerator.dll from either release or debug directory.");
+        return;
+    }
+
     if (fileExists(releasePath)) {
         exec('dotnet ' + releasePath, function (err, stdout, stderr) {
             console.log(stdout);

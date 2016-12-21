@@ -48,6 +48,7 @@ namespace Raven.Client.Document
         private bool _disposed;
         private Task _subscriptionTask;
         private NetworkStream _networkStream;
+        private TaskCompletionSource<object> _disposedTask = new TaskCompletionSource<object>();
 
         internal Subscription(SubscriptionConnectionOptions options,
             AsyncServerClient commands, DocumentConvention conventions)
@@ -268,8 +269,11 @@ namespace Raven.Client.Document
                 using (var jsonReader = new JsonTextReaderAsync(reader))
                 {
                     _proccessingCts.Token.ThrowIfCancellationRequested();
-                    var connectionStatus = await ReadNextObject(jsonReader).ConfigureAwait(false);
-
+                    var readObjectTask = ReadNextObject(jsonReader);
+                    var done = await Task.WhenAny(readObjectTask, _disposedTask.Task).ConfigureAwait(false);
+                    if (done == _disposedTask.Task)
+                        return;
+                    var connectionStatus = await readObjectTask.ConfigureAwait(false);
                     if (_proccessingCts.IsCancellationRequested)
                         return;
 
@@ -279,7 +283,7 @@ namespace Raven.Client.Document
                     Task.Run(() => successfullyConnected.TrySetResult(null));
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
-                    var readObjectTask = ReadNextObject(jsonReader);
+                    readObjectTask = ReadNextObject(jsonReader);
 
                     if (_proccessingCts.IsCancellationRequested)
                         return;
@@ -293,14 +297,18 @@ namespace Raven.Client.Document
                         bool endOfBatch = false;
                         while (endOfBatch == false && _proccessingCts.IsCancellationRequested == false)
                         {
+                            done = await Task.WhenAny(readObjectTask, _disposedTask.Task).ConfigureAwait(false);
+                            if (done == _disposedTask.Task)
+                                break;
                             var receivedMessage = await readObjectTask.ConfigureAwait(false);
+
                             if (_proccessingCts.IsCancellationRequested)
-                                return;
+                                break;
 
                             readObjectTask = ReadNextObject(jsonReader);
 
                             if (_proccessingCts.IsCancellationRequested)
-                                return;
+                                break;
 
                             switch (receivedMessage.Type)
                             {

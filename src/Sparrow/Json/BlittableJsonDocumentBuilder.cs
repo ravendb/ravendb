@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using Sparrow.Compression;
 using Sparrow.Json.Parsing;
 
 namespace Sparrow.Json
@@ -15,27 +12,27 @@ namespace Sparrow.Json
         protected readonly JsonOperationContext _context;
         private UsageMode _mode;
         private  IJsonParser _reader;
-        private readonly BlittableWriter _writer;
+        private readonly BlittableWriter<UnmanagedWriteBuffer> _writer;
         private readonly JsonParserState _state;
         
         protected WriteToken _writeToken;
         private  string _debugTag;
         
 
-        public BlittableJsonDocumentBuilder(JsonOperationContext context, JsonParserState state, IJsonParser reader, BlittableWriter writer=null)
+        public BlittableJsonDocumentBuilder(JsonOperationContext context, JsonParserState state, IJsonParser reader, BlittableWriter<UnmanagedWriteBuffer> writer =null)
         {
             _context = context;
             _state = state;
             _reader = reader;
-            _writer = writer ?? new BlittableWriter(context);
+            _writer = writer ?? new BlittableWriter<UnmanagedWriteBuffer>(context);
         }
 
-        public BlittableJsonDocumentBuilder(JsonOperationContext context, UsageMode mode, string debugTag, IJsonParser reader, JsonParserState state, BlittableWriter writer = null) : this(context, state, reader, writer)
+        public BlittableJsonDocumentBuilder(JsonOperationContext context, UsageMode mode, string debugTag, IJsonParser reader, JsonParserState state, BlittableWriter<UnmanagedWriteBuffer> writer = null) : this(context, state, reader, writer)
         {
             Renew(debugTag, mode);
         }
 
-        public BlittableJsonDocumentBuilder(JsonOperationContext context, JsonParserState state, UsageMode mode,  string debugTag, IJsonParser reader, BlittableWriter writer = null):this(context,state,reader,writer)
+        public BlittableJsonDocumentBuilder(JsonOperationContext context, JsonParserState state, UsageMode mode,  string debugTag, IJsonParser reader, BlittableWriter<UnmanagedWriteBuffer> writer = null):this(context,state,reader,writer)
         {
             Renew(debugTag, mode);
         }
@@ -432,17 +429,6 @@ namespace Sparrow.Json
         public override string ToString()
         {
             return "Building json for " + _debugTag;
-        }
-
-        public void CopyTo(IntPtr ptr)
-        {
-            _writer.CopyTo(ptr);
-        }
-
-
-        public void CopyTo(MemoryStream stream)
-        {
-            _writer.CopyTo(stream);
         }
     }
 }

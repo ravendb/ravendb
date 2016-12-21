@@ -127,6 +127,7 @@ namespace TypingsGenerator
 
             // storage report
             scripter.AddType(typeof(StorageReport));
+            scripter.AddType(typeof(DetailedStorageReport));
 
             // map reduce visualizer
             scripter.AddType(typeof(ReduceTree));

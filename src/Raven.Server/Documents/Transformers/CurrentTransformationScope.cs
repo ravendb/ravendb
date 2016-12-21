@@ -9,6 +9,7 @@ using Voron;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using System.Linq;
+using Raven.Abstractions.Exceptions;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json.Parsing;
@@ -170,7 +171,7 @@ namespace Raven.Server.Documents.Transformers
             {
                 var t = _transformerStore.GetTransformer(transformer);
                 if (t == null)
-                    throw new InvalidOperationException("No transformer with the name: " + transformer);
+                    throw new TransformerDoesNotExistsException("No transformer with the name: " + transformer);
 
                 using (var scope = t.OpenTransformationScope(_parameters, _include, _documentsStorage, _transformerStore, _documentsContext, nested: true))
                 {

@@ -280,12 +280,14 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
+                var options = DatabaseSmugglerOptionsServerSide.Create(HttpContext, context);
+
                 var tuple = await GetImportStream();
                 using (tuple.Item2)
                 using (var stream = new GZipStream(tuple.Item1, CompressionMode.Decompress))
                 {
                     var sp = Stopwatch.StartNew();
-                    var importer = new SmugglerImporter(Database);
+                    var importer = new SmugglerImporter(Database, options);
                     var result = await importer.Import(context, stream);
                     sp.Stop();
                     WriteImportResult(context, sp, result, ResponseBodyStream());
@@ -316,6 +318,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var operationId = GetLongQueryString("operationId", required: true) ?? -1;
                 var token = CreateOperationToken();
                 var sp = Stopwatch.StartNew();
+
                 var result = new ImportResult();
                 await Database.Operations.AddOperation("Import to: " + Database.Name,
                     DatabaseOperations.PendingOperationType.DatabaseImport,

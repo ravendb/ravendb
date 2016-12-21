@@ -1,27 +1,21 @@
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Linq.Expressions;
-using Raven.Abstractions.Util.MiniMetrics;
 using Raven.Client.Connection;
 using Raven.Client.Document;
-using Raven.Client.Linq;
-using Xunit;
-using Raven.Client.Indexes;
 using Raven.Json.Linq;
-using Raven.Tests.Helpers;
+using Raven.Server.Utils.Metrics;
+using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_5686
     {
         [Fact]
         public void CanSerializeAndDeserializeMeterValue()
         {
-            var meter = new MeterValue(1, 2.0, 3.0, 4.0, 15.0);
+            var meter = new MeterValue("name", 1, 2.0, 3.0, 4.0, 15.0);
             var jObject = RavenJObject.FromObject(meter);
             var parsed = jObject.Deserialize<MeterValue>(new DocumentConvention());
+
+            Assert.Equal(meter.Name, parsed.Name);
 
             Assert.Equal(meter.Count, parsed.Count);
             Assert.Equal(meter.MeanRate, parsed.MeanRate);

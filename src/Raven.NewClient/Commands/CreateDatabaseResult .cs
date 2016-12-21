@@ -7,17 +7,17 @@
 namespace Raven.NewClient.Client.Commands
 {
     /// <summary>
-    /// The result of a PUT operation
+    /// The result of a create database operation
     /// </summary>
     public class CreateDatabaseResult
     {
         /// <summary>
-        /// Key of the document that was PUT.
+        /// Key of the database .
         /// </summary>
         public string Key { get; set; }
 
         /// <summary>
-        /// long? of the document after PUT operation.
+        /// long? of the database after PUT operation.
         /// </summary>
         public long? ETag { get; set; }
     }

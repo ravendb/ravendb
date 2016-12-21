@@ -9,45 +9,44 @@ using Voron;
 
 namespace FastTests.Voron.Storage
 {
-	public class Increments : StorageTest
-	{
-		[Fact]
-		public void SimpleIncrementShouldWork()
-		{
-			CreateTrees(Env, 1, "tree");
+    public class Increments : StorageTest
+    {
+        [Fact]
+        public void SimpleIncrementShouldWork()
+        {
+            CreateTrees(Env, 1, "tree");
 
-			using (var tx = Env.WriteTransaction())
-			{
-				Assert.Equal(10, tx.CreateTree("tree0").Increment("key/1", 10));
+            using (var tx = Env.WriteTransaction())
+            {
+                Assert.Equal(10, tx.CreateTree("tree0").Increment("key/1", 10));
 
-				tx.Commit();
-			}
+                tx.Commit();
+            }
 
-			using (var tx = Env.WriteTransaction())
-			{
-				Assert.Equal(15, tx.CreateTree("tree0").Increment("key/1", 5));
+            using (var tx = Env.WriteTransaction())
+            {
+                Assert.Equal(15, tx.CreateTree("tree0").Increment("key/1", 5));
 
-				tx.Commit();
-			}
+                tx.Commit();
+            }
 
-			using (var tx = Env.WriteTransaction())
-			{
-				Assert.Equal(12, tx.CreateTree("tree0").Increment("key/1", -3));
+            using (var tx = Env.WriteTransaction())
+            {
+                Assert.Equal(12, tx.CreateTree("tree0").Increment("key/1", -3));
 
-				tx.Commit();
-			}
+                tx.Commit();
+            }
 
-			using (var tx = Env.ReadTransaction())
-			{
-				var read = tx.ReadTree("tree0").Read("key/1");
+            using (var tx = Env.ReadTransaction())
+            {
+                var read = tx.ReadTree("tree0").Read("key/1");
 
-				Assert.NotNull(read);
-				Assert.Equal(3, read.Version);
-				Assert.Equal(12, read.Reader.ReadLittleEndianInt64());
-			}
-		}
+                Assert.NotNull(read);
+                Assert.Equal(12, read.Reader.ReadLittleEndianInt64());
+            }
+        }
 
-	
+    
         [Fact]
         public void SimpleIncrementEntriesCountShouldStayCorrectAfterCommit()
         {
@@ -65,5 +64,5 @@ namespace FastTests.Voron.Storage
                 Assert.Equal(1, tx.ReadTree("tree0").State.NumberOfEntries);
             }
         }
-	}
+    }
 }

@@ -1,26 +1,20 @@
-using System;
-using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document;
-using Sparrow.Json;
 using Sparrow.Logging;
 
 namespace Raven.NewClient.Client.Commands
 {
     public class DeleteByIndexOperation
     {
-        private readonly JsonOperationContext _context;
         private static readonly Logger _logger = LoggingSource.Instance.GetLogger<DeleteByIndexOperation>("Raven.NewClient.Client");
 
-        public DeleteByIndexOperation(JsonOperationContext context)
+        public DeleteByIndexOperation()
         {
-            _context = context;
         }
 
         protected void LogDeleteByIndex(string indexName)
         {
-            //TODO - Better log info
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Delete by '{indexName}' index");
         }
@@ -32,7 +26,6 @@ namespace Raven.NewClient.Client.Commands
                 IndexName = indexName,
                 QueryToDelete = queryToDelete,
                 Options = options,
-                Context = _context
             };
         }
 

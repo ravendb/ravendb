@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Sparrow.Logging;
 using Voron.Data;
 using Voron.Data.BTrees;
+using Voron.Data.Compression;
 using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Debugging;
@@ -65,6 +66,7 @@ namespace Voron
         private long _transactionsCounter;
         private readonly IFreeSpaceHandling _freeSpaceHandling;
         private readonly HeaderAccessor _headerAccessor;
+        private readonly DecompressionBuffersPool _decompressionBuffers;
 
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private readonly ScratchBufferPool _scratchBufferPool;
@@ -95,6 +97,7 @@ namespace Voron
 
                 _options.DeleteAllTempBuffers();
 
+                _decompressionBuffers = new DecompressionBuffersPool(options);
                 var isNew = _headerAccessor.Initialize();
 
                 _scratchBufferPool = new ScratchBufferPool(this);
@@ -117,9 +120,6 @@ namespace Voron
                     CreateNewDatabase();
                 else // existing db, let us load it
                     LoadExistingDatabase();
-
-                if (_options.ManualFlushing == false)
-                    Task.Run(IdleFlushTimer);
             }
             catch (Exception)
             {
@@ -182,38 +182,6 @@ namespace Voron
             }
 
             return true;
-        }
-
-        private async Task IdleFlushTimer()
-        {
-            var cancellationToken = _cancellationTokenSource.Token;
-
-            while (cancellationToken.IsCancellationRequested == false)
-            {
-                if (Disposed)
-                    return;
-
-                if (Options.ManualFlushing)
-                    return;
-
-                try
-                {
-                    await Task.Delay(Options.IdleFlushTimeout, cancellationToken);
-                }
-                catch (ObjectDisposedException)
-                {
-                    return;
-                }
-                catch (OperationCanceledException)
-                {
-                    return;
-                }
-                if (Volatile.Read(ref SizeOfUnflushedTransactionsInJournalFile) != 0)
-                    GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
-                else if (Journal.Applicator.TotalWrittenButUnsyncedBytes != 0)
-                    QueueForSyncDataFile();
-
-            }
         }
 
         public ScratchBufferPool ScratchBufferPool => _scratchBufferPool;
@@ -334,6 +302,8 @@ namespace Voron
 
         public WriteAheadJournal Journal => _journal;
 
+        public DecompressionBuffersPool DecompressionBuffers => _decompressionBuffers;
+
         public void Dispose()
         {
             _cancellationTokenSource.Cancel();
@@ -380,6 +350,7 @@ namespace Voron
                     _headerAccessor,
                     _scratchBufferPool,
                     _journal,
+                    _decompressionBuffers,
                     _options.OwnsPagers ? _options : null
                 }.Concat(_tempPagesPool))
                 {
@@ -451,7 +422,6 @@ namespace Voron
                             CatastrophicFailure = null;
                             _endOfDiskSpace = null;
                             _cancellationTokenSource = new CancellationTokenSource();
-                            Task.Run(IdleFlushTimer);
                             GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
                         }
                     }
@@ -588,7 +558,56 @@ namespace Voron
                 FlushInProgressLock.ExitReadLock();
         }
 
-        public unsafe StorageReport GenerateReport(Transaction tx, bool computeExactSizes = false)
+        public StorageReport GenerateReport(Transaction tx)
+        {
+            var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, NextPageNumber - 1); // async apply to data file task
+            var numberOfFreePages = _freeSpaceHandling.AllPages(tx.LowLevelTransaction).Count;
+
+            var countOfTrees = 0;
+            var countOfTables = 0;
+            using (var rootIterator = tx.LowLevelTransaction.RootObjects.Iterate(false))
+            {
+                if (rootIterator.Seek(Slices.BeforeAllKeys))
+                {
+                    do
+                    {
+                        var currentKey = rootIterator.CurrentKey.Clone(tx.Allocator);
+                        var type = tx.GetRootObjectType(currentKey);
+                        switch (type)
+                        {
+                            case RootObjectType.VariableSizeTree:
+                                countOfTrees++;
+                                break;
+                            case RootObjectType.EmbeddedFixedSizeTree:
+                                break;
+                            case RootObjectType.FixedSizeTree:
+                                countOfTrees++;
+                                break;
+                            case RootObjectType.Table:
+                                countOfTables++;
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
+                    }
+                    while (rootIterator.MoveNext());
+                }
+            }
+
+            var generator = new StorageReportGenerator(tx.LowLevelTransaction);
+
+            return generator.Generate(new ReportInput
+            {
+                NumberOfAllocatedPages = numberOfAllocatedPages,
+                NumberOfFreePages = numberOfFreePages,
+                NextPageNumber = NextPageNumber,
+                CountOfTrees = countOfTrees,
+                CountOfTables = countOfTables,
+                Journals = Journal.Files.ToList()
+            });
+        }
+
+        public unsafe DetailedStorageReport GenerateDetailedReport(Transaction tx, bool calculateExactSizes = false)
         {
             var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, NextPageNumber - 1); // async apply to data file task
             var numberOfFreePages = _freeSpaceHandling.AllPages(tx.LowLevelTransaction).Count;
@@ -634,7 +653,7 @@ namespace Voron
 
             var generator = new StorageReportGenerator(tx.LowLevelTransaction);
 
-            return generator.Generate(new ReportInput
+            return generator.Generate(new DetailedReportInput
             {
                 NumberOfAllocatedPages = numberOfAllocatedPages,
                 NumberOfFreePages = numberOfFreePages,
@@ -643,7 +662,7 @@ namespace Voron
                 Trees = trees,
                 FixedSizeTrees = fixedSizeTrees,
                 Tables = tables,
-                IsLightReport = !computeExactSizes
+                CalculateExactSizes = calculateExactSizes
             });
         }
 

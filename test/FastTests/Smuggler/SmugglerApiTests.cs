@@ -125,7 +125,7 @@ namespace FastTests.Smuggler
                     using (var session = exportStore.OpenAsyncSession())
                     {
                         await Expiration.SetupExpiration(exportStore);
-                        var person1 = new Person {Name = "Name1"};
+                        var person1 = new Person { Name = "Name1" };
                         await session.StoreAsync(person1).ConfigureAwait(false);
                         var metadata = session.Advanced.GetMetadataFor(person1);
                         metadata[Constants.Expiration.RavenExpirationDate] =
@@ -135,11 +135,9 @@ namespace FastTests.Smuggler
                         await session.SaveChangesAsync().ConfigureAwait(false);
                     }
 
-                    var date = DateTime.UtcNow;
-
                     await Task.Delay(10000);
-                    await exportStore.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), file).ConfigureAwait(false);
-                    
+                    await exportStore.Smuggler.ExportAsync(new DatabaseSmugglerOptions { IncludeExpired = false }, file).ConfigureAwait(false);
+
                 }
 
                 using (var importStore = GetDocumentStore(dbSuffixIdentifier: "importStore"))
@@ -150,10 +148,9 @@ namespace FastTests.Smuggler
                         var person = await session.LoadAsync<Person>("people/1").ConfigureAwait(false);
                         Assert.Null(person);
                     }
-                    
                 }
             }
-            finally 
+            finally
             {
                 File.Delete(file);
             }

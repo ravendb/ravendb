@@ -55,7 +55,6 @@ namespace Sparrow.Json.Parsing
         }
         public void SetBuffer(byte* inputBuffer, int size)
         {
-            //TODO: Change this to use a pointer, to avoid the bounds checks
             _inputBuffer = inputBuffer;
             _bufSize = size;
             _pos = 0;
@@ -592,11 +591,12 @@ namespace Sparrow.Json.Parsing
 
         public void ValidateFloat()
         {
-            if (_doubleStringBuffer == null)
-                _doubleStringBuffer = new string(' ', 25);
-            if (_stringBuffer.SizeInBytes > 25)
+            if (_stringBuffer.SizeInBytes > 100)
                 throw CreateException("Too many characters in double: " + _stringBuffer.SizeInBytes);
 
+            if (_doubleStringBuffer == null || _stringBuffer.SizeInBytes > _doubleStringBuffer.Length)
+                _doubleStringBuffer = new string(' ', _stringBuffer.SizeInBytes);
+          
             var tmpBuff = stackalloc byte[_stringBuffer.SizeInBytes];
             // here we assume a clear char <- -> byte conversion, we only support
             // utf8, and those cleanly transfer

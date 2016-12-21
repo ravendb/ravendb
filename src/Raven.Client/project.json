@@ -92,6 +92,7 @@
     "System.Runtime.Extensions": "4.3.0",
     "System.Runtime.InteropServices": "4.3.0",
     "System.Runtime.InteropServices.RuntimeInformation": "4.3.0",
+    "System.Runtime.Serialization.Primitives": "4.3.0",
     "System.Security.Cryptography.Cng": "4.3.0",
     "System.ServiceModel.Primitives": "4.3.0",
     "System.Text.Encoding.Extensions": "4.3.0",

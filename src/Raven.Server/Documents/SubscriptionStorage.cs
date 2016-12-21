@@ -71,7 +71,7 @@ namespace Raven.Server.Documents
             using (var tx = _environment.WriteTransaction(transactionPersistentContext))
             {
                 tx.CreateTree(SubscriptionSchema.IdsTree);
-                _subscriptionsSchema.Create(tx, SubscriptionSchema.SubsTree);
+                _subscriptionsSchema.Create(tx, SubscriptionSchema.SubsTree, 16);
 
                 tx.Commit();
             }
@@ -347,7 +347,11 @@ namespace Raven.Server.Documents
                     if (taken > take)
                         break;
                 }
+
+                writer.WriteStartObject();
+                writer.WritePropertyName("Subscriptions");
                 context.Write(writer, new DynamicJsonArray(subscriptions));
+                writer.WriteEndObject();
             }
         }
 

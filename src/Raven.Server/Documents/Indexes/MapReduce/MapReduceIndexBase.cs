@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             // MapPhase tree has the following entries
             // 1) { document key, fixed size tree } where each fixed size tree stores records like 
             //   |----> { identifier of a map result, hash of a reduce key for the map result }
-            // 2) entry to keep track the identifier of a last stored entry { #LastMapResultId, long_value }
+            // 2) entry to keep track the next identifier of a next map result { #NextMapResultId, long_value }
 
             return tx.CreateTree(MapPhaseTreeName);
         }
@@ -141,11 +141,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                             if (reduceKeyHash == existing.ReduceKeyHash)
                             {
-                                var existingResult = storeOfExisting.Get(existing.Id);
-
-                                if (ResultsBinaryEqual(mapResult.Data, existingResult))
+                                using (var existingResult = storeOfExisting.Get(existing.Id))
                                 {
-                                    continue;
+                                    if (ResultsBinaryEqual(mapResult.Data, existingResult.Data))
+                                    {
+                                        continue;
+                                    }
                                 }
 
                                 id = existing.Id;
@@ -164,7 +165,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         {
                             if (id == -1)
                             {
-                                id = Bits.SwapBytes(MapReduceWorkContext.GetNextIdentifier());
+                                id = Bits.SwapBytes(MapReduceWorkContext.NextMapResultId++);
 
                                 Slice val;
                                 using (Slice.External(indexContext.Allocator, (byte*)&reduceKeyHash, sizeof(ulong), out val))
@@ -273,13 +274,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
         }
 
-        public override StorageReport GenerateStorageReport(bool details)
+        public override DetailedStorageReport GenerateStorageReport(bool calculateExactSizes)
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenReadTransaction())
             {
-                var report = _indexStorage.Environment().GenerateReport(tx.InnerTransaction, details);
+                var report = _indexStorage.Environment().GenerateDetailedReport(tx.InnerTransaction, calculateExactSizes);
 
                 var treesToKeep = new List<TreeReport>();
 
@@ -300,14 +301,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                     aggregatedTree.AllocatedSpaceInBytes += treeReport.AllocatedSpaceInBytes;
                     aggregatedTree.BranchPages += treeReport.BranchPages;
-                    aggregatedTree.Density = details ? aggregatedTree.Density + treeReport.Density : -1;
+                    aggregatedTree.Density = calculateExactSizes ? aggregatedTree.Density + treeReport.Density : -1;
                     aggregatedTree.Depth = Math.Max(aggregatedTree.Depth, treeReport.Depth);
                     aggregatedTree.LeafPages += treeReport.LeafPages;
                     aggregatedTree.NumberOfEntries += treeReport.NumberOfEntries;
                     aggregatedTree.OverflowPages += treeReport.OverflowPages;
                     aggregatedTree.PageCount += treeReport.PageCount;
                     aggregatedTree.Type = treeReport.Type;
-                    aggregatedTree.UsedSpaceInBytes = details ? aggregatedTree.UsedSpaceInBytes + treeReport.UsedSpaceInBytes : -1;
+                    aggregatedTree.UsedSpaceInBytes = calculateExactSizes ? aggregatedTree.UsedSpaceInBytes + treeReport.UsedSpaceInBytes : -1;
                 }
 
                 if (aggregatedTree != null)

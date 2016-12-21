@@ -3,22 +3,21 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Util;
 using Raven.Client;
-using Raven.Client.Document;
 using Raven.Client.Shard;
-using Raven.Tests.Common;
 using Xunit;
-using Xunit.Extensions;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_5256 : RavenTest
+    public class RavenDB_5256 : RavenTestBase
     {
-        [Theory]
+        [Theory(Skip = "RavenDB-5918")]
         [InlineData("ShardA")]
         [InlineData("ShardB")]
         public void ShouldLoadUserFromSessionTwiceInShardingDocumentStore(string mainShard)
@@ -29,13 +28,13 @@ namespace Raven.Tests.Issues
         [Fact]
         public void ShouldLoadUserFromSessionTwiceInEmbeddedDocumentStore()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 AssertLoadUsersWithIncludes(store, null);
             }
         }
 
-        [Theory]
+        [Theory(Skip = "RavenDB-5918")]
         [InlineData("ShardA")]
         [InlineData("ShardB")]
         public void ShouldLoadUserFromAsyncSessionTwiceInShardingDocumentStore(string mainShard)
@@ -46,13 +45,13 @@ namespace Raven.Tests.Issues
         [Fact]
         public void ShouldLoadUserFromAsyncSessionTwiceInEmbeddedDocumentStore()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 AssertLoadUsersWithIncludesAsync(store, null);
             }
         }
 
-        [Theory]
+        [Theory(Skip = "RavenDB-5918")]
         [InlineData("ShardA")]
         [InlineData("ShardB")]
         public void ShouldLoadMultipleUsersWithIncludesFromSessionInShardingDocumentStore(string mainShard)
@@ -63,13 +62,13 @@ namespace Raven.Tests.Issues
         [Fact]
         public void ShouldLoadMultipleUsersWithIncludesFromSessionInEmbeddedDocumentStore()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 AssertLoadMultipleUsersWithIncludes(store, null);
             }
         }
 
-        [Theory]
+        [Theory(Skip = "RavenDB-5918")]
         [InlineData("ShardA")]
         [InlineData("ShardB")]
         public void ShouldLoadMultipleUsersWithIncludesFromAsyncSessionInShardingDocumentStore(string mainShard)
@@ -80,7 +79,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void ShouldLoadMultipleUsersWithIncludesFromAsyncSessionInEmbeddedDocumentStore()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 AssertLoadMultipleUsersWithIncludesAsync(store, null);
             }
@@ -123,7 +122,7 @@ namespace Raven.Tests.Issues
                 session.SaveChanges();
             }
 
-            var type = typeof (UserRole);
+            var type = typeof(UserRole);
             var keys =
                 roleIds.Select(
                     q => documentStore.Conventions.FindFullDocumentKeyFromNonStringIdentifier(q, type, false)).ToList();
@@ -202,7 +201,7 @@ namespace Raven.Tests.Issues
                 session.SaveChanges();
             }
 
-            var type = typeof (UserRole);
+            var type = typeof(UserRole);
             var keys =
                 roleIds.Select(
                     q => documentStore.Conventions.FindFullDocumentKeyFromNonStringIdentifier(q, type, false)).ToList();
@@ -310,7 +309,7 @@ namespace Raven.Tests.Issues
                 session.SaveChanges();
             }
 
-            AsyncHelpers.RunSync(async() =>
+            AsyncHelpers.RunSync(async () =>
             {
                 using (var session = documentStore.OpenAsyncSession())
                 {
@@ -328,22 +327,26 @@ namespace Raven.Tests.Issues
 
         public void TestWithShardedStore(Action<ShardedDocumentStore, string> action, string mainShard)
         {
-            var server1 = GetNewServer(8079);
-            var server2 = GetNewServer(8078);
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                store1.Identifier = "ShardA";
+                store2.Identifier = "ShardB";
 
-            var shards = new List<IDocumentStore>
-            {
-                new DocumentStore {Identifier = "ShardA", Url = server1.Configuration.ServerUrl},
-                new DocumentStore {Identifier = "ShardB", Url = server2.Configuration.ServerUrl}
-            }.ToDictionary(x => x.Identifier, x => x);
+                var shards = new List<IDocumentStore>
+                {
+                    store1,
+                    store2
+                }.ToDictionary(x => x.Identifier, x => x);
 
-            using (var documentStore = new ShardedDocumentStore(new ShardStrategy(shards)
-            {
-                ModifyDocumentId = (convention, shardId, documentId) => documentId
-            }.ShardingOn<User>(x => x.Shard).ShardingOn<UserRole>(x => x.Shard)))
-            {
-                documentStore.Initialize();
-                action(documentStore, mainShard);
+                using (var documentStore = new ShardedDocumentStore(new ShardStrategy(shards)
+                {
+                    ModifyDocumentId = (convention, shardId, documentId) => documentId
+                }.ShardingOn<User>(x => x.Shard).ShardingOn<UserRole>(x => x.Shard)))
+                {
+                    documentStore.Initialize();
+                    action(documentStore, mainShard);
+                }
             }
         }
 

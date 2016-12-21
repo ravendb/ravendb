@@ -82,12 +82,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             EnsureValidStats(stats);
 
+            bool shouldSkip;
             IDisposable setDocument;
             using (_stats.ConvertStats.Start())
-                setDocument = _converter.SetDocument(key, document, indexContext);
+                setDocument = _converter.SetDocument(key, document, indexContext, out shouldSkip);
 
             using (setDocument)
             {
+                if (shouldSkip)
+                    return;
+
                 using (_stats.AddStats.Start())
                     _writer.AddDocument(_converter.Document, _analyzer);
 

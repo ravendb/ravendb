@@ -6,6 +6,7 @@
 
 using System;
 using Sparrow;
+using Voron.Data.Compression;
 using Voron.Impl;
 
 namespace Voron.Data.BTrees
@@ -36,7 +37,7 @@ namespace Voron.Data.BTrees
 
             public void Dispose()
             {
-               _firstScope.Dispose();
+                _firstScope.Dispose();
                _lastScope.Dispose();
             }
         }
@@ -125,6 +126,12 @@ namespace Voron.Data.BTrees
 
         public void Clear()
         {
+            for (var i = 0; i < _cacheSize; i++)
+            {
+                var page = _cache[i];
+                page?.Dispose();
+            }
+            
             Array.Clear(_cache, 0, _cacheSize);
         }
 

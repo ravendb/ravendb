@@ -32,7 +32,7 @@ namespace Raven.NewClient.Client.Document
         /// There can be only a single client that is connected to a subscription.
         /// </summary>
         /// <returns>Subscription object that allows to add/remove subscription handlers.</returns>
-        // TODO Subscription<RavenJObject> Open(SubscriptionConnectionOptions options, string database = null);
+        Subscription<dynamic> Open(SubscriptionConnectionOptions options, string database = null);
 
         /// <summary>
         /// It opens a subscription and starts pulling documents since a last processed document for that subscription (in document's long? order).
@@ -53,10 +53,5 @@ namespace Raven.NewClient.Client.Document
         /// It deletes a subscription.
         /// </summary>
         Task DeleteAsync(long id, string database = null);
-
-        /// <summary>
-        /// It releases a subscriptions by forcing a connected client to drop.
-        /// </summary>
-        Task ReleaseAsync(long id, string database = null);
     }
 }

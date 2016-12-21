@@ -277,11 +277,11 @@ namespace Voron.Data.Tables
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public void Create(Transaction tx, string name)
+        public void Create(Transaction tx, string name, ushort? sizeInPages)
         {
             Slice nameSlice;
             Slice.From(tx.Allocator, name, ByteStringType.Immutable, out nameSlice);
-            Create(tx, nameSlice);
+            Create(tx, nameSlice, sizeInPages);
         }
 
         /// <summary>
@@ -298,7 +298,7 @@ namespace Voron.Data.Tables
         ///  - schemas -> schema definition for the table
         /// 
         /// </summary>
-        public void Create(Transaction tx, Slice name)
+        public void Create(Transaction tx, Slice name, ushort? sizeInPages)
         {
             if (_primaryKey == null && _indexes.Count == 0 && _fixedSizeIndexes.Count == 0)
                 throw new InvalidOperationException($"Cannot create table {name} without a primary key and no indexes");
@@ -308,7 +308,7 @@ namespace Voron.Data.Tables
                 return; // this was already created
 
             // Create raw data. This is where we will actually store the documents
-            using (var rawDataActiveSection = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, name))
+            using (var rawDataActiveSection = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, name, sizeInPages))
             {
 
 

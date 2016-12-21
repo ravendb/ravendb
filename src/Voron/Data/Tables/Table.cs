@@ -163,7 +163,7 @@ namespace Voron.Data.Tables
             var pkTree = GetTree(_schema.Key);
             var readResult = pkTree?.Read(key);
             if (readResult == null)
-                return false;
+                  return false;
 
             id = readResult.Reader.ReadLittleEndianInt64();
             return true;
@@ -521,7 +521,8 @@ namespace Voron.Data.Tables
                     }
                 }
 
-                _activeDataSmallSection = ActiveRawDataSmallSection.Create(_tx.LowLevelTransaction, Name);
+                var newNumberOfPages = Math.Max((ushort)(ActiveDataSmallSection.NumberOfPages * 2), ushort.MaxValue);
+                _activeDataSmallSection = ActiveRawDataSmallSection.Create(_tx.LowLevelTransaction, Name, newNumberOfPages);
                 _activeDataSmallSection.DataMoved += OnDataMoved;
                 Slice pageNumber;
                 var val = _activeDataSmallSection.PageNumber;
@@ -894,21 +895,21 @@ namespace Voron.Data.Tables
             _tableTree?.Dispose();
         }
 
-        public TableReport GetReport(bool calculateDensity)
+        public TableReport GetReport(bool calculateExactSizes)
         {
             var overflowSize = _overflowPageCount * _pageSize;
-            var report = new TableReport(overflowSize, overflowSize, calculateDensity)
+            var report = new TableReport(overflowSize, overflowSize, calculateExactSizes)
             {
                 Name = Name.ToString(),
                 NumberOfEntries = NumberOfEntries
             };
 
-            report.AddStructure(_tableTree, calculateDensity);
+            report.AddStructure(_tableTree, calculateExactSizes);
 
             if (_schema.Key != null && _schema.Key.IsGlobal == false)
             {
                 var pkTree = GetTree(_schema.Key);
-                report.AddIndex(pkTree, calculateDensity);
+                report.AddIndex(pkTree, calculateExactSizes);
             }
 
             foreach (var index in _schema.FixedSizeIndexes)
@@ -917,7 +918,7 @@ namespace Voron.Data.Tables
                     continue;
 
                 var fst = GetFixedSizeTree(index.Value);
-                report.AddIndex(fst, calculateDensity);
+                report.AddIndex(fst, calculateExactSizes);
             }
 
             foreach (var index in _schema.Indexes)
@@ -926,14 +927,14 @@ namespace Voron.Data.Tables
                     continue;
 
                 var tree = GetTree(index.Value);
-                report.AddIndex(tree, calculateDensity);
+                report.AddIndex(tree, calculateExactSizes);
             }
 
             var activeCandidateSection = ActiveCandidateSection;
-            report.AddStructure(activeCandidateSection, calculateDensity);
+            report.AddStructure(activeCandidateSection, calculateExactSizes);
 
             var inactiveSections = InactiveSections;
-            report.AddStructure(inactiveSections, calculateDensity);
+            report.AddStructure(inactiveSections, calculateExactSizes);
 
             using (var it = inactiveSections.Iterate())
             {
@@ -942,12 +943,12 @@ namespace Voron.Data.Tables
                     do
                     {
                         var inactiveSection = new RawDataSection(_tx.LowLevelTransaction, it.CurrentKey);
-                        report.AddData(inactiveSection, calculateDensity);
+                        report.AddData(inactiveSection, calculateExactSizes);
                     } while (it.MoveNext());
                 }
             }
 
-            report.AddData(ActiveDataSmallSection, calculateDensity);
+            report.AddData(ActiveDataSmallSection, calculateExactSizes);
 
             return report;
         }

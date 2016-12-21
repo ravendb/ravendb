@@ -46,12 +46,12 @@ namespace Raven.NewClient.Client.Blittable
         }
 
         /// <summary>
-        /// Converts the json document to an entity.
+        /// Converts a BlittableJsonReaderObject to an entity.
         /// </summary>
         /// <param name="entityType"></param>
         /// <param name="id">The id.</param>
         /// <param name="document">The document found.</param>
-        /// <returns></returns>
+        /// <returns>The converted entity</returns>
         public object ConvertToEntity(Type entityType, string id, BlittableJsonReaderObject document)
         {
             //TODO -  Add RegisterMissingProperties ???
@@ -75,6 +75,45 @@ namespace Raven.NewClient.Client.Blittable
                     entity = _session.Conventions.DeserializeEntityFromBlittable(entityType, document);
                 }
                 _session.GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
+
+                return entity;
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Could not convert document {id} to entity of type {entityType}",
+                    ex);
+            }
+        }
+
+        /// <summary>
+        /// Converts a BlittableJsonReaderObject to an entity without a session.
+        /// </summary>
+        /// <param name="entityType"></param>
+        /// <param name="id">The id.</param>
+        /// <param name="document">The document found.</param>
+        /// <param name="documentConvention">The documentConvention.</param>
+        /// <returns>The converted entity</returns>
+        public static object ConvertToEntity(Type entityType, string id, BlittableJsonReaderObject document, DocumentConvention documentConvention)
+        {
+            try
+            {
+                var defaultValue = InMemoryDocumentSessionOperations.GetDefaultValue(entityType);
+                var entity = defaultValue;
+
+                var documentType = documentConvention.GetClrType(id, document);
+                if (documentType != null)
+                {
+                    var type = Type.GetType(documentType);
+                    if (type != null)
+                    {
+                        entity = documentConvention.DeserializeEntityFromBlittable(type, document);
+                    }
+                }
+
+                if (Equals(entity, defaultValue))
+                {
+                    entity = documentConvention.DeserializeEntityFromBlittable(entityType, document);
+                }
 
                 return entity;
             }

@@ -19,8 +19,9 @@ namespace Voron.Exceptions
 
         public DiskFullException(DriveInfo driveInfo, string filePath, long requestedFileSize)
             : base(
-                string.Format("There is not enough space on {0} drive to set size of file {1} to {2} bytes", driveInfo.Name,
-                              filePath, requestedFileSize))
+                $"There is not enough space on {driveInfo.Name} drive to set size of file {filePath} to {requestedFileSize / 1024:N1} KB. " +
+                $"Currently available space: {driveInfo.AvailableFreeSpace / 1024:N1} KB"
+            )
         {
             DriveInfo = driveInfo;
         }

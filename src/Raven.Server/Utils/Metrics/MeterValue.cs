@@ -1,4 +1,6 @@
-﻿namespace Raven.Server.Utils.Metrics
+﻿using Raven.Imports.Newtonsoft.Json;
+
+namespace Raven.Server.Utils.Metrics
 {
     /// <summary>
     /// The value reported by a Meter Tickable
@@ -11,16 +13,16 @@
         public readonly double FiveMinuteRate;
         public readonly double FifteenMinuteRate;
         public string Name { get; private set; }
-        
 
+        [JsonConstructor]
         public MeterValue(string name, long count, double meanRate, double oneMinuteRate, double fiveMinuteRate, double fifteenMinuteRate)
         {
-            this.Count = count;
-            this.MeanRate = meanRate;
-            this.OneMinuteRate = oneMinuteRate;
-            this.FiveMinuteRate = fiveMinuteRate;
-            this.FifteenMinuteRate = fifteenMinuteRate;
-            this.Name = name;
+            Count = count;
+            MeanRate = meanRate;
+            OneMinuteRate = oneMinuteRate;
+            FiveMinuteRate = fiveMinuteRate;
+            FifteenMinuteRate = fifteenMinuteRate;
+            Name = name;
         }
     }
 }

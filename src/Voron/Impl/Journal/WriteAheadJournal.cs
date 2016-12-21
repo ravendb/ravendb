@@ -26,6 +26,8 @@ namespace Voron.Impl.Journal
 {
     public unsafe class WriteAheadJournal : IDisposable
     {
+        private static readonly TimeSpan Infinity = TimeSpan.FromMilliseconds(-1);
+
         private readonly StorageEnvironment _env;
         private readonly AbstractPager _dataPager;
 
@@ -35,8 +37,7 @@ namespace Voron.Impl.Journal
         private long _journalIndex = -1;
 
         private bool _disposed;
-
-        private readonly LZ4 _lz4 = new LZ4();
+        
         private readonly JournalApplicator _journalApplicator;
         private readonly ModifyHeaderAction _updateLogInfo;
 
@@ -560,7 +561,8 @@ namespace Voron.Impl.Journal
                     try
                     {
                         var transactionPersistentContext = new TransactionPersistentContext(true);
-                        using (var txw = _waj._env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
+                        
+                        using (var txw = _waj._env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite, timeout: Infinity))
                         {
                             txw.JournalApplicatorTransaction();
 
@@ -1129,7 +1131,7 @@ namespace Voron.Impl.Journal
 
             var compressionBuffer = fullTxBuffer + sizeof(TransactionHeader);
 
-            var compressedLen = _lz4.Encode64LongBuffer(
+            var compressedLen =  LZ4.Encode64LongBuffer(
                 outputBuffer,
                 compressionBuffer,
                 totalSizeWritten,

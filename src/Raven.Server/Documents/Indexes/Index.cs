@@ -1662,6 +1662,46 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public IndexEntriesQueryResult IndexEntries(IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        {
+            AssertIndexState();
+
+            if (State == IndexState.Idle)
+                SetState(IndexState.Normal);
+
+            MarkQueried(DocumentDatabase.Time.GetUtcNow());
+
+            AssertQueryDoesNotContainFieldsThatAreNotIndexed(query, query.SortedFields);
+
+            TransactionOperationContext indexContext;
+            using (var marker = MarkQueryAsRunning(query, token))
+            using (_contextPool.AllocateOperationContext(out indexContext))
+            using (var indexTx = indexContext.OpenReadTransaction())
+            using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
+            {
+                AssertIndexState();
+                marker.HoldLock();
+
+                var result = new IndexEntriesQueryResult();
+
+                using (documentsContext.OpenReadTransaction())
+                {
+                    var isStale = IsStale(documentsContext, indexContext, query.CutoffEtag);
+                    FillQueryResult(result, isStale, documentsContext, indexContext);
+                }
+
+                var totalResults = new Reference<int>();
+                foreach (var indexEntry in reader.IndexEntries(query, totalResults, documentsContext, token.Token))
+                {
+                    result.AddResult(indexEntry);
+                }
+
+                result.TotalResults = totalResults.Value;
+
+                return result;
+            }
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void AssertIndexState(bool assertState = true)
         {
@@ -2010,13 +2050,13 @@ namespace Raven.Server.Documents.Indexes
                 : DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, collection);
         }
 
-        public virtual StorageReport GenerateStorageReport(bool details)
+        public virtual DetailedStorageReport GenerateStorageReport(bool calculateExactSizes)
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenReadTransaction())
             {
-                return _environment.GenerateReport(tx.InnerTransaction, details);
+                return _environment.GenerateDetailedReport(tx.InnerTransaction, calculateExactSizes);
             }
         }
 

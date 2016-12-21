@@ -8,71 +8,71 @@ namespace Voron.Data.Tables
 {
     public class TableReport
     {
-        public TableReport(long allocatedSpaceInBytes, long usedSizeInBytes, bool calculateDensity)
+        public TableReport(long allocatedSpaceInBytes, long usedSizeInBytes, bool calculateExactSizes)
         {
             AllocatedSpaceInBytes = DataSizeInBytes = allocatedSpaceInBytes;
             UsedSizeInBytes = usedSizeInBytes;
 
-            if (calculateDensity == false)
+            if (calculateExactSizes == false)
                 UsedSizeInBytes = -1;
 
             Indexes = new List<TreeReport>();
             Structure = new List<TreeReport>();
         }
 
-        public void AddStructure(FixedSizeTree fst, bool calculateDensity)
+        public void AddStructure(FixedSizeTree fst, bool calculateExactSizes)
         {
-            var report = StorageReportGenerator.GetReport(fst, calculateDensity);
-            AddStructure(report, fst.Llt.PageSize, calculateDensity);
+            var report = StorageReportGenerator.GetReport(fst, calculateExactSizes);
+            AddStructure(report, fst.Llt.PageSize, calculateExactSizes);
         }
 
-        public void AddStructure(Tree tree, bool calculateDensity)
+        public void AddStructure(Tree tree, bool calculateExactSizes)
         {
-            var report = StorageReportGenerator.GetReport(tree, calculateDensity);
-            AddStructure(report, tree.Llt.PageSize, calculateDensity);
+            var report = StorageReportGenerator.GetReport(tree, calculateExactSizes);
+            AddStructure(report, tree.Llt.PageSize, calculateExactSizes);
         }
 
-        private void AddStructure(TreeReport report, int pageSize, bool calculateDensity)
+        private void AddStructure(TreeReport report, int pageSize, bool calculateExactSizes)
         {
             Structure.Add(report);
 
             var allocatedSpaceInBytes = report.PageCount * pageSize;
             AllocatedSpaceInBytes += allocatedSpaceInBytes;
 
-            if (calculateDensity)
+            if (calculateExactSizes)
                 UsedSizeInBytes += (long)(allocatedSpaceInBytes * report.Density);
         }
 
-        public void AddIndex(FixedSizeTree fst, bool calculateDensity)
+        public void AddIndex(FixedSizeTree fst, bool calculateExactSizes)
         {
-            var report = StorageReportGenerator.GetReport(fst, calculateDensity);
-            AddIndex(report, fst.Llt.PageSize, calculateDensity);
+            var report = StorageReportGenerator.GetReport(fst, calculateExactSizes);
+            AddIndex(report, fst.Llt.PageSize, calculateExactSizes);
         }
 
-        public void AddIndex(Tree tree, bool calculateDensity)
+        public void AddIndex(Tree tree, bool calculateExactSizes)
         {
-            var report = StorageReportGenerator.GetReport(tree, calculateDensity);
-            AddIndex(report, tree.Llt.PageSize, calculateDensity);
+            var report = StorageReportGenerator.GetReport(tree, calculateExactSizes);
+            AddIndex(report, tree.Llt.PageSize, calculateExactSizes);
         }
 
-        private void AddIndex(TreeReport report, int pageSize, bool calculateDensity)
+        private void AddIndex(TreeReport report, int pageSize, bool calculateExactSizes)
         {
             Indexes.Add(report);
 
             var allocatedSpaceInBytes = report.PageCount * pageSize;
             AllocatedSpaceInBytes += allocatedSpaceInBytes;
 
-            if (calculateDensity)
+            if (calculateExactSizes)
                 UsedSizeInBytes += (long)(allocatedSpaceInBytes * report.Density);
         }
 
-        public void AddData(RawDataSection section, bool calculateDensity)
+        public void AddData(RawDataSection section, bool calculateExactSizes)
         {
             var allocatedSpaceInBytes = section.Size;
             AllocatedSpaceInBytes += allocatedSpaceInBytes;
             DataSizeInBytes += allocatedSpaceInBytes;
 
-            if (calculateDensity)
+            if (calculateExactSizes)
                 UsedSizeInBytes += (long)(allocatedSpaceInBytes * section.Density);
         }
 

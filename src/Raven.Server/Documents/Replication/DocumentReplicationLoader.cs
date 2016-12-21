@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Replication
         private readonly ConcurrentDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>> _incomingRejectionStats = new ConcurrentDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>>();
 
         private readonly ConcurrentSet<ConnectionFailureInfo> _reconnectQueue = new ConcurrentSet<ConnectionFailureInfo>();
-
+        internal Dictionary<string,ScriptResolver> ManualConflictResolversCache;
         private readonly Logger _log;
         private ReplicationDocument _replicationDocument;
 
@@ -51,6 +51,16 @@ namespace Raven.Server.Documents.Replication
         public IReadOnlyDictionary<IncomingConnectionInfo, DateTime> IncomingLastActivityTime => _incomingLastActivityTime;
         public IReadOnlyDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>> IncomingRejectionStats => _incomingRejectionStats;
         public IEnumerable<ReplicationDestination> ReconnectQueue => _reconnectQueue.Select(x => x.Destination);
+
+        public long? GetLastReplicatedEtagForDestination(ReplicationDestination dest)
+        {
+            foreach (var replicationHandler in _outgoing)
+            {
+                if (replicationHandler.Destination.IsMatch(dest))
+                    return replicationHandler._lastSentDocumentEtag;
+            }
+            return null;
+        }
 
         public void AcceptIncomingConnection(TcpConnectionOptions tcpConnectionOptions)
         {
@@ -186,11 +196,17 @@ namespace Raven.Server.Documents.Replication
 
         private void AssertValidConnection(IncomingConnectionInfo connectionInfo)
         {
-
-            if (Guid.Parse(connectionInfo.SourceDatabaseId) == _database.DbId)
+            Guid sourceDbId;
+            //precaution, should never happen..
+            if (string.IsNullOrWhiteSpace(connectionInfo.SourceDatabaseId) ||
+                !Guid.TryParse(connectionInfo.SourceDatabaseId, out sourceDbId))
             {
-                throw new InvalidOperationException(
-                    "Cannot have have replication with source and destination being the same database. They share the same db id ({connectionInfo} - {_database.DbId})");
+                throw new InvalidOperationException($"Failed to parse source database Id. What I got is {(string.IsNullOrWhiteSpace(connectionInfo.SourceDatabaseId) ? "<empty string>" : _database.DbId.ToString())}. This is not supposed to happen and is likely a bug.");
+            }
+
+            if (sourceDbId == _database.DbId)
+            {
+                throw new InvalidOperationException($"Cannot have have replication with source and destination being the same database. They share the same db id ({connectionInfo} - {_database.DbId})");
             }
 
             foreach (var relevantActivityEntry in _incomingLastActivityTime)
@@ -219,6 +235,7 @@ namespace Raven.Server.Documents.Replication
             _database.Notifications.OnSystemDocumentChange += OnSystemDocumentChange;
 
             InitializeOutgoingReplications();
+            InitializeManualResolver();
         }
 
         private void InitializeOutgoingReplications()
@@ -243,6 +260,16 @@ namespace Raven.Server.Documents.Replication
             }
             if (_log.IsInfoEnabled)
                 _log.Info("Finished initialization of outgoing replications..");
+        }
+
+        private void InitializeManualResolver()
+        {
+            DocumentsOperationContext context;
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenReadTransaction())
+            {
+                ManualConflictResolversCache = _database.DocumentsStorage.GetDictionaryOfScriptResolvers(tx.InnerTransaction);  
+            }
         }
 
         private void AddAndStartOutgoingReplication(ReplicationDestination destination)
@@ -303,6 +330,36 @@ namespace Raven.Server.Documents.Replication
 
         private void OnSystemDocumentChange(DocumentChangeNotification notification)
         {
+
+            if (notification.Key.Equals(Constants.Replication.DocumentReplicationResolvers,
+                StringComparison.OrdinalIgnoreCase))
+            {
+                DocumentsOperationContext context;
+                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    var scriptConfig = _database.DocumentsStorage.Get(context, Constants.Replication.DocumentReplicationResolvers);
+                    var resolverObj = JsonDeserializationServer.ReplicationManualResolver(scriptConfig.Data);
+
+                    foreach (var kvp in resolverObj.ResolveByCollection)
+                    {
+                        var collection = kvp.Key;
+                        var script = kvp.Value.Script;
+                        if (string.IsNullOrEmpty(script.Trim()))
+                        {
+                            continue;
+                        }
+                        context.DocumentDatabase.DocumentsStorage.AddOrUpdateScript(context, collection, script);
+                        ManualConflictResolversCache[collection] = new ScriptResolver
+                        {
+                            Script = script
+                        };
+                    }  
+                    tx.Commit();
+                }  
+                return;        
+            }
+
             if (!notification.Key.Equals(Constants.Replication.DocumentReplicationConfiguration, StringComparison.OrdinalIgnoreCase))
                 return;
 

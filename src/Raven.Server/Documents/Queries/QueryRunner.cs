@@ -17,7 +17,7 @@ using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Voron;
+
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Queries
@@ -144,6 +144,26 @@ namespace Raven.Server.Documents.Queries
             context.OpenReadTransaction();
 
             return index.MoreLikeThisQuery(query, context, token);
+        }
+
+        public IndexEntriesQueryResult ExecuteIndexEntriesQuery(string indexName, IndexQueryServerSide query, long? existingResultEtag, OperationCancelToken token)
+        {
+            if (DynamicQueryRunner.IsDynamicIndex(indexName))
+            {
+                var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, token);
+                return runner.ExecuteIndexEntries(indexName, query, existingResultEtag);
+            }
+
+            var index = GetIndex(indexName);
+
+            if (existingResultEtag.HasValue)
+            {
+                var etag = index.GetIndexEtag();
+                if (etag == existingResultEtag)
+                    return IndexEntriesQueryResult.NotModifiedResult;
+            }
+
+            return index.IndexEntries(query, _documentsContext, token);
         }
 
         public List<DynamicQueryToIndexMatcher.Explanation> ExplainDynamicIndexSelection(string indexName, IndexQueryServerSide indexQuery)

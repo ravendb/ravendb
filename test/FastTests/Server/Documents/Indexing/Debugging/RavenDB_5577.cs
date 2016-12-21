@@ -117,7 +117,7 @@ select new
 }",
                 }, database))
                 {
-                    var numberOfDocs = 100;
+                    var numberOfDocs = 1000;
 
                     using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                     {
@@ -143,7 +143,7 @@ select new
                                 var tree = result[0];
 
                                 Assert.Equal(2, tree.Depth);
-                                Assert.Equal(100, tree.NumberOfEntries);
+                                Assert.Equal(1000, tree.NumberOfEntries);
                                 Assert.Equal(3, tree.PageCount);
 
                                 Assert.True(tree.Root.Children.Any());
@@ -176,7 +176,7 @@ select new
 
                                 Assert.True(hasSource);
 
-                                Assert.Equal(100, right.Entries.Count + left.Entries.Count);
+                                Assert.Equal(1000, right.Entries.Count + left.Entries.Count);
                             }
                         }
                     }

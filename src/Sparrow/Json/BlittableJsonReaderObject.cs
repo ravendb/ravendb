@@ -45,6 +45,11 @@ namespace Sparrow.Json
         public BlittableJsonReaderObject(byte* mem, int size, JsonOperationContext context,
             UnmanagedWriteBuffer buffer = default(UnmanagedWriteBuffer))
         {
+            if(size == 0)
+                //otherwise SetupPropertiesAccess will throw because of the memory garbage
+                //(or won't throw, but this is actually worse!)
+                throw new ArgumentException("BlittableJsonReaderObject does not support objects with zero size",nameof(size));
+
             _buffer = buffer;
             _mem = mem; // get beginning of memory pointer
             _size = size; // get document size
@@ -251,7 +256,15 @@ namespace Sparrow.Json
                     }
                     else
                     {
-                        obj = (T)Convert.ChangeType(result, type);
+                        var lazyStringValue = result as LazyStringValue;
+                        if (lazyStringValue != null)
+                        {
+                            obj = (T)Convert.ChangeType(lazyStringValue.ToString(), type);
+                        }
+                        else
+                        {
+                            obj = (T)Convert.ChangeType(result, type);
+                        }
                     }
                 }
                 catch (Exception e)
@@ -673,12 +686,12 @@ namespace Sparrow.Json
             var escCount = ReadVariableSizeInt(stringOffset + lenOffset + stringLength, out escOffset);
             if (escCount != 0)
             {
-                var prevEscChar = 0;
+                var prevEscCharOffset = 0;
                 for (var i = 0; i < escCount; i++)
                 {
                     byte escCharOffsetLen;
                     var escCharOffset = ReadVariableSizeInt(str + stringLength + escOffset + totalEscCharLen, out escCharOffsetLen);
-                    escCharOffset += prevEscChar ;
+                    escCharOffset += prevEscCharOffset;
                     var escChar = (char)ReadNumber(_mem + str + escCharOffset, 1);
                     switch (escChar)
                     {
@@ -695,7 +708,7 @@ namespace Sparrow.Json
                             throw new InvalidDataException("String not valid, invalid escape character: " + escChar);
                     }
                     totalEscCharLen += escCharOffsetLen;
-                    prevEscChar = escCharOffset + 1;
+                    prevEscCharOffset = escCharOffset + 1;
                 }
             }
             return stringLength + escOffset + totalEscCharLen + lenOffset;

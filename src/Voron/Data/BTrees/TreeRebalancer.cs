@@ -85,6 +85,11 @@ namespace Voron.Data.BTrees
                 if (page.TreeFlags != sibling.TreeFlags)
                     return null;
 
+                if (sibling.IsCompressed)
+                    return null;
+                
+                Debug.Assert(page.IsCompressed == false);
+
                 minKeys = sibling.IsBranch ? 2 : 1; // branch must have at least 2 keys
                 if (sibling.UseMoreSizeThan(_tx.DataPager.PageMinSpace) &&
                     sibling.NumberOfEntries > minKeys)
@@ -97,7 +102,7 @@ namespace Voron.Data.BTrees
 
                     return parentPage;
                 }
-
+                
                 if (page.LastSearchPosition == 0) // this is the right page, merge left
                 {
                     if (TryMergePages(parentPage, sibling, page) == false)
@@ -207,16 +212,9 @@ namespace Voron.Data.BTrees
             Slice originalFromKeyStart;
             using (GetActualKey(from, from.LastSearchPositionOrLastEntry, out originalFromKeyStart))
             {
-
-
                 var fromNode = from.GetNode(from.LastSearchPosition);
                 byte* val = @from.Base + @from.KeysOffsets[@from.LastSearchPosition] + Constants.NodeHeaderSize +
                             originalFromKeyStart.Size;
-
-                var nodeVersion = fromNode->Version;
-                    // every time new node is allocated the version is increased, but in this case we do not want to increase it
-                if (nodeVersion > 0)
-                    nodeVersion -= 1;
 
                 byte* dataPos;
                 var fromDataSize = fromNode->DataSize;
@@ -228,12 +226,11 @@ namespace Voron.Data.BTrees
                         break;
                     case TreeNodeFlags.Data:
                         to.EnsureHasSpaceFor(_tx, originalFromKeyStart, fromDataSize);
-                        dataPos = to.AddDataNode(to.LastSearchPosition, originalFromKeyStart, fromDataSize, nodeVersion);
+                        dataPos = to.AddDataNode(to.LastSearchPosition, originalFromKeyStart, fromDataSize);
                         break;
                     case TreeNodeFlags.MultiValuePageRef:
                         to.EnsureHasSpaceFor(_tx, originalFromKeyStart, fromDataSize);
-                        dataPos = to.AddMultiValueNode(to.LastSearchPosition, originalFromKeyStart, fromDataSize,
-                            nodeVersion);
+                        dataPos = to.AddMultiValueNode(to.LastSearchPosition, originalFromKeyStart, fromDataSize);
                         break;
                     default:
                         throw new NotSupportedException("Invalid node type to move: " + fromNode->Flags);

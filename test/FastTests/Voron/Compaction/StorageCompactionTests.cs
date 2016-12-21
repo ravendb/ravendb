@@ -119,7 +119,7 @@ namespace FastTests.Voron.Compaction
                     // Create table in the environment
                     using (var tx = env.WriteTransaction())
                     {
-                        schema.Create(tx, "test");
+                        schema.Create(tx, "test", 16);
                         var table = tx.OpenTable(schema, "test");
 
                         foreach (var entry in create)

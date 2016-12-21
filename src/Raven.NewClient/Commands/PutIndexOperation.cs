@@ -1,8 +1,5 @@
-using System;
-using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Client.Indexing;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -19,11 +16,10 @@ namespace Raven.NewClient.Client.Commands
             _context = context;
         }
 
-        protected void Log()
+        protected void Log(string indexName)
         {
             if (_logger.IsInfoEnabled)
-            {
-            }
+                _logger.Info($"Put '{indexName}' index");
         }
 
         public PutIndexCommand CreateRequest(DocumentConvention documentConvention, string indexName, IndexDefinition indexDefinition)

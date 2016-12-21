@@ -59,7 +59,7 @@ namespace Voron.Benchmark.Table
 
             using (var tx = Env.WriteTransaction())
             {
-                Schema.Create(tx, TableNameSlice);
+                Schema.Create(tx, TableNameSlice, 16);
                 tx.Commit();
             }
 

@@ -3,6 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 
 using Raven.Abstractions.Cluster;
@@ -56,6 +58,17 @@ namespace Raven.Abstractions.Replication
     /// </summary>
     public class ReplicationDocument : ReplicationDocument<ReplicationDestination>
     {
+    }
+
+    public class ReplicationManualResolver
+    {
+        public Dictionary<string,ScriptResolver> ResolveByCollection { get; set; }
+    }
+
+    public class ScriptResolver
+    {
+        public string Script { get; set; }
+        public DateTime LastModifiedTime { get; }= DateTime.UtcNow;
     }
 
     public class ReplicationDocumentWithClusterInformation : ReplicationDocument<ReplicationDestination.ReplicationDestinationWithClusterInformation>

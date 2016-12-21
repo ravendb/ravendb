@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Patch
             if (string.IsNullOrEmpty(patch.Script))
                 throw new InvalidOperationException("Patch script must be non-null and not empty");
 
-            var scope = ApplySingleScript(context, document, false, patch);
+            var scope = ApplySingleScript(context, document, true, patch);
             var modifiedDocument = context.ReadObject(scope.ToBlittable(scope.PatchObject.AsObject()), document.Key); /* TODO: Should not use BlittableJsonDocumentBuilder.UsageMode.ToDisk? */
             return new PatchResultData
             {

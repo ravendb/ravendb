@@ -1134,7 +1134,8 @@ namespace Raven.Client.Connection.Async
                 {
                     request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
 
-                    var result = (RavenJArray)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                    var json = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                    var result = json.Value<RavenJArray>("Results");
 
                     int nextPageStart;
                     if (pagingInformation != null && int.TryParse(request.ResponseHeaders[Constants.Headers.NextPageStart], out nextPageStart)) pagingInformation.Fill(start, pageSize, nextPageStart);

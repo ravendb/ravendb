@@ -67,11 +67,16 @@ namespace Voron.Impl
             if (header != null)
             {
                 if (header->RootObjectType != type)
-                    throw new InvalidOperationException($"Tried to opened {treeName} as a {type}, but it is actually a " + header->RootObjectType);
+                    throw new InvalidOperationException($"Tried to open {treeName} as a {type}, but it is actually a " + header->RootObjectType);
 
                 tree = Tree.Open(_lowLevelTransaction, this, header, type, pageLocator);
                 tree.Name = treeName;
+
+                if ((tree.State.Flags & TreeFlags.LeafsCompressed) == TreeFlags.LeafsCompressed)
+                    tree.InitializeCompression();
+
                 _trees.Add(treeName, tree);
+                
                 return tree;
             }
 
@@ -291,14 +296,14 @@ namespace Voron.Impl
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public Tree CreateTree(string name, RootObjectType type = RootObjectType.VariableSizeTree, PageLocator pageLocator = null)
+        public Tree CreateTree(string name, RootObjectType type = RootObjectType.VariableSizeTree, TreeFlags flags = TreeFlags.None, PageLocator pageLocator = null)
         {
             Slice treeNameSlice;
             Slice.From(Allocator, name, ByteStringType.Immutable, out treeNameSlice);
-            return CreateTree(treeNameSlice, type, pageLocator);
+            return CreateTree(treeNameSlice, type, flags, pageLocator);
         }
 
-        public Tree CreateTree(Slice name, RootObjectType type = RootObjectType.VariableSizeTree, PageLocator pageLocator = null)
+        public Tree CreateTree(Slice name, RootObjectType type = RootObjectType.VariableSizeTree, TreeFlags flags = TreeFlags.None, PageLocator pageLocator = null)
         {
             Tree tree = ReadTree(name, type, pageLocator);
             if (tree != null)
@@ -308,7 +313,7 @@ namespace Voron.Impl
                 throw new InvalidOperationException("No such tree: '" + name +
                                                     "' and cannot create trees in read transactions");
 
-            tree = Tree.Create(_lowLevelTransaction, this, pageLocator: pageLocator);
+            tree = Tree.Create(_lowLevelTransaction, this, flags,  pageLocator: pageLocator);
             tree.Name = name;
             tree.State.RootObjectType = type;
 

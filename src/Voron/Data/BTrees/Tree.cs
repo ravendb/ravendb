@@ -4,27 +4,27 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Sparrow;
+using Voron.Data.Compression;
 using Voron.Data.Fixed;
 using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
-using System.Linq;
 
 namespace Voron.Data.BTrees
 {
     public unsafe partial class Tree : IDisposable
     {
-        private Dictionary<Slice, FixedSizeTree> _fixedSizeTrees;
         private readonly TreeMutableState _state;
+        private readonly bool _isPageLocatorOwned;
+        private readonly RecentlyFoundTreePages _recentlyFoundPages;
+
+        private Dictionary<Slice, FixedSizeTree> _fixedSizeTrees;
+        private PageLocator _pageLocator;
 
         public event Action<long> PageModified;
         public event Action<long> PageFreed;
-
-        private readonly RecentlyFoundTreePages _recentlyFoundPages;
-        private PageLocator _pageLocator;
-        private readonly bool _isPageLocatorOwned;
 
         public Slice Name { get; set; }
 
@@ -66,6 +66,12 @@ namespace Voron.Data.BTrees
             _state = state;
         }
 
+        public bool IsLeafCompressionSupported
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return (State.Flags & TreeFlags.LeafsCompressed) == TreeFlags.LeafsCompressed; }
+        }
+
         public static Tree Open(LowLevelTransaction llt, Transaction tx, TreeRootHeader* header, RootObjectType type = RootObjectType.VariableSizeTree, PageLocator pageLocator = null)
         {
             return new Tree(llt, tx, header->RootPageNumber, pageLocator)
@@ -100,6 +106,9 @@ namespace Voron.Data.BTrees
                 }
             };
 
+            if ((flags & TreeFlags.LeafsCompressed) == TreeFlags.LeafsCompressed)
+                tree.InitializeCompression();
+
             tree.State.RecordNewPage(newRootPage, 1);
             return tree;
         }
@@ -107,7 +116,7 @@ namespace Voron.Data.BTrees
         /// <summary>
         /// This is using little endian
         /// </summary>
-        public long Increment(Slice key, long delta, ushort? version = null)
+        public long Increment(Slice key, long delta)
         {
             State.IsModified = true;
 
@@ -118,7 +127,7 @@ namespace Voron.Data.BTrees
                 currentValue = *(long*)read.Reader.Base;
 
             var value = currentValue + delta;
-            var result = (long*)DirectAdd(key, sizeof(long), version: version);
+            var result = (long*)DirectAdd(key, sizeof(long));
             *result = value;
 
             return value;
@@ -127,7 +136,7 @@ namespace Voron.Data.BTrees
         /// <summary>
         /// This is using little endian
         /// </summary>
-        public bool AddMax(Slice key, long value, ushort? version = null)
+        public bool AddMax(Slice key, long value)
         {
             var read = Read(key);
             if (read != null)
@@ -139,13 +148,13 @@ namespace Voron.Data.BTrees
 
             State.IsModified = true;
 
-            var result = (long*)DirectAdd(key, sizeof(long), version: version);
+            var result = (long*)DirectAdd(key, sizeof(long));
             *result = value;
 
             return true;
         }
 
-        public void Add(Slice key, Stream value, ushort? version = null)
+        public void Add(Slice key, Stream value)
         {
             ValidateValueLength(value);
 
@@ -153,7 +162,7 @@ namespace Voron.Data.BTrees
 
             var length = (int)value.Length;
 
-            var pos = DirectAdd(key, length, version: version);
+            var pos = DirectAdd(key, length);
 
             CopyStreamToPointer(_llt, value, pos);
         }
@@ -166,12 +175,12 @@ namespace Voron.Data.BTrees
                 throw new ArgumentException("Cannot add a value that is over 2GB in size", nameof(value));
         }
 
-        public void Add(Slice key, byte[] value, ushort? version = null)
+        public void Add(Slice key, byte[] value)
         {
             if (value == null) throw new ArgumentNullException(nameof(value));
 
             State.IsModified = true;
-            var pos = DirectAdd(key, value.Length, version: version);
+            var pos = DirectAdd(key, value.Length);
 
             fixed (byte* src = value)
             {
@@ -179,13 +188,13 @@ namespace Voron.Data.BTrees
             }
         }
 
-        public void Add(Slice key, Slice value, ushort? version = null)
+        public void Add(Slice key, Slice value)
         {
             if (!value.HasValue)
                 throw new ArgumentNullException(nameof(value));
 
             State.IsModified = true;
-            var pos = DirectAdd(key, value.Size, version: version);
+            var pos = DirectAdd(key, value.Size);
 
             value.CopyTo(pos);
         }
@@ -213,7 +222,7 @@ namespace Voron.Data.BTrees
             }
         }
 
-        public byte* DirectAdd(Slice key, int len, TreeNodeFlags nodeType = TreeNodeFlags.Data, ushort? version = null)
+        public byte* DirectAdd(Slice key, int len, TreeNodeFlags nodeType = TreeNodeFlags.Data)
         {
             Debug.Assert(nodeType == TreeNodeFlags.Data || nodeType == TreeNodeFlags.MultiValuePageRef);
 
@@ -231,11 +240,10 @@ namespace Voron.Data.BTrees
 
             Func<Slice, TreeCursor> cursorConstructor;
             TreeNodeHeader* node;
-            var foundPage = FindPageFor(key, out node, out cursorConstructor);
+            var foundPage = FindPageFor(key, node: out node, cursor: out cursorConstructor, allowCompressed: true);
 
             var page = ModifyPage(foundPage);
-
-            ushort nodeVersion = 0;
+            
             bool? shouldGoToOverflowPage = null;
             if (page.LastMatch == 0) // this is an update operation
             {
@@ -254,25 +262,23 @@ namespace Voron.Data.BTrees
                 if (shouldGoToOverflowPage == false)
                 {
                     // optimization for Data and MultiValuePageRef - try to overwrite existing node space
-                    if (TryOverwriteDataOrMultiValuePageRefNode(node, key, len, nodeType, version, out pos))
+                    if (TryOverwriteDataOrMultiValuePageRefNode(node, len, nodeType, out pos))
                         return pos;
                 }
                 else
                 {
                     // optimization for PageRef - try to overwrite existing overflows
-                    if (TryOverwriteOverflowPages(node, key, len, version, out pos))
+                    if (TryOverwriteOverflowPages(node, len, out pos))
                         return pos;
                 }
 
-                RemoveLeafNode(page, out nodeVersion);
+                RemoveLeafNode(page);
             }
             else // new item should be recorded
             {
                 State.NumberOfEntries++;
             }
-
-            CheckConcurrency(key, version, nodeVersion, TreeActionType.Add);
-
+            
             var lastSearchPosition = page.LastSearchPosition; // searching for overflow pages might change this
             byte* overFlowPos = null;
             var pageNumber = -1L;
@@ -286,37 +292,43 @@ namespace Voron.Data.BTrees
             byte* dataPos;
             if (page.HasSpaceFor(_llt, key, len) == false)
             {
-                using (var cursor = cursorConstructor(key))
+                if (IsLeafCompressionSupported == false || TryCompressPageNodes(key, len, page) == false)
                 {
-                    cursor.Update(cursor.Pages.First, page);
+                    using (var cursor = cursorConstructor(key))
+                    {
+                        cursor.Update(cursor.Pages.First, page);
 
-                    var pageSplitter = new TreePageSplitter(_llt, this, key, len, pageNumber, nodeType, nodeVersion, cursor);
-                    dataPos = pageSplitter.Execute();
+                        var pageSplitter = new TreePageSplitter(_llt, this, key, len, pageNumber, nodeType, cursor);
+                        dataPos = pageSplitter.Execute();
+                    }
+
+                    DebugValidateTree(State.RootPageNumber);
+
+                    return overFlowPos == null ? dataPos : overFlowPos;
                 }
 
-                DebugValidateTree(State.RootPageNumber);
+                // existing values compressed and put at the end of the page, let's insert from Upper position
+                lastSearchPosition = 0;
             }
-            else
+
+            switch (nodeType)
             {
-                switch (nodeType)
-                {
-                    case TreeNodeFlags.PageRef:
-                        dataPos = page.AddPageRefNode(lastSearchPosition, key, pageNumber);
-                        break;
-                    case TreeNodeFlags.Data:
-                        dataPos = page.AddDataNode(lastSearchPosition, key, len, nodeVersion);
-                        break;
-                    case TreeNodeFlags.MultiValuePageRef:
-                        dataPos = page.AddMultiValueNode(lastSearchPosition, key, len, nodeVersion);
-                        break;
-                    default:
-                        throw new NotSupportedException("Unknown node type for direct add operation: " + nodeType);
-                }
-                page.DebugValidate(this, State.RootPageNumber);
+                case TreeNodeFlags.PageRef:
+                    dataPos = page.AddPageRefNode(lastSearchPosition, key, pageNumber);
+                    break;
+                case TreeNodeFlags.Data:
+                    dataPos = page.AddDataNode(lastSearchPosition, key, len);
+                    break;
+                case TreeNodeFlags.MultiValuePageRef:
+                    dataPos = page.AddMultiValueNode(lastSearchPosition, key, len);
+                    break;
+                default:
+                    throw new NotSupportedException("Unknown node type for direct add operation: " + nodeType);
             }
-            if (overFlowPos != null)
-                return overFlowPos;
-            return dataPos;
+
+            page.DebugValidate(this, State.RootPageNumber);
+
+            return overFlowPos == null ? dataPos : overFlowPos;
         }
 
         public TreePage ModifyPage(TreePage page)
@@ -336,6 +348,9 @@ namespace Voron.Data.BTrees
             var newPage = GetWriteableTreePage(pageNumber);
             newPage.Dirty = true;
             _recentlyFoundPages.Reset(pageNumber);
+
+            if (IsLeafCompressionSupported && newPage.IsCompressed)
+                DecompressionsCache.Invalidate(pageNumber, DecompressionUsage.Read);
 
             PageModified?.Invoke(pageNumber);
 
@@ -362,10 +377,9 @@ namespace Voron.Data.BTrees
             return overflowPageStart.PageNumber;
         }
 
-        private void RemoveLeafNode(TreePage page, out ushort nodeVersion)
+        private void RemoveLeafNode(TreePage page)
         {
             var node = page.GetNode(page.LastSearchPosition);
-            nodeVersion = node->Version;
             if (node->Flags == (TreeNodeFlags.PageRef)) // this is an overflow pointer
             {
                 var overflowPage = GetReadOnlyTreePage(node->PageNumber);
@@ -386,30 +400,35 @@ namespace Voron.Data.BTrees
             while (stack.Count > 0)
             {
                 var p = stack.Pop();
-                if (p.NumberOfEntries == 0 && p != root)
-                {
-                    DebugStuff.RenderAndShowTree(this, rootPageNumber);
-                    throw new InvalidOperationException("The page " + p.PageNumber + " is empty");
 
-                }
-                p.DebugValidate(this, rootPageNumber);
-                if (p.IsBranch == false)
-                    continue;
-
-                if (p.NumberOfEntries < 2)
+                using (p.IsCompressed ? (DecompressedLeafPage)(p = DecompressPage(p, skipCache: true)) : null)
                 {
-                    throw new InvalidOperationException("The branch page " + p.PageNumber + " has " + p.NumberOfEntries + " entry");
-                }
-
-                for (int i = 0; i < p.NumberOfEntries; i++)
-                {
-                    var page = p.GetNode(i)->PageNumber;
-                    if (pages.Add(page) == false)
+                    if (p.NumberOfEntries == 0 && p != root)
                     {
                         DebugStuff.RenderAndShowTree(this, rootPageNumber);
-                        throw new InvalidOperationException("The page " + page + " already appeared in the tree!");
+                        throw new InvalidOperationException("The page " + p.PageNumber + " is empty");
+
                     }
-                    stack.Push(GetReadOnlyTreePage(page));
+                    p.DebugValidate(this, rootPageNumber);
+                    if (p.IsBranch == false)
+                        continue;
+
+                    if (p.NumberOfEntries < 2)
+                    {
+                        throw new InvalidOperationException("The branch page " + p.PageNumber + " has " +
+                                                            p.NumberOfEntries + " entry");
+                    }
+
+                    for (int i = 0; i < p.NumberOfEntries; i++)
+                    {
+                        var page = p.GetNode(i)->PageNumber;
+                        if (pages.Add(page) == false)
+                        {
+                            DebugStuff.RenderAndShowTree(this, rootPageNumber);
+                            throw new InvalidOperationException("The page " + page + " already appeared in the tree!");
+                        }
+                        stack.Push(GetReadOnlyTreePage(page));
+                    }
                 }
             }
         }
@@ -446,16 +465,19 @@ namespace Voron.Data.BTrees
             return SearchForPage(key, out node);
         }
 
-        internal TreePage FindPageFor(Slice key, out TreeNodeHeader* node, out Func<Slice, TreeCursor> cursor)
+        internal TreePage FindPageFor(Slice key, out TreeNodeHeader* node, out Func<Slice, TreeCursor> cursor, bool allowCompressed = false)
         {
             TreePage p;
 
             if (TryUseRecentTransactionPage(key, out cursor, out p, out node))
             {
+                if (allowCompressed == false && p.IsCompressed)
+                    ThrowOnCompressedPage(p);
+
                 return p;
             }
 
-            return SearchForPage(key, out cursor, out node);
+            return SearchForPage(key, allowCompressed, out cursor, out node);
         }
 
         private TreePage SearchForPage(Slice key, out TreeNodeHeader* node)
@@ -517,6 +539,9 @@ namespace Voron.Data.BTrees
             if (p.IsLeaf == false)
                 VoronUnrecoverableErrorException.Raise(_llt.Environment, "Index points to a non leaf page " + p.PageNumber);
 
+            if (p.IsCompressed)
+                ThrowOnCompressedPage(p);
+
             node = p.Search(_llt, key); // will set the LastSearchPosition
 
             AddToRecentlyFoundPages(cursorPath, p, leftmostPage, rightmostPage);
@@ -524,7 +549,7 @@ namespace Voron.Data.BTrees
             return p;
         }
 
-        private TreePage SearchForPage(Slice key, out Func<Slice, TreeCursor> cursorConstructor, out TreeNodeHeader* node)
+        private TreePage SearchForPage(Slice key, bool allowCompressed, out Func<Slice, TreeCursor> cursorConstructor, out TreeNodeHeader* node, bool addToRecentlyFoundPages = true)
         {
             var p = GetReadOnlyTreePage(State.RootPageNumber);
 
@@ -584,15 +609,26 @@ namespace Voron.Data.BTrees
             if (p.IsLeaf == false)
                 VoronUnrecoverableErrorException.Raise(_llt.Environment, "Index points to a non leaf page");
 
+            if (allowCompressed == false && p.IsCompressed)
+                ThrowOnCompressedPage(p);
+
             node = p.Search(_llt, key); // will set the LastSearchPosition
 
-            AddToRecentlyFoundPages(cursor, p, leftmostPage, rightmostPage);
+            if (p.NumberOfEntries > 0 && addToRecentlyFoundPages) // compressed page can have no ordinary entries
+                AddToRecentlyFoundPages(cursor, p, leftmostPage, rightmostPage);
 
             return p;
         }
 
+        private static void ThrowOnCompressedPage(TreePage p)
+        {
+            throw new InvalidOperationException($"Page {p.PageNumber} is compressed. You need to decompress it to be able to access its content.");
+        }
+
         private void AddToRecentlyFoundPages(List<long> c, TreePage p, bool leftmostPage, bool rightmostPage)
         {
+            Debug.Assert(p.IsCompressed == false);
+
             ByteStringContext.Scope firstScope, lastScope;
             Slice firstKey;
             if (leftmostPage)
@@ -767,7 +803,7 @@ namespace Voron.Data.BTrees
             }
             return c;
         }
-
+        
         internal TreePage NewPage(TreePageFlags flags, int num)
         {
             var page = AllocateNewPage(_llt, flags, num);
@@ -784,7 +820,7 @@ namespace Voron.Data.BTrees
             var page = new TreePage(newPage.Pointer, tx.PageSize)
             {
                 Flags = PageFlags.VariableSizeTreePage | (num == 1 ? PageFlags.Single : PageFlags.Overflow),
-                Lower = (ushort) Constants.TreePageHeaderSize,
+                Lower = (ushort)Constants.TreePageHeaderSize,
                 TreeFlags = flags,
                 Upper = (ushort)tx.PageSize,
                 Dirty = true
@@ -815,7 +851,7 @@ namespace Voron.Data.BTrees
             }
         }
 
-        public void Delete(Slice key, ushort? version = null)
+        public void Delete(Slice key)
         {
             if (_llt.Flags == (TransactionFlags.ReadWrite) == false)
                 throw new ArgumentException("Cannot delete a value in a read only transaction");
@@ -823,7 +859,13 @@ namespace Voron.Data.BTrees
             State.IsModified = true;
             Func<Slice, TreeCursor> cursorConstructor;
             TreeNodeHeader* node;
-            var page = FindPageFor(key, out node, out cursorConstructor);
+            var page = FindPageFor(key, node: out node, cursor: out cursorConstructor, allowCompressed: true);
+
+            if (page.IsCompressed)
+            {
+                DeleteOnCompressedPage(page, key, cursorConstructor);
+                return;
+            }
 
             if (page.LastMatch != 0)
                 return; // not an exact match, can't delete
@@ -831,10 +873,8 @@ namespace Voron.Data.BTrees
             page = ModifyPage(page);
 
             State.NumberOfEntries--;
-            ushort nodeVersion;
-            RemoveLeafNode(page, out nodeVersion);
 
-            CheckConcurrency(key, version, nodeVersion, TreeActionType.Delete);
+            RemoveLeafNode(page);
 
             using (var cursor = cursorConstructor(key))
             {
@@ -862,14 +902,15 @@ namespace Voron.Data.BTrees
             if (p.LastMatch != 0)
                 return null;
 
-            return new ReadResult(GetValueReaderFromHeader(node), node->Version);
+            return new ReadResult(GetValueReaderFromHeader(node));
         }
 
         public int GetDataSize(Slice key)
         {
             TreeNodeHeader* node;
             var p = FindPageFor(key, out node);
-            if (p == null || p.LastMatch != 0)
+
+            if (p.LastMatch != 0)
                 return -1;
 
             if (node == null)
@@ -897,15 +938,29 @@ namespace Voron.Data.BTrees
 
         public long GetParentPageOf(TreePage page)
         {
+            Debug.Assert(page.IsCompressed == false);
+
             TreePage p;
             Slice key;
+
             using (page.IsLeaf ? page.GetNodeKey(_llt, 0, out key) : page.GetNodeKey(_llt, 1, out key))
             {
                 Func<Slice, TreeCursor> cursorConstructor;
                 TreeNodeHeader* node;
-                p = FindPageFor(key, out node, out cursorConstructor);
-                if (p == null || p.LastMatch != 0)
-                    return -1;
+                p = FindPageFor(key, node: out node, cursor: out cursorConstructor, allowCompressed: true);
+
+                if (p.LastMatch != 0)
+                {
+                    if (p.IsCompressed == false)
+                        ThrowOnCompressedPage(p);
+#if DEBUG
+                    using (var decompressed = DecompressPage(p, skipCache: true))
+                    {
+                        decompressed.Search(_llt, key);
+                        Debug.Assert(decompressed.LastMatch == 0);
+                    }
+#endif                 
+                }
 
                 using (var cursor = cursorConstructor(key))
                 {
@@ -926,27 +981,11 @@ namespace Voron.Data.BTrees
             return -1;
         }
 
-        public ushort ReadVersion(Slice key)
-        {
-            TreeNodeHeader* node;
-            var p = FindPageFor(key, out node);
-            if (p == null || p.LastMatch != 0)
-                return 0;
-
-            Slice nodeKey;
-            using (TreeNodeHeader.ToSlicePtr(_llt.Allocator, node, out nodeKey))
-            {
-                if (!SliceComparer.EqualsInline(nodeKey, key))
-                    return 0;
-            }
-
-            return node->Version;
-        }
-
         internal byte* DirectRead(Slice key)
         {
             TreeNodeHeader* node;
             var p = FindPageFor(key, out node);
+
             if (p == null || p.LastMatch != 0)
                 return null;
 
@@ -1035,41 +1074,16 @@ namespace Voron.Data.BTrees
                 }
             }
 
-            if (_pageLocator != null && _isPageLocatorOwned )
+            if (_pageLocator != null && _isPageLocatorOwned)
             {
                 _llt.PersistentContext.FreePageLocator(_pageLocator);
                 _pageLocator = null;
             }
+
+            DecompressionsCache?.Dispose();
         }
 
-        private void CheckConcurrency(Slice key, ushort? expectedVersion, ushort nodeVersion, TreeActionType actionType)
-        {
-            if (expectedVersion.HasValue && nodeVersion != expectedVersion.Value)
-                throw new ConcurrencyException(string.Format("Cannot {0} '{1}' to '{4}' tree. Version mismatch. Expected: {2}. Actual: {3}.", actionType.ToString().ToLowerInvariant(), key, expectedVersion.Value, nodeVersion, Name))
-                {
-                    ActualETag = nodeVersion,
-                    ExpectedETag = expectedVersion.Value,
-                };
-        }
-
-
-        private void CheckConcurrency(Slice key, Slice value, ushort? expectedVersion, ushort nodeVersion, TreeActionType actionType)
-        {
-            if (expectedVersion.HasValue && nodeVersion != expectedVersion.Value)
-                throw new ConcurrencyException(string.Format("Cannot {0} value '{5}' to key '{1}' to '{4}' tree. Version mismatch. Expected: {2}. Actual: {3}.", actionType.ToString().ToLowerInvariant(), key, expectedVersion.Value, nodeVersion, Name, value))
-                {
-                    ActualETag = nodeVersion,
-                    ExpectedETag = expectedVersion.Value,
-                };
-        }
-
-        private enum TreeActionType
-        {
-            Add,
-            Delete
-        }
-
-        private bool TryOverwriteOverflowPages(TreeNodeHeader* updatedNode, Slice key, int len, ushort? version, out byte* pos)
+        private bool TryOverwriteOverflowPages(TreeNodeHeader* updatedNode, int len, out byte* pos)
         {
             if (updatedNode->Flags == TreeNodeFlags.PageRef)
             {
@@ -1077,12 +1091,6 @@ namespace Voron.Data.BTrees
 
                 if (len <= readOnlyOverflowPage.OverflowSize)
                 {
-                    CheckConcurrency(key, version, updatedNode->Version, TreeActionType.Add);
-
-                    if (updatedNode->Version == ushort.MaxValue)
-                        updatedNode->Version = 0;
-                    updatedNode->Version++;
-
                     var availableOverflows = _llt.DataPager.GetNumberOfOverflowPages(readOnlyOverflowPage.OverflowSize);
 
                     var requestedOverflows = _llt.DataPager.GetNumberOfOverflowPages(len);
@@ -1110,7 +1118,7 @@ namespace Voron.Data.BTrees
             pos = null;
             return false;
         }
-
+        
         public Slice LastKeyOrDefault()
         {
             using (var it = Iterate(false))

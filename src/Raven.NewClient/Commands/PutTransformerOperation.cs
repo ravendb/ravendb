@@ -1,10 +1,6 @@
-using System;
-using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Extensions;
-using Raven.NewClient.Client.Indexing;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -23,7 +19,7 @@ namespace Raven.NewClient.Client.Commands
         protected void Log()
         {
             if (_logger.IsInfoEnabled)
-            {
+            {//TODO
             }
         }
 
