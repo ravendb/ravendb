@@ -108,7 +108,7 @@ namespace Raven.SlowTests.Bugs
 
         [Theory]
         [PropertyData("Storages")]
-        public async Task TestMassiveParallelDatabaseLoadsWithALogOfIndexesPerDatabase(string storageEngine)
+        public async Task TestMassiveParallelDatabaseLoadsWithALotOfIndexesPerDatabase(string storageEngine)
         {
             var indexes = new List<IndexDefinition>();
 
@@ -197,7 +197,7 @@ namespace Raven.SlowTests.Bugs
             }
         }
 
-        [Theory]
+        [Theory(Skip = "This test should be moved to manual tests suite, that will verify the system's behaviour")]
         [PropertyData("Storages")]
         public async Task TestMassiveParallelDatabaseTakedownsAndLoads(string storageEngine)
         {
