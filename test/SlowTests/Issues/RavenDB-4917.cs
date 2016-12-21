@@ -1,17 +1,17 @@
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
-using Raven.Tests.Common;
-using Xunit;
 using Raven.Client.Indexes;
+using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_4917 : RavenTest
+    public class RavenDB_4917 : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "RavenDB-5919")]
         public void side_by_side_doesnt_create_new_index()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 Assert.Equal(1, store.DatabaseCommands.GetStatistics().CountOfIndexes);
 
@@ -25,7 +25,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class Customer
+        private class Customer
         {
             public string Id { get; set; }
 
@@ -36,7 +36,7 @@ namespace Raven.Tests.Issues
             public string DisplayName { get; set; }
         }
 
-        public class Customer_Index : AbstractIndexCreationTask<Customer, Customer_Index.IndexEntry>
+        private class Customer_Index : AbstractIndexCreationTask<Customer, Customer_Index.IndexEntry>
         {
             public class IndexEntry
             {
