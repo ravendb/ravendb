@@ -187,23 +187,28 @@ namespace Raven.NewClient.Client.Http
                     }
                 }
 
-                using (response)
+                if (response.StatusCode == HttpStatusCode.NotModified)
                 {
-                    if (response.StatusCode == HttpStatusCode.NotModified)
-                    {
-                        cachedItem.NotModified();
-                        command.SetResponse(cachedValue);
+                    cachedItem.NotModified();
+                    command.SetResponse(cachedValue);
+                    return;
+                }
+                if (response.IsSuccessStatusCode == false)
+                {
+                    if (await HandleUnsuccessfulResponse(choosenNode, context, command, response, url))
                         return;
-                    }
-                    if (response.IsSuccessStatusCode == false)
-                    {
-                        if (await HandleUnsuccessfulResponse(choosenNode, context, command, response, url))
-                            return;
-                    }
+                }
 
-                    if (response.Content.Headers.ContentLength.HasValue && response.Content.Headers.ContentLength == 0)
-                        return;
+                if (response.Content.Headers.ContentLength.HasValue && response.Content.Headers.ContentLength == 0)
+                    return;
 
+                if (command.GetType() == typeof(StreamCommand))
+                {
+                    var stream = await response.Content.ReadAsStreamAsync();
+                    (command as StreamCommand)?.SetResponse(stream);
+                }
+                else
+                {
                     using (var stream = await response.Content.ReadAsStreamAsync())
                     {
                         // we intentionally don't dispose the reader here, we'll be using it
@@ -214,11 +219,12 @@ namespace Raven.NewClient.Client.Http
                             long? etag = response.GetEtagHeader();
                             if (etag != null)
                             {
-                                _cache.Set(url, (long)etag, blittableJsonReaderObject);
+                                _cache.Set(url, (long) etag, blittableJsonReaderObject);
                             }
                         }
                         command.SetResponse(blittableJsonReaderObject);
                     }
+                    response.Dispose();
                 }
             }
         }
