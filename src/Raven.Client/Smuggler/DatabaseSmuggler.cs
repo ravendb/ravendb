@@ -57,13 +57,13 @@ namespace Raven.Client.Smuggler
             }
         }
 
-        public async Task ImportIncrementalAsync(DatabaseSmugglerOptions options,  string directoryPath, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task ImportIncrementalAsync(DatabaseSmugglerOptions options, string directoryPath, CancellationToken cancellationToken = default(CancellationToken))
         {
             var files = Directory.GetFiles(directoryPath)
                 .Where(file =>
                 {
                     var extension = Path.GetExtension(file);
-                    return 
+                    return
                         Constants.PeriodicExport.IncrementalExportExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
                         Constants.PeriodicExport.FullExportExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
                 })
@@ -114,13 +114,7 @@ namespace Raven.Client.Smuggler
             var httpClient = GetHttpClient();
             using (var content = new StreamContent(stream))
             {
-                var uri = $"{url}/databases/{database}/smuggler/import";
-                var query = new Dictionary<string, object>
-                {
-                    {"operateOnTypes", options.OperateOnTypes},
-                };
-                // todo: send more options here
-                uri = UrlHelper.BuildUrl(uri, query);
+                var uri = $"{url}/databases/{database}/smuggler/import?{options.ToQueryString()}";
 
                 var response = await httpClient.PostAsync(uri, content, cancellationToken).ConfigureAwait(false);
                 if (response.IsSuccessStatusCode == false)
@@ -148,7 +142,7 @@ namespace Raven.Client.Smuggler
 
         private void ShowProgress(string message)
         {
-            
+
         }
     }
 }

@@ -57,7 +57,7 @@ namespace Raven.NewClient.Client.Smuggler
             }
         }
 
-        public async Task ImportIncrementalAsync(DatabaseSmugglerOptions options,  string directoryPath, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task ImportIncrementalAsync(DatabaseSmugglerOptions options, string directoryPath, CancellationToken cancellationToken = default(CancellationToken))
         {
             var files = Directory.GetFiles(directoryPath)
                 .Where(file =>
@@ -114,17 +114,11 @@ namespace Raven.NewClient.Client.Smuggler
             var httpClient = GetHttpClient();
             using (var content = new StreamContent(stream))
             {
-                var uri = $"{url}/databases/{database}/smuggler/import";
-                var query = new Dictionary<string, object>
-                {
-                    {"operateOnTypes", options.OperateOnTypes},
-                };
-                // todo: send more options here
-                uri = UrlHelper.BuildUrl(uri, query);
+                var uri = $"{url}/databases/{database}/smuggler/import?{options.ToQueryString()}";
 
                 var response = await httpClient.PostAsync(uri, content, cancellationToken).ConfigureAwait(false);
                 if (response.IsSuccessStatusCode == false)
-                    throw new InvalidOperationException("Import failed with status code: " +  response.StatusCode + Environment.NewLine + 
+                    throw new InvalidOperationException("Import failed with status code: " + response.StatusCode + Environment.NewLine +
                         await response.Content.ReadAsStringAsync()
                         );
 
@@ -146,7 +140,7 @@ namespace Raven.NewClient.Client.Smuggler
 
         private void ShowProgress(string message)
         {
-            
+
         }
     }
 }
