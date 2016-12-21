@@ -26,12 +26,10 @@ namespace Raven.Server.Documents.Patch
     public class PatchConflict : PatchDocument
     {
         private readonly List<DocumentConflict> _docs = new List<DocumentConflict>();
-        private readonly string _key;
-        private readonly bool _hasTombstone = false;
-        private const string TombstoneResolverValue = "_To_Tombstone__";
+        private readonly bool _hasTombstone;
+        private static readonly string TombstoneResolverValue = Guid.NewGuid().ToString();
 
-        public PatchConflict(DocumentDatabase database, IReadOnlyCollection<DocumentConflict> docs,
-              string key):base(database)
+        public PatchConflict(DocumentDatabase database, IReadOnlyCollection<DocumentConflict> docs):base(database)
         {
             foreach (var doc in docs)
             {
@@ -39,10 +37,13 @@ namespace Raven.Server.Documents.Patch
                 {
                     _docs.Add(doc);
                 }
+                else
+                {
+                    _hasTombstone = true;
+                }
+
             }
-            _hasTombstone = docs.Any(doc => doc.Doc == null);
             ExecutionString = @"function ExecutePatchScript(docs){{ {0} }}";
-            _key = key;     
         }
 
         public override PatchResultData Apply(DocumentsOperationContext context, Document document, PatchRequest patch)
@@ -109,7 +110,7 @@ namespace Raven.Server.Documents.Patch
                 return null;
             }
             var obj = scope.ActualPatchResult.AsObject();
-            using (var writer = new ManualBlittalbeJsonDocumentBuilder(context))
+            using (var writer = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
             {
                 writer.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
                 writer.StartWriteObjectDocument();
