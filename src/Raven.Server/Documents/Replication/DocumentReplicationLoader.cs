@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Replication
         private readonly ConcurrentDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>> _incomingRejectionStats = new ConcurrentDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>>();
 
         private readonly ConcurrentSet<ConnectionFailureInfo> _reconnectQueue = new ConcurrentSet<ConnectionFailureInfo>();
-        internal Dictionary<string,ScriptResolver> ManualConflictResolversCache;
+        internal readonly Dictionary<string,ScriptResolver> ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
         private readonly Logger _log;
         private ReplicationDocument _replicationDocument;
 
@@ -219,7 +219,28 @@ namespace Raven.Server.Documents.Replication
             _database.Notifications.OnSystemDocumentChange += OnSystemDocumentChange;
 
             InitializeOutgoingReplications();
-            InitializeManualResolver();
+            InitializeResolvers();
+        }
+
+        private void InitializeResolvers()
+        {
+            if ( _replicationDocument?.ResolveByCollection == null )
+            {
+                return;
+            }
+            foreach (var kvp in _replicationDocument.ResolveByCollection)
+            {
+                var collection = kvp.Key;
+                var script = kvp.Value.Script;
+                if (string.IsNullOrEmpty(script.Trim()))
+                {
+                    continue;
+                }
+                ScriptConflictResolversCache[collection] = new ScriptResolver
+                {
+                    Script = script
+                };
+            }
         }
 
         private void InitializeOutgoingReplications()
@@ -242,18 +263,9 @@ namespace Raven.Server.Documents.Replication
                 if (_log.IsInfoEnabled)
                     _log.Info($"Initialized outgoing replication for [{destination.Database}/{destination.Url}]");
             }
+
             if (_log.IsInfoEnabled)
                 _log.Info("Finished initialization of outgoing replications..");
-        }
-
-        private void InitializeManualResolver()
-        {
-            DocumentsOperationContext context;
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-            using (var tx = context.OpenReadTransaction())
-            {
-                ManualConflictResolversCache = _database.DocumentsStorage.GetDictionaryOfScriptResolvers(tx.InnerTransaction);  
-            }
         }
 
         private void AddAndStartOutgoingReplication(ReplicationDestination destination)
@@ -315,35 +327,6 @@ namespace Raven.Server.Documents.Replication
         private void OnSystemDocumentChange(DocumentChangeNotification notification)
         {
 
-            if (notification.Key.Equals(Constants.Replication.DocumentReplicationResolvers,
-                StringComparison.OrdinalIgnoreCase))
-            {
-                DocumentsOperationContext context;
-                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-                using (var tx = context.OpenWriteTransaction())
-                {
-                    var scriptConfig = _database.DocumentsStorage.Get(context, Constants.Replication.DocumentReplicationResolvers);
-                    var resolverObj = JsonDeserializationServer.ReplicationManualResolver(scriptConfig.Data);
-
-                    foreach (var kvp in resolverObj.ResolveByCollection)
-                    {
-                        var collection = kvp.Key;
-                        var script = kvp.Value.Script;
-                        if (string.IsNullOrEmpty(script.Trim()))
-                        {
-                            continue;
-                        }
-                        context.DocumentDatabase.DocumentsStorage.AddOrUpdateScript(context, collection, script);
-                        ManualConflictResolversCache[collection] = new ScriptResolver
-                        {
-                            Script = script
-                        };
-                    }  
-                    tx.Commit();
-                }  
-                return;        
-            }
-
             if (!notification.Key.Equals(Constants.Replication.DocumentReplicationConfiguration, StringComparison.OrdinalIgnoreCase))
                 return;
 
@@ -359,6 +342,8 @@ namespace Raven.Server.Documents.Replication
             _outgoingFailureInfo.Clear();
 
             InitializeOutgoingReplications();
+
+            InitializeResolvers();
 
             if (_log.IsInfoEnabled)
                 _log.Info($"Replication configuration was changed: {notification.Key}");

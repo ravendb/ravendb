@@ -645,7 +645,7 @@ namespace Raven.Server.Documents.Replication
                 $"Reading past the size of buffer! TotalSize {totalSize} but position is {doc.Position} & size is {doc.DocumentSize}!");
         }
 
-        public void ResovleConflictManually(ReplicationDocumentsPositions docPosition,
+        public void ResovleConflictByScript(ReplicationDocumentsPositions docPosition,
             ChangeVectorEntry[] conflictingVector,
             BlittableJsonReaderObject doc)
         {
@@ -655,18 +655,35 @@ namespace Raven.Server.Documents.Replication
             var collection = CollectionName.GetCollectionName(docPosition.Id, doc);
 
             ScriptResolver scriptResolver;
-            var hasScript = _parent.ManualConflictResolversCache.TryGetValue(collection, out scriptResolver);
+            var hasScript = _parent.ScriptConflictResolversCache.TryGetValue(collection, out scriptResolver);
             if (!hasScript || scriptResolver == null)
             {
-                throw new InvalidOperationException($"Script not found to resolve the {collection} collection");
+                if (_log.IsInfoEnabled)
+                {
+                    _log.Info($"Script not found to resolve the {collection} collection");
+                }
+                return;
             }
 
             PatchRequest request = new PatchRequest
             {
                 Script = scriptResolver.Script
             };
+            PatchResultData results;
+
+            try
+            {
+                results = patch.Apply(_documentsContext, null, request);
+            }
+            catch(OperationCanceledException ex)
+            {
+                if (_log.IsInfoEnabled)
+                {
+                    _log.Info(ex.Message);
+                }
+                return;
+            }
             
-            var results = patch.Apply(_documentsContext,  request);
             _documentsContext.DocumentDatabase.DocumentsStorage.DeleteConflictsFor(_documentsContext, docPosition.Id);
             var merged = ReplicationUtils.MergeVectors(conflictingVector, _tempReplicatedChangeVector);
             if (results.ModifiedDocument != null)
@@ -751,12 +768,9 @@ namespace Raven.Server.Documents.Replication
                         ResolveConflictToLocal(docPosition, conflictingVector);
                     }
                     break;
-                case StraightforwardConflictResolution.ResolveManually:
-                    _database.DocumentsStorage.AddConflict(_documentsContext, docPosition.Id, doc, _tempReplicatedChangeVector);    
-                    ResovleConflictManually(docPosition, conflictingVector, doc);
-                    break;
-                default:
+                 default:
                     _database.DocumentsStorage.AddConflict(_documentsContext, docPosition.Id, doc, _tempReplicatedChangeVector);
+                    ResovleConflictByScript(docPosition, conflictingVector, doc);
                     break;
             }
         }
