@@ -12,7 +12,7 @@ namespace Voron.Debugging
     public class StorageReport
     {
         public DataFileReport DataFile { get; set; }
-        public int CountOfJournals { get; set; }
+        public List<JournalReport> Journals { get; set; }
         public int CountOfTrees { get; set; }
         public int CountOfTables { get; set; }
     }

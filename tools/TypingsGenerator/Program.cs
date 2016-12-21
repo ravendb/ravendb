@@ -126,6 +126,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(PeriodicExportConfiguration));
 
             // storage report
+            scripter.AddType(typeof(StorageReport));
             scripter.AddType(typeof(DetailedStorageReport));
 
             // map reduce visualizer

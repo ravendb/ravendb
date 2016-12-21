@@ -1,52 +1,79 @@
-﻿class protractedCommandsDetector {
+﻿
+class requestExecution {
+
+    spinnerVisible = false;
+    alertVisible = false;
+    completed = false;
+
+    private spinnerTimeout: number;
+    private alertTimeout: number;
+
+    constructor(private timeForSpinner: number, private timeToAlert: number = 0, private sync: Function) {
+        this.setTimeouts();
+    }
+
+    markCompleted() {
+        this.cleanState();
+        this.sync();
+        this.completed = true;
+    }
+
+    markProgress() {
+        this.cleanState();
+        this.setTimeouts();
+        this.sync();
+    }
+
+    private cleanState() {
+        clearTimeout(this.spinnerTimeout);
+        if (this.alertTimeout) {
+            clearTimeout(this.alertTimeout);
+        }
+        this.spinnerVisible = false;
+        this.alertVisible = false;
+    }
+
+    private setTimeouts() {
+        this.spinnerTimeout = setTimeout(() => {
+            this.spinnerVisible = true;
+            this.sync();
+        }, this.timeForSpinner);
+
+        if (this.timeToAlert > 0) {
+            this.alertTimeout = setTimeout(() => {
+                this.alertVisible = true;
+                this.sync();
+            }, this.timeToAlert);
+        }
+    }
+}
+
+class protractedCommandsDetector {
     static instance = new protractedCommandsDetector();
+
+    private requestsInProgress = [] as Array<requestExecution>;
 
     showSpinner = ko.observable<boolean>(false);
     showServerNotResponding = ko.observable<boolean>(false);
-
-    private requestsInProgress = 0;
-    private spinnerTimeout = 0;
-    private alertTimeout = 0;
-    private biggestTimeToAlert = 0;
 
     constructor() {
         this.showSpinner.subscribe((show: boolean) => $("body").toggleClass("processing", show));
     }
 
-    progressReceived(timeToAlert: number) {
-        clearTimeout(this.alertTimeout);
-        this.alertTimeout = setTimeout(() => this.showServerNotRespondingAlert(), timeToAlert);
+    requestStarted(timeForSpinner: number, timeForAlert: number = 0): requestExecution {
+        const execution = new requestExecution(timeForSpinner, timeForAlert, () => this.sync());
+
+        this.requestsInProgress.push(execution);
+
+        return execution;
     }
 
-    requestStarted(timeToAlert: number) {
-        this.requestsInProgress++;
+    private sync() {
+        this.showSpinner(_.some(this.requestsInProgress, x => x.spinnerVisible));
 
-        var isBiggestTimeToAlertUpdated = timeToAlert > this.biggestTimeToAlert;
-        if ((this.requestsInProgress === 0 && timeToAlert > 0) || isBiggestTimeToAlertUpdated) {
-            this.biggestTimeToAlert = timeToAlert;
-            clearTimeout(this.spinnerTimeout);
-            this.spinnerTimeout = setTimeout(() => this.showSpin(timeToAlert, isBiggestTimeToAlertUpdated), 1000);
-        }
-    }
+        //TODO: handle block UI ?
 
-    requestCompleted() {
-        this.requestsInProgress--;
-        if (this.requestsInProgress === 0) {
-            clearTimeout(this.spinnerTimeout);
-            clearTimeout(this.alertTimeout);
-            this.alertTimeout = 0;
-            this.spinnerTimeout = 0;
-            this.allRequestsCompleted();
-        }
-    }
-
-    private showSpin(timeToAlert: number, isBiggestTimeToAlertUpdated: boolean) {
-        this.showSpinner(true);
-        if (this.alertTimeout === 0 || isBiggestTimeToAlertUpdated) {
-            clearTimeout(this.alertTimeout);
-            this.biggestTimeToAlert = timeToAlert;
-            this.alertTimeout = setTimeout(() => this.showServerNotRespondingAlert(), timeToAlert);
-        }
+        _.remove(this.requestsInProgress, x => x.completed);
     }
 
     private showServerNotRespondingAlert() {
@@ -55,10 +82,6 @@
         $.blockUI({ message: '<div id="longTimeoutMessage"><span> This is taking longer than usual</span><br/><span>(Waiting for server to respond)</span></div>' });
     }
 
-    private allRequestsCompleted() {
-        this.showSpinner(false);
-        this.showServerNotResponding(false); //TODO: bind unblockui somewhere $.unblockUI();
-    }
 }
 
 export = protractedCommandsDetector;

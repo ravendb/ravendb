@@ -3,6 +3,7 @@ import app = require("durandal/app");
 import tempStatDialog = require("viewmodels/database/status/indexing/tempStatDialog");
 import getIOMetricsCommand = require("commands/database/debug/getIOMetricsCommand");
 import fileDownloader = require("common/fileDownloader");
+import d3 = require("d3");
 
 class ioStats extends viewModelBase { 
 

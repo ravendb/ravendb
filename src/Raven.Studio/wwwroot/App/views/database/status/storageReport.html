@@ -9,7 +9,7 @@
     <h4>Current path:</h4>
     <div class="current-path">
         <span data-bind="foreach: currentPath">
-            <a href="#" data-bind="click: $root.onClick, attr: { class: type }">
+            <a href="#" data-bind="click: _.partial($root.onClick, $data, false), attr: { class: type }">
                 <small data-bind="text: type"></small>
                 <span data-bind="text: name"></span>
             </a>
@@ -32,7 +32,7 @@
             <tr>
                 <td data-bind="text: _.upperFirst(type)"></td>
                 <td>
-                    <a href="#" data-bind="text: name, click: $root.onClick, visible: hasChildren()"></a>
+                    <a href="#" data-bind="text: name, click: _.partial($root.onClick, $data, true), visible: hasChildren()"></a>
                     <span href="#" data-bind="text: name, visible: !hasChildren()"></span>
                 </td>
                 <td data-bind="visible: $root.showPagesColumn(), text: pageCount ? pageCount.toLocaleString() : 0"></td>

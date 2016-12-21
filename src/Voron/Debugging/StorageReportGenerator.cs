@@ -21,10 +21,10 @@ namespace Voron.Debugging
 {
     public class ReportInput
     {
+        public List<JournalFile> Journals;
         public long NumberOfAllocatedPages { get; set; }
         public int NumberOfFreePages { get; set; }
         public long NextPageNumber { get; set; }
-        public int CountOfJournals { get; set; }
         public int CountOfTrees { get; set; }
         public int CountOfTables { get; set; }
     }
@@ -55,10 +55,12 @@ namespace Voron.Debugging
         {
             var dataFile = GenerateDataFileReport(input.NumberOfAllocatedPages, input.NumberOfFreePages, input.NextPageNumber);
 
+            var journals = GenerateJournalsReport(input.Journals);
+
             return new StorageReport
             {
                 DataFile = dataFile,
-                CountOfJournals = input.CountOfJournals,
+                Journals = journals,
                 CountOfTables = input.CountOfTables,
                 CountOfTrees = input.CountOfTrees
             };
@@ -91,11 +93,7 @@ namespace Voron.Debugging
                 tables.Add(tableReport);
             }
 
-            var journals = input.Journals.Select(journal => new JournalReport
-            {
-                Number = journal.Number,
-                AllocatedSpaceInBytes = PagesToBytes(journal.JournalWriter.NumberOfAllocatedPages)
-            }).ToList();
+            var journals = GenerateJournalsReport(input.Journals);
 
             return new DetailedStorageReport
             {
@@ -116,6 +114,15 @@ namespace Voron.Debugging
                 UsedSpaceInBytes = PagesToBytes(nextPageNumber - numberOfFreePages),
                 FreeSpaceInBytes = PagesToBytes(numberOfFreePages + unallocatedPagesAtEndOfFile)
             };
+        }
+
+        private List<JournalReport> GenerateJournalsReport(List<JournalFile> journals)
+        {
+            return journals.Select(journal => new JournalReport
+            {
+                Number = journal.Number,
+                AllocatedSpaceInBytes = PagesToBytes(journal.JournalWriter.NumberOfAllocatedPages)
+            }).ToList();
         }
 
         public static TreeReport GetReport(FixedSizeTree fst, bool calculateExactSizes)
