@@ -8,6 +8,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.DependencyInjection;
 using Raven.Abstractions.Data;
 using Raven.Client.Data;
@@ -120,6 +121,10 @@ namespace Raven.Server
                     {
                         services.AddSingleton(Router);
                         services.AddSingleton(this);
+                        services.Configure<FormOptions>(options =>
+                        {
+                            options.MultipartBodyLengthLimit = long.MaxValue;
+                        });
                     })
                     // ReSharper disable once AccessToDisposedClosure
                     .Build();
