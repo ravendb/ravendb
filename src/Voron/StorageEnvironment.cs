@@ -120,9 +120,6 @@ namespace Voron
                     CreateNewDatabase();
                 else // existing db, let us load it
                     LoadExistingDatabase();
-
-                if (_options.ManualFlushing == false)
-                    Task.Run(IdleFlushTimer);
             }
             catch (Exception)
             {
@@ -185,38 +182,6 @@ namespace Voron
             }
 
             return true;
-        }
-
-        private async Task IdleFlushTimer()
-        {
-            var cancellationToken = _cancellationTokenSource.Token;
-
-            while (cancellationToken.IsCancellationRequested == false)
-            {
-                if (Disposed)
-                    return;
-
-                if (Options.ManualFlushing)
-                    return;
-
-                try
-                {
-                    await Task.Delay(Options.IdleFlushTimeout, cancellationToken);
-                }
-                catch (ObjectDisposedException)
-                {
-                    return;
-                }
-                catch (OperationCanceledException)
-                {
-                    return;
-                }
-                if (Volatile.Read(ref SizeOfUnflushedTransactionsInJournalFile) != 0)
-                    GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
-                else if (Journal.Applicator.TotalWrittenButUnsyncedBytes != 0)
-                    QueueForSyncDataFile();
-
-            }
         }
 
         public ScratchBufferPool ScratchBufferPool => _scratchBufferPool;
@@ -457,7 +422,6 @@ namespace Voron
                             CatastrophicFailure = null;
                             _endOfDiskSpace = null;
                             _cancellationTokenSource = new CancellationTokenSource();
-                            Task.Run(IdleFlushTimer);
                             GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
                         }
                     }
