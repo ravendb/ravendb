@@ -202,30 +202,7 @@ namespace Raven.NewClient.Client.Http
                 if (response.Content.Headers.ContentLength.HasValue && response.Content.Headers.ContentLength == 0)
                     return;
 
-                if (command.GetType() == typeof(StreamCommand))
-                {
-                    var stream = await response.Content.ReadAsStreamAsync();
-                    (command as StreamCommand)?.SetResponse(stream);
-                }
-                else
-                {
-                    using (var stream = await response.Content.ReadAsStreamAsync())
-                    {
-                        // we intentionally don't dispose the reader here, we'll be using it
-                        // in the command, any associated memory will be released on context reset
-                        var blittableJsonReaderObject = await context.ReadForMemoryAsync(stream, "PutResult");
-                        if (response.Headers.ETag != null)
-                        {
-                            long? etag = response.GetEtagHeader();
-                            if (etag != null)
-                            {
-                                _cache.Set(url, (long) etag, blittableJsonReaderObject);
-                            }
-                        }
-                        command.SetResponse(blittableJsonReaderObject);
-                    }
-                    response.Dispose();
-                }
+                await command.ProcessResponse(context, _cache, response, url);
             }
         }
 
