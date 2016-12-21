@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
+using FastTests.Subscriptions;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Document;
 using Xunit;

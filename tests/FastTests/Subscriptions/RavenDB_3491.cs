@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using FastTests.Subscriptions;
 using Raven.NewClient.Abstractions.Data;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;

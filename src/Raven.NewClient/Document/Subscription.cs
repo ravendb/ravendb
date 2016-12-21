@@ -368,8 +368,6 @@ namespace Raven.NewClient.Client.Document
 
         private void NotifySubscribers(BlittableJsonReaderObject curDoc, out long lastReceivedEtag)
         {
-            T instance;
-
             BlittableJsonReaderObject metadata;
             string id;
 
@@ -380,7 +378,7 @@ namespace Raven.NewClient.Client.Document
             if (metadata.TryGet(Constants.Metadata.Etag, out lastReceivedEtag) == false)
                 throw new InvalidOperationException("Document must have an ETag");
 
-            instance = (T)EntityToBlittable.ConvertToEntity(typeof(T), id, curDoc, _conventions);
+            var instance = (T)EntityToBlittable.ConvertToEntity(typeof(T), id, curDoc, _conventions);
 
             if (string.IsNullOrEmpty(id) == false)
                 _generateEntityIdOnTheClient.TrySetIdentity(instance, id);

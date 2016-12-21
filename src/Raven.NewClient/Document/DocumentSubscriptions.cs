@@ -49,11 +49,6 @@ namespace Raven.NewClient.Client.Document
             AsyncHelpers.RunSync(() => innerAsync.DeleteAsync(id, database));
         }
 
-        public void Release(long id, string database = null)
-        {
-            AsyncHelpers.RunSync(() => innerAsync.ReleaseAsync(id, database));
-        }
-
         public void Dispose()
         {
             innerAsync.Dispose();

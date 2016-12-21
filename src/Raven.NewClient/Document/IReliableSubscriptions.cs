@@ -47,10 +47,5 @@ namespace Raven.NewClient.Client.Document
         /// It deletes a subscription.
         /// </summary>
         void Delete(long id, string database = null);
-
-        /// <summary>
-        /// It releases a subscriptions by forcing a connected client to drop.
-        /// </summary>
-        void Release(long id, string database = null);
     }
 }

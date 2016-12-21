@@ -77,7 +77,6 @@ namespace Raven.NewClient.Client.Document
             if (options == null)
                 throw new InvalidOperationException("Cannot open a subscription if options are null");
 
-            // to ensure that subscription is open try to call it with the same connection id
             var subscription = new Subscription<T>(options, documentStore, documentStore.Conventions, database); 
 
             subscriptions.Add(subscription);
@@ -93,10 +92,10 @@ namespace Raven.NewClient.Client.Document
             var requestExecuter = documentStore.GetRequestExecuter(database ?? documentStore.DefaultDatabase);
             requestExecuter.ContextPool.AllocateOperationContext(out jsonOperationContext);
 
-            var command = new GetSubscriptionsCommand();
+            var command = new GetSubscriptionsCommand(start, take);
             await requestExecuter.ExecuteAsync(command, jsonOperationContext);
 
-            foreach (BlittableJsonReaderObject document in command.Result.Results)
+            foreach (BlittableJsonReaderObject document in command.Result.Subscriptions)
             {
                 configs.Add((SubscriptionConfig)documentStore.Conventions.DeserializeEntityFromBlittable(typeof(SubscriptionConfig), document));
             }
@@ -111,16 +110,6 @@ namespace Raven.NewClient.Client.Document
             requestExecuter.ContextPool.AllocateOperationContext(out jsonOperationContext);
 
             var command = new DeleteSubscriptionCommand(id);
-            await requestExecuter.ExecuteAsync(command, jsonOperationContext);
-        }
-
-        public async Task ReleaseAsync(long id, string database = null)
-        {
-            JsonOperationContext jsonOperationContext;
-            var requestExecuter = documentStore.GetRequestExecuter(database ?? documentStore.DefaultDatabase);
-            requestExecuter.ContextPool.AllocateOperationContext(out jsonOperationContext);
-
-            var command = new ReleaseSubscriptionCommand(id);
             await requestExecuter.ExecuteAsync(command, jsonOperationContext);
         }
 

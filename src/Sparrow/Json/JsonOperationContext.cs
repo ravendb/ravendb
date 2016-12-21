@@ -477,7 +477,7 @@ namespace Sparrow.Json
             private readonly UnmanagedJsonParser _parser;
             private readonly BlittableJsonDocumentBuilder _writer;
             private ReturnBuffer _returnManagedBuffer;
-            private int _bufferOffset = 0;
+            private int _bufferOffset;
 
             public MultiDocumentParser(JsonOperationContext context, Stream stream)
             {
@@ -540,6 +540,7 @@ namespace Sparrow.Json
                         if (read == 0)
                             throw new EndOfStreamException("Stream ended without reaching end of json content");
                         _parser.SetBuffer(_buffer, read);
+                        _bufferOffset = 0;
                     }
                     else
                     {
@@ -564,6 +565,7 @@ namespace Sparrow.Json
                         if (read == 0)
                             throw new EndOfStreamException("Stream ended without reaching end of json content.");
                         _parser.SetBuffer(_buffer, read);
+                        _bufferOffset = 0;
                     }
                     else
                     {

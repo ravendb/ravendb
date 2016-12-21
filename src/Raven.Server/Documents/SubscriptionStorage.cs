@@ -349,7 +349,7 @@ namespace Raven.Server.Documents
                 }
 
                 writer.WriteStartObject();
-                writer.WritePropertyName("Results");
+                writer.WritePropertyName("Subscriptions");
                 context.Write(writer, new DynamicJsonArray(subscriptions));
                 writer.WriteEndObject();
             }

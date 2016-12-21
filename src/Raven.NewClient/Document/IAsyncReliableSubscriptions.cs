@@ -53,10 +53,5 @@ namespace Raven.NewClient.Client.Document
         /// It deletes a subscription.
         /// </summary>
         Task DeleteAsync(long id, string database = null);
-
-        /// <summary>
-        /// It releases a subscriptions by forcing a connected client to drop.
-        /// </summary>
-        Task ReleaseAsync(long id, string database = null);
     }
 }

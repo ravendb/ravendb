@@ -98,7 +98,7 @@ namespace Raven.Client.Document
             {
                 var response = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 
-                var resultsArray = response.Value<RavenJArray>("Results");
+                var resultsArray = response.Value<RavenJArray>("Subscriptions");
 
                 configs = documentStore.Conventions.CreateSerializer().Deserialize<SubscriptionConfig[]>(new RavenJTokenReader(resultsArray)).ToList();
             }

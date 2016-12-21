@@ -4,6 +4,7 @@ using Raven.NewClient.Abstractions.Data;
 using Xunit;
 using System;
 using System.Threading;
+using FastTests.Subscriptions;
 using Raven.NewClient.Abstractions.Exceptions.Subscriptions;
 using Sparrow;
 
