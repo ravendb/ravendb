@@ -1,3 +1,4 @@
+using FastTests;
 using Raven.Client.Connection;
 using Raven.Client.Document;
 using Raven.Json.Linq;
@@ -6,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_5686
+    public class RavenDB_5686 : NoDisposalNeeded
     {
         [Fact]
         public void CanSerializeAndDeserializeMeterValue()
