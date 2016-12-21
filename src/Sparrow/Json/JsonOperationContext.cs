@@ -594,11 +594,6 @@ namespace Sparrow.Json
                 }
             }
 
-            private static void ThrowInvalidContextVersion()
-            {
-                throw new InvalidOperationException("Cannot use a parser from a previous version of the context, you forgot to reset the parser?");
-            }
-
             public void Dispose()
             {
                 _returnManagedBuffer.Dispose();

@@ -3,20 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace Raven.Server.Extensions
 {
     public static class StringExtensions
     {
-        /// <summary>
-        /// note: for debugging and testing, do not use in production!
-        /// </summary>
-        public static string RemoveControlChars(this string s)
-        {
-            return Regex.Replace(s, @"[^\x20-\x7F]", string.Empty);
-        }
-
         public static List<string> GetSemicolonSeparatedValues(this string self)
         {
             return self.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
