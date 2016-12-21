@@ -3,36 +3,36 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Abstractions.Indexing;
-using Raven.Tests.Common;
 
+using FastTests;
+using Raven.Abstractions.Indexing;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RDBQA_17 : RavenTest
+    public class RDBQA_17 : RavenTestBase
     {
         [Fact]
         public void WhenOverridingTransformerOldOneShouldBeDeleted()
         {
             const string Name = "users/selectName";
 
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.PutTransformer(Name, new TransformerDefinition
-                                                            {
-                                                                Name = Name,
-                                                                TransformResults = "from user in results select new { user.Age, user.Name }"
-                                                            });
+                {
+                    Name = Name,
+                    TransformResults = "from user in results select new { user.Age, user.Name }"
+                });
 
                 var transformers = store.DatabaseCommands.GetTransformers(0, 10);
                 var transformerId = transformers[0].TransfomerId;
 
                 store.DatabaseCommands.PutTransformer(Name, new TransformerDefinition
-                                                            {
-                                                                Name = Name,
-                                                                TransformResults = "from user in results select new { Name = user.Name }"
-                                                            });
+                {
+                    Name = Name,
+                    TransformResults = "from user in results select new { Name = user.Name }"
+                });
 
                 transformers = store.DatabaseCommands.GetTransformers(0, 10);
 
