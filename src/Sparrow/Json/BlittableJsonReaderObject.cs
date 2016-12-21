@@ -259,7 +259,7 @@ namespace Sparrow.Json
                         var lazyStringValue = result as LazyStringValue;
                         if (lazyStringValue != null)
                         {
-                            obj = (T)Convert.ChangeType(lazyStringValue.String, type);
+                            obj = (T)Convert.ChangeType(lazyStringValue.ToString(), type);
                         }
                         else
                         {

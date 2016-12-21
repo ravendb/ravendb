@@ -17,7 +17,6 @@ namespace Sparrow.Json
     public class JsonOperationContext : IDisposable
     {
         private const int InitialStreamSize = 4096;
-        private int _version;
         private readonly int _initialSize;
         private readonly int _longLivedSize;
         private readonly ArenaMemoryAllocator _arenaAllocator;
@@ -478,7 +477,6 @@ namespace Sparrow.Json
             private readonly UnmanagedJsonParser _parser;
             private readonly BlittableJsonDocumentBuilder _writer;
             private ReturnBuffer _returnManagedBuffer;
-            private int _contextVersion;
 
             public MultiDocumentParser(JsonOperationContext context, Stream stream)
             {
@@ -488,8 +486,6 @@ namespace Sparrow.Json
                 _returnManagedBuffer = context.GetManagedBuffer(out _buffer);
                 _parser = new UnmanagedJsonParser(context, state, "parse/multi");
                 _writer = new BlittableJsonDocumentBuilder(_context, state, _parser);
-
-                _contextVersion = context._version;
             }
 
             public BlittableJsonReaderObject ParseToMemory(string debugTag = null) =>
@@ -533,11 +529,8 @@ namespace Sparrow.Json
 
             public async Task<BlittableJsonReaderObject> ParseAsync(BlittableJsonDocumentBuilder.UsageMode mode, string debugTag)
             {
-                EnsureParserUseValidBuffers();
+                PrepareForNewDocumentParse(mode, debugTag);
 
-                _writer.Renew(debugTag, mode);
-                _writer.ReadObjectDocument();
-                _context.CachedProperties.NewDocument();
                 while (true)
                 {
                     if (_parser.BufferOffset == _parser.BufferSize)
@@ -560,11 +553,7 @@ namespace Sparrow.Json
 
             public BlittableJsonReaderObject Parse(BlittableJsonDocumentBuilder.UsageMode mode, string debugTag)
             {
-                EnsureParserUseValidBuffers();
-
-                _writer.Renew(debugTag, mode);
-                _writer.ReadObjectDocument();
-                _context.CachedProperties.NewDocument();
+                PrepareForNewDocumentParse(mode, debugTag);
                 while (true)
                 {
                     if (_parser.BufferOffset == _parser.BufferSize)
@@ -585,13 +574,12 @@ namespace Sparrow.Json
                 return _writer.CreateReader();
             }
 
-            private void EnsureParserUseValidBuffers()
+            private void PrepareForNewDocumentParse(BlittableJsonDocumentBuilder.UsageMode mode, string debugTag)
             {
-                if (_contextVersion != _context._version)
-                {
-                    _parser.NewDocument();
-                    _contextVersion = _context._version;
-                }
+                _parser.NewDocument();
+                _writer.Renew(debugTag, mode);
+                _writer.ReadObjectDocument();
+                _context.CachedProperties.NewDocument();
             }
 
             public void Dispose()
@@ -626,8 +614,6 @@ namespace Sparrow.Json
 
         protected internal virtual unsafe void Reset()
         {
-            _version++;
-
             if (_tempBuffer != null)
                 _tempBuffer.Address = null;
 

@@ -13,9 +13,13 @@ namespace Tryouts
     {
         static void Main(string[] args)
         {
-            using (var store = new FastTests.Server.Documents.Indexing.Auto.BasicAutoMapIndexing())
+            for (int i = 0; i < 100; i++)
             {
-                store.IndexLoadErrorCreatesFaultyInMemoryIndexFakeAndAddsAlert();
+                Console.WriteLine(i);
+                using (var store = new FastTests.Server.Documents.Replication.AutomaticConflictResolution())
+                {
+                    store.ShouldResolveDocumentConflictInFavorOfLatestVersion();
+                }
             }
         }
     }
