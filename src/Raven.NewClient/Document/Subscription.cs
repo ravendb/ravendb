@@ -50,6 +50,7 @@ namespace Raven.NewClient.Client.Document
         private bool _disposed;
         private Task _subscriptionTask;
         private NetworkStream _networkStream;
+        private TaskCompletionSource<object> _disposedTask = new TaskCompletionSource<object>();
 
         internal Subscription(SubscriptionConnectionOptions options, IDocumentStore documentStore, DocumentConvention conventions, string dbName)
         {
@@ -111,7 +112,8 @@ namespace Raven.NewClient.Client.Document
 
                 _disposed = true;
                 _proccessingCts.Cancel();
-                CloseTcpClient(); // we disconnect immediately, freeing the subscription task
+                _disposedTask.TrySetResult(null); // notify the subscription task that we are done
+
                 if (_subscriptionTask != null && Task.CurrentId != _subscriptionTask.Id)
                 {
                     try
@@ -123,6 +125,9 @@ namespace Raven.NewClient.Client.Document
                         // just need to wait for it to end
                     }
                 }
+
+                CloseTcpClient(); // we disconnect immediately, freeing the subscription task
+
                 OnCompletedNotification();
             }
             catch (Exception ex)
@@ -270,7 +275,11 @@ namespace Raven.NewClient.Client.Document
                     using(var parser = context.ParseMultiFrom(tcpStream))
                     {
                         _proccessingCts.Token.ThrowIfCancellationRequested();
-                        var connectionStatus = await ReadNextObject(parser).ConfigureAwait(false);
+                        var readObjectTask = ReadNextObject(parser);
+                        var done = await Task.WhenAny(readObjectTask, _disposedTask.Task).ConfigureAwait(false);
+                        if (done == _disposedTask.Task)
+                            return;
+                        var connectionStatus = await readObjectTask.ConfigureAwait(false);
 
                         if (_proccessingCts.IsCancellationRequested)
                             return;
@@ -281,7 +290,7 @@ namespace Raven.NewClient.Client.Document
                         Task.Run(() => successfullyConnected.TrySetResult(null));
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
-                        var readObjectTask = ReadNextObject(parser);
+                        readObjectTask = ReadNextObject(parser);
 
                         if (_proccessingCts.IsCancellationRequested)
                             return;
@@ -295,14 +304,17 @@ namespace Raven.NewClient.Client.Document
                             bool endOfBatch = false;
                             while (endOfBatch == false && _proccessingCts.IsCancellationRequested == false)
                             {
+                                done = await Task.WhenAny(readObjectTask, _disposedTask.Task).ConfigureAwait(false);
+                                if (done == _disposedTask.Task)
+                                    break;
                                 var receivedMessage = await readObjectTask.ConfigureAwait(false);
                                 if (_proccessingCts.IsCancellationRequested)
-                                    return;
+                                    break;
 
                                 readObjectTask = ReadNextObject(parser);
 
                                 if (_proccessingCts.IsCancellationRequested)
-                                    return;
+                                    break;
 
                                 switch (receivedMessage.Type)
                                 {
