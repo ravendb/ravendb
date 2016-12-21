@@ -15,6 +15,7 @@ using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Transformers;
@@ -62,7 +63,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 transformer = Database.TransformerStore.GetTransformer(transformerName);
                 if (transformer == null)
-                    throw new InvalidOperationException("No transformer with the name: " + transformerName);
+                    throw new TransformerDoesNotExistsException("No transformer with the name: " + transformerName);
             }
 
             DocumentsOperationContext context;
