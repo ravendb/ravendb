@@ -347,7 +347,11 @@ namespace Raven.Server.Documents
                     if (taken > take)
                         break;
                 }
+
+                writer.WriteStartObject();
+                writer.WritePropertyName("Results");
                 context.Write(writer, new DynamicJsonArray(subscriptions));
+                writer.WriteEndObject();
             }
         }
 

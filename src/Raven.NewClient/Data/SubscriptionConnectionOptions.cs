@@ -10,6 +10,7 @@ using Raven.NewClient.Abstractions.Exceptions.Subscriptions;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Extensions;
 using Newtonsoft.Json;
+using Sparrow.Json;
 
 
 namespace Raven.NewClient.Abstractions.Data
@@ -49,7 +50,7 @@ namespace Raven.NewClient.Abstractions.Data
 
         public MessageType Type { get; set; }
         public ConnectionStatus Status { get; set; }
-        //public RavenJObject Data { get; set; }
+        public BlittableJsonReaderObject Data { get; set; }
         public string Exception { get; set; }
     }
   

@@ -278,10 +278,8 @@ namespace NewClientTests
             while (sp.Elapsed < timeout.Value)
             {
                 var getStatsCommand = new GetStatisticsCommand();
-                if (getStatsCommand != null)
-                {
-                    requestExecuter.Execute(getStatsCommand, jsonOperationContext);
-                }
+                requestExecuter.Execute(getStatsCommand, jsonOperationContext);
+
                 var databaseStatistics = getStatsCommand.Result;
 
 
