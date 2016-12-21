@@ -1093,28 +1093,26 @@ namespace Voron.Impl.Journal
 
             foreach (var txPage in txPages)
             {
-                var scratchPage = tx.Environment.ScratchBufferPool.AcquirePagePointer(tx, txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
-
+                var scratchPage = tx.Environment.ScratchBufferPool.AcquirePagePointer(tx, txPage.ScratchFileNumber,
+                    txPage.PositionInScratchBuffer);
                 pagesInfo[pageSequencialNumber].PageNumber = ((PageHeader*)scratchPage)->PageNumber;
-
                 *(long*)write = ((PageHeader*)scratchPage)->PageNumber;
                 write += sizeof(long);
-
                 _diffPage.Output = write;
-
-                int diffPageSize = txPage.NumberOfPages * pageSize;
-
+                _diffPage.Modified = scratchPage;
+                _diffPage.Size = txPage.NumberOfPages * pageSize;
                 if (txPage.PreviousVersion != null)
                 {
-                    _diffPage.ComputeDiff(txPage.PreviousVersion.Value.Pointer, scratchPage, diffPageSize);
+                    _diffPage.Original = txPage.PreviousVersion.Value.Pointer;
+                    _diffPage.ComputeDiff();
                 }
                 else
                 {
-                    _diffPage.ComputeNew(scratchPage, diffPageSize);
+                    _diffPage.Original = null;
+                    _diffPage.ComputeNew();
                 }
-
                 write += _diffPage.OutputSize;
-                pagesInfo[pageSequencialNumber].Size = _diffPage.OutputSize == 0 ? 0 : diffPageSize;
+                pagesInfo[pageSequencialNumber].Size = _diffPage.OutputSize == 0 ? 0 : _diffPage.Size;
                 pagesInfo[pageSequencialNumber].DiffSize = _diffPage.IsDiff ? _diffPage.OutputSize : 0;
 
 

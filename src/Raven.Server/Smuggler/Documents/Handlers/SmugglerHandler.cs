@@ -318,6 +318,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var operationId = GetLongQueryString("operationId", required: true) ?? -1;
                 var token = CreateOperationToken();
                 var sp = Stopwatch.StartNew();
+
                 var result = new ImportResult();
                 await Database.Operations.AddOperation("Import to: " + Database.Name,
                     DatabaseOperations.PendingOperationType.DatabaseImport,
