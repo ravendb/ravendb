@@ -116,7 +116,7 @@ namespace Voron.Data.BTrees
         /// <summary>
         /// This is using little endian
         /// </summary>
-        public long Increment(Slice key, long delta, ushort? version = null)
+        public long Increment(Slice key, long delta)
         {
             State.IsModified = true;
 
@@ -127,7 +127,7 @@ namespace Voron.Data.BTrees
                 currentValue = *(long*)read.Reader.Base;
 
             var value = currentValue + delta;
-            var result = (long*)DirectAdd(key, sizeof(long), version: version);
+            var result = (long*)DirectAdd(key, sizeof(long));
             *result = value;
 
             return value;
@@ -136,7 +136,7 @@ namespace Voron.Data.BTrees
         /// <summary>
         /// This is using little endian
         /// </summary>
-        public bool AddMax(Slice key, long value, ushort? version = null)
+        public bool AddMax(Slice key, long value)
         {
             var read = Read(key);
             if (read != null)
@@ -148,13 +148,13 @@ namespace Voron.Data.BTrees
 
             State.IsModified = true;
 
-            var result = (long*)DirectAdd(key, sizeof(long), version: version);
+            var result = (long*)DirectAdd(key, sizeof(long));
             *result = value;
 
             return true;
         }
 
-        public void Add(Slice key, Stream value, ushort? version = null)
+        public void Add(Slice key, Stream value)
         {
             ValidateValueLength(value);
 
@@ -162,7 +162,7 @@ namespace Voron.Data.BTrees
 
             var length = (int)value.Length;
 
-            var pos = DirectAdd(key, length, version: version);
+            var pos = DirectAdd(key, length);
 
             CopyStreamToPointer(_llt, value, pos);
         }
@@ -175,12 +175,12 @@ namespace Voron.Data.BTrees
                 throw new ArgumentException("Cannot add a value that is over 2GB in size", nameof(value));
         }
 
-        public void Add(Slice key, byte[] value, ushort? version = null)
+        public void Add(Slice key, byte[] value)
         {
             if (value == null) throw new ArgumentNullException(nameof(value));
 
             State.IsModified = true;
-            var pos = DirectAdd(key, value.Length, version: version);
+            var pos = DirectAdd(key, value.Length);
 
             fixed (byte* src = value)
             {
@@ -188,13 +188,13 @@ namespace Voron.Data.BTrees
             }
         }
 
-        public void Add(Slice key, Slice value, ushort? version = null)
+        public void Add(Slice key, Slice value)
         {
             if (!value.HasValue)
                 throw new ArgumentNullException(nameof(value));
 
             State.IsModified = true;
-            var pos = DirectAdd(key, value.Size, version: version);
+            var pos = DirectAdd(key, value.Size);
 
             value.CopyTo(pos);
         }
@@ -222,7 +222,7 @@ namespace Voron.Data.BTrees
             }
         }
 
-        public byte* DirectAdd(Slice key, int len, TreeNodeFlags nodeType = TreeNodeFlags.Data, ushort? version = null)
+        public byte* DirectAdd(Slice key, int len, TreeNodeFlags nodeType = TreeNodeFlags.Data)
         {
             Debug.Assert(nodeType == TreeNodeFlags.Data || nodeType == TreeNodeFlags.MultiValuePageRef);
 
@@ -243,8 +243,7 @@ namespace Voron.Data.BTrees
             var foundPage = FindPageFor(key, node: out node, cursor: out cursorConstructor, allowCompressed: true);
 
             var page = ModifyPage(foundPage);
-
-            ushort nodeVersion = 0;
+            
             bool? shouldGoToOverflowPage = null;
             if (page.LastMatch == 0) // this is an update operation
             {
@@ -263,25 +262,23 @@ namespace Voron.Data.BTrees
                 if (shouldGoToOverflowPage == false)
                 {
                     // optimization for Data and MultiValuePageRef - try to overwrite existing node space
-                    if (TryOverwriteDataOrMultiValuePageRefNode(node, key, len, nodeType, version, out pos))
+                    if (TryOverwriteDataOrMultiValuePageRefNode(node, len, nodeType, out pos))
                         return pos;
                 }
                 else
                 {
                     // optimization for PageRef - try to overwrite existing overflows
-                    if (TryOverwriteOverflowPages(node, key, len, version, out pos))
+                    if (TryOverwriteOverflowPages(node, len, out pos))
                         return pos;
                 }
 
-                RemoveLeafNode(page, out nodeVersion);
+                RemoveLeafNode(page);
             }
             else // new item should be recorded
             {
                 State.NumberOfEntries++;
             }
-
-            CheckConcurrency(key, version, nodeVersion, TreeActionType.Add);
-
+            
             var lastSearchPosition = page.LastSearchPosition; // searching for overflow pages might change this
             byte* overFlowPos = null;
             var pageNumber = -1L;
@@ -301,7 +298,7 @@ namespace Voron.Data.BTrees
                     {
                         cursor.Update(cursor.Pages.First, page);
 
-                        var pageSplitter = new TreePageSplitter(_llt, this, key, len, pageNumber, nodeType, nodeVersion, cursor);
+                        var pageSplitter = new TreePageSplitter(_llt, this, key, len, pageNumber, nodeType, cursor);
                         dataPos = pageSplitter.Execute();
                     }
 
@@ -320,10 +317,10 @@ namespace Voron.Data.BTrees
                     dataPos = page.AddPageRefNode(lastSearchPosition, key, pageNumber);
                     break;
                 case TreeNodeFlags.Data:
-                    dataPos = page.AddDataNode(lastSearchPosition, key, len, nodeVersion);
+                    dataPos = page.AddDataNode(lastSearchPosition, key, len);
                     break;
                 case TreeNodeFlags.MultiValuePageRef:
-                    dataPos = page.AddMultiValueNode(lastSearchPosition, key, len, nodeVersion);
+                    dataPos = page.AddMultiValueNode(lastSearchPosition, key, len);
                     break;
                 default:
                     throw new NotSupportedException("Unknown node type for direct add operation: " + nodeType);
@@ -380,10 +377,9 @@ namespace Voron.Data.BTrees
             return overflowPageStart.PageNumber;
         }
 
-        private void RemoveLeafNode(TreePage page, out ushort nodeVersion)
+        private void RemoveLeafNode(TreePage page)
         {
             var node = page.GetNode(page.LastSearchPosition);
-            nodeVersion = node->Version;
             if (node->Flags == (TreeNodeFlags.PageRef)) // this is an overflow pointer
             {
                 var overflowPage = GetReadOnlyTreePage(node->PageNumber);
@@ -855,7 +851,7 @@ namespace Voron.Data.BTrees
             }
         }
 
-        public void Delete(Slice key, ushort? version = null)
+        public void Delete(Slice key)
         {
             if (_llt.Flags == (TransactionFlags.ReadWrite) == false)
                 throw new ArgumentException("Cannot delete a value in a read only transaction");
@@ -877,10 +873,8 @@ namespace Voron.Data.BTrees
             page = ModifyPage(page);
 
             State.NumberOfEntries--;
-            ushort nodeVersion;
-            RemoveLeafNode(page, out nodeVersion);
 
-            CheckConcurrency(key, version, nodeVersion, TreeActionType.Delete);
+            RemoveLeafNode(page);
 
             using (var cursor = cursorConstructor(key))
             {
@@ -908,7 +902,7 @@ namespace Voron.Data.BTrees
             if (p.LastMatch != 0)
                 return null;
 
-            return new ReadResult(GetValueReaderFromHeader(node), node->Version);
+            return new ReadResult(GetValueReaderFromHeader(node));
         }
 
         public int GetDataSize(Slice key)
@@ -985,24 +979,6 @@ namespace Voron.Data.BTrees
             }
 
             return -1;
-        }
-
-        public ushort ReadVersion(Slice key)
-        {
-            TreeNodeHeader* node;
-            var p = FindPageFor(key, out node);
-
-            if (p.LastMatch != 0)
-                return 0;
-
-            Slice nodeKey;
-            using (TreeNodeHeader.ToSlicePtr(_llt.Allocator, node, out nodeKey))
-            {
-                if (!SliceComparer.EqualsInline(nodeKey, key))
-                    return 0;
-            }
-
-            return node->Version;
         }
 
         internal byte* DirectRead(Slice key)
@@ -1107,34 +1083,7 @@ namespace Voron.Data.BTrees
             DecompressionsCache?.Dispose();
         }
 
-        private void CheckConcurrency(Slice key, ushort? expectedVersion, ushort nodeVersion, TreeActionType actionType)
-        {
-            if (expectedVersion.HasValue && nodeVersion != expectedVersion.Value)
-                throw new ConcurrencyException(string.Format("Cannot {0} '{1}' to '{4}' tree. Version mismatch. Expected: {2}. Actual: {3}.", actionType.ToString().ToLowerInvariant(), key, expectedVersion.Value, nodeVersion, Name))
-                {
-                    ActualETag = nodeVersion,
-                    ExpectedETag = expectedVersion.Value,
-                };
-        }
-
-
-        private void CheckConcurrency(Slice key, Slice value, ushort? expectedVersion, ushort nodeVersion, TreeActionType actionType)
-        {
-            if (expectedVersion.HasValue && nodeVersion != expectedVersion.Value)
-                throw new ConcurrencyException(string.Format("Cannot {0} value '{5}' to key '{1}' to '{4}' tree. Version mismatch. Expected: {2}. Actual: {3}.", actionType.ToString().ToLowerInvariant(), key, expectedVersion.Value, nodeVersion, Name, value))
-                {
-                    ActualETag = nodeVersion,
-                    ExpectedETag = expectedVersion.Value,
-                };
-        }
-
-        private enum TreeActionType
-        {
-            Add,
-            Delete
-        }
-
-        private bool TryOverwriteOverflowPages(TreeNodeHeader* updatedNode, Slice key, int len, ushort? version, out byte* pos)
+        private bool TryOverwriteOverflowPages(TreeNodeHeader* updatedNode, int len, out byte* pos)
         {
             if (updatedNode->Flags == TreeNodeFlags.PageRef)
             {
@@ -1142,12 +1091,6 @@ namespace Voron.Data.BTrees
 
                 if (len <= readOnlyOverflowPage.OverflowSize)
                 {
-                    CheckConcurrency(key, version, updatedNode->Version, TreeActionType.Add);
-
-                    if (updatedNode->Version == ushort.MaxValue)
-                        updatedNode->Version = 0;
-                    updatedNode->Version++;
-
                     var availableOverflows = _llt.DataPager.GetNumberOfOverflowPages(readOnlyOverflowPage.OverflowSize);
 
                     var requestedOverflows = _llt.DataPager.GetNumberOfOverflowPages(len);

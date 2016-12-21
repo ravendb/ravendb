@@ -14,11 +14,13 @@ namespace Raven.Server.Indexing
         private readonly string _name;
         private readonly Transaction _tx;
         private readonly FileStream _file;
+        private LuceneFileInfo _fileInfo;
 
-        public VoronIndexOutput(string tempPath, string name, Transaction tx)
+        public VoronIndexOutput(string tempPath, string name, Transaction tx, LuceneFileInfo fileInfo)
         {
             _name = name;
             _tx = tx;
+            _fileInfo = fileInfo;
             var fileTempPath = Path.Combine(tempPath, name + "_" + Guid.NewGuid());
             //TODO: Pass this flag
             //const FileOptions FILE_ATTRIBUTE_TEMPORARY = (FileOptions)256;
@@ -65,11 +67,14 @@ namespace Raven.Server.Indexing
             }
 
             var files = _tx.ReadTree("Files");
-            Slice val;
             using (Slice.From(_tx.Allocator, _name, out key))
-            using (Slice.From(_tx.Allocator, (byte*)&size, sizeof(long), out val))
             {
-                files.Add(key, val);
+                var pos = files.DirectAdd(key, sizeof(LuceneFileInfo));
+
+                _fileInfo.Length = size;
+                _fileInfo.Version++;
+
+                *(LuceneFileInfo*)pos = _fileInfo;
             }
 
             _file.Dispose();

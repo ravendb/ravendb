@@ -282,13 +282,6 @@ namespace FastTests.Voron
                 tree.MultiDelete(CHILDTREE_KEY, CHILDTREE_VALUE);
                 tx.Commit();
             }
-
-            using (var tx = Env.ReadTransaction())
-            {
-                var tree = tx.CreateTree("foo");
-                
-                Assert.Equal(0, tree.ReadVersion(CHILDTREE_KEY));
-            }
         }
         
         [Fact]

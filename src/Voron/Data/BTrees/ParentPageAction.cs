@@ -41,7 +41,7 @@ namespace Voron.Data.BTrees
 
             if (_parentPage.HasSpaceFor(_tx, TreeSizeOf.BranchEntry(separator) + Constants.NodeOffsetSize) == false)
             {
-                var pageSplitter = new TreePageSplitter(_tx, _tree, separator, -1, pageRefNumber, TreeNodeFlags.PageRef, 0, _cursor);
+                var pageSplitter = new TreePageSplitter(_tx, _tree, separator, -1, pageRefNumber, TreeNodeFlags.PageRef, _cursor);
 
                 var posToInsert = pageSplitter.Execute();
 

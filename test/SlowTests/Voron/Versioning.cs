@@ -40,7 +40,7 @@ namespace SlowTests.Voron
                 {
                     var readTree = snapshot.CreateTree("tree1");
                     var result = readTree.Read("Foo" + i);
-                    readTree.Delete("Foo" + i, result.Version);
+                    readTree.Delete("Foo" + i);
                 }
             }
         }

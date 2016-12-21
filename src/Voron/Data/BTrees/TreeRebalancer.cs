@@ -216,11 +216,6 @@ namespace Voron.Data.BTrees
                 byte* val = @from.Base + @from.KeysOffsets[@from.LastSearchPosition] + Constants.NodeHeaderSize +
                             originalFromKeyStart.Size;
 
-                var nodeVersion = fromNode->Version;
-                    // every time new node is allocated the version is increased, but in this case we do not want to increase it
-                if (nodeVersion > 0)
-                    nodeVersion -= 1;
-
                 byte* dataPos;
                 var fromDataSize = fromNode->DataSize;
                 switch (fromNode->Flags)
@@ -231,12 +226,11 @@ namespace Voron.Data.BTrees
                         break;
                     case TreeNodeFlags.Data:
                         to.EnsureHasSpaceFor(_tx, originalFromKeyStart, fromDataSize);
-                        dataPos = to.AddDataNode(to.LastSearchPosition, originalFromKeyStart, fromDataSize, nodeVersion);
+                        dataPos = to.AddDataNode(to.LastSearchPosition, originalFromKeyStart, fromDataSize);
                         break;
                     case TreeNodeFlags.MultiValuePageRef:
                         to.EnsureHasSpaceFor(_tx, originalFromKeyStart, fromDataSize);
-                        dataPos = to.AddMultiValueNode(to.LastSearchPosition, originalFromKeyStart, fromDataSize,
-                            nodeVersion);
+                        dataPos = to.AddMultiValueNode(to.LastSearchPosition, originalFromKeyStart, fromDataSize);
                         break;
                     default:
                         throw new NotSupportedException("Invalid node type to move: " + fromNode->Flags);
