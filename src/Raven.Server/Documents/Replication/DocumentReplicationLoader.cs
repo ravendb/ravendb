@@ -196,11 +196,17 @@ namespace Raven.Server.Documents.Replication
 
         private void AssertValidConnection(IncomingConnectionInfo connectionInfo)
         {
-
-            if (Guid.Parse(connectionInfo.SourceDatabaseId) == _database.DbId)
+            Guid sourceDbId;
+            //precaution, should never happen..
+            if (string.IsNullOrWhiteSpace(connectionInfo.SourceDatabaseId) ||
+                !Guid.TryParse(connectionInfo.SourceDatabaseId, out sourceDbId))
             {
-                throw new InvalidOperationException(
-                    "Cannot have have replication with source and destination being the same database. They share the same db id ({connectionInfo} - {_database.DbId})");
+                throw new InvalidOperationException($"Failed to parse source database Id. What I got is {(string.IsNullOrWhiteSpace(connectionInfo.SourceDatabaseId) ? "<empty string>" : _database.DbId.ToString())}. This is not supposed to happen and is likely a bug.");
+            }
+
+            if (sourceDbId == _database.DbId)
+            {
+                throw new InvalidOperationException($"Cannot have have replication with source and destination being the same database. They share the same db id ({connectionInfo} - {_database.DbId})");
             }
 
             foreach (var relevantActivityEntry in _incomingLastActivityTime)

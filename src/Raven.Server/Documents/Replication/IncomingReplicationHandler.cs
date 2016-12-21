@@ -172,12 +172,11 @@ namespace Raven.Server.Documents.Replication
                                             [nameof(ReplicationMessageReply.MessageType)] = messageType,
                                             [nameof(ReplicationMessageReply.LastEtagAccepted)] = -1,
                                             [nameof(ReplicationMessageReply.LastIndexTransformerEtagAccepted)] = -1,
-                                            [nameof(ReplicationMessageReply.Exception)] = e.SimplifyError()
-                                        };
+                                            [nameof(ReplicationMessageReply.Exception)] = e.ToString()
+                                        };                                   
 
                                         _documentsContext.Write(writer, returnValue);
                                         writer.Flush();
-
                                         exceptionLogged = true;
 
                                         if (_log.IsInfoEnabled)
