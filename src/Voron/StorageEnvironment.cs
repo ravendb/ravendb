@@ -601,9 +601,9 @@ namespace Voron
                 NumberOfAllocatedPages = numberOfAllocatedPages,
                 NumberOfFreePages = numberOfFreePages,
                 NextPageNumber = NextPageNumber,
-                CountOfJournals = Journal.Files.Count,
                 CountOfTrees = countOfTrees,
                 CountOfTables = countOfTables,
+                Journals = Journal.Files.ToList()
             });
         }
 

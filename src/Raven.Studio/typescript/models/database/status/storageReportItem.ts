@@ -17,7 +17,7 @@ class storageReportItem {
     showType: boolean;
     w?: number; // used for storing text width
     numberOfEntries: number = null;
-
+    lazyLoadChildren = false;
 
     constructor(name: string, type: string, showType: boolean, size: number, internalChildren: storageReportItem[] = null) {
         this.name = name;
@@ -35,8 +35,8 @@ class storageReportItem {
         return (this.size * 100 / parentSize).toFixed(2) + '%';
     }
 
-    hasChildren() {
-        return this.internalChildren && this.internalChildren.length;
+    hasChildren(): boolean {
+        return this.internalChildren && this.internalChildren.length > 0;
     }
 
 }
