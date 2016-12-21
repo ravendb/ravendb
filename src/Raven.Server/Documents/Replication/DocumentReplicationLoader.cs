@@ -52,6 +52,16 @@ namespace Raven.Server.Documents.Replication
         public IReadOnlyDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>> IncomingRejectionStats => _incomingRejectionStats;
         public IEnumerable<ReplicationDestination> ReconnectQueue => _reconnectQueue.Select(x => x.Destination);
 
+        public long? GetLastReplicatedEtagForDestination(ReplicationDestination dest)
+        {
+            foreach (var replicationHandler in _outgoing)
+            {
+                if (replicationHandler.Destination.IsMatch(dest))
+                    return replicationHandler._lastSentDocumentEtag;
+            }
+            return null;
+        }
+
         public void AcceptIncomingConnection(TcpConnectionOptions tcpConnectionOptions)
         {
             ReplicationLatestEtagRequest getLatestEtagMessage;

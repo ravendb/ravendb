@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
@@ -31,10 +32,11 @@ namespace Raven.Server.Documents.Handlers
                     GenerateTopology(context, writer);
                     return Task.CompletedTask;
                 }
-                //here we need to construct the topology from the replication document(Shouldn't we use the same structure for both?).
+                //here we need to construct the topology from the replication document 
                 var replicationDocument = JsonDeserializationServer.ReplicationDocument(configurationDocument.Data);
+            
                 var nodes = GenerateNodesFromReplicationDocument(replicationDocument);
-                configurationDocument.EnsureMetadata();
+                
                 GenerateTopology(context, writer, nodes, configurationDocument.Etag);
             }
             return Task.CompletedTask;
@@ -46,8 +48,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 [nameof(Topology.LeaderNode)] = new DynamicJsonValue
                 {
-                    [nameof(ServerNode.Url)] =
-                    GetStringQueryString("url", required: false) ?? Server.Configuration.Core.ServerUrl,
+                    [nameof(ServerNode.Url)] = GetStringQueryString("url", required: false) ?? Server.Configuration.Core.ServerUrl,
                     [nameof(ServerNode.Database)] = Database.Name,
                 },
                 [nameof(Topology.Nodes)] = (nodes == null)? new DynamicJsonArray(): new DynamicJsonArray(nodes),
@@ -64,16 +65,32 @@ namespace Raven.Server.Documents.Handlers
 
         private IEnumerable<DynamicJsonValue> GenerateNodesFromReplicationDocument(ReplicationDocument replicationDocument)
         {
-            foreach (var des in replicationDocument.Destinations)
+            var destinations = new DynamicJsonValue[replicationDocument.Destinations.Count];
+            var etags = new long[replicationDocument.Destinations.Count];
+            for (int index = 0; index < replicationDocument.Destinations.Count; index++)
             {
-                if( des.CanBeFailover() == false || des.Disabled || des.IgnoredClient || des.SpecifiedCollections?.Count > 0 )
+                var des = replicationDocument.Destinations[index];
+                if (des.CanBeFailover() == false || des.Disabled || des.IgnoredClient ||
+                    des.SpecifiedCollections?.Count > 0)
                     continue;
-                yield return new DynamicJsonValue
+                etags[index] = Database.DocumentReplicationLoader.GetLastReplicatedEtagForDestination(des) ??
+                               -1;
+                destinations[index] = new DynamicJsonValue
                 {
                     [nameof(ServerNode.Url)] = des.Url,
                     [nameof(ServerNode.ApiKey)] = des.ApiKey,
                     [nameof(ServerNode.Database)] = des.Database
                 };
+            }
+
+            // We want to have the client failover to the most up to date destination if it needs to, so we sort
+            // them by the last replicated etag
+
+            Array.Sort(etags,destinations);
+            for (int i = destinations.Length - 1; i >= 0; i--)
+            {
+                if (destinations[i] != null)
+                    yield return destinations[i];
             }
         }
     }
