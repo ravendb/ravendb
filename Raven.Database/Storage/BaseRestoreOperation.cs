@@ -38,10 +38,11 @@ namespace Raven.Database.Storage
             //If we got the index location in the request use that.
             if (databaseRestoreRequest.IndexesLocation != null)
                 return databaseRestoreRequest.IndexesLocation;
+            //globalConfiguration == null for tests only
             if (globalConfiguration != null)
             {
                 //If the system database uses the <database-name>\Indexes\ folder then we did not change the global index folder
-                //We can safly create the index folder under the path of the database because this is where it is going to be looked for
+                //We can safly create the index folder under the path of the database because this is where it is going to be looked for            
                 if (globalConfiguration.IndexStoragePath.EndsWith("\\System\\Indexes"))
                     return Path.Combine(_restoreRequest.DatabaseLocation, "Indexes");
                 //system database restore with global config
