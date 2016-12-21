@@ -211,8 +211,7 @@ namespace Voron.Data.BTrees
                             decompressedPage.AddPageRefNode(index, nodeKey, uncompressedNode->PageNumber);
                             break;
                         case TreeNodeFlags.Data:
-                            var pos = decompressedPage.AddDataNode(index, nodeKey, uncompressedNode->DataSize,
-                                (ushort)(uncompressedNode->Version - 1));
+                            var pos = decompressedPage.AddDataNode(index, nodeKey, uncompressedNode->DataSize);
                             var nodeValue = TreeNodeHeader.Reader(_llt, uncompressedNode);
                             Memory.Copy(pos, nodeValue.Base, nodeValue.Length);
                             break;
@@ -254,12 +253,11 @@ namespace Voron.Data.BTrees
             var tombstoneNodeSize = page.GetRequiredSpace(keyToDelete, 0);
 
             page = ModifyPage(page);
-            ushort nodeVersion;
 
             if (page.HasSpaceFor(_llt, tombstoneNodeSize))
             {
                 if (page.LastMatch == 0)
-                    RemoveLeafNode(page, out nodeVersion);
+                    RemoveLeafNode(page);
 
                 page.AddCompressionTombstoneNode(page.LastSearchPosition, keyToDelete);
                 return;
@@ -276,9 +274,7 @@ namespace Voron.Data.BTrees
 
                 State.NumberOfEntries--;
 
-                RemoveLeafNode(decompressed, out nodeVersion);
-
-                // TODO arek CheckConcurrency(key, version, nodeVersion, TreeActionType.Delete);
+                RemoveLeafNode(decompressed);
 
                 using (var cursor = cursorConstructor(keyToDelete))
                 {
@@ -326,7 +322,7 @@ namespace Voron.Data.BTrees
                     return null;
             }
 
-            return new DecompressedReadResult(GetValueReaderFromHeader(node), node->Version, decompressed);
+            return new DecompressedReadResult(GetValueReaderFromHeader(node), decompressed);
         }
         
         public struct DecompressionInput

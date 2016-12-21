@@ -6,7 +6,7 @@ namespace Voron.Data.Compression
     {
         private readonly DecompressedLeafPage _page;
 
-        public DecompressedReadResult(ValueReader reader, ushort version, DecompressedLeafPage page) : base(reader, version)
+        public DecompressedReadResult(ValueReader reader, DecompressedLeafPage page) : base(reader)
         {
             _page = page;
         }

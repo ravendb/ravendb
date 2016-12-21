@@ -237,29 +237,29 @@ namespace Voron.Data.BTrees
 
         public byte* AddPageRefNode(int index, Slice key, long pageNumber)
         {
-            var node = CreateNode(index, key, TreeNodeFlags.PageRef, -1, 0);
+            var node = CreateNode(index, key, TreeNodeFlags.PageRef, -1);
             node->PageNumber = pageNumber;
 
             return null; // nothing to write into page ref node
         }
 
-        public byte* AddDataNode(int index, Slice key, int dataSize, ushort previousNodeVersion)
+        public byte* AddDataNode(int index, Slice key, int dataSize)
         {
             Debug.Assert(dataSize >= 0);
             Debug.Assert(key.Options == SliceOptions.Key);
 
-            var node = CreateNode(index, key, TreeNodeFlags.Data, dataSize, previousNodeVersion);
+            var node = CreateNode(index, key, TreeNodeFlags.Data, dataSize);
             node->DataSize = dataSize;
 
             return (byte*)node + Constants.NodeHeaderSize + key.Size;
         }
 
-        public byte* AddMultiValueNode(int index, Slice key, int dataSize, ushort previousNodeVersion)
+        public byte* AddMultiValueNode(int index, Slice key, int dataSize)
         {
             Debug.Assert(dataSize == sizeof(TreeRootHeader));
             Debug.Assert(key.Options == SliceOptions.Key);
 
-            var node = CreateNode(index, key, TreeNodeFlags.MultiValuePageRef, dataSize, previousNodeVersion);
+            var node = CreateNode(index, key, TreeNodeFlags.MultiValuePageRef, dataSize);
             node->DataSize = dataSize;
 
             return (byte*)node + Constants.NodeHeaderSize + key.Size;
@@ -267,7 +267,7 @@ namespace Voron.Data.BTrees
 
         public void AddCompressionTombstoneNode(int index, Slice key)
         {
-            var node = CreateNode(index, key, TreeNodeFlags.CompressionTombstone, 0, 0);
+            var node = CreateNode(index, key, TreeNodeFlags.CompressionTombstone, 0);
             node->PageNumber = 0;
         }
 
@@ -279,11 +279,10 @@ namespace Voron.Data.BTrees
 
             node->KeySize = 0;
             node->Flags = TreeNodeFlags.PageRef;
-            node->Version = 1;
             node->PageNumber = implicitRefPageNumber;
         }
 
-        private TreeNodeHeader* CreateNode(int index, Slice key, TreeNodeFlags flags, int len, ushort previousNodeVersion)
+        private TreeNodeHeader* CreateNode(int index, Slice key, TreeNodeFlags flags, int len)
         {
             Debug.Assert(index <= NumberOfEntries && index >= 0);
             Debug.Assert(IsBranch == false || index != 0 || key.Size == 0);// branch page's first item must be the implicit ref
@@ -298,7 +297,7 @@ namespace Voron.Data.BTrees
             }
 
             var nodeSize = TreeSizeOf.NodeEntry(PageMaxSpace, key, len);
-            var node = AllocateNewNode(index, nodeSize, previousNodeVersion);
+            var node = AllocateNewNode(index, nodeSize);
 
             node->Flags = flags;
 
@@ -324,11 +323,7 @@ namespace Voron.Data.BTrees
 
             Debug.Assert(IsBranch == false || index != 0 || key.Size == 0);// branch page's first item must be the implicit ref
 
-            var nodeVersion = other->Version; // every time new node is allocated the version is increased, but in this case we do not want to increase it
-            if (nodeVersion > 0)
-                nodeVersion -= 1;
-
-            var newNode = AllocateNewNode(index, nodeSize, nodeVersion);
+            var newNode = AllocateNewNode(index, nodeSize);
 
             Debug.Assert(key.Size <= ushort.MaxValue);
             newNode->KeySize = (ushort)key.Size;
@@ -349,12 +344,8 @@ namespace Voron.Data.BTrees
                                  other->DataSize);
         }
 
-        private TreeNodeHeader* AllocateNewNode(int index, int nodeSize, ushort previousNodeVersion)
+        private TreeNodeHeader* AllocateNewNode(int index, int nodeSize)
         {
-            int newSize = previousNodeVersion + 1;
-            if (newSize > ushort.MaxValue)
-                previousNodeVersion = 0;
-
             TreePageHeader* header = Header;
 
             int upper;
@@ -374,7 +365,6 @@ namespace Voron.Data.BTrees
             header->Lower += Constants.NodeOffsetSize;
                         
             node->Flags = 0;
-            node->Version = ++previousNodeVersion;
             return node;
         }
 
