@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Replication
         private readonly ConcurrentDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>> _incomingRejectionStats = new ConcurrentDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>>();
 
         private readonly ConcurrentSet<ConnectionFailureInfo> _reconnectQueue = new ConcurrentSet<ConnectionFailureInfo>();
-        internal readonly Dictionary<string,ScriptResolver> ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
+        internal Dictionary<string,ScriptResolver> ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
         private readonly Logger _log;
         private ReplicationDocument _replicationDocument;
 
@@ -242,8 +242,11 @@ namespace Raven.Server.Documents.Replication
         {
             if ( _replicationDocument?.ResolveByCollection == null )
             {
+                if (ScriptConflictResolversCache.Count > 0)
+                    ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
                 return;
             }
+            var copy = new Dictionary<string, ScriptResolver>();
             foreach (var kvp in _replicationDocument.ResolveByCollection)
             {
                 var collection = kvp.Key;
@@ -252,11 +255,12 @@ namespace Raven.Server.Documents.Replication
                 {
                     continue;
                 }
-                ScriptConflictResolversCache[collection] = new ScriptResolver
+                copy[collection] = new ScriptResolver
                 {
                     Script = script
                 };
             }
+            ScriptConflictResolversCache = copy;
         }
 
         private void InitializeOutgoingReplications()
