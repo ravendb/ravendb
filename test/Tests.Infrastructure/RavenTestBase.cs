@@ -227,6 +227,9 @@ namespace FastTests
             store.DatabaseCommands.GlobalAdmin.CreateDatabase(doc);
             store.AfterDispose += (sender, args) =>
             {
+                if (CreatedStores.Contains(store) == false)
+                    return; // can happen if we are wrapping the store inside sharded one
+
                 var databaseTask = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name);
                 if (databaseTask != null && databaseTask.IsCompleted == false)
                     databaseTask.Wait(); // if we are disposing store before database had chance to load then we need to wait

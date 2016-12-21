@@ -32,6 +32,9 @@ namespace Raven.Server.Documents.Includes
 
         public void Gather(Document document)
         {
+            if (document == null)
+                return;
+
             if (_includes.Count == 0)
                 return;
 
