@@ -45,7 +45,8 @@ namespace Sparrow.Json
         public BlittableJsonReaderObject(byte* mem, int size, JsonOperationContext context,
             UnmanagedWriteBuffer buffer = default(UnmanagedWriteBuffer))
         {
-            ThrowOnZeroSize(size);
+            if (size == 0)
+                ThrowOnZeroSize(size);
 
             _buffer = buffer;
             _mem = mem; // get beginning of memory pointer
@@ -79,7 +80,6 @@ namespace Sparrow.Json
 
         private static void ThrowOnZeroSize(int size)
         {
-            if (size == 0)
                 //otherwise SetupPropertiesAccess will throw because of the memory garbage
                 //(or won't throw, but this is actually worse!)
                 throw new ArgumentException("BlittableJsonReaderObject does not support objects with zero size", nameof(size));
