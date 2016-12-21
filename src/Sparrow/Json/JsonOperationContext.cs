@@ -478,6 +478,7 @@ namespace Sparrow.Json
             private readonly UnmanagedJsonParser _parser;
             private readonly BlittableJsonDocumentBuilder _writer;
             private ReturnBuffer _returnManagedBuffer;
+            private int _bufferOffset = 0;
 
             public MultiDocumentParser(JsonOperationContext context, Stream stream)
             {
@@ -545,7 +546,8 @@ namespace Sparrow.Json
                     }
                     else
                     {
-                        _parser.SetBuffer(_buffer, _parser.BufferOffset, _parser.BufferSize - _parser.BufferOffset);
+                        _bufferOffset += _parser.BufferOffset;
+                        _parser.SetBuffer(_buffer, _bufferOffset, _parser.BufferSize - _parser.BufferOffset);
                     }
                     if (_writer.Read())
                         break;
@@ -570,7 +572,8 @@ namespace Sparrow.Json
                     }
                     else
                     {
-                        _parser.SetBuffer(_buffer, _parser.BufferOffset, _parser.BufferSize - _parser.BufferOffset);
+                        _bufferOffset += _parser.BufferOffset;
+                        _parser.SetBuffer(_buffer, _bufferOffset, _parser.BufferSize - _parser.BufferOffset);
                     }
                     if (_writer.Read())
                         break;
