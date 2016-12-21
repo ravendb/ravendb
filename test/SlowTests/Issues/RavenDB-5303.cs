@@ -1,26 +1,23 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB-5303.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Linq;
-using Raven.Abstractions.Data;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using Raven.Json.Linq;
 using Xunit;
-using Xunit.Extensions;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_5303 : RavenTest
+    public class RavenDB_5303 : RavenTestBase
     {
-        [Theory]
-        [PropertyData("Storages")]
-        public void can_load_documents_with_transformer_with_load_document_documents_starting_with(string storageType)
+        [Fact]
+        public void can_load_documents_with_transformer_with_load_document_documents_starting_with()
         {
-            using (var server = GetNewServer(requestedStorage: storageType))
-            using (var store = NewRemoteDocumentStore(true, ravenDbServer: server))
+            using (var store = GetDocumentStore())
             {
                 new TestDocumentTransformer().Execute(store);
                 new TestDocumentTransformer2().Execute(store);
@@ -47,26 +44,24 @@ namespace Raven.Tests.Issues
                 {
                     var docs = session.Advanced.LoadStartingWith<TestDocumentTransformer, TestDocumentTransformer.Output>("test/", start: 0, pageSize: 1024).ToList();
                     Assert.Equal(2, docs.Count);
-                    Assert.True(docs[0].ValueFormatted.StartsWith("Formatted Value is {\r\n  \"Value\": 1,\r\n"));
-                    Assert.True(docs[1].ValueFormatted.StartsWith("Formatted Value is {\r\n  \"Value\": 2,\r\n"));
+                    Assert.True(docs[0].ValueFormatted.StartsWith("Formatted Value is {\"Value\":1,"));
+                    Assert.True(docs[1].ValueFormatted.StartsWith("Formatted Value is {\"Value\":2,"));
                 }
 
                 using (var session = store.OpenSession())
                 {
                     var docs = session.Advanced.LoadStartingWith<TestDocumentTransformer2, TestDocumentTransformer2.Output>("test/", start: 0, pageSize: 1024).ToList();
                     Assert.Equal(2, docs.Count);
-                    Assert.True(docs[0].ValueFormatted.StartsWith("Formatted Value is {\r\n  \"Value\": 1,\r\n"));
-                    Assert.True(docs[1].ValueFormatted.StartsWith("Formatted Value is {\r\n  \"Value\": 2,\r\n"));
+                    Assert.True(docs[0].ValueFormatted.StartsWith("Formatted Value is {\"Value\":1,"));
+                    Assert.True(docs[1].ValueFormatted.StartsWith("Formatted Value is {\"Value\":2,"));
                 }
             }
         }
 
-        [Theory]
-        [PropertyData("Storages")]
-        public void can_load_documents_with_transformer_with_load_document_streaming(string storageType)
+        [Fact]
+        public void can_load_documents_with_transformer_with_load_document_streaming()
         {
-            using (var server = GetNewServer(requestedStorage: storageType))
-            using (var store = NewRemoteDocumentStore(true, ravenDbServer: server))
+            using (var store = GetDocumentStore())
             {
                 var transformer = new TestDocumentTransformer();
                 new TestDocumentTransformer().Execute(store);
@@ -91,19 +86,19 @@ namespace Raven.Tests.Issues
                     Assert.Equal(2, docsWithoutTransformer[1].Value);
                 }
 
-                using (var enumerator = store.DatabaseCommands.StreamDocs(Etag.Empty, transformer: transformer.TransformerName))
+                using (var enumerator = store.DatabaseCommands.StreamDocs(0, transformer: transformer.TransformerName))
                 {
                     var count = 0;
                     while (enumerator.MoveNext())
                     {
-                        var result = enumerator.Current;
+                        var result = (RavenJObject)enumerator.Current.Value<RavenJArray>("$values")[0];
                         switch (count)
                         {
                             case 0:
-                                Assert.True(result.Value<string>("ValueFormatted").StartsWith("Formatted Value is {\r\n  \"Value\": 1,\r\n"));
+                                Assert.True(result.Value<string>("ValueFormatted").StartsWith("Formatted Value is {\"Value\":1,"));
                                 break;
                             case 1:
-                                Assert.True(result.Value<string>("ValueFormatted").StartsWith("Formatted Value is {\r\n  \"Value\": 2,\r\n"));
+                                Assert.True(result.Value<string>("ValueFormatted").StartsWith("Formatted Value is {\"Value\":2,"));
                                 break;
                         }
                         count++;
@@ -112,19 +107,19 @@ namespace Raven.Tests.Issues
                     Assert.Equal(2, count);
                 }
 
-                using (var enumerator = store.DatabaseCommands.StreamDocs(Etag.Empty, transformer: transformer2.TransformerName))
+                using (var enumerator = store.DatabaseCommands.StreamDocs(0, transformer: transformer2.TransformerName))
                 {
                     var count = 0;
                     while (enumerator.MoveNext())
                     {
-                        var result = enumerator.Current;
+                        var result = (RavenJObject)enumerator.Current.Value<RavenJArray>("$values")[0];
                         switch (count)
                         {
                             case 0:
-                                Assert.True(result.Value<string>("ValueFormatted").StartsWith("Formatted Value is {\r\n  \"Value\": 1,\r\n"));
+                                Assert.True(result.Value<string>("ValueFormatted").StartsWith("Formatted Value is {\"Value\":1,"));
                                 break;
                             case 1:
-                                Assert.True(result.Value<string>("ValueFormatted").StartsWith("Formatted Value is {\r\n  \"Value\": 2,\r\n"));
+                                Assert.True(result.Value<string>("ValueFormatted").StartsWith("Formatted Value is {\"Value\":2,"));
                                 break;
                         }
                         count++;
@@ -135,18 +130,18 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class TestDocument
+        private class TestDocument
         {
             public string Id { get; set; }
             public int Value { get; set; }
         }
 
-        public class OtherDocument
+        private class OtherDocument
         {
             public string Id { get; set; }
         }
 
-        public class TestDocumentTransformer : AbstractTransformerCreationTask<TestDocument>
+        private class TestDocumentTransformer : AbstractTransformerCreationTask<TestDocument>
         {
             public class Output
             {
@@ -165,7 +160,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class TestDocumentTransformer2 : AbstractTransformerCreationTask<TestDocument>
+        private class TestDocumentTransformer2 : AbstractTransformerCreationTask<TestDocument>
         {
             public class Output
             {
