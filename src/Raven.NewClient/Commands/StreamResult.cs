@@ -1,13 +1,15 @@
 ﻿
 using System.Collections.Generic;
 using System.IO;
+using System.Net.Http;
 using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Commands
 {
     public class StreamResult
     {
-        public Stream Results { get; set; }
+        public HttpResponseMessage Response { get; set; }
+        public Stream Stream { get; set; }
     }
 
     public class StreamResult<TType>

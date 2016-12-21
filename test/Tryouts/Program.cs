@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using FastTests.Server.Basic;
 using FastTests.Server.Documents.Alerts;
@@ -15,12 +16,25 @@ namespace Tryouts
     {
         static unsafe void Main(string[] args)
         {
-            var readAllBytes = File.ReadAllBytes(@"C:\Users\ayende\Downloads\docs (1)");
-            using(var s = JsonOperationContext.ShortTermSingleUse())
-            fixed (byte* p = readAllBytes)
+            byte[] bytes = Encoding.UTF8.GetBytes("{\"Results\":[");
+            Console.WriteLine(bytes.ToString());
+            for (int i = 0; i < 1000; i++)
             {
-                var blittableJsonReaderObject = new BlittableJsonReaderObject(p, readAllBytes.Length,s);
-                Console.WriteLine(blittableJsonReaderObject.ToString());
+                Console.WriteLine(i);
+                using (var a = new SlowTests.Issues.RDBQA_11())
+                {
+                    a.SmugglerWithExcludeExpiredDocumentsShouldWork2();
+                }
+
+                using (var a = new SlowTests.Issues.RDBQA_11())
+                {
+                    a.SmugglerWithExcludeExpiredDocumentsShouldWork1();
+                }
+
+                using (var a = new SlowTests.Issues.RDBQA_11())
+                {
+                    a.SmugglerWithoutExcludeExpiredDocumentsShouldWork();
+                }
             }
         }
     }

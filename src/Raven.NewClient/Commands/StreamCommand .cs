@@ -3,6 +3,7 @@ using System.IO;
 using System.Net.Http;
 using Sparrow.Json;
 using Raven.NewClient.Client.Http;
+using System.Threading.Tasks;
 
 namespace Raven.NewClient.Client.Commands
 {
@@ -24,20 +25,13 @@ namespace Raven.NewClient.Client.Commands
 
         public override void SetResponse(BlittableJsonReaderObject response)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
-        public void SetResponse(Stream response)
+        public override async Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
         {
-            //WIP
-            if (response == null)
-                throw new InvalidOperationException();
-            var buffer = new byte[12];
-            response.Read(buffer, 0, 12);
-            //TODO  - better exception
-            if (string.Compare(buffer.ToString(), "{\"Results\":[") != 1)
-                throw new InvalidOperationException();
-            Result = new StreamResult {Results = response};
+            Result.Response = response;
+            Result.Stream = await response.Content.ReadAsStreamAsync();
         }
     }
 }
