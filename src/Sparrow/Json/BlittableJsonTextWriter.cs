@@ -4,6 +4,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Text;
+using System.Threading;
 
 namespace Sparrow.Json
 {
@@ -337,7 +338,7 @@ namespace Sparrow.Json
             _stream.Write(_pinnedBuffer.Buffer.Array, _pinnedBuffer.Buffer.Offset, _pos);
             _pos = 0;
         }
-
+      
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteNull()
         {
