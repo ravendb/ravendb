@@ -1,16 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using static Sparrow.Json.BlittableJsonDocumentBuilder;
 
 namespace Sparrow.Json
 {
-    public class ManualBlittalbeJsonDocumentBuilder:IDisposable
+    public class ManualBlittalbeJsonDocumentBuilder<TWriter> :IDisposable
+        where TWriter : struct, IUnmanagedWriteBuffer
     {
         private readonly JsonOperationContext _context;
-        private readonly BlittableWriter _writer;
+        private readonly BlittableWriter<TWriter> _writer;
         private readonly Stack<BuildingState> _continuationState = new Stack<BuildingState>();
         private UsageMode _mode;
         private WriteToken _writeToken;
+
 
         /// <summary>
         /// Allows incrementally building json document
@@ -18,11 +21,14 @@ namespace Sparrow.Json
         /// <param name="context"></param>
         /// <param name="mode"></param>
         /// <param name="writer"></param>
-        public ManualBlittalbeJsonDocumentBuilder(JsonOperationContext context, UsageMode? mode = null, BlittableWriter writer = null)
+        public ManualBlittalbeJsonDocumentBuilder(
+            JsonOperationContext context, 
+            UsageMode? mode = null, 
+            BlittableWriter<TWriter> writer = null)
         {
             _context = context;
             _mode = mode?? UsageMode.None;
-            _writer = writer?? new BlittableWriter(_context);
+            _writer = writer?? new BlittableWriter<TWriter>(_context);
         }
 
         public virtual void StartWriteObjectDocument()

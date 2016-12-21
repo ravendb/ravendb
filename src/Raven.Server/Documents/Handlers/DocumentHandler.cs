@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http.Headers;
@@ -24,6 +25,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Voron.Exceptions;
+using Voron.Util;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -204,9 +206,22 @@ namespace Raven.Server.Documents.Handlers
                 return;
             }
 
-            HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
             HttpContext.Response.Headers[Constants.MetadataEtagField] = "\"" + actualEtag + "\"";
 
+            if (HttpContext.Request.Query["blittable"] == "true")
+            {
+                WriteDocumentsBlittable(context, documentsToWrite, includes);
+            }
+            else
+            {
+                WriteDocumentsJson(context, metadataOnly, documentsToWrite, includeDocs, includes);
+            }
+        }
+
+        private void WriteDocumentsJson(DocumentsOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite,
+            IncludeDocumentsCommand includeDocs, List<Document> includes)
+        {
+            HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
@@ -228,6 +243,46 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 writer.WriteEndObject();
+            }
+        }
+
+        private void WriteDocumentsBlittable(DocumentsOperationContext context, IEnumerable<Document> documentsToWrite, List<Document> includes)
+        {
+            HttpContext.Response.Headers["Content-Type"] = "binary/blittable-json";
+
+
+            using (var streamBuffer = new UnmanagedStreamBuffer(context, ResponseBodyStream()))
+            using (var writer = new ManualBlittalbeJsonDocumentBuilder<UnmanagedStreamBuffer>(context,
+                null, new BlittableWriter<UnmanagedStreamBuffer>(context, streamBuffer)))
+            {
+                writer.StartWriteObjectDocument();
+
+                writer.StartWriteObject();
+                writer.WritePropertyName("Results");
+
+                writer.StartWriteArray();
+
+                foreach (var document in documentsToWrite)
+                {
+                    writer.WriteEmbeddedBlittableDocument(document.Data);
+                }
+
+                writer.WriteArrayEnd();
+
+                writer.WritePropertyName("Includes");
+
+                writer.StartWriteArray();
+
+                foreach (var include in includes)
+                {
+                    writer.WriteEmbeddedBlittableDocument(include.Data);
+                }
+
+                writer.WriteArrayEnd();
+
+                writer.WriteObjectEnd();
+
+                writer.FinalizeDocument();
             }
         }
 
