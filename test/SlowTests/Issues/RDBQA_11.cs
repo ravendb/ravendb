@@ -3,33 +3,26 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Tests.Common;
 
-namespace Raven.Tests.Issues
+using System;
+using System.IO;
+using FastTests;
+using Raven.Abstractions;
+using Raven.Abstractions.Data;
+using Raven.Client;
+using Raven.Client.Smuggler;
+using Raven.Json.Linq;
+using Raven.Server.Documents.Expiration;
+using Raven.Server.Utils;
+using Xunit;
+
+namespace SlowTests.Issues
 {
-    using System;
-    using System.IO;
-
-    using Raven.Abstractions;
-    using Raven.Abstractions.Data;
-    using Raven.Abstractions.Smuggler;
-    using Raven.Client;
-    using Raven.Database.Extensions;
-    using Raven.Json.Linq;
-    using Raven.Smuggler;
-
-    using Xunit;
-
-    public class RDBQA_11 : RavenTest
+    public class RDBQA_11 : RavenTestBase
     {
         private class Product
         {
             public int Id { get; set; }
-        }
-
-        protected override void ModifyConfiguration(Database.Config.InMemoryRavenConfiguration configuration)
-        {
-            configuration.Settings["Raven/ActiveBundles"] = "DocumentExpiration";
         }
 
         [Fact, Trait("Category", "Smuggler")]
@@ -39,20 +32,16 @@ namespace Raven.Tests.Issues
 
             try
             {
-                using (var store = NewRemoteDocumentStore())
+                using (var store = GetDocumentStore())
                 {
                     Initialize(store);
 
-                    var smuggler = new SmugglerDatabaseApi();
-
-                    smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    store.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), path).Wait(TimeSpan.FromSeconds(15));
                 }
 
-                using (var store = NewRemoteDocumentStore())
+                using (var store = GetDocumentStore())
                 {
-                    var smuggler = new SmugglerDatabaseApi();
-
-                    smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    store.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), path).Wait(TimeSpan.FromSeconds(15));
 
                     using (var session = store.OpenSession())
                     {
@@ -61,7 +50,7 @@ namespace Raven.Tests.Issues
                         var product3 = session.Load<Product>(3);
 
                         Assert.NotNull(product1);
-                        Assert.Null(product2);
+                        Assert.NotNull(product2);
                         Assert.NotNull(product3);
                     }
                 }
@@ -79,18 +68,16 @@ namespace Raven.Tests.Issues
 
             try
             {
-                using (var store = NewRemoteDocumentStore())
+                using (var store = GetDocumentStore())
                 {
                     Initialize(store);
 
-                    var smuggler = new SmugglerDatabaseApi(new SmugglerDatabaseOptions { ShouldExcludeExpired = true });
-                    smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    store.Smuggler.ExportAsync(new DatabaseSmugglerOptions { IncludeExpired = false }, path).Wait(TimeSpan.FromSeconds(15));
                 }
 
-                using (var store = NewRemoteDocumentStore())
+                using (var store = GetDocumentStore())
                 {
-                    var smuggler = new SmugglerDatabaseApi(new SmugglerDatabaseOptions { ShouldExcludeExpired = true });
-                    smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    store.Smuggler.ImportAsync(new DatabaseSmugglerOptions { IncludeExpired = false }, path).Wait(TimeSpan.FromSeconds(15));
 
                     using (var session = store.OpenSession())
                     {
@@ -117,20 +104,19 @@ namespace Raven.Tests.Issues
 
             try
             {
-                using (var store = NewRemoteDocumentStore())
+                using (var store = GetDocumentStore())
                 {
                     Initialize(store);
 
-                    var smuggler = new SmugglerDatabaseApi { Options = { ShouldExcludeExpired = true } };
-                    smuggler.ExportData(new SmugglerExportOptions<RavenConnectionStringOptions> { ToFile = path, From = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    store.Smuggler.ExportAsync(new DatabaseSmugglerOptions { IncludeExpired = false }, path).Wait(TimeSpan.FromSeconds(15));
                 }
 
-                using (var store = NewRemoteDocumentStore())
+                using (var store = GetDocumentStore())
                 {
-                    SystemTime.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                    var database = GetDocumentDatabaseInstanceFor(store).Result;
+                    database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
 
-                    var smuggler = new SmugglerDatabaseApi { Options = { ShouldExcludeExpired = true } };
-                    smuggler.ImportData(new SmugglerImportOptions<RavenConnectionStringOptions> { FromFile = path, To = new RavenConnectionStringOptions { Url = store.Url, DefaultDatabase = store.DefaultDatabase } }).Wait(TimeSpan.FromSeconds(15));
+                    store.Smuggler.ImportAsync(new DatabaseSmugglerOptions { IncludeExpired = false }, path).Wait(TimeSpan.FromSeconds(15));
 
                     using (var session = store.OpenSession())
                     {
@@ -152,6 +138,8 @@ namespace Raven.Tests.Issues
 
         private static void Initialize(IDocumentStore store)
         {
+            SetupExpiration(store);
+
             var product1 = new Product();
             var product2 = new Product();
             var product3 = new Product();
@@ -166,6 +154,20 @@ namespace Raven.Tests.Issues
 
                 session.Advanced.GetMetadataFor(product2)["Raven-Expiration-Date"] = new RavenJValue(past);
                 session.Advanced.GetMetadataFor(product3)["Raven-Expiration-Date"] = new RavenJValue(future);
+
+                session.SaveChanges();
+            }
+        }
+
+        private static void SetupExpiration(IDocumentStore store)
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new ExpirationConfiguration
+                {
+                    Active = true,
+                    DeleteFrequencySeconds = 100,
+                }, Constants.Expiration.ConfigurationDocumentKey);
 
                 session.SaveChanges();
             }

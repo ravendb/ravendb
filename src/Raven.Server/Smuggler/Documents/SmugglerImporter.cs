@@ -124,7 +124,7 @@ namespace Raven.Server.Smuggler.Documents
                                         Data = reader,
                                     };
 
-                                    if (!Options.IncludeExpired && document.Expired())
+                                    if (Options.IncludeExpired == false && document.Expired(_database.Time.GetUtcNow()))
                                         continue;
 
                                     TransformScriptOrDisableVersioningIfNeeded(context, patch, reader, document, patchRequest);
