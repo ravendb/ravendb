@@ -10,7 +10,7 @@ namespace Raven.Client.Data
     {
         public List<DatabaseInfo> Databases { get; set; }
 
-        public List<FileSystemInfo> Filesystems { get; set; }
+        public List<FileSystemInfo> FileSystems { get; set; }
 
         //TODO: ts, cs
 
