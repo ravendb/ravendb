@@ -10,6 +10,7 @@ using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
+using Voron;
 
 namespace Raven.Server.Documents.Indexes.Workers
 {
@@ -186,6 +187,36 @@ namespace Raven.Server.Documents.Indexes.Workers
             return false;
         }
 
+        private DateTime _lastCheckedFlushLock;
+
+        private bool ShouldReleaseTransactionBecauseFlushIsWaiting(IndexingStatsScope stats)
+        {
+            if (GlobalFlushingBehavior.GlobalFlusher.Value.HasLowNumberOfFlushingResources)
+                return false;
+
+            var now = DateTime.UtcNow;
+            if ((now - _lastCheckedFlushLock).TotalSeconds < 1)
+                return false;
+
+            _lastCheckedFlushLock = now;
+
+            var gotLock = _index._indexStorage.Environment().FlushInProgressLock.TryEnterReadLock(0);
+            try
+            {
+                if (gotLock == false)
+                {
+                    stats.RecordMapCompletedReason("Environment flush was waiting for us and global flusher was about to use all free flushing resources");
+                    return true;
+                }
+            }
+            finally
+            {
+                if (gotLock)
+                    _index._indexStorage.Environment().FlushInProgressLock.ExitReadLock();
+            }
+            return false;
+        }
+
         public bool CanContinueBatch(IndexingStatsScope stats, long currentEtag, long maxEtag)
         {
             if (stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
@@ -200,6 +231,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                 return false;
             }
 
+            if (ShouldReleaseTransactionBecauseFlushIsWaiting(stats))
+                return false;
+           
             if (_index.CanContinueBatch(stats) == false)
                 return false;
 
