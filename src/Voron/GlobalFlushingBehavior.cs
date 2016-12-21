@@ -23,6 +23,7 @@ namespace Voron
 
         private readonly ConcurrentQueue<StorageEnvironment> _maybeNeedToFlush = new ConcurrentQueue<StorageEnvironment>();
         private readonly ManualResetEventSlim _flushWriterEvent = new ManualResetEventSlim();
+        private readonly int _lowNumberOfFlushingResources = Math.Max(StorageEnvironment.MaxConcurrentFlushes / 10, 1);
         private readonly SemaphoreSlim _concurrentFlushes = new SemaphoreSlim(StorageEnvironment.MaxConcurrentFlushes);
         private readonly HashSet<StorageEnvironment> _avoidDuplicates = new HashSet<StorageEnvironment>();
         private readonly ConcurrentQueue<StorageEnvironment> _maybeNeedToSync = new ConcurrentQueue<StorageEnvironment>();
@@ -36,6 +37,8 @@ namespace Voron
             public readonly ConcurrentQueue<StorageEnvironment> StorageEnvironments = new ConcurrentQueue<StorageEnvironment>();
             public long LastSyncTimeInMountPointInTicks = DateTime.MinValue.Ticks;
         }
+
+        public bool HasLowNumberOfFlushingResources => _concurrentFlushes.CurrentCount <= _lowNumberOfFlushingResources;
 
         public void VoronEnvironmentFlushing()
         {
