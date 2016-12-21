@@ -4,21 +4,20 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using FastTests;
 using Raven.Client.Document;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RDBQA_18 : RavenTest
+    public class RDBQA_18 : RavenTestBase
     {
         [Fact]
         public void ShouldNotThrowNullReferenceException()
         {
             using (var store = new DocumentStore())
             {
-                Assert.DoesNotThrow(store.Replication.WaitAsync().Wait);
+                store.Replication.WaitAsync().Wait(); // should not throw
             }
         }
     }
