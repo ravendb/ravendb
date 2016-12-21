@@ -118,6 +118,7 @@ namespace Sparrow.Json
                 case BlittableJsonToken.StartArray:
                     WriteArrayToStream((BlittableJsonReaderArray)val, originalPropertyOrder);
                     break;
+                case BlittableJsonToken.EmbeddedBlittable:
                 case BlittableJsonToken.StartObject:
                     var blittableJsonReaderObject = ((BlittableJsonReaderObject)val);
                     if (originalPropertyOrder)
