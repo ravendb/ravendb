@@ -15,6 +15,7 @@ import disableResourceToggleCommand = require("commands/resources/disableResourc
 import toggleIndexingCommand = require("commands/database/index/toggleIndexingCommand");
 import deleteResourceCommand = require("commands/resources/deleteResourceCommand");
 import loadResourceCommand = require("commands/resources/loadResourceCommand");
+import globalAlertNotification = Raven.Server.Alerts.GlobalAlertNotification;
 
 import resourcesInfo = require("models/resources/info/resourcesInfo");
 import getResourcesCommand = require("commands/resources/getResourcesCommand");
@@ -90,15 +91,80 @@ class resources extends viewModelBase {
 
         // we can't use createNotifications here, as it is called after *resource changes API* is connected, but user
         // can enter this view and never select resource
-        this.addNotification(this.changesContext.globalChangesApi().watchItemsStartingWith("db/", e => this.fetchResources()));
-
+        this.addNotification(this.changesContext.globalChangesApi().watchItemsStartingWith("db/", (e: globalAlertNotification) => this.fetchResource(e)));
+        //TODO: add notification for fs, cs, ts
         return this.fetchResources();
     }
 
+    // Fetch all resources info
     private fetchResources(): JQueryPromise<resourcesInfo> {
         return new getResourcesCommand()
             .execute()
             .done(info => this.resources(info));
+    }
+
+    // Fetch single resource info
+    private fetchResource(e: globalAlertNotification) {
+
+        // First find if database already exists in the page resources
+        let resource = ko.utils.arrayFirst(this.resources().sortedResources(), (r: resourceInfo) => {
+            return r.qualifiedName === e.Id;
+        });
+
+        switch (e.Operation) {
+            case "Write": 
+                if (resource) {
+                    // TODO: Database exists in page resources, only get/load its info from server (#5899)
+                    // Relevant for disable/enable...
+
+                } else {
+                    // Add a new resource for a newly created database
+                    var resourceInfo = this.getNewResource(e.Id.substr(0, 2), e.Id.substr(3));
+                    this.resources().addResource(resourceInfo); 
+                }
+               
+                break;
+            case "Load":
+                // Database turned ONLINE, get its stats
+                // TODO: load resource info - todo when #5899 is done
+                break;
+            case "Delete":
+                // Delete database from page resources if exists (because maybe another client did the delete..)
+                if (resource) {
+                    this.removeResource(resource);
+                }
+                break;
+        }
+    }
+
+    private getNewResource(resourceType: string, resourceName: string): resourceInfo {
+        switch (resourceType) {
+            case "db":
+                let dto: Raven.Client.Data.DatabaseInfo = {
+                    Name: resourceName,
+                    Alerts: 0,
+                    BackupInfo: { FullBackupInterval: "", IncrementalBackupInterval: "", LastFullBackup: "", LastIncrementalBackup: "" },
+                    Bundles: [],
+                    Disabled: false,
+                    Errors: 0,
+                    IsAdmin: false,
+                    TotalSize: { HumaneSize: "0 MBytes", SizeInBytes: 0 },
+                    UpTime: null,
+                    DocumentsCount: 0,
+                    IndexesCount: 0,
+                    IndexingStatus: "Disabled",
+                    RejectClients: false
+                };
+                return new databaseInfo(dto);
+
+            //TODO: implemet fs, cs, ts
+            /*case "fs":
+                break;
+            case "cs":
+                break;
+            case "ts":
+                break;*/
+        }
     }
 
     attached() {
@@ -200,9 +266,13 @@ class resources extends viewModelBase {
         const matchedResource = this.resources().sortedResources().find(x => x.qualifiedName === deletedResource.qualifiedName);
 
         if (matchedResource) {
-            this.resources().sortedResources.remove(matchedResource);
-            this.selectedResources.remove(matchedResource.qualifiedName);
+            this.removeResource(matchedResource);
         }
+    }
+
+    private removeResource(resource: resourceInfo) {
+        this.resources().sortedResources.remove(resource);
+        this.selectedResources.remove(resource.qualifiedName);
     }
 
     toggleSelectedResources() {
@@ -328,7 +398,6 @@ class resources extends viewModelBase {
         shell.disconnectFromResourceChangesApi();
     }
     */
-  
 }
 
 export = resources;

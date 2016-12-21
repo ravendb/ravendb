@@ -6,6 +6,10 @@ type deletionResult = {
     name: string;
     deleted: boolean;
     reason: string;
+};
+
+type Results = {
+    Results: Array<deletionResult>;
 }
 
 class deleteResourceCommand extends commandBase {
@@ -31,10 +35,11 @@ class deleteResourceCommand extends commandBase {
             const task = $.Deferred<Array<resource>>();
             this.deleteOneResource()
                 .done(result => {
-                    if (result[0].deleted) {
+                    console.log(result);
+                    if (result.Results[0].deleted) {
                         task.resolve(this.resources);
                     } else {
-                        task.reject(result[0].reason);
+                        task.reject(result.Results[0].reason);
                     }
                 })
                 .fail(reason => task.reject(reason));
@@ -43,8 +48,8 @@ class deleteResourceCommand extends commandBase {
             throw new Error("not supported yet!");
         }
     }
-
-    private deleteOneResource(): JQueryPromise<Array<deletionResult>> {
+   
+    private deleteOneResource(): JQueryPromise<Results> {
         const resource = this.resources[0];
         this.reportInfo("Deleting " + resource.name + "...");
 

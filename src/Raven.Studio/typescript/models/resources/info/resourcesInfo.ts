@@ -25,6 +25,14 @@ class resourcesInfo {
         this.initObservables();
     }
 
+    public addResource(resource: resourceInfo) {       
+        const resources = this.sortedResources();
+        resources.push(resource);
+
+        resources.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+        this.sortedResources(resources);
+    }
+
     private initObservables() {
         this.databasesCount = ko.pureComputed(() => this
             .sortedResources()
