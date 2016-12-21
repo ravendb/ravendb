@@ -650,7 +650,7 @@ namespace Raven.Server.Documents.Replication
         {
             IReadOnlyList<DocumentConflict> conflictedDocs = _documentsContext.DocumentDatabase.DocumentsStorage.GetConflictsFor(_documentsContext, docPosition.Id);        
 
-            var patch = new PatchConflict(_database, conflictedDocs, docPosition.Id);
+            var patch = new PatchConflict(_database, conflictedDocs);
             var collection = CollectionName.GetCollectionName(docPosition.Id, doc);
 
             ScriptResolver scriptResolver;
@@ -664,38 +664,41 @@ namespace Raven.Server.Documents.Replication
                 return;
             }
 
-            PatchRequest request = new PatchRequest
-            {
-                Script = scriptResolver.Script
-            };
-            PatchResultData results;
-
-            try
-            {
-                results = patch.Apply(_documentsContext, null, request);
-            }
-            catch(OperationCanceledException ex)
+            BlittableJsonReaderObject resolved;
+            if (patch.TryResolveConflict(_documentsContext, new PatchRequest
+                {
+                    Script = scriptResolver.Script
+                }, out resolved) == false)
             {
                 if (_log.IsInfoEnabled)
                 {
-                    _log.Info(ex.Message);
+                    _log.Info($"Conflict resolution script for {collection} collection declined to resolve the conflict for {docPosition.Id}");
                 }
                 return;
             }
             
             _documentsContext.DocumentDatabase.DocumentsStorage.DeleteConflictsFor(_documentsContext, docPosition.Id);
             var merged = ReplicationUtils.MergeVectors(conflictingVector, _tempReplicatedChangeVector);
-            if (results.ModifiedDocument != null)
+            if (resolved != null)
             {
+                if (_log.IsInfoEnabled)
+                {
+                    _log.Info($"Conflict resolution script for {collection} collection resolved the conflict for {docPosition.Id}.");
+                }
+
                 _database.DocumentsStorage.Put(
                     _documentsContext,
                     docPosition.Id,
                     null,
-                    results.ModifiedDocument,
+                    resolved,
                     merged);
             }
             else //resolving to tombstone
             {
+                if (_log.IsInfoEnabled)
+                {
+                    _log.Info($"Conflict resolution script for {collection} collection resolved the conflict for {docPosition.Id} by deleting the document, tombstone created");
+                }
                 _database.DocumentsStorage.AddTombstoneOnReplicationIfRelevant(
                     _documentsContext,
                     docPosition.Id,

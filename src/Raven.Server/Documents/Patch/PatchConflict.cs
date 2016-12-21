@@ -28,6 +28,7 @@ namespace Raven.Server.Documents.Patch
         private readonly List<DocumentConflict> _docs = new List<DocumentConflict>();
         private readonly bool _hasTombstone;
         private static readonly string TombstoneResolverValue = Guid.NewGuid().ToString();
+        private readonly int _docsSize;
 
         public PatchConflict(DocumentDatabase database, IReadOnlyCollection<DocumentConflict> docs):base(database)
         {
@@ -35,6 +36,7 @@ namespace Raven.Server.Documents.Patch
             {
                 if (doc.Doc != null)
                 {
+                    _docsSize += doc.Doc.Size;
                     _docs.Add(doc);
                 }
                 else
@@ -46,22 +48,25 @@ namespace Raven.Server.Documents.Patch
             ExecutionString = @"function ExecutePatchScript(docs){{ {0} }}";
         }
 
-        public override PatchResultData Apply(DocumentsOperationContext context, Document document, PatchRequest patch)
+        public bool TryResolveConflict(DocumentsOperationContext context, PatchRequest patch, out BlittableJsonReaderObject resolved)
         {
-            if (string.IsNullOrEmpty(patch.Script))
-                throw new InvalidOperationException("Patch script must be non-null and not empty");
-
-            var scope = ApplySingleScript(context, document, false, patch);
-
-            var resolvedDocument = TryParse(context, scope);
-            return new PatchResultData
+            var run = new SingleScriptRun(this, context, patch, false);
+            try
             {
-                ModifiedDocument = resolvedDocument,
-                DebugInfo = scope.DebugInfo
-            };
+                run.Prepare(_docsSize);
+                SetupInputs(run.Scope, run.JintEngine);
+                run.Execute();
+
+                return TryParse(context, run.Scope, out resolved);
+            }
+            catch (Exception errorEx)
+            {
+                run.HandleError(errorEx);
+                throw;
+            }
         }
 
-        protected override void SetupInputs(Document document, PatcherOperationScope scope, Engine jintEngine)
+        protected void SetupInputs(PatcherOperationScope scope, Engine jintEngine)
         {
             var docsArr = jintEngine.Array.Construct(Arguments.Empty);
             int index = 0;
@@ -95,19 +100,18 @@ namespace Raven.Server.Documents.Patch
             engine.SetValue("HasTombstone", _hasTombstone);
         }
 
-        private BlittableJsonReaderObject TryParse(DocumentsOperationContext context, PatcherOperationScope scope)
+        private bool TryParse(DocumentsOperationContext context, PatcherOperationScope scope, out BlittableJsonReaderObject val)
         {
             if (scope.ActualPatchResult == JsValue.Undefined || scope.ActualPatchResult == JsValue.Undefined)
             {
-                throw new OperationCanceledException
-                    ("It seems that the script was unable to resolve the conflict");
+                val = null;
+                return false;
             }
 
             if (scope.ActualPatchResult == TombstoneResolverValue)
             {
-                // getting a Function instance here,
-                // means that we couldn't evaluate it using Jint
-                return null;
+                val = null;
+                return true;
             }
             var obj = scope.ActualPatchResult.AsObject();
             using (var writer = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
@@ -116,7 +120,8 @@ namespace Raven.Server.Documents.Patch
                 writer.StartWriteObjectDocument();
                 scope.ToBlittableJsonReaderObject(writer, obj);
                 writer.FinalizeDocument();
-                return writer.CreateReader();
+                val = writer.CreateReader();
+                return true;
             }
         }
     }
