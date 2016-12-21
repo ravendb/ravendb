@@ -359,8 +359,6 @@ namespace Raven.Abstractions.Data
 
             public const string DocumentReplicationConfiguration = "Raven/DocumentReplication/Configuration";
 
-            public const string DocumentReplicationResolvers = "Raven/DocumentReplication/Resolvers";
-
             //among others stuff, this will return node's change vector
             public const string DocumentReplicationStatus = "Raven/DocumentReplication/Status";
         }

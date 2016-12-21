@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
@@ -22,7 +23,7 @@ namespace FastTests.Server.Documents.Replication
             using (var slave = GetDocumentStore())
             {
 
-                SetToManualResolution(master, slave, "return {Name:docs[0].Name + '123'};");
+                SetToManualResolution(slave, "return {Name:docs[0].Name + '123'};");
                 SetupReplication(master, slave);
 
                 using (var session = master.OpenSession())
@@ -50,7 +51,7 @@ namespace FastTests.Server.Documents.Replication
                     }, "users/1");
                     session.SaveChanges();
                 }
-     
+
                 var updated2 = WaitForDocument(slave, "users/1");
                 Assert.True(updated2);
 
@@ -82,16 +83,16 @@ namespace FastTests.Server.Documents.Replication
 
 
         [Fact]
-        public void ManuallyResolveToTombstone()
+        public async Task ScriptResolveToTombstone()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
 
-                SetToManualResolution(master, slave,"return null;");
+                SetToManualResolution(slave, "return ResolveToTombstone();");
                 SetupReplication(master, slave);
 
-                using (var session = master.OpenSession())
+                using (var session = slave.OpenSession())
                 {
                     session.Store(new ReplicationConflictsTests.User()
                     {
@@ -100,14 +101,6 @@ namespace FastTests.Server.Documents.Replication
                     session.SaveChanges();
                 }
 
-                var updated = WaitForDocument(slave, "users/1");
-                Assert.True(updated);
-
-                using (var session = slave.OpenSession())
-                {
-                    session.Delete("users/1");
-                    session.SaveChanges();
-                }
                 using (var session = master.OpenSession())
                 {
                     session.Store(new ReplicationConflictsTests.User()
@@ -116,35 +109,40 @@ namespace FastTests.Server.Documents.Replication
                     }, "users/1");
                     session.SaveChanges();
                 }
-
-                var updated2 = WaitForDocumentDeletion(slave, "users/1");
-                Assert.True(updated2);
+                
+                var tombstoneIDs = await WaitUntilHasTombstones(slave);
+                Assert.Equal(1, tombstoneIDs.Count);
             }
         }
 
         [Fact]
-        public void ManuallyResolveCopmlex()
+        public void ScriptComplexResolution()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
 
-                SetToManualResolution(master, slave, @"
+                SetToManualResolution(slave, @"
 
 function onlyUnique(value, index, self) { 
     return self.indexOf(value) === index;
 }
 
     var names = [];
+    var history = [];
     for(var i = 0; i < docs.length; i++) 
     {
         names = names.concat(docs[i].Name.split(' '));
+        history.push(docs[i]);
     }
-            return {
+            var out = {
                 Name: names.filter(onlyUnique).join(' '),
-                Age: Math.max.apply(Math,docs.map(function(o){return o.Age;}))
+                Age: Math.max.apply(Math,docs.map(function(o){return o.Age;})),
+                Grades:{Bio:12,Math:123,Pys:5,Sports:44},
+                Versions:history
             }
-
+output(out);
+return out;
 ");
                 SetupReplication(master, slave);
                 long? etag;
@@ -158,7 +156,7 @@ function onlyUnique(value, index, self) {
                     session.SaveChanges();
                     etag = session.Advanced.GetEtagFor(session.Load<ReplicationConflictsTests.User>("users/1"));
                 }
-            
+
                 using (var session = master.OpenSession())
                 {
                     session.Store(new ReplicationConflictsTests.User()
@@ -178,7 +176,7 @@ function onlyUnique(value, index, self) {
                     try
                     {
                         var item = session.Load<ReplicationConflictsTests.User>("users/1");
-                        Assert.Equal("Karmel",item.Name);
+                        Assert.Equal("Karmel", item.Name);
                         Assert.Equal(123, item.Age);
                     }
                     catch (ErrorResponseException e)
@@ -189,26 +187,20 @@ function onlyUnique(value, index, self) {
             }
         }
 
-        [Fact]
-        public void ManuallyResolveIgnore()
+        [Fact(Skip = "Wait for RavenDB-5848")]
+        public void ScriptUnableToResolve()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
-
-                SetToManualResolution(master, slave, @"
-
-return;
-
-");
                 SetupReplication(master, slave);
                 long? etag;
                 using (var session = slave.OpenSession())
                 {
                     session.Store(new ReplicationConflictsTests.User()
                     {
-                        Name = "Karmel",
-                        Age = 12
+                        Name = "Karmel1",
+                        Age = 1
                     }, "users/1");
                     session.SaveChanges();
                     etag = session.Advanced.GetEtagFor(session.Load<ReplicationConflictsTests.User>("users/1"));
@@ -218,14 +210,53 @@ return;
                 {
                     session.Store(new ReplicationConflictsTests.User()
                     {
-                        Name = "Karmel",
-                        Age = 123
+                        Name = "Karmel2",
+                        Age = 2
                     }, "users/1");
                     session.SaveChanges();
                 }
 
-                var update = WaitForBiggerEtag(slave, etag);
-                Assert.False(update);
+                SetToManualResolution(slave, @"return;");
+
+                try
+                {
+                    WaitForBiggerEtag(slave, etag);
+                    throw new Exception("Test failed, an unexpected conflict resolusion occured.");
+                }
+                catch (Exception)
+                {   
+                    // It ok, we get an exception when trying to load a conflicted document
+                }
+               
+
+                SetToManualResolution(slave, @"return docs[1];");
+
+                using (var session = master.OpenSession())
+                {
+                    session.Store(new ReplicationConflictsTests.User()
+                    {
+                        Name = "Karmel3",
+                        Age = 3
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                var update2 = WaitForResolution(slave);
+                Assert.True(update2);
+
+                using (var session = slave.OpenSession())
+                {
+                    try
+                    {
+                        var item = session.Load<ReplicationConflictsTests.User>("users/1");
+                        Assert.Equal("Karmel3", item.Name);
+                        Assert.Equal(3, item.Age);
+                    }
+                    catch (ErrorResponseException e)
+                    {
+                        Assert.Equal(HttpStatusCode.Conflict, e.StatusCode);
+                    }
+                }
 
             }
         }
@@ -246,19 +277,35 @@ return;
             return false;
         }
 
-        public void SetToManualResolution(DocumentStore master, DocumentStore slave, string script)
+        public bool WaitForResolution(DocumentStore store)
         {
-            using (var session = slave.OpenSession())
+            var sw = Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds < 10000)
             {
-                var destinations = new List<ReplicationDestination>();
+                using (var session = store.OpenSession())
+                {
+                    try
+                    {
+                        session.Load<ReplicationConflictsTests.User>("users/1");
+                        return true;
+                    }
+                    catch
+                    {
+                        // ignored
+                    }
+                }
+                Thread.Sleep(100);
+            }
+            return false;
+        }
+
+        public void SetToManualResolution(DocumentStore store, string script)
+        {
+            using (var session = store.OpenSession())
+            {
                 session.Store(new ReplicationDocument
                 {
-                    Destinations = destinations,
-                    DocumentConflictResolution = StraightforwardConflictResolution.ResolveManually,
-
-                }, Constants.Replication.DocumentReplicationConfiguration);
-                session.Store(new ReplicationManualResolver
-                {
+                    DocumentConflictResolution = StraightforwardConflictResolution.None,
                     ResolveByCollection = new Dictionary<string, ScriptResolver>{
                             { "Users", new ScriptResolver
                                 {
@@ -266,7 +313,8 @@ return;
                                 }
                             }
                         }
-                }, Constants.Replication.DocumentReplicationResolvers);
+                }, Constants.Replication.DocumentReplicationConfiguration);
+                
                 session.SaveChanges();
             }
         }

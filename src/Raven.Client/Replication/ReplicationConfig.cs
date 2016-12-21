@@ -30,9 +30,5 @@ namespace Raven.Abstractions.Replication
         /// Always resolve in favor of the latest version based on the last modified time
         /// </summary>
         ResolveToLatest,
-        /// <summary>
-        /// Let the user resolve the conflict
-        /// </summary>
-        ResolveManually
     }
 }

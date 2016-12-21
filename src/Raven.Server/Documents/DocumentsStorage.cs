@@ -35,16 +35,13 @@ namespace Raven.Server.Documents
         private static readonly Slice AllDocsEtagsSlice;
         private static readonly Slice TombstonesSlice;
         private static readonly Slice KeyAndChangeVectorSlice;
-        private static readonly Slice ScriptKeySlice;
-
+ 
         private static readonly TableSchema DocsSchema = new TableSchema();
         private static readonly Slice TombstonesPrefix;
         private static readonly Slice DeletedEtagsSlice;
         private static readonly TableSchema ConflictsSchema = new TableSchema();
         private static readonly TableSchema TombstonesSchema = new TableSchema();
-        private static readonly TableSchema CollectionsSchema = new TableSchema();
-        private static readonly TableSchema ReplicationResolverSchema = new TableSchema();
-        
+        private static readonly TableSchema CollectionsSchema = new TableSchema();        
 
         private readonly DocumentDatabase _documentDatabase;
 
@@ -56,21 +53,12 @@ namespace Raven.Server.Documents
             Slice.From(StorageEnvironment.LabelsContext, "LastEtag", ByteStringType.Immutable, out LastEtagSlice);
             Slice.From(StorageEnvironment.LabelsContext, "Key", ByteStringType.Immutable, out KeySlice);
             Slice.From(StorageEnvironment.LabelsContext, "Docs", ByteStringType.Immutable, out DocsSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "ScriptKey", ByteStringType.Immutable, out ScriptKeySlice);
             Slice.From(StorageEnvironment.LabelsContext, "CollectionEtags", ByteStringType.Immutable, out CollectionEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "AllDocsEtags", ByteStringType.Immutable, out AllDocsEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "Tombstones", ByteStringType.Immutable, out TombstonesSlice);
             Slice.From(StorageEnvironment.LabelsContext, "KeyAndChangeVector", ByteStringType.Immutable, out KeyAndChangeVectorSlice);
             Slice.From(StorageEnvironment.LabelsContext, CollectionName.GetTablePrefix(CollectionTableType.Tombstones), ByteStringType.Immutable, out TombstonesPrefix);
             Slice.From(StorageEnvironment.LabelsContext, "DeletedEtags", ByteStringType.Immutable, out DeletedEtagsSlice);
-
-            ReplicationResolverSchema.DefineKey(new TableSchema.SchemaIndexDef()
-            {
-                StartIndex = 0,
-                Count = 1,
-                IsGlobal = false,
-                Name = ScriptKeySlice
-            });
 
             /*
              Collection schema is:
@@ -252,7 +240,6 @@ namespace Raven.Server.Documents
                     tx.CreateTree("ChangeVector");
                     ConflictsSchema.Create(tx, "Conflicts", 32);
                     CollectionsSchema.Create(tx, "Collections", 32);
-                    ReplicationResolverSchema.Create(tx, "Scripts", 32);
 
                     _hasConflicts = tx.OpenTable(ConflictsSchema, "Conflicts").NumberOfEntries;
 
@@ -271,94 +258,6 @@ namespace Raven.Server.Documents
                 Dispose();
                 throw;
             }
-        }
-
-        public enum ReplicationResolverEntry
-        {
-           LoweredKey,
-           Key,
-           Script 
-        }
-
-        public void AddOrUpdateScript(DocumentsOperationContext context, string collection, string script)
-        {
-            var table = context.Transaction.InnerTransaction.OpenTable(ReplicationResolverSchema, "Scripts");
-
-            byte* lowerKey;
-            int lowerSize;
-
-            byte* keyPtr;
-            int keySize;
-            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, collection, out lowerKey, out lowerSize, out keyPtr,
-                out keySize);
-
-            Slice scriptAsSlice;
-            using (Slice.From(context.Allocator, script,ByteStringType.Immutable,out scriptAsSlice))
-            {
-                table.Set(new TableValueBuilder
-                {
-                    {lowerKey, lowerSize},
-                    {keyPtr, keySize},
-                    scriptAsSlice
-                });
-            }
-        }
-
-        public string GetScript(DocumentsOperationContext context, string collection)
-        {
-            var table = context.Transaction.InnerTransaction.OpenTable(ReplicationResolverSchema, "Scripts");
-
-            byte* lowerKey;
-            int lowerSize;
-
-            byte* keyPtr;
-            int keySize;
-            DocumentKeyWorker.GetLowerKeySliceAndStorageKey(context, collection, out lowerKey, out lowerSize, out keyPtr,
-                out keySize);
-            Slice collectionNameAsSlice;
-
-            using (Slice.External(context.Allocator,lowerKey,lowerSize,out collectionNameAsSlice))
-            {
-                var tvr = table.ReadByKey(collectionNameAsSlice);
-                if (tvr == null)
-                {
-                    throw new ArgumentException("Resolution script for the given collection does not exist", collection);
-                }
-
-                int size;
-                var ptr = tvr.Read((int)ReplicationResolverEntry.Script, out size);
-
-                //note : this will work due to implicit casting of LazyStringValue to string
-                return new LazyStringValue(null, ptr, size, context);
-            }
-        }
-
-        public Dictionary<string, ScriptResolver> GetDictionaryOfScriptResolvers(Transaction tx)
-        {
-            var scripts = tx.OpenTable(ReplicationResolverSchema, "Scripts");
-
-            var result = new Dictionary<string, ScriptResolver>();
-
-            JsonOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
-            {
-                foreach (var tvr in scripts.SeekByPrimaryKey(Slices.BeforeAllKeys))
-                {
-                    int collectionSize;
-                    var collectionPtr = tvr.Read((int)ReplicationResolverEntry.LoweredKey, out collectionSize);
-                    var collection = new LazyStringValue(null, collectionPtr, collectionSize, context);
-
-                    int scriptSize;
-                    var scriptPtr = tvr.Read((int)ReplicationResolverEntry.Script, out scriptSize);
-                    var script = new LazyStringValue(null, scriptPtr, scriptSize, context);
-
-                    result.Add(collection, new ScriptResolver
-                    {
-                        Script = script
-                    });
-                }
-            }
-            return result;
         }
 
         private static void AssertTransaction(DocumentsOperationContext context)
