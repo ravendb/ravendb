@@ -26,6 +26,8 @@ namespace Voron.Impl.Journal
 {
     public unsafe class WriteAheadJournal : IDisposable
     {
+        private static readonly TimeSpan Infinity = TimeSpan.FromMilliseconds(-1);
+
         private readonly StorageEnvironment _env;
         private readonly AbstractPager _dataPager;
 
@@ -559,7 +561,8 @@ namespace Voron.Impl.Journal
                     try
                     {
                         var transactionPersistentContext = new TransactionPersistentContext(true);
-                        using (var txw = _waj._env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
+                        
+                        using (var txw = _waj._env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite, timeout: Infinity))
                         {
                             txw.JournalApplicatorTransaction();
 

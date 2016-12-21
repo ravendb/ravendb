@@ -186,33 +186,6 @@ namespace Raven.Server.Documents.Indexes.Workers
             return false;
         }
 
-        private DateTime _lastCheckedFlushLock;
-
-        private bool ShouldReleaseTransactionBecauseFlushIsWaiting(IndexingStatsScope stats)
-        {
-            var now = DateTime.UtcNow;
-            if ((now - _lastCheckedFlushLock).TotalSeconds < 1)
-                return false;
-
-            _lastCheckedFlushLock = now;
-
-            var gotLock = _index._indexStorage.Environment().FlushInProgressLock.TryEnterReadLock(0);
-            try
-            {
-                if (gotLock == false)
-                {
-                    stats.RecordMapCompletedReason("Environment flush was waiting for us");
-                    return true;
-                }
-            }
-            finally
-            {
-                if (gotLock)
-                    _index._indexStorage.Environment().FlushInProgressLock.ExitReadLock();
-            }
-            return false;
-        }
-
         public bool CanContinueBatch(IndexingStatsScope stats, long currentEtag, long maxEtag)
         {
             if (stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
@@ -227,9 +200,6 @@ namespace Raven.Server.Documents.Indexes.Workers
                 return false;
             }
 
-            if (ShouldReleaseTransactionBecauseFlushIsWaiting(stats))
-                return false;
-           
             if (_index.CanContinueBatch(stats) == false)
                 return false;
 
