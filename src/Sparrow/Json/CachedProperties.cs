@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Sparrow.Json
 {
@@ -18,11 +19,16 @@ namespace Sparrow.Json
     {
         private readonly JsonOperationContext _context;
 
-        private class PropertyName
+        private class PropertyName :IComparable<PropertyName>
         {
             public LazyStringValue Comparer;
             public int GlobalSortOrder;
             public int PropertyId;
+
+            public int CompareTo(PropertyName other)
+            {
+                return Comparer.CompareTo(other.Comparer);
+            }
 
             public override string ToString()
             {
@@ -31,7 +37,7 @@ namespace Sparrow.Json
         }
 
         private readonly List<PropertyName> _docPropNames = new List<PropertyName>();
-        private readonly List<PropertyName> _propertiesSortOrder = new List<PropertyName>();
+        private readonly SortedDictionary<PropertyName, object> _propertiesSortOrder = new SortedDictionary<PropertyName, object>();
         private readonly Dictionary<LazyStringValue, PropertyName> _propertyNameToId = new Dictionary<LazyStringValue, PropertyName>();
         private bool _propertiesNeedSorting;
 
@@ -57,7 +63,7 @@ namespace Sparrow.Json
                 };
 
                 _docPropNames.Add(prop);
-                _propertiesSortOrder.Add(prop);
+                _propertiesSortOrder.Add(prop, prop);
                 _propertyNameToId[propName] = prop; 
                 _propertiesNeedSorting = true;
                 if (_docPropNames.Count > PropertiesDiscovered+1)
@@ -99,10 +105,10 @@ namespace Sparrow.Json
             // Sort object properties metadata by property names
             if (_propertiesNeedSorting)
             {
-                _propertiesSortOrder.Sort((a1, a2) => a1.Comparer.CompareTo(a2.Comparer));
-                for (int i = 0; i < _propertiesSortOrder.Count; i++)
+                int index = 0;
+                foreach (var o in _propertiesSortOrder)
                 {
-                    _propertiesSortOrder[i].GlobalSortOrder = i;
+                    o.Key.GlobalSortOrder = index++;
                 }
                 _propertiesNeedSorting = false;
             }
