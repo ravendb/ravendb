@@ -26,7 +26,7 @@ namespace Sparrow.Utils
 
         public static unsafe void SetCurrentThreadPriority(ThreadPriority priority)
         {
-            if (Platform.RunningOnPosix)
+            if (Platform.RunningOnPosix) // Works only with su permission
             {
                 IntPtr threadId = PosixThreadsMethods.pthread_self();
                 sched_param param = new sched_param
