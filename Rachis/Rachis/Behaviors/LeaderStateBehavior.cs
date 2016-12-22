@@ -367,20 +367,23 @@ namespace Rachis.Behaviors
             }
 
 
+            if (resp.Success == false)
+            {
+                _nextIndexes[resp.From] = resp.LastLogIndex - 1;
+                _matchIndexes[resp.From] = 0;
+
+                if (_log.IsDebugEnabled)
+                    _log.Debug("Received Success = false in AppendEntriesResponse from {1}. Now _nextIndexes[{1}] = {0}. Reason: {2}",
+                    _nextIndexes[resp.From], resp.From, resp.Message);
+                return;
+            }
+
             Debug.Assert(resp.From != null);
             _nextIndexes[resp.From] = resp.LastLogIndex + 1;
             _matchIndexes[resp.From] = resp.LastLogIndex;
             _lastContact[resp.From] = DateTime.UtcNow;
             if (_log.IsDebugEnabled)
                 _log.Debug("Follower ({0}) has LastLogIndex = {1}", resp.From, resp.LastLogIndex);
-
-            if (resp.Success == false)
-            {
-                if (_log.IsDebugEnabled)
-                    _log.Debug("Received Success = false in AppendEntriesResponse from {1}. Now _nextIndexes[{1}] = {0}. Reason: {2}",
-                    _nextIndexes[resp.From], resp.From, resp.Message);
-                return;
-            }
 
 
             if (Engine.CurrentTopology.IsPromotable(resp.From) &&

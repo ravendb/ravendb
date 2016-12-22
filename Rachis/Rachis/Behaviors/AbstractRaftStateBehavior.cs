@@ -473,7 +473,7 @@ namespace Rachis.Behaviors
                 {
                     Success = false,
                     CurrentTerm = Engine.PersistentState.CurrentTerm,
-                    LastLogIndex = Engine.PersistentState.LastLogEntry().Index,
+                    LastLogIndex = req.PrevLogIndex,
                     Message = msg,
                     LeaderId = Engine.CurrentLeader,
                     From = Engine.Name,
