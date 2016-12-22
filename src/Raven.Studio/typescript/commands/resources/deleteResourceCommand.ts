@@ -1,133 +1,57 @@
 import commandBase = require("commands/commandBase");
 import resource = require("models/resources/resource");
+import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
-type deletionResult = {
-    name: string;
-    deleted: boolean;
-    reason: string;
-}
-
 class deleteResourceCommand extends commandBase {
-    
-    private static readonly oneDatabasePath = endpoints.global.adminDatabases.adminDatabases;
-
-    //TODO: use endpoints!
-    private multipleDatabasesPath = "/admin/databases/batch-delete";
-    private oneFileSystemPath = "/admin/fs/";
-    private multipleFileSystemsPath = "/admin/fs/batch-delete";
-    private oneCounterStoragePath = "/admin/cs/";
-    private multipleCounterStoragesPath = "/admin/cs/batch-delete";
-    private oneTimeSeriesPath = "/admin/ts/";
-    private multipleTimeSeriesPath = "/admin/ts/batch-delete";
 
     constructor(private resources: Array<resource>, private isHardDelete: boolean) {
         super();
     }
 
     execute(): JQueryPromise<Array<resource>> {
-        if (this.resources.length === 1) {
+        const singleResource = this.resources.length === 1;
 
-            const task = $.Deferred<Array<resource>>();
-            this.deleteOneResource()
-                .done(result => {
-                    if (result[0].deleted) {
-                        task.resolve(this.resources);
-                    } else {
-                        task.reject(result[0].reason);
-                    }
-                })
-                .fail(reason => task.reject(reason));
-            return task;
-        } else {
-            throw new Error("not supported yet!");
-        }
-    }
+        this.reportInfo(singleResource ? "Deleting " + _.first(this.resources).name + "..." : "Deleting " + this.resources.length + " resources");
 
-    private deleteOneResource(): JQueryPromise<Array<deletionResult>> {
-        const resource = this.resources[0];
-        this.reportInfo("Deleting " + resource.name + "...");
+        const resourcesByQualifier = _.groupBy(this.resources, x => x.qualifier);
 
-        const args = {
-            name: resource.name,
-            "hard-delete": this.isHardDelete
-        };
+        const tasks = Object.keys(resourcesByQualifier).map(qualifier => {
+            const resourceGroup = resourcesByQualifier[qualifier];
 
-        const disableOneResourcePath = deleteResourceCommand.oneDatabasePath;
-            /* TODO:(resource.type === TenantType.Database) ? this.oneDatabasePath :
-            resource.type === TenantType.FileSystem ? this.oneFileSystemPath :
-            resource.type === TenantType.CounterStorage ? this.oneCounterStoragePath : this.oneTimeSeriesPath;*/
-        const url = disableOneResourcePath + this.urlEncodeArgs(args);
-        return this.del(url, null)
-            .done(() => this.reportSuccess("Successfully deleted " + resource.name))
-            .fail((response: JQueryXHR) => this.reportError("Failed to delete " + resource.name, response.responseText, response.statusText));
-    }
+            const url = this.getDeleteEndpointUrlForQualifier(qualifier);
+            const args = {
+                "hard-delete": this.isHardDelete, 
+                name: resourceGroup.map(x => x.name)
+            };
 
-    private deleteMultipleResources(): JQueryPromise<any> {
-        throw new Error("not supported for now!");
-        /* TODO:
-        var _arguments = arguments;
-
-        this.reportInfo("Deleting " + this.resources.length + " resources...");
-
-        var dbToDelete = this.resources.filter(r => r.type === TenantType.Database);
-        var fsToDelete = this.resources.filter(r => r.type === TenantType.FileSystem);
-        var csToDelete = this.resources.filter(r => r.type === TenantType.CounterStorage);
-        var tsToDelete = this.resources.filter(r => r.type === TenantType.TimeSeries);
-
-        var deleteTasks: Array<JQueryDeferred<resource[]>> = [];
-
-        if (dbToDelete.length > 0) {
-            deleteTasks.push(this.deleteTask(dbToDelete, this.multipleDatabasesPath));
-        }
-
-        if (fsToDelete.length > 0) {
-            deleteTasks.push(this.deleteTask(fsToDelete, this.multipleFileSystemsPath));
-        }
-
-        if (csToDelete.length > 0) {
-            deleteTasks.push(this.deleteTask(csToDelete, this.multipleCounterStoragesPath));
-        }
-
-        if (tsToDelete.length > 0) {
-            deleteTasks.push(this.deleteTask(tsToDelete, this.multipleTimeSeriesPath));
-        }
-
-        var mergedPromise = $.Deferred();
-
-        var combinedPromise = $.when.apply(null, deleteTasks);
-        combinedPromise.done((...resources: resource[][]) => {
-            var deletedResources = [].concat.apply([], resources);
-            this.reportSuccess("Successfully deleted " + deletedResources.length + " resources!");
-            mergedPromise.resolve(deletedResources);
+            return Promise.resolve(
+                this.del<{ Results: deleteResourceResult[] }>(url + this.urlEncodeArgs(args), null, null, 9000 * this.resources.length)
+            );
         });
 
-        combinedPromise.fail((response: JQueryXHR) => {
-            this.reportError("Failed to delete resources", response.responseText, response.statusText);
-            mergedPromise.reject(response);
-        });
-        return mergedPromise;*/
-    }
+        const result = $.Deferred<Array<resource>>();
 
-    /* TODO:
-    private deleteTask(resources: Array<resource>, deletePath: string) {
-        var _arguments = arguments;
-
-        var args = {
-            ids: resources.map(d => d.name),
-            "hard-delete": this.isHardDelete
-        };
-
-        var url = deletePath + this.urlEncodeArgs(args);
-
-        var task = $.Deferred<resource[]>();
-        this.del(url, null, null, null, 9000 * resources.length)
-            .done((resourceNames: string[]) => {
-                task.resolve(resources.filter(r => _.includes(resourceNames, r.name)));
+        Promise.all(tasks)
+            .then((results) => {
+                //TODO: display successful message
+                //TODO: check if all resources was deleted! - display dialog with deletion summary in case of failure? 
+                result.resolve(this.resources);
             })
-            .fail(() => task.reject(_arguments));
-        return task;
-    }*/
+            .catch((response: JQueryXHR) => {
+                this.reportError("Failed to delete resources", response.responseText, response.statusText);
+                result.reject(response);
+            });
+
+        return result;
+    }
+
+    private getDeleteEndpointUrlForQualifier(qualifier: string) {
+        if (qualifier === database.qualifier) {
+            return endpoints.global.adminDatabases.adminDatabases;
+        }
+        throw new Error("qualifer is not yet supported" + qualifier);
+    }
 
 } 
 
