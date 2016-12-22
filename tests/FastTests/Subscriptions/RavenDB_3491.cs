@@ -262,11 +262,7 @@ namespace NewClientTests.NewClient.Subscriptions
                     await subscription.StartAsync();
 
                     dynamic item;
-                    var tryTake = docs.TryTake(out item, TimeSpan.FromMilliseconds(250));
-                    if (tryTake)
-                        Console.WriteLine(item.Value<int>("Age"));
-                    Assert.False(tryTake);
-
+                    Assert.False(docs.TryTake(out item, TimeSpan.FromSeconds(10)));
                 }
             }
         }
