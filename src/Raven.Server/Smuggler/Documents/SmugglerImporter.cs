@@ -146,8 +146,8 @@ namespace Raven.Server.Smuggler.Documents
                                     break;
 
                                 result.RevisionDocumentsCount++;
-                                using (var reader = builder.CreateReader())
-                                    _batchPutCommand.Add(reader);
+                                var reader = builder.CreateReader();
+                                _batchPutCommand.Add(reader);
                                 await HandleBatchOfDocuments(context, parser, buildVersion).ConfigureAwait(false); ;
                             }
                             else
