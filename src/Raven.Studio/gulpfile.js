@@ -106,6 +106,16 @@ gulp.task('compile:app', ['generate-ts'], function () {
         .pipe(gulp.dest(PATHS.tsOutput));
 });
 
+gulp.task('compile:app-changed', [], function () {
+    return gulp.src([PATHS.tsSource])
+        .pipe(plugins.changed(PATHS.tsOutput, { extension: '.js' }))
+        .pipe(plugins.sourcemaps.init())
+        .pipe(tsProject())
+        .js
+        .pipe(plugins.sourcemaps.write("."))
+        .pipe(gulp.dest(PATHS.tsOutput));
+});
+
 gulp.task('typings', function() {
     return gulp.src(PATHS.typingsConfig)
         .pipe(plugins.typings());
@@ -244,7 +254,7 @@ gulp.task('watch:test', ['test'], function () {
 gulp.task('compile', ['less', 'compile:app'], function() { });
 
 gulp.task('watch', ['compile'], function () {
-    gulp.watch(PATHS.tsSource, ['compile:app']);
+    gulp.watch(PATHS.tsSource, ['compile:app-changed']);
     gulp.watch(PATHS.test.tsSource, ['compile:test']);
     gulp.watch(PATHS.lessSource, ['less']);
 });

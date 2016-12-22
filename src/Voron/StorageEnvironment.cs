@@ -847,6 +847,7 @@ namespace Voron
         {
             Journal.Cleanup();
             ScratchBufferPool.Cleanup();
+            DecompressionBuffers.Cleanup();
         }
 
         public override string ToString()

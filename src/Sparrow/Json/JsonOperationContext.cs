@@ -474,7 +474,7 @@ namespace Sparrow.Json
             private readonly JsonOperationContext _context;
             private readonly Stream _stream;
             private readonly ManagedPinnedBuffer _buffer;
-            private readonly UnmanagedJsonParser _parser;
+            public readonly UnmanagedJsonParser _parser;
             private readonly BlittableJsonDocumentBuilder _writer;
             private ReturnBuffer _returnManagedBuffer;
             private int _bufferOffset;

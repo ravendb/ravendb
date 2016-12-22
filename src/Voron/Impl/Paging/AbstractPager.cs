@@ -321,9 +321,9 @@ namespace Voron.Impl.Paging
                 numberOfPages = this.GetNumberOfOverflowPages(pageHeader->OverflowSize);
             }
 
-            dest.EnsureContinuous(pageHeader->PageNumber, numberOfPages);
+            var destPagerState = dest.EnsureContinuous(pageHeader->PageNumber, numberOfPages);
 
-            destwPagerBatchWrites.Write(pageHeader->PageNumber, numberOfPages, src, null);
+            destwPagerBatchWrites.Write(pageHeader->PageNumber, numberOfPages, src, destPagerState);
             return numberOfPages;
         }
     }
@@ -346,10 +346,10 @@ namespace Voron.Impl.Paging
             _abstractPager = abstractPager;
         }
 
-        public  void Write(long pageNumber, int numberOfPages, byte* source, PagerState pagerState)
+        public void Write(long pageNumber, int numberOfPages, byte* source, PagerState pagerState)
         {
             var toWrite = numberOfPages * _abstractPager.PageSize;
-            byte* destination = (pagerState ?? _abstractPager.PagerState).MapBase + pageNumber * _abstractPager.PageSize;
+            byte* destination = _abstractPager.AcquirePagePointer(null, pageNumber, pagerState);
 
             _abstractPager.UnprotectPageRange(destination, (ulong)toWrite);
 
@@ -366,7 +366,7 @@ namespace Voron.Impl.Paging
 
         public void Clear()
         {
-            
+
         }
     }
 }

@@ -58,11 +58,7 @@ namespace Raven.Abstractions.Replication
     /// </summary>
     public class ReplicationDocument : ReplicationDocument<ReplicationDestination>
     {
-    }
-
-    public class ReplicationManualResolver
-    {
-        public Dictionary<string,ScriptResolver> ResolveByCollection { get; set; }
+        public Dictionary<string, ScriptResolver> ResolveByCollection { get; set; }
     }
 
     public class ScriptResolver

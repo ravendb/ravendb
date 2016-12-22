@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Patch
             if (string.IsNullOrEmpty(patch.Script))
                 throw new InvalidOperationException("Patch script must be non-null and not empty");
 
-            var scope = ApplySingleScript(context, document, true, patch);
+            var scope = ApplySingleScript(context, document, false, patch);
             var modifiedDocument = context.ReadObject(scope.ToBlittable(scope.PatchObject.AsObject()), document.Key); /* TODO: Should not use BlittableJsonDocumentBuilder.UsageMode.ToDisk? */
             return new PatchResultData
             {
@@ -160,63 +160,72 @@ namespace Raven.Server.Documents.Patch
             return result;
         }
 
-        protected PatcherOperationScope ApplySingleScript(DocumentsOperationContext context, Document document, bool isTestOnly, PatchRequest patch)
+        public struct SingleScriptRun
         {
-            var scope = new PatcherOperationScope(_database, context, isTestOnly)
-            {
-                AdditionalStepsPerSize = additionalStepsPerSize,
-                MaxSteps = maxSteps,
-            };
+            private readonly PatchDocument _parent;
+            private readonly PatchRequest _patch;
+            public Engine JintEngine;
+            public PatcherOperationScope Scope;
 
-            Engine jintEngine;
-            try
+            public SingleScriptRun(PatchDocument parent,DocumentsOperationContext context, PatchRequest patch, bool isTestOnly)
             {
-                jintEngine = ScriptsCache.GetEngine(CreateEngine, patch, scope.CustomFunctions);
+                _parent = parent;
+                _patch = patch;
+                Scope = new PatcherOperationScope(parent._database, context, isTestOnly)
+                {
+                    AdditionalStepsPerSize = parent.additionalStepsPerSize,
+                    MaxSteps = parent.maxSteps,
+                };
+
+                try
+                {
+                    JintEngine = ScriptsCache.GetEngine(parent.CreateEngine, patch, Scope.CustomFunctions);
+                }
+                catch (NotSupportedException e)
+                {
+                    throw new ParseException("Could not parse script", e);
+                }
+                catch (JavaScriptException e)
+                {
+                    throw new ParseException("Could not parse script", e);
+                }
+                catch (Exception e)
+                {
+                    throw new ParseException("Could not parse: " + Environment.NewLine + patch.Script, e);
+                }
             }
-            catch (NotSupportedException e)
+
+            public void Prepare(int size)
             {
-                throw new ParseException("Could not parse script", e);
-            }
-            catch (JavaScriptException e)
-            {
-                throw new ParseException("Could not parse script", e);
-            }
-            catch (Exception e)
-            {
-                throw new ParseException("Could not parse: " + Environment.NewLine + patch.Script, e);
+                _parent.PrepareEngine(_patch, Scope, JintEngine, size);
             }
 
-            try
+            public void Execute()
             {
-                PrepareEngine(patch, document, scope, jintEngine);
+                Scope.ActualPatchResult = JintEngine.Invoke("ExecutePatchScript", Scope.PatchObject);
 
-                scope.PatchObject = scope.ToJsObject(jintEngine, document.Data);
-                scope.ActualPatchResult = jintEngine.Invoke("ExecutePatchScript", scope.PatchObject);
+                _parent.CleanupEngine(_patch, JintEngine, Scope);
 
-                CleanupEngine(patch, jintEngine, scope);
-
-                OutputLog(jintEngine, scope);
-                if (scope.DebugMode)
-                    scope.DebugInfo.Add(string.Format("Statements executed: {0}", jintEngine.StatementsCount));
-
-                return scope;
+                _parent.OutputLog(JintEngine, Scope);
+                if (Scope.DebugMode)
+                    Scope.DebugInfo.Add(string.Format("Statements executed: {0}", JintEngine.StatementsCount));
             }
-            catch (ConcurrencyException)
-            {
-                throw;
-            }
-            catch (Exception errorEx)
-            {
-                jintEngine.ResetStatementsCount();
 
-                OutputLog(jintEngine, scope);
-                var errorMsg = "Unable to execute JavaScript: " + Environment.NewLine + patch.Script + Environment.NewLine;
+            public void HandleError(Exception errorEx)
+            {
+                if (errorEx is ConcurrencyException)
+                    return;
+
+                JintEngine.ResetStatementsCount();
+
+                _parent.OutputLog(JintEngine, Scope);
+                var errorMsg = "Unable to execute JavaScript: " + Environment.NewLine + _patch.Script + Environment.NewLine;
                 var error = errorEx as JavaScriptException;
                 if (error != null)
                     errorMsg += Environment.NewLine + "Error: " + Environment.NewLine + string.Join(Environment.NewLine, error.Error);
-                if (scope.DebugInfo.Items.Count != 0)
+                if (Scope.DebugInfo.Items.Count != 0)
                     errorMsg += Environment.NewLine + "Debug information: " + Environment.NewLine +
-                                string.Join(Environment.NewLine, scope.DebugInfo.Items);
+                                string.Join(Environment.NewLine, Scope.DebugInfo.Items);
 
                 if (error != null)
                     errorMsg += Environment.NewLine + "Stacktrace:" + Environment.NewLine + error.CallStack;
@@ -233,6 +242,29 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
+        protected PatcherOperationScope ApplySingleScript(DocumentsOperationContext context, Document document,  bool isTestOnly, PatchRequest patch)
+        {
+            var run = new SingleScriptRun(this,context, patch, isTestOnly);
+            try
+            {
+                run.Prepare(document?.Data?.Size ?? 0);
+                SetupInputs(document, run.Scope,run.JintEngine);
+                run.Execute();
+                return run.Scope;
+            }
+            catch (Exception errorEx)
+            {
+                run.HandleError(errorEx);
+                throw;
+            }
+        }
+
+        protected void SetupInputs(Document document, PatcherOperationScope scope, Engine jintEngine)
+        {
+            jintEngine.SetValue("__document_id", document.Key);
+            scope.PatchObject = scope.ToJsObject(jintEngine, document.Data);
+        }
+
         private void CleanupEngine(PatchRequest patch, Engine jintEngine, PatcherOperationScope scope)
         {
             if (patch.Values != null)
@@ -245,12 +277,12 @@ namespace Raven.Server.Documents.Patch
             RemoveEngineCustomizations(jintEngine, scope);
         }
 
-        private void PrepareEngine(PatchRequest patch, Document document, PatcherOperationScope scope, Engine jintEngine)
+        private void PrepareEngine(PatchRequest patch,  PatcherOperationScope scope, Engine jintEngine, int documentSize)
         {
             int totalScriptSteps = 0;
-            if (document.Data.Size != 0)
+            if (documentSize != 0)
             {
-                totalScriptSteps = maxSteps + (document.Data.Size * additionalStepsPerSize);
+                totalScriptSteps = maxSteps + (documentSize * additionalStepsPerSize);
                 jintEngine.Options.MaxStatements(totalScriptSteps);
             }
 
@@ -261,7 +293,6 @@ namespace Raven.Server.Documents.Patch
             CustomizeEngine(jintEngine, scope);
             
             jintEngine.SetValue("LoadDocument", (Func<string, JsValue>)(key => scope.LoadDocument(key, jintEngine, ref totalScriptSteps)));
-            jintEngine.SetValue("__document_id", document.Key);
 
             jintEngine.SetValue("IncreaseNumberOfAllowedStepsBy", (Action<int>)(number =>
             {
@@ -287,12 +318,14 @@ namespace Raven.Server.Documents.Patch
             jintEngine.ResetStatementsCount();
         }
 
+        protected string ExecutionString =
+            @"function ExecutePatchScript(docInner){{ return (function(doc){{ {0} }}).apply(docInner); }};";
         private Engine CreateEngine(PatchRequest patch)
         {
             var scriptWithProperLines = patch.Script.NormalizeLineEnding();
             // NOTE: we merged few first lines of wrapping script to make sure {0} is at line 0.
             // This will all us to show proper line number using user lines locations.
-            var wrapperScript = string.Format(@"function ExecutePatchScript(docInner){{ return (function(doc){{ {0} }}).apply(docInner); }};", scriptWithProperLines);
+            var wrapperScript = string.Format(ExecutionString, scriptWithProperLines);
 
             var jintEngine = new Engine(cfg =>
             {

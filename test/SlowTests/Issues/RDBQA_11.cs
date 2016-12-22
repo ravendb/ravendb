@@ -6,6 +6,7 @@
 
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
@@ -26,7 +27,7 @@ namespace SlowTests.Issues
         }
 
         [Fact, Trait("Category", "Smuggler")]
-        public void SmugglerWithoutExcludeExpiredDocumentsShouldWork()
+        public async Task SmugglerWithoutExcludeExpiredDocumentsShouldWork()
         {
             var path = Path.GetTempFileName();
 
@@ -36,12 +37,12 @@ namespace SlowTests.Issues
                 {
                     Initialize(store);
 
-                    store.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), path).Wait(TimeSpan.FromSeconds(15));
+                    await store.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), path);
                 }
 
                 using (var store = GetDocumentStore())
                 {
-                    store.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), path).Wait(TimeSpan.FromSeconds(15));
+                    await store.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), path);
 
                     using (var session = store.OpenSession())
                     {
@@ -62,7 +63,7 @@ namespace SlowTests.Issues
         }
 
         [Fact, Trait("Category", "Smuggler")]
-        public void SmugglerWithExcludeExpiredDocumentsShouldWork1()
+        public async Task SmugglerWithExcludeExpiredDocumentsShouldWork1()
         {
             var path = Path.GetTempFileName();
 
@@ -72,12 +73,12 @@ namespace SlowTests.Issues
                 {
                     Initialize(store);
 
-                    store.Smuggler.ExportAsync(new DatabaseSmugglerOptions { IncludeExpired = false }, path).Wait(TimeSpan.FromSeconds(15));
+                    await store.Smuggler.ExportAsync(new DatabaseSmugglerOptions { IncludeExpired = false }, path);
                 }
 
                 using (var store = GetDocumentStore())
                 {
-                    store.Smuggler.ImportAsync(new DatabaseSmugglerOptions { IncludeExpired = false }, path).Wait(TimeSpan.FromSeconds(15));
+                    await store.Smuggler.ImportAsync(new DatabaseSmugglerOptions { IncludeExpired = false }, path);
 
                     using (var session = store.OpenSession())
                     {
@@ -98,7 +99,7 @@ namespace SlowTests.Issues
         }
 
         [Fact, Trait("Category", "Smuggler")]
-        public void SmugglerWithExcludeExpiredDocumentsShouldWork2()
+        public async Task SmugglerWithExcludeExpiredDocumentsShouldWork2()
         {
             var path = Path.GetTempFileName();
 
@@ -108,7 +109,7 @@ namespace SlowTests.Issues
                 {
                     Initialize(store);
 
-                    store.Smuggler.ExportAsync(new DatabaseSmugglerOptions { IncludeExpired = false }, path).Wait(TimeSpan.FromSeconds(15));
+                    await store.Smuggler.ExportAsync(new DatabaseSmugglerOptions { IncludeExpired = false }, path);
                 }
 
                 using (var store = GetDocumentStore())
@@ -116,7 +117,7 @@ namespace SlowTests.Issues
                     var database = GetDocumentDatabaseInstanceFor(store).Result;
                     database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
 
-                    store.Smuggler.ImportAsync(new DatabaseSmugglerOptions { IncludeExpired = false }, path).Wait(TimeSpan.FromSeconds(15));
+                    await store.Smuggler.ImportAsync(new DatabaseSmugglerOptions { IncludeExpired = false }, path);
 
                     using (var session = store.OpenSession())
                     {

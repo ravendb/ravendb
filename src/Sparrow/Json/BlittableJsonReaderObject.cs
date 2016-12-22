@@ -45,10 +45,8 @@ namespace Sparrow.Json
         public BlittableJsonReaderObject(byte* mem, int size, JsonOperationContext context,
             UnmanagedWriteBuffer buffer = default(UnmanagedWriteBuffer))
         {
-            if(size == 0)
-                //otherwise SetupPropertiesAccess will throw because of the memory garbage
-                //(or won't throw, but this is actually worse!)
-                throw new ArgumentException("BlittableJsonReaderObject does not support objects with zero size",nameof(size));
+            if (size == 0)
+                ThrowOnZeroSize(size);
 
             _buffer = buffer;
             _mem = mem; // get beginning of memory pointer
@@ -60,7 +58,7 @@ namespace Sparrow.Json
             var propsOffset = ReadVariableSizeIntInReverse(_mem, propOffsetStart, out offset);
             // init document level properties
             SetupPropertiesAccess(mem, propsOffset);
-            
+
             // get pointer to property names array on document level
 
             // init root level object properties
@@ -78,6 +76,13 @@ namespace Sparrow.Json
             // analyze main object type and it's offset and propertyIds flags
             _currentOffsetSize = ProcessTokenOffsetFlags(currentType);
             _currentPropertyIdSize = ProcessTokenPropertyFlags(currentType);
+        }
+
+        private static void ThrowOnZeroSize(int size)
+        {
+                //otherwise SetupPropertiesAccess will throw because of the memory garbage
+                //(or won't throw, but this is actually worse!)
+                throw new ArgumentException("BlittableJsonReaderObject does not support objects with zero size", nameof(size));
         }
 
         private void SetupPropertiesAccess(byte* mem, int propsOffset)

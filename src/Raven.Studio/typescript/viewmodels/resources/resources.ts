@@ -14,7 +14,6 @@ import toggleRejectDatabaseClients = require("commands/maintenance/toggleRejectD
 import disableResourceToggleCommand = require("commands/resources/disableResourceToggleCommand");
 import toggleIndexingCommand = require("commands/database/index/toggleIndexingCommand");
 import deleteResourceCommand = require("commands/resources/deleteResourceCommand");
-import loadResourceCommand = require("commands/resources/loadResourceCommand");
 import globalAlertNotification = Raven.Server.Alerts.GlobalAlertNotification;
 
 import resourcesInfo = require("models/resources/info/resourcesInfo");
@@ -41,7 +40,6 @@ class resources extends viewModelBase {
     spinners = {
         globalToggleDisable: ko.observable<boolean>(false),
         itemTakedowns: ko.observableArray<string>([]),
-        resourceLoad: ko.observableArray<string>([]),
         disableIndexing: ko.observableArray<string>([]), //TODO: bind on UI
         toggleRejectMode: ko.observableArray<string>([]) //TODO: bind on UI
     }
@@ -54,7 +52,7 @@ class resources extends viewModelBase {
     constructor() {
         super();
 
-        this.bindToCurrentInstance("loadResource", "toggleResource", "toggleDatabaseIndexing", "deleteResource");
+        this.bindToCurrentInstance("toggleResource", "toggleDatabaseIndexing", "deleteResource");
 
         this.initObservables();
     }
@@ -362,15 +360,6 @@ class resources extends viewModelBase {
         if (matchedResource) {
             matchedResource.disabled(result.disabled);
         }
-    }
-
-    loadResource(rs: resourceInfo) {
-        this.spinners.resourceLoad.push(rs.qualifiedName);
-
-        new loadResourceCommand(rs.asResource())
-            .execute()
-            .done(() => this.fetchResources())
-            .always(() => this.spinners.resourceLoad.remove(rs.qualifiedName));
     }
 
     toggleDatabaseIndexing(db: databaseInfo) {

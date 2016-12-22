@@ -1,11 +1,14 @@
 ﻿using System;
 using System.IO;
+using System.Text;
 using System.Threading.Tasks;
+using FastTests.Client.Subscriptions;
 using FastTests.Server.Basic;
 using FastTests.Server.Documents.Alerts;
 using FastTests.Server.Documents.Patching;
 using FastTests.Server.Documents.Replication;
 using FastTests.Server.Documents.SqlReplication;
+using SlowTests.Core.Commands;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -15,12 +18,12 @@ namespace Tryouts
     {
         static unsafe void Main(string[] args)
         {
-            var readAllBytes = File.ReadAllBytes(@"C:\Users\ayende\Downloads\docs (1)");
-            using(var s = JsonOperationContext.ShortTermSingleUse())
-            fixed (byte* p = readAllBytes)
+            for (int i = 0; i < 10; i++)
             {
-                var blittableJsonReaderObject = new BlittableJsonReaderObject(p, readAllBytes.Length,s);
-                Console.WriteLine(blittableJsonReaderObject.ToString());
+                using (var a = new RavenDB_3491())
+                {
+                    a.SubscribtionWithEtag_MultipleOpens().Wait();
+                }
             }
         }
     }

@@ -16,145 +16,202 @@ namespace Sparrow.Utils
     /// </summary>
     public unsafe class DiffPages
     {
-        public long Size;
-        public byte* Original;
-        public byte* Modified;
         public byte* Output;
         public long OutputSize;
         public bool IsDiff { get; private set; }
-        private bool _allZeros;
 
-        public void ComputeDiff()
+        public void ComputeDiff(void* originalBuffer, void* modifiedBuffer, int size)
         {
-            Debug.Assert(Size % 4096 == 0);
-            Debug.Assert(Size % sizeof(long) == 0);
-            var len = Size / sizeof(long);
+            Debug.Assert(size % 4096 == 0);
+            Debug.Assert(size % sizeof(long) == 0);
+
+            var len = size / sizeof(long);
             IsDiff = true;
 
             long start = 0;
             OutputSize = 0;
-            _allZeros = true;
+            bool allZeros = true;
 
-            // This stops the JIT from accesing Original directly, as we know
+            // This stops the JIT from accesing originalBuffer directly, as we know
             // it is not mutable, this lowers the number of generated instructions
-            long* original = (long*)Original;
-            long* modified = (long*)Modified;
+            long* originalPtr = (long*)originalBuffer;
+            long* modifiedPtr = (long*)modifiedBuffer;
 
-            for (long i = 0; i < len; i += 4, original += 4, modified += 4)
+            for (long i = 0; i < len; i += 4, originalPtr += 4, modifiedPtr += 4)
             {
-                long m0 = modified[0];
-                long m1 = modified[1];
-                long m2 = modified[2];
-                long m3 = modified[3];
+                long m0 = modifiedPtr[0];
+                long o0 = originalPtr[0];
 
-                long o0 = original[0];
-                long o1 = original[1];
-                long o2 = original[2];
-                long o3 = original[3];
+                long m1 = modifiedPtr[1];
+                long o1 = originalPtr[1];
 
-                _allZeros &= m0 == 0 && m1 == 0 && m2 == 0 && m3 == 0;
+                long m2 = modifiedPtr[2];
+                long o2 = originalPtr[2];
+
+                long m3 = modifiedPtr[3];
+                long o3 = originalPtr[3];
+
+                if (allZeros)
+                    allZeros &= m0 == 0 && m1 == 0 && m2 == 0 && m3 == 0;
 
                 if (o0 != m0 || o1 != m1 || o2 != m2 || o3 != m3)
                     continue;
 
-                if (start == i || WriteDiff(start, i - start))
+                if (start == i)
                 {
                     start = i + 4;
-                    _allZeros = true;
+                    continue;
                 }
-                else return;
+
+                long count = (i - start) * sizeof(long);
+
+                long countCheck = allZeros ? 0 : count;
+                if (OutputSize + countCheck + sizeof(long) * 2 > size)
+                    goto CopyFull;
+
+                if (allZeros)
+                {
+                    WriteDiffAllZeroes(start * sizeof(long), count);
+                }
+                else
+                {
+                    WriteDiffNonZeroes(start * sizeof(long), count, (byte*)modifiedBuffer);
+                    allZeros = true;
+                }
+
+                start = i + 4;
             }
 
-            if (start != len)
-                WriteDiff(start, len - start);
+            if (start == len)
+                return;
+
+            long length = (len - start) * sizeof(long);
+            if (OutputSize + (allZeros ? 0 : length) + sizeof(long) * 2 > size)
+                goto CopyFull;
+
+            if (allZeros)
+            {
+                WriteDiffAllZeroes(start * sizeof(long), length);
+            }
+            else
+            {
+                WriteDiffNonZeroes(start * sizeof(long), length, (byte*)modifiedBuffer);
+            }
+
+            return;
+
+            CopyFull:
+            CopyFullBuffer((byte*)modifiedBuffer, size);
         }
 
-        public void ComputeNew()
+        public void ComputeNew(void* modifiedBuffer, int size)
         {
-            Debug.Assert(Size % 4096 == 0);
-            Debug.Assert(Size % sizeof(long) == 0);
-            var len = Size / sizeof(long);
+            Debug.Assert(size % 4096 == 0);
+            Debug.Assert(size % sizeof(long) == 0);
+            var len = size / sizeof(long);
             IsDiff = true;
 
             long start = 0;
             OutputSize = 0;
-            _allZeros = true;
 
-            // This stops the JIT from accesing Original directly, as we know
-            // it is not mutable, this lowers the number of generated instructions
-            long* modified = (long*)Modified;
+            bool allZeros = true;
+            long* modifiedPtr = (long*)modifiedBuffer;
 
-            for (long i = 0; i < len; i += 4, modified += 4)
+            for (long i = 0; i < len; i += 4, modifiedPtr += 4)
             {
-                long m0 = modified[0];
-                long m1 = modified[1];
-                long m2 = modified[2];
-                long m3 = modified[3];
+                long m0 = modifiedPtr[0];
+                long m1 = modifiedPtr[1];
+                long m2 = modifiedPtr[2];
+                long m3 = modifiedPtr[3];
 
-                _allZeros &= m0 == 0 && m1 == 0 && m2 == 0 && m3 == 0;
+                if (allZeros)
+                    allZeros &= m0 == 0 && m1 == 0 && m2 == 0 && m3 == 0;
 
                 if (0 != m0 || 0 != m1 || 0 != m2 || 0 != m3)
                     continue;
 
-                if (start == i || WriteDiff(start, i - start))
+                if (start == i)
                 {
                     start = i + 4;
-                    _allZeros = true;
+                    continue;
                 }
-                else return;
+
+                long count = (i - start) * sizeof(long);
+
+                long countCheck = allZeros ? 0 : count;
+                if (OutputSize + countCheck + sizeof(long) * 2 > size)
+                    goto CopyFull;
+
+                if (allZeros)
+                {
+                    WriteDiffAllZeroes(start * sizeof(long), count);
+                }
+                else
+                {
+                    WriteDiffNonZeroes(start * sizeof(long), count, (byte*)modifiedBuffer);
+                    allZeros = true;
+                }
+
+                start = i + 4;
             }
 
-            if (start != len)
-                WriteDiff(start, len - start);
-        }
+            if (start == len)
+                return;
 
-        private bool WriteDiff(long start, long count)
+            long length = (len - start) * sizeof(long);
+            if (OutputSize + (allZeros ? 0 : length) + sizeof(long) * 2 > size)
+                goto CopyFull;
+
+            if (allZeros)
+            {
+                WriteDiffAllZeroes(start * sizeof(long), length);
+            }
+            else
+            {
+                WriteDiffNonZeroes(start * sizeof(long), length, (byte*)modifiedBuffer);
+            }
+
+            return;
+
+            CopyFull:
+            CopyFullBuffer((byte*)modifiedBuffer, size);
+        }       
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void WriteDiffNonZeroes(long start, long count, byte* modified)
         {
-            Debug.Assert(start < Size);
             Debug.Assert(count > 0);
             Debug.Assert((OutputSize % sizeof(long)) == 0);
 
-            start *= sizeof(long);
-            count *= sizeof(long);
-
-            long* outputPtr = (long*) Output;
             long outputSize = OutputSize;
-            long smOutputSize = outputSize / sizeof(long);
-
-            if (_allZeros)
-            {
-                if (outputSize + sizeof(long) * 2 > Size)
-                {
-                    CopyFullBuffer();
-                    return false;
-                }
-
-                outputPtr[smOutputSize] = start;
-                outputPtr[smOutputSize + 1] = -count;
-                OutputSize += sizeof(long) * 2;
-                return true;
-            }
-
-            if (outputSize + count + sizeof(long) * 2 > Size)
-            {
-                CopyFullBuffer();
-                return false;
-            }
-
-            outputPtr[smOutputSize] = start;
-            outputPtr[smOutputSize + 1] = count;
+            long* outputPtr = (long*)Output + outputSize / sizeof(long);
+            outputPtr[0] = start;
+            outputPtr[1] = count;
             outputSize += sizeof(long) * 2;
-            Memory.Copy(Output + outputSize, Modified + start, count);
+
+            Memory.Copy(Output + outputSize, modified + start, count);
             OutputSize = outputSize + count;
-            return true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void CopyFullBuffer()
+        private void WriteDiffAllZeroes(long start, long count)
+        {
+            Debug.Assert(count > 0);
+            Debug.Assert((OutputSize % sizeof(long)) == 0);
+
+            long* outputPtr = (long*)Output + (OutputSize / sizeof(long));
+            outputPtr[0] = start;
+            outputPtr[1] = -count;
+
+            OutputSize += sizeof(long) * 2;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void CopyFullBuffer(byte* modified, int size)
         {
             // too big, no saving, just use the full modification
-            OutputSize = Size;
-            Memory.BulkCopy(Output, Modified, Size);
+            OutputSize = size;
+            Memory.BulkCopy(Output, modified, size);
             IsDiff = false;
         }
     }

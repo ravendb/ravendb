@@ -264,7 +264,7 @@ namespace FastTests.Client.Subscriptions
                     RavenJObject item;
                     var tryTake = docs.TryTake(out item, TimeSpan.FromMilliseconds(250));
                     if (tryTake)
-                        Console.WriteLine(item.Value<int>("Age"));
+                        Console.WriteLine(item);
                     Assert.False(tryTake);
 
                 }

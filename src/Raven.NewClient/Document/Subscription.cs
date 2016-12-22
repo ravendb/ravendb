@@ -50,7 +50,7 @@ namespace Raven.NewClient.Client.Document
         private bool _disposed;
         private Task _subscriptionTask;
         private NetworkStream _networkStream;
-        private TaskCompletionSource<object> _disposedTask = new TaskCompletionSource<object>();
+        private readonly TaskCompletionSource<object> _disposedTask = new TaskCompletionSource<object>();
 
         internal Subscription(SubscriptionConnectionOptions options, IDocumentStore documentStore, DocumentConvention conventions, string dbName)
         {
@@ -390,7 +390,16 @@ namespace Raven.NewClient.Client.Document
             if (metadata.TryGet(Constants.Metadata.Etag, out lastReceivedEtag) == false)
                 throw new InvalidOperationException("Document must have an ETag");
 
-            var instance = (T)EntityToBlittable.ConvertToEntity(typeof(T), id, curDoc, _conventions);
+            T instance;
+
+            if (typeof(T) == typeof(BlittableJsonReaderObject))
+            {
+                instance = (T)(object)curDoc;
+            }
+            else
+            {
+                instance = (T)EntityToBlittable.ConvertToEntity(typeof(T), id, curDoc, _conventions);
+            }
 
             if (string.IsNullOrEmpty(id) == false)
                 _generateEntityIdOnTheClient.TrySetIdentity(instance, id);
