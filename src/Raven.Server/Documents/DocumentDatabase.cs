@@ -169,7 +169,7 @@ namespace Raven.Server.Documents
             _indexStoreTask = IndexStore.InitializeAsync();
             _transformerStoreTask = TransformerStore.InitializeAsync();
             SqlReplicationLoader.Initialize();
-            
+
             DocumentTombstoneCleaner.Initialize();
             BundleLoader = new BundleLoader(this);
 
@@ -195,7 +195,7 @@ namespace Raven.Server.Documents
 
             //Index Metadata Store shares Voron env and context pool with documents storage, 
             //so replication of both documents and indexes/transformers can be made within one transaction
-            ConfigurationStorage.Initialize(IndexStore,TransformerStore);
+            ConfigurationStorage.Initialize(IndexStore, TransformerStore);
             DocumentReplicationLoader.Initialize();
         }
 
@@ -215,6 +215,14 @@ namespace Raven.Server.Documents
                 _waitForUsagesOnDisposal.Wait(100);
             }
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentDatabase)}");
+
+            foreach (var connection in RunningTcpConnections)
+            {
+                exceptionAggregator.Execute(() =>
+                {
+                    connection.Dispose();
+                });
+            }
 
             exceptionAggregator.Execute(() =>
             {
