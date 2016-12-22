@@ -221,6 +221,8 @@ namespace Voron.Data.Tables
 
                 if (existingNumberOfPages == newNumberOfPages)
                 {
+                    page = _tx.LowLevelTransaction.ModifyPage(pageNumber);
+
                     page.OverflowSize = size;
                     var pos = page.Pointer + sizeof(PageHeader);
 
