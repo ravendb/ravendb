@@ -649,7 +649,13 @@ namespace Raven.Server.Documents.Replication
             ChangeVectorEntry[] conflictingVector,
             BlittableJsonReaderObject doc)
         {
-            IReadOnlyList<DocumentConflict> conflictedDocs = _documentsContext.DocumentDatabase.DocumentsStorage.GetConflictsFor(_documentsContext, docPosition.Id);        
+            IReadOnlyList<DocumentConflict> conflictedDocs = _documentsContext.DocumentDatabase.DocumentsStorage.GetConflictsFor(_documentsContext, docPosition.Id);
+
+            if (conflictedDocs.Count == 0)
+            {
+                // all conflicts are already resolved
+                return;
+            }
 
             var patch = new PatchConflict(_database, conflictedDocs, docPosition.Id);
             var collection = CollectionName.GetCollectionName(docPosition.Id, doc);

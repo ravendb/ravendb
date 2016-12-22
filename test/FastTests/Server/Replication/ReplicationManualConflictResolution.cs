@@ -187,7 +187,7 @@ return out;
             }
         }
 
-        [Fact(Skip = "Wait for RavenDB-5848")]
+        [Fact]
         public void ScriptUnableToResolve()
         {
             using (var master = GetDocumentStore())
@@ -229,7 +229,7 @@ return out;
                 }
                
 
-                SetToManualResolution(slave, @"return docs[1];");
+                SetToManualResolution(slave, @"return docs[0];");
 
                 using (var session = master.OpenSession())
                 {

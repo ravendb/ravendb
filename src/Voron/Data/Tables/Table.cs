@@ -561,19 +561,21 @@ namespace Voron.Data.Tables
             return GetTree(idx.Name);
         }
 
-        public void DeleteByKey(Slice key)
+        public bool DeleteByKey(Slice key)
         {
             var pkTree = GetTree(_schema.Key);
 
             var readResult = pkTree.Read(key);
             if (readResult == null)
-                return;
+                return false;
 
             // This is an implementation detail. We read the absolute location pointer (absolute offset on the file)
             long id = readResult.Reader.ReadLittleEndianInt64();
 
             // And delete the element accordingly.
             Delete(id);
+
+            return true;
         }
 
         private IEnumerable<TableValueReader> GetSecondaryIndexForValue(Tree tree, Slice value)

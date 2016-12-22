@@ -200,7 +200,7 @@ namespace Raven.Server.Documents.Replication
                     continue;
 
                 if (relevantActivityEntry.Key != null &&
-                   (relevantActivityEntry.Value - DateTime.UtcNow).TotalMilliseconds <=
+                   (DateTime.UtcNow - relevantActivityEntry.Value).TotalMilliseconds <=
                    _database.Configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds)
                 {
                     throw new InvalidOperationException(

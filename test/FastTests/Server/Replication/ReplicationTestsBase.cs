@@ -38,6 +38,35 @@ namespace FastTests.Server.Documents.Replication
             }
         }
 
+        protected async Task<Dictionary<string, List<ChangeVectorEntry[]>>> WaitUntilHasConflict(
+                DocumentStore store,
+                string docId,
+                int count = 1,
+                int timeout = 10000)
+        {
+            if (Debugger.IsAttached)
+                timeout *= 100;
+            Dictionary<string, List<ChangeVectorEntry[]>> conflicts;
+            var sw = Stopwatch.StartNew();
+            do
+            {
+                conflicts = await GetConflicts(store, docId);
+
+                List<ChangeVectorEntry[]> list;
+                if (conflicts.TryGetValue(docId, out list) == false)
+                    list = new List<ChangeVectorEntry[]>();
+                if (list.Count >= count)
+                    break;
+
+                if (sw.ElapsedMilliseconds > timeout)
+                {
+                    Assert.False(true,
+                        "Timed out while waiting for conflicts on " + docId + " we have " + list.Count + " conflicts");
+                }
+
+            } while (true);
+            return conflicts;
+        }
 
         protected bool WaitForDocumentDeletion(DocumentStore store,
             string docId,
