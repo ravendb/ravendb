@@ -935,11 +935,6 @@ pre {
 }
 
 .panel {
-
-    &.active {
-        box-shadow: 0 0 0 0 #1e2626, 0 0 0 2px @brand-primary;
-    }
-
     .panel-heading {
         .right-action-button {
             display: inline;
@@ -957,6 +952,27 @@ pre {
             &:hover {
                 opacity: 1;
             }
+        }
+    }
+    &.active {
+        &.state-primary {
+            box-shadow: 0 0 0 2px @brand-primary-dark;
+        }
+
+        &.state-success {
+            box-shadow: 0 0 0 2px @brand-success-dark;
+        }
+
+        &.state-info {
+            box-shadow: 0 0 0 2px @brand-info-dark;
+        }
+
+        &.state-warning {
+            box-shadow: 0 0 0 2px @brand-warning-dark;
+        }
+
+        &.state-danger {
+            box-shadow: 0 0 0 2px @brand-danger-dark;
         }
     }
 }

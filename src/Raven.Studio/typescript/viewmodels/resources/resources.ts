@@ -14,7 +14,6 @@ import toggleRejectDatabaseClients = require("commands/maintenance/toggleRejectD
 import disableResourceToggleCommand = require("commands/resources/disableResourceToggleCommand");
 import toggleIndexingCommand = require("commands/database/index/toggleIndexingCommand");
 import deleteResourceCommand = require("commands/resources/deleteResourceCommand");
-import loadResourceCommand = require("commands/resources/loadResourceCommand");
 
 import resourcesInfo = require("models/resources/info/resourcesInfo");
 import getResourcesCommand = require("commands/resources/getResourcesCommand");
