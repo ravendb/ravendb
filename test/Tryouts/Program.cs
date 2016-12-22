@@ -8,6 +8,7 @@ using FastTests.Server.Documents.Alerts;
 using FastTests.Server.Documents.Patching;
 using FastTests.Server.Documents.Replication;
 using FastTests.Server.Documents.SqlReplication;
+using SlowTests.Core.Commands;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -17,35 +18,13 @@ namespace Tryouts
     {
         static unsafe void Main(string[] args)
         {
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < 10; i++)
             {
-                Console.WriteLine(i);
                 using (var a = new RavenDB_3491())
                 {
                     a.SubscribtionWithEtag_MultipleOpens().Wait();
                 }
             }
-
-            //byte[] bytes = Encoding.UTF8.GetBytes("{\"Results\":[");
-            //Console.WriteLine(bytes.ToString());
-            //for (int i = 0; i < 1000; i++)
-            //{
-            //    Console.WriteLine(i);
-            //    using (var a = new SlowTests.Issues.RDBQA_11())
-            //    {
-            //        a.SmugglerWithExcludeExpiredDocumentsShouldWork2();
-            //    }
-
-            //    using (var a = new SlowTests.Issues.RDBQA_11())
-            //    {
-            //        a.SmugglerWithExcludeExpiredDocumentsShouldWork1();
-            //    }
-
-            //    using (var a = new SlowTests.Issues.RDBQA_11())
-            //    {
-            //        a.SmugglerWithoutExcludeExpiredDocumentsShouldWork();
-            //    }
-            //}
         }
     }
 
