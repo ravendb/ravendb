@@ -16,7 +16,7 @@ class deleteFilesMatchingQueryCommand extends commandBase {
         };
 
         var url = "/search/" + this.urlEncodeArgs(args);
-        var task = this.del(url, null, this.fs);
+        var task = this.del<operationIdDto>(url, null, this.fs);
         task.done((result) => this.waitForOperationToComplete(this.fs, result.OperationId, deleteTaskWithWait));
         task.fail((response: JQueryXHR) => this.reportError("Error deleting files matching query", response.responseText, response.statusText));
         return deleteTaskWithWait;

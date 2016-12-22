@@ -26,6 +26,12 @@ interface disableResourceResult {
     disabled: boolean;
 }
 
+interface deleteResourceResult {
+    name: string;
+    deleted: boolean;
+    reason: string;
+}
+
 interface deleteResourceConfirmResult extends confirmDialogResult {
     keepFiles: boolean;
 }
