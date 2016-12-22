@@ -54,7 +54,7 @@ namespace Rachis
                 if (_currentLeader == value)
                     return;
                 if (_log.IsDebugEnabled)
-                    _log.Debug("Setting CurrentLeader: {0}", value);
+                    _log.Debug("Setting CurrentLeader: {0} on term {1}", value, PersistentState.CurrentTerm);
                 _currentLeader = value;
 
 
