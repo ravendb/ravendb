@@ -198,7 +198,7 @@ namespace Voron.Data.Tables
             {
                 // We must read before we call TryWriteDirect, because it will modify the size
                 int oldDataSize;
-                var oldData = ActiveDataSmallSection.DirectRead(id, out oldDataSize);
+                var oldData = DirectRead(id, out oldDataSize);
 
                 byte* pos;
                 if (prevIsSmall && ActiveDataSmallSection.TryWriteDirect(id, size, out pos))
