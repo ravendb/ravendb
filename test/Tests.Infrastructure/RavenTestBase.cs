@@ -230,11 +230,15 @@ namespace FastTests
                 if (CreatedStores.Contains(store) == false)
                     return; // can happen if we are wrapping the store inside sharded one
 
-                var databaseTask = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name);
-                if (databaseTask != null && databaseTask.IsCompleted == false)
-                    databaseTask.Wait(); // if we are disposing store before database had chance to load then we need to wait
+                if (Server.Disposed == false)
+                {
+                    var databaseTask = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name);
+                    if (databaseTask != null && databaseTask.IsCompleted == false)
+                        databaseTask.Wait(); // if we are disposing store before database had chance to load then we need to wait
 
-                store.DatabaseCommands.GlobalAdmin.DeleteDatabase(name, hardDelete: hardDelete);
+                    store.DatabaseCommands.GlobalAdmin.DeleteDatabase(name, hardDelete: hardDelete);
+                }
+
                 CreatedStores.TryRemove(store);
             };
             CreatedStores.Add(store);
