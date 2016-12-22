@@ -50,7 +50,7 @@ namespace Raven.NewClient.Client.Document
         private bool _disposed;
         private Task _subscriptionTask;
         private NetworkStream _networkStream;
-        private TaskCompletionSource<object> _disposedTask = new TaskCompletionSource<object>();
+        private readonly TaskCompletionSource<object> _disposedTask = new TaskCompletionSource<object>();
 
         internal Subscription(SubscriptionConnectionOptions options, IDocumentStore documentStore, DocumentConvention conventions, string dbName)
         {

@@ -2,6 +2,7 @@
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using FastTests.Client.Subscriptions;
 using FastTests.Server.Basic;
 using FastTests.Server.Documents.Alerts;
 using FastTests.Server.Documents.Patching;
@@ -16,26 +17,35 @@ namespace Tryouts
     {
         static unsafe void Main(string[] args)
         {
-            byte[] bytes = Encoding.UTF8.GetBytes("{\"Results\":[");
-            Console.WriteLine(bytes.ToString());
-            for (int i = 0; i < 1000; i++)
+            for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new SlowTests.Issues.RDBQA_11())
+                using (var a = new RavenDB_3491())
                 {
-                    a.SmugglerWithExcludeExpiredDocumentsShouldWork2();
-                }
-
-                using (var a = new SlowTests.Issues.RDBQA_11())
-                {
-                    a.SmugglerWithExcludeExpiredDocumentsShouldWork1();
-                }
-
-                using (var a = new SlowTests.Issues.RDBQA_11())
-                {
-                    a.SmugglerWithoutExcludeExpiredDocumentsShouldWork();
+                    a.SubscribtionWithEtag_MultipleOpens().Wait();
                 }
             }
+
+            //byte[] bytes = Encoding.UTF8.GetBytes("{\"Results\":[");
+            //Console.WriteLine(bytes.ToString());
+            //for (int i = 0; i < 1000; i++)
+            //{
+            //    Console.WriteLine(i);
+            //    using (var a = new SlowTests.Issues.RDBQA_11())
+            //    {
+            //        a.SmugglerWithExcludeExpiredDocumentsShouldWork2();
+            //    }
+
+            //    using (var a = new SlowTests.Issues.RDBQA_11())
+            //    {
+            //        a.SmugglerWithExcludeExpiredDocumentsShouldWork1();
+            //    }
+
+            //    using (var a = new SlowTests.Issues.RDBQA_11())
+            //    {
+            //        a.SmugglerWithoutExcludeExpiredDocumentsShouldWork();
+            //    }
+            //}
         }
     }
 

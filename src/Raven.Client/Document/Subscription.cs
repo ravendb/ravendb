@@ -48,7 +48,7 @@ namespace Raven.Client.Document
         private bool _disposed;
         private Task _subscriptionTask;
         private NetworkStream _networkStream;
-        private TaskCompletionSource<object> _disposedTask = new TaskCompletionSource<object>();
+        private readonly TaskCompletionSource<object> _disposedTask = new TaskCompletionSource<object>();
 
         internal Subscription(SubscriptionConnectionOptions options,
             AsyncServerClient commands, DocumentConvention conventions)
@@ -114,7 +114,8 @@ namespace Raven.Client.Document
 
                 _disposed = true;
                 _proccessingCts.Cancel();
-                CloseTcpClient(); // we disconnect immediately, freeing the subscription task
+                _disposedTask.TrySetResult(null); // notify the subscription task that we are done
+
                 if (_subscriptionTask != null && Task.CurrentId != _subscriptionTask.Id)
                 {
                     try
@@ -126,6 +127,9 @@ namespace Raven.Client.Document
                         // just need to wait for it to end
                     }
                 }
+
+                CloseTcpClient(); // we disconnect immediately, freeing the subscription task
+
                 OnCompletedNotification();
             }
             catch (Exception ex)
