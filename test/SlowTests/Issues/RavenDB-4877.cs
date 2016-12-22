@@ -1,42 +1,42 @@
 using System.Linq;
+using FastTests;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Tests.Common;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_4877 : RavenTest
+    public class RavenDB_4877 : RavenTestBase
     {
-        public class User
+        private class User
         {
             public string Name { get; set; }
             public string[] Pets { get; set; }
         }
 
-        public class Users_ByNameAndPets : AbstractIndexCreationTask<User>
+        private class Users_ByNameAndPets : AbstractIndexCreationTask<User>
         {
             public Users_ByNameAndPets()
             {
                 Map = users => from user in users
-                    select new
-                    {
-                        user.Name,
-                        user.Pets
-                    };
+                               select new
+                               {
+                                   user.Name,
+                                   user.Pets
+                               };
             }
         }
-        
+
         [Fact]
         public void CanQueryWhenContainsAnyIsEmpty()
         {
             var noPets = new string[0];
-            var coolPets = new[] { "Brian", "Garfield", "Nemo"};
-            var petsToSearchFor = new[] {"Brian"};
+            var coolPets = new[] { "Brian", "Garfield", "Nemo" };
+            var petsToSearchFor = new[] { "Brian" };
 
-            var sadUser = new User {Name = "Michael", Pets = noPets };
+            var sadUser = new User { Name = "Michael", Pets = noPets };
             var happyUser = new User { Name = "Maxim", Pets = coolPets };
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Users_ByNameAndPets().Execute(store);
 
