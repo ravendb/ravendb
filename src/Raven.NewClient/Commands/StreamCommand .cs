@@ -30,8 +30,11 @@ namespace Raven.NewClient.Client.Commands
 
         public override async Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
         {
-            Result.Response = response;
-            Result.Stream = await response.Content.ReadAsStreamAsync();
+            Result = new StreamResult
+            {
+                Response = response,
+                Stream = await response.Content.ReadAsStreamAsync()
+            };
         }
     }
 }

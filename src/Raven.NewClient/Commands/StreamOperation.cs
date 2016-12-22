@@ -121,6 +121,7 @@ namespace Raven.NewClient.Client.Commands
                         parser.SetBuffer(buffer, read);
                     }
                     builder.FinalizeDocument();
+                    ReadNextToken(response.Stream, parser, buffer);
                     yield return builder.CreateReader();
                 }
 
