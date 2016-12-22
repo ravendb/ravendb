@@ -38,13 +38,13 @@ namespace Raven.Server.Documents
         private static readonly Slice AllDocsEtagsSlice;
         private static readonly Slice TombstonesSlice;
         private static readonly Slice KeyAndChangeVectorSlice;
- 
+
         private static readonly TableSchema DocsSchema = new TableSchema();
         private static readonly Slice TombstonesPrefix;
         private static readonly Slice DeletedEtagsSlice;
         private static readonly TableSchema ConflictsSchema = new TableSchema();
         private static readonly TableSchema TombstonesSchema = new TableSchema();
-        private static readonly TableSchema CollectionsSchema = new TableSchema();        
+        private static readonly TableSchema CollectionsSchema = new TableSchema();
 
         private readonly DocumentDatabase _documentDatabase;
 
@@ -163,7 +163,7 @@ namespace Raven.Server.Documents
 
         // this is only modified by write transactions under lock
         // no need to use thread safe ops
-        private long _lastEtag;
+        public long LastEtag { get; private set; }
 
         public string DataDirectory;
         public DocumentsContextPool ContextPool;
@@ -246,7 +246,7 @@ namespace Raven.Server.Documents
 
                     _hasConflicts = tx.OpenTable(ConflictsSchema, "Conflicts").NumberOfEntries;
 
-                    _lastEtag = ReadLastEtag(tx);
+                    LastEtag = ReadLastEtag(tx);
                     _collectionsCache = ReadCollections(tx);
 
                     tx.Commit();
@@ -918,10 +918,10 @@ namespace Raven.Server.Documents
 
         private void EnsureLastEtagIsPersisted(DocumentsOperationContext context, long docEtag)
         {
-            if (docEtag != _lastEtag)
+            if (docEtag != LastEtag)
                 return;
             var etagTree = context.Transaction.InnerTransaction.ReadTree("Etags");
-            var etag = _lastEtag;
+            var etag = LastEtag;
             Slice etagSlice;
             using (Slice.External(context.Allocator, (byte*)&etag, sizeof(long), out etagSlice))
                 etagTree.Add(LastEtagSlice, etagSlice);
@@ -955,7 +955,7 @@ namespace Raven.Server.Documents
                 else
                 {
                     var doc = result.Item1;
-                    var newEtag = ++_lastEtag;
+                    var newEtag = ++LastEtag;
 
                     if (changeVector == null)
                     {
@@ -996,7 +996,7 @@ namespace Raven.Server.Documents
                     context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
                     {
                         Type = DocumentChangeTypes.DeleteOnTombstoneReplication,
-                        Etag = _lastEtag,
+                        Etag = LastEtag,
                         MaterializeKey = state => ((Slice)state).ToString(),
                         MaterializeKeyState = loweredKey,
                         CollectionName = collectionName.Name,
@@ -1018,7 +1018,7 @@ namespace Raven.Server.Documents
             tombstone.ChangeVector = changeVector;
             var tombstoneTables = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
                 collectionName.GetTableName(CollectionTableType.Tombstones));
-            var newEtag = ++_lastEtag;
+            var newEtag = ++LastEtag;
             var newEtagBigEndian = Bits.SwapBytes(newEtag);
             var documentEtag = tombstone.DeletedEtag;
             var documentEtagBigEndian = Bits.SwapBytes(documentEtag);
@@ -1048,7 +1048,7 @@ namespace Raven.Server.Documents
             ChangeVectorEntry[] docChangeVector,
             ChangeVectorEntry[] changeVector)
         {
-            var newEtag = ++_lastEtag;
+            var newEtag = ++LastEtag;
             var newEtagBigEndian = Bits.SwapBytes(newEtag);
             var documentEtagBigEndian = Bits.SwapBytes(etag);
 
@@ -1125,21 +1125,21 @@ namespace Raven.Server.Documents
                 {
                     foreach (var tvr in result.Results)
                     {
-                        deleted = true;
+                    deleted = true;
 
-                        int size;
-                        var cve = tvr.Read(1, out size);
-                        var vector = new ChangeVectorEntry[size/sizeof(ChangeVectorEntry)];
-                        fixed (ChangeVectorEntry* pVector = vector)
-                        {
-                            Memory.Copy((byte*) pVector, cve, size);
-                        }
-                        list.Add(vector);
-
-                        conflictsTable.Delete(tvr.Id);
-                        break;
+                    int size;
+                    var cve = tvr.Read(1, out size);
+                    var vector = new ChangeVectorEntry[size / sizeof(ChangeVectorEntry)];
+                    fixed (ChangeVectorEntry* pVector = vector)
+                    {
+                        Memory.Copy((byte*)pVector, cve, size);
                     }
+                    list.Add(vector);
+
+                    conflictsTable.Delete(tvr.Id);
+                    break;
                 }
+            }
             }
 
             // once this value has been set, we can't set it to false
@@ -1454,7 +1454,7 @@ namespace Raven.Server.Documents
             // delete a tombstone if it exists
             DeleteTombstoneIfNeeded(context, collectionName, lowerKey, lowerSize);
 
-            var newEtag = ++_lastEtag;
+            var newEtag = ++LastEtag;
             var newEtagBigEndian = Bits.SwapBytes(newEtag);
 
             var lastModifiedTicks = DateTime.UtcNow.Ticks;

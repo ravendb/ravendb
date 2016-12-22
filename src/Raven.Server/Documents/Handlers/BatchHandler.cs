@@ -115,6 +115,18 @@ namespace Raven.Server.Documents.Handlers
                 }
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
+                var waitForReplication = GetStringQueryString("waitForReplication", required: false);
+                if (waitForReplication != null)
+                {
+                    await Database.DocumentReplicationLoader.WaitForReplicationAsync(waitForReplication).ConfigureAwait(false);
+                }
+
+                var waitForIndexes = GetStringQueryString("waitForIndexes", required: false);
+                if (waitForIndexes != null)
+                {
+
+                }
+
                 using (var writer = new BlittableJsonTextWriter(readBatchCommandContext, ResponseBodyStream()))
                 {
                     readBatchCommandContext.Write(writer, new DynamicJsonValue

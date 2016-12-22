@@ -3,6 +3,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
@@ -38,6 +40,17 @@ namespace Raven.Server.Documents.Replication
 
         public IEnumerable<IncomingConnectionInfo> IncomingConnections => _incoming.Values.Select(x => x.ConnectionInfo);
         public IEnumerable<ReplicationDestination> OutgoingConnections => _outgoing.Select(x => x.Destination);
+
+        private class WaitForReplicationInfo
+        {
+            public TaskCompletionSource<object> Tcs;
+            public long Etag;
+            public int Replicas;
+            public TimeSpan Timeout;
+            public DateTime Start;
+        }
+
+        private readonly ConcurrentSet<WaitForReplicationInfo> _waitForReplicationTasks = new ConcurrentSet<WaitForReplicationInfo>();
 
         public DocumentReplicationLoader(DocumentDatabase database)
         {
@@ -338,6 +351,19 @@ namespace Raven.Server.Documents.Replication
             ConnectionFailureInfo failureInfo;
             if (_outgoingFailureInfo.TryGetValue(instance.Destination, out failureInfo))
                 failureInfo.Reset();
+
+            foreach (var waitForReplicationInfo in _waitForReplicationTasks)
+            {
+                if (ReplicatedPast(waitForReplicationInfo.Etag) < waitForReplicationInfo.Replicas)
+                {
+                    if ((SystemTime.UtcNow - waitForReplicationInfo.Start) <= waitForReplicationInfo.Timeout)
+                        continue;
+                    _waitForReplicationTasks.TryRemove(waitForReplicationInfo);
+                    Task.Run(() => waitForReplicationInfo.Tcs.TrySetCanceled());
+                }
+                _waitForReplicationTasks.TryRemove(waitForReplicationInfo);
+                Task.Run(() => waitForReplicationInfo.Tcs.TrySetResult(null));
+            }
         }
 
         private void OnIncomingReceiveSucceeded(IncomingReplicationHandler instance)
@@ -441,6 +467,80 @@ namespace Raven.Server.Documents.Replication
                 NextTimout = TimeSpan.FromMilliseconds(Math.Min(NextTimout.TotalMilliseconds * 4, MaxConnectionTimout));
                 RetryOn = DateTime.UtcNow + NextTimout;
             }
+        }
+
+        public async Task WaitForReplicationAsync(string waitForReplication)
+        {
+
+            if (_outgoing.Count == 0)
+            {
+                if (_log.IsInfoEnabled)
+                {
+                    _log.Info("Was asked to get write assurance on a database without replication, ignoring the request");
+                }
+                return;
+            }
+
+            var lastEtag = _database.DocumentsStorage.LastEtag;
+            var parts = waitForReplication.Split(';');
+            var replicas = int.Parse(parts[0]);
+            var timeout = TimeSpan.Parse(parts[1]);
+            var throwOnTimeout = bool.Parse(parts[2]);
+            var majority = parts[3] == "majority";
+
+            if (majority)
+            {
+                var numberOfActiveReplicationDestinations = _outgoing.Count;
+                replicas = Math.Max(numberOfActiveReplicationDestinations / 2 + 1, replicas);
+                replicas = Math.Min(replicas, numberOfActiveReplicationDestinations);
+            }
+
+            if (ReplicatedPast(lastEtag) >= replicas)
+                return;
+
+            var tcs = new TaskCompletionSource<object>();
+
+            _waitForReplicationTasks.Add(new WaitForReplicationInfo
+            {
+                Tcs = tcs,
+                Etag = lastEtag,
+                Replicas = replicas,
+                Timeout = timeout,
+                Start = SystemTime.UtcNow
+            });
+
+            int replicatedPast;
+            try
+            {
+                if (await Task.WhenAny(tcs.Task, Task.Delay(timeout)).ConfigureAwait(false) == tcs.Task)
+                    return;
+                replicatedPast = ReplicatedPast(lastEtag);
+                if (replicatedPast >= replicas)
+                    return;
+
+                if (throwOnTimeout == false)
+                    return;
+            }
+            catch (OperationCanceledException)
+            {
+                replicatedPast = ReplicatedPast(lastEtag);
+                if (replicatedPast >= replicas)
+                    return;
+            }
+
+            throw new TimeoutException("Could not verify that etag " + lastEtag + " was replicated to " + replicas + " servers in " + timeout + "." +
+                                       " So far, it only replicated to " + replicatedPast);
+        }
+
+        private int ReplicatedPast(long etag)
+        {
+            int count = 0;
+            foreach (var destination in _outgoing)
+            {
+                if (destination._lastSentDocumentEtag >= etag)
+                    count++;
+            }
+            return count;
         }
     }
 }
