@@ -2,6 +2,7 @@
 
 import resourceInfo = require("models/resources/info/resourceInfo");
 import database = require("models/resources/database");
+import generalUtils = require("common/generalUtils");
 
 class databaseInfo extends resourceInfo {
 
@@ -34,6 +35,16 @@ class databaseInfo extends resourceInfo {
 
     asResource(): database {
         return new database(this.name, this.isAdmin(), this.disabled(), this.bundles());
+    }
+
+    update(databaseInfo: Raven.Client.Data.DatabaseInfo): void {
+        this.updateCurrentInstance(databaseInfo);
+        
+        this.rejectClients(databaseInfo.RejectClients);
+        this.indexingStatus(databaseInfo.IndexingStatus);
+        this.indexingEnabled(databaseInfo.IndexingStatus === ("Running" as Raven.Client.Data.Indexes.IndexRunningStatus));
+        this.documentsCount(databaseInfo.DocumentsCount);
+        this.indexesCount(databaseInfo.IndexesCount);
     }
 }
 

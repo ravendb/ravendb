@@ -12,6 +12,7 @@ abstract class resourceInfo {
     isCurrentlyActiveResource: KnockoutComputed<boolean>;
     disabled = ko.observable<boolean>();
     totalSize = ko.observable<string>();
+    totalSizeToShow: KnockoutComputed<string>;
 
     errors = ko.observable<number>();
     alerts = ko.observable<number>();
@@ -73,6 +74,25 @@ abstract class resourceInfo {
     }
 
     abstract asResource(): resource;
+
+    abstract update(resourceInfo: Raven.Client.Data.ResourceInfo): void;
+    
+    updateCurrentInstance(dto: Raven.Client.Data.ResourceInfo) {
+        this.name = dto.Name;
+        this.disabled(dto.Disabled);
+        this.isAdmin(dto.IsAdmin);
+        this.totalSize(dto.TotalSize ? dto.TotalSize.HumaneSize : null);
+        this.errors(dto.Errors);
+        this.alerts(dto.Alerts);
+        this.bundles(dto.Bundles);
+        this.uptime(generalUtils.timeSpanAsAgo(dto.UpTime, false));
+        this.backupEnabled(!!dto.BackupInfo);
+        if (this.backupEnabled()) {
+            const lastBackup = resourceInfo.findLastBackupDate(dto.BackupInfo);
+            this.lastFullOrIncrementalBackup(moment(new Date(lastBackup)).fromNow());
+            this.backupStatus(this.computeBackupStatus(dto.BackupInfo));
+        }
+    }
 
     private computeBackupStatus(dto: Raven.Client.Data.BackupInfo) {
         if (!dto.LastFullBackup && !dto.LastIncrementalBackup) {
@@ -139,8 +159,11 @@ abstract class resourceInfo {
 
             return currentResource.qualifiedName === this.qualifiedName;
         });
-    }
 
+        this.totalSizeToShow = ko.pureComputed(() => {
+            return this.totalSize() === "-1 Bytes" ? "0 Bytes" : this.totalSize();
+        });
+    }
 }
 
 export = resourceInfo;
