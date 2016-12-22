@@ -191,7 +191,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         private bool ShouldReleaseTransactionBecauseFlushIsWaiting(IndexingStatsScope stats)
         {
-            if (GlobalFlushingBehavior.GlobalFlusher.Value.HasLowNumberOfFlushingResources)
+            if (GlobalFlushingBehavior.GlobalFlusher.Value.HasLowNumberOfFlushingResources == false)
                 return false;
 
             var now = DateTime.UtcNow;
