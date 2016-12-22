@@ -439,6 +439,7 @@ namespace Raven.Client.Document
                 Etag = lastReceivedEtag,
                 Type = SubscriptionConnectionClientMessage.MessageType.Acknowledge
             }).WriteTo(networkStream);
+            networkStream.Flush();
         }
 
         private async Task RunSubscriptionAsync(TaskCompletionSource<object> firstConnectionCompleted)
