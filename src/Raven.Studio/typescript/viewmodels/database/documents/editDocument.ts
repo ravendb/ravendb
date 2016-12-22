@@ -145,8 +145,6 @@ class editDocument extends viewModelBase {
         const canActivateResult = $.Deferred<canActivateResultDto>();
         this.loadDocument(id)
             .done(() => {
-                this.changeNotification = this.createDocumentChangeNotification(id);
-                this.addNotification(this.changeNotification);
                 canActivateResult.resolve({ can: true });
             })
             .fail(() => {
@@ -155,6 +153,18 @@ class editDocument extends viewModelBase {
             });
         return canActivateResult;
     }
+
+    createNotifications(): Array<changeSubscription> {
+        if (!this.document())
+            return [];
+        //TODO: support for query results
+
+        this.changeNotification = this.createDocumentChangeNotification(this.document().getId());
+        return [
+            this.changeNotification
+        ];
+    }
+
 
     private activateByIndex(indexName: string, query: string, argSorts: string, argItem: any) {
         const canActivateResult = $.Deferred<canActivateResultDto>();
