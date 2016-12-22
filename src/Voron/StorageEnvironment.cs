@@ -177,7 +177,8 @@ namespace Voron
                 result = Syscall.unlink(filename);
                 if (result != 0)
                 {
-                    _log.Info($"Failed to delete test file at \'{filename}\'. (rc = {result}).");
+                    if (_log.IsInfoEnabled)
+                        _log.Info($"Failed to delete test file at \'{filename}\'. (rc = {result}).");
                 }
             }
 
