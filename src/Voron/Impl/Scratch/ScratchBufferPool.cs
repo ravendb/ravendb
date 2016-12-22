@@ -41,7 +41,7 @@ namespace Voron.Impl.Scratch
         {
             _env = env;
             _options = env.Options;
-            _current = NextFile(_options.InitialLogFileSize, null);
+            _current = NextFile(_options.InitialLogFileSize, null, null);
             UpdateCacheForPagerStatesOfAllScratches();
         }
 
@@ -85,7 +85,7 @@ namespace Voron.Impl.Scratch
             return _scratchBuffers[scratchNumber].File.NumberOfAllocations;
         }
 
-        private ScratchBufferItem NextFile(long minSize, long? requestedSize)
+        private ScratchBufferItem NextFile(long minSize, long? requestedSize, LowLevelTransaction tx)
         {
             if (_recycleArea.Count > 0)
             {
@@ -94,7 +94,7 @@ namespace Voron.Impl.Scratch
 
                 if (recycled.File.Size <= Math.Max(minSize, requestedSize ?? 0))
                 {
-                    recycled.File.Reset();
+                    recycled.File.Reset(tx);
                     _scratchBuffers.TryAdd(recycled.Number, recycled);
                     return recycled;
                 }
@@ -114,7 +114,7 @@ namespace Voron.Impl.Scratch
                 {
                     // this can fail because of disk space issue, let us just ignore it
                     // we'll allocate the minimum amount in a bit anway
-                    return NextFile(minSize, null);
+                    return NextFile(minSize, null, tx);
                 }
             }
             else
@@ -159,7 +159,7 @@ namespace Voron.Impl.Scratch
             var minSize = numberOfPages * _options.PageSize;
             var requestedSize = Math.Max(minSize, Math.Min(_current.File.Size * 2, _options.MaxScratchBufferSize));
             // We need to ensure that _current stays constant through the codepath until return. 
-            current = NextFile(minSize, requestedSize);
+            current = NextFile(minSize, requestedSize, tx);
 
             try
             {
@@ -197,12 +197,12 @@ namespace Voron.Impl.Scratch
             {
                 if (scratch.File.Size <= _options.MaxScratchBufferSize)
                 {
-                    scratch.File.Reset();
+                    scratch.File.Reset(tx);
                     return;
                 }
 
                 // this is the current one, but the size is too big, let us trim it
-                var newCurrent = NextFile(_options.InitialLogFileSize, _options.MaxScratchBufferSize);
+                var newCurrent = NextFile(_options.InitialLogFileSize, _options.MaxScratchBufferSize, tx);
                 newCurrent.File.PagerState.AddRef();
                 _current = newCurrent;
             }
