@@ -82,7 +82,7 @@ class commandBase {
         return this.ajax(relativeUrl, args, "RESET", resource, options);
     }
 
-    protected del(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
+    protected del<T>(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<T> {
         return this.ajax(relativeUrl, args, "DELETE", resource, options, timeToAlert);
     }
 

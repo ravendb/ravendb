@@ -15,7 +15,7 @@ class deleteTransformerCommand extends commandBase {
         }
 
         const url = endpoints.databases.transformer.transformers + this.urlEncodeArgs(args);
-        return this.del(url, null, this.db)
+        return this.del<void>(url, null, this.db)
             .done(() => this.reportSuccess("Deleted " + this.transformerName))
             .fail((response: JQueryXHR) => this.reportError("Failed to delete transformer " + this.transformerName,
                 response.responseText));
