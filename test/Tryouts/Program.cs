@@ -20,9 +20,9 @@ namespace Tryouts
         {
             for (int i = 0; i < 10; i++)
             {
-                using (var a = new RavenDB_3491())
+                using (var a = new SlowTests.Issues.RavenDB_5763())
                 {
-                    a.SubscribtionWithEtag_MultipleOpens().Wait();
+                    a.Should_not_throw_timeout_and_out_of_memory();
                 }
             }
         }

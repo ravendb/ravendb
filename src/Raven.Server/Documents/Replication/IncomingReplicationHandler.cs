@@ -1054,7 +1054,7 @@ namespace Raven.Server.Documents.Replication
             foreach (var disposable in _disposables)
             {
                 disposable.Dispose();
-        }
+            }
             _disposables.Clear();
         }
 

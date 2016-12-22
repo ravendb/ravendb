@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Replication
         private readonly ConcurrentSet<OutgoingReplicationHandler> _outgoing = new ConcurrentSet<OutgoingReplicationHandler>();
         private readonly ConcurrentDictionary<ReplicationDestination, ConnectionFailureInfo> _outgoingFailureInfo = new ConcurrentDictionary<ReplicationDestination, ConnectionFailureInfo>();
 
-        private readonly ConcurrentSet<IncomingReplicationHandler> _incoming = new ConcurrentSet<IncomingReplicationHandler>();
+        private readonly ConcurrentDictionary<string, IncomingReplicationHandler> _incoming = new ConcurrentDictionary<string, IncomingReplicationHandler>();
         private readonly ConcurrentDictionary<IncomingConnectionInfo, DateTime> _incomingLastActivityTime = new ConcurrentDictionary<IncomingConnectionInfo, DateTime>();
         private readonly ConcurrentDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>> _incomingRejectionStats = new ConcurrentDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>>();
 
@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Replication
         private readonly Logger _log;
         private ReplicationDocument _replicationDocument;
 
-        public IEnumerable<IncomingConnectionInfo> IncomingConnections => _incoming.Select(x => x.ConnectionInfo);
+        public IEnumerable<IncomingConnectionInfo> IncomingConnections => _incoming.Values.Select(x => x.ConnectionInfo);
         public IEnumerable<ReplicationDestination> OutgoingConnections => _outgoing.Select(x => x.Destination);
 
         public DocumentReplicationLoader(DocumentDatabase database)
@@ -151,9 +151,12 @@ namespace Raven.Server.Documents.Replication
             if (_log.IsInfoEnabled)
                 _log.Info($"Initialized document replication connection from {connectionInfo.SourceDatabaseName} located at {connectionInfo.SourceUrl}", null);
 
-            _incoming.Add(newIncoming);
-
-            newIncoming.Start();
+            // need to safeguard against two concurrent connection attempts
+            var newConnection = _incoming.GetOrAdd(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming);
+            if(newConnection == newIncoming)
+                newIncoming.Start();
+            else
+                newIncoming.Dispose();
         }
 
         private void AttemptReconnectFailedOutgoing(object state)
@@ -209,20 +212,17 @@ namespace Raven.Server.Documents.Replication
                 throw new InvalidOperationException($"Cannot have have replication with source and destination being the same database. They share the same db id ({connectionInfo} - {_database.DbId})");
             }
 
-            foreach (var relevantActivityEntry in _incomingLastActivityTime)
+            IncomingReplicationHandler value;
+            if (_incoming.TryRemove(connectionInfo.SourceDatabaseId, out value))
             {
-                if (relevantActivityEntry.Key.SourceDatabaseId.Equals(connectionInfo.SourceDatabaseId,
-                        StringComparison.OrdinalIgnoreCase) == false)
-                    continue;
-
-                if (relevantActivityEntry.Key != null &&
-                   (relevantActivityEntry.Value - DateTime.UtcNow).TotalMilliseconds <=
-                   _database.Configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds)
+                if (_log.IsInfoEnabled)
                 {
-                    throw new InvalidOperationException(
-                        $"Tried to connect [{connectionInfo}], but the connection from the same source was active less then {_database.Configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalSeconds} ago. Duplicate connections from the same source are not allowed.");
+                    _log.Info($"Disconnecting existing connection from {value.FromToString} because we got a new connection from the same source db");
                 }
+                value.Dispose();
             }
+
+           
         }
 
         public void Initialize()
@@ -305,7 +305,8 @@ namespace Raven.Server.Documents.Replication
         {
             using (instance)
             {
-                _incoming.TryRemove(instance);
+                IncomingReplicationHandler _;
+                _incoming.TryRemove(instance.ConnectionInfo.SourceDatabaseId, out _);
 
                 instance.Failed -= OnIncomingReceiveFailed;
                 instance.DocumentsReceived -= OnIncomingReceiveSucceeded;
@@ -398,7 +399,7 @@ namespace Raven.Server.Documents.Replication
                 _log.Info("Closing and disposing document replication connections.");
 
             foreach (var incoming in _incoming)
-                incoming.Dispose();
+                incoming.Value.Dispose();
 
             foreach (var outgoing in _outgoing)
                 outgoing.Dispose();
