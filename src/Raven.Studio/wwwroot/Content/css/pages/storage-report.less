@@ -15,6 +15,9 @@
 @chart-structure-color: #80ced0;
 
 #storage-report {
+
+
+
     .chart-tooltip {
         box-shadow: 0 3px 10px -3px rgba(0, 0, 0, 0.45);
         position: absolute;
@@ -29,12 +32,30 @@
     }
 
 
-    .storage-report-container {
+    #storage-report-container {
         position: relative;
+        transition:background .2s ease;
+
+        &.processing {
+            pointer-events:none;
+            .global-spinner;  
+            background:fadeout(@gray-darker,50%);          
+
+            &:before {
+                .vcenter;
+                margin-right:-22px;
+                margin-top:-22px;
+            }
+
+            .chart {
+                opacity:.1;
+            }
+        }
     }
 
 
     .chart {
+        transition: opacity .2s ease;
         width: 100%;
         height: 40vh;
         font-size: 12px;
