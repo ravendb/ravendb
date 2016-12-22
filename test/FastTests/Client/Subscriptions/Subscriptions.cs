@@ -99,7 +99,7 @@ namespace FastTests.Client.Subscriptions
                     var acceptedSubscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions()
                     {
                         SubscriptionId = subsId,
-                        TimeToWaitBeforeConnectionRetryMilliseconds = 10000
+                        TimeToWaitBeforeConnectionRetryMilliseconds = 20000
                     }))
                 {
 
@@ -127,7 +127,7 @@ namespace FastTests.Client.Subscriptions
                             {
                                 SubscriptionId = subsId,
                                 Strategy = SubscriptionOpeningStrategy.OpenIfFree,
-                                TimeToWaitBeforeConnectionRetryMilliseconds = 6000
+                                TimeToWaitBeforeConnectionRetryMilliseconds = 2000
                             }))
                     {
 
