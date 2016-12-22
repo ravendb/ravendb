@@ -3,16 +3,17 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Raven.Database.Client.Azure;
-using Raven.Tests.Common;
+using FastTests;
+using Raven.Server.Documents.PeriodicExport.Azure;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_4163 : NoDisposalNeeded
     {
