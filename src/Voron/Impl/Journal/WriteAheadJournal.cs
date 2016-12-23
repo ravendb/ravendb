@@ -561,8 +561,15 @@ namespace Voron.Impl.Journal
                     try
                     {
                         var transactionPersistentContext = new TransactionPersistentContext(true);
-                        
-                        using (var txw = _waj._env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite, timeout: Infinity))
+
+                        TimeSpan? timeout;
+
+                        if (pagesToWrite.Count < _waj._env.Options.MaxNumberOfPagesInJournalBeforeFlush)
+                            timeout = null;
+                        else
+                            timeout = Infinity;
+
+                        using (var txw = _waj._env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite, timeout: timeout))
                         {
                             _lastFlushedJournalId = lastProcessedJournal;
                             _lastFlushedTransactionId = lastFlushedTransactionId;
