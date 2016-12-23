@@ -564,8 +564,6 @@ namespace Voron.Impl.Journal
                         
                         using (var txw = _waj._env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite, timeout: Infinity))
                         {
-                            txw.JournalApplicatorTransaction();
-
                             _lastFlushedJournalId = lastProcessedJournal;
                             _lastFlushedTransactionId = lastFlushedTransactionId;
                             _lastFlushedJournal = _waj._files.First(x => x.Number == lastProcessedJournal);
@@ -586,15 +584,12 @@ namespace Voron.Impl.Journal
 
                             FreeScratchPages(unusedJournals, txw);
 
-                            if (txw != null)
-                            {
-                                // by forcing a commit, we free the read transaction that held the lazy tx buffer (if existed)
-                                // and make those pages available in the scratch files
-                                txw.IsLazyTransaction = false;
-                                _waj.HasLazyTransactions = false;
+                            // by forcing a commit, we free the read transaction that held the lazy tx buffer (if existed)
+                            // and make those pages available in the scratch files
+                            txw.IsLazyTransaction = false;
+                            _waj.HasLazyTransactions = false;
 
-                                txw.Commit();
-                            }
+                            txw.Commit();
                         }
                     }
                     finally
