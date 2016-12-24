@@ -96,6 +96,8 @@ namespace Voron.Impl.Scratch
 
         public long AllocatedPagesCount => _allocatedPagesCount;
 
+        public long TxIdAfterWhichLatestFreePagesBecomeAvailable => _txIdAfterWhichLatestFreePagesBecomeAvailable;
+
         public long SizeAfterAllocation(long sizeToAllocate)
         {
             return (_lastUsedPage + sizeToAllocate) * _pageSize;

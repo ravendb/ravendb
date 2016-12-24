@@ -561,11 +561,16 @@ namespace Voron.Impl.Journal
                     try
                     {
                         var transactionPersistentContext = new TransactionPersistentContext(true);
-                        
-                        using (var txw = _waj._env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite, timeout: Infinity))
-                        {
-                            txw.JournalApplicatorTransaction();
 
+                        TimeSpan? timeout;
+
+                        if (pagesToWrite.Count < _waj._env.Options.MaxNumberOfPagesInJournalBeforeFlush)
+                            timeout = null;
+                        else
+                            timeout = Infinity;
+
+                        using (var txw = _waj._env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite, timeout: timeout))
+                        {
                             _lastFlushedJournalId = lastProcessedJournal;
                             _lastFlushedTransactionId = lastFlushedTransactionId;
                             _lastFlushedJournal = _waj._files.First(x => x.Number == lastProcessedJournal);
@@ -586,15 +591,12 @@ namespace Voron.Impl.Journal
 
                             FreeScratchPages(unusedJournals, txw);
 
-                            if (txw != null)
-                            {
-                                // by forcing a commit, we free the read transaction that held the lazy tx buffer (if existed)
-                                // and make those pages available in the scratch files
-                                txw.IsLazyTransaction = false;
-                                _waj.HasLazyTransactions = false;
+                            // by forcing a commit, we free the read transaction that held the lazy tx buffer (if existed)
+                            // and make those pages available in the scratch files
+                            txw.IsLazyTransaction = false;
+                            _waj.HasLazyTransactions = false;
 
-                                txw.Commit();
-                            }
+                            txw.Commit();
                         }
                     }
                     finally

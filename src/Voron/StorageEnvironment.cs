@@ -530,20 +530,6 @@ namespace Voron
                 
                 State = tx.State;
             }
-
-            if (tx.FlushedToJournal == false)
-                return;
-
-            var totalPages = 0;
-            // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var page in tx.GetTransactionPages())
-            {
-                totalPages += page.NumberOfPages;
-            }
-
-            Interlocked.Add(ref SizeOfUnflushedTransactionsInJournalFile, totalPages);
-            if (tx.IsLazyTransaction == false)
-                GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
         }
 
         internal void TransactionCompleted(LowLevelTransaction tx)
@@ -554,7 +540,23 @@ namespace Voron
             if (tx.Flags != (TransactionFlags.ReadWrite))
                 return;
 
+            if (tx.FlushedToJournal)
+            {
+                var totalPages = 0;
+                // ReSharper disable once LoopCanBeConvertedToQuery
+                foreach (var page in tx.GetTransactionPages())
+                {
+                    totalPages += page.NumberOfPages;
+                }
+
+                Interlocked.Add(ref SizeOfUnflushedTransactionsInJournalFile, totalPages);
+
+                if (tx.IsLazyTransaction == false)
+                    GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
+            }
+
             Monitor.Exit(_txWriter);
+            
             if (tx.FlushInProgressLockTaken)
                 FlushInProgressLock.ExitReadLock();
         }

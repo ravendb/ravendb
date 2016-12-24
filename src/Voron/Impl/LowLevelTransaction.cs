@@ -111,9 +111,6 @@ namespace Voron.Impl
             }
         }
 
-
-        internal bool CreatedByJournalApplicator;
-
         public StorageEnvironment Environment => _env;
 
         public long Id => _id;
@@ -693,13 +690,6 @@ namespace Voron.Impl
         public void RetrieveCommitStats(out CommitStats stats)
         {
             _requestedCommitStats = stats = new CommitStats();
-        }
-
-
-        internal LowLevelTransaction JournalApplicatorTransaction()
-        {
-            CreatedByJournalApplicator = true;
-            return this;
         }
 
         private PagerState _lastState;

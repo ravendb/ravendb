@@ -4,7 +4,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using Voron.Impl.Paging;
 
 namespace Voron.Impl.Scratch
@@ -306,13 +305,62 @@ namespace Voron.Impl.Scratch
 
         public void Cleanup()
         {
-            if (_recycleArea.Count == 0)
+            if (_recycleArea.Count == 0 && _scratchBuffers.Count == 1)
                 return;
+
+            long txIdAllowingToReleaseOldScratches = -1;
+
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var scratchBufferItem in _scratchBuffers)
+            {
+                if (scratchBufferItem.Value == _current)
+                    continue;
+
+                txIdAllowingToReleaseOldScratches = Math.Max(txIdAllowingToReleaseOldScratches,
+                    scratchBufferItem.Value.File.TxIdAfterWhichLatestFreePagesBecomeAvailable);
+            }
+            
+            while (_env.CurrentReadTransactionId <= txIdAllowingToReleaseOldScratches)
+            {
+                // we've just flushed and had no more writes after that, let us bump id of next read transactions to ensure
+                // that nobody will attempt to read old scratches so we will be able to release more files
+
+                try
+                {
+                    using (var tx = _env.NewLowLevelTransaction(new TransactionPersistentContext(),
+                            TransactionFlags.ReadWrite, timeout: TimeSpan.FromMilliseconds(500)))
+                    {
+                        tx.ModifyPage(0);
+                        tx.Commit();
+                    }
+                }
+                catch (TimeoutException)
+                {
+                    break;
+                }
+            }
 
             // we need to ensure that no access to _recycleArea will take place in the same time
             // and only methods that access this are used within write transaction
             using (_env.WriteTransaction())
             {
+                //check if we can put more files into recycle area
+
+                foreach (var scratchBufferItem in _scratchBuffers)
+                {
+                    var scratchItem = scratchBufferItem.Value;
+                    if (scratchItem == _current)
+                        continue;
+
+                    if (scratchItem.File.HasActivelyUsedBytes(_env.PossibleOldestReadTransaction))
+                        continue;
+
+                    RecyleScratchFile(scratchItem);
+                }
+
+                if (_recycleArea.Count == 0)
+                    return;
+
                 while (_recycleArea.First != null)
                 {
                     _recycleArea.First.Value.Item2.File.Dispose();

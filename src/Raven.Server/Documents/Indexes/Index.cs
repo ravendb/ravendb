@@ -99,6 +99,8 @@ namespace Raven.Server.Documents.Indexes
 
         protected readonly ManualResetEventSlim _mre = new ManualResetEventSlim();
 
+        private readonly ManualResetEventSlim _logsAppliedEvent = new ManualResetEventSlim();
+
         private DateTime? _lastQueryingTime;
         public DateTime? LastIndexingTime { get; private set; }
 
@@ -133,7 +135,6 @@ namespace Raven.Server.Documents.Indexes
         private string _errorStateReason;
         private bool _isCompactionInProgress;
         private readonly ReaderWriterLockSlim _currentlyRunningQueriesLock = new ReaderWriterLockSlim();
-        private volatile bool _logsApplied;
         private volatile bool _priorityChanged;
         private volatile bool _hadRealIndexingWorkToDo;
 
@@ -717,6 +718,7 @@ namespace Raven.Server.Documents.Indexes
                                 _currentMaximumAllowedMemory = Size.Min(_currentMaximumAllowedMemory,
                                     new Size(NativeMemory.ThreadAllocations.Value.Allocations, SizeUnit.Bytes));
                             }
+
                             if (_mre.Wait(timeToWaitForMemoryCleanup, cts.Token) == false)
                             {
                                 _allocationCleanupNeeded = false;
@@ -726,13 +728,15 @@ namespace Raven.Server.Documents.Indexes
                                 // anytime soon
                                 ReduceMemoryUsage();
 
-                                _mre.Wait(cts.Token);
+                                var numberOfSetEvents =
+                                    WaitHandle.WaitAny(new[]
+                                        {_mre.WaitHandle, _logsAppliedEvent.WaitHandle, cts.Token.WaitHandle});
 
-                                if (_logsApplied)
+                                if (numberOfSetEvents == 1 && _logsAppliedEvent.IsSet)
                                 {
-                                    _logsApplied = false;
                                     _hadRealIndexingWorkToDo = false;
                                     _environment.Cleanup();
+                                    _logsAppliedEvent.Reset();
                                 }
                             }
                         }
@@ -783,9 +787,8 @@ namespace Raven.Server.Documents.Indexes
 
         private void HandleLogsApplied()
         {
-            _logsApplied = true;
             if (_hadRealIndexingWorkToDo)
-                _mre.Set();
+                _logsAppliedEvent.Set();
         }
 
         private void ReduceMemoryUsage()
