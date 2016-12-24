@@ -60,6 +60,7 @@ namespace Voron
         internal ExceptionDispatchInfo CatastrophicFailure;
         private readonly WriteAheadJournal _journal;
         private readonly object _txWriter = new object();
+        private readonly AsyncManualResetEvent _writeTransactionRunning = new AsyncManualResetEvent();
         internal readonly ThreadHoppingReaderWriterLock FlushInProgressLock = new ThreadHoppingReaderWriterLock();
         private readonly ReaderWriterLockSlim _txCommit = new ReaderWriterLockSlim();
 
@@ -120,6 +121,9 @@ namespace Voron
                     CreateNewDatabase();
                 else // existing db, let us load it
                     LoadExistingDatabase();
+
+                if (_options.ManualFlushing == false)
+                    Task.Run(IdleFlushTimer);
             }
             catch (Exception)
             {
@@ -183,6 +187,43 @@ namespace Voron
             }
 
             return true;
+        }
+
+        private async Task IdleFlushTimer()
+        {
+            var cancellationToken = _cancellationTokenSource.Token;
+
+            while (cancellationToken.IsCancellationRequested == false)
+            {
+                if (Disposed)
+                    return;
+
+                if (Options.ManualFlushing)
+                    return;
+
+                try
+                {
+                    if (await _writeTransactionRunning.WaitAsync(TimeSpan.FromMilliseconds(Options.IdleFlushTimeout)) == false)
+                    {
+                        if (Volatile.Read(ref SizeOfUnflushedTransactionsInJournalFile) != 0)
+                            GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
+                        else if (Journal.Applicator.TotalWrittenButUnsyncedBytes != 0)
+                            QueueForSyncDataFile();
+                    }
+                    else
+                    {
+                        await Task.Delay(1000, cancellationToken);
+                    }
+                }
+                catch (ObjectDisposedException)
+                {
+                    return;
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+            }
         }
 
         public ScratchBufferPool ScratchBufferPool => _scratchBufferPool;
@@ -416,6 +457,9 @@ namespace Voron
                         GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
                         ThrowOnTimeoutWaitingForWriteTxLock(wait);
                     }
+
+                    _writeTransactionRunning.SetByAsyncCompletion();
+
                     if (_endOfDiskSpace != null)
                     {
                         if (_endOfDiskSpace.CanContinueWriting)
@@ -423,6 +467,7 @@ namespace Voron
                             CatastrophicFailure = null;
                             _endOfDiskSpace = null;
                             _cancellationTokenSource = new CancellationTokenSource();
+                            Task.Run(IdleFlushTimer);
                             GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
                         }
                     }
@@ -554,6 +599,8 @@ namespace Voron
             if (tx.Flags != (TransactionFlags.ReadWrite))
                 return;
 
+            _writeTransactionRunning.Reset();
+            
             Monitor.Exit(_txWriter);
             if (tx.FlushInProgressLockTaken)
                 FlushInProgressLock.ExitReadLock();
