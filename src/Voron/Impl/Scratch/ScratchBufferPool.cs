@@ -325,10 +325,18 @@ namespace Voron.Impl.Scratch
                 // we've just flushed and had no more writes after that, let us bump id of next read transactions to ensure
                 // that nobody will attempt to read old scratches so we will be able to release more files
 
-                using (var tx = _env.WriteTransaction())
+                try
                 {
-                    tx.LowLevelTransaction.ModifyPage(0);
-                    tx.Commit();
+                    using (var tx = _env.NewLowLevelTransaction(new TransactionPersistentContext(),
+                            TransactionFlags.ReadWrite, timeout: TimeSpan.FromMilliseconds(500)))
+                    {
+                        tx.ModifyPage(0);
+                        tx.Commit();
+                    }
+                }
+                catch (TimeoutException)
+                {
+                    break;
                 }
             }
 
