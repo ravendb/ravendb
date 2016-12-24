@@ -62,7 +62,6 @@ namespace Voron.Impl.Paging
 
             FileName = file;
             _logger = LoggingSource.Instance.GetLogger<StorageEnvironment>($"Pager-{file}");
-            _batchWrites = new SparsePagerBatchWrites(this);
 
             if (Options.CopyOnWriteMode)
                 throw new NotImplementedException("CopyOnWriteMode using spare memory is currently not supported on " +
@@ -150,7 +149,7 @@ namespace Voron.Impl.Paging
             MapPages(state, allocationStartPosition, ammountToMapInBytes);
         }
 
-        public override int CopyPage(AbstractPager dest, IPagerBatchWrites destPagerBatchWrites, long pageNumber, PagerState pagerState)
+        public override int CopyPage(IPagerBatchWrites destPagerBatchWrites, long pageNumber, PagerState pagerState)
         {
             var distanceFromStart = (pageNumber % 16);
             var allocationStartPosition = pageNumber - distanceFromStart;
@@ -182,12 +181,16 @@ namespace Voron.Impl.Paging
                 pageHeader = (PageHeader*)(result + (distanceFromStart * PageSize));
             }
 
-            dest.EnsureContinuous(pageHeader->PageNumber, numberOfPages);
-            destPagerBatchWrites.Write(pageHeader->PageNumber, numberOfPages, (byte*)pageHeader, null);
+            destPagerBatchWrites.Write(pageHeader->PageNumber, numberOfPages, (byte*)pageHeader);
 
             UnmapViewOfFile(result);
 
             return numberOfPages;
+        }
+
+        public override IPagerBatchWrites BatchWriter()
+        {
+            return new SparsePagerBatchWrites(this);
         }
 
         public override byte* AcquirePagePointer(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)
@@ -332,7 +335,7 @@ namespace Voron.Impl.Paging
                 _parent = parent;
             }
 
-            public void Write(long pageNumber, int numberOfPages, byte* source, PagerState pagerState)
+            public void Write(long pageNumber, int numberOfPages, byte* source)
             {
                 var distanceFromStart = (pageNumber % 16);
                 var allocationStartPosition = pageNumber - distanceFromStart;
@@ -364,7 +367,7 @@ namespace Voron.Impl.Paging
                 _parent.ProtectPageRange(destination, (ulong)toWrite);
             }
 
-            public void Flush()
+            public void Dispose()
             {
                 foreach (var page in _state.LoadedPages)
                 {
@@ -373,11 +376,7 @@ namespace Voron.Impl.Paging
                     // afterward, we can call flush on this
                     FlushViewOfFile(loadedPage.Pointer, new IntPtr(loadedPage.NumberOfPages * _parent.PageSize));
                 }
-                Clear();
-            }
-
-            public void Clear()
-            {
+            
                 foreach (var ptr in _state.AddressesToUnload)
                 {
                     UnmapViewOfFile((byte*)ptr);

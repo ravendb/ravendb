@@ -255,12 +255,12 @@ namespace Voron.Impl.Scratch
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public virtual int CopyPage(AbstractPager dest, IPagerBatchWrites destPagerBatchWrites, int scratchNumber, long p, PagerState pagerState)
+        public virtual int CopyPage(IPagerBatchWrites destPagerBatchWrites, int scratchNumber, long p, PagerState pagerState)
         {
             var item = GetScratchBufferFile(scratchNumber);
 
             ScratchBufferFile bufferFile = item.File;
-            return bufferFile.CopyPage(dest, destPagerBatchWrites, p, pagerState);
+            return bufferFile.CopyPage(destPagerBatchWrites, p, pagerState);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

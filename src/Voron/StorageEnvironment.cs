@@ -429,10 +429,10 @@ namespace Voron
             return writeTransaction;
         }
 
-        public Transaction WriteTransaction(ByteStringContext context = null)
+        public Transaction WriteTransaction(ByteStringContext context = null, TimeSpan? timeout = null)
         {
             var transactionPersistentContext = new TransactionPersistentContext();
-            var newLowLevelTransaction = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite, context, null);
+            var newLowLevelTransaction = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite, context, timeout);
             var writeTransaction = new Transaction(newLowLevelTransaction);
             return writeTransaction;
         }

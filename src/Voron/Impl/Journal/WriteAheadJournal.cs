@@ -807,7 +807,7 @@ namespace Voron.Impl.Journal
                     long written = 0;
                     using (var meter = _waj._dataPager.Options.IoMetrics.MeterIoRate(_waj._dataPager.FileName, IoMetrics.MeterType.DataFlush, 0))
                     {
-                        var batchWrites = _waj._dataPager.BatchWrites;
+                        using(var batchWrites = _waj._dataPager.BatchWriter())
                         {
                             foreach (var pagePosition in pagesToWrite.Values)
                             {
@@ -822,7 +822,6 @@ namespace Voron.Impl.Journal
                                 }
 
                                 var numberOfPages = scratchBufferPool.CopyPage(
-                                    _waj._dataPager,
                                     batchWrites,
                                     scratchNumber,
                                     pagePosition.ScratchPos,
@@ -831,7 +830,6 @@ namespace Voron.Impl.Journal
                                 written += numberOfPages * _waj._dataPager.PageSize;
                             }
                         }
-                        batchWrites.Flush();
 
                         meter.IncrementSize(written);
 

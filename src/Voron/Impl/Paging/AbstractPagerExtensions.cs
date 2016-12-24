@@ -26,31 +26,6 @@ namespace Voron.Impl.Paging
             return requestedPageNumber + numberOfPages > pager.NumberOfAllocatedPages;
         }
 
-        public static long Write(this AbstractPager pager, List<Page> pages)
-        {
-            var pagerState = pager.GetPagerStateAndAddRefAtomically();
-            try
-            {
-                long total = 0;
-                var writer = pager.BatchWrites;
-                foreach (var page in pages)
-                {
-                    var numberOfPages = pager.GetNumberOfPages(page);
-
-                    writer.Write(page.PageNumber, numberOfPages, page.Pointer, pagerState);
-                    total += numberOfPages*pager.PageSize;
-                }
-                writer.Flush();
-                return total;
-            }
-            finally
-            {
-                pagerState.Release();
-            }
-        }
-
-
-
         public static int GetNumberOfPages(this AbstractPager pager, Page page)
         {
             return page.IsOverflow ? pager.GetNumberOfOverflowPages(page.OverflowSize) : 1;
