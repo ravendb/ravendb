@@ -2,7 +2,6 @@
 
 import resourceInfo = require("models/resources/info/resourceInfo");
 import database = require("models/resources/database");
-import generalUtils = require("common/generalUtils");
 
 class databaseInfo extends resourceInfo {
 
@@ -16,7 +15,7 @@ class databaseInfo extends resourceInfo {
         super(dto);
         this.rejectClients(dto.RejectClients);
         this.indexingStatus(dto.IndexingStatus);
-        this.indexingEnabled(dto.IndexingStatus === ("Running" as Raven.Client.Data.Indexes.IndexRunningStatus));
+        this.indexingEnabled(dto.IndexingStatus === "Running");
         this.documentsCount(dto.DocumentsCount);
         this.indexesCount(dto.IndexesCount);
     }
@@ -38,11 +37,10 @@ class databaseInfo extends resourceInfo {
     }
 
     update(databaseInfo: Raven.Client.Data.DatabaseInfo): void {
-        this.updateCurrentInstance(databaseInfo);
-        
+        super.update(databaseInfo);
         this.rejectClients(databaseInfo.RejectClients);
         this.indexingStatus(databaseInfo.IndexingStatus);
-        this.indexingEnabled(databaseInfo.IndexingStatus === ("Running" as Raven.Client.Data.Indexes.IndexRunningStatus));
+        this.indexingEnabled(databaseInfo.IndexingStatus === "Running");
         this.documentsCount(databaseInfo.DocumentsCount);
         this.indexesCount(databaseInfo.IndexesCount);
     }

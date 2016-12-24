@@ -25,12 +25,27 @@ class resourcesInfo {
         this.initObservables();
     }
 
-    public addResource(resource: resourceInfo) {       
-        const resources = this.sortedResources();
-        resources.push(resource);
+    addResource(newResourceInfo: Raven.Client.Data.ResourceInfo, resourceType: string) {
+        let resourceToAdd: resourceInfo;
 
-        resources.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
-        this.sortedResources(resources);
+        switch (resourceType) {
+            case "db":
+               
+                let dto = newResourceInfo as Raven.Client.Data.DatabaseInfo;
+                resourceToAdd = new databaseInfo(dto);
+                break;
+
+            //TODO: implemet fs, cs, ts
+            //case "fs":
+            //    break;
+            //case "cs":
+            //    break;
+            //case "ts":
+            //    break;
+        }
+
+        let locationToInsert = _.sortedIndexBy(this.sortedResources(), resourceToAdd, function(item) { return item.name.toLowerCase() });
+        this.sortedResources.splice(locationToInsert, 0, resourceToAdd);
     }
 
     private initObservables() {

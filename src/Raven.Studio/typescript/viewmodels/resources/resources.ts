@@ -2,15 +2,10 @@ import app = require("durandal/app");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import accessHelper = require("viewmodels/shell/accessHelper");
-import EVENTS = require("common/constants/events");
-
 import resource = require("models/resources/resource");
-import database = require("models/resources/database");
-
 import deleteResourceConfirm = require("viewmodels/resources/deleteResourceConfirm");
 import createDatabase = require("viewmodels/resources/createDatabase");
 import disableResourceToggleConfirm = require("viewmodels/resources/disableResourceToggleConfirm");
-import toggleRejectDatabaseClients = require("commands/maintenance/toggleRejectDatabaseClients");
 import disableResourceToggleCommand = require("commands/resources/disableResourceToggleCommand");
 import toggleIndexingCommand = require("commands/database/index/toggleIndexingCommand");
 import deleteResourceCommand = require("commands/resources/deleteResourceCommand");
@@ -91,7 +86,8 @@ class resources extends viewModelBase {
         // we can't use createNotifications here, as it is called after *resource changes API* is connected, but user
         // can enter this view and never select resource
         this.addNotification(this.changesContext.globalChangesApi().watchItemsStartingWith("db/", (e: globalAlertNotification) => this.fetchResource(e)));
-        //TODO: add notification for fs, cs, ts
+
+        // TODO: add notification for fs, cs, ts
 
         return this.fetchResources();
     }
@@ -113,27 +109,31 @@ class resources extends viewModelBase {
     private fetchResource(e: globalAlertNotification) {
 
         // First find if database already exists in the page resources
-        let resource = ko.utils.arrayFirst(this.resources().sortedResources(), (rs: resourceInfo) => {
-            return rs.qualifiedName === e.Id;
-        });
-
+        let resource = this.resources().sortedResources().find(rs => rs.qualifiedName === e.Id);
+       
         switch (e.Operation) {
+
             case "Write": 
                 if (resource) {
                     // Relevant for disable/enable...
-                    this.getResourceInfo(resource);
+                    this.getResourceInfo(resource.qualifier, resource.name)
+                        .done(result => resource.update(result));
                 } else {
-                    // Add a new resource for a newly created database
-                    let newResourceInfo = this.getNewResource(e.Id.substr(0, 2), e.Id.substr(3));
-                    newResourceInfo.backupEnabled(false);
-                    this.resources().addResource(newResourceInfo); 
+                    // Need to add a new resource for a newly created database
+                    let notificationData = resourceInfo.extractQualifierAndNameFromNotification(e.Id);
+                    this.getResourceInfo(notificationData.qualifier, notificationData.name)
+                        .done((result: Raven.Client.Data.ResourceInfo) => {
+                            this.resources().addResource(result, notificationData.qualifier);
+                         });
                 }
-               
                 break;
-            case "Load":
-                // Database turned ONLINE, get its stats
-                this.getResourceInfo(resource);
+
+            case "Loaded":
+                // An existing database turned ONLINE, get its stats
+                this.getResourceInfo(resource.qualifier, resource.name)
+                    .done(result => resource.update(result));               
                 break;
+
             case "Delete":
                 // Delete database from page resources if exists (because maybe another client did the delete..)
                 if (resource) {
@@ -143,56 +143,8 @@ class resources extends viewModelBase {
         }
     }
 
-    private getNewResource(resourceType: string, resourceName: string): resourceInfo {
-        switch (resourceType) {
-            case "db":
-                let dto: Raven.Client.Data.DatabaseInfo = {
-                    Name: resourceName,
-                    Alerts: 0,
-                    BackupInfo: {
-                        FullBackupInterval: null,
-                        IncrementalBackupInterval: null,
-                        LastFullBackup: null,
-                        LastIncrementalBackup: null
-                    },
-                    Bundles: [],
-                    Disabled: false,
-                    Errors: 0,
-                    IsAdmin: false,
-                    TotalSize: { HumaneSize: "0 Bytes", SizeInBytes: 0 },
-                    UpTime: null,
-                    DocumentsCount: 0,
-                    IndexesCount: 0,
-                    IndexingStatus: 'Running' as Raven.Client.Data.Indexes.IndexRunningStatus,
-                    RejectClients: false
-                };
-                let dbInfo = new databaseInfo(dto);
-                dbInfo.indexingEnabled(true);  
-                return dbInfo;
-
-            //TODO: implemet fs, cs, ts
-            /*case "fs":
-                break;
-            case "cs":
-                break;
-            case "ts":
-                break;*/
-        }
-    }
-
-    private getResourceInfo(resource: resourceInfo) {
-
-        new getResourceCommand(resource)
-            .execute()
-            .done((resourceInfoResult: Raven.Client.Data.ResourceInfo) => {
-
-                let resourceToUpdate = ko.utils.arrayFirst(this.resources().sortedResources(),
-                    (rs: resourceInfo) => {
-                        return rs.qualifiedName === resource.qualifiedName;
-                    });
-
-                resourceToUpdate.update(resourceInfoResult);
-            });
+    private getResourceInfo(resourceType: string, resourceName: string): JQueryPromise<Raven.Client.Data.ResourceInfo> {
+        return new getResourceCommand(resourceType, resourceName).execute();
     }
 
     private filterResources(): void {

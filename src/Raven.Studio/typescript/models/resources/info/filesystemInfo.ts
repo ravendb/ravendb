@@ -24,8 +24,8 @@ class filesystemInfo extends resourceInfo {
         return new filesystem(this.name, this.isAdmin(), this.disabled(), this.bundles());
     }
 
-    update(resourceInfo: Raven.Client.Data.FileSystemInfo): void {
-        this.updateCurrentInstance(resourceInfo);
+    update(fileSystemInfo: Raven.Client.Data.FileSystemInfo): void {
+        super.update(fileSystemInfo);
 
         //TODO: implement
     }

@@ -12,7 +12,6 @@ abstract class resourceInfo {
     isCurrentlyActiveResource: KnockoutComputed<boolean>;
     disabled = ko.observable<boolean>();
     totalSize = ko.observable<string>();
-    totalSizeToShow: KnockoutComputed<string>;
 
     errors = ko.observable<number>();
     alerts = ko.observable<number>();
@@ -34,6 +33,10 @@ abstract class resourceInfo {
     online: KnockoutComputed<boolean>;
 
     canNavigateToResource: KnockoutComputed<boolean>;
+    
+    static extractQualifierAndNameFromNotification(input: string): { qualifier: string, name: string } {
+        return { qualifier: input.substr(0, 2), name: input.substr(3) };
+    }
 
     protected constructor(dto: Raven.Client.Data.ResourceInfo) {
         this.name = dto.Name;
@@ -75,9 +78,7 @@ abstract class resourceInfo {
 
     abstract asResource(): resource;
 
-    abstract update(resourceInfo: Raven.Client.Data.ResourceInfo): void;
-    
-    updateCurrentInstance(dto: Raven.Client.Data.ResourceInfo) {
+    update(dto: Raven.Client.Data.ResourceInfo): void {
         this.name = dto.Name;
         this.disabled(dto.Disabled);
         this.isAdmin(dto.IsAdmin);
@@ -158,10 +159,6 @@ abstract class resourceInfo {
             }
 
             return currentResource.qualifiedName === this.qualifiedName;
-        });
-
-        this.totalSizeToShow = ko.pureComputed(() => {
-            return this.totalSize() === "-1 Bytes" ? "0 Bytes" : this.totalSize();
         });
     }
 }
