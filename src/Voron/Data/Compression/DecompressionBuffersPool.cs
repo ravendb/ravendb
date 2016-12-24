@@ -94,6 +94,9 @@ namespace Voron.Data.Compression
 
             while (queue.TryDequeue(out buffer))
             {
+                if (buffer.CanReuse == false)
+                    continue;
+
                 try
                 {
                     buffer.EnsureValidPointer(tx);
@@ -251,6 +254,8 @@ namespace Voron.Data.Compression
 
                 TempPage.SetPointer(p);
             }
+
+            public bool CanReuse => _pager.Disposed == false;
 
             public void Dispose()
             {
