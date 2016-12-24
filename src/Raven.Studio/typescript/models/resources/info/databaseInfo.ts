@@ -15,7 +15,7 @@ class databaseInfo extends resourceInfo {
         super(dto);
         this.rejectClients(dto.RejectClients);
         this.indexingStatus(dto.IndexingStatus);
-        this.indexingEnabled(dto.IndexingStatus === ("Running" as Raven.Client.Data.Indexes.IndexRunningStatus));
+        this.indexingEnabled(dto.IndexingStatus === "Running");
         this.documentsCount(dto.DocumentsCount);
         this.indexesCount(dto.IndexesCount);
     }
@@ -34,6 +34,15 @@ class databaseInfo extends resourceInfo {
 
     asResource(): database {
         return new database(this.name, this.isAdmin(), this.disabled(), this.bundles());
+    }
+
+    update(databaseInfo: Raven.Client.Data.DatabaseInfo): void {
+        super.update(databaseInfo);
+        this.rejectClients(databaseInfo.RejectClients);
+        this.indexingStatus(databaseInfo.IndexingStatus);
+        this.indexingEnabled(databaseInfo.IndexingStatus === "Running");
+        this.documentsCount(databaseInfo.DocumentsCount);
+        this.indexesCount(databaseInfo.IndexesCount);
     }
 }
 
