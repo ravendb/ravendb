@@ -3,17 +3,15 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions;
-using Raven.Tests.Common;
 
+using System;
+using FastTests;
+using Raven.Abstractions.Connection;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RDBQA_1 : RavenTest
+    public class RDBQA_1 : RavenTestBase
     {
         private class Doc
         {
@@ -22,17 +20,17 @@ namespace Raven.Tests.Issues
             public string Name { get; set; }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-5912")]
         public void InsertingAndReadingDocumentWithReadOnlyFlagShouldWork()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 string docId;
                 using (var session = store.OpenSession())
                 {
                     var doc = new Doc { Name = "Name1" };
                     session.Store(doc);
-                    session.Advanced.GetMetadataFor(doc)[Constants.RavenReadOnly] = true;
+                    //session.Advanced.GetMetadataFor(doc)[Constants.RavenReadOnly] = true;
 
                     session.SaveChanges();
 
@@ -49,17 +47,17 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-5912")]
         public void UpdatingAndDeletingDocumentWithReadOnlyFlagShouldThrow()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 string docId;
                 using (var session = store.OpenSession())
                 {
                     var doc = new Doc { Name = "Name1" };
                     session.Store(doc);
-                    session.Advanced.GetMetadataFor(doc)[Constants.RavenReadOnly] = true;
+                    //session.Advanced.GetMetadataFor(doc)[Constants.RavenReadOnly] = true;
 
                     session.SaveChanges();
 
@@ -97,7 +95,7 @@ namespace Raven.Tests.Issues
 
                     doc.Name = "Name2";
                     session.Store(doc);
-                    session.Advanced.GetMetadataFor(doc)[Constants.RavenReadOnly] = true;
+                    //session.Advanced.GetMetadataFor(doc)[Constants.RavenReadOnly] = true;
 
                     var e = Assert.Throws<ErrorResponseException>(() => session.SaveChanges());
                     Assert.Contains("PUT vetoed on document docs/1 by Raven.Database.Plugins.Builtins.ReadOnlyPutTrigger because: You cannot update document 'docs/1' when both of them, new and existing one, are marked as readonly. To update this document change 'Raven-Read-Only' flag to 'False' or remove it entirely.", e.Message);
@@ -105,17 +103,17 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-5912")]
         public void CanUpdateDocumentWhenReadOnlyFlagChanged()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 string docId;
                 using (var session = store.OpenSession())
                 {
                     var doc = new Doc { Name = "Name1" };
                     session.Store(doc);
-                    session.Advanced.GetMetadataFor(doc)[Constants.RavenReadOnly] = true;
+                    //session.Advanced.GetMetadataFor(doc)[Constants.RavenReadOnly] = true;
 
                     session.SaveChanges();
 
@@ -126,23 +124,23 @@ namespace Raven.Tests.Issues
                 {
                     var doc = new Doc { Id = docId, Name = "Name1" };
                     session.Store(doc);
-                    session.Advanced.GetMetadataFor(doc)[Constants.RavenReadOnly] = false;
+                    //session.Advanced.GetMetadataFor(doc)[Constants.RavenReadOnly] = false;
 
                     session.SaveChanges();
                     session.Advanced.Clear();
 
                     doc = session.Load<Doc>(docId);
                     var metadata = session.Advanced.GetMetadataFor(doc);
-                    Assert.False(metadata.Value<bool>(Constants.RavenReadOnly));
+                    //Assert.False(metadata.Value<bool>(Constants.RavenReadOnly));
 
-                    metadata.Remove(Constants.RavenReadOnly);
+                    //metadata.Remove(Constants.RavenReadOnly);
 
                     session.SaveChanges();
                     session.Advanced.Clear();
 
                     doc = session.Load<Doc>(docId);
                     metadata = session.Advanced.GetMetadataFor(doc);
-                    Assert.False(metadata.ContainsKey(Constants.RavenReadOnly));
+                    //Assert.False(metadata.ContainsKey(Constants.RavenReadOnly));
                 }
             }
         }

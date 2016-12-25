@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Sparrow.Binary;
@@ -7,7 +8,114 @@ using Sparrow.Json.Parsing;
 
 namespace Sparrow.Json
 {
-    public unsafe struct UnmanagedWriteBuffer : IDisposable
+    public unsafe interface IUnmanagedWriteBuffer : IDisposable
+    {
+        int SizeInBytes { get; }
+        void Write(byte[] buffer, int start, int count);
+        void Write(byte* buffer, int length);
+        void WriteByte(byte data);
+        void EnsureSingleChunk(JsonParserState state);
+        void EnsureSingleChunk(out byte* ptr, out int size);
+    }
+
+    public unsafe struct UnmanagedStreamBuffer : IUnmanagedWriteBuffer
+    {
+        private readonly Stream _stream;
+        private int _sizeInBytes;
+        public int Used;
+        private readonly JsonOperationContext.ManagedPinnedBuffer _buffer;
+        private JsonOperationContext.ReturnBuffer _returnBuffer;
+
+        public int SizeInBytes => _sizeInBytes;
+
+        public UnmanagedStreamBuffer(JsonOperationContext context, Stream stream)
+        {
+            _stream = stream;
+            _sizeInBytes = 0;
+            Used = 0;
+            _returnBuffer = context.GetManagedBuffer(out _buffer);
+        }
+
+        public void Write(byte[] buffer, int start, int count)
+        {
+            fixed (byte* p = buffer)
+            {
+                Write(p + start, count);
+            }
+        }
+
+        public void Write(byte* buffer, int length)
+        {
+            if (length == 0)
+                return;
+
+            var bufferPosition = 0;
+            var lengthLeft = length;
+            do
+            {
+                if (Used == _buffer.Length)
+                {
+                    _stream.Write(_buffer.Buffer.Array, _buffer.Buffer.Offset, Used);
+                    Used = 0;
+                }
+
+                var bytesToWrite = Math.Min(lengthLeft, _buffer.Length - Used);
+
+                Memory.Copy(_buffer.Pointer + Used, buffer, bytesToWrite);
+                _sizeInBytes += bytesToWrite;
+                lengthLeft -= bytesToWrite;
+                bufferPosition += bytesToWrite;
+                buffer += bytesToWrite;
+                Used += bytesToWrite;
+
+            } while (bufferPosition < length);
+        }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteByte(byte data)
+        {
+            if (Used == _buffer.Length)
+            {
+                _stream.Write(_buffer.Buffer.Array, _buffer.Buffer.Offset, Used);
+                Used = 0;
+            }
+            _sizeInBytes++;
+            *(_buffer.Pointer + Used) = data;
+            Used++;
+        }
+
+        public int CopyTo(IntPtr pointer)
+        {
+            throw new NotSupportedException();
+        }
+
+        public int CopyTo(byte* pointer)
+        {
+            throw new NotSupportedException();
+        }
+
+        public void Dispose()
+        {
+            _returnBuffer.Dispose();
+            if (Used == 0)
+                return;
+
+            _stream.Write(_buffer.Buffer.Array, _buffer.Buffer.Offset, Used);
+            Used = 0;
+        }
+
+        public void EnsureSingleChunk(JsonParserState state)
+        {
+            throw new NotSupportedException();
+        }
+        public void EnsureSingleChunk(out byte* ptr, out int size)
+        {
+            throw new NotSupportedException();
+        }
+    }
+
+    public unsafe struct UnmanagedWriteBuffer : IUnmanagedWriteBuffer
     {
         private readonly JsonOperationContext _context;
         private int _sizeInBytes;

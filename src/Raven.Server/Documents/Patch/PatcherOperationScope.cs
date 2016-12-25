@@ -7,7 +7,6 @@ using Jint.Native.Object;
 using Jint.Runtime;
 using Jint.Runtime.Descriptors;
 using Raven.Abstractions.Data;
-using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -126,6 +125,150 @@ namespace Raven.Server.Documents.Patch
                 return key;
 
             return property + "." + key;
+        }
+
+        public void ToBlittableJsonReaderObject(ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer> writer, ObjectInstance jsObject, string propertyKey = null,
+            bool recursiveCall = false)
+        {
+            if (jsObject.Class == "Function")
+            {
+                // getting a Function instance here,
+                // means that we couldn't evaluate it using Jint
+                return;
+            }
+            writer.StartWriteObject();
+            foreach (var property in jsObject.GetOwnProperties())
+            {
+                if (property.Key == Constants.Indexing.Fields.ReduceKeyFieldName || property.Key == Constants.Indexing.Fields.DocumentIdFieldName)
+                    continue;
+
+                var value = property.Value.Value;
+                if (value.HasValue == false)
+                    continue;
+
+                if (value.Value.IsRegExp())
+                    continue;
+
+                var recursive = jsObject == value; 
+                writer.WritePropertyName(property.Key);
+                if (recursiveCall && recursive)
+                    writer.WriteValueNull();
+                else
+                {
+                    ToBlittableJsonReaderValue(writer, value.Value, CreatePropertyKey(property.Key, propertyKey), recursive);
+                }
+            }
+            writer.WriteObjectEnd();
+        }
+
+        private void ToBlittableJsonReaderValue(ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer> writer, JsValue v, string propertyKey, bool recursiveCall)
+        {
+            if (v.IsBoolean())
+            {
+                writer.WriteValue(v.AsBoolean());
+                return;
+            }
+
+            if (v.IsString())
+            {
+                const string RavenDataByteArrayToBase64 = "raven-data:byte[];base64,";
+                var valueAsObject = v.ToObject();
+                var value = valueAsObject?.ToString();
+                if (value != null && value.StartsWith(RavenDataByteArrayToBase64))
+                {
+                    value = value.Remove(0, RavenDataByteArrayToBase64.Length);
+                    var byteArray = Convert.FromBase64String(value);
+                    writer.WriteValue(Encoding.UTF8.GetString(byteArray));
+                    return;
+                }
+                writer.WriteValue(value);
+                return;
+            }
+
+            if (v.IsNumber())
+            {
+                var num = v.AsNumber();
+
+                KeyValuePair<object, JsValue> property;
+                if (_propertiesByValue.TryGetValue(propertyKey, out property))
+                {
+                    var originalValue = property.Key;
+                    if (originalValue is float || originalValue is int)
+                    {
+                        // If the current value is exactly as the original value, we can return the original value before we made the JS conversion, 
+                        // which will convert a Int64 to jsFloat.
+                        var jsValue = property.Value;
+                        if (jsValue.IsNumber() && Math.Abs(num - jsValue.AsNumber()) < double.Epsilon)
+                        {
+                            writer.WriteValue((int)originalValue);
+                            return;
+                        }
+
+                        //We might have change the type of num from Integer to long in the script by design 
+                        //Making sure the number isn't a real float before returning it as integer
+                        if (originalValue is int &&
+                            (Math.Abs(num - Math.Floor(num)) <= double.Epsilon ||
+                             Math.Abs(num - Math.Ceiling(num)) <= double.Epsilon))
+                        {
+                            writer.WriteValue((long)num);
+                            return;
+                        }
+                        writer.WriteValue((float)num);
+                        return; //float
+                    }
+                }
+
+                // If we don't have the type, assume that if the number ending with ".0" it actually an integer.
+                var integer = Math.Truncate(num);
+                if (Math.Abs(num - integer) < double.Epsilon)
+                {
+                    writer.WriteValue((long)integer);
+                    return; 
+                }
+                writer.WriteValue(num);
+                return;
+            }
+            if (v.IsNull() || v.IsUndefined())
+            {
+                writer.WriteValueNull();
+                return;
+            }  
+            if (v.IsArray())
+            {
+                var jsArray = v.AsArray();
+                writer.StartWriteArray();
+                foreach (var property in jsArray.GetOwnProperties())
+                {
+                    if (InheritedProperties.Contains(property.Key))
+                        continue;
+
+                    var jsInstance = property.Value.Value;
+                    if (!jsInstance.HasValue)
+                        continue;
+
+                    ToBlittableJsonReaderValue(writer, jsInstance.Value, propertyKey + "[" + property.Key + "]",
+                        recursiveCall); 
+                }
+                writer.WriteArrayEnd();
+                return;
+            }
+            if (v.IsDate())
+            {
+                writer.WriteValue(v.AsDate().ToDateTime().ToString(Abstractions.Default.DateTimeFormatsToWrite));
+                return;
+            }
+            if (v.IsObject())
+            {
+                ToBlittableJsonReaderObject(writer,v.AsObject(), propertyKey, recursiveCall);
+                return;
+            }
+            if (v.IsRegExp())
+            {
+                writer.WriteValueNull();
+                return;
+            }
+
+            throw new NotSupportedException(v.Type.ToString());
         }
 
         public DynamicJsonValue ToBlittable(ObjectInstance jsObject, string propertyKey = null, bool recursiveCall = false)

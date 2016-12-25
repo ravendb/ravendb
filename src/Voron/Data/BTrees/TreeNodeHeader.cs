@@ -26,9 +26,6 @@ namespace Voron.Data.BTrees
         [FieldOffset(9)]
         public ushort KeySize;
 
-        [FieldOffset(11)]
-        public ushort Version;
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetNodeSize()
         {

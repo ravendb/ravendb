@@ -98,7 +98,9 @@ namespace Raven.Client.Document
             {
                 var response = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 
-                configs = documentStore.Conventions.CreateSerializer().Deserialize<SubscriptionConfig[]>(new RavenJTokenReader(response)).ToList();
+                var resultsArray = response.Value<RavenJArray>("Subscriptions");
+
+                configs = documentStore.Conventions.CreateSerializer().Deserialize<SubscriptionConfig[]>(new RavenJTokenReader(resultsArray)).ToList();
             }
 
             return configs;

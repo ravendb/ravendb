@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="StorageReport.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="DetailedStorageReport.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -10,6 +10,14 @@ using Voron.Data.Tables;
 namespace Voron.Debugging
 {
     public class StorageReport
+    {
+        public DataFileReport DataFile { get; set; }
+        public List<JournalReport> Journals { get; set; }
+        public int CountOfTrees { get; set; }
+        public int CountOfTables { get; set; }
+    }
+
+    public class DetailedStorageReport
     {
         public DataFileReport DataFile { get; set; }
         public List<JournalReport> Journals { get; set; }

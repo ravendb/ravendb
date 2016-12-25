@@ -9,14 +9,14 @@ namespace Raven.NewClient.Client.Json
 {
     public class BlittableJsonWriter : JsonWriter
     {
-        private readonly ManualBlittalbeJsonDocumentBuilder _manualBlittalbeJsonDocumentBuilder;
+        private readonly ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer> _manualBlittalbeJsonDocumentBuilder;
         private bool _first;
         private readonly DocumentInfo _documentInfo;
 
         public BlittableJsonWriter(JsonOperationContext context, DocumentInfo documentInfo = null, 
-            BlittableJsonDocumentBuilder.UsageMode? mode = null, BlittableWriter writer = null)
+            BlittableJsonDocumentBuilder.UsageMode? mode = null, BlittableWriter<UnmanagedWriteBuffer> writer = null)
         {
-            _manualBlittalbeJsonDocumentBuilder = new ManualBlittalbeJsonDocumentBuilder(context, mode, writer);
+            _manualBlittalbeJsonDocumentBuilder = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(context, mode, writer);
             _manualBlittalbeJsonDocumentBuilder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
             _manualBlittalbeJsonDocumentBuilder.StartWriteObjectDocument();
             _documentInfo = documentInfo;

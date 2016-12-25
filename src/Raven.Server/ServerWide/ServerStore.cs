@@ -11,6 +11,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.LowMemoryNotification;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Voron;
 using Sparrow;
@@ -332,28 +333,18 @@ namespace Raven.Server.ServerWide
 
         public void Dispose()
         {
-
             _shutdownNotification.Cancel();
 
-            ContextPool?.Dispose();
-
-            toDispose.Add(_env);
             toDispose.Add(DatabasesLandlord);
+            toDispose.Add(_env);
+            toDispose.Add(ContextPool);
 
-            var errors = new List<Exception>();
+            var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(ServerStore)}.");
+
             foreach (var disposable in toDispose)
-            {
-                try
-                {
-                    disposable?.Dispose();
-                }
-                catch (Exception e)
-                {
-                    errors.Add(e);
-                }
-            }
-            if (errors.Count != 0)
-                throw new AggregateException(errors);
+                exceptionAggregator.Execute(() => disposable?.Dispose());
+
+            exceptionAggregator.ThrowIfNeeded();
         }
 
         private void IdleOperations(object state)

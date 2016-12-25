@@ -17,7 +17,6 @@ namespace Sparrow.Json
     public class JsonOperationContext : IDisposable
     {
         private const int InitialStreamSize = 4096;
-
         private readonly int _initialSize;
         private readonly int _longLivedSize;
         private readonly ArenaMemoryAllocator _arenaAllocator;
@@ -475,9 +474,10 @@ namespace Sparrow.Json
             private readonly JsonOperationContext _context;
             private readonly Stream _stream;
             private readonly ManagedPinnedBuffer _buffer;
-            private readonly UnmanagedJsonParser _parser;
+            public readonly UnmanagedJsonParser _parser;
             private readonly BlittableJsonDocumentBuilder _writer;
             private ReturnBuffer _returnManagedBuffer;
+            private int _bufferOffset;
 
             public MultiDocumentParser(JsonOperationContext context, Stream stream)
             {
@@ -530,10 +530,8 @@ namespace Sparrow.Json
 
             public async Task<BlittableJsonReaderObject> ParseAsync(BlittableJsonDocumentBuilder.UsageMode mode, string debugTag)
             {
-                _writer.Renew(debugTag, mode);
-                _parser.NewDocument();
-                _writer.ReadObjectDocument();
-                _context.CachedProperties.NewDocument();
+                PrepareForNewDocumentParse(mode, debugTag);
+
                 while (true)
                 {
                     if (_parser.BufferOffset == _parser.BufferSize)
@@ -542,10 +540,12 @@ namespace Sparrow.Json
                         if (read == 0)
                             throw new EndOfStreamException("Stream ended without reaching end of json content");
                         _parser.SetBuffer(_buffer, read);
+                        _bufferOffset = 0;
                     }
                     else
                     {
-                        _parser.SetBuffer(_buffer, _parser.BufferOffset, _parser.BufferSize - _parser.BufferOffset);
+                        _bufferOffset += _parser.BufferOffset;
+                        _parser.SetBuffer(_buffer, _bufferOffset, _parser.BufferSize - _parser.BufferOffset);
                     }
                     if (_writer.Read())
                         break;
@@ -556,9 +556,7 @@ namespace Sparrow.Json
 
             public BlittableJsonReaderObject Parse(BlittableJsonDocumentBuilder.UsageMode mode, string debugTag)
             {
-                _writer.Renew(debugTag, mode);
-                _writer.ReadObjectDocument();
-                _context.CachedProperties.NewDocument();
+                PrepareForNewDocumentParse(mode, debugTag);
                 while (true)
                 {
                     if (_parser.BufferOffset == _parser.BufferSize)
@@ -567,16 +565,26 @@ namespace Sparrow.Json
                         if (read == 0)
                             throw new EndOfStreamException("Stream ended without reaching end of json content.");
                         _parser.SetBuffer(_buffer, read);
+                        _bufferOffset = 0;
                     }
                     else
                     {
-                        _parser.SetBuffer(_buffer, _parser.BufferOffset, _parser.BufferSize - _parser.BufferOffset);
+                        _bufferOffset += _parser.BufferOffset;
+                        _parser.SetBuffer(_buffer, _bufferOffset, _parser.BufferSize - _parser.BufferOffset);
                     }
                     if (_writer.Read())
                         break;
                 }
                 _writer.FinalizeDocument();
                 return _writer.CreateReader();
+            }
+
+            private void PrepareForNewDocumentParse(BlittableJsonDocumentBuilder.UsageMode mode, string debugTag)
+            {
+                _parser.NewDocument();
+                _writer.Renew(debugTag, mode);
+                _writer.ReadObjectDocument();
+                _context.CachedProperties.NewDocument();
             }
 
             public void Dispose()

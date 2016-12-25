@@ -10,6 +10,7 @@ using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
+using Voron;
 
 namespace Raven.Server.Documents.Indexes.Workers
 {
@@ -190,6 +191,9 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         private bool ShouldReleaseTransactionBecauseFlushIsWaiting(IndexingStatsScope stats)
         {
+            if (GlobalFlushingBehavior.GlobalFlusher.Value.HasLowNumberOfFlushingResources == false)
+                return false;
+
             var now = DateTime.UtcNow;
             if ((now - _lastCheckedFlushLock).TotalSeconds < 1)
                 return false;
@@ -201,7 +205,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             {
                 if (gotLock == false)
                 {
-                    stats.RecordMapCompletedReason("Environment flush was waiting for us");
+                    stats.RecordMapCompletedReason("Environment flush was waiting for us and global flusher was about to use all free flushing resources");
                     return true;
                 }
             }

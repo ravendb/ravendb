@@ -4,7 +4,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using Voron.Impl.Paging;
 
 namespace Voron.Impl.Scratch
@@ -41,7 +40,7 @@ namespace Voron.Impl.Scratch
         {
             _env = env;
             _options = env.Options;
-            _current = NextFile(_options.InitialLogFileSize, null);
+            _current = NextFile(_options.InitialLogFileSize, null, null);
             UpdateCacheForPagerStatesOfAllScratches();
         }
 
@@ -85,7 +84,7 @@ namespace Voron.Impl.Scratch
             return _scratchBuffers[scratchNumber].File.NumberOfAllocations;
         }
 
-        private ScratchBufferItem NextFile(long minSize, long? requestedSize)
+        private ScratchBufferItem NextFile(long minSize, long? requestedSize, LowLevelTransaction tx)
         {
             if (_recycleArea.Count > 0)
             {
@@ -94,7 +93,7 @@ namespace Voron.Impl.Scratch
 
                 if (recycled.File.Size <= Math.Max(minSize, requestedSize ?? 0))
                 {
-                    recycled.File.Reset();
+                    recycled.File.Reset(tx);
                     _scratchBuffers.TryAdd(recycled.Number, recycled);
                     return recycled;
                 }
@@ -114,7 +113,7 @@ namespace Voron.Impl.Scratch
                 {
                     // this can fail because of disk space issue, let us just ignore it
                     // we'll allocate the minimum amount in a bit anway
-                    return NextFile(minSize, null);
+                    return NextFile(minSize, null, tx);
                 }
             }
             else
@@ -159,7 +158,7 @@ namespace Voron.Impl.Scratch
             var minSize = numberOfPages * _options.PageSize;
             var requestedSize = Math.Max(minSize, Math.Min(_current.File.Size * 2, _options.MaxScratchBufferSize));
             // We need to ensure that _current stays constant through the codepath until return. 
-            current = NextFile(minSize, requestedSize);
+            current = NextFile(minSize, requestedSize, tx);
 
             try
             {
@@ -197,12 +196,12 @@ namespace Voron.Impl.Scratch
             {
                 if (scratch.File.Size <= _options.MaxScratchBufferSize)
                 {
-                    scratch.File.Reset();
+                    scratch.File.Reset(tx);
                     return;
                 }
 
                 // this is the current one, but the size is too big, let us trim it
-                var newCurrent = NextFile(_options.InitialLogFileSize, _options.MaxScratchBufferSize);
+                var newCurrent = NextFile(_options.InitialLogFileSize, _options.MaxScratchBufferSize, tx);
                 newCurrent.File.PagerState.AddRef();
                 _current = newCurrent;
             }
@@ -256,12 +255,12 @@ namespace Voron.Impl.Scratch
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public virtual int CopyPage(AbstractPager dest, IPagerBatchWrites destPagerBatchWrites, int scratchNumber, long p, PagerState pagerState)
+        public virtual int CopyPage(IPagerBatchWrites destPagerBatchWrites, int scratchNumber, long p, PagerState pagerState)
         {
             var item = GetScratchBufferFile(scratchNumber);
 
             ScratchBufferFile bufferFile = item.File;
-            return bufferFile.CopyPage(dest, destPagerBatchWrites, p, pagerState);
+            return bufferFile.CopyPage(destPagerBatchWrites, p, pagerState);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -306,13 +305,62 @@ namespace Voron.Impl.Scratch
 
         public void Cleanup()
         {
-            if (_recycleArea.Count == 0)
+            if (_recycleArea.Count == 0 && _scratchBuffers.Count == 1)
                 return;
+
+            long txIdAllowingToReleaseOldScratches = -1;
+
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var scratchBufferItem in _scratchBuffers)
+            {
+                if (scratchBufferItem.Value == _current)
+                    continue;
+
+                txIdAllowingToReleaseOldScratches = Math.Max(txIdAllowingToReleaseOldScratches,
+                    scratchBufferItem.Value.File.TxIdAfterWhichLatestFreePagesBecomeAvailable);
+            }
+            
+            while (_env.CurrentReadTransactionId <= txIdAllowingToReleaseOldScratches)
+            {
+                // we've just flushed and had no more writes after that, let us bump id of next read transactions to ensure
+                // that nobody will attempt to read old scratches so we will be able to release more files
+
+                try
+                {
+                    using (var tx = _env.NewLowLevelTransaction(new TransactionPersistentContext(),
+                            TransactionFlags.ReadWrite, timeout: TimeSpan.FromMilliseconds(500)))
+                    {
+                        tx.ModifyPage(0);
+                        tx.Commit();
+                    }
+                }
+                catch (TimeoutException)
+                {
+                    break;
+                }
+            }
 
             // we need to ensure that no access to _recycleArea will take place in the same time
             // and only methods that access this are used within write transaction
             using (_env.WriteTransaction())
             {
+                //check if we can put more files into recycle area
+
+                foreach (var scratchBufferItem in _scratchBuffers)
+                {
+                    var scratchItem = scratchBufferItem.Value;
+                    if (scratchItem == _current)
+                        continue;
+
+                    if (scratchItem.File.HasActivelyUsedBytes(_env.PossibleOldestReadTransaction))
+                        continue;
+
+                    RecyleScratchFile(scratchItem);
+                }
+
+                if (_recycleArea.Count == 0)
+                    return;
+
                 while (_recycleArea.First != null)
                 {
                     _recycleArea.First.Value.Item2.File.Dispose();

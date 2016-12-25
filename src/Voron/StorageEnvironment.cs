@@ -60,6 +60,7 @@ namespace Voron
         internal ExceptionDispatchInfo CatastrophicFailure;
         private readonly WriteAheadJournal _journal;
         private readonly object _txWriter = new object();
+        private readonly AsyncManualResetEvent _writeTransactionRunning = new AsyncManualResetEvent();
         internal readonly ThreadHoppingReaderWriterLock FlushInProgressLock = new ThreadHoppingReaderWriterLock();
         private readonly ReaderWriterLockSlim _txCommit = new ReaderWriterLockSlim();
 
@@ -180,7 +181,8 @@ namespace Voron
                 result = Syscall.unlink(filename);
                 if (result != 0)
                 {
-                    _log.Info($"Failed to delete test file at \'{filename}\'. (rc = {result}).");
+                    if (_log.IsInfoEnabled)
+                        _log.Info($"Failed to delete test file at \'{filename}\'. (rc = {result}).");
                 }
             }
 
@@ -201,7 +203,17 @@ namespace Voron
 
                 try
                 {
-                    await Task.Delay(Options.IdleFlushTimeout, cancellationToken);
+                    if (await _writeTransactionRunning.WaitAsync(TimeSpan.FromMilliseconds(Options.IdleFlushTimeout)) == false)
+                    {
+                        if (Volatile.Read(ref SizeOfUnflushedTransactionsInJournalFile) != 0)
+                            GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
+                        else if (Journal.Applicator.TotalWrittenButUnsyncedBytes != 0)
+                            QueueForSyncDataFile();
+                    }
+                    else
+                    {
+                        await Task.Delay(1000, cancellationToken);
+                    }
                 }
                 catch (ObjectDisposedException)
                 {
@@ -211,11 +223,6 @@ namespace Voron
                 {
                     return;
                 }
-                if (Volatile.Read(ref SizeOfUnflushedTransactionsInJournalFile) != 0)
-                    GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
-                else if (Journal.Applicator.TotalWrittenButUnsyncedBytes != 0)
-                    QueueForSyncDataFile();
-
             }
         }
 
@@ -422,10 +429,10 @@ namespace Voron
             return writeTransaction;
         }
 
-        public Transaction WriteTransaction(ByteStringContext context = null)
+        public Transaction WriteTransaction(ByteStringContext context = null, TimeSpan? timeout = null)
         {
             var transactionPersistentContext = new TransactionPersistentContext();
-            var newLowLevelTransaction = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite, context, null);
+            var newLowLevelTransaction = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite, context, timeout);
             var writeTransaction = new Transaction(newLowLevelTransaction);
             return writeTransaction;
         }
@@ -450,6 +457,9 @@ namespace Voron
                         GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
                         ThrowOnTimeoutWaitingForWriteTxLock(wait);
                     }
+
+                    _writeTransactionRunning.SetByAsyncCompletion();
+
                     if (_endOfDiskSpace != null)
                     {
                         if (_endOfDiskSpace.CanContinueWriting)
@@ -565,20 +575,6 @@ namespace Voron
                 
                 State = tx.State;
             }
-
-            if (tx.FlushedToJournal == false)
-                return;
-
-            var totalPages = 0;
-            // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var page in tx.GetTransactionPages())
-            {
-                totalPages += page.NumberOfPages;
-            }
-
-            Interlocked.Add(ref SizeOfUnflushedTransactionsInJournalFile, totalPages);
-            if (tx.IsLazyTransaction == false)
-                GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
         }
 
         internal void TransactionCompleted(LowLevelTransaction tx)
@@ -589,12 +585,79 @@ namespace Voron
             if (tx.Flags != (TransactionFlags.ReadWrite))
                 return;
 
+            _writeTransactionRunning.Reset();
+
+            if (tx.FlushedToJournal)
+            {
+                var totalPages = 0;
+                // ReSharper disable once LoopCanBeConvertedToQuery
+                foreach (var page in tx.GetTransactionPages())
+                {
+                    totalPages += page.NumberOfPages;
+                }
+
+                Interlocked.Add(ref SizeOfUnflushedTransactionsInJournalFile, totalPages);
+
+                if (tx.IsLazyTransaction == false)
+                    GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
+            }
+
             Monitor.Exit(_txWriter);
+            
             if (tx.FlushInProgressLockTaken)
                 FlushInProgressLock.ExitReadLock();
         }
 
-        public unsafe StorageReport GenerateReport(Transaction tx, bool computeExactSizes = false)
+        public StorageReport GenerateReport(Transaction tx)
+        {
+            var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, NextPageNumber - 1); // async apply to data file task
+            var numberOfFreePages = _freeSpaceHandling.AllPages(tx.LowLevelTransaction).Count;
+
+            var countOfTrees = 0;
+            var countOfTables = 0;
+            using (var rootIterator = tx.LowLevelTransaction.RootObjects.Iterate(false))
+            {
+                if (rootIterator.Seek(Slices.BeforeAllKeys))
+                {
+                    do
+                    {
+                        var currentKey = rootIterator.CurrentKey.Clone(tx.Allocator);
+                        var type = tx.GetRootObjectType(currentKey);
+                        switch (type)
+                        {
+                            case RootObjectType.VariableSizeTree:
+                                countOfTrees++;
+                                break;
+                            case RootObjectType.EmbeddedFixedSizeTree:
+                                break;
+                            case RootObjectType.FixedSizeTree:
+                                countOfTrees++;
+                                break;
+                            case RootObjectType.Table:
+                                countOfTables++;
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
+                    }
+                    while (rootIterator.MoveNext());
+                }
+            }
+
+            var generator = new StorageReportGenerator(tx.LowLevelTransaction);
+
+            return generator.Generate(new ReportInput
+            {
+                NumberOfAllocatedPages = numberOfAllocatedPages,
+                NumberOfFreePages = numberOfFreePages,
+                NextPageNumber = NextPageNumber,
+                CountOfTrees = countOfTrees,
+                CountOfTables = countOfTables,
+                Journals = Journal.Files.ToList()
+            });
+        }
+
+        public unsafe DetailedStorageReport GenerateDetailedReport(Transaction tx, bool calculateExactSizes = false)
         {
             var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, NextPageNumber - 1); // async apply to data file task
             var numberOfFreePages = _freeSpaceHandling.AllPages(tx.LowLevelTransaction).Count;
@@ -640,7 +703,7 @@ namespace Voron
 
             var generator = new StorageReportGenerator(tx.LowLevelTransaction);
 
-            return generator.Generate(new ReportInput
+            return generator.Generate(new DetailedReportInput
             {
                 NumberOfAllocatedPages = numberOfAllocatedPages,
                 NumberOfFreePages = numberOfFreePages,
@@ -649,7 +712,7 @@ namespace Voron
                 Trees = trees,
                 FixedSizeTrees = fixedSizeTrees,
                 Tables = tables,
-                IsLightReport = !computeExactSizes
+                CalculateExactSizes = calculateExactSizes
             });
         }
 
@@ -834,6 +897,7 @@ namespace Voron
         {
             Journal.Cleanup();
             ScratchBufferPool.Cleanup();
+            DecompressionBuffers.Cleanup();
         }
 
         public override string ToString()

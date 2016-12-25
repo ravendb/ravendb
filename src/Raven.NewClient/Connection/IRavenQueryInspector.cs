@@ -17,7 +17,7 @@ namespace Raven.NewClient.Client.Connection
     /// <summary>
     /// Provide access to the underlying <see cref="IDocumentQuery{T}"/>
     /// </summary>
-    internal interface IRavenQueryInspector
+    public interface IRavenQueryInspector
     {
         /// <summary>
         /// Get the name of the index being queried

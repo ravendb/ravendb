@@ -9,9 +9,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Threading;
-using Voron.Data;
 using Voron.Impl.Paging;
+#if VALIDATE
+using System.Diagnostics;
+#endif
 
 namespace Voron.Impl.Scratch
 {
@@ -45,10 +46,38 @@ namespace Voron.Impl.Scratch
             _pageSize = scratchPager.PageSize;
         }
 
-        public void Reset()
+        public void Reset(LowLevelTransaction tx)
         {
             _allocatedPages.Clear();
+
+#if VALIDATE
+            foreach (var free in _freePagesBySizeAvailableImmediately)
+            {
+                foreach (var freeAndAvailablePageNumber in free.Value)
+                {
+                    byte* freeAndAvailablePagePointer = _scratchPager.AcquirePagePointer(tx, freeAndAvailablePageNumber, PagerState);
+                    ulong freeAndAvailablePageSize = (ulong)free.Key * (ulong)_scratchPager.PageSize;
+                    // This has to be forced, as the list of available pages should be protected by default, but this
+                    // is a policy we implement inside the ScratchBufferFile only.
+                    _scratchPager.UnprotectPageRange(freeAndAvailablePagePointer, freeAndAvailablePageSize, true);
+                }
+            }            
+#endif
             _freePagesBySizeAvailableImmediately.Clear();
+
+#if VALIDATE
+            foreach (var free in _freePagesBySize)
+            {
+                foreach (var val in free.Value)
+                {
+                    byte* freePageBySizePointer = _scratchPager.AcquirePagePointer(tx, val.Page, PagerState);
+                    ulong freePageBySizeSize = (ulong)free.Key * (ulong)_scratchPager.PageSize;
+                    // This has to be forced, as the list of available pages should be protected by default, but this
+                    // is a policy we implement inside the ScratchBufferFile only.
+                    _scratchPager.UnprotectPageRange(freePageBySizePointer, freePageBySizeSize, true);
+                }
+            }
+#endif
             _freePagesBySize.Clear();
             _txIdAfterWhichLatestFreePagesBecomeAvailable = -1;
             _lastUsedPage = 0;
@@ -66,6 +95,8 @@ namespace Voron.Impl.Scratch
         public long NumberOfAllocatedPages => _scratchPager.NumberOfAllocatedPages;
 
         public long AllocatedPagesCount => _allocatedPagesCount;
+
+        public long TxIdAfterWhichLatestFreePagesBecomeAvailable => _txIdAfterWhichLatestFreePagesBecomeAvailable;
 
         public long SizeAfterAllocation(long sizeToAllocate)
         {
@@ -99,7 +130,6 @@ namespace Voron.Impl.Scratch
 
 #if VALIDATE
                 byte* freeAndAvailablePagePointer = _scratchPager.AcquirePagePointer(tx, freeAndAvailablePageNumber, PagerState);
-                var freeAndAvailablePage = new Page(freeAndAvailablePagePointer);
                 ulong freeAndAvailablePageSize = (ulong)size * (ulong)_scratchPager.PageSize;
                 // This has to be forced, as the list of available pages should be protected by default, but this
                 // is a policy we implement inside the ScratchBufferFile only.
@@ -127,7 +157,6 @@ namespace Voron.Impl.Scratch
 
 #if VALIDATE
             byte* freePageBySizePointer = _scratchPager.AcquirePagePointer(tx, val.Page, PagerState);
-            var freePageBySize = new Page(freePageBySizePointer);
             ulong freePageBySizeSize = (ulong)size * (ulong)_scratchPager.PageSize;
             // This has to be forced, as the list of available pages should be protected by default, but this
             // is a policy we implement inside the ScratchBufferFile only.
@@ -221,9 +250,9 @@ namespace Voron.Impl.Scratch
             }
         }
 
-        public int CopyPage(AbstractPager dest, IPagerBatchWrites destPagerBatchWrites, long p, PagerState pagerState)
+        public int CopyPage(IPagerBatchWrites destPagerBatchWrites, long p, PagerState pagerState)
         {
-            return _scratchPager.CopyPage(dest, destPagerBatchWrites, p, pagerState);
+            return _scratchPager.CopyPage(destPagerBatchWrites, p, pagerState);
         }
 
         public Page ReadPage(LowLevelTransaction tx, long p, PagerState pagerState = null)

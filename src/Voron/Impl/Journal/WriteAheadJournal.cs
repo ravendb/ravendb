@@ -26,6 +26,8 @@ namespace Voron.Impl.Journal
 {
     public unsafe class WriteAheadJournal : IDisposable
     {
+        private static readonly TimeSpan Infinity = TimeSpan.FromMilliseconds(-1);
+
         private readonly StorageEnvironment _env;
         private readonly AbstractPager _dataPager;
 
@@ -559,10 +561,16 @@ namespace Voron.Impl.Journal
                     try
                     {
                         var transactionPersistentContext = new TransactionPersistentContext(true);
-                        using (var txw = _waj._env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
-                        {
-                            txw.JournalApplicatorTransaction();
 
+                        TimeSpan? timeout;
+
+                        if (pagesToWrite.Count < _waj._env.Options.MaxNumberOfPagesInJournalBeforeFlush)
+                            timeout = null;
+                        else
+                            timeout = Infinity;
+
+                        using (var txw = _waj._env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite, timeout: timeout))
+                        {
                             _lastFlushedJournalId = lastProcessedJournal;
                             _lastFlushedTransactionId = lastFlushedTransactionId;
                             _lastFlushedJournal = _waj._files.First(x => x.Number == lastProcessedJournal);
@@ -583,15 +591,12 @@ namespace Voron.Impl.Journal
 
                             FreeScratchPages(unusedJournals, txw);
 
-                            if (txw != null)
-                            {
-                                // by forcing a commit, we free the read transaction that held the lazy tx buffer (if existed)
-                                // and make those pages available in the scratch files
-                                txw.IsLazyTransaction = false;
-                                _waj.HasLazyTransactions = false;
+                            // by forcing a commit, we free the read transaction that held the lazy tx buffer (if existed)
+                            // and make those pages available in the scratch files
+                            txw.IsLazyTransaction = false;
+                            _waj.HasLazyTransactions = false;
 
-                                txw.Commit();
-                            }
+                            txw.Commit();
                         }
                     }
                     finally
@@ -802,7 +807,7 @@ namespace Voron.Impl.Journal
                     long written = 0;
                     using (var meter = _waj._dataPager.Options.IoMetrics.MeterIoRate(_waj._dataPager.FileName, IoMetrics.MeterType.DataFlush, 0))
                     {
-                        var batchWrites = _waj._dataPager.BatchWrites;
+                        using(var batchWrites = _waj._dataPager.BatchWriter())
                         {
                             foreach (var pagePosition in pagesToWrite.Values)
                             {
@@ -817,7 +822,6 @@ namespace Voron.Impl.Journal
                                 }
 
                                 var numberOfPages = scratchBufferPool.CopyPage(
-                                    _waj._dataPager,
                                     batchWrites,
                                     scratchNumber,
                                     pagePosition.ScratchPos,
@@ -826,7 +830,6 @@ namespace Voron.Impl.Journal
                                 written += numberOfPages * _waj._dataPager.PageSize;
                             }
                         }
-                        batchWrites.Flush();
 
                         meter.IncrementSize(written);
 
@@ -1090,26 +1093,28 @@ namespace Voron.Impl.Journal
 
             foreach (var txPage in txPages)
             {
-                var scratchPage = tx.Environment.ScratchBufferPool.AcquirePagePointer(tx, txPage.ScratchFileNumber,
-                    txPage.PositionInScratchBuffer);
+                var scratchPage = tx.Environment.ScratchBufferPool.AcquirePagePointer(tx, txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
+
                 pagesInfo[pageSequencialNumber].PageNumber = ((PageHeader*)scratchPage)->PageNumber;
+
                 *(long*)write = ((PageHeader*)scratchPage)->PageNumber;
                 write += sizeof(long);
+
                 _diffPage.Output = write;
-                _diffPage.Modified = scratchPage;
-                _diffPage.Size = txPage.NumberOfPages * pageSize;
+
+                int diffPageSize = txPage.NumberOfPages * pageSize;
+
                 if (txPage.PreviousVersion != null)
                 {
-                    _diffPage.Original = txPage.PreviousVersion.Value.Pointer;
-                    _diffPage.ComputeDiff();
+                    _diffPage.ComputeDiff(txPage.PreviousVersion.Value.Pointer, scratchPage, diffPageSize);
                 }
                 else
                 {
-                    _diffPage.Original = null;
-                    _diffPage.ComputeNew();
+                    _diffPage.ComputeNew(scratchPage, diffPageSize);
                 }
+
                 write += _diffPage.OutputSize;
-                pagesInfo[pageSequencialNumber].Size = _diffPage.OutputSize == 0 ? 0 : _diffPage.Size;
+                pagesInfo[pageSequencialNumber].Size = _diffPage.OutputSize == 0 ? 0 : diffPageSize;
                 pagesInfo[pageSequencialNumber].DiffSize = _diffPage.IsDiff ? _diffPage.OutputSize : 0;
 
 

@@ -60,6 +60,11 @@ gulp.task('generate-typings', function (cb) {
     var debugPath = '../../tools/TypingsGenerator/bin/Debug/netcoreapp1.1/TypingsGenerator.dll';
     var releasePath = '../../tools/TypingsGenerator/bin/Release/netcoreapp1.1/TypingsGenerator.dll';
 
+    if (fileExists(releasePath) && fileExists(debugPath)) {
+        cb("Ambiguous TypingsGenerator lookup. Delete compiled TypingsGenerator.dll from either release or debug directory.");
+        return;
+    }
+
     if (fileExists(releasePath)) {
         exec('dotnet ' + releasePath, function (err, stdout, stderr) {
             console.log(stdout);
@@ -94,6 +99,16 @@ gulp.task('compile:test', ['generate-ts'], function() {
 gulp.task('compile:app', ['generate-ts'], function () {
     return gulp.src([PATHS.tsSource])
         .pipe(plugins.naturalSort())
+        .pipe(plugins.sourcemaps.init())
+        .pipe(tsProject())
+        .js
+        .pipe(plugins.sourcemaps.write("."))
+        .pipe(gulp.dest(PATHS.tsOutput));
+});
+
+gulp.task('compile:app-changed', [], function () {
+    return gulp.src([PATHS.tsSource])
+        .pipe(plugins.changed(PATHS.tsOutput, { extension: '.js' }))
         .pipe(plugins.sourcemaps.init())
         .pipe(tsProject())
         .js
@@ -239,7 +254,7 @@ gulp.task('watch:test', ['test'], function () {
 gulp.task('compile', ['less', 'compile:app'], function() { });
 
 gulp.task('watch', ['compile'], function () {
-    gulp.watch(PATHS.tsSource, ['compile:app']);
+    gulp.watch(PATHS.tsSource, ['compile:app-changed']);
     gulp.watch(PATHS.test.tsSource, ['compile:test']);
     gulp.watch(PATHS.lessSource, ['less']);
 });

@@ -44,5 +44,11 @@ namespace Raven.NewClient.Client.Json
         public static readonly Func<BlittableJsonReaderObject, HiLoResult> HiLoResult = GenerateJsonDeserializationRoutine<HiLoResult>();
 
         public static readonly Func<BlittableJsonReaderObject, GetTcpInfoResult> GetTcpInfoResult = GenerateJsonDeserializationRoutine<GetTcpInfoResult>();
+
+        public static readonly Func<BlittableJsonReaderObject, SubscriptionConnectionServerMessage> SubscriptionNextObjectResult = GenerateJsonDeserializationRoutine<SubscriptionConnectionServerMessage>();
+
+        public static readonly Func<BlittableJsonReaderObject, CreateSubscriptionResult> CreateSubscriptionResult = GenerateJsonDeserializationRoutine<CreateSubscriptionResult>();
+
+        public static readonly Func<BlittableJsonReaderObject, GetSubscriptionsResult> GetSubscriptionsResult = GenerateJsonDeserializationRoutine<GetSubscriptionsResult>();
     }
 }

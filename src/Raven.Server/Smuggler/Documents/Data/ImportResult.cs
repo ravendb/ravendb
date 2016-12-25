@@ -14,6 +14,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 
         public readonly List<string> Warnings = new List<string>();
         public string Message { get; set; }
+        public string Exception { get; set; }
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue(GetType())
@@ -24,7 +25,8 @@ namespace Raven.Server.Smuggler.Documents.Data
                 [nameof(TransformersCount)] = TransformersCount,
                 [nameof(IdentitiesCount)] = IdentitiesCount,
                 [nameof(Warnings)] = Warnings,
-                [nameof(Message)] = Message
+                [nameof(Message)] = Message,
+                [nameof(Exception)] = Exception
             };
         }
     }

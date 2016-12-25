@@ -26,7 +26,7 @@ namespace FastTests.Voron.Storage
         {
             using (var tx = Env.ReadTransaction())
             {
-                var report = Env.GenerateReport(tx);
+                var report = Env.GenerateDetailedReport(tx);
 
                 Assert.Equal(report.DataFile.AllocatedSpaceInBytes, report.DataFile.UsedSpaceInBytes + report.DataFile.FreeSpaceInBytes);
             }
@@ -60,7 +60,7 @@ namespace FastTests.Voron.Storage
 
             using (var tx = Env.ReadTransaction())
             {
-                var report = Env.GenerateReport(tx, computeExactSizes: true);
+                var report = Env.GenerateDetailedReport(tx, calculateExactSizes: true);
 
                 Assert.Equal(report.DataFile.AllocatedSpaceInBytes, report.DataFile.UsedSpaceInBytes + report.DataFile.FreeSpaceInBytes);
                 Assert.Equal(numberOfTrees + 1/*$Database-Metadata*/, report.Trees.Count);
@@ -124,7 +124,7 @@ namespace FastTests.Voron.Storage
 
             using (var tx = Env.ReadTransaction())
             {
-                var report = Env.GenerateReport(tx, computeExactSizes: true);
+                var report = Env.GenerateDetailedReport(tx, calculateExactSizes: true);
 
                 Assert.Equal(report.DataFile.AllocatedSpaceInBytes, report.DataFile.UsedSpaceInBytes + report.DataFile.FreeSpaceInBytes);
                 Assert.Equal(numberOfTrees + 1/*$Database-Metadata*/, report.Trees.Count);
@@ -165,7 +165,7 @@ namespace FastTests.Voron.Storage
 
             using (var tx = Env.ReadTransaction())
             {
-                var report = Env.GenerateReport(tx);
+                var report = Env.GenerateDetailedReport(tx);
 
                 Assert.NotEmpty(report.Journals);
 
@@ -208,7 +208,7 @@ namespace FastTests.Voron.Storage
 
             using (var tx = Env.ReadTransaction())
             {
-                var report = Env.GenerateReport(tx, computeExactSizes: true);
+                var report = Env.GenerateDetailedReport(tx, calculateExactSizes: true);
 
                 Assert.Equal(report.DataFile.AllocatedSpaceInBytes, report.DataFile.UsedSpaceInBytes + report.DataFile.FreeSpaceInBytes);
                 Assert.Equal(1 + 1/*$Database-Metadata*/, report.Trees.Count);
@@ -248,7 +248,7 @@ namespace FastTests.Voron.Storage
 
             using (var tx = Env.ReadTransaction())
             {
-                var report = Env.GenerateReport(tx, computeExactSizes: true);
+                var report = Env.GenerateDetailedReport(tx, calculateExactSizes: true);
 
                 Assert.Equal(keys.Length, report.Trees[1].NumberOfEntries);
 
@@ -273,7 +273,7 @@ namespace FastTests.Voron.Storage
 
             using (var tx = Env.ReadTransaction())
             {
-                var report = Env.GenerateReport(tx, computeExactSizes: true);
+                var report = Env.GenerateDetailedReport(tx, calculateExactSizes: true);
 
                 Assert.True(report.Trees[1].MultiValues.PageCount > 0);
                 Assert.Equal(report.Trees[1].MultiValues.PageCount, 
@@ -294,7 +294,7 @@ namespace FastTests.Voron.Storage
 
             using (var tx = Env.ReadTransaction())
             {
-                var report = Env.GenerateReport(tx, computeExactSizes: true);
+                var report = Env.GenerateDetailedReport(tx, calculateExactSizes: true);
 
                 Assert.True(report.Trees[1].MultiValues.PageCount == 0);
                 Assert.Equal(report.Trees[1].MultiValues.PageCount, 

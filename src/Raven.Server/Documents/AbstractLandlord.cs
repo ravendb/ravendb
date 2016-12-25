@@ -91,6 +91,8 @@ namespace Raven.Server.Documents
                 if (Logger.IsInfoEnabled)
                     Logger.Info("Failed to dispose resource semaphore", e);
             }
+
+            exceptionAggregator.ThrowIfNeeded();
         }
 
         private void UnloadResource(string resourceName)

@@ -10,10 +10,11 @@ using static Sparrow.Json.BlittableJsonDocumentBuilder;
 
 namespace Sparrow.Json
 {
-    public class BlittableWriter :IDisposable
+    public class BlittableWriter<TWriter> :IDisposable
+        where TWriter : struct,IUnmanagedWriteBuffer
     {
         private readonly JsonOperationContext _context;
-        private UnmanagedWriteBuffer _unmanagedWriteBuffer;
+        private TWriter _unmanagedWriteBuffer;
         private AllocatedMemoryData _compressionBuffer;
         private int _position;
 
@@ -28,26 +29,16 @@ namespace Sparrow.Json
             byte* ptr;
             int size;
             _unmanagedWriteBuffer.EnsureSingleChunk(out ptr, out size);
-            var reader = new BlittableJsonReaderObject(ptr, size, _context, _unmanagedWriteBuffer);
-            _unmanagedWriteBuffer = default(UnmanagedWriteBuffer);
+            var reader = new BlittableJsonReaderObject(ptr, size, _context, (UnmanagedWriteBuffer)(object)_unmanagedWriteBuffer);
+            _unmanagedWriteBuffer = default(TWriter);
             return reader;
         }
 
-        public unsafe void CopyTo(IntPtr ptr)
-        {
-            _unmanagedWriteBuffer.CopyTo((byte*)ptr);
-        }
 
-        public unsafe void CopyTo(MemoryStream stream)
+        public BlittableWriter(JsonOperationContext context, TWriter writer)
         {
-            stream.SetLength(stream.Position + SizeInBytes);
-            ArraySegment<byte> bytes;
-            stream.TryGetBuffer(out bytes);
-            fixed (byte* ptr = bytes.Array)
-            {
-                _unmanagedWriteBuffer.CopyTo(ptr + stream.Position);
-                stream.Position += SizeInBytes;
-            }
+            _context = context;
+            _unmanagedWriteBuffer = writer;
         }
 
         public BlittableWriter(JsonOperationContext context)
@@ -126,7 +117,7 @@ namespace Sparrow.Json
 
         public void Renew()
         {
-            _unmanagedWriteBuffer = _context.GetStream();
+            _unmanagedWriteBuffer = (TWriter)(object)_context.GetStream();
             _position = 0;
         }
 

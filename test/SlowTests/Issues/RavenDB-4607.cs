@@ -3,19 +3,20 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using Raven.Tests.Common;
+
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_4607 : RavenTest
+    public class RavenDB_4607 : RavenTestBase
     {
-        public class Company
+        private class Company
         {
             public Address Address { get; set; }
         }
 
-        public class Address
+        private class Address
         {
             public object Line1 { get; set; }
         }
@@ -23,7 +24,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void can_change_object_to_double()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -40,7 +41,7 @@ namespace Raven.Tests.Issues
                     var company = session.Load<Address>("address");
                     company.Line1 = 1.5d;
 
-                    Assert.DoesNotThrow(() => session.SaveChanges());
+                    session.SaveChanges(); // does not throw
                 }
             }
         }
@@ -48,7 +49,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void can_change_object_to_decimal()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -65,7 +66,7 @@ namespace Raven.Tests.Issues
                     var company = session.Load<Address>("address");
                     company.Line1 = 1.5m;
 
-                    Assert.DoesNotThrow(() => session.SaveChanges());
+                    session.SaveChanges(); // does not throw
                 }
             }
         }
@@ -73,7 +74,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void can_change_nested_object_to_double()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -93,7 +94,7 @@ namespace Raven.Tests.Issues
                     var company = session.Load<Company>("company");
                     company.Address.Line1 = 1.5d;
 
-                    Assert.DoesNotThrow(() => session.SaveChanges());
+                    session.SaveChanges(); // does not throw
                 }
             }
         }
@@ -101,7 +102,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void can_change_nested_object_to_decimal()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -121,7 +122,7 @@ namespace Raven.Tests.Issues
                     var company = session.Load<Company>("company");
                     company.Address.Line1 = 3.5m;
 
-                    Assert.DoesNotThrow(() => session.SaveChanges());
+                    session.SaveChanges(); // does not throw
                 }
             }
         }

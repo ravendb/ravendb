@@ -8,6 +8,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.DependencyInjection;
 using Raven.Abstractions.Data;
 using Raven.Client.Data;
@@ -64,9 +65,9 @@ namespace Raven.Server
             _latestVersionCheck = new LatestVersionCheck(ServerStore);
         }
 
-        public async Task<string> GetTcpServerPortAsync()
+        public async Task<TcpListenerStatus> GetTcpServerStatusAsync()
         {
-            return (await _tcpListenerTask).ListenAddress.First();
+            return await _tcpListenerTask;
         }
 
 
@@ -120,6 +121,10 @@ namespace Raven.Server
                     {
                         services.AddSingleton(Router);
                         services.AddSingleton(this);
+                        services.Configure<FormOptions>(options =>
+                        {
+                            options.MultipartBodyLengthLimit = long.MaxValue;
+                        });
                     })
                     // ReSharper disable once AccessToDisposedClosure
                     .Build();
@@ -180,11 +185,12 @@ namespace Raven.Server
 
         private readonly JsonContextPool _tcpContextPool = new JsonContextPool();
 
-        private class TcpListenerStatus
+        public class TcpListenerStatus
         {
             public readonly List<TcpListener> Listeners = new List<TcpListener>();
-            public readonly HashSet<string> ListenAddress = new HashSet<string>();
+            public int Port;
         }
+
         private async Task<TcpListenerStatus> StartTcpListener()
         {
             var status = new TcpListenerStatus();
@@ -199,20 +205,15 @@ namespace Raven.Server
                     if (uri.IsDefaultPort == false)
                         port = uri.Port;
                 }
+
                 foreach (var ipAddress in await GetTcpListenAddresses(host))
                 {
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"RavenDB TCP is configured to use {Configuration.Core.TcpServerUrl} and bind to {ipAddress} at {port}");
 
-                    status.ListenAddress.Add(new UriBuilder
-                    {
-                        Host = FindEntryForAddress(host),
-                        Port = port,
-                        Scheme = "tcp"
-                    }.Uri.ToString());
-
                     var listener = new TcpListener(ipAddress, port);
                     status.Listeners.Add(listener);
+                    status.Port = port;
                     listener.Start();
                     for (int i = 0; i < 4; i++)
                     {
@@ -417,13 +418,13 @@ namespace Raven.Server
         public RequestRouter Router { get; private set; }
         public MetricsCountersManager Metrics { get; private set; }
 
-        private bool _disposed;
+        public bool Disposed { get; private set; }
 
         public void Dispose()
         {
-            if (_disposed)
+            if (Disposed)
                 return;
-            _disposed = true;
+            Disposed = true;
             Metrics?.Dispose();
             _webHost?.Dispose();
             if (_tcpListenerTask != null)

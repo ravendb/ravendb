@@ -15,12 +15,14 @@ using Raven.NewClient.Abstractions.Util;
 
 using Raven.NewClient.Client.Util;
 using Newtonsoft.Json;
-
+using Raven.NewClient.Client.Blittable;
+using Raven.NewClient.Client.Commands;
 using Sparrow.Collections;
+using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Document
 {
-    public class AsyncDocumentSubscriptions //TODO Iftah: IAsyncReliableSubscriptions
+    public class AsyncDocumentSubscriptions : IAsyncReliableSubscriptions
     {
         private readonly IDocumentStore documentStore;
         private readonly ConcurrentSet<IDisposableAsync> subscriptions = new ConcurrentSet<IDisposableAsync>();
@@ -47,94 +49,68 @@ namespace Raven.NewClient.Client.Document
 
         public async Task<long> CreateAsync(SubscriptionCriteria criteria, long startEtag=0, string database = null)
         {
-            throw new NotImplementedException();
-
-            /*if (criteria == null)
+            if (criteria == null)
                 throw new InvalidOperationException("Cannot create a subscription if criteria is null");
+            
+            JsonOperationContext jsonOperationContext;
+            var requestExecuter = documentStore.GetRequestExecuter(database ?? documentStore.DefaultDatabase);
+            requestExecuter.ContextPool.AllocateOperationContext(out jsonOperationContext);
 
-            var commands = database == null
-                ? documentStore.AsyncDatabaseCommands
-                : documentStore.AsyncDatabaseCommands.ForDatabase(database);
-
-            using (var request = commands.CreateRequest("/subscriptions/create?startEtag="+startEtag, HttpMethods.Post))
+            var command = new CreateSubscriptionCommand()
             {
-                await request.WriteAsync(RavenJObject.FromObject(criteria)).ConfigureAwait(false);
+                Context = jsonOperationContext,
+                Criteria = criteria,
+                StartEtag = startEtag
+            };
+            await requestExecuter.ExecuteAsync(command, jsonOperationContext);
 
-                return request.ReadResponseJson().Value<long>("Id");
-            }*/
+            return command.Result.Id;
         }
 
-        /*public Subscription<RavenJObject> Open(SubscriptionConnectionOptions options, string database = null)
+        public Subscription<dynamic> Open(SubscriptionConnectionOptions options, string database = null)
         {
-            return Open<RavenJObject>(options, database);
-        }*/
+            return Open<dynamic>(options, database);
+        }
 
         public Subscription<T> Open<T>(SubscriptionConnectionOptions options, string database = null) where T : class
         {
-            throw new NotImplementedException();
-
-            /*if (options == null)
+            if (options == null)
                 throw new InvalidOperationException("Cannot open a subscription if options are null");
-            
-            // todo: treat the sharded connection case..
-            AsyncServerClient commands =
-                 (AsyncServerClient ) (database == null
-                ? documentStore.AsyncDatabaseCommands
-                : documentStore.AsyncDatabaseCommands.ForDatabase(database));
 
-            var subscription = new Subscription<T>(options, commands,
-                documentStore.Conventions); // to ensure that subscription is open try to call it with the same connection id
+            var subscription = new Subscription<T>(options, documentStore, documentStore.Conventions, database); 
 
             subscriptions.Add(subscription);
 
-            return subscription;*/
+            return subscription;
         }
 
         public async Task<List<SubscriptionConfig>> GetSubscriptionsAsync(int start, int take, string database = null)
         {
-            throw new NotImplementedException();
+            List<SubscriptionConfig> configs = new List<SubscriptionConfig>();
 
-            /*var commands = database == null
-                ? documentStore.AsyncDatabaseCommands
-                : documentStore.AsyncDatabaseCommands.ForDatabase(database);
+            JsonOperationContext jsonOperationContext;
+            var requestExecuter = documentStore.GetRequestExecuter(database ?? documentStore.DefaultDatabase);
+            requestExecuter.ContextPool.AllocateOperationContext(out jsonOperationContext);
 
-            List<SubscriptionConfig> configs;
+            var command = new GetSubscriptionsCommand(start, take);
+            await requestExecuter.ExecuteAsync(command, jsonOperationContext);
 
-            using (var request = commands.CreateRequest("/subscriptions", HttpMethods.Get))
+            foreach (BlittableJsonReaderObject document in command.Result.Subscriptions)
             {
-                var response = await request.ReadResponseJsonAsync().ConfigureAwait(false);
-
-                configs = documentStore.Conventions.CreateSerializer().Deserialize<SubscriptionConfig[]>(new RavenJTokenReader(response)).ToList();
+                configs.Add((SubscriptionConfig)documentStore.Conventions.DeserializeEntityFromBlittable(typeof(SubscriptionConfig), document));
             }
 
-            return configs;*/
+            return configs;
         }
 
         public async Task DeleteAsync(long id, string database = null)
         {
-            throw new NotImplementedException();
+            JsonOperationContext jsonOperationContext;
+            var requestExecuter = documentStore.GetRequestExecuter(database ?? documentStore.DefaultDatabase);
+            requestExecuter.ContextPool.AllocateOperationContext(out jsonOperationContext);
 
-            /*var commands = database == null
-                ? documentStore.AsyncDatabaseCommands
-                : documentStore.AsyncDatabaseCommands.ForDatabase(database);
-
-            using (var request = commands.CreateRequest("/subscriptions?id=" + id, HttpMethods.Delete))
-            {
-                await request.ExecuteRequestAsync().ConfigureAwait(false);
-            }*/
-        }
-
-        public async Task ReleaseAsync(long id, string database = null)
-        {
-            throw new NotImplementedException();
-            /*var commands = database == null
-                ? documentStore.AsyncDatabaseCommands
-                : documentStore.AsyncDatabaseCommands.ForDatabase(database);
-
-            using (var request = commands.CreateRequest(string.Format("/subscriptions/close?id={0}&connection=&force=true", id), HttpMethods.Post))
-            {
-                await request.ExecuteRequestAsync().ConfigureAwait(false);
-            }*/
+            var command = new DeleteSubscriptionCommand(id);
+            await requestExecuter.ExecuteAsync(command, jsonOperationContext);
         }
 
         public static bool TryGetSubscriptionException(ErrorResponseException ere, out SubscriptionException subscriptionException)

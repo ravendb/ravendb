@@ -29,9 +29,9 @@ namespace Raven.NewClient.Client
             InitializeEncryptor();
 
             LastEtagHolder = new GlobalLastEtagHolder();
-            //TODO: Iftah
-            //AsyncSubscriptions = new AsyncDocumentSubscriptions(this);
-            //Subscriptions = new DocumentSubscriptions(this);
+            
+            AsyncSubscriptions = new AsyncDocumentSubscriptions(this);
+            Subscriptions = new DocumentSubscriptions(this);
         }
 
         public abstract void Dispose();

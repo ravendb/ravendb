@@ -1,17 +1,17 @@
 ﻿using System.Linq;
+using FastTests;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_5422 : RavenTest
+    public class RavenDB_5422 : RavenTestBase
     {
         [Fact]
         public void ShouldBeAbleToQueryLuceneTokens()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.ExecuteIndex(new Users_ByName());
                 using (var session = store.OpenSession())
@@ -22,7 +22,7 @@ namespace Raven.Tests.Issues
                     session.Store(new User() { Name = "TO" });
                     session.Store(new User() { Name = "INTERSECT" });
                     session.Store(new User() { Name = "NULL" });
-                    
+
                     session.SaveChanges();
                     WaitForIndexing(store);
                     session.Query<User, Users_ByName>().Search(user => user.Name, "OR").Single();
@@ -35,7 +35,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class Users_ByName : AbstractIndexCreationTask<User>
+        private class Users_ByName : AbstractIndexCreationTask<User>
         {
             public Users_ByName()
             {
@@ -43,7 +43,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class User
+        private class User
         {
             public string Name { get; set; }
         }

@@ -10,7 +10,7 @@ using Raven.NewClient.Abstractions.Util;
 
 namespace Raven.NewClient.Client.Document
 {
-    public class DocumentSubscriptions //TODO iftah: IReliableSubscriptions
+    public class DocumentSubscriptions : IReliableSubscriptions
     {
         private readonly AsyncDocumentSubscriptions innerAsync;
 
@@ -29,10 +29,10 @@ namespace Raven.NewClient.Client.Document
             return AsyncHelpers.RunSync(() => innerAsync.CreateAsync(criteria, startEtag, database));
         }
 
-        /*public Subscription<RavenJObject> Open(SubscriptionConnectionOptions options, string database = null)
+        public Subscription<dynamic> Open(SubscriptionConnectionOptions options, string database = null)
         {
-            return innerAsync.Open(options, database);
-        }*/
+            return innerAsync.Open<dynamic>(options, database);
+        }
 
         public Subscription<T> Open<T>(SubscriptionConnectionOptions options, string database = null) where T : class
         {
@@ -47,11 +47,6 @@ namespace Raven.NewClient.Client.Document
         public void Delete(long id, string database = null)
         {
             AsyncHelpers.RunSync(() => innerAsync.DeleteAsync(id, database));
-        }
-
-        public void Release(long id, string database = null)
-        {
-            AsyncHelpers.RunSync(() => innerAsync.ReleaseAsync(id, database));
         }
 
         public void Dispose()
