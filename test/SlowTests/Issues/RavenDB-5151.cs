@@ -1,23 +1,20 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Json.Linq;
-using Raven.Tests.Common;
-using Raven.Tests.Core.Replication;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_5151: RavenTest
+    public class RavenDB_5151 : RavenTestBase
     {
         [Fact]
-        void CanDoPrefixQueryOnAnalyzedFields()
+        public void CanDoPrefixQueryOnAnalyzedFields()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             using (var session = store.OpenSession())
             {
                 new FooBarIndex().Execute(store);
-                session.Store(new Foo { Bar = "Shalom"});
+                session.Store(new Foo { Bar = "Shalom" });
                 session.Store(new Foo { Bar = "Salam" });
                 session.SaveChanges();
                 WaitForIndexing(store);
@@ -26,16 +23,16 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class Foo
+        private class Foo
         {
             public string Bar { get; set; }
         }
 
-        public class FooBarIndex : AbstractIndexCreationTask<Foo>
+        private class FooBarIndex : AbstractIndexCreationTask<Foo>
         {
             public FooBarIndex()
             {
-                Map = foos => from foo in foos select new {foo.Bar};
+                Map = foos => from foo in foos select new { foo.Bar };
                 Analyzers.Add(c => c.Bar, typeof(Lucene.Net.Analysis.Standard.StandardAnalyzer).ToString());
             }
         }

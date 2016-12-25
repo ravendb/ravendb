@@ -2,22 +2,18 @@ import app = require("durandal/app");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import accessHelper = require("viewmodels/shell/accessHelper");
-import EVENTS = require("common/constants/events");
-
 import resource = require("models/resources/resource");
-import database = require("models/resources/database");
-
 import deleteResourceConfirm = require("viewmodels/resources/deleteResourceConfirm");
 import createDatabase = require("viewmodels/resources/createDatabase");
 import disableResourceToggleConfirm = require("viewmodels/resources/disableResourceToggleConfirm");
-import toggleRejectDatabaseClients = require("commands/maintenance/toggleRejectDatabaseClients");
 import disableResourceToggleCommand = require("commands/resources/disableResourceToggleCommand");
 import toggleIndexingCommand = require("commands/database/index/toggleIndexingCommand");
 import deleteResourceCommand = require("commands/resources/deleteResourceCommand");
-import loadResourceCommand = require("commands/resources/loadResourceCommand");
+import globalAlertNotification = Raven.Server.Alerts.GlobalAlertNotification;
 
 import resourcesInfo = require("models/resources/info/resourcesInfo");
 import getResourcesCommand = require("commands/resources/getResourcesCommand");
+import getResourceCommand = require("commands/resources/getResourceCommand");
 import resourceInfo = require("models/resources/info/resourceInfo");
 import databaseInfo = require("models/resources/info/databaseInfo");
 import filesystemInfo = require("models/resources/info/filesystemInfo");
@@ -39,7 +35,6 @@ class resources extends viewModelBase {
     spinners = {
         globalToggleDisable: ko.observable<boolean>(false),
         itemTakedowns: ko.observableArray<string>([]),
-        resourceLoad: ko.observableArray<string>([]),
         disableIndexing: ko.observableArray<string>([]), //TODO: bind on UI
         toggleRejectMode: ko.observableArray<string>([]) //TODO: bind on UI
     }
@@ -52,7 +47,7 @@ class resources extends viewModelBase {
     constructor() {
         super();
 
-        this.bindToCurrentInstance("loadResource", "toggleResource", "toggleDatabaseIndexing", "deleteResource");
+        this.bindToCurrentInstance("toggleResource", "toggleDatabaseIndexing", "deleteResource");
 
         this.initObservables();
     }
@@ -90,21 +85,66 @@ class resources extends viewModelBase {
 
         // we can't use createNotifications here, as it is called after *resource changes API* is connected, but user
         // can enter this view and never select resource
-        this.addNotification(this.changesContext.globalChangesApi().watchItemsStartingWith("db/", e => this.fetchResources()));
+        this.addNotification(this.changesContext.globalChangesApi().watchItemsStartingWith("db/", (e: globalAlertNotification) => this.fetchResource(e)));
+
+        // TODO: add notification for fs, cs, ts
 
         return this.fetchResources();
-    }
-
-    private fetchResources(): JQueryPromise<resourcesInfo> {
-        return new getResourcesCommand()
-            .execute()
-            .done(info => this.resources(info));
     }
 
     attached() {
         super.attached();
         this.updateHelpLink("Z8DC3Q");
         ko.postbox.publish("SetRawJSONUrl", appUrl.forDatabasesRawData());
+    }
+
+    // Fetch all resources info
+    private fetchResources(): JQueryPromise<resourcesInfo> {
+        return new getResourcesCommand()
+            .execute()
+            .done(info => this.resources(info));
+    }
+
+    // Fetch single resource info
+    private fetchResource(e: globalAlertNotification) {
+
+        // First find if database already exists in the page resources
+        let resource = this.resources().sortedResources().find(rs => rs.qualifiedName === e.Id);
+       
+        switch (e.Operation) {
+
+            case "Write": 
+                if (resource) {
+                    // Relevant for disable/enable...
+                    this.getResourceInfo(resource.qualifier, resource.name)
+                        .done(result => resource.update(result));
+                } else {
+                    // Need to add a new resource for a newly created database
+                    let notificationData = resourceInfo.extractQualifierAndNameFromNotification(e.Id);
+                    this.getResourceInfo(notificationData.qualifier, notificationData.name)
+                        .done((result: Raven.Client.Data.ResourceInfo) => {
+                            this.resources().addResource(result, notificationData.qualifier);
+                         });
+                }
+                break;
+
+            case "Loaded":
+                // An existing database turned ONLINE, get its stats
+                this.getResourceInfo(resource.qualifier, resource.name)
+                    .done(result => resource.update(result));               
+                break;
+
+            case "Delete":
+                // Delete database from page resources if exists (because maybe another client did the delete..)
+                if (resource) {
+                    this.removeResource(resource);
+                }
+                break;
+        }
+    }
+
+    private getResourceInfo(resourceType: string, resourceName: string): JQueryPromise<Raven.Client.Data.ResourceInfo> {
+        return new getResourceCommand(resourceType, resourceName).execute();
     }
 
     private filterResources(): void {
@@ -200,9 +240,13 @@ class resources extends viewModelBase {
         const matchedResource = this.resources().sortedResources().find(x => x.qualifiedName === deletedResource.qualifiedName);
 
         if (matchedResource) {
-            this.resources().sortedResources.remove(matchedResource);
-            this.selectedResources.remove(matchedResource.qualifiedName);
+            this.removeResource(matchedResource);
         }
+    }
+
+    private removeResource(resource: resourceInfo) {
+        this.resources().sortedResources.remove(resource);
+        this.selectedResources.remove(resource.qualifiedName);
     }
 
     toggleSelectedResources() {
@@ -270,15 +314,6 @@ class resources extends viewModelBase {
         }
     }
 
-    loadResource(rs: resourceInfo) {
-        this.spinners.resourceLoad.push(rs.qualifiedName);
-
-        new loadResourceCommand(rs.asResource())
-            .execute()
-            .done(() => this.fetchResources())
-            .always(() => this.spinners.resourceLoad.remove(rs.qualifiedName));
-    }
-
     toggleDatabaseIndexing(db: databaseInfo) {
         const enableIndexing = !db.indexingEnabled();
         const message = enableIndexing ? "Enable" : "Disable";
@@ -328,7 +363,6 @@ class resources extends viewModelBase {
         shell.disconnectFromResourceChangesApi();
     }
     */
-  
 }
 
 export = resources;

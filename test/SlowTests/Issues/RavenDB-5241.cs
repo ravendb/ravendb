@@ -3,19 +3,20 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Linq;
-using Raven.Tests.Common;
+using FastTests;
 using Raven.Client.Indexes;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_5241 : RavenTest
+    public class RavenDB_5241 : RavenTestBase
     {
         [Fact]
         public void loading_documents_with_transformer_duplicate_ids()
         {
-            using (var store = NewRemoteDocumentStore(true))
+            using (var store = GetDocumentStore())
             {
                 new TestDocumentTransformer().Execute(store);
 
@@ -62,7 +63,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void loading_documents_with_transformer_duplicate_ids_and_non_existing_document()
         {
-            using (var store = NewRemoteDocumentStore(true))
+            using (var store = GetDocumentStore())
             {
                 new TestDocumentTransformer().Execute(store);
 
@@ -113,13 +114,13 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class TestDocument
+        private class TestDocument
         {
             public string Id { get; set; }
             public int Value { get; set; }
         }
 
-        public class TestDocumentTransformer : AbstractTransformerCreationTask<TestDocument>
+        private class TestDocumentTransformer : AbstractTransformerCreationTask<TestDocument>
         {
             public class Output
             {

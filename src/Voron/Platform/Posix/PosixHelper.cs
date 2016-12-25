@@ -115,10 +115,14 @@ namespace Voron.Platform.Posix
             {
                 if (path.Contains(d.Name))
                 {
-                    // TODO : Add other types
-                    if (d.DriveFormat.Equals("cifs"))
-                        return false;
-                    return true;
+                    switch (d.DriveFormat)
+                    {
+                        // TODO : Add other types
+                        case "cifs":
+                            return false;
+                        default:
+                            return true;
+                    }
                 }
             }
             return true;

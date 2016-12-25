@@ -99,7 +99,7 @@ namespace FastTests.Client.Subscriptions
                     var acceptedSubscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions()
                     {
                         SubscriptionId = subsId,
-                        TimeToWaitBeforeConnectionRetryMilliseconds = 10000
+                        TimeToWaitBeforeConnectionRetryMilliseconds = 20000
                     }))
                 {
 
@@ -127,7 +127,7 @@ namespace FastTests.Client.Subscriptions
                             {
                                 SubscriptionId = subsId,
                                 Strategy = SubscriptionOpeningStrategy.OpenIfFree,
-                                TimeToWaitBeforeConnectionRetryMilliseconds = 6000
+                                TimeToWaitBeforeConnectionRetryMilliseconds = 2000
                             }))
                     {
 
@@ -203,7 +203,7 @@ namespace FastTests.Client.Subscriptions
                             waitingSubscriptionList.Add(x);
                         });
                         var taskStarted = waitingSubscription.StartAsync();
-                        var completed = await Task.WhenAny(taskStarted, Task.Delay(300));
+                        var completed = await Task.WhenAny(taskStarted, Task.Delay(10000));
 
 
                         Assert.False(completed == taskStarted);
@@ -270,7 +270,7 @@ namespace FastTests.Client.Subscriptions
                         Assert.True(acceptedSusbscriptionList.TryTake(out thing, 5000), "no doc");
                     }
 
-                    Assert.True(await batchProccessedByFirstSubscription.WaitAsync(TimeSpan.FromSeconds(5)), "no ack");
+                    Assert.True(await batchProccessedByFirstSubscription.WaitAsync(TimeSpan.FromSeconds(15)), "no ack");
 
                     Assert.False(acceptedSusbscriptionList.TryTake(out thing));
 

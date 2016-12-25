@@ -354,7 +354,7 @@ class editDocument extends viewModelBase {
     }
 
     foldAll() {
-        const AceRange = require("ace/range").Range;
+        const AceRange = ace.require("ace/range").Range;
         this.docEditor.getSession().foldAll();
         const folds = <any[]> this.docEditor.getSession().getFoldsInRange(new AceRange(0, 0, this.docEditor.getSession().getLength(), 0));
         folds.map(f => this.docEditor.getSession().expandFold(f));

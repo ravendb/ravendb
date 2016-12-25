@@ -78,6 +78,10 @@ class importDatabase extends viewModelBase {
                     return;
                 }
 
+                if (percentComplete === 100) {
+                    setTimeout(() => this.isUploading(false), 700);
+                }
+
                 this.uploadStatus(percentComplete);
             }),
             ko.postbox.subscribe("ChangesApiReconnected", (db: database) => {
@@ -101,11 +105,9 @@ class importDatabase extends viewModelBase {
 
         $.when<any>(this.getNextOperationId(db), this.getAuthToken(db))
             .then(([operationId]: [number], [token]: [singleAuthToken]) => {
+                notificationCenter.instance.monitorOperation(db, operationId);
                 new importDatabaseCommand(db, operationId, token, fileInput.files[0], this.model)
                     .execute()
-                    .done(() => {
-                        notificationCenter.instance.monitorOperation(db, operationId);
-                    })
                     .always(() => this.isUploading(false));
             });
     }

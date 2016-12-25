@@ -36,6 +36,7 @@ class storageReport extends viewModelBase {
 
     private transitioning = false;
 
+    showLoader = ko.observable<boolean>(false);
     showPagesColumn: KnockoutObservable<boolean>;
     showEntriesColumn: KnockoutObservable<boolean>;
 
@@ -396,10 +397,21 @@ class storageReport extends viewModelBase {
 
         const env = d.parent;
 
+        const showLoaderTimer = setTimeout(() => {
+            this.showLoader(true);
+        }, 100);
+
         return new getEnvironmentStorageReportCommand(this.activeDatabase(), env.name, _.capitalize(env.type))
             .execute()
             .done((envReport) => {
                 this.mapDetailedReport(envReport.Report, d);
+            })
+            .always(() => {
+                if (this.showLoader()) {
+                    this.showLoader(false);
+                } else {
+                    clearTimeout(showLoaderTimer);
+                }
             });
     }
 

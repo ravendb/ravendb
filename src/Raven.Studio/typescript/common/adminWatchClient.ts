@@ -49,7 +49,7 @@ class adminWatchClient extends abstractWebSocketClient {
         switch (eventOperation) {
             case "Write":
             case "Delete":
-            case "Load":
+            case "Loaded":
                 this.fireEvents<globalAlertNotification>(this.allItemsHandlers(), eventDto, () => true);
 
                 this.watchedItems.forEach((callbacks, key) => {

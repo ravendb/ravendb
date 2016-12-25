@@ -33,6 +33,10 @@ abstract class resourceInfo {
     online: KnockoutComputed<boolean>;
 
     canNavigateToResource: KnockoutComputed<boolean>;
+    
+    static extractQualifierAndNameFromNotification(input: string): { qualifier: string, name: string } {
+        return { qualifier: input.substr(0, 2), name: input.substr(3) };
+    }
 
     protected constructor(dto: Raven.Client.Data.ResourceInfo) {
         this.name = dto.Name;
@@ -73,6 +77,23 @@ abstract class resourceInfo {
     }
 
     abstract asResource(): resource;
+
+    update(dto: Raven.Client.Data.ResourceInfo): void {
+        this.name = dto.Name;
+        this.disabled(dto.Disabled);
+        this.isAdmin(dto.IsAdmin);
+        this.totalSize(dto.TotalSize ? dto.TotalSize.HumaneSize : null);
+        this.errors(dto.Errors);
+        this.alerts(dto.Alerts);
+        this.bundles(dto.Bundles);
+        this.uptime(generalUtils.timeSpanAsAgo(dto.UpTime, false));
+        this.backupEnabled(!!dto.BackupInfo);
+        if (this.backupEnabled()) {
+            const lastBackup = resourceInfo.findLastBackupDate(dto.BackupInfo);
+            this.lastFullOrIncrementalBackup(moment(new Date(lastBackup)).fromNow());
+            this.backupStatus(this.computeBackupStatus(dto.BackupInfo));
+        }
+    }
 
     private computeBackupStatus(dto: Raven.Client.Data.BackupInfo) {
         if (!dto.LastFullBackup && !dto.LastIncrementalBackup) {
@@ -140,7 +161,6 @@ abstract class resourceInfo {
             return currentResource.qualifiedName === this.qualifiedName;
         });
     }
-
 }
 
 export = resourceInfo;

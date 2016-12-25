@@ -83,7 +83,7 @@ class notificationCenterOperations {
 
         this.storage.saveOperations(rs, this.getOperationIds());
 
-        this.fetchOperationWithRetries(rs, operationId, 3)
+        this.fetchOperationWithRetries(rs, operationId, 5)
             .done(operation => this.onOperationInfo(rs, operation, operationId, onProgress, task))
             .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to get operation", response.responseText, response.statusText));
 
@@ -163,7 +163,7 @@ class notificationCenterOperations {
 
     private fetchOperationWithRetries(rs: resource, operationId: number, retries = 3): JQueryPromise<Raven.Server.Documents.PendingOperation> {
         const task = $.Deferred<Raven.Server.Documents.PendingOperation>();
-        this.fetchOperation(rs, operationId, 3, task);
+        this.fetchOperation(rs, operationId, retries, task);
         return task;
     }
 
@@ -177,7 +177,7 @@ class notificationCenterOperations {
                     return;
                 }
 
-                setTimeout(() => this.fetchOperation(rs, operationId, retries - 1, task), 200);
+                setTimeout(() => this.fetchOperation(rs, operationId, retries - 1, task), 500);
             });
     }
 

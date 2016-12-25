@@ -561,11 +561,16 @@ namespace Voron.Impl.Journal
                     try
                     {
                         var transactionPersistentContext = new TransactionPersistentContext(true);
-                        
-                        using (var txw = _waj._env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite, timeout: Infinity))
-                        {
-                            txw.JournalApplicatorTransaction();
 
+                        TimeSpan? timeout;
+
+                        if (pagesToWrite.Count < _waj._env.Options.MaxNumberOfPagesInJournalBeforeFlush)
+                            timeout = null;
+                        else
+                            timeout = Infinity;
+
+                        using (var txw = _waj._env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite, timeout: timeout))
+                        {
                             _lastFlushedJournalId = lastProcessedJournal;
                             _lastFlushedTransactionId = lastFlushedTransactionId;
                             _lastFlushedJournal = _waj._files.First(x => x.Number == lastProcessedJournal);
@@ -586,15 +591,12 @@ namespace Voron.Impl.Journal
 
                             FreeScratchPages(unusedJournals, txw);
 
-                            if (txw != null)
-                            {
-                                // by forcing a commit, we free the read transaction that held the lazy tx buffer (if existed)
-                                // and make those pages available in the scratch files
-                                txw.IsLazyTransaction = false;
-                                _waj.HasLazyTransactions = false;
+                            // by forcing a commit, we free the read transaction that held the lazy tx buffer (if existed)
+                            // and make those pages available in the scratch files
+                            txw.IsLazyTransaction = false;
+                            _waj.HasLazyTransactions = false;
 
-                                txw.Commit();
-                            }
+                            txw.Commit();
                         }
                     }
                     finally
@@ -805,7 +807,7 @@ namespace Voron.Impl.Journal
                     long written = 0;
                     using (var meter = _waj._dataPager.Options.IoMetrics.MeterIoRate(_waj._dataPager.FileName, IoMetrics.MeterType.DataFlush, 0))
                     {
-                        var batchWrites = _waj._dataPager.BatchWrites;
+                        using(var batchWrites = _waj._dataPager.BatchWriter())
                         {
                             foreach (var pagePosition in pagesToWrite.Values)
                             {
@@ -820,7 +822,6 @@ namespace Voron.Impl.Journal
                                 }
 
                                 var numberOfPages = scratchBufferPool.CopyPage(
-                                    _waj._dataPager,
                                     batchWrites,
                                     scratchNumber,
                                     pagePosition.ScratchPos,
@@ -829,7 +830,6 @@ namespace Voron.Impl.Journal
                                 written += numberOfPages * _waj._dataPager.PageSize;
                             }
                         }
-                        batchWrites.Flush();
 
                         meter.IncrementSize(written);
 
