@@ -234,12 +234,14 @@ namespace Voron.Data.Compression
 
             public DecompressionBuffer(AbstractPager pager, long position, int size, DecompressionBuffersPool pool, int index, LowLevelTransaction tx)
             {
-                _ptr = pager.AcquirePagePointer(tx, position);
                 _pager = pager;
                 _position = position;
                 _size = size;
                 _pool = pool;
                 _index = index;
+                _pager.EnsureMapped(tx, _position, _size / _pager.PageSize);
+                _ptr = _pager.AcquirePagePointer(tx, position);
+
                 TempPage = new TemporaryPage(_ptr, size) { ReturnTemporaryPageToPool = this };
             }
             
@@ -247,6 +249,7 @@ namespace Voron.Data.Compression
 
             public void EnsureValidPointer(LowLevelTransaction tx)
             {
+                _pager.EnsureMapped(tx, _position, _size / _pager.PageSize);
                 var p = _pager.AcquirePagePointer(tx, _position);
 
                 if (_ptr == p)
