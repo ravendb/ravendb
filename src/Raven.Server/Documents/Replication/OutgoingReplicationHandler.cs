@@ -22,6 +22,7 @@ using Raven.Json.Linq;
 using Raven.Server.Alerts;
 using Raven.Server.Exceptions;
 using Raven.Server.Extensions;
+using Sparrow;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -209,7 +210,7 @@ namespace Raven.Server.Documents.Replication
 
                             while (_cts.IsCancellationRequested == false)
                             {
-                                _documentsContext.ResetAndRenew();
+                                _documentsContext.ResetAndRenew();                                
                                 long currentEtag;
 
                                 Debug.Assert(_database.IndexMetadataPersistence.IsInitialized);

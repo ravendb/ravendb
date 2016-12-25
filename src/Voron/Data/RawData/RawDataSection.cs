@@ -193,8 +193,14 @@ namespace Voron.Data.RawData
             var pageHeader = PageHeaderFor(tx, pageNumberInSection);
 
             if (posInPage >= pageHeader->NextAllocation)
+            {
+                if(posInPage == 0)
+                    VoronUnrecoverableErrorException.Raise(tx.Environment,
+                        $"Asked to load a large value from a raw data section page {pageHeader->PageNumber}, this is a bug");
+
                 VoronUnrecoverableErrorException.Raise(tx.Environment,
                     $"Asked to load a past the allocated values: {id} from page {pageHeader->PageNumber}");
+            }
 
             var sizes = (RawDataEntrySizes*)((byte*)pageHeader + posInPage);
             if (sizes->UsedSize < 0)

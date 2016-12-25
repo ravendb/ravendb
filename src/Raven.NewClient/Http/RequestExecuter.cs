@@ -187,39 +187,22 @@ namespace Raven.NewClient.Client.Http
                     }
                 }
 
-                using (response)
+                if (response.StatusCode == HttpStatusCode.NotModified)
                 {
-                    if (response.StatusCode == HttpStatusCode.NotModified)
-                    {
-                        cachedItem.NotModified();
-                        command.SetResponse(cachedValue);
-                        return;
-                    }
-                    if (response.IsSuccessStatusCode == false)
-                    {
-                        if (await HandleUnsuccessfulResponse(choosenNode, context, command, response, url))
-                            return;
-                    }
-
-                    if (response.Content.Headers.ContentLength.HasValue && response.Content.Headers.ContentLength == 0)
-                        return;
-
-                    using (var stream = await response.Content.ReadAsStreamAsync())
-                    {
-                        // we intentionally don't dispose the reader here, we'll be using it
-                        // in the command, any associated memory will be released on context reset
-                        var blittableJsonReaderObject = await context.ReadForMemoryAsync(stream, "PutResult");
-                        if (response.Headers.ETag != null)
-                        {
-                            long? etag = response.GetEtagHeader();
-                            if (etag != null)
-                            {
-                                _cache.Set(url, (long)etag, blittableJsonReaderObject);
-                            }
-                        }
-                        command.SetResponse(blittableJsonReaderObject);
-                    }
+                    cachedItem.NotModified();
+                    command.SetResponse(cachedValue);
+                    return;
                 }
+                if (response.IsSuccessStatusCode == false)
+                {
+                    if (await HandleUnsuccessfulResponse(choosenNode, context, command, response, url))
+                        return;
+                }
+
+                if (response.Content.Headers.ContentLength.HasValue && response.Content.Headers.ContentLength == 0)
+                    return;
+
+                await command.ProcessResponse(context, _cache, response, url);
             }
         }
 

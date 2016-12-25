@@ -17,7 +17,9 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using Jint;
 using Jint.Parser.Ast;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Primitives;
+using Microsoft.Net.Http.Headers;
 using Raven.Abstractions;
 using Raven.Client.Data;
 using Raven.Client.Smuggler;
@@ -280,12 +282,14 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
+                var options = DatabaseSmugglerOptionsServerSide.Create(HttpContext, context);
+
                 var tuple = await GetImportStream();
                 using (tuple.Item2)
                 using (var stream = new GZipStream(tuple.Item1, CompressionMode.Decompress))
                 {
                     var sp = Stopwatch.StartNew();
-                    var importer = new SmugglerImporter(Database);
+                    var importer = new SmugglerImporter(Database, options);
                     var result = await importer.Import(context, stream);
                     sp.Stop();
                     WriteImportResult(context, sp, result, ResponseBodyStream());
@@ -316,6 +320,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var operationId = GetLongQueryString("operationId", required: true) ?? -1;
                 var token = CreateOperationToken();
                 var sp = Stopwatch.StartNew();
+
                 var result = new ImportResult();
                 await Database.Operations.AddOperation("Import to: " + Database.Name,
                     DatabaseOperations.PendingOperationType.DatabaseImport,
@@ -323,13 +328,44 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     {
                         return Task.Run(async () =>
                         {
-                            foreach (var file in HttpContext.Request.Form.Files)
+                            try
                             {
-                                using (var fileStream = file.OpenReadStream())
+                                var boundary = MultipartRequestHelper.GetBoundary(
+                                    MediaTypeHeaderValue.Parse(HttpContext.Request.ContentType),
+                                    MultipartRequestHelper.MultipartBoundaryLengthLimit);
+                                var reader = new MultipartReader(boundary, HttpContext.Request.Body);
+                                DatabaseSmugglerOptions smugglerOptions = null;
+                            
+                                while (true)
                                 {
-                                    var stream = new GZipStream(fileStream, CompressionMode.Decompress);
+                                    var section = await reader.ReadNextSectionAsync().ConfigureAwait(false);
+                                    if (section == null)
+                                        break;
+
+                                    ContentDispositionHeaderValue contentDisposition;
+                                    var hasContentDispositionHeader = ContentDispositionHeaderValue.TryParse(section.ContentDisposition,
+                                        out contentDisposition);
+
+                                    if (hasContentDispositionHeader == false)
+                                        continue;
+
+                                    if (MultipartRequestHelper.HasFormDataContentDisposition(contentDisposition))
+                                    {
+                                        var key = HeaderUtilities.RemoveQuotes(contentDisposition.Name);
+                                        if (key != "importOptions")
+                                            continue;
+
+                                        var blittableJson = await context.ReadForMemoryAsync(section.Body, "importOptions");
+                                        smugglerOptions = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
+                                        continue;
+                                    }
+
+                                    if (MultipartRequestHelper.HasFileContentDisposition(contentDisposition) == false)
+                                        continue;
+
+                                    var stream = new GZipStream(section.Body, CompressionMode.Decompress);
                                     var fileImport =
-                                        await DoImportInternal(context, stream, onProgress).ConfigureAwait(false);
+                                        await DoImportInternal(context, stream, smugglerOptions, onProgress).ConfigureAwait(false);
                                     result.DocumentsCount += fileImport.DocumentsCount;
                                     result.Warnings.AddRange(fileImport.Warnings);
                                     result.IdentitiesCount += fileImport.IdentitiesCount;
@@ -338,6 +374,11 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                     result.IndexesCount += fileImport.IndexesCount;
                                     result.TransformersCount += fileImport.TransformersCount;
                                 }
+                            }
+                            catch (Exception e)
+                            {
+                                result.Message = $"Error occured during export. Exception: {e.Message}";
+                                result.Exception = e.ToString();
                             }
 
                             return (IOperationResult) result;
@@ -349,14 +390,11 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         }
 
         private async Task<ImportResult> DoImportInternal(DocumentsOperationContext context, Stream stream,
-            Action<IOperationProgress> onProgress = null)
+            DatabaseSmugglerOptions smugglerOptions, Action<IOperationProgress> onProgress)
         {
             try
             {
-                var importOptionsStream = TryGetRequestFormStream("importOptions") ?? RequestBodyStream();
-                var blittableJson = await context.ReadForMemoryAsync(importOptionsStream, "importOptions");
-                var options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
-                var importer = new SmugglerImporter(Database, options);
+                var importer = new SmugglerImporter(Database, smugglerOptions);
 
                 return await importer.Import(context, stream, onProgress);
             }

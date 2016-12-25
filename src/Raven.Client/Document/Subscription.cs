@@ -48,6 +48,7 @@ namespace Raven.Client.Document
         private bool _disposed;
         private Task _subscriptionTask;
         private NetworkStream _networkStream;
+        private readonly TaskCompletionSource<object> _disposedTask = new TaskCompletionSource<object>();
 
         internal Subscription(SubscriptionConnectionOptions options,
             AsyncServerClient commands, DocumentConvention conventions)
@@ -113,7 +114,8 @@ namespace Raven.Client.Document
 
                 _disposed = true;
                 _proccessingCts.Cancel();
-                CloseTcpClient(); // we disconnect immediately, freeing the subscription task
+                _disposedTask.TrySetResult(null); // notify the subscription task that we are done
+
                 if (_subscriptionTask != null && Task.CurrentId != _subscriptionTask.Id)
                 {
                     try
@@ -125,6 +127,9 @@ namespace Raven.Client.Document
                         // just need to wait for it to end
                     }
                 }
+
+                CloseTcpClient(); // we disconnect immediately, freeing the subscription task
+
                 OnCompletedNotification();
             }
             catch (Exception ex)
@@ -268,8 +273,11 @@ namespace Raven.Client.Document
                 using (var jsonReader = new JsonTextReaderAsync(reader))
                 {
                     _proccessingCts.Token.ThrowIfCancellationRequested();
-                    var connectionStatus = await ReadNextObject(jsonReader).ConfigureAwait(false);
-
+                    var readObjectTask = ReadNextObject(jsonReader);
+                    var done = await Task.WhenAny(readObjectTask, _disposedTask.Task).ConfigureAwait(false);
+                    if (done == _disposedTask.Task)
+                        return;
+                    var connectionStatus = await readObjectTask.ConfigureAwait(false);
                     if (_proccessingCts.IsCancellationRequested)
                         return;
 
@@ -279,7 +287,7 @@ namespace Raven.Client.Document
                     Task.Run(() => successfullyConnected.TrySetResult(null));
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
-                    var readObjectTask = ReadNextObject(jsonReader);
+                    readObjectTask = ReadNextObject(jsonReader);
 
                     if (_proccessingCts.IsCancellationRequested)
                         return;
@@ -293,14 +301,18 @@ namespace Raven.Client.Document
                         bool endOfBatch = false;
                         while (endOfBatch == false && _proccessingCts.IsCancellationRequested == false)
                         {
+                            done = await Task.WhenAny(readObjectTask, _disposedTask.Task).ConfigureAwait(false);
+                            if (done == _disposedTask.Task)
+                                break;
                             var receivedMessage = await readObjectTask.ConfigureAwait(false);
+
                             if (_proccessingCts.IsCancellationRequested)
-                                return;
+                                break;
 
                             readObjectTask = ReadNextObject(jsonReader);
 
                             if (_proccessingCts.IsCancellationRequested)
-                                return;
+                                break;
 
                             switch (receivedMessage.Type)
                             {
@@ -427,6 +439,7 @@ namespace Raven.Client.Document
                 Etag = lastReceivedEtag,
                 Type = SubscriptionConnectionClientMessage.MessageType.Acknowledge
             }).WriteTo(networkStream);
+            networkStream.Flush();
         }
 
         private async Task RunSubscriptionAsync(TaskCompletionSource<object> firstConnectionCompleted)

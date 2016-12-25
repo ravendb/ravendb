@@ -4,6 +4,8 @@ using System.Net;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Threading.Tasks;
+using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Http;
 using Sparrow.Json;
 
@@ -38,5 +40,25 @@ namespace Raven.NewClient.Client.Commands
         {
             return FailedNodes != null && FailedNodes.Contains(leaderNode);
         }
+
+        public virtual async Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
+        {
+            using(response)
+            using (var stream = await response.Content.ReadAsStreamAsync())
+            {
+                // we intentionally don't dispose the reader here, we'll be using it
+                // in the command, any associated memory will be released on context reset
+                var blittableJsonReaderObject = await context.ReadForMemoryAsync(stream, "PutResult");
+                if (response.Headers.ETag != null)
+                {
+                    long? etag = response.GetEtagHeader();
+                    if (etag != null)
+                    {
+                        cache.Set(url, (long)etag, blittableJsonReaderObject);
+                    }
+                }
+                SetResponse(blittableJsonReaderObject);
+            }
+    }
     }
 }

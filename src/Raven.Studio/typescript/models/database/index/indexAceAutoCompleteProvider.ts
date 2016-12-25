@@ -80,7 +80,7 @@ class indexAceAutoCompleteProvider {
     getIndexMapCompleterValues(editor: any, session: AceAjax.IEditSession, pos: AceAjax.Position): JQueryPromise<any> {
         var currentToken: any = session.getTokenAt(pos.row, pos.column);
         var completedToken: AceAjax.TokenInfo;
-        var TokenIterator = require("ace/token_iterator").TokenIterator;
+        var TokenIterator = ace.require("ace/token_iterator").TokenIterator;
         var curPosIterator = new TokenIterator(editor.getSession(), pos.row, pos.column);
         var prevToken = curPosIterator.stepBackward();
 

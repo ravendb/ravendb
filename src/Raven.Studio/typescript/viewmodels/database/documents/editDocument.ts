@@ -145,8 +145,6 @@ class editDocument extends viewModelBase {
         const canActivateResult = $.Deferred<canActivateResultDto>();
         this.loadDocument(id)
             .done(() => {
-                this.changeNotification = this.createDocumentChangeNotification(id);
-                this.addNotification(this.changeNotification);
                 canActivateResult.resolve({ can: true });
             })
             .fail(() => {
@@ -155,6 +153,18 @@ class editDocument extends viewModelBase {
             });
         return canActivateResult;
     }
+
+    createNotifications(): Array<changeSubscription> {
+        if (!this.document())
+            return [];
+        //TODO: support for query results
+
+        this.changeNotification = this.createDocumentChangeNotification(this.document().getId());
+        return [
+            this.changeNotification
+        ];
+    }
+
 
     private activateByIndex(indexName: string, query: string, argSorts: string, argItem: any) {
         const canActivateResult = $.Deferred<canActivateResultDto>();
@@ -344,7 +354,7 @@ class editDocument extends viewModelBase {
     }
 
     foldAll() {
-        const AceRange = require("ace/range").Range;
+        const AceRange = ace.require("ace/range").Range;
         this.docEditor.getSession().foldAll();
         const folds = <any[]> this.docEditor.getSession().getFoldsInRange(new AceRange(0, 0, this.docEditor.getSession().getLength(), 0));
         folds.map(f => this.docEditor.getSession().expandFold(f));

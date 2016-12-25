@@ -2,12 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Client.Data;
 using Raven.Server.Documents;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using DatabaseInfo = Raven.Client.Data.DatabaseInfo;
 
 namespace Raven.Server.Web.System
 {
@@ -55,53 +57,15 @@ namespace Raven.Server.Web.System
                     writer.WriteStartArray();
                     var first = true;
 
-                    foreach (var dbDoc in ServerStore.StartingWith(context, "db/", GetStart(), GetPageSize(int.MaxValue)))
+                    foreach (var dbDoc in ServerStore.StartingWith(context, Constants.Database.Prefix, GetStart(), GetPageSize(int.MaxValue)))
                     {
                         if (first == false)
                             writer.WriteComma();
+
                         first = false;
-                        {
-                            bool disabled;
-                            dbDoc.Data.TryGet("Disabled", out disabled);
 
-                            var dbName = dbDoc.Key.Substring("db/".Length);
-                            Task<DocumentDatabase> dbTask;
-                            var online = ServerStore.DatabasesLandlord.ResourcesStoresCache.TryGetValue(dbName, out dbTask) && dbTask != null && dbTask.IsCompleted;
-                            var db = online ? dbTask.Result : null;
-                            if (online == false)
-                            {
-                                // If state of database is found in the cache we can continue
-                                if (ServerStore.DatabaseInfoCache.TryWriteOfflineDatabaseStatustoRequest(context, writer, dbName, disabled))
-                                    continue;
-                                // We won't find it if it is a new database or after a dirty shutdown, so just report empty values then
-                            }
-                            var indexingStatus = dbTask != null && dbTask.IsCompleted ? dbTask.Result.IndexStore.Status.ToString() : null;
-                            var size = new Size(GetTotalSize(db));
-                            var backupInfo = GetBackupInfo(db);
-
-                            var doc = new DynamicJsonValue
-                            {
-                                [nameof(ResourceInfo.Bundles)] = new DynamicJsonArray(GetBundles(db)),
-                                [nameof(ResourceInfo.IsAdmin)] = true, //TODO: implement me!
-                                [nameof(ResourceInfo.Name)] = dbName,
-                                [nameof(ResourceInfo.Disabled)] = disabled,
-                                [nameof(ResourceInfo.TotalSize)] = new DynamicJsonValue
-                                {
-                                    [nameof(Size.HumaneSize)] = size.HumaneSize,
-                                    [nameof(Size.SizeInBytes)] = size.SizeInBytes
-                                },
-                                [nameof(ResourceInfo.Errors)] = online ? db.IndexStore.GetIndexes().Sum(index => index.GetErrors().Count) : 0,
-                                [nameof(ResourceInfo.Alerts)] = online ? db.Alerts.GetAlertCount() : 0,
-                                [nameof(ResourceInfo.UpTime)] = online ? GetUptime(db).ToString() : null,
-                                [nameof(ResourceInfo.BackupInfo)] = backupInfo,
-                                [nameof(DatabaseInfo.DocumentsCount)] = online ? db.DocumentsStorage.GetNumberOfDocuments() : 0,
-                                [nameof(DatabaseInfo.IndexesCount)] = online ? db.IndexStore.GetIndexes().Count() : 0,
-                                [nameof(DatabaseInfo.RejectClients)] = false, //TODO: implement me!
-                                [nameof(DatabaseInfo.IndexingStatus)] = indexingStatus
-                            };
-
-                            context.Write(writer, doc);
-                        }
+                        var databaseName = dbDoc.Key.Substring(Constants.Database.Prefix.Length);
+                        WriteDatabaseInfo(databaseName, dbDoc.Data, context, writer);
                     }
 
                     writer.WriteEndArray();
@@ -111,7 +75,95 @@ namespace Raven.Server.Web.System
                     writer.WriteEndObject();
                 }
             }
+
             return Task.CompletedTask;
+        }
+
+        [RavenAction("/resource", "GET")]
+        public Task Resource()
+        {
+            var resourceName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
+
+            TransactionOperationContext context;
+            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            {
+                context.OpenReadTransaction();
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    switch (type)
+                    {
+                        case "db":
+                            var dbId = Constants.Database.Prefix + resourceName;
+                            long etag;
+                            var dbDoc = ServerStore.Read(context, dbId, out etag);
+                            WriteDatabaseInfo(resourceName, dbDoc, context, writer);
+                            break;
+
+                        //TODO: write fs, cs, ts
+
+                        default:
+                            throw new ArgumentOutOfRangeException("type");
+                    }
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
+        private void WriteDatabaseInfo(string databaseName, BlittableJsonReaderObject data,
+            TransactionOperationContext context, BlittableJsonTextWriter writer)
+        {
+            bool disabled;
+            data.TryGet("Disabled", out disabled);
+
+            Task<DocumentDatabase> dbTask;
+            var online =
+                ServerStore.DatabasesLandlord.ResourcesStoresCache.TryGetValue(databaseName, out dbTask) &&
+                dbTask != null && dbTask.IsCompleted;
+            var db = online ? dbTask.Result : null;
+            if (online == false)
+            {
+                // if state of database is found in the cache we can continue
+                if (ServerStore.DatabaseInfoCache.TryWriteOfflineDatabaseStatustoRequest(
+                    context, writer, databaseName, disabled))
+                    return;
+                // we won't find it if it is a new database or after a dirty shutdown, so just report empty values then
+            }
+
+            var indexingStatus = dbTask != null && dbTask.IsCompleted
+                ? dbTask.Result.IndexStore.Status.ToString()
+                : null;
+
+            var size = new Size(GetTotalSize(db));
+            var backupInfo = GetBackupInfo(db);
+
+            var doc = new DynamicJsonValue
+            {
+                [nameof(ResourceInfo.Bundles)] = new DynamicJsonArray(GetBundles(db)),
+                [nameof(ResourceInfo.IsAdmin)] = true, //TODO: implement me!
+                [nameof(ResourceInfo.Name)] = databaseName,
+                [nameof(ResourceInfo.Disabled)] = disabled,
+                [nameof(ResourceInfo.TotalSize)] = new DynamicJsonValue
+                {
+                    [nameof(Size.HumaneSize)] = size.HumaneSize,
+                    [nameof(Size.SizeInBytes)] = size.SizeInBytes
+                },
+                [nameof(ResourceInfo.Errors)] = online
+                    ? db.IndexStore.GetIndexes().Sum(index => index.GetErrors().Count)
+                    : 0,
+                [nameof(ResourceInfo.Alerts)] = online ? db.Alerts.GetAlertCount() : 0,
+                [nameof(ResourceInfo.UpTime)] = online ? GetUptime(db).ToString() : null,
+                [nameof(ResourceInfo.BackupInfo)] = backupInfo,
+                [nameof(DatabaseInfo.DocumentsCount)] = online
+                    ? db.DocumentsStorage.GetNumberOfDocuments()
+                    : 0,
+                [nameof(DatabaseInfo.IndexesCount)] = online ? db.IndexStore.GetIndexes().Count() : 0,
+                [nameof(DatabaseInfo.RejectClients)] = false, //TODO: implement me!
+                [nameof(DatabaseInfo.IndexingStatus)] = indexingStatus
+            };
+
+            context.Write(writer, doc);
         }
 
         private DynamicJsonValue GetBackupInfo(DocumentDatabase db)
@@ -140,7 +192,8 @@ namespace Raven.Server.Web.System
         private long GetTotalSize(DocumentDatabase db)
         {
             if (db == null)
-                return -1;
+                return 0;    
+
             return
                 db.GetAllStoragesEnvironment()
                     .Sum(env => env.Environment.Stats().AllocatedDataFileSizeInBytes);

@@ -27,16 +27,16 @@ namespace Raven.Server.Documents.Replication
         private readonly ConcurrentSet<OutgoingReplicationHandler> _outgoing = new ConcurrentSet<OutgoingReplicationHandler>();
         private readonly ConcurrentDictionary<ReplicationDestination, ConnectionFailureInfo> _outgoingFailureInfo = new ConcurrentDictionary<ReplicationDestination, ConnectionFailureInfo>();
 
-        private readonly ConcurrentSet<IncomingReplicationHandler> _incoming = new ConcurrentSet<IncomingReplicationHandler>();
+        private readonly ConcurrentDictionary<string, IncomingReplicationHandler> _incoming = new ConcurrentDictionary<string, IncomingReplicationHandler>();
         private readonly ConcurrentDictionary<IncomingConnectionInfo, DateTime> _incomingLastActivityTime = new ConcurrentDictionary<IncomingConnectionInfo, DateTime>();
         private readonly ConcurrentDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>> _incomingRejectionStats = new ConcurrentDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>>();
 
         private readonly ConcurrentSet<ConnectionFailureInfo> _reconnectQueue = new ConcurrentSet<ConnectionFailureInfo>();
-        internal readonly Dictionary<string,ScriptResolver> ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
+        internal Dictionary<string,ScriptResolver> ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
         private readonly Logger _log;
         private ReplicationDocument _replicationDocument;
 
-        public IEnumerable<IncomingConnectionInfo> IncomingConnections => _incoming.Select(x => x.ConnectionInfo);
+        public IEnumerable<IncomingConnectionInfo> IncomingConnections => _incoming.Values.Select(x => x.ConnectionInfo);
         public IEnumerable<ReplicationDestination> OutgoingConnections => _outgoing.Select(x => x.Destination);
 
         public DocumentReplicationLoader(DocumentDatabase database)
@@ -51,6 +51,16 @@ namespace Raven.Server.Documents.Replication
         public IReadOnlyDictionary<IncomingConnectionInfo, DateTime> IncomingLastActivityTime => _incomingLastActivityTime;
         public IReadOnlyDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>> IncomingRejectionStats => _incomingRejectionStats;
         public IEnumerable<ReplicationDestination> ReconnectQueue => _reconnectQueue.Select(x => x.Destination);
+
+        public long? GetLastReplicatedEtagForDestination(ReplicationDestination dest)
+        {
+            foreach (var replicationHandler in _outgoing)
+            {
+                if (replicationHandler.Destination.IsMatch(dest))
+                    return replicationHandler._lastSentDocumentEtag;
+            }
+            return null;
+        }
 
         public void AcceptIncomingConnection(TcpConnectionOptions tcpConnectionOptions)
         {
@@ -141,9 +151,12 @@ namespace Raven.Server.Documents.Replication
             if (_log.IsInfoEnabled)
                 _log.Info($"Initialized document replication connection from {connectionInfo.SourceDatabaseName} located at {connectionInfo.SourceUrl}", null);
 
-            _incoming.Add(newIncoming);
-
-            newIncoming.Start();
+            // need to safeguard against two concurrent connection attempts
+            var newConnection = _incoming.GetOrAdd(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming);
+            if(newConnection == newIncoming)
+                newIncoming.Start();
+            else
+                newIncoming.Dispose();
         }
 
         private void AttemptReconnectFailedOutgoing(object state)
@@ -186,27 +199,30 @@ namespace Raven.Server.Documents.Replication
 
         private void AssertValidConnection(IncomingConnectionInfo connectionInfo)
         {
-
-            if (Guid.Parse(connectionInfo.SourceDatabaseId) == _database.DbId)
+            Guid sourceDbId;
+            //precaution, should never happen..
+            if (string.IsNullOrWhiteSpace(connectionInfo.SourceDatabaseId) ||
+                !Guid.TryParse(connectionInfo.SourceDatabaseId, out sourceDbId))
             {
-                throw new InvalidOperationException(
-                    "Cannot have have replication with source and destination being the same database. They share the same db id ({connectionInfo} - {_database.DbId})");
+                throw new InvalidOperationException($"Failed to parse source database Id. What I got is {(string.IsNullOrWhiteSpace(connectionInfo.SourceDatabaseId) ? "<empty string>" : _database.DbId.ToString())}. This is not supposed to happen and is likely a bug.");
             }
 
-            foreach (var relevantActivityEntry in _incomingLastActivityTime)
+            if (sourceDbId == _database.DbId)
             {
-                if (relevantActivityEntry.Key.SourceDatabaseId.Equals(connectionInfo.SourceDatabaseId,
-                        StringComparison.OrdinalIgnoreCase) == false)
-                    continue;
+                throw new InvalidOperationException($"Cannot have have replication with source and destination being the same database. They share the same db id ({connectionInfo} - {_database.DbId})");
+            }
 
-                if (relevantActivityEntry.Key != null &&
-                   (DateTime.UtcNow - relevantActivityEntry.Value).TotalMilliseconds <=
-                   _database.Configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds)
+            IncomingReplicationHandler value;
+            if (_incoming.TryRemove(connectionInfo.SourceDatabaseId, out value))
+            {
+                if (_log.IsInfoEnabled)
                 {
-                    throw new InvalidOperationException(
-                        $"Tried to connect [{connectionInfo}], but the connection from the same source was active less then {_database.Configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalSeconds} ago. Duplicate connections from the same source are not allowed.");
+                    _log.Info($"Disconnecting existing connection from {value.FromToString} because we got a new connection from the same source db");
                 }
+                value.Dispose();
             }
+
+           
         }
 
         public void Initialize()
@@ -226,8 +242,11 @@ namespace Raven.Server.Documents.Replication
         {
             if ( _replicationDocument?.ResolveByCollection == null )
             {
+                if (ScriptConflictResolversCache.Count > 0)
+                    ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
                 return;
             }
+            var copy = new Dictionary<string, ScriptResolver>();
             foreach (var kvp in _replicationDocument.ResolveByCollection)
             {
                 var collection = kvp.Key;
@@ -236,11 +255,12 @@ namespace Raven.Server.Documents.Replication
                 {
                     continue;
                 }
-                ScriptConflictResolversCache[collection] = new ScriptResolver
+                copy[collection] = new ScriptResolver
                 {
                     Script = script
                 };
             }
+            ScriptConflictResolversCache = copy;
         }
 
         private void InitializeOutgoingReplications()
@@ -285,7 +305,8 @@ namespace Raven.Server.Documents.Replication
         {
             using (instance)
             {
-                _incoming.TryRemove(instance);
+                IncomingReplicationHandler _;
+                _incoming.TryRemove(instance.ConnectionInfo.SourceDatabaseId, out _);
 
                 instance.Failed -= OnIncomingReceiveFailed;
                 instance.DocumentsReceived -= OnIncomingReceiveSucceeded;
@@ -378,7 +399,7 @@ namespace Raven.Server.Documents.Replication
                 _log.Info("Closing and disposing document replication connections.");
 
             foreach (var incoming in _incoming)
-                incoming.Dispose();
+                incoming.Value.Dispose();
 
             foreach (var outgoing in _outgoing)
                 outgoing.Dispose();

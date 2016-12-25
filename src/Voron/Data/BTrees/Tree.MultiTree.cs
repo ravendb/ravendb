@@ -34,7 +34,7 @@ namespace Voron.Data.BTrees
     {
         public bool IsMultiValueTree { get; set; }
 
-        public void MultiAdd(Slice key, Slice value, ushort? version = null)
+        public void MultiAdd(Slice key, Slice value)
         {
             if (!value.HasValue)
                 throw new ArgumentNullException(nameof(value));
@@ -52,7 +52,7 @@ namespace Voron.Data.BTrees
             var page = FindPageFor(key, out node);
             if (page == null || page.LastMatch != 0)
             {
-                MultiAddOnNewValue(key, value, version, maxNodeSize);
+                MultiAddOnNewValue(key, value, maxNodeSize);
                 return;
             }
 
@@ -64,7 +64,7 @@ namespace Voron.Data.BTrees
             if (item->Flags == TreeNodeFlags.MultiValuePageRef)
             {
                 var existingTree = OpenMultiValueTree(key, item);
-                existingTree.DirectAdd(value, 0, version: version);
+                existingTree.DirectAdd(value, 0);
                 return;
             }
 
@@ -78,9 +78,6 @@ namespace Voron.Data.BTrees
             var existingItem = nestedPage.Search(_llt, value);
             if (nestedPage.LastMatch != 0)
                 existingItem = null;// not an actual match, just greater than
-
-            ushort previousNodeRevision = existingItem != null ? existingItem->Version : (ushort)0;
-            CheckConcurrency(key, value, version, previousNodeRevision, TreeActionType.Add);
 
             if (existingItem != null)
             {
@@ -98,7 +95,7 @@ namespace Voron.Data.BTrees
             if (nestedPage.HasSpaceFor(_llt, value, 0))
             {
                 // we are now working on top of the modified root page, we can just modify the memory directly
-                nestedPage.AddDataNode(nestedPage.LastSearchPosition, value, 0, previousNodeRevision);
+                nestedPage.AddDataNode(nestedPage.LastSearchPosition, value, 0);
                 return;
             }
 
@@ -133,7 +130,7 @@ namespace Voron.Data.BTrees
                 using (nestedPage.GetNodeKey(_llt, i, out existingValue))
                     tree.DirectAdd(existingValue, 0);
             }
-            tree.DirectAdd(value, 0, version: version);
+            tree.DirectAdd(value, 0);
             _tx.AddMultiValueTree(this, key, tree);
             // we need to record that we switched to tree mode here, so the next call wouldn't also try to create the tree again
             DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef);
@@ -169,15 +166,15 @@ namespace Voron.Data.BTrees
 
                     Slice nodeKey;
                     using (TreeNodeHeader.ToSlicePtr(allocator, nodeHeader, out nodeKey))
-                        newNestedPage.AddDataNode(i, nodeKey, 0, (ushort)(nodeHeader->Version - 1)); // we dec by one because AdddataNode will inc by one, and we don't want to change those values
+                        newNestedPage.AddDataNode(i, nodeKey, 0);
                 }
 
                 newNestedPage.Search(_llt, value);
-                newNestedPage.AddDataNode(newNestedPage.LastSearchPosition, value, 0, 0);
+                newNestedPage.AddDataNode(newNestedPage.LastSearchPosition, value, 0);
             }
         }
 
-        private void MultiAddOnNewValue(Slice key, Slice value, ushort? version, int maxNodeSize)
+        private void MultiAddOnNewValue(Slice key, Slice value, int maxNodeSize)
         {
             var requiredPageSize = Constants.TreePageHeaderSize + // header of a nested page
                                    Constants.NodeOffsetSize +   // one node in a nested page
@@ -209,12 +206,10 @@ namespace Voron.Data.BTrees
                 Flags = 0
             };
 
-            CheckConcurrency(key, value, version, 0, TreeActionType.Add);
-
-            nestedPage.AddDataNode(0, value, 0, 0);
+            nestedPage.AddDataNode(0, value, 0);
         }
 
-        public void MultiDelete(Slice key, Slice value, ushort? version = null)
+        public void MultiDelete(Slice key, Slice value)
         {
             State.IsModified = true;
             TreeNodeHeader* node;
@@ -232,7 +227,7 @@ namespace Voron.Data.BTrees
             {
                 var tree = OpenMultiValueTree(key, item);
 
-                tree.Delete(value, version);
+                tree.Delete(value);
 
                 // previously, we would convert back to a simple model if we dropped to a single entry
                 // however, it doesn't really make sense, once you got enough values to go to an actual nested 
@@ -247,7 +242,7 @@ namespace Voron.Data.BTrees
             else // we use a nested page here
             {
                 var nestedPage = new TreePage(DirectAccessFromHeader(item), (ushort)GetDataSize(item));
-                var nestedItem = nestedPage.Search(_llt, value);
+
                 if (nestedPage.LastMatch != 0) // value not found
                     return;
 
@@ -260,8 +255,7 @@ namespace Voron.Data.BTrees
                 {
                     LastSearchPosition = nestedPage.LastSearchPosition
                 };
-
-                CheckConcurrency(key, value, version, nestedItem->Version, TreeActionType.Delete);
+                
                 nestedPage.RemoveNode(nestedPage.LastSearchPosition);
                 if (nestedPage.NumberOfEntries == 0)
                     Delete(key);
@@ -348,8 +342,8 @@ namespace Voron.Data.BTrees
             return tree;
         }
 
-        private bool TryOverwriteDataOrMultiValuePageRefNode(TreeNodeHeader* updatedNode, Slice key, int len,
-                                                             TreeNodeFlags requestedNodeType, ushort? version, out byte* pos)
+        private bool TryOverwriteDataOrMultiValuePageRefNode(TreeNodeHeader* updatedNode, int len,
+                                                             TreeNodeFlags requestedNodeType, out byte* pos)
         {
             switch (requestedNodeType)
             {
@@ -359,18 +353,10 @@ namespace Voron.Data.BTrees
                         if (updatedNode->DataSize == len &&
                             (updatedNode->Flags == TreeNodeFlags.Data || updatedNode->Flags == TreeNodeFlags.MultiValuePageRef))
                         {
-                            CheckConcurrency(key, version, updatedNode->Version, TreeActionType.Add);
-
-                            if (updatedNode->Version == UInt16.MaxValue)
-                                updatedNode->Version = 0;
-                            updatedNode->Version++;
-
                             updatedNode->Flags = requestedNodeType;
 
-                            {
-                                pos = (byte*)updatedNode + Constants.NodeHeaderSize + updatedNode->KeySize;
-                                return true;
-                            }
+                            pos = (byte*)updatedNode + Constants.NodeHeaderSize + updatedNode->KeySize;
+                            return true;
                         }
                         break;
                     }

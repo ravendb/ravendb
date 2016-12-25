@@ -29,12 +29,12 @@ namespace Raven.Server.Documents.Transformers
             return new RecursiveFunction(item, func).Execute();
         }
 
-        public dynamic LoadDocument<TIGnored>(object keyOrEnumerable, string collectionName)
+        public dynamic LoadDocument<TIGnored>(object keyOrEnumerable, string collectionName = null)
         {
             return LoadDocument(keyOrEnumerable, collectionName);
         }
 
-        public dynamic LoadDocument(object keyOrEnumerable, string collectionName)
+        public dynamic LoadDocument(object keyOrEnumerable, string collectionName = null)
         {
             if (CurrentTransformationScope.Current == null)
                 throw new InvalidOperationException("Transformation scope was not initialized. Key: " + keyOrEnumerable);

@@ -274,13 +274,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
         }
 
-        public override StorageReport GenerateStorageReport(bool details)
+        public override DetailedStorageReport GenerateStorageReport(bool calculateExactSizes)
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenReadTransaction())
             {
-                var report = _indexStorage.Environment().GenerateReport(tx.InnerTransaction, details);
+                var report = _indexStorage.Environment().GenerateDetailedReport(tx.InnerTransaction, calculateExactSizes);
 
                 var treesToKeep = new List<TreeReport>();
 
@@ -301,14 +301,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                     aggregatedTree.AllocatedSpaceInBytes += treeReport.AllocatedSpaceInBytes;
                     aggregatedTree.BranchPages += treeReport.BranchPages;
-                    aggregatedTree.Density = details ? aggregatedTree.Density + treeReport.Density : -1;
+                    aggregatedTree.Density = calculateExactSizes ? aggregatedTree.Density + treeReport.Density : -1;
                     aggregatedTree.Depth = Math.Max(aggregatedTree.Depth, treeReport.Depth);
                     aggregatedTree.LeafPages += treeReport.LeafPages;
                     aggregatedTree.NumberOfEntries += treeReport.NumberOfEntries;
                     aggregatedTree.OverflowPages += treeReport.OverflowPages;
                     aggregatedTree.PageCount += treeReport.PageCount;
                     aggregatedTree.Type = treeReport.Type;
-                    aggregatedTree.UsedSpaceInBytes = details ? aggregatedTree.UsedSpaceInBytes + treeReport.UsedSpaceInBytes : -1;
+                    aggregatedTree.UsedSpaceInBytes = calculateExactSizes ? aggregatedTree.UsedSpaceInBytes + treeReport.UsedSpaceInBytes : -1;
                 }
 
                 if (aggregatedTree != null)

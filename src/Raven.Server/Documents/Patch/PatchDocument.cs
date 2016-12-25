@@ -259,7 +259,7 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        protected virtual void SetupInputs(Document document, PatcherOperationScope scope, Engine jintEngine)
+        protected void SetupInputs(Document document, PatcherOperationScope scope, Engine jintEngine)
         {
             jintEngine.SetValue("__document_id", document.Key);
             scope.PatchObject = scope.ToJsObject(jintEngine, document.Data);

@@ -82,7 +82,7 @@ class commandBase {
         return this.ajax(relativeUrl, args, "RESET", resource, options);
     }
 
-    protected del(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
+    protected del<T>(relativeUrl: string, args: any, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<T> {
         return this.ajax(relativeUrl, args, "DELETE", resource, options, timeToAlert);
     }
 
@@ -100,6 +100,9 @@ class commandBase {
 
     protected ajax(relativeUrl: string, args: any, method: string, resource?: resource, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
         var originalArguments = arguments;
+
+        const requestExecution = protractedCommandsDetector.instance.requestStarted(4000, timeToAlert);
+
         // ContentType:
         //
         // Can't use application/json in cross-domain requests, otherwise it 
@@ -124,7 +127,7 @@ class commandBase {
                     if (evt.lengthComputable) {
                         var percentComplete = (evt.loaded / evt.total) * 100;
                         if (percentComplete < 100) {
-                            protractedCommandsDetector.instance.progressReceived(timeToAlert);
+                            requestExecution.markProgress();
                         }
                         //TODO: use event
                         ko.postbox.publish("UploadProgress", percentComplete);
@@ -157,12 +160,10 @@ class commandBase {
             defaultOptions.headers["Authorization"] = oauthContext.authHeader();
         }
 
-        protractedCommandsDetector.instance.requestStarted(timeToAlert);
-
         var ajaxTask = $.Deferred();
 
         $.ajax(defaultOptions).always(() => {
-            protractedCommandsDetector.instance.requestCompleted();
+            requestExecution.markCompleted();
         }).done((results, status, xhr) => {
             ajaxTask.resolve(results, status, xhr);
         }).fail((request, status, error) => {

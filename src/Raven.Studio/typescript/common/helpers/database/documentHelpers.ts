@@ -31,13 +31,13 @@ class documentHelpers {
     }
 
     static unescapeNewlinesAndTabsInTextFields(str: string): string {
-        var AceDocumentClass = require("ace/document").Document;
-        var AceEditSessionClass = require("ace/edit_session").EditSession;
-        var AceJSONMode = require("ace/mode/json").Mode;
+        var AceDocumentClass = ace.require("ace/document").Document;
+        var AceEditSessionClass = ace.require("ace/edit_session").EditSession;
+        var AceJSONMode = ace.require("ace/mode/json").Mode;
         var documentTextAceDocument = new AceDocumentClass(str);
         var jsonMode = new AceJSONMode();
         var documentTextAceEditSession = new AceEditSessionClass(documentTextAceDocument, jsonMode);
-        var TokenIterator = require("ace/token_iterator").TokenIterator;
+        var TokenIterator = ace.require("ace/token_iterator").TokenIterator;
         var iterator = new TokenIterator(documentTextAceEditSession, 0, 0);
         var curToken = iterator.getCurrentToken();
         // first, calculate newline indexes
@@ -95,15 +95,15 @@ class documentHelpers {
     }
 
     static escapeNewlinesAndTabsInTextFields(str: string): any {
-        var AceDocumentClass = require("ace/document").Document;
-        var AceEditSessionClass = require("ace/edit_session").EditSession;
-        var AceJSONMode = require("ace/mode/json_newline_friendly").Mode;
+        var AceDocumentClass = ace.require("ace/document").Document;
+        var AceEditSessionClass = ace.require("ace/edit_session").EditSession;
+        var AceJSONMode = ace.require("ace/mode/json_newline_friendly").Mode;
         var documentTextAceDocument = new AceDocumentClass(str);
         var jsonMode = new AceJSONMode();
         var documentTextAceEditSession = new AceEditSessionClass(documentTextAceDocument, jsonMode);
         var previousLine = 0;
 
-        var TokenIterator = require("ace/token_iterator").TokenIterator;
+        var TokenIterator = ace.require("ace/token_iterator").TokenIterator;
         var iterator = new TokenIterator(documentTextAceEditSession, 0, 0);
         var curToken = iterator.getCurrentToken();
         var text = "";

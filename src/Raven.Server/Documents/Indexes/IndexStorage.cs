@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Indexes
                 using (Slice.External(context.Allocator, (byte*)&typeInt, sizeof(int), out tmpSlice))
                     statsTree.Add(IndexSchema.TypeSlice, tmpSlice);
 
-                if (statsTree.ReadVersion(IndexSchema.CreatedTimestampSlice) == 0)
+                if (statsTree.Read(IndexSchema.CreatedTimestampSlice) == null)
                 {
                     var binaryDate = SystemTime.UtcNow.ToBinary();
                     using (Slice.External(context.Allocator, (byte*)&binaryDate, sizeof(long), out tmpSlice))

@@ -31,7 +31,7 @@ namespace Raven.Server.Indexing
         public override bool FileExists(string name)
         {
             var filesTree = _currentTransaction.Value.ReadTree("Files");
-            return filesTree.ReadVersion(name) != 0;
+            return filesTree.Read(name) != null;
         }
 
         public override string[] ListAll()
@@ -58,7 +58,9 @@ namespace Raven.Server.Indexing
             if (readResult == null)
                 throw new FileNotFoundException("Could not find file", name);
 
-            return readResult.Version;
+            var fileInfo = *(LuceneFileInfo*)readResult.Reader.Base;
+
+            return fileInfo.Version;
         }
 
         public override void TouchFile(string name)
@@ -68,8 +70,12 @@ namespace Raven.Server.Indexing
             if (readResult == null)
                 throw new FileNotFoundException("Could not find file", name);
 
+            var fileInfo = *(LuceneFileInfo*)readResult.Reader.Base;
+            fileInfo.Version++;
+
             var pos = filesTree.DirectAdd(name, readResult.Reader.Length);
-            Memory.Copy(pos, readResult.Reader.Base, readResult.Reader.Length);
+
+            *(LuceneFileInfo*)pos = fileInfo;
         }
 
         public override long FileLength(string name)
@@ -79,7 +85,9 @@ namespace Raven.Server.Indexing
             if (readResult == null)
                 return 0;
 
-            return readResult.Reader.ReadLittleEndianInt64();
+            var fileInfo = *(LuceneFileInfo*)readResult.Reader.Base;
+
+            return fileInfo.Length;
         }
 
         public override void DeleteFile(string name)
@@ -101,9 +109,17 @@ namespace Raven.Server.Indexing
         public override IndexOutput CreateOutput(string name)
         {
             var filesTree = _currentTransaction.Value.ReadTree("Files");
-            filesTree.Add(name, Stream.Null);
 
-            return new VoronIndexOutput(_environment.Options.TempPath, name, _currentTransaction.Value);
+            var read = filesTree.Read(name);
+
+            LuceneFileInfo fileInfo;
+
+            if (read == null)
+                fileInfo = new LuceneFileInfo();
+            else
+                fileInfo = *(LuceneFileInfo*)read.Reader.Base;
+
+            return new VoronIndexOutput(_environment.Options.TempPath, name, _currentTransaction.Value, fileInfo);
         }
 
         public IDisposable SetTransaction(Transaction tx)

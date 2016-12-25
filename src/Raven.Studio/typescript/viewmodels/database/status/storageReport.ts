@@ -1,11 +1,22 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import getStorageReportCommand = require("commands/database/debug/getStorageReportCommand");
+import getEnvironmentStorageReportCommand = require("commands/database/debug/getEnvironmentStorageReportCommand");
+import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
 import generalUtils = require("common/generalUtils");
 import app = require("durandal/app");
 import storageReportItem = require("models/database/status/storageReportItem");
 import d3 = require("d3");
 
+type positionAndSizes = {
+    dx: number,
+    dy: number,
+    x: number,
+    y: number
+}
+
 class storageReport extends viewModelBase {
+
+    static readonly animationLegth = 200;
 
     private rawData = [] as storageReportItemDto[];
 
@@ -23,12 +34,14 @@ class storageReport extends viewModelBase {
     private w: number;
     private h: number;
 
+    private transitioning = false;
+
+    showLoader = ko.observable<boolean>(false);
     showPagesColumn: KnockoutObservable<boolean>;
     showEntriesColumn: KnockoutObservable<boolean>;
 
     constructor() {
         super();
-
         this.bindToCurrentInstance("onClick");
     }
 
@@ -48,7 +61,7 @@ class storageReport extends viewModelBase {
         super.compositionComplete();
         this.processData();
         this.initGraph();
-        this.draw();
+        this.draw(undefined, undefined);
     }
 
     private initObservables() {
@@ -117,14 +130,20 @@ class storageReport extends viewModelBase {
     private mapDataFile(report: Voron.Debugging.StorageReport): storageReportItem {
         const dataFile = report.DataFile;
 
+        const storageItem = new storageReportItem("Datafile", "data", false, dataFile.AllocatedSpaceInBytes);
+        storageItem.lazyLoadChildren = true;
+
+        return storageItem;
+    }
+
+    private mapDetailedReport(report: Voron.Debugging.DetailedStorageReport, d: storageReportItem) {
+        d.lazyLoadChildren = false;
+
         const tables = this.mapTables(report.Tables);
         const trees = this.mapTrees(report.Trees, "Trees");
+        const freeSpace = new storageReportItem("Free", "free", false, report.DataFile.FreeSpaceInBytes, []);
 
-        const freeSpace = new storageReportItem("Free", "free", false, dataFile.FreeSpaceInBytes, []);
-
-        const totalSize = tables.size + trees.size + freeSpace.size;
-
-        return new storageReportItem("Datafile", "data", false, totalSize, [tables, trees, freeSpace]);
+        d.internalChildren = [tables, trees, freeSpace];
     }
 
     private mapTables(tables: Voron.Data.Tables.TableReport[]): storageReportItem {
@@ -212,11 +231,15 @@ class storageReport extends viewModelBase {
         g.append("path").attr("d", "M10,0 l-10,10");
     }
 
-    private getChildren(node: any, depth: number) {
+    private getChildren(node: storageReportItem, depth: number) {
         return depth === 0 ? node.internalChildren : [];
     }
 
-    private draw() {
+    private draw(goingIn: boolean, previousNode: storageReportItem) {
+
+        const levelDown = goingIn === true;
+        const levelUp = goingIn === false;
+
         this.treemap = d3.layout.treemap<any>()
             .children((n, depth) => this.getChildren(n, depth))
             .value(d => d.size)
@@ -224,33 +247,117 @@ class storageReport extends viewModelBase {
 
         this.tooltip = d3.select(".chart-tooltip");
 
+        const oldLocation: positionAndSizes = {
+            dx: this.node().dx,
+            dy: this.node().dy,
+            x: this.node().x,
+            y: this.node().y
+        };
+
         const nodes = this.treemap.nodes(this.node())
             .filter(n => !n.children);
 
+        if (levelDown) {
+            this.animateZoomIn(nodes, oldLocation);
+        } else if (levelUp) {
+            this.animateZoomOut(nodes);
+        } else {
+            // initial state
+            this.svg.select(".treemap")
+                .remove();
+            const container = this.svg.append("g")
+                .classed("treemap", true);
+            this.drawNewTreeMap(nodes, container);
+        }
+    }
+
+    private animateZoomIn(nodes: storageReportItem[], oldLocation: positionAndSizes) {
+        this.transitioning = true;
+
+        const oldContainer = this.svg.select(".treemap");
+        const oldCells = oldContainer.selectAll("g.cell");
+
+        const newGroup = this.svg.append("g")
+            .classed("treemap", true);
+
+        const scaleX = this.w / oldLocation.dx;
+        const scaleY = this.h / oldLocation.dy;
+        const transX = -oldLocation.x * scaleX;
+        const transY = -oldLocation.y * scaleY;
+
+        oldContainer
+            .selectAll("text")
+            .transition()
+            .duration(storageReport.animationLegth / 4)
+            .style('opacity', 0);
+
+        oldContainer
+            .transition()
+            .duration(storageReport.animationLegth)
+            .attr("transform", "translate(" + transX + "," + transY + ")scale(" + scaleX + "," + scaleY + ")")
+            .each("end", () => {
+                const newCells = this.drawNewTreeMap(nodes, newGroup);
+                newCells
+                    .style('opacity', 0)
+                    .transition()
+                    .duration(storageReport.animationLegth)
+                    .style('opacity', 1)
+                    .each("end", () => {
+                        oldContainer.remove();
+                        this.transitioning = false;
+                    });
+            });
+    }
+
+    private animateZoomOut(nodes: storageReportItem[]) {
+        this.transitioning = true;
+
+        const oldContainer = this.svg.select(".treemap");
+        const oldCells = oldContainer.selectAll("g.cell");
+
+        const newGroup = this.svg.append("g")
+            .classed("treemap", true);
+
+        const newCells = this.drawNewTreeMap(nodes, newGroup);
+
+        newCells
+            .style('opacity', 0)
+            .transition()
+            .duration(storageReport.animationLegth)
+            .style('opacity', 1)
+            .each("end", () => {
+                oldContainer.remove();
+                this.transitioning = false;
+            });
+    }
+
+    private drawNewTreeMap(nodes: storageReportItem[], container: d3.Selection<any>) {
         const self = this;
         const showTypeOffset = 7;
         const showTypePredicate = (d: storageReportItem) => d.showType && d.dy > 22 && d.dx > 20;
 
-        this.svg.selectAll("g.cell").remove();
-
-        const cell = this.svg.selectAll("g.cell")
+        const cell = container.selectAll("g.cell-no-such") // we always select non-existing nodes to draw from scratch - we don't update elements here
             .data(nodes)
             .enter().append("svg:g")
             .attr("class", d => "cell " + d.type)
             .attr("transform", d => "translate(" + d.x + "," + d.y + ")")
-            .on("click", d => this.onClick(d))
+            .on("click", d => this.onClick(d, true))
             .on("mouseover", d => this.onMouseOver(d))
             .on("mouseout", d => this.onMouseOut(d))
             .on("mousemove", d => this.onMouseMove(d));
 
-        cell.append("svg:rect")
+        const rectangles = cell.append("svg:rect")
             .attr("width", d => d.dx - 1)
             .attr("height", d => d.dy - 1);
+
+        rectangles
+            .filter(x => x.hasChildren() || x.lazyLoadChildren)
+            .style('cursor', 'pointer');
 
         cell.append("svg:text")
             .filter(d => d.dx > 20 && d.dy > 8)
             .attr("x", d => d.dx / 2)
-            .attr("y", d => showTypePredicate(d) ? d.dy/2 - showTypeOffset : d.dy / 2)
+            .attr("y", d => showTypePredicate(d) ? d.dy / 2 - showTypeOffset : d.dy / 2)
             .attr("dy", ".35em")
             .attr("text-anchor", "middle")
             .text(d => d.name)
@@ -261,13 +368,15 @@ class storageReport extends viewModelBase {
         cell.filter(d => showTypePredicate(d))
             .append("svg:text")
             .attr("x", d => d.dx / 2)
-            .attr("y", d => showTypePredicate(d) ? d.dy/2 + showTypeOffset : d.dy / 2)
+            .attr("y", d => showTypePredicate(d) ? d.dy / 2 + showTypeOffset : d.dy / 2)
             .attr("dy", ".35em")
             .attr("text-anchor", "middle")
             .text(d => _.upperFirst(d.type))
             .each(function (d) {
                 self.wrap(this, d.dx);
             });
+
+        return cell;
     }
 
     wrap($self: any, width: number) {
@@ -281,12 +390,60 @@ class storageReport extends viewModelBase {
         }
     } 
 
-    onClick(d: storageReportItem) {
+    private loadDetailedReport(d: storageReportItem): JQueryPromise<detailedStorageReportItemDto> {
+        if (!d.lazyLoadChildren) {
+            return;
+        }
+
+        const env = d.parent;
+
+        const showLoaderTimer = setTimeout(() => {
+            this.showLoader(true);
+        }, 100);
+
+        return new getEnvironmentStorageReportCommand(this.activeDatabase(), env.name, _.capitalize(env.type))
+            .execute()
+            .done((envReport) => {
+                this.mapDetailedReport(envReport.Report, d);
+            })
+            .always(() => {
+                if (this.showLoader()) {
+                    this.showLoader(false);
+                } else {
+                    clearTimeout(showLoaderTimer);
+                }
+            });
+    }
+
+    onClick(d: storageReportItem, goingIn: boolean) {
+        if (this.transitioning || this.node() === d) {
+            return;
+        }
+
+        if (d.lazyLoadChildren) {
+            const requestExecution = protractedCommandsDetector.instance.requestStarted(500);
+
+            this.loadDetailedReport(d)
+                .done(() => {
+                    const prev = this.node();
+                    this.node(d);
+                    this.draw(true, prev);
+                })
+                .always(() => requestExecution.markCompleted());
+
+            if (d3.event) {
+                (d3.event as any).stopPropagation();
+            }
+            return;
+        }
+
         if (!d.internalChildren || !d.internalChildren.length) {
             return;
         }
+
+        const prev = this.node();
         this.node(d);
-        this.draw();
+        this.draw(goingIn, prev);
 
         if (d3.event) {
             (d3.event as any).stopPropagation();
@@ -294,14 +451,15 @@ class storageReport extends viewModelBase {
     }
 
     private onMouseMove(d: storageReportItem) {
-        const [x, y] = d3.mouse(this.svg.node());
-        let offset = d.showType ? 38 : 15;
-        if (this.shouldDisplayNumberOfEntires(d)) {
-            offset += 23;
-        }
+        let [x, y] = d3.mouse(this.svg.node());
+
+        const tooltipWidth = $(".chart-tooltip").width() + 20;
+
+        x = Math.min(x, Math.max(this.w - tooltipWidth, 0));
+
         this.tooltip
-            .style("left", x + "px")
-            .style("top", (y - offset) + "px");
+            .style("left", (x + 10) + "px")
+            .style("top", (y + 10) + "px");
     }
 
     private onMouseOver(d: storageReportItem) {

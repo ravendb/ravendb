@@ -35,13 +35,13 @@ namespace Voron.Impl.Journal
             {
                 _firstPositionInJournalFile = position; // first lazy tx saves position to all lazy tx that comes afterwards
             }
+            using (var writer = _lazyTransactionPager.BatchWriter())
+            {
+                writer.Write(_lastUsedPage,
+                    pages.NumberOfPages,
+                    pages.Base);
 
-            _lazyTransactionPager.BatchWrites.Write(_lastUsedPage,
-                pages.NumberOfPages,
-                pages.Base,
-                null);
-
-            _lazyTransactionPager.BatchWrites.Clear();
+            }
 
             _lastUsedPage += pages.NumberOfPages;
         }

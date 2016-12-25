@@ -14,7 +14,6 @@ namespace Voron.Data.BTrees
         private readonly int _len;
         private readonly Slice _newKey;
         private readonly TreeNodeFlags _nodeType;
-        private readonly ushort _nodeVersion;
         private readonly long _pageNumber;
         private readonly LowLevelTransaction _tx;
         private readonly Tree _tree;
@@ -28,7 +27,6 @@ namespace Voron.Data.BTrees
             int len,
             long pageNumber,
             TreeNodeFlags nodeType,
-            ushort nodeVersion,
             TreeCursor cursor)
         {
             _tx = tx;
@@ -37,7 +35,6 @@ namespace Voron.Data.BTrees
             _len = len;
             _pageNumber = pageNumber;
             _nodeType = nodeType;
-            _nodeVersion = nodeVersion;
             _cursor = cursor;
             TreePage page = _cursor.Pages.First.Value;
             _page = _tree.ModifyPage(page);
@@ -156,9 +153,9 @@ namespace Voron.Data.BTrees
                 case TreeNodeFlags.PageRef:
                     return page.AddPageRefNode(index, newKeyToInsert, _pageNumber);
                 case TreeNodeFlags.Data:
-                    return page.AddDataNode(index, newKeyToInsert, _len, _nodeVersion);
+                    return page.AddDataNode(index, newKeyToInsert, _len);
                 case TreeNodeFlags.MultiValuePageRef:
-                    return page.AddMultiValueNode(index, newKeyToInsert, _len, _nodeVersion);
+                    return page.AddMultiValueNode(index, newKeyToInsert, _len);
                 default:
                     throw new NotSupportedException("Unknown node type");
             }
@@ -357,7 +354,7 @@ namespace Voron.Data.BTrees
             {
                 _cursor.Push(p);
 
-                var pageSplitter = new TreePageSplitter(_tx, _tree, _newKey, _len, _pageNumber, _nodeType, _nodeVersion, _cursor);
+                var pageSplitter = new TreePageSplitter(_tx, _tree, _newKey, _len, _pageNumber, _nodeType, _cursor);
 
                 return pageSplitter.Execute();
             }

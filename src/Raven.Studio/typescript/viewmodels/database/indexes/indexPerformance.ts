@@ -20,6 +20,7 @@ type rTreeLeaf = {
 }
 
 class hitTest {
+    cursor = ko.observable<string>("auto");
     private rTree = rbush<rTreeLeaf>();
     private container: d3.Selection<any>;
     private onToggleIndex: (indexName: string) => void;
@@ -87,6 +88,8 @@ class hitTest {
         const clickLocation = d3.mouse(this.container.node());
         const items = this.findItems(clickLocation[0], clickLocation[1]);
 
+        this.cursor(items.length ? "pointer" : "auto");
+
         const currentItem = items.filter(x => x.actionType === "trackItem").map(x => x.arg as Raven.Client.Data.Indexes.IndexingPerformanceOperation)[0];
         this.handleTooltip(currentItem, clickLocation[0], clickLocation[1]);
     }
@@ -149,23 +152,26 @@ class metrics extends viewModelBase {
     }
 
     static readonly brushSectionHeight = 40;
-    static readonly brushSectionIndexesWorkHeight = 22;
-    static readonly brushSectionLineWidth = 1;
-    static readonly trackHeight = 16; // height used for callstack item
-    static readonly stackPadding = 1; // space between call stacks
-    static readonly trackMargin = 4;
-    static readonly closedTrackPadding = 2;
-    static readonly openedTrackPadding = 4;
-    static readonly axisHeight = 35; 
+    private static readonly brushSectionIndexesWorkHeight = 22;
+    private static readonly brushSectionLineWidth = 1;
+    private static readonly trackHeight = 18; // height used for callstack item
+    private static readonly stackPadding = 1; // space between call stacks
+    private static readonly trackMargin = 4;
+    private static readonly closedTrackPadding = 2;
+    private static readonly openedTrackPadding = 4;
+    private static readonly axisHeight = 35; 
 
-    static readonly maxRecursion = 5;
-    static readonly minGapSize = 10 * 1000; // 10 seconds
+    private static readonly maxRecursion = 5;
+    private static readonly minGapSize = 10 * 1000; // 10 seconds
 
     private data: Raven.Client.Data.Indexes.IndexPerformanceStats[] = [];
     private totalWidth: number;
     private totalHeight: number;
 
+    private searchText = ko.observable<string>();
+
     private indexNames = ko.observableArray<string>();
+    private filteredIndexNames = ko.observableArray<string>();
     private expandedTracks = ko.observableArray<string>();
 
     private isoParser = d3.time.format.iso;
@@ -188,7 +194,6 @@ class metrics extends viewModelBase {
 
     private gapFinder: gapFinder;
 
-    private color = d3.scale.category20c(); //TODO: use custom colors
     private dialogVisible = false;
     private canExpandAll: KnockoutComputed<boolean>;
 
@@ -210,6 +215,8 @@ class metrics extends viewModelBase {
 
             return indexNames.length && indexNames.length !== expandedTracks.length;
         });
+
+        this.searchText.throttle(200).subscribe(() => this.filterIndexes());
     }
 
     activate(args: { indexName: string, database: string}): JQueryPromise<any> {
@@ -268,7 +275,6 @@ class metrics extends viewModelBase {
 
         this.zoom = d3.behavior.zoom()
             .x(this.xNumericScale)
-            //TODO:.scaleExtent([1, 100]) - it is not that easy as brush resets scale/transform on zoom object!
             .on("zoom", () => this.onZoom());
 
         this.svg
@@ -287,6 +293,10 @@ class metrics extends viewModelBase {
         const onMove = () => {
             this.hitTest.onMouseMove();
         }
+
+        this.hitTest.cursor.subscribe((cursor) => {
+            selection.style("cursor", cursor);
+        });
 
         selection.on("mousemove.tip", onMove);
 
@@ -316,6 +326,14 @@ class metrics extends viewModelBase {
             });
 
         selection.on("dblclick.zoom", null);
+    }
+
+    private filterIndexes() {
+        const criteria = this.searchText().toLowerCase();
+
+        this.filteredIndexNames(this.indexNames().filter(x => x.toLowerCase().includes(criteria)));
+
+        this.drawMainSection();
     }
 
     private draw() {
@@ -423,6 +441,7 @@ class metrics extends viewModelBase {
 
     private prepareMainSection() {
         this.indexNames(this.findIndexNames());
+        this.filteredIndexNames(this.indexNames());
     }
 
     private fixCurrentOffset() {
@@ -434,7 +453,7 @@ class metrics extends viewModelBase {
         let domain = [] as Array<string>;
         let range = [] as Array<number>;
 
-        const indexesInfo = this.indexNames();
+        const indexesInfo = this.filteredIndexNames();
 
         for (let i = 0; i < indexesInfo.length; i++) {
             const indexName = indexesInfo[i];
@@ -456,10 +475,10 @@ class metrics extends viewModelBase {
 
     private calcMaxYOffset() {
         const expandedTracksCount = this.expandedTracks().length;
-        const closedTracksCount = this.indexNames().length - expandedTracksCount;
+        const closedTracksCount = this.filteredIndexNames().length - expandedTracksCount;
 
         const offset = metrics.axisHeight
-            + this.indexNames().length * metrics.trackMargin
+            + this.filteredIndexNames().length * metrics.trackMargin
             + expandedTracksCount * metrics.openedTrackHeight
             + closedTracksCount * metrics.closedTrackHeight;
 
@@ -505,6 +524,7 @@ class metrics extends viewModelBase {
 
         context.textAlign = "left";
         context.textBaseline = "top";
+        context.font = "10px Lato";
         ticks.forEach((x, i) => {
             // draw text with 5px left padding
             context.fillText(this.xTickFormat(x), initialOffset + (i * step) + 5, 5);
@@ -513,22 +533,11 @@ class metrics extends viewModelBase {
     }
 
     private onZoom() {
-        this.checkOffScale();
-
         this.brush.extent(this.xNumericScale.domain() as [number, number]);
         this.brushContainer
             .call(this.brush);
 
         this.drawMainSection();
-    }
-
-    private checkOffScale() {
-        var t = (d3.event as any).translate,
-            s = (d3.event as any).scale;
-        var tx = t[0],
-            ty = t[1];
-
-        //TODO: http://bl.ocks.org/tommct/8116740
     }
 
     private onBrush() {
@@ -617,10 +626,6 @@ class metrics extends viewModelBase {
     }
 
     private drawTracks(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
-        //TODO: include quadTree, don't draw when index is offscreen, include vertical scroll, don't draw section if off screen
-        //TODO: support not completed items
-        //TODO: put hit area cache (use quadtree as well)
-
         if (xScale.domain().length === 0) {
             return;
         }
@@ -633,7 +638,7 @@ class metrics extends viewModelBase {
             yStart += isOpened ? metrics.openedTrackPadding : metrics.closedTrackPadding;
 
             perfStat.Performance.forEach(perf => {
-                const startDate = this.isoParser.parse(perf.Started); //TODO: create cache for this to avoid parsing dates
+                const startDate = this.isoParser.parse(perf.Started);
                 const x1 = xScale(startDate);
 
                 const yOffset = isOpened ? metrics.trackHeight + metrics.stackPadding : 0;
@@ -676,7 +681,8 @@ class metrics extends viewModelBase {
                     const textWidth = context.measureText(text).width
                     const truncatedText = graphHelper.truncText(text, textWidth, dx - 4);
                     if (truncatedText) {
-                        context.fillText(truncatedText, currentX + 2, yStart + 11, dx - 4);
+                        context.font = "12px Lato";
+                        context.fillText(truncatedText, currentX + 2, yStart + 13, dx - 4);
                     }
                 }
             }
@@ -690,10 +696,11 @@ class metrics extends viewModelBase {
 
     private drawIndexNames(context: CanvasRenderingContext2D) {
         const yScale = this.yScale;
-        const textShift = 13.5;
+        const textShift = 14.5;
         const textStart = 3 + 8 + 4;
 
-        this.indexNames().forEach((indexName) => {
+        this.filteredIndexNames().forEach((indexName) => {
+            context.font = "12px Lato";
             const rectWidth = context.measureText(indexName).width + 2 * 3 /* left right padding */ + 8 /* arrow space */ + 4; /* padding between arrow and text */ 
 
             context.fillStyle = metrics.colors.trackNameBg;
@@ -762,9 +769,13 @@ class metrics extends viewModelBase {
                 this.tooltip.datum(element);
             }
 
+            const tooltipWidth = $("#indexingPerformance .tooltip").width() + 30;
+
+            x = Math.min(x, Math.max(this.totalWidth - tooltipWidth, 0));
+
             this.tooltip
-                .style("left", x + "px")
-                .style("top", (y - 38) + "px");
+                .style("left", (x + 10) + "px")
+                .style("top", (y + 10) + "px");
         } else {
             this.hideTooltip();
         }
@@ -812,7 +823,7 @@ class metrics extends viewModelBase {
 
     private dataImported(result: string) {
         this.data = JSON.parse(result);
-
+        this.expandedTracks([]);
         this.draw();
     }
 

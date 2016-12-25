@@ -50,7 +50,7 @@ namespace SlowTests.Voron
                                 var tIndex = random.Next(0, numberOfTrees - 1);
                                 var treeName = trees[tIndex];
 
-                                using (var tx = Env.WriteTransaction())
+                                using (var tx = Env.WriteTransaction(timeout: TimeSpan.FromMinutes(5)))
                                 {
                                     var tree = tx.CreateTree(treeName);
                                     tree.Add("testdocuments/" + random.Next(0, 100000), new MemoryStream(buffer));
