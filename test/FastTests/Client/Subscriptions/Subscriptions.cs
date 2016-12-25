@@ -133,7 +133,18 @@ namespace FastTests.Client.Subscriptions
 
                         rejectedSusbscription.Subscribe(thing1 => { });
 
-                        await Assert.ThrowsAsync<SubscriptionInUseException>(async () => await rejectedSusbscription.StartAsync());
+                        // sometime not throwing (on linux) when written like this:
+                        // await Assert.ThrowsAsync<SubscriptionInUseException>(async () => await rejectedSusbscription.StartAsync());
+                        // so we put this in a try block
+                        try
+                        {
+                            await rejectedSusbscription.StartAsync();
+                            Assert.False(true); // we didn't throw - so test failed
+                        }
+                        catch (SubscriptionInUseException)
+                        {
+
+                        }
 
                     }
                 }
