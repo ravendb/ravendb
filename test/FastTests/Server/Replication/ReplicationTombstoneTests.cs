@@ -176,7 +176,7 @@ namespace FastTests.Server.Documents.Replication
                 SetupReplication(store1, store2);
                 SetupReplication(store2, store1);
 
-                var timeout = 100 * Server.ServerStore.DatabasesLandlord.LastRecentlyUsed.Count;
+                var timeout = 1000 * Server.ServerStore.DatabasesLandlord.LastRecentlyUsed.Count;
                 Assert.True(WaitForDocument(store2, "foo/bar",timeout));
                 Assert.True(WaitForDocument(store2, "foo/bar2", timeout));
 
