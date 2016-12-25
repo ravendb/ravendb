@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
 using System.Net;
 using System.Threading;
@@ -8,6 +9,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Exceptions;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
@@ -21,6 +23,7 @@ using Voron.Exceptions;
 using Voron.Impl;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron.Util;
 
@@ -1157,6 +1160,29 @@ namespace Raven.Server.Documents
             return list;
         }
 
+        public void DeleteConflictsFor(DocumentsOperationContext context, ChangeVectorEntry[] changeVector)
+        {
+            var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
+
+            fixed(ChangeVectorEntry* pChangeVector = changeVector)
+            {
+                Slice changeVectorSlice;
+                using (Slice.External(context.Allocator, (byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length, out changeVectorSlice))
+                {
+                    if (conflictsTable.DeleteByKey(changeVectorSlice))
+                    {
+                        var tx = context.Transaction.InnerTransaction.LowLevelTransaction;
+                        tx.AfterCommitWhenNewReadTransactionsPrevented += () =>
+                        {
+                            Interlocked.Decrement(ref _hasConflicts);
+                        };
+                    }
+                }
+            }
+        }
+
+
+
         public DocumentConflict GetConflictForChangeVector(
             DocumentsOperationContext context,
             string key,
@@ -1259,8 +1285,10 @@ namespace Raven.Server.Documents
         {
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Adding conflict to {key} (Incoming change vector {incomingChangeVector.Format()})");
-            var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
+            var tx = context.Transaction.InnerTransaction;
+            var conflictsTable = tx.OpenTable(ConflictsSchema, "Conflicts");
 
+            int conflictChanges = 0;
             byte* lowerKey;
             int lowerSize;
             byte* keyPtr;
@@ -1272,6 +1300,20 @@ namespace Raven.Server.Documents
             if (existing.Item1 != null)
             {
                 var existingDoc = existing.Item1;
+                var isMetadataEqual = existingDoc.CompareMetadata(incomingDoc, 
+                    new[] {
+                        Constants.Headers.RavenLastModified,
+                        Constants.Headers.LastModified
+                    });
+
+                if (isMetadataEqual && existingDoc.CompareContent(incomingDoc))
+                {
+                    // no real conflict here, both documents have identical content
+                    existingDoc.ChangeVector = ReplicationUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector);
+                    Put(context, existingDoc.Key, null, existingDoc.Data, existingDoc.ChangeVector);
+                    return;
+                }
+
                 fixed (ChangeVectorEntry* pChangeVector = existingDoc.ChangeVector)
                 {
                     conflictsTable.Set(new TableValueBuilder
@@ -1288,35 +1330,79 @@ namespace Raven.Server.Documents
                     var collectionName = ExtractCollectionName(context, existingDoc.Key, existingDoc.Data);
 
                     //make sure that the relevant collection tree exists
-                    var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
+                    var table = tx.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
                     table.Delete(existingDoc.StorageId);
                 }
             }
-            if (existing.Item2 != null)
+            else if (existing.Item2 != null)
             {
                 var existingTombstone = existing.Item2;
+                if (incomingDoc == null)
+                {
+                    // Conflict between two tombstones resolves to the local tombstone
+                    existingTombstone.ChangeVector = ReplicationUtils.MergeVectors(incomingChangeVector, existingTombstone.ChangeVector);
+                    AddTombstoneOnReplicationIfRelevant(context, existingTombstone.Key,
+                        existingTombstone.ChangeVector,
+                        existingTombstone.Collection);
+                    return;
+                }
                 fixed (ChangeVectorEntry* pChangeVector = existingTombstone.ChangeVector)
                 {
                     conflictsTable.Set(new TableValueBuilder
                     {
                         {lowerKey, lowerSize},
-                        {(byte*) pChangeVector, existingTombstone .ChangeVector.Length*sizeof(ChangeVectorEntry)},
+                        {(byte*) pChangeVector, existingTombstone.ChangeVector.Length*sizeof(ChangeVectorEntry)},
                         {keyPtr, keySize},
-                        {null,0}
+                        {null, 0}
                     });
 
                     // we delete the data directly, without generating a tombstone, because we have a 
-                    // conflict instead
-                    EnsureLastEtagIsPersisted(context, existingTombstone.Etag);
+                        // conflict instead
+                        EnsureLastEtagIsPersisted(context, existingTombstone.Etag);
 
                     var collectionName = GetCollection(existingTombstone.Collection, throwIfDoesNotExist: true);
 
-                    var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
+                    var table = tx.OpenTable(TombstonesSchema,
+                        collectionName.GetTableName(CollectionTableType.Tombstones));
                     table.Delete(existingTombstone.StorageId);
                 }
             }
-
+            else // has existing conflicts
+            {
+                Slice loweredKeySlice;
+                using (Slice.External(context.Allocator, lowerKey, lowerSize, out loweredKeySlice))
+                {
+                    var conflicts = GetConflictsFor(context, loweredKeySlice);
+                    foreach (var conflict in conflicts)
+                    {
+                        var conflictStatus = IncomingReplicationHandler.GetConflictStatus( incomingChangeVector, conflict.ChangeVector);
+                        switch (conflictStatus)
+                        {
+                            case IncomingReplicationHandler.ConflictStatus.Update:
+                                DeleteConflictsFor(context, conflict.ChangeVector); // delete this, it has been subsumed
+                                break;
+                            case IncomingReplicationHandler.ConflictStatus.Conflict:
+                                break; // we'll add this conflict if no one else also includes it
+                            case IncomingReplicationHandler.ConflictStatus.AlreadyMerged:
+                                if (conflictChanges != 0)
+                                {
+                                    tx.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
+                                    {
+                                        Interlocked.Add(ref _hasConflicts, conflictChanges);
+                                    };
+                                }
+                                return; // we already have a conflict that includes this version
+                            
+                            // ReSharper disable once RedundantCaseLabel
+                            case IncomingReplicationHandler.ConflictStatus.ShouldResolveConflict:
+                            default:
+                                throw new ArgumentOutOfRangeException("Invalid conflict status " + conflictStatus);
+                        }
+                    }
+                }
+            }
+            conflictChanges++;
             fixed (ChangeVectorEntry* pChangeVector = incomingChangeVector)
             {
                 byte* doc = null;
@@ -1335,7 +1421,7 @@ namespace Raven.Server.Documents
                     {doc, docSize}
                 };
 
-                Interlocked.Increment(ref _hasConflicts);
+                Interlocked.Add(ref _hasConflicts, conflictChanges);
                 conflictsTable.Set(tvb);
             }
         }

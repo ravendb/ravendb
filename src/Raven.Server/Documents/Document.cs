@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Globalization;
+using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Replication.Messages;
 using Sparrow;
@@ -97,6 +98,62 @@ namespace Raven.Server.Documents
                     return true;
             }
             return false;
+        }
+
+        public bool CompareMetadata(BlittableJsonReaderObject obj, string[] excludedShallowProperties)
+        {
+            BlittableJsonReaderObject myMetadata;
+            BlittableJsonReaderObject objMetadata;
+            if (Data.TryGet(Constants.Metadata.Key, out myMetadata) && obj.TryGet(Constants.Metadata.Key, out objMetadata))
+            {
+                foreach (var property in myMetadata.GetPropertyNames().Union(objMetadata.GetPropertyNames()))
+                {
+                    if (Array.IndexOf(excludedShallowProperties, property) >= 0)
+                    {
+                        continue;
+                    }
+                    
+                    object myProperty = null;
+                    object objProperty = null;
+                    
+                    if ((myMetadata.TryGetMember(property, out myProperty) | objMetadata.TryGetMember(property, out objProperty)) == false)
+                    {
+                        continue;
+                    }
+
+                    if (myProperty == null)
+                    {
+                        return false;
+                    }
+
+                    if (myProperty.Equals(objProperty))
+                    {
+                        continue;
+                    }
+
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        public bool CompareContent(BlittableJsonReaderObject obj, string[] excludedShallowProperties = null)
+        {
+            if (excludedShallowProperties == null)
+            {
+                excludedShallowProperties = new string[] { Constants.Metadata.Key };
+            }
+
+            foreach (var property in Data.GetPropertyNames())
+            {
+                if (Array.IndexOf(excludedShallowProperties, property) >= 0
+                    || Data[property].Equals(obj[property]))
+                {
+                    continue;
+                }
+                return false;
+            }
+            return true;
         }
 
     }
