@@ -77,6 +77,7 @@ namespace Raven.Client.Document
         private bool disposed;
         private bool firstConnection = true;
         private TaskCompletionSource<bool> taskCompletionSource = new TaskCompletionSource<bool>();
+        public event Action OnDispose;
 
         /// <summary>
         /// Task that will be completed when the subscription connection will close and self dispose, or errorous if subscription connection is entirely interrupted
@@ -576,6 +577,8 @@ namespace Raven.Client.Document
         {
             if (disposed)
                 return new CompletedTask();
+
+            OnDispose?.Invoke();
 
             disposed = true;
 
