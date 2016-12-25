@@ -102,6 +102,7 @@ namespace Raven.Client.Document
                 documentStore.Conventions, open, () => SendOpenSubscriptionRequest(commands, id, options)); // to ensure that subscription is open try to call it with the same connection id
 
             subscriptions.Add(subscription);
+            subscription.OnDispose += () => subscriptions.TryRemove(subscription);
 
             return subscription;
         }
