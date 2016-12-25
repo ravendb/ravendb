@@ -332,11 +332,8 @@ namespace Raven.Server
                             tcpClient
                         }
                     };
-                    tcp.DisposeOnConnectionClose.Add(
-                        _tcpContextPool.AllocateOperationContext(out tcp.Context)
-                        );
 
-
+                    tcp.DisposeOnConnectionClose.Add(_tcpContextPool.AllocateOperationContext(out tcp.Context));
                     tcp.MultiDocumentParser = tcp.Context.ParseMultiFrom(stream);
 
                     try
@@ -373,6 +370,9 @@ namespace Raven.Server
                             case TcpConnectionHeaderMessage.OperationTypes.Replication:
                                 var documentReplicationLoader = tcp.DocumentDatabase.DocumentReplicationLoader;
                                 documentReplicationLoader.AcceptIncomingConnection(tcp);
+                                break;
+                            case TcpConnectionHeaderMessage.OperationTypes.TopologyDiscovery:
+                                
                                 break;
                             default:
                                 throw new InvalidOperationException("Unknown operation for tcp " + header.Operation);

@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
@@ -18,48 +20,53 @@ namespace Raven.Server.Documents.Handlers
         {
             DocumentsOperationContext context;
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-            using ( var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                Document configurationDocument;
-                using (context.OpenReadTransaction())
-                {
-                    configurationDocument = Database.DocumentsStorage.Get(context, Constants.Replication.DocumentReplicationConfiguration);
-                }                
-                //This is the case where we don't have real replication topology.
-                if (configurationDocument == null)
-                {
-                    GenerateTopology(context, writer);
-                    return Task.CompletedTask;
-                }
-                //here we need to construct the topology from the replication document(Shouldn't we use the same structure for both?).
-                var replicationDocument = JsonDeserializationServer.ReplicationDocument(configurationDocument.Data);
-                var nodes = GenerateNodesFromReplicationDocument(replicationDocument);
-                configurationDocument.EnsureMetadata();
-                GenerateTopology(context, writer, nodes, configurationDocument.Etag);
+                context.Write(writer, GenerateTopology(context));
             }
             return Task.CompletedTask;
         }
-
-        private void GenerateTopology(DocumentsOperationContext context, BlittableJsonTextWriter writer, IEnumerable<DynamicJsonValue> nodes = null, long etag = -1)
+        
+        private DynamicJsonValue GenerateTopology(DocumentsOperationContext context)
         {
-            context.Write(writer, new DynamicJsonValue
+            Document replicationConfigDocument;
+            using (context.OpenReadTransaction())
+            {
+                replicationConfigDocument = Database.DocumentsStorage.Get(context, Constants.Replication.DocumentReplicationConfiguration);
+            }
+
+            //This is the case where we don't have real replication topology.
+            if (replicationConfigDocument == null)
+            {
+                return GetEmptyTopology();
+            }
+
+            var replicationDocument = JsonDeserializationServer.ReplicationDocument(replicationConfigDocument.Data);
+            if (replicationDocument.Destinations.Count == 0)
+                return GetEmptyTopology();
+
+            throw new NotImplementedException();
+        }
+
+        private DynamicJsonValue GetEmptyTopology()
+        {
+            return new DynamicJsonValue
             {
                 [nameof(Topology.LeaderNode)] = new DynamicJsonValue
                 {
                     [nameof(ServerNode.Url)] =
-                    GetStringQueryString("url", required: false) ?? Server.Configuration.Core.ServerUrl,
+                        GetStringQueryString("url", required: false) ?? Server.Configuration.Core.ServerUrl,
                     [nameof(ServerNode.Database)] = Database.Name,
                 },
-                [nameof(Topology.Nodes)] = (nodes == null)? new DynamicJsonArray(): new DynamicJsonArray(nodes),
-                [nameof(Topology.ReadBehavior)] =
-                ReadBehavior.LeaderWithFailoverWhenRequestTimeSlaThresholdIsReached.ToString(),
+                [nameof(Topology.Nodes)] = null,
+                [nameof(Topology.ReadBehavior)] = ReadBehavior.LeaderWithFailoverWhenRequestTimeSlaThresholdIsReached.ToString(),
                 [nameof(Topology.WriteBehavior)] = WriteBehavior.LeaderOnly.ToString(),
                 [nameof(Topology.SLA)] = new DynamicJsonValue
                 {
                     [nameof(TopologySla.RequestTimeThresholdInMilliseconds)] = 100,
                 },
-                [nameof(Topology.Etag)] = etag,
-            });
+                [nameof(Topology.Etag)] = -1,
+            };
         }
 
         private IEnumerable<DynamicJsonValue> GenerateNodesFromReplicationDocument(ReplicationDocument replicationDocument)

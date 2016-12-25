@@ -54,11 +54,14 @@ namespace Raven.NewClient.Client.Http
         {
             _topology = new Topology
             {
-                LeaderNode = new ServerNode
+                LeaderNode = new TopologyNode
                 {
-                    Url = url,
-                    Database = databaseName,
-                    ApiKey = apiKey,
+                    Node = new ServerNode
+                    {
+                        Url = url,
+                        Database = databaseName,
+                        ApiKey = apiKey,
+                    }
                 },
                 ReadBehavior = ReadBehavior.LeaderOnly,
                 WriteBehavior = WriteBehavior.LeaderOnly,
@@ -86,9 +89,9 @@ namespace Raven.NewClient.Client.Http
             JsonOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                var node = _topology.LeaderNode;
+                var leader = _topology.LeaderNode;
 
-                var serverHash = ServerHash.GetServerHash(node.Url, node.Database);
+                var serverHash = ServerHash.GetServerHash(leader.Node.Url, leader.Node.Database);
 
                 if (_firstTimeTryLoadFromTopologyCache)
                 {
@@ -108,7 +111,7 @@ namespace Raven.NewClient.Client.Http
                 var command = new GetTopologyCommand();
                 try
                 {
-                    await ExecuteAsync(new ChoosenNode {Node = node}, context, command);
+                    await ExecuteAsync(new ChoosenNode {Node = leader.Node}, context, command);
                     if (_topology.Etag != command.Result.Etag)
                     {
                         _topology = command.Result;
@@ -387,7 +390,7 @@ namespace Raven.NewClient.Client.Http
 
         public string UrlFor(string documentKey)
         {
-            var node = _topology.LeaderNode;
+            var node = _topology.LeaderNode.Node;
             return $"{node.Url}/databases/{node.Database}/docs/{documentKey}";
         }
 
@@ -401,33 +404,33 @@ namespace Raven.NewClient.Client.Http
         {
             var topology = _topology;
 
-            var leaderNode = topology.LeaderNode;
+            var leader = topology.LeaderNode.Node;
 
             if (command.IsReadRequest)
             {
                 if (topology.ReadBehavior == ReadBehavior.LeaderOnly)
                 {
-                    if (command.IsFailedWithNode(leaderNode) == false)
-                        return new ChoosenNode {Node = leaderNode};
+                    if (command.IsFailedWithNode(leader) == false)
+                        return new ChoosenNode {Node = leader};
                     throw new HttpRequestException("Leader not was failed to make this request. The current ReadBehavior is set to Leader to we won't failover to a differnt node.", exception);
                 }
 
                 if (topology.ReadBehavior == ReadBehavior.RoundRobin)
                 {
-                    if (leaderNode.IsFailed == false && command.IsFailedWithNode(leaderNode) == false)
-                        return new ChoosenNode {Node = leaderNode};
+                    if (leader.IsFailed == false && command.IsFailedWithNode(leader) == false)
+                        return new ChoosenNode {Node = leader};
 
                     // TODO: Should we choose nodes here by rate value as for SLA?
                     var choosenNode = new ChoosenNode {SkippedNodes = new List<ServerNode>()};
-                    foreach (var node in topology.Nodes)
+                    foreach (var outgoing in topology.Outgoing)
                     {
-                        if (node.IsFailed == false && command.IsFailedWithNode(node) == false)
+                        if (outgoing.Node.IsFailed == false && command.IsFailedWithNode(outgoing.Node) == false)
                         {
-                            choosenNode.Node = node;
+                            choosenNode.Node = outgoing.Node;
                             return choosenNode;
                         }
 
-                        choosenNode.SkippedNodes.Add(node);
+                        choosenNode.SkippedNodes.Add(outgoing.Node);
                     }
 
                     throw new HttpRequestException("Tried all nodes in the cluster but failed getting a response", exception);
@@ -435,11 +438,12 @@ namespace Raven.NewClient.Client.Http
 
                 if (topology.ReadBehavior == ReadBehavior.LeaderWithFailoverWhenRequestTimeSlaThresholdIsReached)
                 {
-                    if (leaderNode.IsFailed == false && command.IsFailedWithNode(leaderNode) == false && leaderNode.IsRateSurpassed(topology.SLA.RequestTimeThresholdInMilliseconds))
-                        return new ChoosenNode {Node = leaderNode};
+                    if (leader.IsFailed == false && command.IsFailedWithNode(leader) == false && leader.IsRateSurpassed(topology.SLA.RequestTimeThresholdInMilliseconds))
+                        return new ChoosenNode {Node = leader};
 
-                    var nodesWithLeader = topology.Nodes
-                        .Union(new[] { leaderNode })
+                    var nodesWithLeader = topology.Outgoing
+                        .Select(x => x.Node)
+                        .Union(new[] { leader })
                         .OrderBy(node => node.Rate())
                         .ToList();
                     var fastestNode = nodesWithLeader.FirstOrDefault(node => node.IsFailed == false && command.IsFailedWithNode(node) == false);
@@ -462,21 +466,21 @@ namespace Raven.NewClient.Client.Http
 
             if (topology.WriteBehavior == WriteBehavior.LeaderOnly)
             {
-                if (command.IsFailedWithNode(leaderNode) == false)
-                    return new ChoosenNode {Node = leaderNode};
+                if (command.IsFailedWithNode(leader) == false)
+                    return new ChoosenNode {Node = leader};
                 throw new HttpRequestException("Leader not was failed to make this request. The current WriteBehavior is set to Leader to we won't failover to a differnt node.", exception);
             }
 
             if (topology.WriteBehavior == WriteBehavior.LeaderWithFailover)
             {
-                if (leaderNode.IsFailed == false && command.IsFailedWithNode(leaderNode) == false)
-                    return new ChoosenNode {Node = leaderNode};
+                if (leader.IsFailed == false && command.IsFailedWithNode(leader) == false)
+                    return new ChoosenNode {Node = leader};
 
                 // TODO: Should we choose nodes here by rate value as for SLA?
-                foreach (var node in topology.Nodes)
+                foreach (var outgoing in topology.Outgoing)
                 {
-                    if (node.IsFailed == false && command.IsFailedWithNode(node) == false)
-                        return new ChoosenNode { Node = node };
+                    if (outgoing.Node.IsFailed == false && command.IsFailedWithNode(outgoing.Node) == false)
+                        return new ChoosenNode { Node = outgoing.Node };
                 }
 
                 throw new HttpRequestException("Tried all nodes in the cluster but failed getting a response", exception);
@@ -517,7 +521,7 @@ namespace Raven.NewClient.Client.Http
             {
                 var topology = _topology;
 
-                var leaderNode = topology.LeaderNode;
+                var leaderNode = topology.LeaderNode.Node;
                 if (leaderNode != null)
                 {
 #pragma warning disable 4014
@@ -525,10 +529,10 @@ namespace Raven.NewClient.Client.Http
 #pragma warning restore 4014
                 }
 
-                foreach (var node in topology.Nodes)
+                foreach (var outgoing in topology.Outgoing)
                 {
 #pragma warning disable 4014
-                    HandleUnauthorized(null, node, context, shouldThrow: false);
+                    HandleUnauthorized(null, outgoing.Node, context, shouldThrow: false);
 #pragma warning restore 4014
                 }
             }
@@ -546,18 +550,18 @@ namespace Raven.NewClient.Client.Http
                 var topology = _topology;
                 var tasks = new List<Task>();
 
-                var leaderNode = topology.LeaderNode;
+                var leaderNode = topology?.LeaderNode?.Node;
                 if (leaderNode?.IsFailed ?? false)
                 {
                     tasks.Add(TestIfNodeAlive(leaderNode));
                 }
 
-                var serverNodes = topology.Nodes;
+                var serverNodes = topology?.Outgoing;
                 if (serverNodes != null)
                 {
                     for (var i = 1; i <= serverNodes.Count; i++)
                     {
-                        var node = serverNodes[i];
+                        var node = serverNodes[i]?.Node;
                         if (node?.IsFailed ?? false)
                         {
                             tasks.Add(TestIfNodeAlive(node));
