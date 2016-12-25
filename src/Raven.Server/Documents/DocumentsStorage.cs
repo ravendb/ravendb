@@ -1280,6 +1280,15 @@ namespace Raven.Server.Documents
             return items;
         }
 
+        private static HashSet<string> IgnoredMetadataProperties = new HashSet<string>
+        {
+            Constants.Headers.RavenLastModified,
+            Constants.Headers.LastModified
+        };
+        private static HashSet<string> IgnoredDocumentroperties = new HashSet<string>
+        {
+            Constants.Metadata.Key,
+        };
         public void AddConflict(DocumentsOperationContext context, string key, BlittableJsonReaderObject incomingDoc,
             ChangeVectorEntry[] incomingChangeVector)
         {
@@ -1288,7 +1297,6 @@ namespace Raven.Server.Documents
             var tx = context.Transaction.InnerTransaction;
             var conflictsTable = tx.OpenTable(ConflictsSchema, "Conflicts");
 
-            int conflictChanges = 0;
             byte* lowerKey;
             int lowerSize;
             byte* keyPtr;
@@ -1300,13 +1308,9 @@ namespace Raven.Server.Documents
             if (existing.Item1 != null)
             {
                 var existingDoc = existing.Item1;
-                var isMetadataEqual = existingDoc.CompareMetadata(incomingDoc, 
-                    new[] {
-                        Constants.Headers.RavenLastModified,
-                        Constants.Headers.LastModified
-                    });
 
-                if (isMetadataEqual && existingDoc.CompareContent(incomingDoc))
+                if (existingDoc.IsMetadataEqualTo(incomingDoc, IgnoredMetadataProperties) && 
+                    existingDoc.IsEqualTo(incomingDoc, IgnoredDocumentroperties))
                 {
                     // no real conflict here, both documents have identical content
                     existingDoc.ChangeVector = ReplicationUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector);
@@ -1385,15 +1389,7 @@ namespace Raven.Server.Documents
                             case IncomingReplicationHandler.ConflictStatus.Conflict:
                                 break; // we'll add this conflict if no one else also includes it
                             case IncomingReplicationHandler.ConflictStatus.AlreadyMerged:
-                                if (conflictChanges != 0)
-                                {
-                                    tx.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
-                                    {
-                                        Interlocked.Add(ref _hasConflicts, conflictChanges);
-                                    };
-                                }
                                 return; // we already have a conflict that includes this version
-                            
                             // ReSharper disable once RedundantCaseLabel
                             case IncomingReplicationHandler.ConflictStatus.ShouldResolveConflict:
                             default:
@@ -1402,7 +1398,6 @@ namespace Raven.Server.Documents
                     }
                 }
             }
-            conflictChanges++;
             fixed (ChangeVectorEntry* pChangeVector = incomingChangeVector)
             {
                 byte* doc = null;
@@ -1421,7 +1416,7 @@ namespace Raven.Server.Documents
                     {doc, docSize}
                 };
 
-                Interlocked.Add(ref _hasConflicts, conflictChanges);
+                Interlocked.Increment(ref _hasConflicts);
                 conflictsTable.Set(tvb);
             }
         }

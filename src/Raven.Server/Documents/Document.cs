@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Raven.Abstractions.Data;
@@ -100,61 +101,54 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        public bool CompareMetadata(BlittableJsonReaderObject obj, string[] excludedShallowProperties)
+        public bool IsMetadataEqualTo(BlittableJsonReaderObject obj, HashSet<string> excludedShallowProperties)
         {
             BlittableJsonReaderObject myMetadata;
             BlittableJsonReaderObject objMetadata;
-            if (Data.TryGet(Constants.Metadata.Key, out myMetadata) && obj.TryGet(Constants.Metadata.Key, out objMetadata))
-            {
-                foreach (var property in myMetadata.GetPropertyNames().Union(objMetadata.GetPropertyNames()))
-                {
-                    if (Array.IndexOf(excludedShallowProperties, property) >= 0)
-                    {
-                        continue;
-                    }
-                    
-                    object myProperty = null;
-                    object objProperty = null;
-                    
-                    if ((myMetadata.TryGetMember(property, out myProperty) | objMetadata.TryGetMember(property, out objProperty)) == false)
-                    {
-                        continue;
-                    }
+            Data.TryGet(Constants.Metadata.Key, out myMetadata);
+            obj.TryGet(Constants.Metadata.Key, out objMetadata);
 
-                    if (myProperty == null)
-                    {
-                        return false;
-                    }
+            if (myMetadata == null && objMetadata == null)
+                return true;
 
-                    if (myProperty.Equals(objProperty))
-                    {
-                        continue;
-                    }
-
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        public bool CompareContent(BlittableJsonReaderObject obj, string[] excludedShallowProperties = null)
-        {
-            if (excludedShallowProperties == null)
-            {
-                excludedShallowProperties = new string[] { Constants.Metadata.Key };
-            }
-
-            foreach (var property in Data.GetPropertyNames())
-            {
-                if (Array.IndexOf(excludedShallowProperties, property) >= 0
-                    || Data[property].Equals(obj[property]))
-                {
-                    continue;
-                }
+            if (myMetadata == null || objMetadata == null)
                 return false;
+
+            return IsEqualTo(excludedShallowProperties, myMetadata, objMetadata);
+        }
+
+        public bool IsEqualTo(BlittableJsonReaderObject obj, HashSet<string> excludedShallowProperties)
+        {
+            return IsEqualTo(excludedShallowProperties, Data, obj);
+        }
+
+        private static bool IsEqualTo(HashSet<string> excludedShallowProperties, BlittableJsonReaderObject myMetadata,
+            BlittableJsonReaderObject objMetadata)
+        {
+            var properties = new HashSet<string>(myMetadata.GetPropertyNames());
+            foreach (var propertyName in objMetadata.GetPropertyNames())
+            {
+                properties.Add(propertyName);
+            }
+
+            foreach (var property in properties)
+            {
+                if (excludedShallowProperties.Contains(property))
+                    continue;
+
+                object myProperty;
+                object objProperty;
+
+                if (myMetadata.TryGetMember(property, out myProperty) == false)
+                    return false;
+
+                if (objMetadata.TryGetMember(property, out objProperty) == false)
+                    return false;
+
+                if (Equals(myProperty, objProperty) == false)
+                    return false;
             }
             return true;
         }
-
     }
 }
