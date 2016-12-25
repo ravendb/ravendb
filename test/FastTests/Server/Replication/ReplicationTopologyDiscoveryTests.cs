@@ -22,7 +22,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Stuff not implemented yet")]
         public async Task Master_slave_topology_should_be_correctly_detected()
         {
             using (var master = GetDocumentStore())

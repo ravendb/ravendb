@@ -1,33 +1,39 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
-using Raven.Client.Http;
+using Raven.NewClient.Client.Http;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using ReadBehavior = Raven.Client.Http.ReadBehavior;
+using ServerNode = Raven.Client.Http.ServerNode;
+using Topology = Raven.Client.Http.Topology;
+using TopologySla = Raven.Client.Http.TopologySla;
+using WriteBehavior = Raven.Client.Http.WriteBehavior;
 
 namespace Raven.Server.Documents.Handlers
 {
     public class TopologyHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/topology", "GET")]
-        public Task GetTopology()
+        public async Task GetTopology()
         {
             DocumentsOperationContext context;
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                context.Write(writer, GenerateTopology(context));
+                context.Write(writer, await GenerateTopology(context));
             }
-            return Task.CompletedTask;
         }
         
-        private DynamicJsonValue GenerateTopology(DocumentsOperationContext context)
+        private async Task<DynamicJsonValue> GenerateTopology(DocumentsOperationContext context)
         {
             Document replicationConfigDocument;
             using (context.OpenReadTransaction())
@@ -45,7 +51,51 @@ namespace Raven.Server.Documents.Handlers
             if (replicationDocument.Destinations.Count == 0)
                 return GetEmptyTopology();
 
-            throw new NotImplementedException();
+            using (var discoverer = new ReplicationTopologyDiscoverer(
+                Database.DocumentReplicationLoader.Outgoing,
+                Database.DatabaseShutdown,
+                new List<Guid>()))
+            {
+                var nodes = await discoverer.WaitForTopologyDiscovery();
+                return GetTopology(nodes);
+            }
+        }
+
+        private DynamicJsonValue NodeGraphToJson(TopologyNode node)
+        {
+            var json = new DynamicJsonValue
+            {
+                [nameof(TopologyNode.Node)] = new DynamicJsonValue
+                {
+                    [nameof(ServerNode.Url)] = node.Node.Url,
+                    [nameof(ServerNode.ApiKey)] = node.Node.ApiKey,
+                    [nameof(ServerNode.Database)] = node.Node.Database
+                },
+                [nameof(TopologyNode.Outgoing)] = new DynamicJsonArray(node.Outgoing.Select(NodeGraphToJson))
+            };
+
+            return json;
+        }
+
+        private DynamicJsonValue GetTopology(TopologyNode[] nodes)
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Topology.LeaderNode)] = new DynamicJsonValue
+                {
+                    [nameof(ServerNode.Url)] = GetStringQueryString("url", required: false) ?? 
+                                                    Server.Configuration.Core.ServerUrl,
+                    [nameof(ServerNode.Database)] = Database.Name,
+                },
+                [nameof(Topology.Nodes)] = new DynamicJsonArray(nodes.Select(NodeGraphToJson)),
+                [nameof(Topology.ReadBehavior)] = ReadBehavior.LeaderWithFailoverWhenRequestTimeSlaThresholdIsReached.ToString(),
+                [nameof(Topology.WriteBehavior)] = WriteBehavior.LeaderOnly.ToString(),
+                [nameof(Topology.SLA)] = new DynamicJsonValue
+                {
+                    [nameof(TopologySla.RequestTimeThresholdInMilliseconds)] = 100,
+                },
+                [nameof(Topology.Etag)] = -1,
+            };
         }
 
         private DynamicJsonValue GetEmptyTopology()

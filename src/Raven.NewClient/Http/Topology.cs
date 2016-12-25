@@ -5,7 +5,7 @@ namespace Raven.NewClient.Client.Http
     public class TopologyNode
     {
         public ServerNode Node;
-        public List<ServerNode> Outgoing;
+        public List<TopologyNode> Outgoing;
     }
 
     public class Topology
