@@ -10,6 +10,8 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Logging;
+using Sparrow.Platform;
+using Sparrow.Platform.Posix;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Compression;
@@ -103,7 +105,7 @@ namespace Voron
 
                 _scratchBufferPool = new ScratchBufferPool(this);
 
-                if (Sparrow.Platform.RunningOnPosix &&
+                if (PlatformDetails.RunningOnPosix &&
                     options.BasePath != null && 
                     IsStorageSupportingO_Direct(options.BasePath) == false)
                 {

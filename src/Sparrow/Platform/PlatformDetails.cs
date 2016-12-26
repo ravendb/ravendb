@@ -1,10 +1,9 @@
-﻿using System.Runtime.InteropServices;
-using System;
+﻿using System;
+using System.Runtime.InteropServices;
 
-
-namespace Sparrow
+namespace Sparrow.Platform
 {
-    public static class Platform
+    public static class PlatformDetails
     {
         public static readonly bool Is64Bits = IntPtr.Size == 8;
 

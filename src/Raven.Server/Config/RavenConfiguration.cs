@@ -10,6 +10,7 @@ using Raven.Server.Config.Categories;
 using ExpressionExtensions = Raven.Server.Extensions.ExpressionExtensions;
 using Sparrow;
 using Sparrow.Logging;
+using Sparrow.Platform;
 
 namespace Raven.Server.Config
 {
@@ -93,7 +94,7 @@ namespace Raven.Server.Config
         private void AddJsonConfigurationVariables()
         {
             var platformPostfix = "windows";
-            if (Platform.RunningOnPosix)
+            if (PlatformDetails.RunningOnPosix)
                 platformPostfix = "posix";
 
             _configBuilder.AddJsonFile($"settings_{platformPostfix}.json", optional: true);

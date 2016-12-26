@@ -9,6 +9,7 @@ using Voron.Platform.Posix;
 
 using Sparrow;
 using Sparrow.Collections;
+using Sparrow.Platform;
 
 namespace NewClientTests
 {
@@ -27,7 +28,7 @@ namespace NewClientTests
 
             var newDataDir = Path.GetFullPath($".\\Databases\\{testName ?? "TestDatabase"}_{serverPort}-{DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss-fff")}-{Interlocked.Increment(ref _pathCount)}");
 
-            if (Platform.RunningOnPosix)
+            if (PlatformDetails.RunningOnPosix)
                 newDataDir = PosixHelper.FixLinuxPath(newDataDir);
 
             if (forceCreateDir && Directory.Exists(newDataDir) == false)

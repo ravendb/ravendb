@@ -22,6 +22,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.SqlReplication;
 using Raven.Tests.Core;
 using Sparrow;
+using Sparrow.Platform;
 using Xunit;
 using Xunit.Sdk;
 
@@ -121,7 +122,7 @@ CREATE TABLE [dbo].[Orders]
                         try
                         {
                             string path;
-                            if (Platform.RunningOnPosix)
+                            if (PlatformDetails.RunningOnPosix)
                                 path = @"/tmp/sqlReplicationPassword.txt";
                             else
                                 path = @"P:\Build\SqlReplicationPassword.txt";

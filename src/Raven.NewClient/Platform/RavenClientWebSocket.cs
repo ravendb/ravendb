@@ -3,6 +3,7 @@ using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.NewClient.Client.Platform.Unix;
+using Sparrow.Platform;
 
 // TODO: Move to Raven.NewClient.Client.Http
 namespace Raven.NewClient.Client.Platform
@@ -14,7 +15,7 @@ namespace Raven.NewClient.Client.Platform
 
         public RavenClientWebSocket()
         {
-            if (Sparrow.Platform.RunningOnPosix)
+            if (PlatformDetails.RunningOnPosix)
                 unixInstance = new RavenUnixClientWebSocket();
             else
                 winInstance = new ClientWebSocket();
@@ -24,7 +25,7 @@ namespace Raven.NewClient.Client.Platform
         {
             get
             {
-                if (Sparrow.Platform.RunningOnPosix)
+                if (PlatformDetails.RunningOnPosix)
                     return unixInstance.State;
                 return winInstance.State;
             }
@@ -32,7 +33,7 @@ namespace Raven.NewClient.Client.Platform
 
         public async Task ConnectAsync(Uri uri, CancellationToken token)
         {
-            if (Sparrow.Platform.RunningOnPosix)
+            if (PlatformDetails.RunningOnPosix)
                 await unixInstance.ConnectAsync(uri, token);
             else
                 await winInstance.ConnectAsync(uri, token);
@@ -40,14 +41,14 @@ namespace Raven.NewClient.Client.Platform
 
         public async Task<WebSocketReceiveResult> ReceiveAsync(ArraySegment<byte> arraySegment, CancellationToken token)
         {
-            if (Sparrow.Platform.RunningOnPosix)
+            if (PlatformDetails.RunningOnPosix)
                 return await unixInstance.ReceiveAsync(arraySegment, token);
             return await winInstance.ReceiveAsync(arraySegment, token).ConfigureAwait(false);
         }
 
         public async Task CloseOutputAsync(WebSocketCloseStatus closeStatus, string statusDescription, CancellationToken token)
         {
-            if (Sparrow.Platform.RunningOnPosix)
+            if (PlatformDetails.RunningOnPosix)
                 await unixInstance.CloseOutputAsync(closeStatus, statusDescription, token);
             else
                 await winInstance.CloseOutputAsync(closeStatus, statusDescription, token);
@@ -55,7 +56,7 @@ namespace Raven.NewClient.Client.Platform
 
         public async Task SendAsync(ArraySegment<byte> segment, WebSocketMessageType messageType, bool endOfMessage, CancellationToken token)
         {
-            if (Sparrow.Platform.RunningOnPosix)
+            if (PlatformDetails.RunningOnPosix)
                 await unixInstance.SendAsync(segment, messageType, endOfMessage, token);
             else
                 await winInstance.SendAsync(segment, messageType, endOfMessage, token);
@@ -63,7 +64,7 @@ namespace Raven.NewClient.Client.Platform
 
         public void Dispose()
         {
-            if (Sparrow.Platform.RunningOnPosix)
+            if (PlatformDetails.RunningOnPosix)
                 unixInstance.Dispose();
             else
                 winInstance.Dispose();
@@ -71,7 +72,7 @@ namespace Raven.NewClient.Client.Platform
 
         public async Task CloseAsync(WebSocketCloseStatus closeStatus, string statusDescription, CancellationToken token)
         {
-            if (Sparrow.Platform.RunningOnPosix)
+            if (PlatformDetails.RunningOnPosix)
                 await unixInstance.CloseAsync(closeStatus, statusDescription, token);
             else
                 await winInstance.CloseAsync(closeStatus, statusDescription, token);

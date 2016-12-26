@@ -11,6 +11,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Voron.Platform.Posix;
 
 namespace Raven.Server.Documents.Transformers
@@ -134,7 +135,7 @@ namespace Raven.Server.Documents.Transformers
         {
             var path = Path.Combine(configuration.IndexStoragePath, "Transformers", $"{transformerId}.{Convert.ToBase64String(Encoding.UTF8.GetBytes(name))}{FileExtension}");
 
-            if (Platform.RunningOnPosix)
+            if (PlatformDetails.RunningOnPosix)
                 path = PosixHelper.FixLinuxPath(path);
 
             return path;

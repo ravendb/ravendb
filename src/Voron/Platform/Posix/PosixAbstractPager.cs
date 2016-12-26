@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using Sparrow.Platform;
+using Sparrow.Platform.Posix;
 using Voron.Data.BTrees;
 using Voron.Impl.Paging;
 using Voron.Platform.Win32;
@@ -22,7 +24,7 @@ namespace Voron.Platform.Posix
 
         public override unsafe void TryPrefetchingWholeFile()
         {
-            if (Sparrow.Platform.CanPrefetch == false)
+            if (PlatformDetails.CanPrefetch == false)
                 return; // not supported
 
             long size = 0;
@@ -57,7 +59,7 @@ namespace Voron.Platform.Posix
 
         public override unsafe void MaybePrefetchMemory(List<long> pagesToPrefetch)
         {
-            if (Sparrow.Platform.CanPrefetch == false)
+            if (PlatformDetails.CanPrefetch == false)
                 return; // not supported
 
             if (pagesToPrefetch.Count == 0)

@@ -2,6 +2,8 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using Sparrow.Logging;
+using Sparrow.Platform;
+using Sparrow.Platform.Posix;
 
 namespace Sparrow.Utils
 {
@@ -26,26 +28,19 @@ namespace Sparrow.Utils
 
         public static unsafe void SetCurrentThreadPriority(ThreadPriority priority)
         {
-            if (Platform.RunningOnPosix) // Works only with su permission
+            if (PlatformDetails.RunningOnPosix)
             {
-                IntPtr threadId = PosixThreadsMethods.pthread_self();
-                sched_param param = new sched_param
-                {
-                    sched_priority = (int)priority
-                };
+                var nice = FixLinuxPriority(priority);
 
-                int policy = priority != ThreadPriority.Normal ? SCHED_RR : SCHED_OTHER;
-
-                param.sched_priority = FixPosixPriority(priority);
-
-                var success = PosixThreadsMethods.pthread_setschedparam(threadId, policy, &param);
+                var threadId = Syscall.gettid();
+                var success = Syscall.setpriority((int)Prio.PROCESS, threadId, nice);
                 if (success != 0)
                 {
                     int lastError = Marshal.GetLastWin32Error();
                     if (_log.IsInfoEnabled)
-                        _log.Info($"SetThreadPriority failed to set thread priority. threadId:{threadId.ToInt64()}, error code {lastError}");
+                        _log.Info($"SetThreadPriority failed to set thread priority. threadId:{threadId}, error code {lastError} - {(Errno)lastError}");
 
-                    throw new InvalidOperationException("Failed to set priority to thread " + threadId.ToInt64() + " with " + (Errno)lastError);
+                    throw new InvalidOperationException("Failed to set priority to thread " + threadId + " with " + (Errno)lastError);
                 }
             }
             else
@@ -76,58 +71,44 @@ namespace Sparrow.Utils
             }
         }
 
-        public static unsafe ThreadPriority GetCurrentThreadPriority()
+        public static ThreadPriority GetCurrentThreadPriority()
         {
-            ThreadPriority threadPriority;
-            if (Platform.RunningOnPosix)
+            if (PlatformDetails.RunningOnPosix)
             {
-                int policy = 0;
-                sched_param param = new sched_param();
-                IntPtr threadId = PosixThreadsMethods.pthread_self();
-                var success = PosixThreadsMethods.pthread_getschedparam(threadId, &policy, &param);
-                if (success != 0)
-                {
-                    int lastWin32ErrorCode = Marshal.GetLastWin32Error();
-                    throw new Win32Exception("Failed to set priority to thread " + threadId,
-                        new Win32Exception(lastWin32ErrorCode));
+                var threadId = Syscall.gettid();
+                var value = Syscall.getpriority((int)Prio.PROCESS, threadId);
+                // we assume no failure here, since clearing errno isn't really possible here
+                return FixLinuxPriority(value);
+            }
 
-                }
-                threadPriority = FixPosixPriority(param.sched_priority);
-            }
-            else
+            IntPtr handle = IntPtr.Zero;
+            try
             {
-                IntPtr handle = IntPtr.Zero;
-                try
-                {
-                    uint threadId = Win32ThreadsMethods.GetCurrentThreadId();
-                    handle = Win32ThreadsMethods.OpenThread(ThreadAccess.QueryInformation, false, threadId);
-                    if (handle == IntPtr.Zero)
-                        throw new Win32Exception("Failed to setup thread priority, couldn't open the current thread");
-                    threadPriority = Win32ThreadsMethods.GetThreadPriority(handle);
-                    if (threadId == int.MaxValue)
-                        throw new Win32Exception("Failed to setup thread priority, couldn't get the thread priority");
-                }
-                finally
-                {
-                    if (handle != IntPtr.Zero)
-                        Win32ThreadsMethods.CloseHandle(handle);
-                }
+                uint threadId = Win32ThreadsMethods.GetCurrentThreadId();
+                handle = Win32ThreadsMethods.OpenThread(ThreadAccess.QueryInformation, false, threadId);
+                if (handle == IntPtr.Zero)
+                    throw new Win32Exception("Failed to setup thread priority, couldn't open the current thread");
+                return Win32ThreadsMethods.GetThreadPriority(handle);
             }
-            return threadPriority;
+            finally
+            {
+                if (handle != IntPtr.Zero)
+                    Win32ThreadsMethods.CloseHandle(handle);
+            }
         }
 
-        private static int FixPosixPriority(ThreadPriority priority)
+        private static int FixLinuxPriority(ThreadPriority priority)
         {
             switch (priority)
             {
                 case ThreadPriority.Lowest:
-                    return 1;
+                    return 19;
                 case ThreadPriority.BelowNormal:
-                    return 25;
+                    return 5;
                 case ThreadPriority.AboveNormal:
-                    return 50;
+                    return -5;
                 case ThreadPriority.Highest:
-                    return 99;
+                    return -20;
                 case ThreadPriority.Normal:
                     return 0;
                 default:
@@ -135,17 +116,17 @@ namespace Sparrow.Utils
             }
         }
 
-        private static ThreadPriority FixPosixPriority(int priority)
+        private static ThreadPriority FixLinuxPriority(int priority)
         {
-            if(priority == 0)
-                return ThreadPriority.Normal;
-            if (priority >= 1 && priority <= 24)
+            if (priority < -5)
                 return ThreadPriority.Lowest;
-            if (priority >= 25 && priority <= 49)
+            if (priority < 0 )
                 return ThreadPriority.BelowNormal;
-            if (priority >= 50 && priority <= 74)
-                return ThreadPriority.AboveNormal;
-            if (priority >= 75 && priority <= 99)
+            if (priority == 0)
+                return ThreadPriority.Normal;
+            if (priority == 20)
+                return ThreadPriority.Highest;
+            if (priority < 20)
                 return ThreadPriority.Highest;
 
             throw new ArgumentOutOfRangeException(nameof(priority), "Uknown range for priority " + priority);

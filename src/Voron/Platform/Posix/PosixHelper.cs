@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Sparrow;
+using Sparrow.Platform.Posix;
 using Voron.Exceptions;
 using Voron.Impl.FileHeaders;
 using Voron.Platform.Win32;

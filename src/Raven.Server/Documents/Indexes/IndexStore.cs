@@ -22,6 +22,7 @@ using Voron.Platform.Posix;
 
 using Sparrow;
 using Sparrow.Logging;
+using Sparrow.Platform;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -668,7 +669,7 @@ namespace Raven.Server.Documents.Indexes
 
         private void InitializePath(string path)
         {
-            if (Platform.RunningOnPosix)
+            if (PlatformDetails.RunningOnPosix)
                 path = PosixHelper.FixLinuxPath(path);
 
             if (Directory.Exists(path) == false && _documentDatabase.Configuration.Indexing.RunInMemory == false)
