@@ -217,12 +217,12 @@ namespace FastTests.Server.Documents.Replication
             {
                 using (var s1 = store1.OpenSession())
                 {
-                    s1.Store(new User(), "foo/bar");
+                    s1.Store(new User { Name = "test" }, "foo/bar");
                     s1.SaveChanges();
                 }
                 using (var s2 = store2.OpenSession())
                 {
-                    s2.Store(new User(), "foo/bar");
+                    s2.Store(new User { Name = "test2" }, "foo/bar");
                     s2.SaveChanges();
                 }
 
@@ -241,7 +241,7 @@ namespace FastTests.Server.Documents.Replication
             {
                 using (var s1 = store1.OpenSession())
                 {
-                    s1.Store(new User(), "foo/bar");
+                    s1.Store(new User { Name = "test" }, "foo/bar");
                     s1.SaveChanges();
                 }
 
@@ -250,7 +250,7 @@ namespace FastTests.Server.Documents.Replication
 
                 using (var s2 = store2.OpenSession())
                 {
-                    s2.Store(new User(), "foo/bar");
+                    s2.Store(new User { Name = "test2" }, "foo/bar");
                     s2.SaveChanges();
                 }
                 WaitForIndexing(store2);
@@ -277,7 +277,7 @@ namespace FastTests.Server.Documents.Replication
             {
                 using (var s1 = store1.OpenSession())
                 {
-                    s1.Store(new User(), "foo/bar");
+                    s1.Store(new User { Name = "test" }, "foo/bar");
                     s1.SaveChanges();
                 }
 
@@ -286,7 +286,7 @@ namespace FastTests.Server.Documents.Replication
 
                 using (var s2 = store2.OpenSession())
                 {
-                    s2.Store(new User(), "foo/bar");
+                    s2.Store(new User { Name = "test2" }, "foo/bar");
                     s2.SaveChanges();
                 }
                 WaitForIndexing(store2);
@@ -334,7 +334,7 @@ namespace FastTests.Server.Documents.Replication
             {
                 using (var s1 = store1.OpenSession())
                 {
-                    s1.Store(new User(), "foo/bar");
+                    s1.Store(new User { Name = "test" }, "foo/bar");
                     s1.SaveChanges();
                 }
 
@@ -343,7 +343,7 @@ namespace FastTests.Server.Documents.Replication
 
                 using (var s2 = store2.OpenSession())
                 {
-                    s2.Store(new User(), "foo/bar");
+                    s2.Store(new User { Name = "test2" }, "foo/bar");
                     s2.SaveChanges();
                 }
                 WaitForIndexing(store2);
@@ -373,13 +373,13 @@ namespace FastTests.Server.Documents.Replication
             {
                 using (var s1 = store1.OpenSession())
                 {
-                    s1.Store(new User(), "foo/bar");
+                    s1.Store(new User { Name = "test" }, "foo/bar");
                     s1.SaveChanges();
                 }
 
                 using (var s2 = store2.OpenSession())
                 {
-                    s2.Store(new User(), "foo/bar");
+                    s2.Store(new User { Name = "test2" }, "foo/bar");
                     s2.SaveChanges();
                 }
 
@@ -406,13 +406,13 @@ namespace FastTests.Server.Documents.Replication
             {
                 using (var s1 = store1.OpenSession())
                 {
-                    s1.Store(new User(), "foo/bar");
+                    s1.Store(new User { Name = "test" }, "foo/bar");
                     s1.SaveChanges();
                 }
 
                 using (var s2 = store2.OpenSession())
                 {
-                    s2.Store(new User(), "foo/bar");
+                    s2.Store(new User { Name = "test2" }, "foo/bar");
                     s2.SaveChanges();
                 }
 
@@ -445,13 +445,13 @@ namespace FastTests.Server.Documents.Replication
             {
                 using (var s1 = store1.OpenSession())
                 {
-                    s1.Store(new User(), "foo/bar");
+                    s1.Store(new User { Name = "test" }, "foo/bar");
                     s1.SaveChanges();
                 }
 
                 using (var s2 = store2.OpenSession())
                 {
-                    s2.Store(new User(), "foo/bar");
+                    s2.Store(new User { Name = "test2" }, "foo/bar");
                     s2.SaveChanges();
                 }
 
@@ -492,17 +492,17 @@ namespace FastTests.Server.Documents.Replication
             {
                 using (var s1 = store1.OpenSession())
                 {
-                    s1.Store(new User(), "foo/bar");
+                    s1.Store(new User { Name = "test1" }, "foo/bar");
                     s1.SaveChanges();
                 }
                 using (var s2 = store2.OpenSession())
                 {
-                    s2.Store(new User(), "foo/bar");
+                    s2.Store(new User { Name = "test2" }, "foo/bar");
                     s2.SaveChanges();
                 }
                 using (var s3 = store3.OpenSession())
                 {
-                    s3.Store(new User(), "foo/bar");
+                    s3.Store(new User { Name = "test3" }, "foo/bar");
                     s3.SaveChanges();
                 }
 
@@ -515,35 +515,7 @@ namespace FastTests.Server.Documents.Replication
             }
         }
 
-        private async Task<Dictionary<string, List<ChangeVectorEntry[]>>> WaitUntilHasConflict(
-                DocumentStore store,
-                string docId,
-                int count = 1,
-                int timeout = 10000)
-        {
-            if (Debugger.IsAttached)
-                timeout *= 100;
-            Dictionary<string, List<ChangeVectorEntry[]>> conflicts;
-            var sw = Stopwatch.StartNew();
-            do
-            {
-                conflicts = await GetConflicts(store, docId);
-
-                List<ChangeVectorEntry[]> list;
-                if (conflicts.TryGetValue(docId, out list) == false)
-                    list = new List<ChangeVectorEntry[]>();
-                if (list.Count >= count)
-                    break;
-
-                if (sw.ElapsedMilliseconds > timeout)
-                {
-                    Assert.False(true,
-                        "Timed out while waiting for conflicts on " + docId + " we have " + list.Count + " conflicts");
-                }
-
-            } while (true);
-            return conflicts;
-        }
+        
 
         public class UserIndex : AbstractIndexCreationTask<User>
         {

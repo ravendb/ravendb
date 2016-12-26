@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Client.Replication.Messages;
 using Sparrow;
@@ -99,5 +101,54 @@ namespace Raven.Server.Documents
             return false;
         }
 
+        public bool IsMetadataEqualTo(BlittableJsonReaderObject obj, HashSet<string> excludedShallowProperties)
+        {
+            BlittableJsonReaderObject myMetadata;
+            BlittableJsonReaderObject objMetadata;
+            Data.TryGet(Constants.Metadata.Key, out myMetadata);
+            obj.TryGet(Constants.Metadata.Key, out objMetadata);
+
+            if (myMetadata == null && objMetadata == null)
+                return true;
+
+            if (myMetadata == null || objMetadata == null)
+                return false;
+
+            return IsEqualTo(excludedShallowProperties, myMetadata, objMetadata);
+        }
+
+        public bool IsEqualTo(BlittableJsonReaderObject obj, HashSet<string> excludedShallowProperties)
+        {
+            return IsEqualTo(excludedShallowProperties, Data, obj);
+        }
+
+        private static bool IsEqualTo(HashSet<string> excludedShallowProperties, BlittableJsonReaderObject myMetadata,
+            BlittableJsonReaderObject objMetadata)
+        {
+            var properties = new HashSet<string>(myMetadata.GetPropertyNames());
+            foreach (var propertyName in objMetadata.GetPropertyNames())
+            {
+                properties.Add(propertyName);
+            }
+
+            foreach (var property in properties)
+            {
+                if (excludedShallowProperties.Contains(property))
+                    continue;
+
+                object myProperty;
+                object objProperty;
+
+                if (myMetadata.TryGetMember(property, out myProperty) == false)
+                    return false;
+
+                if (objMetadata.TryGetMember(property, out objProperty) == false)
+                    return false;
+
+                if (Equals(myProperty, objProperty) == false)
+                    return false;
+            }
+            return true;
+        }
     }
 }

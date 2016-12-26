@@ -187,13 +187,15 @@ return out;
             }
         }
 
-        [Fact(Skip = "Wait for RavenDB-5848")]
-        public void ScriptUnableToResolve()
+        [Fact]
+        public async void ScriptUnableToResolve()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
                 SetupReplication(master, slave);
+                SetToManualResolution(slave, @"return;");
+
                 long? etag;
                 using (var session = slave.OpenSession())
                 {
@@ -216,48 +218,8 @@ return out;
                     session.SaveChanges();
                 }
 
-                SetToManualResolution(slave, @"return;");
-
-                try
-                {
-                    WaitForBiggerEtag(slave, etag);
-                    throw new Exception("Test failed, an unexpected conflict resolusion occured.");
-                }
-                catch (Exception)
-                {   
-                    // It ok, we get an exception when trying to load a conflicted document
-                }
-               
-
-                SetToManualResolution(slave, @"return docs[1];");
-
-                using (var session = master.OpenSession())
-                {
-                    session.Store(new ReplicationConflictsTests.User()
-                    {
-                        Name = "Karmel3",
-                        Age = 3
-                    }, "users/1");
-                    session.SaveChanges();
-                }
-
-                var update2 = WaitForResolution(slave);
-                Assert.True(update2);
-
-                using (var session = slave.OpenSession())
-                {
-                    try
-                    {
-                        var item = session.Load<ReplicationConflictsTests.User>("users/1");
-                        Assert.Equal("Karmel3", item.Name);
-                        Assert.Equal(3, item.Age);
-                    }
-                    catch (ErrorResponseException e)
-                    {
-                        Assert.Equal(HttpStatusCode.Conflict, e.StatusCode);
-                    }
-                }
-
+                var conflicts = await WaitUntilHasConflict(slave, "users/1");
+                Assert.Equal(2,conflicts["users/1"].Count);
             }
         }
 

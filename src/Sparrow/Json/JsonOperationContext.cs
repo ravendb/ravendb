@@ -489,6 +489,56 @@ namespace Sparrow.Json
                 _writer = new BlittableJsonDocumentBuilder(_context, state, _parser);
             }
 
+            private Task<BlittableJsonReaderObject> _prevCall;
+            private Task[] _waitableTasks;
+
+            public async Task<BlittableJsonReaderObject> InterruptibleParseToMemoryAsync(string debugTag, AsyncManualResetEvent interruptEvent)
+            {
+                if (_prevCall == null)
+                {
+                    _prevCall = ParseToMemoryAsync(debugTag);
+                }
+                if(_waitableTasks == null)
+                    _waitableTasks = new Task[2];
+                _waitableTasks[0] = _prevCall;
+                _waitableTasks[1] = interruptEvent.WaitAsync();
+
+                var whenAny = await Task.WhenAny(_waitableTasks);
+                if (whenAny != _prevCall)
+                    return null;
+
+                var result = await _prevCall;
+                _prevCall = null;
+                return result;
+            }
+
+            public BlittableJsonReaderObject InterruptibleParseToMemory(string debugTag,
+                AsyncManualResetEvent interruptEvent)
+            {
+                int state;
+                return InterruptibleParseToMemory(debugTag, interruptEvent, Timeout.Infinite, CancellationToken.None, out state);
+            }
+
+            public BlittableJsonReaderObject InterruptibleParseToMemory(string debugTag, AsyncManualResetEvent interruptEvent, int timeout, CancellationToken token, out int state)
+            {
+                if (_prevCall == null)
+                {
+                    _prevCall = ParseToMemoryAsync(debugTag);
+                }
+                if (_waitableTasks == null)
+                    _waitableTasks = new Task[2];
+                _waitableTasks[0] = _prevCall;
+                _waitableTasks[1] = interruptEvent.WaitAsync();
+
+                state = Task.WaitAny(_waitableTasks, timeout, token);
+                if (state != 0)
+                    return null;
+
+                var result = _prevCall.Result;
+                _prevCall = null;
+                return result;
+            }
+
             public BlittableJsonReaderObject ParseToMemory(string debugTag = null) =>
                 Parse(BlittableJsonDocumentBuilder.UsageMode.None, debugTag);
 

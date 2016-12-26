@@ -343,6 +343,11 @@ namespace Raven.Server.Documents.Replication
         private void OnIncomingReceiveSucceeded(IncomingReplicationHandler instance)
         {
             _incomingLastActivityTime.AddOrUpdate(instance.ConnectionInfo, DateTime.UtcNow, (_, __) => DateTime.UtcNow);
+            foreach (var handler in _incoming.Values)
+            {
+                if (handler != instance)
+                    handler.OnReplicationFromAnotherSource();
+            }
         }
 
         private void OnSystemDocumentChange(DocumentChangeNotification notification)
