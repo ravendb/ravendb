@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -50,6 +49,8 @@ namespace Raven.Client.Document
         private NetworkStream _networkStream;
         private readonly TaskCompletionSource<object> _disposedTask = new TaskCompletionSource<object>();
 
+        private long _lastReceivedEtag;
+
         internal Subscription(SubscriptionConnectionOptions options,
             AsyncServerClient commands, DocumentConvention conventions)
         {
@@ -79,7 +80,7 @@ namespace Raven.Client.Document
             }
             catch
             {
-
+                // ignored
             }
         }
         /// <summary>
@@ -249,16 +250,16 @@ namespace Raven.Client.Document
                     break;
                 case SubscriptionConnectionServerMessage.ConnectionStatus.InUse:
                     throw new SubscriptionInUseException(
-                        $"Subscription With Id {this._options.SubscriptionId} cannot be opened, because it's in use and the connection strategy is {this._options.Strategy}");
+                        $"Subscription With Id {_options.SubscriptionId} cannot be opened, because it's in use and the connection strategy is {_options.Strategy}");
                 case SubscriptionConnectionServerMessage.ConnectionStatus.Closed:
                     throw new SubscriptionClosedException(
-                        $"Subscription With Id {this._options.SubscriptionId} cannot be opened, because it was closed");
+                        $"Subscription With Id {_options.SubscriptionId} cannot be opened, because it was closed");
                 case SubscriptionConnectionServerMessage.ConnectionStatus.NotFound:
                     throw new SubscriptionDoesNotExistException(
-                        $"Subscription With Id {this._options.SubscriptionId} cannot be opened, because it does not exist");
+                        $"Subscription With Id {_options.SubscriptionId} cannot be opened, because it does not exist");
                 default:
                     throw new ArgumentException(
-                        $"Subscription {this._options.SubscriptionId} could not be opened, reason: {connectionStatus.Status}");
+                        $"Subscription {_options.SubscriptionId} could not be opened, reason: {connectionStatus.Status}");
             }
         }
 
@@ -273,7 +274,7 @@ namespace Raven.Client.Document
                 using (var jsonReader = new JsonTextReaderAsync(reader))
                 {
                     _proccessingCts.Token.ThrowIfCancellationRequested();
-                    var readObjectTask = ReadNextObject(jsonReader);
+                    var readObjectTask = ReadNextObject(jsonReader, false);
                     var done = await Task.WhenAny(readObjectTask, _disposedTask.Task).ConfigureAwait(false);
                     if (done == _disposedTask.Task)
                         return;
@@ -287,33 +288,37 @@ namespace Raven.Client.Document
                     Task.Run(() => successfullyConnected.TrySetResult(null));
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
-                    readObjectTask = ReadNextObject(jsonReader);
+                    readObjectTask = ReadNextObject(jsonReader, false);
+
 
                     if (_proccessingCts.IsCancellationRequested)
                         return;
 
                     var incomingBatch = new List<RavenJObject>();
-                    long lastReceivedEtag = 0;
+                    _lastReceivedEtag = 0;
                     bool waitingForAck = false;
-                    while (_proccessingCts.IsCancellationRequested == false)
+                    while (_proccessingCts.IsCancellationRequested == false || waitingForAck)
                     {
                         BeforeBatch();
                         bool endOfBatch = false;
-                        while (endOfBatch == false && _proccessingCts.IsCancellationRequested == false)
+                        while ((endOfBatch == false && _proccessingCts.IsCancellationRequested == false) || waitingForAck)
                         {
+                            if (readObjectTask == null)
+                                readObjectTask = ReadNextObject(jsonReader, waitingForAck);
+
                             done = await Task.WhenAny(readObjectTask, _disposedTask.Task).ConfigureAwait(false);
                             if (done == _disposedTask.Task)
                             {
                                 if (waitingForAck == false)
                                     break;
-                                waitingForAck = false; // we will only wait once
                             }
 
                             var receivedMessage = await readObjectTask.ConfigureAwait(false);
 
-                            readObjectTask = ReadNextObject(jsonReader);
+                            if (done == _disposedTask.Task)
+                                waitingForAck = false; // we will only wait once
 
-                            switch (receivedMessage.Type)
+                            switch (receivedMessage?.Type)
                             {
                                 case SubscriptionConnectionServerMessage.MessageType.Data:
                                     incomingBatch.Add(receivedMessage.Data);
@@ -331,30 +336,38 @@ namespace Raven.Client.Document
                                     switch (receivedMessage.Status)
                                     {
                                         case SubscriptionConnectionServerMessage.ConnectionStatus.Closed:
-                                            throw new SubscriptionClosedException(receivedMessage.Exception??string.Empty);
+                                            throw new SubscriptionClosedException(receivedMessage.Exception ?? string.Empty);
                                         default:
-                                            throw new Exception($"Connection terminated by server. Exception: {receivedMessage.Exception ?? "None"}");
+                                        {
+                                            throw new Exception(
+                                                $"Connection terminated by server. Exception: {receivedMessage.Exception ?? "None"}");
+                                        }
                                     }
-                                    
+                                                                        
                                 default:
                                     throw new ArgumentException(
-                                        $"Unrecognized message '{receivedMessage.Type}' type received from server");
+                                        $"Unrecognized message '{receivedMessage?.Type}' type received from server");
                             }
+                            readObjectTask = null;
                         }
+
+                        if (_proccessingCts.IsCancellationRequested)
+                            break;
 
                         foreach (var curDoc in incomingBatch)
                         {
-                            NotifySubscribers(curDoc, out lastReceivedEtag);
+                            NotifySubscribers(curDoc, out _lastReceivedEtag);
                         }
 
-                        SendAck(lastReceivedEtag, tcpStream);
+                        SendAck(_lastReceivedEtag, tcpStream);
                         waitingForAck = true;
+                        readObjectTask = ReadNextObject(jsonReader, true);
                     }
                 }
             }
             catch (OperationCanceledException)
             {
-                
+
             }
             catch (Exception ex)
             {
@@ -364,16 +377,16 @@ namespace Raven.Client.Document
             }
         }
 
-        private async Task<SubscriptionConnectionServerMessage> ReadNextObject(JsonTextReaderAsync jsonReader)
+        private async Task<SubscriptionConnectionServerMessage> ReadNextObject(JsonTextReaderAsync jsonReader, bool waitForAck)
         {
             do
             {
-                if (_proccessingCts.IsCancellationRequested || _tcpClient.Connected == false)
+                if ((_proccessingCts.IsCancellationRequested || _tcpClient.Connected == false) && waitForAck == false)
                     return null;
                 jsonReader.ResetState();
             } while (await jsonReader.ReadAsync().ConfigureAwait(false) == false && 
             _proccessingCts.Token.IsCancellationRequested);// need to do that to handle the heartbeat whitespace 
-            if (_proccessingCts.Token.IsCancellationRequested)
+            if (_proccessingCts.Token.IsCancellationRequested && waitForAck == false)
                 return null;
             return (await RavenJObject.LoadAsync(jsonReader).ConfigureAwait(false)).JsonDeserialization<SubscriptionConnectionServerMessage>();
         }
@@ -434,7 +447,6 @@ namespace Raven.Client.Document
         private void SendAck(long lastReceivedEtag, Stream networkStream)
         {
             BeforeAcknowledgment();
-
             RavenJObject.FromObject(new SubscriptionConnectionClientMessage
             {
                 Etag = lastReceivedEtag,
@@ -458,9 +470,7 @@ namespace Raven.Client.Document
                 catch (Exception ex)
                 {
                     if (_proccessingCts.Token.IsCancellationRequested)
-                    {
                         return;
-                    }
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                     Task.Run(() => firstConnectionCompleted.TrySetException(ex));
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
@@ -549,6 +559,7 @@ namespace Raven.Client.Document
                 }
                 catch (Exception)
                 {
+                    // ignored
                 }
             }
             if (_tcpClient != null)
@@ -560,7 +571,7 @@ namespace Raven.Client.Document
                 }
                 catch (Exception)
                 {
-
+                    // ignored
                 }
             }
         }

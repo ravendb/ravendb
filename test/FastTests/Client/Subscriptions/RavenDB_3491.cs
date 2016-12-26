@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Json.Linq;
 using Raven.Tests.Core.Utils.Entities;
 using Raven.Tests.Notifications;
@@ -200,6 +201,7 @@ namespace FastTests.Client.Subscriptions
                         Collection = "Users"
                     }, user2Etag ?? 0);
 
+
                     var users = new List<RavenJObject>();
 
                     using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions
@@ -207,7 +209,6 @@ namespace FastTests.Client.Subscriptions
                         SubscriptionId = subscriptionId
                     }))
                     {
-
                         var docs = new BlockingCollection<RavenJObject>();
                         var keys = new BlockingCollection<string>();
                         var ages = new BlockingCollection<int>();
@@ -228,7 +229,6 @@ namespace FastTests.Client.Subscriptions
                         users.Add(doc);
                         var cnt = users.Count;
                         Assert.Equal(3, cnt);
-
 
                         string key;
                         Assert.True(keys.TryTake(out key, waitForDocTimeout));
@@ -251,22 +251,22 @@ namespace FastTests.Client.Subscriptions
                         Assert.Equal(34, age);
                     }
                 }
+
                 using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions
                 {
                     SubscriptionId = subscriptionId
                 }))
                 {
+
                     var docs = new BlockingCollection<RavenJObject>();
 
                     subscription.Subscribe(o => docs.Add(o));
+
                     await subscription.StartAsync();
 
                     RavenJObject item;
                     var tryTake = docs.TryTake(out item, TimeSpan.FromMilliseconds(250));
-                    if (tryTake)
-                        Console.WriteLine(item);
                     Assert.False(tryTake);
-
                 }
             }
         }

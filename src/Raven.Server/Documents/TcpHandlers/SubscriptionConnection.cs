@@ -209,6 +209,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     }
                     catch (Exception)
                     {
+                        // ignored
                     }
                 }
                 finally
@@ -238,6 +239,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         }
                         catch
                         {
+                            // ignored
                         }
                     }
                     tcpConnectionOptions.Dispose();
@@ -286,7 +288,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     while (CancellationTokenSource.IsCancellationRequested == false)
                     {
                         dbContext.ResetAndRenew();
-                        TcpConnection.Context.ResetAndRenew();
+                       // TcpConnection.Context.ResetAndRenew();
 
                         bool anyDocumentsSentInCurrentIteration = false;
                         using (dbContext.OpenReadTransaction())
@@ -366,6 +368,8 @@ namespace Raven.Server.Documents.TcpHandlers
                                         TcpConnection.RegisterBytesReceived(reply.Size);
                                         clientReply = JsonDeserializationServer.SubscriptionConnectionClientMessage(reply);
                                     }
+
+                                    TcpConnection.Context.ResetAndRenew();
                                     replyFromClientTask = TcpConnection.MultiDocumentParser.ParseToMemoryAsync("client reply");
                                     break;
                                 }
@@ -483,6 +487,7 @@ namespace Raven.Server.Documents.TcpHandlers
             }
             catch (Exception)
             {
+                // ignored
             }
         }
     }
