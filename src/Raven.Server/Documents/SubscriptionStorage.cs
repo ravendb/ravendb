@@ -149,6 +149,8 @@ namespace Raven.Server.Documents
                 table.Update(existingSubscription.Id, tvb);
                 tx.Commit();
             }
+            Console.WriteLine("Server batch ack " + id + " " + lastEtag);
+            Console.Out.Flush();
         }
 
         public void AssertSubscriptionExists(long id)

@@ -301,16 +301,23 @@ namespace Raven.Client.Document
                         bool endOfBatch = false;
                         while (endOfBatch == false && _proccessingCts.IsCancellationRequested == false)
                         {
+                            bool track = false;
                             done = await Task.WhenAny(readObjectTask, _disposedTask.Task).ConfigureAwait(false);
                             if (done == _disposedTask.Task)
                             {
                                 if (waitingForAck == false)
                                     break;
+                                track = true;
                                 waitingForAck = false; // we will only wait once
                             }
 
                             var receivedMessage = await readObjectTask.ConfigureAwait(false);
-
+                            if (track)
+                            {
+                                Console.WriteLine("Client last message " + receivedMessage.Type);
+                                Console.WriteLine("Client last " + receivedMessage.Data);
+                                Console.Out.Flush();    
+                            }
                             readObjectTask = ReadNextObject(jsonReader);
 
                             switch (receivedMessage.Type)
@@ -322,6 +329,8 @@ namespace Raven.Client.Document
                                     endOfBatch = true;
                                     break;
                                 case SubscriptionConnectionServerMessage.MessageType.Confirm:
+                                    Console.WriteLine("CLIENT confirm " + lastReceivedEtag);
+                                    Console.Out.Flush();
                                     AfterAcknowledgment();
                                     AfterBatch(incomingBatch.Count);
                                     incomingBatch.Clear();
@@ -437,7 +446,8 @@ namespace Raven.Client.Document
         private void SendAck(long lastReceivedEtag, Stream networkStream)
         {
             BeforeAcknowledgment();
-
+            Console.WriteLine("CLIENT SendAck " + lastReceivedEtag);
+            Console.Out.Flush();
             RavenJObject.FromObject(new SubscriptionConnectionClientMessage
             {
                 Etag = lastReceivedEtag,
