@@ -278,6 +278,9 @@ namespace Raven.Server.Documents.TcpHandlers
                 TcpConnection.DocumentDatabase.SubscriptionStorage.GetCriteriaAndEtag(_options.SubscriptionId, dbContext,
                     out criteria, out startEtag);
 
+                Console.WriteLine("SERVER ------> start etag = " + startEtag);
+                Console.Out.Flush();
+
                 var replyFromClientTask = TcpConnection.MultiDocumentParser.ParseToMemoryAsync("client reply");
                 using (RegisterForNotificationOnNewDocuments(criteria))
                 {
@@ -307,6 +310,9 @@ namespace Raven.Server.Documents.TcpHandlers
                                     // make sure that if we read a lot of irrelevant documents, we send keep alive over the network
                                     if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
                                     {
+                                        Console.WriteLine("SERVER ------> HEARTBEAT");
+                                        Console.Out.Flush();
+
                                         await SendHeartBeat();
                                         sendingCurrentBatchStopwatch.Reset();
                                     }
