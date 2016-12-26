@@ -2,11 +2,7 @@ import app = require("durandal/app");
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import accessHelper = require("viewmodels/shell/accessHelper");
-import EVENTS = require("common/constants/events");
-
 import resource = require("models/resources/resource");
-import database = require("models/resources/database");
-
 import deleteResourceConfirm = require("viewmodels/resources/deleteResourceConfirm");
 import createDatabase = require("viewmodels/resources/createDatabase");
 import disableResourceToggleConfirm = require("viewmodels/resources/disableResourceToggleConfirm");
@@ -97,6 +93,7 @@ class resources extends viewModelBase {
         return new getResourcesCommand()
             .execute()
             .done(info => this.resources(info));
+
     }
 
     attached() {
@@ -302,6 +299,13 @@ class resources extends viewModelBase {
         app.showBootstrapDialog(createDbView);
     }
 
+    activateResource(qualifiedName: string) {
+        let resuorce = this.resourcesManager.resources().filter(x => x.qualifiedName === qualifiedName)[0];
+        if (!resuorce)
+            return;
+
+        resuorce.activate();
+    }
 
     /* TODO: cluster related work
 
