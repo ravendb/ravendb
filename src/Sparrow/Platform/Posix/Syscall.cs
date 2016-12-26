@@ -25,8 +25,14 @@ namespace Sparrow.Platform.Posix
         [SecurityCritical]
         public static extern IntPtr Set(byte* dest, int c, long count);
 
-        [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int gettid();
+        [DllImport(LIBC_6, EntryPoint = "syscall", SetLastError = true)]
+        private static extern long syscall0(long number);
+
+        public static int gettid()
+        {
+            const int SYS_gettid = 178;
+            return (int) syscall0(SYS_gettid);
+        }
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int setpriority(int which, int who, int prio);
