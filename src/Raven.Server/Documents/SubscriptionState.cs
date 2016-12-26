@@ -50,18 +50,23 @@ namespace Raven.Server.Documents
                         // this piece of code could have been upper, but we choose to have it here, for better readability
                         case SubscriptionOpeningStrategy.WaitForFree:
                             throw new TimeoutException();
+
                         case SubscriptionOpeningStrategy.OpenIfFree:
                             throw new SubscriptionInUseException(
                                 $"Subscription {incomingConnection.SubscriptionId} is occupied, connection cannot be opened");
+
                         case SubscriptionOpeningStrategy.TakeOver:
                             if (_currentConnection?.Strategy == SubscriptionOpeningStrategy.ForceAndKeep)
                                 throw  new SubscriptionInUseException(
                                     $"Subscription {incomingConnection.SubscriptionId} is occupied by a ForceAndKeep connection, connectionId cannot be opened");
 
-                            _currentConnection.ConnectionException = new SubscriptionClosedException("Closed by Takeover");
+                            if (_currentConnection != null)
+                                _currentConnection.ConnectionException = new SubscriptionClosedException("Closed by Takeover");
+
                             _currentConnection?.CancellationTokenSource.Cancel();
                         
                             throw new TimeoutException();
+
                         case SubscriptionOpeningStrategy.ForceAndKeep:
                             _currentConnection.ConnectionException = new SubscriptionClosedException("Closed by ForceAndKeep");
                             _currentConnection?.CancellationTokenSource.Cancel();
