@@ -816,7 +816,7 @@ namespace Raven.Server.Documents
             return result;
         }
 
-        public bool Delete(DocumentsOperationContext context, string key, long? expectedEtag)
+        public long? Delete(DocumentsOperationContext context, string key, long? expectedEtag)
         {
             Slice keySlice;
             using (DocumentKeyWorker.GetSliceFromKey(context, key, out keySlice))
@@ -825,7 +825,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public bool Delete(DocumentsOperationContext context,
+        public long? Delete(DocumentsOperationContext context,
             Slice loweredKey,
             string key,
             long? expectedEtag,
@@ -833,7 +833,7 @@ namespace Raven.Server.Documents
         {
             var result = GetDocumentOrTombstone(context, loweredKey);
             if (result.Item2 != null)
-                return false; //NOP, already deleted
+                return null; //NOP, already deleted
 
             var doc = result.Item1;
             if (doc == null)
@@ -844,7 +844,7 @@ namespace Raven.Server.Documents
 
                 if (_hasConflicts != 0)
                     ThrowDocumentConflictIfNeeded(context, loweredKey);
-                return false;
+                return null;
             }
 
             if (expectedEtag != null && doc.Etag != expectedEtag)
@@ -872,7 +872,7 @@ namespace Raven.Server.Documents
             int keySize;
             var keyPtr = tvr.Read(2, out keySize);
 
-            CreateTombstone(context,
+            var etag = CreateTombstone(context,
                 lowerKey,
                 lowerSize,
                 keyPtr,
@@ -899,15 +899,9 @@ namespace Raven.Server.Documents
                 IsSystemDocument = collectionName.IsSystem,
             });
 
-            return true;
+            return etag;
         }
 
-        private void ThrowDocumentConflictIfNeeded(DocumentsOperationContext context, string key)
-        {
-            var conflicts = GetConflictsFor(context, key);
-            if (conflicts.Count > 0)
-                throw new DocumentConflictException(key, conflicts);
-        }
 
         private void ThrowDocumentConflictIfNeeded(DocumentsOperationContext context, Slice loweredKey)
         {
@@ -1039,7 +1033,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void CreateTombstone(
+        private long CreateTombstone(
             DocumentsOperationContext context,
             byte* lowerKey, int lowerSize,
             byte* keyPtr, int keySize,
@@ -1086,6 +1080,7 @@ namespace Raven.Server.Documents
                     table.Insert(tbv);
                 }
             }
+            return newEtag;
         }
 
         public void DeleteConflictsFor(DocumentsOperationContext context, string key)

@@ -159,7 +159,7 @@ namespace Raven.NewClient.Client.Document
         /// <summary>
         /// SaveChanges will wait for the indexes to catch up with the saved changes
         /// </summary>
-        void WaitForIndexesAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = false, string[] indexes = null);
+        void WaitForIndexesAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = true, string[] indexes = null);
 
         /// <summary>
         /// Convert blittable to entity

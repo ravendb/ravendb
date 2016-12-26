@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.SqlTypes;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -16,6 +17,8 @@ using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries.Dynamic;
+using Raven.Server.Documents.SqlReplication;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 
 using Voron.Platform.Posix;
@@ -682,6 +685,28 @@ namespace Raven.Server.Documents.Indexes
             public Index Index { get; set; }
             public IndexState State { get; set; }
             public DateTime CreationDate { get; set; }
+        }
+
+        public Task WaitForIndexesAsync(string waitForIndexes, DocumentsOperationContext context)
+        {
+            var parts = waitForIndexes.Split(';');
+            var throwOnTimeout = bool.Parse(parts[0]);
+            var timeout = TimeSpan.Parse(parts[1]);
+            var specificIndexes = new HashSet<string>(parts.Skip(2));
+
+            var f = true;
+            while (f)
+            {
+                f = false;
+                foreach (var index in _indexes)
+                {
+                    if (index.IsStale(context) == false)
+                    {
+                        f = true;
+                    }
+                }
+            }
+            return Task.CompletedTask;
         }
     }
 }

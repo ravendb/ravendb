@@ -461,7 +461,7 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteComma();
 
                     writer.WritePropertyName(("Etag"));
-                    writer.WriteInteger(cmd.PutResult.ETag ?? -1);
+                    writer.WriteInteger(cmd.PutResult.ETag);
 
                     writer.WriteEndObject();
                 }

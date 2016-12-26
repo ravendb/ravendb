@@ -169,7 +169,7 @@ namespace Raven.Server.Documents.Expiration
 
                                     var deleted = _database.DocumentsStorage.Delete(context, clonedKey, key: null, expectedEtag: null);
                                     count++;
-                                    if (_logger.IsInfoEnabled && deleted == false)
+                                    if (_logger.IsInfoEnabled && deleted == null)
                                         _logger.Info($"Tried to delete expired document '{clonedKey}' but document was not found.");
                                 } while (multiIt.MoveNext());
                             }

@@ -1,8 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Commands;
+using Raven.Abstractions.Extensions;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -113,19 +117,29 @@ namespace Raven.Server.Documents.Handlers
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
                     throw;
                 }
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
                 var waitForReplication = GetStringQueryString("waitForReplication", required: false);
                 if (waitForReplication != null)
                 {
-                    await Database.DocumentReplicationLoader.WaitForReplicationAsync(waitForReplication).ConfigureAwait(false);
+                    //numberOfReplicasToWaitFor = [Number] (default 1)
+                    //waitForReplicasTimeout = timespan & throwOnTimeoutInWaitForReplicas = false (default true)
+                    //majority = string (default false)
+
+                    var numberOfReplicasToWaitFor = GetIntValueQueryString("numberOfReplicasToWaitFor") ?? 1;
+                    var waitForReplicasTimeout = GetTimeSpanQueryString("waitForReplicasTimeout") ?? TimeSpan.FromSeconds(15);
+                    var throwOnTimeoutInWaitForReplicas = GetBoolValueQueryString("throwOnTimeoutInWaitForReplicas") ?? true;
+                    var majority = GetStringQueryString("majority") == "majority";
+
+                    await Database.DocumentReplicationLoader.WaitForReplicationAsync(numberOfReplicasToWaitFor, waitForReplicasTimeout, throwOnTimeoutInWaitForReplicas, majority, mergedCmd.LastEtag).ConfigureAwait(false);
                 }
 
                 var waitForIndexes = GetStringQueryString("waitForIndexes", required: false);
                 if (waitForIndexes != null)
                 {
-
+                    await WaitForIndexesAsync(mergedCmd.LastEtag).ConfigureAwait(false);
                 }
+
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
                 using (var writer = new BlittableJsonTextWriter(readBatchCommandContext, ResponseBodyStream()))
                 {
@@ -137,11 +151,74 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        private async Task WaitForIndexesAsync(long lastEtag)
+        {
+            // waitForIndexesTimeout=timespan & waitForIndexThrow=false (default true)
+            // waitForspecificIndex=specific index1 & waitForspecificIndex=specific index 2
+
+            var specificIndexes = HttpContext.Request.Query["waitForSpecificIndexs"].ToHashSet();
+            var timeout = TimeSpan.Parse(GetStringQueryString("waitForIndexesTimeout"));
+            var throwOnTimeout = bool.Parse(GetStringQueryString("waitForIndexThrow"));
+
+            var indexesTask = new List<Task>();
+            var indexesToCheck = new List<Index>();
+
+            if (specificIndexes.Count > 0)
+            {
+                foreach (var index in Database.IndexStore.GetIndexes())
+                {
+                    if (specificIndexes.Contains(index.Name))
+                        indexesToCheck.Add(index);
+                }
+            }
+            else
+            {
+                indexesToCheck.AddRange(Database.IndexStore.GetIndexes());
+            }
+
+            var sp = Stopwatch.StartNew();
+            while (true)
+            {
+                indexesTask.Clear();
+
+                DocumentsOperationContext context;
+                using (ContextPool.AllocateOperationContext(out context))
+                using (context.OpenReadTransaction())
+                {
+                    foreach (var index in indexesToCheck)
+                    {
+                        if (index.IsStale(context, lastEtag))
+                        {
+                            indexesTask.Add(index.NextIndexingRound);
+                        }
+                    }
+                }
+
+                if (indexesTask.Count == 0)
+                    return;
+
+                var remaining = timeout - sp.Elapsed;
+                if (remaining < TimeSpan.Zero)
+                    break; // will throw timeout exception
+
+                indexesTask.Add(Task.Delay(remaining));
+
+                await Task.WhenAny(indexesTask);
+            }
+            if (throwOnTimeout)
+            {
+                throw new TimeoutException(
+                    $"After waiting for {sp.Elapsed}, could not verify that {indexesToCheck.Count} " +
+                    $"indexes has caught up with the changes as of etag: {Database.DocumentsStorage.LastEtag}");
+            }
+        }
+
         private class MergedBatchCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             public DynamicJsonArray Reply;
             public CommandData[] ParsedCommands;
             public DocumentDatabase Database;
+            public long LastEtag;
 
             public override void Execute(DocumentsOperationContext context, RavenTransaction tx)
             {
@@ -158,7 +235,7 @@ namespace Raven.Server.Documents.Handlers
 
                             BlittableJsonReaderObject metadata;
                             cmd.Document.TryGet(Constants.Metadata.Key, out metadata);
-
+                            LastEtag = putResult.ETag;
                             Reply.Add(new DynamicJsonValue
                             {
                                 ["Key"] = putResult.Key,
@@ -188,10 +265,12 @@ namespace Raven.Server.Documents.Handlers
                                 additionalData["Document"] = patchResult.ModifiedDocument;
                                 additionalData["Actions"] = patchResult.DebugActions;
                             }
+                            if (patchResult.Etag != null)
+                                LastEtag = patchResult.Etag.Value;
                             Reply.Add(new DynamicJsonValue
                             {
                                 ["Key"] = cmd.Key,
-                                ["Etag"] = cmd.Etag,
+                                ["Etag"] = patchResult.Etag,
                                 ["Method"] = "PATCH",
                                 ["AdditionalData"] = additionalData,
                                 ["PatchResult"] = patchResult.PatchResult.ToString(),
@@ -199,12 +278,14 @@ namespace Raven.Server.Documents.Handlers
                             break;
                         case "DELETE":
                             var deleted = Database.DocumentsStorage.Delete(context, cmd.Key, cmd.Etag);
+                            if (deleted != null)
+                                LastEtag = deleted.Value;
                             Reply.Add(new DynamicJsonValue
                             {
                                 ["Key"] = cmd.Key,
                                 ["Method"] = "DELETE",
                                 ["AdditionalData"] = cmd.AdditionalData,
-                                ["Deleted"] = deleted
+                                ["Deleted"] = deleted != null
                             });
                             break;
                     }

@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Replication
         private readonly ConcurrentDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>> _incomingRejectionStats = new ConcurrentDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>>();
 
         private readonly ConcurrentSet<ConnectionFailureInfo> _reconnectQueue = new ConcurrentSet<ConnectionFailureInfo>();
-        internal Dictionary<string,ScriptResolver> ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
+        internal Dictionary<string, ScriptResolver> ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
         private readonly Logger _log;
         private ReplicationDocument _replicationDocument;
 
@@ -46,8 +46,6 @@ namespace Raven.Server.Documents.Replication
             public TaskCompletionSource<object> Tcs;
             public long Etag;
             public int Replicas;
-            public TimeSpan Timeout;
-            public DateTime Start;
         }
 
         private readonly ConcurrentSet<WaitForReplicationInfo> _waitForReplicationTasks = new ConcurrentSet<WaitForReplicationInfo>();
@@ -253,7 +251,7 @@ namespace Raven.Server.Documents.Replication
 
         private void InitializeResolvers()
         {
-            if ( _replicationDocument?.ResolveByCollection == null )
+            if (_replicationDocument?.ResolveByCollection == null)
             {
                 if (ScriptConflictResolversCache.Count > 0)
                     ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
@@ -354,15 +352,11 @@ namespace Raven.Server.Documents.Replication
 
             foreach (var waitForReplicationInfo in _waitForReplicationTasks)
             {
-                if (ReplicatedPast(waitForReplicationInfo.Etag) < waitForReplicationInfo.Replicas)
+                if (ReplicatedPast(waitForReplicationInfo.Etag) >= waitForReplicationInfo.Replicas)
                 {
-                    if ((SystemTime.UtcNow - waitForReplicationInfo.Start) <= waitForReplicationInfo.Timeout)
-                        continue;
                     _waitForReplicationTasks.TryRemove(waitForReplicationInfo);
-                    Task.Run(() => waitForReplicationInfo.Tcs.TrySetCanceled());
+                    Task.Run(() => waitForReplicationInfo.Tcs.TrySetResult(null));
                 }
-                _waitForReplicationTasks.TryRemove(waitForReplicationInfo);
-                Task.Run(() => waitForReplicationInfo.Tcs.TrySetResult(null));
             }
         }
 
@@ -469,9 +463,8 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public async Task WaitForReplicationAsync(string waitForReplication)
+        public async Task WaitForReplicationAsync(int numberOfReplicasToWaitFor, TimeSpan waitForReplicasTimeout, bool throwOnTimeoutInWaitForReplicas, bool majority, long lastEtag)
         {
-
             if (_outgoing.Count == 0)
             {
                 if (_log.IsInfoEnabled)
@@ -481,21 +474,14 @@ namespace Raven.Server.Documents.Replication
                 return;
             }
 
-            var lastEtag = _database.DocumentsStorage.LastEtag;
-            var parts = waitForReplication.Split(';');
-            var replicas = int.Parse(parts[0]);
-            var timeout = TimeSpan.Parse(parts[1]);
-            var throwOnTimeout = bool.Parse(parts[2]);
-            var majority = parts[3] == "majority";
-
             if (majority)
             {
                 var numberOfActiveReplicationDestinations = _outgoing.Count;
-                replicas = Math.Max(numberOfActiveReplicationDestinations / 2 + 1, replicas);
-                replicas = Math.Min(replicas, numberOfActiveReplicationDestinations);
+                numberOfReplicasToWaitFor = Math.Max(numberOfActiveReplicationDestinations / 2 + 1, numberOfReplicasToWaitFor);
+                numberOfReplicasToWaitFor = Math.Min(numberOfReplicasToWaitFor, numberOfActiveReplicationDestinations);
             }
 
-            if (ReplicatedPast(lastEtag) >= replicas)
+            if (ReplicatedPast(lastEtag) >= numberOfReplicasToWaitFor)
                 return;
 
             var tcs = new TaskCompletionSource<object>();
@@ -504,32 +490,22 @@ namespace Raven.Server.Documents.Replication
             {
                 Tcs = tcs,
                 Etag = lastEtag,
-                Replicas = replicas,
-                Timeout = timeout,
-                Start = SystemTime.UtcNow
+                Replicas = numberOfReplicasToWaitFor,
             });
 
             int replicatedPast;
-            try
-            {
-                if (await Task.WhenAny(tcs.Task, Task.Delay(timeout)).ConfigureAwait(false) == tcs.Task)
-                    return;
-                replicatedPast = ReplicatedPast(lastEtag);
-                if (replicatedPast >= replicas)
-                    return;
+            if (await Task.WhenAny(tcs.Task, Task.Delay(waitForReplicasTimeout)).ConfigureAwait(false) == tcs.Task)
+                return;
 
-                if (throwOnTimeout == false)
-                    return;
-            }
-            catch (OperationCanceledException)
-            {
-                replicatedPast = ReplicatedPast(lastEtag);
-                if (replicatedPast >= replicas)
-                    return;
-            }
+            replicatedPast = ReplicatedPast(lastEtag);
+            if (replicatedPast >= numberOfReplicasToWaitFor)
+                return;
 
-            throw new TimeoutException("Could not verify that etag " + lastEtag + " was replicated to " + replicas + " servers in " + timeout + "." +
-                                       " So far, it only replicated to " + replicatedPast);
+            if (throwOnTimeoutInWaitForReplicas)
+            {
+                throw new TimeoutException(
+                    $"Could not verify that etag {lastEtag} was replicated to {numberOfReplicasToWaitFor} servers in {waitForReplicasTimeout}. So far, it only replicated to {replicatedPast}");
+            }
         }
 
         private int ReplicatedPast(long etag)

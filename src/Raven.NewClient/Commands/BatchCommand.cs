@@ -75,13 +75,13 @@ namespace Raven.NewClient.Client.Commands
             {
                 if (Options.WaitForReplicas)
                     waitForReplicas =
-                        $"waitForReplication={Options.NumberOfReplicasToWaitFor};{Options.WaitForReplicasTimout};" +
-                        $"{Options.ThrowOnTimeoutInWaitForReplicas};{(Options.Majority ? "majority" : "exact")}";
+                        $"waitForReplication=true&numberOfReplicasToWaitFor={Options.NumberOfReplicasToWaitFor}&waitForReplicasTimeout={Options.WaitForReplicasTimeout}" +
+                        $"&throwOnTimeoutInWaitForReplicas={Options.ThrowOnTimeoutInWaitForReplicas}&majority={(Options.Majority ? "majority" : "exact")}";
 
                 if (Options.WaitForIndexes)
                     waitForIndexes =
-                        $"waitForIndexes={Options.ThrowOnTimeoutInWaitForIndexes};{Options.WaitForIndexesTimeout}" +
-                        $"{(Options.WaitForSpecificIndexes != null ? ";" + string.Join(";", Options.WaitForSpecificIndexes) : "")}";
+                        $"waitForIndexes=true&waitForIndexesTimeout={Options.WaitForIndexesTimeout}&waitForIndexThrow={Options.ThrowOnTimeoutInWaitForIndexes}" +
+                        $"{(Options.WaitForSpecificIndexes != null ? "&waitForSpecificIndexs=" + string.Join("&waitForSpecificIndexs=", Options.WaitForSpecificIndexes) : "")}";
             }
         }
     }

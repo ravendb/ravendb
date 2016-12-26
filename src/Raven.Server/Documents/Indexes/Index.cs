@@ -138,6 +138,18 @@ namespace Raven.Server.Documents.Indexes
         private volatile bool _priorityChanged;
         private volatile bool _hadRealIndexingWorkToDo;
 
+        private bool _indexIsBeingWatched;
+        private TaskCompletionSource<object> _indexindDone = new TaskCompletionSource<object>();
+
+        public Task NextIndexingRound
+        {
+            get
+            {
+                _indexIsBeingWatched = true;
+                return _indexindDone.Task;
+            }
+        }
+
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
             if (indexId <= 0)
@@ -497,7 +509,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public virtual bool IsStale(DocumentsOperationContext databaseContext)
+        public virtual bool IsStale(DocumentsOperationContext databaseContext, long? cutoff = null)
         {
             Debug.Assert(databaseContext.Transaction != null);
 
@@ -508,7 +520,7 @@ namespace Raven.Server.Documents.Indexes
             using (_contextPool.AllocateOperationContext(out indexContext))
             using (indexContext.OpenReadTransaction())
             {
-                return IsStale(databaseContext, indexContext);
+                return IsStale(databaseContext, indexContext, cutoff);
             }
         }
 
@@ -999,6 +1011,16 @@ namespace Raven.Server.Documents.Indexes
 
             if (notification.Type == IndexChangeTypes.IndexMarkedAsErrored)
                 Stop();
+
+            if (_indexIsBeingWatched)
+            {
+                var old = _indexindDone;
+                Interlocked.Exchange(ref _indexindDone, new TaskCompletionSource<object>());
+                Task.Factory.StartNew(() =>
+                {
+                    old.TrySetResult(null);
+                });
+            }
         }
 
         protected virtual void HandleDocumentChange(DocumentChangeNotification notification)
@@ -2175,6 +2197,11 @@ namespace Raven.Server.Documents.Indexes
                     _parent._currentlyRunningQueriesLock.ExitReadLock();
                 _parent.CurrentlyRunningQueries.TryRemove(_queryInfo);
             }
+        }
+
+        public override string ToString()
+        {
+            return Name;
         }
     }
 }

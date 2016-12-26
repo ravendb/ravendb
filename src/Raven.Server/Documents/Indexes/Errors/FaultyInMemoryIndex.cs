@@ -89,11 +89,6 @@ namespace Raven.Server.Documents.Indexes.Errors
             }
         }
 
-        public override bool IsStale(DocumentsOperationContext databaseContext)
-        {
-            return false;
-        }
-
         public override IndexProgress GetProgress(DocumentsOperationContext documentsContext)
         {
             return new IndexProgress

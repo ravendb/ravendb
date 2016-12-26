@@ -152,8 +152,10 @@ namespace Raven.Server.Documents.Patch
 
                 if (isModified)
                 {
-                    _database.DocumentsStorage.Put(context, document.Key, document.Etag, modifiedDocument);
+                    var putResult = _database.DocumentsStorage.Put(context, document.Key, document.Etag,
+                        modifiedDocument);
                     result.PatchResult = PatchResult.Patched;
+                    result.Etag = putResult.ETag;
                 }
             }
 
