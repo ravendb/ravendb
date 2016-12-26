@@ -109,7 +109,7 @@ namespace Voron
                     options.BasePath != null && 
                     IsStorageSupportingO_Direct(options.BasePath) == false)
                 {
-                    options.SafePosixOpenFlags &= ~OpenFlagsThatAreDifferentBetweenPlatforms.O_DIRECT;
+                    options.SafePosixOpenFlags &= ~PerPlatformValues.OpenFlags.O_DIRECT;
                     var message = "Path " + options.BasePath +
                                   " not supporting O_DIRECT writes. As a result - data durability is not guarenteed";
                     _options.InvokeNonDurabaleFileSystemError(this, message, null);
@@ -138,7 +138,7 @@ namespace Voron
         {
             var filename = Path.Combine(path, "test-" + Guid.NewGuid() + ".tmp");
             var fd = Syscall.open(filename,
-                OpenFlags.O_WRONLY | OpenFlags.O_DSYNC | OpenFlagsThatAreDifferentBetweenPlatforms.O_DIRECT |
+                OpenFlags.O_WRONLY | OpenFlags.O_DSYNC | PerPlatformValues.OpenFlags.O_DIRECT |
                 OpenFlags.O_CREAT, FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
 
             int result;
