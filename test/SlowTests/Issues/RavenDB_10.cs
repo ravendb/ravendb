@@ -1,14 +1,15 @@
 using System.Collections.Generic;
-using Lucene.Net.Analysis.Standard;
 using Raven.Abstractions.Indexing;
-using Raven.Tests.Common;
 
 using Xunit;
 using System.Linq;
+using FastTests;
+using Lucene.Net.Analysis.Standard;
+using Raven.Client.Indexing;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_10 : RavenTest
+    public class RavenDB_10 : RavenTestBase
     {
         public class Item
         {
@@ -19,7 +20,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void ShouldSortCorrectly()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -45,7 +46,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void ShouldSearchCorrectly()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -54,11 +55,12 @@ namespace Raven.Tests.Issues
 
                     session.SaveChanges();
                 }
+                var opt = new IndexFieldOptions {Analyzer = typeof(StandardAnalyzer).AssemblyQualifiedName,Indexing = FieldIndexing.Analyzed };
+
                 store.DatabaseCommands.PutIndex("test", new IndexDefinition
                 {
-                    Map = "from doc in docs select new { doc.Text }",
-                    Analyzers = { { "Text", typeof(StandardAnalyzer).AssemblyQualifiedName } },
-                    Indexes = { { "Text", FieldIndexing.Analyzed } }
+                    Maps = new HashSet<string>{ "from doc in docs select new { doc.Text }" },
+                    Fields = { { "Text", opt } },
                 });
 
                 using (var session = store.OpenSession())
@@ -72,7 +74,6 @@ namespace Raven.Tests.Issues
                                         .Customize(x => x.WaitForNonStaleResults())
                                         .Where(x => x.Text == "Sit's")
                                         .ToList());
-
                 }
             }
         }

@@ -32,6 +32,8 @@
   },
 
   "dependencies": {
+    "Lucene.Net": "3.0.4-*",
+    "Lucene.Net.Contrib.Spatial.NTS": "3.0.4-*",
     "dotnet-test-xunit": "2.2.0-preview2-build1029",
     "Sparrow": "4.0.0-*",
     "FastTests": "4.0.0-*",
