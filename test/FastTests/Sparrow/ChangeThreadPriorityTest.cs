@@ -9,7 +9,7 @@ namespace FastTests.Sparrow
 {
     public class ChangeThreadPriorityTest
     {
-        [Fact]
+        [NonLinuxFact]
         public void StartChangeThreadPriority()
         {
             Exception e = null;

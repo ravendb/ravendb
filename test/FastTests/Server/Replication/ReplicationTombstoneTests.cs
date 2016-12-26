@@ -97,8 +97,8 @@ namespace FastTests.Server.Documents.Replication
                 SetupReplication(store1, store2);
                 SetupReplication(store2, store3);
 
-                Assert.True(WaitForDocument(store2, "foo/bar"), store2.Identifier);
-                Assert.True(WaitForDocument(store3, "foo/bar"), store3.Identifier);
+                Assert.True(WaitForDocument(store2, "foo/bar", 20000), store2.Identifier);
+                Assert.True(WaitForDocument(store3, "foo/bar", 20000), store3.Identifier);
 
                 using (var s1 = store1.OpenSession())
                 {
@@ -110,13 +110,13 @@ namespace FastTests.Server.Documents.Replication
                 Assert.Equal(1, tombstoneIDs.Count);
                 Assert.Contains("foo/bar", tombstoneIDs);
 
-                Assert.True(WaitForDocumentDeletion(store2, "foo/bar", 100));
+                Assert.True(WaitForDocumentDeletion(store2, "foo/bar", 1000));
                 
                 tombstoneIDs = await WaitUntilHasTombstones(store3);
                 Assert.Equal(1, tombstoneIDs.Count);
                 Assert.Contains("foo/bar", tombstoneIDs);
 
-                Assert.True(WaitForDocumentDeletion(store3, "foo/bar", 100));
+                Assert.True(WaitForDocumentDeletion(store3, "foo/bar", 1000));
             }
         }
 
@@ -176,7 +176,7 @@ namespace FastTests.Server.Documents.Replication
                 SetupReplication(store1, store2);
                 SetupReplication(store2, store1);
 
-                var timeout = 100 * Server.ServerStore.DatabasesLandlord.LastRecentlyUsed.Count;
+                var timeout = 1000 * Server.ServerStore.DatabasesLandlord.LastRecentlyUsed.Count;
                 Assert.True(WaitForDocument(store2, "foo/bar",timeout));
                 Assert.True(WaitForDocument(store2, "foo/bar2", timeout));
 

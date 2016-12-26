@@ -6,6 +6,7 @@ using Raven.Server.Config;
 using Sparrow.Collections;
 using Sparrow;
 using Sparrow.Logging;
+using Sparrow.Platform;
 
 namespace Raven.Server.ServerWide.LowMemoryNotification
 {
@@ -80,7 +81,7 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
 
         public static void Initialize(CancellationToken shutdownNotification, RavenConfiguration configuration)
         {
-            Instance = Platform.RunningOnPosix
+            Instance = PlatformDetails.RunningOnPosix
                 ? new PosixLowMemoryNotification(shutdownNotification, configuration) as AbstractLowMemoryNotification
                 : new WinLowMemoryNotification(shutdownNotification, configuration);
             _logger = LoggingSource.Instance.GetLogger<AbstractLowMemoryNotification>("Raven/Server");

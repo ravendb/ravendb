@@ -898,7 +898,7 @@ more responsive application.
             _saveChangesOptions.WaitForReplicas = true;
             _saveChangesOptions.Majority = majority;
             _saveChangesOptions.NumberOfReplicasToWaitFor = replicas;
-            _saveChangesOptions.WaitForReplicasTimout = realTimeout;
+            _saveChangesOptions.WaitForReplicasTimeout = realTimeout;
             _saveChangesOptions.ThrowOnTimeoutInWaitForReplicas = throwOnTimeout;
         }
 

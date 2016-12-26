@@ -192,7 +192,8 @@ namespace Raven.Server.Web.System
         private long GetTotalSize(DocumentDatabase db)
         {
             if (db == null)
-                return -1;
+                return 0;    
+
             return
                 db.GetAllStoragesEnvironment()
                     .Sum(env => env.Environment.Stats().AllocatedDataFileSizeInBytes);

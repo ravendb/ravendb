@@ -5,6 +5,7 @@ using Raven.Server.Config.Settings;
 using Voron;
 using Voron.Platform.Posix;
 using Sparrow.Logging;
+using Sparrow.Platform.Posix;
 
 namespace Raven.Server.ServerWide.LowMemoryNotification
 {

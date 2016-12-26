@@ -1,8 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
+using Lucene.Net.Util;
+using Microsoft.Extensions.Logging.Abstractions;
+using Newtonsoft.Json;
 using Raven.Abstractions.Commands;
+using Raven.Abstractions.Extensions;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -98,12 +105,16 @@ namespace Raven.Server.Documents.Handlers
                     }
                 }
 
+                var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
+
                 var mergedCmd = new MergedBatchCommand
                 {
                     Database = Database,
                     ParsedCommands = parsedCommands,
                     Reply = new DynamicJsonArray()
                 };
+                if(waitForIndexesTimeout != null)
+                    mergedCmd.ModifiedCollections = new HashSet<string>();
                 try
                 {
                     await Database.TxMerger.Enqueue(mergedCmd);
@@ -113,6 +124,18 @@ namespace Raven.Server.Documents.Handlers
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
                     throw;
                 }
+
+                var waitForReplicasTimeout = GetTimeSpanQueryString("waitForReplicasTimeout", required: false);
+                if (waitForReplicasTimeout != null)
+                {
+                    await WaitForReplicationAsync(waitForReplicasTimeout.Value, mergedCmd);
+                }
+
+                if (waitForIndexesTimeout != null)
+                {
+                    await WaitForIndexesAsync(waitForIndexesTimeout.Value, mergedCmd.LastEtag, mergedCmd.ModifiedCollections);
+                }
+
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
                 using (var writer = new BlittableJsonTextWriter(readBatchCommandContext, ResponseBodyStream()))
@@ -125,11 +148,125 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        private async Task WaitForReplicationAsync(TimeSpan waitForReplicasTimeout, MergedBatchCommand mergedCmd)
+        {
+            //numberOfReplicasToWaitFor = "majority" or [Number] (default 1)
+            //waitForReplicasTimeout = timespan & throwOnTimeoutInWaitForReplicas = false (default true)
+
+            int numberOfReplicasToWaitFor;
+            var numberOfReplicasStr = GetStringQueryString("numberOfReplicasToWaitFor", required: false) ?? "1";
+            if (numberOfReplicasStr == "majority")
+            {
+                numberOfReplicasToWaitFor = Database.DocumentReplicationLoader.GetSizeOfMajority();
+            }
+            else
+            {
+                if (int.TryParse(numberOfReplicasStr, out numberOfReplicasToWaitFor) == false)
+                    ThrowInvalidInteger("numberOfReplicasToWaitFor", numberOfReplicasStr);
+            }
+            var throwOnTimeoutInWaitForReplicas = GetBoolValueQueryString("throwOnTimeoutInWaitForReplicas") ?? true;
+
+            var waitForReplicationAsync = Database.DocumentReplicationLoader.WaitForReplicationAsync(
+                numberOfReplicasToWaitFor,
+                waitForReplicasTimeout,
+                mergedCmd.LastEtag);
+
+            var replicatedPast = await waitForReplicationAsync;
+            if (replicatedPast < numberOfReplicasToWaitFor && throwOnTimeoutInWaitForReplicas)
+            {
+                throw new TimeoutException(
+                    $"Could not verify that etag {mergedCmd.LastEtag} was replicated to {numberOfReplicasToWaitFor} servers in {waitForReplicasTimeout}. So far, it only replicated to {replicatedPast}");
+            }
+        }
+
+        private async Task WaitForIndexesAsync(TimeSpan timeout, long lastEtag, HashSet<string> modifiedCollections)
+        {
+            // waitForIndexesTimeout=timespan & waitForIndexThrow=false (default true)
+            // waitForspecificIndex=specific index1 & waitForspecificIndex=specific index 2
+
+            if (modifiedCollections.Count == 0)
+                return;
+
+            var throwOnTimeout = GetBoolValueQueryString("waitForIndexThrow", required: false) ?? true;
+
+            var indexesTask = new List<Task>();
+
+            var indexesToCheck = GetImpactedIndexesToWaitForToBecomeNonStale(modifiedCollections);
+
+            var sp = Stopwatch.StartNew();
+            while (true)
+            {
+                indexesTask.Clear();
+
+                DocumentsOperationContext context;
+                using (ContextPool.AllocateOperationContext(out context))
+                using (context.OpenReadTransaction())
+                {
+                    foreach (var index in indexesToCheck)
+                    {
+                        if (index.IsStale(context, lastEtag))
+                        {
+                            indexesTask.Add(index.WaitForNextIndexingRound());
+                        }
+                    }
+                }
+
+                if (indexesTask.Count == 0)
+                    return;
+
+                var remaining = timeout - sp.Elapsed;
+                if (remaining < TimeSpan.Zero)
+                    break; // will throw timeout exception
+
+                indexesTask.Add(Task.Delay(remaining));
+
+                await Task.WhenAny(indexesTask);
+            }
+            if (throwOnTimeout)
+            {
+                throw new TimeoutException(
+                    $"After waiting for {sp.Elapsed}, could not verify that {indexesToCheck.Count} " +
+                    $"indexes has caught up with the changes as of etag: {lastEtag}");
+            }
+        }
+
+        private List<Index> GetImpactedIndexesToWaitForToBecomeNonStale(HashSet<string> modifiedCollections)
+        {
+            var indexesToCheck = new List<Index>();
+
+            var specifiedIndexesQueryString = HttpContext.Request.Query["waitForSpecificIndexs"];
+
+            if (specifiedIndexesQueryString.Count > 0)
+            {
+                var specificIndexes = specifiedIndexesQueryString.ToHashSet();
+                foreach (var index in Database.IndexStore.GetIndexes())
+                {
+                    if (specificIndexes.Contains(index.Name))
+                    {
+                        if (index.Collections.Count == 0 || index.Collections.Overlaps(modifiedCollections))
+                            indexesToCheck.Add(index);
+                    }
+                }
+            }
+            else
+            {
+                foreach (var index in Database.IndexStore.GetIndexes())
+                {
+                    if (index.Collections.Count == 0 || index.Collections.Overlaps(modifiedCollections))
+                        indexesToCheck.Add(index);
+                }
+            }
+            return indexesToCheck;
+        }
+
         private class MergedBatchCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             public DynamicJsonArray Reply;
             public CommandData[] ParsedCommands;
             public DocumentDatabase Database;
+            public long LastEtag;
+
+            public HashSet<string> ModifiedCollections;
 
             public override void Execute(DocumentsOperationContext context, RavenTransaction tx)
             {
@@ -146,11 +283,14 @@ namespace Raven.Server.Documents.Handlers
 
                             BlittableJsonReaderObject metadata;
                             cmd.Document.TryGet(Constants.Metadata.Key, out metadata);
+                            LastEtag = putResult.Etag;
+
+                            ModifiedCollections?.Add(putResult.Collection.Name);
 
                             Reply.Add(new DynamicJsonValue
                             {
                                 ["Key"] = putResult.Key,
-                                ["Etag"] = putResult.ETag,
+                                ["Etag"] = putResult.Etag,
                                 ["Method"] = "PUT",
                                 ["AdditionalData"] = cmd.AdditionalData,
                                 ["Metadata"] = metadata
@@ -176,10 +316,15 @@ namespace Raven.Server.Documents.Handlers
                                 additionalData["Document"] = patchResult.ModifiedDocument;
                                 additionalData["Actions"] = patchResult.DebugActions;
                             }
+                            if (patchResult.Etag != null)
+                                LastEtag = patchResult.Etag.Value;
+                            if (patchResult.Collection != null)
+                                ModifiedCollections?.Add(patchResult.Collection.Name);
+
                             Reply.Add(new DynamicJsonValue
                             {
                                 ["Key"] = cmd.Key,
-                                ["Etag"] = cmd.Etag,
+                                ["Etag"] = patchResult.Etag,
                                 ["Method"] = "PATCH",
                                 ["AdditionalData"] = additionalData,
                                 ["PatchResult"] = patchResult.PatchResult.ToString(),
@@ -187,12 +332,17 @@ namespace Raven.Server.Documents.Handlers
                             break;
                         case "DELETE":
                             var deleted = Database.DocumentsStorage.Delete(context, cmd.Key, cmd.Etag);
+                            if (deleted != null)
+                            {
+                                LastEtag = deleted.Value.Etag;
+                                ModifiedCollections?.Add(deleted.Value.Collection.Name);
+                            }
                             Reply.Add(new DynamicJsonValue
                             {
                                 ["Key"] = cmd.Key,
                                 ["Method"] = "DELETE",
                                 ["AdditionalData"] = cmd.AdditionalData,
-                                ["Deleted"] = deleted
+                                ["Deleted"] = deleted != null
                             });
                             break;
                     }

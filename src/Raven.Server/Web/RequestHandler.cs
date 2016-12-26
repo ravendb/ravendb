@@ -115,7 +115,7 @@ namespace Raven.Server.Web
             return long.Parse(etags[0]);
         }
 
-        private void ThrowInvalidInteger(string name, string etag)
+        protected void ThrowInvalidInteger(string name, string etag)
         {
             throw new ArgumentException("Could not parse header '" + name + "' header as int, value was: " + etag);
         }
@@ -180,7 +180,7 @@ namespace Raven.Server.Web
             if (val.Count == 0 || string.IsNullOrWhiteSpace(val[0]))
             {
                 if (required)
-                    ThrowRequiredMembery(name);
+                    ThrowRequiredMember(name);
 
                 return null;
             }
@@ -188,7 +188,7 @@ namespace Raven.Server.Web
             return val[0];
         }
 
-        private static void ThrowRequiredMembery(string name)
+        private static void ThrowRequiredMember(string name)
         {
             throw new ArgumentException($"Query string {name} is mandatory, but wasn't specified");
         }
@@ -199,7 +199,7 @@ namespace Raven.Server.Web
             if (val.Count == 0)
             {
                 if (required)
-                    ThrowRequiredMembery(name);
+                    ThrowRequiredMember(name);
 
                 return default(StringValues);
             }

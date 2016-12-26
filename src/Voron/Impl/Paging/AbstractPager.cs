@@ -29,7 +29,6 @@ namespace Voron.Impl.Paging
 
         private long _increaseSize;
         private DateTime _lastIncrease;
-        protected IPagerBatchWrites _batchWrites;
         private readonly int _pageSize;
         private readonly object _pagerStateModificationLocker = new object();
         public bool UsePageProtection { get; } = false;
@@ -87,7 +86,6 @@ namespace Voron.Impl.Paging
             _options = options;
             _pageSize = _options.PageSize;
             UsePageProtection = usePageProtection;
-            _batchWrites = new PagerBatchWrites(this);
             Debug.Assert((_pageSize - Constants.TreePageHeaderSize) / Constants.MinKeysInPage >= 1024);
 
 
@@ -301,8 +299,6 @@ namespace Voron.Impl.Paging
             return true;
         }
 
-        public IPagerBatchWrites BatchWrites => _batchWrites;
-
         public abstract void TryPrefetchingWholeFile();
         public abstract void MaybePrefetchMemory(List<long> pagesToPrefetch);
 
@@ -311,7 +307,7 @@ namespace Voron.Impl.Paging
             // nothing to do
         }
 
-        public virtual int CopyPage(AbstractPager dest, IPagerBatchWrites destwPagerBatchWrites, long p, PagerState pagerState)
+        public virtual int CopyPage(IPagerBatchWrites destwPagerBatchWrites, long p, PagerState pagerState)
         {
             var src = AcquirePagePointer(null, p, pagerState);
             var pageHeader = (PageHeader*)src;
@@ -321,52 +317,56 @@ namespace Voron.Impl.Paging
                 numberOfPages = this.GetNumberOfOverflowPages(pageHeader->OverflowSize);
             }
 
-            var destPagerState = dest.EnsureContinuous(pageHeader->PageNumber, numberOfPages);
+            destwPagerBatchWrites.Write(pageHeader->PageNumber, numberOfPages, src);
 
-            destwPagerBatchWrites.Write(pageHeader->PageNumber, numberOfPages, src, destPagerState);
             return numberOfPages;
+        }
+
+        public virtual IPagerBatchWrites BatchWriter()
+        {
+            return new PagerBatchWrites(this);
         }
     }
 
-    public interface IPagerBatchWrites
+    public interface IPagerBatchWrites : IDisposable
     {
-        unsafe void Write(long pageNumber, int numberOfPages, byte* source, PagerState pagerState);
-
-        void Flush();
-
-        void Clear();
+        unsafe void Write(long pageNumber, int numberOfPages, byte* source);
     }
 
     public unsafe class PagerBatchWrites : IPagerBatchWrites
     {
         private readonly AbstractPager _abstractPager;
+        private PagerState _pagerState;
 
         public PagerBatchWrites(AbstractPager abstractPager)
         {
             _abstractPager = abstractPager;
+            _pagerState = _abstractPager.GetPagerStateAndAddRefAtomically();
         }
 
-        public void Write(long pageNumber, int numberOfPages, byte* source, PagerState pagerState)
+        public void Write(long pageNumber, int numberOfPages, byte* source)
         {
+            var newPagerState = _abstractPager.EnsureContinuous(pageNumber, numberOfPages);
+            if (newPagerState != null)
+            {
+                _pagerState.Release();
+                newPagerState.AddRef();
+                _pagerState = newPagerState;
+            }
+
             var toWrite = numberOfPages * _abstractPager.PageSize;
-            byte* destination = _abstractPager.AcquirePagePointer(null, pageNumber, pagerState);
+            byte* destination = _abstractPager.AcquirePagePointer(null, pageNumber, _pagerState);
 
             _abstractPager.UnprotectPageRange(destination, (ulong)toWrite);
 
-            Memory.BulkCopy(destination,
-                source,
-                toWrite);
+            Memory.BulkCopy(destination, source, toWrite);
 
             _abstractPager.ProtectPageRange(destination, (ulong)toWrite);
         }
 
-        public void Flush()
+        public void Dispose()
         {
-        }
-
-        public void Clear()
-        {
-
+            _pagerState.Release();
         }
     }
 }

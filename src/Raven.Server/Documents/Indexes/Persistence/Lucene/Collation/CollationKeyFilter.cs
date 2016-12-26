@@ -13,6 +13,7 @@ using System.Security;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Tokenattributes;
 using Sparrow;
+using Sparrow.Platform;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collation
 {
@@ -47,7 +48,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collation
 
         private byte[] GetCollationKey(string text)
         {
-            if (Platform.RunningOnPosix)
+            if (PlatformDetails.RunningOnPosix)
                 return GetCollationKeyPosix(text);
 
             return GetCollationKeyWin32(text);

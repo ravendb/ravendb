@@ -90,7 +90,7 @@ namespace Raven.Server.Smuggler.Documents
                                 break;
                             }
                             context.CachedProperties.NewDocument();
-                            var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "ImportObject", parser, state);
+                            var builder = new BlittableJsonDocumentBuilder(_batchPutCommand.Context, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "ImportObject", parser, state);
                             builder.ReadNestedObject();
                             while (builder.Read() == false)
                             {
@@ -117,20 +117,19 @@ namespace Raven.Server.Smuggler.Documents
                                 }
 
                                 result.DocumentsCount++;
-                                using (var reader = builder.CreateReader())
+                                var reader = builder.CreateReader();
+                                var document = new Document
                                 {
-                                    var document = new Document
-                                    {
-                                        Data = reader,
-                                    };
+                                    Data = reader,
+                                };
 
-                                    if (Options.IncludeExpired == false && document.Expired(_database.Time.GetUtcNow()))
-                                        continue;
+                                if (Options.IncludeExpired == false && document.Expired(_database.Time.GetUtcNow()))
+                                    continue;
 
-                                    TransformScriptOrDisableVersioningIfNeeded(context, patch, reader, document, patchRequest);
+                                TransformScriptOrDisableVersioningIfNeeded(context, patch, reader, document,
+                                    patchRequest);
 
-                                    _batchPutCommand.Add(document.Data);
-                                }
+                                _batchPutCommand.Add(document.Data);
 
                                 if (result.DocumentsCount % 1000 == 0)
                                 {
@@ -147,8 +146,8 @@ namespace Raven.Server.Smuggler.Documents
                                     break;
 
                                 result.RevisionDocumentsCount++;
-                                using (var reader = builder.CreateReader())
-                                    _batchPutCommand.Add(reader);
+                                var reader = builder.CreateReader();
+                                _batchPutCommand.Add(reader);
                                 await HandleBatchOfDocuments(context, parser, buildVersion).ConfigureAwait(false); ;
                             }
                             else
@@ -370,6 +369,8 @@ namespace Raven.Server.Smuggler.Documents
                 _resetContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
             }
 
+            public JsonOperationContext Context => _context;
+
             public override void Execute(DocumentsOperationContext context, RavenTransaction tx)
             {
                 foreach (var document in Documents)
@@ -415,14 +416,13 @@ namespace Raven.Server.Smuggler.Documents
 
             public void Dispose()
             {
+                Documents.Clear();
                 _resetContext.Dispose();
             }
 
-            public unsafe void Add(BlittableJsonReaderObject doc)
+            public void Add(BlittableJsonReaderObject doc)
             {
-                var mem = _context.GetMemory(doc.Size);
-                Memory.Copy((byte*)mem.Address, doc.BasePointer, doc.Size);
-                Documents.Add(new BlittableJsonReaderObject((byte*)mem.Address, doc.Size, _context));
+                Documents.Add(doc);
                 TotalSize += doc.Size;
             }
         }

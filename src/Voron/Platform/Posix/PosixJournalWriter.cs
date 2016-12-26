@@ -11,6 +11,7 @@ using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using System.Collections.Generic;
 using Sparrow;
+using Sparrow.Platform.Posix;
 
 namespace Voron.Platform.Posix
 {

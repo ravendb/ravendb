@@ -57,7 +57,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Stream
             }
         }
 
-        [Fact(Skip = "StreamAsync Not Implemented")]
+        [Fact]
         public async Task streaming_and_projections_with_property_rename_Async()
         {
             using (var store = GetDocumentStore())
@@ -88,11 +88,14 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Stream
 
                     while (await enumerator.MoveNextAsync())
                     {
-                        /*Assert.Equal("John", enumerator.Current.Document.Name);
-                        Assert.Equal("Tel Aviv", enumerator.Current.Document.OtherThanName);
+                        Assert.Equal("John", enumerator.Current.Document.Name);
+                        //TODO - delete when we have query with projection 
+                        Assert.Equal("Tel Aviv", enumerator.Current.Document.Address);
+                        //TODO - Add when we have query with projection 
+                        //Assert.Equal("Tel Aviv", enumerator.Current.Document.OtherThanName);
 
                         Assert.NotNull(enumerator.Current.Key);
-                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.TemporaryScoreValue));*/
+                        Assert.NotNull(enumerator.Current.Metadata[Constants.Metadata.IndexScore]);
                     }
                 }
             }

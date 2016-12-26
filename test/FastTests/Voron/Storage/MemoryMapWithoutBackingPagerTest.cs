@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Sparrow.Platform.Posix;
 using Xunit;
 using Voron;
 using Voron.Platform.Posix;

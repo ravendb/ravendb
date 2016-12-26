@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Platform;
 
 namespace Raven.Server.Documents
 {
@@ -9,7 +10,7 @@ namespace Raven.Server.Documents
     {
         public static string MakeSureEndsWithSlash(string filePath)
         {
-            if (Platform.RunningOnPosix == false)
+            if (PlatformDetails.RunningOnPosix == false)
                 return filePath.TrimEnd('\\') + "\\";
             return filePath.TrimEnd('\\').TrimEnd('/') + "/";
         }

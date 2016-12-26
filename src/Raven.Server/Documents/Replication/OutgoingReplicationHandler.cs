@@ -31,9 +31,9 @@ namespace Raven.Server.Documents.Replication
         internal readonly DocumentDatabase _database;
         internal readonly ReplicationDestination _destination;
         private readonly Logger _log;
-        private readonly ManualResetEventSlim _waitForChanges = new ManualResetEventSlim(false);
+        private readonly AsyncManualResetEvent _waitForChanges = new AsyncManualResetEvent();
         private readonly CancellationTokenSource _cts;
-        private readonly TimeSpan _minimalHeartbeatInterval = TimeSpan.FromSeconds(15);
+        private readonly int _minimalHeartbeatInterval = 15 * 1000;// ms - 15 seconds
         private Thread _sendingThread;
 
         internal long _lastSentDocumentEtag;
@@ -234,7 +234,7 @@ namespace Raven.Server.Documents.Replication
                                 }
 
                                 //if this returns false, this means either timeout or canceled token is activated                    
-                                while (_waitForChanges.Wait(_minimalHeartbeatInterval, _cts.Token) == false)
+                                while (WaitForChanges(_minimalHeartbeatInterval, _cts.Token) == false)
                                 {
                                     _configurationContext.ResetAndRenew();
                                     _documentsContext.ResetAndRenew();
@@ -275,6 +275,29 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
+        private bool WaitForChanges(int timeout, CancellationToken token)
+        {
+            while (true)
+            {
+                int state;
+                using (var interruptibleParseToMemory = _parser.InterruptibleParseToMemory("replication notify message", _waitForChanges, timeout, token, out state))
+                {
+                    if (interruptibleParseToMemory != null)
+                    {
+                        using (_documentsContext.OpenReadTransaction())
+                        using (_configurationContext.OpenReadTransaction())
+                        {
+                            HandleServerResponse(interruptibleParseToMemory, allowNotify: true);
+                        }
+                    }
+                    else
+                    {
+                        return state != -1; // -1 is timeout
+                    }
+                }
+            }
+        }
+
         internal void WriteToServerAndFlush(DynamicJsonValue val)
         {
             _documentsContext.Write(_writer, val);
@@ -283,18 +306,18 @@ namespace Raven.Server.Documents.Replication
 
         private void UpdateDestinationChangeVector(ReplicationMessageReply replicationBatchReply)
         {
-            _destinationLastKnownDocumentChangeVector.Clear();
-
-            if(replicationBatchReply.MessageType == null)
+            if (replicationBatchReply.MessageType == null)
                 throw new InvalidOperationException("MessageType on replication response is null. This is likely is a symptom of an issue, and should be investigated.");
+
+            _destinationLastKnownDocumentChangeVector.Clear();
 
             UpdateDestinationChangeVectorHeartbeat(replicationBatchReply);
         }
 
         private void UpdateDestinationChangeVectorHeartbeat(ReplicationMessageReply replicationBatchReply)
         {
-            _lastSentDocumentEtag = replicationBatchReply.LastEtagAccepted;
-            _lastSentIndexOrTransformerEtag = replicationBatchReply.LastIndexTransformerEtagAccepted;
+            _lastSentDocumentEtag = Math.Max(_lastSentDocumentEtag, replicationBatchReply.LastEtagAccepted);
+            _lastSentIndexOrTransformerEtag = Math.Max(_lastSentIndexOrTransformerEtag, replicationBatchReply.LastIndexTransformerEtagAccepted);
 
             _destinationLastKnownDocumentChangeVectorAsString = replicationBatchReply.DocumentsChangeVector.Format();
             _destinationLastKnownIndexOrTransformerChangeVectorAsString =
@@ -320,8 +343,8 @@ namespace Raven.Server.Documents.Replication
                     // those up with the remove side, so we'll start the replication loop again.
                     // We don't care if they are locally modified or not, because we filter documents that
                     // the other side already have (based on the change vector).
-                    if (DateTime.UtcNow - _lastDocumentSentTime > _minimalHeartbeatInterval)
-                        _waitForChanges.Set();
+                    if ((DateTime.UtcNow - _lastDocumentSentTime).TotalMilliseconds > _minimalHeartbeatInterval)
+                        _waitForChanges.SetByAsyncCompletion();
                 }
             }
 
@@ -329,8 +352,8 @@ namespace Raven.Server.Documents.Replication
                 _database.IndexMetadataPersistence.ReadLastEtag(_configurationContext.Transaction.InnerTransaction) !=
                 replicationBatchReply.LastIndexTransformerEtagAccepted)
             {
-                if (DateTime.UtcNow - _lastIndexOrTransformerSentTime > _minimalHeartbeatInterval)
-                    _waitForChanges.Set();
+                if ((DateTime.UtcNow - _lastIndexOrTransformerSentTime).TotalMilliseconds > _minimalHeartbeatInterval)
+                    _waitForChanges.SetByAsyncCompletion();
             }
         }
 
@@ -370,71 +393,68 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
+        private readonly AsyncManualResetEvent _neverSetEvent = new AsyncManualResetEvent();
         internal Tuple<ReplicationMessageReply.ReplyType,string> HandleServerResponse()
         {
-            bool hasSucceededParsingResponse = false;
-            try
+            while (true)
             {
-                using (var replicationBatchReplyMessage = _parser.ParseToMemory("replication acknowledge message"))
+                using (var replicationBatchReplyMessage = _parser.InterruptibleParseToMemory("replication acknowledge message", _neverSetEvent))
                 {
-                    replicationBatchReplyMessage.BlittableValidation();
-                    hasSucceededParsingResponse = true;
-                    var replicationBatchReply = JsonDeserializationServer.ReplicationMessageReply(replicationBatchReplyMessage);
-                    if (replicationBatchReply.Type == ReplicationMessageReply.ReplyType.Ok)
-                    {
-                        UpdateDestinationChangeVector(replicationBatchReply);
-                        OnSuccessfulTwoWaysCommunication();
-                    }
-                    else
-                    {
-                        var msg = $"Received error from remote replication destination. Error received: {replicationBatchReply.Exception}";
-                        if (_log.IsInfoEnabled)
-                        {
-                            _log.Info(msg);
-                        }
-                    }
+                    var replicationBatchReply = HandleServerResponse(replicationBatchReplyMessage, allowNotify: false);
+                    if(replicationBatchReply == null)
+                        continue;
 
-                    if (_log.IsInfoEnabled)
-                    {
-                        switch (replicationBatchReply.Type)
-                        {
-                            case ReplicationMessageReply.ReplyType.Ok:
-                                _log.Info(
-                                    $"Received reply for replication batch from {_destination.Database} @ {_destination.Url}. New destination change vector is {_destinationLastKnownDocumentChangeVectorAsString}");
-                                break;
-                            case ReplicationMessageReply.ReplyType.Error:
-                                _log.Info(
-                                    $"Received reply for replication batch from {_destination.Database} at {_destination.Url}. There has been a failure, error string received : {replicationBatchReply.Exception}");
-                                throw new InvalidOperationException(
-                                    $"Received failure reply for replication batch. Error string received = {replicationBatchReply.Exception}");
-                            default:
-                                throw new ArgumentOutOfRangeException(nameof(replicationBatchReply),
-                                    "Received reply for replication batch with unrecognized type... got " +
-                                    replicationBatchReply.Type);
-                        }
-                    }
-
-                    return Tuple.Create(replicationBatchReply.Type, 
-                        item2: replicationBatchReply.Type == ReplicationMessageReply.ReplyType.Error ? 
-                        replicationBatchReply.Exception : string.Empty);
+                    return Tuple.Create(replicationBatchReply.Type,
+                        replicationBatchReply.Type == ReplicationMessageReply.ReplyType.Error
+                            ? replicationBatchReply.Exception
+                            : string.Empty);
                 }
             }
-            catch (Exception e)
-            {
-                if (_log.IsInfoEnabled)
-                {
-                    if (!hasSucceededParsingResponse && e is SocketException)
-                    {
-                        _log.Info("Got Socket exception while trying to receive response from the remote node. This is probably due to exception being thrown on the other end for some reason. This is not supposed to happen and should be investigated.",e);
-                    }
-                    else
-                    {
-                        _log.Info("Failed to read server response.. This is not supposed to happen and should be investigated.",e);
-                    }
-                }    
+        }
 
-                throw;
+        internal ReplicationMessageReply HandleServerResponse(BlittableJsonReaderObject replicationBatchReplyMessage, bool allowNotify)
+        {
+            replicationBatchReplyMessage.BlittableValidation();
+            var replicationBatchReply = JsonDeserializationServer.ReplicationMessageReply(replicationBatchReplyMessage);
+            if (allowNotify == false && replicationBatchReply.MessageType == "Notify")
+                return null;
+
+            switch (replicationBatchReply.Type)
+            {
+                case ReplicationMessageReply.ReplyType.Ok:
+                    UpdateDestinationChangeVector(replicationBatchReply);
+                    OnSuccessfulTwoWaysCommunication();
+                    break;
+                default:
+                    var msg =
+                        $"Received error from remote replication destination. Error received: {replicationBatchReply.Exception}";
+                    if (_log.IsInfoEnabled)
+                    {
+                        _log.Info(msg);
+                    }
+                    break;
             }
+
+            if (_log.IsInfoEnabled)
+            {
+                switch (replicationBatchReply.Type)
+                {
+                    case ReplicationMessageReply.ReplyType.Ok:
+                        _log.Info(
+                            $"Received reply for replication batch from {_destination.Database} @ {_destination.Url}. New destination change vector is {_destinationLastKnownDocumentChangeVectorAsString}");
+                        break;
+                    case ReplicationMessageReply.ReplyType.Error:
+                        _log.Info(
+                            $"Received reply for replication batch from {_destination.Database} at {_destination.Url}. There has been a failure, error string received : {replicationBatchReply.Exception}");
+                        throw new InvalidOperationException(
+                            $"Received failure reply for replication batch. Error string received = {replicationBatchReply.Exception}");
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(replicationBatchReply),
+                            "Received reply for replication batch with unrecognized type... got " +
+                            replicationBatchReply.Type);
+                }
+            }
+            return replicationBatchReply;
         }
 
         private void ConnectSocket(TcpConnectionInfo connection, TcpClient tcpClient)

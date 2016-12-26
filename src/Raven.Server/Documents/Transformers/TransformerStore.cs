@@ -7,6 +7,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Sparrow;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Voron.Platform.Posix;
 
 namespace Raven.Server.Documents.Transformers
@@ -45,7 +46,7 @@ namespace Raven.Server.Documents.Transformers
                 {
                     _path = Path.Combine(_documentDatabase.Configuration.Indexing.IndexStoragePath, "Transformers");
 
-                    if (Platform.RunningOnPosix)
+                    if (PlatformDetails.RunningOnPosix)
                         _path = PosixHelper.FixLinuxPath(_path);
 
                     if (Directory.Exists(_path) == false && _documentDatabase.Configuration.Indexing.RunInMemory == false)

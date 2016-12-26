@@ -65,9 +65,9 @@ namespace Raven.Server
             _latestVersionCheck = new LatestVersionCheck(ServerStore);
         }
 
-        public async Task<string> GetTcpServerPortAsync()
+        public async Task<TcpListenerStatus> GetTcpServerStatusAsync()
         {
-            return (await _tcpListenerTask).ListenAddress.First();
+            return await _tcpListenerTask;
         }
 
 
@@ -185,11 +185,12 @@ namespace Raven.Server
 
         private readonly JsonContextPool _tcpContextPool = new JsonContextPool();
 
-        private class TcpListenerStatus
+        public class TcpListenerStatus
         {
             public readonly List<TcpListener> Listeners = new List<TcpListener>();
-            public readonly HashSet<string> ListenAddress = new HashSet<string>();
+            public int Port;
         }
+
         private async Task<TcpListenerStatus> StartTcpListener()
         {
             var status = new TcpListenerStatus();
@@ -204,20 +205,15 @@ namespace Raven.Server
                     if (uri.IsDefaultPort == false)
                         port = uri.Port;
                 }
+
                 foreach (var ipAddress in await GetTcpListenAddresses(host))
                 {
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"RavenDB TCP is configured to use {Configuration.Core.TcpServerUrl} and bind to {ipAddress} at {port}");
 
-                    status.ListenAddress.Add(new UriBuilder
-                    {
-                        Host = FindEntryForAddress(host),
-                        Port = port,
-                        Scheme = "tcp"
-                    }.Uri.ToString());
-
                     var listener = new TcpListener(ipAddress, port);
                     status.Listeners.Add(listener);
+                    status.Port = port;
                     listener.Start();
                     for (int i = 0; i < 4; i++)
                     {

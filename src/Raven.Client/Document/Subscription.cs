@@ -294,7 +294,7 @@ namespace Raven.Client.Document
 
                     var incomingBatch = new List<RavenJObject>();
                     long lastReceivedEtag = 0;
-
+                    bool waitingForAck = false;
                     while (_proccessingCts.IsCancellationRequested == false)
                     {
                         BeforeBatch();
@@ -303,16 +303,15 @@ namespace Raven.Client.Document
                         {
                             done = await Task.WhenAny(readObjectTask, _disposedTask.Task).ConfigureAwait(false);
                             if (done == _disposedTask.Task)
-                                break;
+                            {
+                                if (waitingForAck == false)
+                                    break;
+                                waitingForAck = false; // we will only wait once
+                            }
+
                             var receivedMessage = await readObjectTask.ConfigureAwait(false);
 
-                            if (_proccessingCts.IsCancellationRequested)
-                                break;
-
                             readObjectTask = ReadNextObject(jsonReader);
-
-                            if (_proccessingCts.IsCancellationRequested)
-                                break;
 
                             switch (receivedMessage.Type)
                             {
@@ -326,6 +325,7 @@ namespace Raven.Client.Document
                                     AfterAcknowledgment();
                                     AfterBatch(incomingBatch.Count);
                                     incomingBatch.Clear();
+                                    waitingForAck = false;
                                     break;
                                 case SubscriptionConnectionServerMessage.MessageType.Error:
                                     switch (receivedMessage.Status)
@@ -348,6 +348,7 @@ namespace Raven.Client.Document
                         }
 
                         SendAck(lastReceivedEtag, tcpStream);
+                        waitingForAck = true;
                     }
                 }
             }

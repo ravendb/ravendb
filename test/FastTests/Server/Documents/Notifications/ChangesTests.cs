@@ -74,8 +74,9 @@ namespace FastTests.Server.Documents.Notifications
                 }
 
                 DocumentChangeNotification documentChangeNotification;
-                Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(10)));
-                Assert.Equal(docsCount - 1, list.Count);
+                int total = docsCount;
+                while (total-- > 0)
+                    Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(10)));
             }
         }
 

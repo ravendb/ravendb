@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Sparrow.Platform;
 using Voron.Impl;
 
 namespace Voron.Data.BTrees
@@ -143,7 +144,7 @@ namespace Voron.Data.BTrees
 
         private void MaybePrefetchOverflowPages(TreePage page)
         {
-            if (Sparrow.Platform.CanPrefetch)
+            if (PlatformDetails.CanPrefetch)
             {
                 _tx.DataPager.MaybePrefetchMemory(page.GetAllOverflowPages());
             }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.SqlTypes;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -16,12 +17,15 @@ using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries.Dynamic;
+using Raven.Server.Documents.SqlReplication;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 
 using Voron.Platform.Posix;
 
 using Sparrow;
 using Sparrow.Logging;
+using Sparrow.Platform;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -668,7 +672,7 @@ namespace Raven.Server.Documents.Indexes
 
         private void InitializePath(string path)
         {
-            if (Platform.RunningOnPosix)
+            if (PlatformDetails.RunningOnPosix)
                 path = PosixHelper.FixLinuxPath(path);
 
             if (Directory.Exists(path) == false && _documentDatabase.Configuration.Indexing.RunInMemory == false)

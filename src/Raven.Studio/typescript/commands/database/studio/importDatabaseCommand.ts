@@ -29,7 +29,7 @@ class importDatabaseCommand extends commandBase {
         formData.append("importOptions", JSON.stringify(args));
         formData.append("file", this.file);
 
-        return this.post(url, formData, this.db, ajaxOptions)
+        return this.post(url, formData, this.db, ajaxOptions, 0)
             .done(() => this.reportInfo("Data was uploaded successfully, processing..."))
             .fail((response: JQueryXHR) => this.reportError("Failed to upload data", response.responseText, response.statusText));
     }

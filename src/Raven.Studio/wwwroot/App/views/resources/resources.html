@@ -91,10 +91,8 @@
                             <a data-bind="attr: { title: name, href: $root.resourceUrl($data) }, text: name, visible: canNavigateToResource()" href="#"></a>
                         </h3>
                     </div>
-                    <div class="col-xs-12 col-sm-12 col-xl-6 vertical-divider properties-container" data-bind="template: { name: 'properties-template' }, visible: online()">
-
-                    </div>
-                    <div data-bind="visible: !online()" class="col-xs-12 col-sm-12 col-xl-6 vertical-divider properties-container">
+                    <div class="col-xs-12 col-sm-12 col-xl-6 vertical-divider properties-container" data-bind="template: { name: 'properties-template' }">
+                  
                     </div>
                     <div class="col-xs-12 col-sm-6 col-xl-2 actions-container">
                         <div class="actions">

@@ -19,6 +19,6 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// long? of the document after PUT operation.
         /// </summary>
-        public long? ETag { get; set; }
+        public long ETag { get; set; }
     }
 }

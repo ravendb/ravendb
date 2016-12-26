@@ -10,6 +10,7 @@ using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 using Sparrow;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Sparrow.Utils;
 using Voron.Data.BTrees;
 using Voron.Global;
@@ -225,7 +226,7 @@ namespace Voron.Platform.Win32
             PagerState.Files = PagerState.Files.Concat(allocationInfo.MappedFile);
             PagerState.AllocationInfos = PagerState.AllocationInfos.Concat(allocationInfo);
 
-            if (Sparrow.Platform.CanPrefetch)
+            if (PlatformDetails.CanPrefetch)
             {
                 // We are asking to allocate pages. It is a good idea that they should be already in memory to only cause a single page fault (as they are continuous).
                 Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY entry;
@@ -397,7 +398,7 @@ namespace Voron.Platform.Win32
 
         public override void MaybePrefetchMemory(List<long> pagesToPrefetch)
         {
-            if (Sparrow.Platform.CanPrefetch == false)
+            if (PlatformDetails.CanPrefetch == false)
                 return; // not supported
 
             if (pagesToPrefetch.Count == 0)
@@ -419,7 +420,7 @@ namespace Voron.Platform.Win32
 
         public override void TryPrefetchingWholeFile()
         {
-            if (Sparrow.Platform.CanPrefetch == false)
+            if (PlatformDetails.CanPrefetch == false)
                 return; // not supported
 
             var pagerState = PagerState;

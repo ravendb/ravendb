@@ -4,6 +4,7 @@ using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.ServerWide.Context;
@@ -24,7 +25,7 @@ namespace FastTests.Server.Documents.Tombstones
             {
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                 {
-                    PutResult result;
+                    DocumentsStorage.PutOperationResults result;
                     using (var tx = context.OpenWriteTransaction())
                     {
                         using (var doc = CreateDocument(context, "key/1", new DynamicJsonValue
@@ -44,7 +45,7 @@ namespace FastTests.Server.Documents.Tombstones
 
                     using (var tx = context.OpenWriteTransaction())
                     {
-                        Assert.True(database.DocumentsStorage.Delete(context, "key/1", null));
+                        Assert.NotNull(database.DocumentsStorage.Delete(context, "key/1", null));
 
                         tx.Commit();
                     }
@@ -61,8 +62,8 @@ namespace FastTests.Server.Documents.Tombstones
                         var tombstone = tombstones[0];
 
                         Assert.True(tombstone.StorageId > 0);
-                        Assert.Equal(result.ETag, tombstone.DeletedEtag);
-                        Assert.Equal(result.ETag + 1, tombstone.Etag);
+                        Assert.Equal(result.Etag, tombstone.DeletedEtag);
+                        Assert.Equal(result.Etag + 1, tombstone.Etag);
                         Assert.Equal(result.Key, tombstone.Key);
                     }
                 }

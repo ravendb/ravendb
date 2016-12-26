@@ -198,7 +198,7 @@ namespace Voron.Data.Tables
             {
                 // We must read before we call TryWriteDirect, because it will modify the size
                 int oldDataSize;
-                var oldData = ActiveDataSmallSection.DirectRead(id, out oldDataSize);
+                var oldData = DirectRead(id, out oldDataSize);
 
                 byte* pos;
                 if (prevIsSmall && ActiveDataSmallSection.TryWriteDirect(id, size, out pos))
@@ -221,6 +221,8 @@ namespace Voron.Data.Tables
 
                 if (existingNumberOfPages == newNumberOfPages)
                 {
+                    page = _tx.LowLevelTransaction.ModifyPage(pageNumber);
+
                     page.OverflowSize = size;
                     var pos = page.Pointer + sizeof(PageHeader);
 
@@ -561,19 +563,21 @@ namespace Voron.Data.Tables
             return GetTree(idx.Name);
         }
 
-        public void DeleteByKey(Slice key)
+        public bool DeleteByKey(Slice key)
         {
             var pkTree = GetTree(_schema.Key);
 
             var readResult = pkTree.Read(key);
             if (readResult == null)
-                return;
+                return false;
 
             // This is an implementation detail. We read the absolute location pointer (absolute offset on the file)
             long id = readResult.Reader.ReadLittleEndianInt64();
 
             // And delete the element accordingly.
             Delete(id);
+
+            return true;
         }
 
         private IEnumerable<TableValueReader> GetSecondaryIndexForValue(Tree tree, Slice value)

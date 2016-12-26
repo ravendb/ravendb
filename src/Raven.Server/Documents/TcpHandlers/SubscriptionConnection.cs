@@ -139,7 +139,6 @@ namespace Raven.Server.Documents.TcpHandlers
                     }
                     timeout = Math.Max(250, _options.TimeToWaitBeforeConnectionRetryMilliseconds/2);
                     await SendHeartBeat();
-
                 }
                 catch (SubscriptionInUseException)
                 {
@@ -359,7 +358,7 @@ namespace Raven.Server.Documents.TcpHandlers
                             while (true)
                             {
                                 var result =
-                                    await Task.WhenAny(replyFromClientTask, Task.Delay(TimeSpan.FromSeconds(5)));
+                                    await Task.WhenAny(replyFromClientTask, Task.Delay(TimeSpan.FromSeconds(5), CancellationTokenSource.Token));
                                 if (result == replyFromClientTask)
                                 {
                                     using (var reply = await replyFromClientTask)

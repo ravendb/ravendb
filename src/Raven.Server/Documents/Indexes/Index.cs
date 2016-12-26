@@ -99,6 +99,8 @@ namespace Raven.Server.Documents.Indexes
 
         protected readonly ManualResetEventSlim _mre = new ManualResetEventSlim();
 
+        private readonly ManualResetEventSlim _logsAppliedEvent = new ManualResetEventSlim();
+
         private DateTime? _lastQueryingTime;
         public DateTime? LastIndexingTime { get; private set; }
 
@@ -133,9 +135,22 @@ namespace Raven.Server.Documents.Indexes
         private string _errorStateReason;
         private bool _isCompactionInProgress;
         private readonly ReaderWriterLockSlim _currentlyRunningQueriesLock = new ReaderWriterLockSlim();
-        private volatile bool _logsApplied;
         private volatile bool _priorityChanged;
         private volatile bool _hadRealIndexingWorkToDo;
+
+        private readonly ConcurrentQueue<TaskCompletionSource<object>> _indexedWatchers =
+            new ConcurrentQueue<TaskCompletionSource<object>>();
+
+        public Task WaitForNextIndexingRound()
+        {
+            TaskCompletionSource<object> result;
+            if (_indexedWatchers.TryPeek(out result))
+                return result.Task;
+
+            var tcs = new TaskCompletionSource<object>();
+            _indexedWatchers.Enqueue(tcs);
+            return tcs.Task;
+        }
 
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
@@ -496,7 +511,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public virtual bool IsStale(DocumentsOperationContext databaseContext)
+        public virtual bool IsStale(DocumentsOperationContext databaseContext, long? cutoff = null)
         {
             Debug.Assert(databaseContext.Transaction != null);
 
@@ -507,7 +522,7 @@ namespace Raven.Server.Documents.Indexes
             using (_contextPool.AllocateOperationContext(out indexContext))
             using (indexContext.OpenReadTransaction())
             {
-                return IsStale(databaseContext, indexContext);
+                return IsStale(databaseContext, indexContext, cutoff);
             }
         }
 
@@ -717,6 +732,7 @@ namespace Raven.Server.Documents.Indexes
                                 _currentMaximumAllowedMemory = Size.Min(_currentMaximumAllowedMemory,
                                     new Size(NativeMemory.ThreadAllocations.Value.Allocations, SizeUnit.Bytes));
                             }
+
                             if (_mre.Wait(timeToWaitForMemoryCleanup, cts.Token) == false)
                             {
                                 _allocationCleanupNeeded = false;
@@ -726,13 +742,15 @@ namespace Raven.Server.Documents.Indexes
                                 // anytime soon
                                 ReduceMemoryUsage();
 
-                                _mre.Wait(cts.Token);
+                                var numberOfSetEvents =
+                                    WaitHandle.WaitAny(new[]
+                                        {_mre.WaitHandle, _logsAppliedEvent.WaitHandle, cts.Token.WaitHandle});
 
-                                if (_logsApplied)
+                                if (numberOfSetEvents == 1 && _logsAppliedEvent.IsSet)
                                 {
-                                    _logsApplied = false;
                                     _hadRealIndexingWorkToDo = false;
                                     _environment.Cleanup();
+                                    _logsAppliedEvent.Reset();
                                 }
                             }
                         }
@@ -783,9 +801,8 @@ namespace Raven.Server.Documents.Indexes
 
         private void HandleLogsApplied()
         {
-            _logsApplied = true;
             if (_hadRealIndexingWorkToDo)
-                _mre.Set();
+                _logsAppliedEvent.Set();
         }
 
         private void ReduceMemoryUsage()
@@ -996,6 +1013,12 @@ namespace Raven.Server.Documents.Indexes
 
             if (notification.Type == IndexChangeTypes.IndexMarkedAsErrored)
                 Stop();
+
+            TaskCompletionSource<object> result;
+            while (_indexedWatchers.TryDequeue(out result))
+            {
+                ThreadPool.QueueUserWorkItem(task => ((TaskCompletionSource<object>) task).TrySetResult(null), result);
+            }
         }
 
         protected virtual void HandleDocumentChange(DocumentChangeNotification notification)
@@ -2172,6 +2195,11 @@ namespace Raven.Server.Documents.Indexes
                     _parent._currentlyRunningQueriesLock.ExitReadLock();
                 _parent.CurrentlyRunningQueries.TryRemove(_queryInfo);
             }
+        }
+
+        public override string ToString()
+        {
+            return Name;
         }
     }
 }
