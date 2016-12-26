@@ -9,7 +9,7 @@ namespace Raven.NewClient.Client.Commands
 {
     public class StreamCommand : RavenCommand<StreamResult>
     {
-        public string Index;
+        public string Url;
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
@@ -18,7 +18,7 @@ namespace Raven.NewClient.Client.Commands
                 Method = HttpMethod.Get,
             };
 
-            url = $"{node.Url}/databases/{node.Database}/{Index}";
+            url = $"{node.Url}/databases/{node.Database}/{Url}";
 
             return request;
         }

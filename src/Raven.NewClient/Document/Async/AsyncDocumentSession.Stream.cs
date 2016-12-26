@@ -49,7 +49,7 @@ namespace Raven.NewClient.Client.Document.Async
         {
             var streamOperation = new StreamOperation(this);
             var command = streamOperation.CreateRequest((IRavenQueryInspector)query);
-            await RequestExecuter.ExecuteAsync(command, Context, token);
+            await RequestExecuter.ExecuteAsync(command, Context, token).ConfigureAwait(false);
             var result = streamOperation.SetResultAsync(command.Result);
 
             var queryOperation = ((AsyncDocumentQuery<T>)query).InitializeQueryOperation();
@@ -83,7 +83,7 @@ namespace Raven.NewClient.Client.Document.Async
             var streamOperation = new StreamOperation(this);
             var command = streamOperation.CreateRequest(fromEtag, startsWith, matches, start, pageSize, null, pagingInformation, skipAfter, transformer, 
                 transformerParameters);
-            await RequestExecuter.ExecuteAsync(command, Context, token);
+            await RequestExecuter.ExecuteAsync(command, Context, token).ConfigureAwait(false);
             var result = streamOperation.SetResultAsync(command.Result);
             return new YieldStream<T>(this, result, token);
         }

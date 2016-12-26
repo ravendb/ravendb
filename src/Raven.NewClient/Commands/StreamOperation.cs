@@ -50,7 +50,7 @@ namespace Raven.NewClient.Client.Commands
 
             return new StreamCommand()
             {
-                Index = path,
+                Url = path,
             };
         }
 
@@ -116,7 +116,7 @@ namespace Raven.NewClient.Client.Commands
 
             return new StreamCommand()
             {
-                Index = sb.ToString(),
+                Url = sb.ToString(),
             };
         }
 
@@ -131,11 +131,11 @@ namespace Raven.NewClient.Client.Commands
             }
         }
 
-        private static async void ReadNextTokenAsync(Stream stream, UnmanagedJsonParser parser, JsonOperationContext.ManagedPinnedBuffer buffer)
+        private static async Task ReadNextTokenAsync(Stream stream, UnmanagedJsonParser parser, JsonOperationContext.ManagedPinnedBuffer buffer)
         {
             while (parser.Read() == false)
             {
-                var read = await stream.ReadAsync(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Buffer.Count);
+                var read = await stream.ReadAsync(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Buffer.Count).ConfigureAwait(false);
                 if (read == 0)
                     throw new EndOfStreamException("The stream ended unexpectedly");
                 parser.SetBuffer(buffer, read);
@@ -242,14 +242,14 @@ namespace Raven.NewClient.Client.Commands
                 using (var parser = new UnmanagedJsonParser(_session.Context, state, "stream contents"))
                 using (_session.Context.GetManagedBuffer(out buffer))
                 {
-                    ReadNextTokenAsync(_response.Stream, parser, buffer);
+                    await ReadNextTokenAsync(_response.Stream, parser, buffer);
 
                     if (state.CurrentTokenType != JsonParserToken.StartObject)
                     {
                         throw new InvalidOperationException("Expected stream to start, but got " +
                                                             state.CurrentTokenType);
                     }
-                    ReadNextTokenAsync(_response.Stream, parser, buffer);
+                    await ReadNextTokenAsync(_response.Stream, parser, buffer);
 
                     if (state.CurrentTokenType != JsonParserToken.String)
                     {
@@ -265,7 +265,7 @@ namespace Raven.NewClient.Client.Commands
                         throw new InvalidOperationException("Expected stream property 'Results' but got " + propery);
                     }
 
-                    ReadNextTokenAsync(_response.Stream, parser, buffer);
+                    await ReadNextTokenAsync(_response.Stream, parser, buffer);
 
                     if (state.CurrentTokenType != JsonParserToken.StartArray)
                     {
@@ -279,18 +279,18 @@ namespace Raven.NewClient.Client.Commands
                     builder.ReadNestedObject();
                     while (builder.Read() == false)
                     {
-                        var read = await _response.Stream.ReadAsync(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Length);
+                        var read = await _response.Stream.ReadAsync(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Length).ConfigureAwait(false);
                         if (read == 0)
                             throw new EndOfStreamException("Stream ended without reaching end of json content");
                         parser.SetBuffer(buffer, read);
                     }
                     builder.FinalizeDocument();
-                    ReadNextTokenAsync(_response.Stream, parser, buffer);
+                    await ReadNextTokenAsync(_response.Stream, parser, buffer);
                     Current = builder.CreateReader();
 
                     if (state.CurrentTokenType == JsonParserToken.EndArray)
                     {
-                        ReadNextTokenAsync(_response.Stream, parser, buffer);
+                        await ReadNextTokenAsync(_response.Stream, parser, buffer);
 
                         if (state.CurrentTokenType != JsonParserToken.EndObject)
                         {
@@ -300,7 +300,7 @@ namespace Raven.NewClient.Client.Commands
                         return false;
                     }
 
-                    ReadNextTokenAsync(_response.Stream, parser, buffer);
+                    await ReadNextTokenAsync(_response.Stream, parser, buffer);
 
                     if (state.CurrentTokenType != JsonParserToken.EndObject)
                     {
