@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Runtime.InteropServices.ComTypes;
+using System.Text;
 using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Json;
 using Sparrow.Json;
@@ -39,20 +41,14 @@ namespace Raven.NewClient.Client.Commands
                 }
             });
 
-            string waitForReplicas;
-            string waitForIndexes;
+            var sb = new StringBuilder($"{node.Url}/databases/{node.Database}/bulk_docs");
 
-            OptionsToString(out waitForReplicas, out waitForIndexes);
+            AppendOptions(sb);
 
-            url = $"{node.Url}/databases/{node.Database}/bulk_docs";
-
-            if (waitForReplicas != null)
-                url += $"?{waitForReplicas}";
-
-            if (waitForIndexes != null)
-                url += $"{(waitForReplicas != null ? "&" : "?")}{waitForIndexes}";
 
             IsReadRequest = false;
+
+            url = sb.ToString();
 
             return request;
         }
@@ -66,22 +62,41 @@ namespace Raven.NewClient.Client.Commands
             Result = JsonDeserializationClient.BatchResult(response);
         }
 
-        private void OptionsToString(out string waitForReplicas, out string waitForIndexes)
+        private void AppendOptions(StringBuilder sb)
         {
-            waitForReplicas = null;
-            waitForIndexes = null;
+            if (Options == null)
+                return;
 
-            if (Options != null)
+            sb.AppendLine("?");
+
+            if (Options.WaitForReplicas)
             {
-                if (Options.WaitForReplicas)
-                    waitForReplicas =
-                        $"waitForReplication=true&numberOfReplicasToWaitFor={Options.NumberOfReplicasToWaitFor}&waitForReplicasTimeout={Options.WaitForReplicasTimeout}" +
-                        $"&throwOnTimeoutInWaitForReplicas={Options.ThrowOnTimeoutInWaitForReplicas}&majority={(Options.Majority ? "majority" : "exact")}";
+                sb.Append("&waitForReplicasTimeout=").Append(Options.WaitForReplicasTimeout);
+                if (Options.ThrowOnTimeoutInWaitForReplicas)
+                {
+                    sb.Append("&throwOnTimeoutInWaitForReplicas=true");
+                }
+                sb.Append("&numberOfReplicasToWaitFor=");
 
-                if (Options.WaitForIndexes)
-                    waitForIndexes =
-                        $"waitForIndexes=true&waitForIndexesTimeout={Options.WaitForIndexesTimeout}&waitForIndexThrow={Options.ThrowOnTimeoutInWaitForIndexes}" +
-                        $"{(Options.WaitForSpecificIndexes != null ? "&waitForSpecificIndexs=" + string.Join("&waitForSpecificIndexs=", Options.WaitForSpecificIndexes) : "")}";
+                sb.Append(Options.Majority
+                    ? "majority"
+                    : Options.NumberOfReplicasToWaitFor.ToString());
+            }
+
+            if (Options.WaitForIndexes)
+            {
+                sb.Append("&waitForIndexesTimeout=").Append(Options.WaitForIndexesTimeout);
+                if (Options.ThrowOnTimeoutInWaitForIndexes)
+                {
+                    sb.Append("&waitForIndexThrow=true");
+                }
+                if (Options.WaitForSpecificIndexes != null)
+                {
+                    foreach (var specificIndex in Options.WaitForSpecificIndexes)
+                    {
+                        sb.Append("&waitForSpecificIndexs=").Append(specificIndex);
+                    }
+                }
             }
         }
     }

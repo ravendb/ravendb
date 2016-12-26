@@ -138,16 +138,18 @@ namespace Raven.Server.Documents.Indexes
         private volatile bool _priorityChanged;
         private volatile bool _hadRealIndexingWorkToDo;
 
-        private bool _indexIsBeingWatched;
-        private TaskCompletionSource<object> _indexindDone = new TaskCompletionSource<object>();
+        private readonly ConcurrentQueue<TaskCompletionSource<object>> _indexedWatchers =
+            new ConcurrentQueue<TaskCompletionSource<object>>();
 
-        public Task NextIndexingRound
+        public Task WaitForNextIndexingRound()
         {
-            get
-            {
-                _indexIsBeingWatched = true;
-                return _indexindDone.Task;
-            }
+            TaskCompletionSource<object> result;
+            if (_indexedWatchers.TryPeek(out result))
+                return result.Task;
+
+            var tcs = new TaskCompletionSource<object>();
+            _indexedWatchers.Enqueue(tcs);
+            return tcs.Task;
         }
 
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
@@ -1012,14 +1014,10 @@ namespace Raven.Server.Documents.Indexes
             if (notification.Type == IndexChangeTypes.IndexMarkedAsErrored)
                 Stop();
 
-            if (_indexIsBeingWatched)
+            TaskCompletionSource<object> result;
+            while (_indexedWatchers.TryDequeue(out result))
             {
-                var old = _indexindDone;
-                Interlocked.Exchange(ref _indexindDone, new TaskCompletionSource<object>());
-                Task.Factory.StartNew(() =>
-                {
-                    old.TrySetResult(null);
-                });
+                ThreadPool.QueueUserWorkItem(task => ((TaskCompletionSource<object>) task).TrySetResult(null), result);
             }
         }
 

@@ -400,8 +400,8 @@ namespace Raven.Server.Documents.PeriodicExport
                 var putResult = _database.DocumentsStorage.Put(context, Constants.PeriodicExport.StatusDocumentKey, null, readerObject);
                 tx.Commit();
 
-                if (_status.LastDocsEtag + 1 == putResult.ETag) // the last etag is with just us
-                    _status.LastDocsEtag = putResult.ETag; // so we can skip it for the next time
+                if (_status.LastDocsEtag + 1 == putResult.Etag) // the last etag is with just us
+                    _status.LastDocsEtag = putResult.Etag; // so we can skip it for the next time
             }
         }
 

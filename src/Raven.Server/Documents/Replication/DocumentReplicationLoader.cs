@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -41,14 +42,7 @@ namespace Raven.Server.Documents.Replication
         public IEnumerable<IncomingConnectionInfo> IncomingConnections => _incoming.Values.Select(x => x.ConnectionInfo);
         public IEnumerable<ReplicationDestination> OutgoingConnections => _outgoing.Select(x => x.Destination);
 
-        private class WaitForReplicationInfo
-        {
-            public TaskCompletionSource<object> Tcs;
-            public long Etag;
-            public int Replicas;
-        }
-
-        private readonly ConcurrentSet<WaitForReplicationInfo> _waitForReplicationTasks = new ConcurrentSet<WaitForReplicationInfo>();
+        private readonly ConcurrentQueue<TaskCompletionSource<object>> _waitForReplicationTasks = new ConcurrentQueue<TaskCompletionSource<object>>();
 
         public DocumentReplicationLoader(DocumentDatabase database)
         {
@@ -349,15 +343,12 @@ namespace Raven.Server.Documents.Replication
             ConnectionFailureInfo failureInfo;
             if (_outgoingFailureInfo.TryGetValue(instance.Destination, out failureInfo))
                 failureInfo.Reset();
-
-            foreach (var waitForReplicationInfo in _waitForReplicationTasks)
+            TaskCompletionSource<object> result;
+            while (_waitForReplicationTasks.TryDequeue(out result))
             {
-                if (ReplicatedPast(waitForReplicationInfo.Etag) >= waitForReplicationInfo.Replicas)
-                {
-                    _waitForReplicationTasks.TryRemove(waitForReplicationInfo);
-                    Task.Run(() => waitForReplicationInfo.Tcs.TrySetResult(null));
-                }
+                ThreadPool.QueueUserWorkItem(task => ((TaskCompletionSource<object>)task).TrySetResult(null), result);
             }
+            
         }
 
         private void OnIncomingReceiveSucceeded(IncomingReplicationHandler instance)
@@ -463,7 +454,15 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public async Task WaitForReplicationAsync(int numberOfReplicasToWaitFor, TimeSpan waitForReplicasTimeout, bool throwOnTimeoutInWaitForReplicas, bool majority, long lastEtag)
+        public int GetSizeOfMajority()
+        {
+            return _outgoing.Count/2 + 1;
+        }
+
+        public async Task<int> WaitForReplicationAsync(
+            int numberOfReplicasToWaitFor, 
+            TimeSpan waitForReplicasTimeout, 
+            long lastEtag)
         {
             if (_outgoing.Count == 0)
             {
@@ -471,41 +470,37 @@ namespace Raven.Server.Documents.Replication
                 {
                     _log.Info("Was asked to get write assurance on a database without replication, ignoring the request");
                 }
-                return;
+                return numberOfReplicasToWaitFor;
             }
-
-            if (majority)
+            var sp = Stopwatch.StartNew();
+            while (true)
             {
-                var numberOfActiveReplicationDestinations = _outgoing.Count;
-                numberOfReplicasToWaitFor = Math.Max(numberOfActiveReplicationDestinations / 2 + 1, numberOfReplicasToWaitFor);
-                numberOfReplicasToWaitFor = Math.Min(numberOfReplicasToWaitFor, numberOfActiveReplicationDestinations);
+                var past = ReplicatedPast(lastEtag);
+                if (past >= numberOfReplicasToWaitFor)
+                    return past;
+
+                var remaining = waitForReplicasTimeout - sp.Elapsed;
+                if(remaining < TimeSpan.Zero)
+                    return ReplicatedPast(lastEtag);
+
+                var timeout = Task.Delay(remaining);
+
+                if (await Task.WhenAny(WaitForNextReplicationAsync(), timeout) == timeout)
+                {
+                    return ReplicatedPast(lastEtag);
+                }
             }
+        }
 
-            if (ReplicatedPast(lastEtag) >= numberOfReplicasToWaitFor)
-                return;
+        private Task WaitForNextReplicationAsync()
+        {
+            TaskCompletionSource<object> result;
+            if (_waitForReplicationTasks.TryPeek(out result))
+                return result.Task;
 
-            var tcs = new TaskCompletionSource<object>();
-
-            _waitForReplicationTasks.Add(new WaitForReplicationInfo
-            {
-                Tcs = tcs,
-                Etag = lastEtag,
-                Replicas = numberOfReplicasToWaitFor,
-            });
-
-            int replicatedPast;
-            if (await Task.WhenAny(tcs.Task, Task.Delay(waitForReplicasTimeout)).ConfigureAwait(false) == tcs.Task)
-                return;
-
-            replicatedPast = ReplicatedPast(lastEtag);
-            if (replicatedPast >= numberOfReplicasToWaitFor)
-                return;
-
-            if (throwOnTimeoutInWaitForReplicas)
-            {
-                throw new TimeoutException(
-                    $"Could not verify that etag {lastEtag} was replicated to {numberOfReplicasToWaitFor} servers in {waitForReplicasTimeout}. So far, it only replicated to {replicatedPast}");
-            }
+            result = new TaskCompletionSource<object>();
+            _waitForReplicationTasks.Enqueue(result);
+            return result.Task;
         }
 
         private int ReplicatedPast(long etag)

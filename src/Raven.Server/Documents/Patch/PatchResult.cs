@@ -66,5 +66,7 @@ namespace Raven.Server.Documents.Patch
         public DynamicJsonArray DebugInfo { get; set; }
 
         public long? Etag;
+
+        public CollectionName Collection;
     }
 }
