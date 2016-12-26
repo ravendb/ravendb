@@ -214,7 +214,7 @@ namespace FastTests.Client.Subscriptions
                             waitingSubscriptionList.Add(x);
                         });
                         var taskStarted = waitingSubscription.StartAsync();
-                        var completed = await Task.WhenAny(taskStarted, Task.Delay(10000));
+                        var completed = await Task.WhenAny(taskStarted, Task.Delay(60000));
 
 
                         Assert.False(completed == taskStarted);
