@@ -225,7 +225,7 @@ namespace FastTests.Client.Subscriptions
 
                         await subscription.StartAsync();
 
-                        debugprint(docs, keys, ages);
+                        Debugprint(docs, keys, ages);
 
                         RavenJObject doc;
                         Assert.True(docs.TryTake(out doc, waitForDocTimeout));
@@ -237,7 +237,7 @@ namespace FastTests.Client.Subscriptions
                         var cnt = users.Count;
                         Assert.Equal(3, cnt);
 
-                        debugprint(docs, keys, ages);
+                        Debugprint(docs, keys, ages);
 
                         string key;
                         Assert.True(keys.TryTake(out key, waitForDocTimeout));
@@ -249,7 +249,7 @@ namespace FastTests.Client.Subscriptions
                         Assert.True(keys.TryTake(out key, waitForDocTimeout));
                         Assert.Equal("users/5", key);
 
-                        debugprint(docs, keys, ages);
+                        Debugprint(docs, keys, ages);
 
                         int age;
                         Assert.True(ages.TryTake(out age, waitForDocTimeout));
@@ -261,7 +261,7 @@ namespace FastTests.Client.Subscriptions
                         Assert.True(ages.TryTake(out age, waitForDocTimeout));
                         Assert.Equal(34, age);
 
-                        debugprint(docs, keys, ages);
+                        Debugprint(docs, keys, ages);
 
 
                     }
@@ -280,35 +280,55 @@ namespace FastTests.Client.Subscriptions
 
 
                     var docs = new BlockingCollection<RavenJObject>();
+
+                    Debugprint(docs);
+
+
                     subscription.Subscribe(o => docs.Add(o));
+
+                    Debugprint(docs);
+
                     await subscription.StartAsync();
 
                     RavenJObject item;
+                    Debugprint(docs);
                     var tryTake = docs.TryTake(out item, TimeSpan.FromMilliseconds(250));
                     if (tryTake)
                         Console.WriteLine(item);
 
                     if (tryTake == true)
-                    Console.WriteLine($"********************** FAILED *******************");
+                    {
+                        Debugprint(docs);
 
+                        Console.WriteLine($"********************** FAILED *******************");
+
+                        Debugprint(docs);
+
+                    }
+
+                    Debugprint(docs);
 
                     Assert.False(tryTake);
 
+                    Debugprint(docs);
+
                     Console.WriteLine($"___SUCCESS___");
 
-
+                    Debugprint(docs);
                 }
             }
         }
 
-        private static void debugprint(BlockingCollection<RavenJObject> docs, BlockingCollection<string> keys = null, BlockingCollection<int> ages=null )
+        private static int cnt = 0;
+
+        private static void Debugprint(BlockingCollection<RavenJObject> docs, BlockingCollection<string> keys = null, BlockingCollection<int> ages=null )
         {
-            Console.WriteLine($"==========================");
-            Console.WriteLine($"docs.Count={docs.Count}");
+            Console.WriteLine($"{++cnt} : ==========================");
+            Console.WriteLine($"{++cnt} : docs.Count={docs.Count}");
             docs.ForEach(x => Console.WriteLine("==> " + x));
 
-            if (keys != null) Console.WriteLine($"keys.Count={keys.Count}");
-            if (ages != null) Console.WriteLine($"ages.Count={ages.Count}");
+            if (keys != null) Console.WriteLine($"{++cnt} : keys.Count={keys.Count}");
+            if (ages != null) Console.WriteLine($"{++cnt} : ages.Count={ages.Count}");
         }
     }
 }
