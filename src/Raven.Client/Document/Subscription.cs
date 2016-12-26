@@ -385,6 +385,9 @@ namespace Raven.Client.Document
             var metadata = curDoc[Constants.Metadata.Key] as RavenJObject;
             lastReceivedEtag = metadata[Constants.Metadata.Etag].Value<long>();
 
+            Console.WriteLine("------> DEUBG : " + lastReceivedEtag + " for " + metadata[Constants.Metadata.Id]);
+            Console.Out.Flush();
+
             if (_isStronglyTyped)
             {
                 instance = curDoc.Deserialize<T>(_conventions);
