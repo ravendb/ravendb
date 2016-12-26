@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Json.Linq;
 using Raven.Tests.Core.Utils.Entities;
 using Raven.Tests.Notifications;
@@ -200,6 +201,10 @@ namespace FastTests.Client.Subscriptions
                         Collection = "Users"
                     }, user2Etag ?? 0);
 
+
+                    Console.WriteLine($"user2Etag={user2Etag}");
+
+
                     var users = new List<RavenJObject>();
 
                     using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions
@@ -207,6 +212,7 @@ namespace FastTests.Client.Subscriptions
                         SubscriptionId = subscriptionId
                     }))
                     {
+                        Console.WriteLine($"subscriptionId={subscriptionId}");
 
                         var docs = new BlockingCollection<RavenJObject>();
                         var keys = new BlockingCollection<string>();
@@ -219,6 +225,8 @@ namespace FastTests.Client.Subscriptions
 
                         await subscription.StartAsync();
 
+                        debugprint(docs, keys, ages);
+
                         RavenJObject doc;
                         Assert.True(docs.TryTake(out doc, waitForDocTimeout));
                         users.Add(doc);
@@ -229,6 +237,7 @@ namespace FastTests.Client.Subscriptions
                         var cnt = users.Count;
                         Assert.Equal(3, cnt);
 
+                        debugprint(docs, keys, ages);
 
                         string key;
                         Assert.True(keys.TryTake(out key, waitForDocTimeout));
@@ -240,6 +249,8 @@ namespace FastTests.Client.Subscriptions
                         Assert.True(keys.TryTake(out key, waitForDocTimeout));
                         Assert.Equal("users/5", key);
 
+                        debugprint(docs, keys, ages);
+
                         int age;
                         Assert.True(ages.TryTake(out age, waitForDocTimeout));
                         Assert.Equal(30, age);
@@ -249,15 +260,26 @@ namespace FastTests.Client.Subscriptions
 
                         Assert.True(ages.TryTake(out age, waitForDocTimeout));
                         Assert.Equal(34, age);
+
+                        debugprint(docs, keys, ages);
+
+
                     }
                 }
+
+
+
                 using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions
                 {
                     SubscriptionId = subscriptionId
                 }))
                 {
-                    var docs = new BlockingCollection<RavenJObject>();
 
+                    Console.WriteLine($"subscriptionId=${subscriptionId}");
+
+
+
+                    var docs = new BlockingCollection<RavenJObject>();
                     subscription.Subscribe(o => docs.Add(o));
                     await subscription.StartAsync();
 
@@ -265,10 +287,28 @@ namespace FastTests.Client.Subscriptions
                     var tryTake = docs.TryTake(out item, TimeSpan.FromMilliseconds(250));
                     if (tryTake)
                         Console.WriteLine(item);
+
+                    if (tryTake == true)
+                    Console.WriteLine($"********************** FAILED *******************");
+
+
                     Assert.False(tryTake);
+
+                    Console.WriteLine($"___SUCCESS___");
+
 
                 }
             }
+        }
+
+        private static void debugprint(BlockingCollection<RavenJObject> docs, BlockingCollection<string> keys = null, BlockingCollection<int> ages=null )
+        {
+            Console.WriteLine($"==========================");
+            Console.WriteLine($"docs.Count={docs.Count}");
+            docs.ForEach(x => Console.WriteLine("==> " + x));
+
+            if (keys != null) Console.WriteLine($"keys.Count={keys.Count}");
+            if (ages != null) Console.WriteLine($"ages.Count={ages.Count}");
         }
     }
 }
