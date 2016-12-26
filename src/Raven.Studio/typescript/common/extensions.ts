@@ -72,6 +72,16 @@ class extensions {
 
     private static installBindingHandlers() {
 
+        ko.bindingHandlers["scrollTo"] = { 
+            update: (element: any, valueAccessor: KnockoutObservable<boolean>) => {
+                if (valueAccessor()) {
+                    let newElementRectData = element.getBoundingClientRect();
+                    let pos = $("#page-host-root").scrollTop() + newElementRectData.top;
+                    $("#page-host-root").scrollTop(pos - newElementRectData.height * 2);
+                }
+            }
+        };
+
         ko.bindingHandlers["collapse"] = {
             init: (element: any, valueAccessor: KnockoutObservable<boolean>) => {
                 var value = valueAccessor();
