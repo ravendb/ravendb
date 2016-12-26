@@ -3,6 +3,7 @@
 import resource = require("models/resources/resource");
 import generalUtils = require("common/generalUtils");
 import activeResourceTracker = require("common/shell/activeResourceTracker");
+import getResourceCommand = require("commands/resources/getResourceCommand");
 
 abstract class resourceInfo {
 
@@ -121,6 +122,7 @@ abstract class resourceInfo {
             if (!this.licensed()) {
                 return "state-danger";
             }
+
             if (this.disabled()) {
                 return "state-warning";
             }
@@ -128,7 +130,8 @@ abstract class resourceInfo {
             if (this.online()) {
                 return "state-success";
             }
-            return ""; // offline
+
+            return "state-offline"; // offline
         });
 
         this.badgeText = ko.pureComputed(() => {
@@ -160,6 +163,12 @@ abstract class resourceInfo {
 
             return currentResource.qualifiedName === this.qualifiedName;
         });
+    }
+
+    updateStats(): JQueryPromise<Raven.Client.Data.ResourceInfo> {
+        return new getResourceCommand(this.qualifier, this.name)
+            .execute()
+            .done(result => this.update(result));
     }
 }
 
