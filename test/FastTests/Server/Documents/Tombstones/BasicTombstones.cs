@@ -44,7 +44,7 @@ namespace FastTests.Server.Documents.Tombstones
 
                     using (var tx = context.OpenWriteTransaction())
                     {
-                        Assert.True(database.DocumentsStorage.Delete(context, "key/1", null));
+                        Assert.NotNull(database.DocumentsStorage.Delete(context, "key/1", null));
 
                         tx.Commit();
                     }
