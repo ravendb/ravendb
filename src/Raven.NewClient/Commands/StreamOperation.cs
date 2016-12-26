@@ -242,14 +242,14 @@ namespace Raven.NewClient.Client.Commands
                 using (var parser = new UnmanagedJsonParser(_session.Context, state, "stream contents"))
                 using (_session.Context.GetManagedBuffer(out buffer))
                 {
-                    await ReadNextTokenAsync(_response.Stream, parser, buffer);
+                    await ReadNextTokenAsync(_response.Stream, parser, buffer).ConfigureAwait(false);
 
                     if (state.CurrentTokenType != JsonParserToken.StartObject)
                     {
                         throw new InvalidOperationException("Expected stream to start, but got " +
                                                             state.CurrentTokenType);
                     }
-                    await ReadNextTokenAsync(_response.Stream, parser, buffer);
+                    await ReadNextTokenAsync(_response.Stream, parser, buffer).ConfigureAwait(false);
 
                     if (state.CurrentTokenType != JsonParserToken.String)
                     {
@@ -265,14 +265,14 @@ namespace Raven.NewClient.Client.Commands
                         throw new InvalidOperationException("Expected stream property 'Results' but got " + propery);
                     }
 
-                    await ReadNextTokenAsync(_response.Stream, parser, buffer);
+                    await ReadNextTokenAsync(_response.Stream, parser, buffer).ConfigureAwait(false);
 
                     if (state.CurrentTokenType != JsonParserToken.StartArray)
                     {
                         throw new InvalidOperationException("Expected stream intial property, but got " +
                                                             state.CurrentTokenType);
                     }
-                    ReadNextTokenAsync(_response.Stream, parser, buffer);
+                    await ReadNextTokenAsync(_response.Stream, parser, buffer).ConfigureAwait(false);
 
                     _session.Context.CachedProperties.NewDocument();
                     var builder = new BlittableJsonDocumentBuilder(_session.Context, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "ImportObject", parser, state);
@@ -285,12 +285,12 @@ namespace Raven.NewClient.Client.Commands
                         parser.SetBuffer(buffer, read);
                     }
                     builder.FinalizeDocument();
-                    await ReadNextTokenAsync(_response.Stream, parser, buffer);
+                    await ReadNextTokenAsync(_response.Stream, parser, buffer).ConfigureAwait(false);
                     Current = builder.CreateReader();
 
                     if (state.CurrentTokenType == JsonParserToken.EndArray)
                     {
-                        await ReadNextTokenAsync(_response.Stream, parser, buffer);
+                        await ReadNextTokenAsync(_response.Stream, parser, buffer).ConfigureAwait(false);
 
                         if (state.CurrentTokenType != JsonParserToken.EndObject)
                         {
@@ -300,7 +300,7 @@ namespace Raven.NewClient.Client.Commands
                         return false;
                     }
 
-                    await ReadNextTokenAsync(_response.Stream, parser, buffer);
+                    await ReadNextTokenAsync(_response.Stream, parser, buffer).ConfigureAwait(false);
 
                     if (state.CurrentTokenType != JsonParserToken.EndObject)
                     {
