@@ -329,6 +329,8 @@ namespace FastTests.Client.Subscriptions
 
             if (keys != null) Console.WriteLine($"{++cnt} : keys.Count={keys.Count}");
             if (ages != null) Console.WriteLine($"{++cnt} : ages.Count={ages.Count}");
+
+            Console.Out.Flush();
         }
     }
 }
