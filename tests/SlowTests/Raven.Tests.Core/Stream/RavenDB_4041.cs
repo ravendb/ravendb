@@ -15,7 +15,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Stream
 {
     public class RavenDB_4041 : RavenTestBase
     {
-        [Fact(Skip = "stream start with Not Implemented")]
+        [Fact]
         public void streaming_returns_metadata()
         {
             using (var store = GetDocumentStore())
@@ -43,7 +43,6 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Stream
 
                         Assert.NotNull(enumerator.Current.Key);
                         Assert.NotNull(enumerator.Current.Etag);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.RavenClrType]);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.RavenEntityName]);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.RavenLastModified]);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.LastModified]);
@@ -52,7 +51,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Stream
             }
         }
 
-        [Fact(Skip = "StreamAsync Not Implemented")]
+        [Fact]
         public async Task streaming_returns_metadata_async()
         {
             using (var store = GetDocumentStore())
@@ -74,7 +73,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Stream
 
                     while (await enumerator.MoveNextAsync())
                     {
-                        /*Assert.NotNull(enumerator.Current.Document.Id);
+                        Assert.NotNull(enumerator.Current.Document.Id);
                         Assert.Equal("John", enumerator.Current.Document.Name);
                         Assert.Equal("Tel Aviv", enumerator.Current.Document.Address);
 
@@ -83,13 +82,13 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Stream
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.RavenClrType]);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.RavenEntityName]);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.RavenLastModified]);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.LastModified]);*/
+                        Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.LastModified]);
                     }
                 }
             }
         }
 
-        [Fact(Skip = "stream start with Not Implemented")]
+        [Fact]
         public void streaming_query_returns_metadata()
         {
             using (var store = GetDocumentStore())
@@ -118,7 +117,6 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Stream
 
                         Assert.NotNull(enumerator.Current.Key);
                         Assert.NotNull(enumerator.Current.Etag);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.RavenClrType]);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.RavenEntityName]);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.RavenLastModified]);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.LastModified]);
@@ -128,7 +126,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Stream
             }
         }
 
-        [Fact(Skip = "StreamAsync Not Implemented")]
+        [Fact]
         public async Task streaming_query_returns_metadata_async()
         {
             using (var store = GetDocumentStore())
@@ -151,17 +149,16 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Stream
 
                     while (await enumerator.MoveNextAsync())
                     {
-                       /* Assert.NotNull(enumerator.Current.Document.Id);
+                        Assert.NotNull(enumerator.Current.Document.Id);
                         Assert.Equal("John", enumerator.Current.Document.Name);
                         Assert.Equal("Tel Aviv", enumerator.Current.Document.Address);
-
                         Assert.NotNull(enumerator.Current.Key);
                         Assert.NotNull(enumerator.Current.Etag);
-                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.RavenClrType));
-                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.RavenEntityName));
-                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.TemporaryScoreValue));
-                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.LastModified));
-                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.RavenLastModified));*/
+                        Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.RavenClrType]);
+                        Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.RavenEntityName]);
+                        Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.LastModified]);
+                        Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.RavenLastModified]);
+                        Assert.NotNull(enumerator.Current.Metadata[Constants.Metadata.IndexScore]);
                     }
                 }
             }
