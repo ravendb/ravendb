@@ -555,16 +555,15 @@ namespace Sparrow.Json
 
         public string Reverse()
         {
-            LazyStringTempComparisonBuffer = new byte[_size];
+            var maxCharCount = _context.Encoding.GetMaxCharCount(Length);
+            if(LazyStringTempBuffer == null || LazyStringTempBuffer.Length < maxCharCount)
+                LazyStringTempBuffer = new char[Bits.NextPowerOf2(maxCharCount)];
 
-            for (int i = _size - 1, j = 0; i >= 0; i--, j++)
+            fixed (char* pChars = LazyStringTempBuffer)
             {
-                LazyStringTempComparisonBuffer[j] = this[i];
-            }
-
-            fixed (byte* pChars = LazyStringTempComparisonBuffer)
-            {
-                return _context.Encoding.GetString(pChars, Length);
+                var chars = _context.Encoding.GetChars(_buffer, Length, pChars, LazyStringTempBuffer.Length);
+                Array.Reverse(LazyStringTempBuffer, 0, chars);
+                return new string(LazyStringTempBuffer, 0, chars);
             }    
         }
     }

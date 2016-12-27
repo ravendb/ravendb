@@ -47,6 +47,41 @@ namespace Raven.Tests.Issues
             }
         }
 
+        [Fact]
+        public async void CanWork2()
+        {
+            using (var store = GetDocumentStore())
+            {
+                const string searchQuery = "Doe";
+
+                // Scan for all indexes inside the ASSEMBLY.
+                new Users_ByDisplayNameReversed2().Execute(store);
+
+                // Seed some fake data.
+                CreateFakeData(store);
+                var xx = new string(searchQuery.Reverse().ToArray());
+
+                // Now lets do our query.
+                using (IDocumentSession documentSession = store.OpenSession())
+                {
+
+                    var query = documentSession
+                        .Query<Users_ByDisplayNameReversed2.Result, Users_ByDisplayNameReversed2>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Where(x => x.Chars.Contains('F'))
+                        .As<User>();
+
+                    var users = query.ToList();
+
+                    Assert.NotEmpty(users);
+                }
+
+                var stats = await store.AsyncDatabaseCommands.GetIndexErrorsAsync();
+                Assert.Equal(0, stats[0].Errors.Length);
+            }
+        }
+
+
         public class User
         {
             public string Id { get; set; }
@@ -76,6 +111,31 @@ namespace Raven.Tests.Issues
             }
 
             
+        }
+
+        public class Users_ByDisplayNameReversed2 : AbstractIndexCreationTask<User, Users_ByDisplayNameReversed.Result>
+        {
+            public class Result
+            {
+                public string Id { get; set; }
+                public string DisplayName { get; set; }
+                public char[] Chars { get; set; }
+            }
+
+            public Users_ByDisplayNameReversed2()
+            {
+                Map = users => from doc in users
+                               select new
+                               {
+                                   Id = doc.Id,
+                                   DisplayName = doc.DisplayName,
+                                   Chars = doc.DisplayName.ToCharArray()
+                               };
+
+                //Index(x => x.DisplayNameReversed, FieldIndexing.NotAnalyzed);
+            }
+
+
         }
 
         private static void CreateFakeData(IDocumentStore documentStore)

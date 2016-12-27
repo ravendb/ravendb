@@ -11,6 +11,7 @@ using FastTests.Server.Documents.Patching;
 using FastTests.Server.Documents.Replication;
 using FastTests.Server.Documents.SqlReplication;
 using Raven.Client.Document;
+using Raven.Tests.Issues;
 using SlowTests.Core.Commands;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -24,9 +25,13 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i); 
-                using (var a = new NewClientTests.NewClient.FastTests.Versioning.Versioning())
+                using (var a = new RavenDB_72())
                 {
-                    a.ServerSaveBundlesAfterRestart().Wait();
+                    a.CanWork2();
+                }
+                using (var a = new RavenDB_72())
+                {
+                    a.CanWork();
                 }
                 Console.WriteLine(i);
 
