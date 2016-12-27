@@ -323,12 +323,12 @@ namespace FastTests.Client.Subscriptions
 
         private static void Debugprint(BlockingCollection<RavenJObject> docs, BlockingCollection<string> keys = null, BlockingCollection<int> ages=null )
         {
-            Console.WriteLine($"{++cnt} : ==========================");
+            //Console.WriteLine($"{++cnt} : ==========================");
             Console.WriteLine($"{++cnt} : docs.Count={docs.Count}");
-            docs.ForEach(x => Console.WriteLine("==> " + x));
+            //docs.ForEach(x => Console.WriteLine("==> " + x));
 
-            if (keys != null) Console.WriteLine($"{++cnt} : keys.Count={keys.Count}");
-            if (ages != null) Console.WriteLine($"{++cnt} : ages.Count={ages.Count}");
+            //if (keys != null) Console.WriteLine($"{++cnt} : keys.Count={keys.Count}");
+            //if (ages != null) Console.WriteLine($"{++cnt} : ages.Count={ages.Count}");
 
             Console.Out.Flush();
         }
