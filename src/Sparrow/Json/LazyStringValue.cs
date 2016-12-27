@@ -553,9 +553,19 @@ namespace Sparrow.Json
             return ToString().TrimStart(trimChars);
         }
 
-        public IEnumerable<char> Reverse()
+        public string Reverse()
         {
-            return ToString().Reverse();
+            LazyStringTempComparisonBuffer = new byte[_size];
+
+            for (int i = _size - 1, j = 0; i >= 0; i--, j++)
+            {
+                LazyStringTempComparisonBuffer[j] = this[i];
+            }
+
+            fixed (byte* pChars = LazyStringTempComparisonBuffer)
+            {
+                return _context.Encoding.GetString(pChars, Length);
+            }    
         }
     }
 }
