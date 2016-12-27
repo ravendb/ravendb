@@ -65,10 +65,18 @@ namespace Raven.Server.Routing
             var databaseName = context.RouteMatch.GetCapture();
             var databasesLandlord = context.RavenServer.ServerStore.DatabasesLandlord;
             var database =  databasesLandlord.TryGetOrCreateResourceStore(databaseName);
+
             if (database == null)
             {
                 throw new DatabaseDoesNotExistsException($"Database '{databaseName}' was not found");
             }
+
+
+            if (await Task.WhenAny(database, Task.Delay(databasesLandlord.DatabaseLoadTimeout)) != database)
+                throw new InvalidOperationException(
+                    $"Timeout when loading database {databaseName}, try again later");
+
+
             context.Database = await database;
         }
 
