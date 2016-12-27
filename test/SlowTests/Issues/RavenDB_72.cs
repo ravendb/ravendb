@@ -13,7 +13,7 @@ namespace Raven.Tests.Issues
 {
     public class RavenDB_72 : RavenTestBase
     {
-        [Fact(Skip = "Wait for RavenDB-5958")]
+        [Fact]
         public async void CanWork()
         {
             using (var store = GetDocumentStore())
@@ -43,7 +43,7 @@ namespace Raven.Tests.Issues
                 }
 
                 var stats = await store.AsyncDatabaseCommands.GetIndexErrorsAsync();   
-                Assert.Equal(0,stats.Length);
+                Assert.Equal(0,stats[0].Errors.Length);
             }
         }
 

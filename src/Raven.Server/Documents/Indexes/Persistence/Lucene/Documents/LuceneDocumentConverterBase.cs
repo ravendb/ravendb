@@ -488,23 +488,26 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 numericField = cached.Field;
             }
 
-            double doubleValue;
-            long longValue;
-
-            switch (BlittableNumber.Parse(value, out doubleValue, out longValue))
+            if (!(value is char))
             {
-                case NumberParseResult.Double:
-                    if (field.SortOption == SortOptions.NumericLong)
-                        yield return numericField.SetLongValue((long)doubleValue);
-                    else
-                        yield return numericField.SetDoubleValue(doubleValue);
-                    break;
-                case NumberParseResult.Long:
-                    if (field.SortOption == SortOptions.NumericDouble)
-                        yield return numericField.SetDoubleValue(longValue);
-                    else
-                        yield return numericField.SetLongValue(longValue);
-                    break;
+                double doubleValue;
+                long longValue;
+
+                switch (BlittableNumber.Parse(value, out doubleValue, out longValue))
+                {
+                    case NumberParseResult.Double:
+                        if (field.SortOption == SortOptions.NumericLong)
+                            yield return numericField.SetLongValue((long)doubleValue);
+                        else
+                            yield return numericField.SetDoubleValue(doubleValue);
+                        break;
+                    case NumberParseResult.Long:
+                        if (field.SortOption == SortOptions.NumericDouble)
+                            yield return numericField.SetDoubleValue(longValue);
+                        else
+                            yield return numericField.SetLongValue(longValue);
+                        break;
+                }
             }
         }
 
