@@ -123,7 +123,7 @@ namespace NewClientTests.NewClient.FastTests.Versioning
         {
             var path = NewDataPath();
             var company = new Company { Name = "Company Name" };
-            using (var store = GetDocumentStore(path: path))
+            using (var store = GetDocumentStore(path: path, deleteDbAfterDispose: false))
             {
                 await VersioningHelper.SetupVersioning(store);
                 using (var session = store.OpenAsyncSession())

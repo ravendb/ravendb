@@ -26,7 +26,7 @@ namespace Tryouts
                 Console.WriteLine(i); 
                 using (var a = new NewClientTests.NewClient.FastTests.Versioning.Versioning())
                 {
-                    a.WillDeleteRevisionsIfDeleted_OnlyIfPurgeOnDeleteIsTrue().Wait();
+                    a.ServerSaveBundlesAfterRestart().Wait();
                 }
                 Console.WriteLine(i);
 
