@@ -46,7 +46,7 @@ namespace Raven.Client.Document
         private TcpClient _tcpClient;
         private bool _completed, _started;
         private bool _disposed;
-        private Task<int> _subscriptionTask;
+        private Task _subscriptionTask;
         private NetworkStream _networkStream;
         private readonly TaskCompletionSource<object> _disposedTask = new TaskCompletionSource<object>();
 
@@ -112,8 +112,6 @@ namespace Raven.Client.Document
 
         public async Task DisposeAsync()
         {
-            Console.WriteLine($"[{_localId}] :: Enter dispose");
-            Console.Out.Flush();
             try
             {
                 if (_disposed)
@@ -127,31 +125,13 @@ namespace Raven.Client.Document
                 {
                     try
                     {
-                        Console.WriteLine($"[{_localId}] :: awaiting _subscriptionTask.Id={_subscriptionTask.Id}");
-                        Console.Out.Flush();
-
-                        var i = await _subscriptionTask;
-                        Console.WriteLine("task stats " + i);
-
-                        Console.WriteLine($"[{_localId}] :: finished await _subscriptionTask.Id={_subscriptionTask.Id}");
-                        Console.Out.Flush();
+                        await _subscriptionTask;
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
-                        Console.WriteLine($"[{_localId}] :: exception _subscriptionTask.Id={_subscriptionTask.Id}" +
-                                          Environment.NewLine + ex.Message);
-                        Console.Out.Flush();
                         // just need to wait for it to end
                     }
-                    finally
-                    {
-                        Console.WriteLine($"[{_localId}] :: done _subscriptionTask.Id={_subscriptionTask.Id} = status - " + _subscriptionTask.Status);
-                        Console.Out.Flush();
-
-                    }
                 }
-                Console.WriteLine($"[{_localId}] :: disposed ack is {_lastReceivedEtag}");
-                Console.Out.Flush();
 
                 CloseTcpClient(); // we disconnect immediately, freeing the subscription task
 
@@ -201,7 +181,7 @@ namespace Raven.Client.Document
             {
                 try
                 {
-                    return  await RunSubscriptionAsync(tcs);
+                    await RunSubscriptionAsync(tcs);
                 }
                 finally
                 {
@@ -287,7 +267,7 @@ namespace Raven.Client.Document
             }
         }
 
-        private async Task<int> ProccessSubscription(TaskCompletionSource<object> successfullyConnected)
+        private async Task ProccessSubscription(TaskCompletionSource<object> successfullyConnected)
         {
             try
             {
@@ -301,10 +281,10 @@ namespace Raven.Client.Document
                     var readObjectTask = ReadNextObject(jsonReader, false);
                     var done = await Task.WhenAny(readObjectTask, _disposedTask.Task).ConfigureAwait(false);
                     if (done == _disposedTask.Task)
-                        return -1;
+                        return;
                     var connectionStatus = await readObjectTask.ConfigureAwait(false);
                     if (_proccessingCts.IsCancellationRequested)
-                        return -2;
+                        return;
 
                     AssertConnectionState(connectionStatus);
 
@@ -316,16 +296,13 @@ namespace Raven.Client.Document
 
 
                     if (_proccessingCts.IsCancellationRequested)
-                        return -3;
+                        return;
 
                     var incomingBatch = new List<RavenJObject>();
                     _lastReceivedEtag = 0;
                     bool waitingForAck = false;
                     while (_proccessingCts.IsCancellationRequested == false || waitingForAck)
                     {
-                        Console.WriteLine($"[{_localId}] :: Status1 : {_proccessingCts.IsCancellationRequested} , {waitingForAck}");
-                        Console.Out.Flush();
-
                         BeforeBatch();
                         bool endOfBatch = false;
                         while ((endOfBatch == false && _proccessingCts.IsCancellationRequested == false) || waitingForAck)
@@ -333,40 +310,15 @@ namespace Raven.Client.Document
                             if (readObjectTask == null)
                                 readObjectTask = ReadNextObject(jsonReader, waitingForAck);
 
-                            Console.WriteLine($"[{_localId}] :: Status2 : {_proccessingCts.IsCancellationRequested} , {waitingForAck}");
-                            Console.Out.Flush();
-
-                            bool track = false;
-
                             done = await Task.WhenAny(readObjectTask, _disposedTask.Task).ConfigureAwait(false);
                             if (done == _disposedTask.Task)
                             {
-                                Console.WriteLine($"[{_localId}] :: Status3 : {_proccessingCts.IsCancellationRequested} , {waitingForAck}");
-                                Console.Out.Flush();
-
                                 if (waitingForAck == false)
                                     break;
-
-                                // await readObjectTask;
-
-                                track = true;
                             }
-
-                            Console.WriteLine($"done == _disposedTask.Task = {done == _disposedTask.Task}");
 
                             SubscriptionConnectionServerMessage receivedMessage = null;
                             receivedMessage = await readObjectTask.ConfigureAwait(false);
-
-                            if (track)
-                            {
-                                Console.WriteLine("Client last message " + receivedMessage?.Type);
-                                Console.WriteLine("Client last " + receivedMessage?.Data);
-                                Console.Out.Flush();    
-                            }
-
-
-                            Console.WriteLine($"[{_localId}] :: Status4 : {_proccessingCts.IsCancellationRequested} , {waitingForAck} , {receivedMessage?.Type}");
-                            Console.Out.Flush();
 
                             if (done == _disposedTask.Task)
                                 waitingForAck = false; // we will only wait once
@@ -380,8 +332,6 @@ namespace Raven.Client.Document
                                     endOfBatch = true;
                                     break;
                                 case SubscriptionConnectionServerMessage.MessageType.Confirm:
-                                    Console.WriteLine($"[{_localId}] :: CLIENT confirm " + _lastReceivedEtag);
-                                    Console.Out.Flush();
                                     AfterAcknowledgment();
                                     AfterBatch(incomingBatch.Count);
                                     incomingBatch.Clear();
@@ -403,8 +353,6 @@ namespace Raven.Client.Document
                             readObjectTask = null;
                         }
 
-                        Console.WriteLine($"[{_localId}] :: checking for Cancel");
-                        Console.Out.Flush();
                         if (_proccessingCts.IsCancellationRequested)
                             break;
 
@@ -413,8 +361,6 @@ namespace Raven.Client.Document
                             NotifySubscribers(curDoc, out _lastReceivedEtag);
                         }
 
-                        Console.WriteLine($"[{_localId}] :: client sending ACK : " + _lastReceivedEtag);
-                        Console.Out.Flush();
                         SendAck(_lastReceivedEtag, tcpStream);
                         waitingForAck = true;
                         readObjectTask = ReadNextObject(jsonReader, true);
@@ -423,18 +369,14 @@ namespace Raven.Client.Document
             }
             catch (OperationCanceledException)
             {
-                Console.WriteLine($"[{_localId}] :: OpearationCanceledException");
-                Console.Out.Flush();
 
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
                 if (_proccessingCts.Token.IsCancellationRequested==false)
                     InformSubscribersOnError(ex);
                 throw;
             }
-            return -5;
         }
 
         private async Task<SubscriptionConnectionServerMessage> ReadNextObject(JsonTextReaderAsync jsonReader, bool waitForAck)
@@ -457,9 +399,6 @@ namespace Raven.Client.Document
             T instance;
             var metadata = curDoc[Constants.Metadata.Key] as RavenJObject;
             lastReceivedEtag = metadata[Constants.Metadata.Etag].Value<long>();
-
-            Console.WriteLine("------> DEUBG : " + lastReceivedEtag + " for " + metadata[Constants.Metadata.Id]);
-            Console.Out.Flush();
 
             if (_isStronglyTyped)
             {
@@ -510,8 +449,6 @@ namespace Raven.Client.Document
         private void SendAck(long lastReceivedEtag, Stream networkStream)
         {
             BeforeAcknowledgment();
-            Console.WriteLine("CLIENT SendAck " + lastReceivedEtag);
-            Console.Out.Flush();
             RavenJObject.FromObject(new SubscriptionConnectionClientMessage
             {
                 Etag = lastReceivedEtag,
@@ -520,7 +457,7 @@ namespace Raven.Client.Document
             networkStream.Flush();
         }
 
-        private async Task<int> RunSubscriptionAsync(TaskCompletionSource<object> firstConnectionCompleted)
+        private async Task RunSubscriptionAsync(TaskCompletionSource<object> firstConnectionCompleted)
         {
             while (_proccessingCts.Token.IsCancellationRequested == false)
             {
@@ -530,17 +467,12 @@ namespace Raven.Client.Document
                     Logger.Debug(string.Format("Subscription #{0}. Connecting to server...", _options.SubscriptionId));
 
                     _tcpClient = new TcpClient();
-                    var rc = await ProccessSubscription(firstConnectionCompleted);
-                    Console.WriteLine($"{_localId} :: ProccessSubscription returned " + rc);
+                    await ProccessSubscription(firstConnectionCompleted);
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"{_localId} :: ProccessSubscription throw " + ex);
-
                     if (_proccessingCts.Token.IsCancellationRequested)
-                    {
-                        return -90;
-                    }
+                        return;
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                     Task.Run(() => firstConnectionCompleted.TrySetException(ex));
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
@@ -553,13 +485,13 @@ namespace Raven.Client.Document
                     {
                         if (Logger.IsDebugEnabled)
                             Logger.Debug(string.Format("Subscription #{0}.", _options.SubscriptionId));
-                        return -91;
+                        return;
                     }
                     await Task.Delay(_options.TimeToWaitBeforeConnectionRetryMilliseconds);
                 }
             }
             if (_proccessingCts.Token.IsCancellationRequested)
-                return -92;
+                return;
 
             if (IsErroredBecauseOfSubscriber)
             {
@@ -576,7 +508,7 @@ namespace Raven.Client.Document
                             _options.SubscriptionId), e);
                 }
             }
-            return -93;
+            return;
         }
 
         private async Task<bool> TryHandleRejectedConnection(Exception ex, bool reopenTried)
