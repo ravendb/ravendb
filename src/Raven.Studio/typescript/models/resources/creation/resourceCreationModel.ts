@@ -50,7 +50,7 @@ abstract class resourceCreationModel {
                     message: _.upperFirst(this.resourceType) + " already exists"
                 }, {
                     validator: (val: string) => rg1.test(val),
-                    message: `The {0} name can't contain any of the following characters: \ / : * ? " < > |`,
+                    message: `The {0} name can't contain any of the following characters: \\ / : * ? " < > |`,
                     params: this.resourceType
                 }, {
                     validator: (val: string) => !val.startsWith("."),
@@ -73,23 +73,31 @@ abstract class resourceCreationModel {
     }
 
     protected setupPathValidation(observable: KnockoutObservable<string>, name: string) {
-        const maxLegnth = 248;
-        const rg1 = /^[^*\\?"<>\|]*$/; // forbidden characters \ * : ? " < > |
+        const maxLength = 248;
+
+        const rg1 = /^[^*?"<>\|]*$/; // forbidden characters * ? " < > |
+        const rg2 = /[\\//]{2,}/;    // multiple '\', '/' is forbidden
         const rg3 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
 
         observable.extend({
             maxLength: {
-                params: maxLegnth,
-                message: `The path name for the '${name}' can't exceed ${maxLegnth} characters!`
+                params: maxLength,
+                message: `Path name for '${name}' can't exceed ${maxLength} characters!`
             },
             validation: [{
                 validator: (val: string) => rg1.test(val),
-                message: `The {0} can't contain any of the following characters: \\ : * ? " < > |`,
+                message: `{0} path can't contain any of the following characters: * ? " < > |`,
                 params: name
-            }, {
-                validator: (val: string) => !rg3.test(val),
-                message: `The name {0} is forbidden for use!`,
-                params: this.name
+            },
+            {
+                validator: (val: string) => !(rg2.test(val)),
+                message: `{0} path can't contain multiple characters: \\ / `,
+                params: name                    
+            },
+            {
+               validator: (val: string) => !rg3.test(val),
+               message: `The name {0} is forbidden for use!`,
+               params: this.name
             }]
         });
     }

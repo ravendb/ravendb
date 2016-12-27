@@ -1,7 +1,5 @@
 /// <reference path="../../typings/tsd.d.ts"/>
 
-import moment = require("moment");
-
 class extensions {
     static install() {
         extensions.installObservableExtensions();
@@ -71,13 +69,23 @@ class extensions {
     }
 
     private static installBindingHandlers() {
-
-        ko.bindingHandlers["scrollTo"] = { 
+      
+        ko.bindingHandlers["scrollTo"] = {
             update: (element: any, valueAccessor: KnockoutObservable<boolean>) => {
                 if (valueAccessor()) {
-                    let newElementRectData = element.getBoundingClientRect();
-                    let pos = $("#page-host-root").scrollTop() + newElementRectData.top;
-                    $("#page-host-root").scrollTop(pos - newElementRectData.height * 2);
+                  
+                    const $container = $("#page-host-root");
+                    const scrollTop = $container.scrollTop();
+                    const scrollBottom = scrollTop + $container.height();
+
+                    const $element = $(element);
+                    const elementTop = $element.position().top;
+                    const elementBottom = elementTop + $element.height();
+
+                    // Scroll vertically only if element is outside of viewport 
+                    if ((elementTop < scrollTop) || (elementBottom > scrollBottom)){
+                        $container.scrollTop(elementTop);
+                    } 
                 }
             }
         };
