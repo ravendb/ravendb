@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
@@ -32,12 +35,14 @@ namespace Raven.Server.Documents.Replication
         private readonly ConcurrentDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>> _incomingRejectionStats = new ConcurrentDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>>();
 
         private readonly ConcurrentSet<ConnectionFailureInfo> _reconnectQueue = new ConcurrentSet<ConnectionFailureInfo>();
-        internal Dictionary<string,ScriptResolver> ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
+        internal Dictionary<string, ScriptResolver> ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
         private readonly Logger _log;
         private ReplicationDocument _replicationDocument;
 
         public IEnumerable<IncomingConnectionInfo> IncomingConnections => _incoming.Values.Select(x => x.ConnectionInfo);
         public IEnumerable<ReplicationDestination> OutgoingConnections => _outgoing.Select(x => x.Destination);
+
+        private readonly ConcurrentQueue<TaskCompletionSource<object>> _waitForReplicationTasks = new ConcurrentQueue<TaskCompletionSource<object>>();
 
         public DocumentReplicationLoader(DocumentDatabase database)
         {
@@ -240,7 +245,7 @@ namespace Raven.Server.Documents.Replication
 
         private void InitializeResolvers()
         {
-            if ( _replicationDocument?.ResolveByCollection == null )
+            if (_replicationDocument?.ResolveByCollection == null)
             {
                 if (ScriptConflictResolversCache.Count > 0)
                     ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
@@ -338,6 +343,12 @@ namespace Raven.Server.Documents.Replication
             ConnectionFailureInfo failureInfo;
             if (_outgoingFailureInfo.TryGetValue(instance.Destination, out failureInfo))
                 failureInfo.Reset();
+            TaskCompletionSource<object> result;
+            while (_waitForReplicationTasks.TryDequeue(out result))
+            {
+                ThreadPool.QueueUserWorkItem(task => ((TaskCompletionSource<object>)task).TrySetResult(null), result);
+            }
+            
         }
 
         private void OnIncomingReceiveSucceeded(IncomingReplicationHandler instance)
@@ -441,6 +452,66 @@ namespace Raven.Server.Documents.Replication
                 NextTimout = TimeSpan.FromMilliseconds(Math.Min(NextTimout.TotalMilliseconds * 4, MaxConnectionTimout));
                 RetryOn = DateTime.UtcNow + NextTimout;
             }
+        }
+
+        public int GetSizeOfMajority()
+        {
+            return _outgoing.Count/2 + 1;
+        }
+
+        public async Task<int> WaitForReplicationAsync(
+            int numberOfReplicasToWaitFor, 
+            TimeSpan waitForReplicasTimeout, 
+            long lastEtag)
+        {
+            if (_outgoing.Count == 0)
+            {
+                if (_log.IsInfoEnabled)
+                {
+                    _log.Info("Was asked to get write assurance on a database without replication, ignoring the request");
+                }
+                return numberOfReplicasToWaitFor;
+            }
+            var sp = Stopwatch.StartNew();
+            while (true)
+            {
+                var past = ReplicatedPast(lastEtag);
+                if (past >= numberOfReplicasToWaitFor)
+                    return past;
+
+                var remaining = waitForReplicasTimeout - sp.Elapsed;
+                if(remaining < TimeSpan.Zero)
+                    return ReplicatedPast(lastEtag);
+
+                var timeout = Task.Delay(remaining);
+
+                if (await Task.WhenAny(WaitForNextReplicationAsync(), timeout) == timeout)
+                {
+                    return ReplicatedPast(lastEtag);
+                }
+            }
+        }
+
+        private Task WaitForNextReplicationAsync()
+        {
+            TaskCompletionSource<object> result;
+            if (_waitForReplicationTasks.TryPeek(out result))
+                return result.Task;
+
+            result = new TaskCompletionSource<object>();
+            _waitForReplicationTasks.Enqueue(result);
+            return result.Task;
+        }
+
+        private int ReplicatedPast(long etag)
+        {
+            int count = 0;
+            foreach (var destination in _outgoing)
+            {
+                if (destination._lastSentDocumentEtag >= etag)
+                    count++;
+            }
+            return count;
         }
     }
 }

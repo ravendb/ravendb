@@ -145,9 +145,7 @@ namespace Voron
             MaxNumberOfPagesInJournalBeforeFlush = 8192; // 32 MB when 4Kb             
 
             IdleFlushTimeout = 5000; // 5 seconds
-
-            ScratchBufferOverflowTimeout = 5000; // 5 seconds
-
+            
             OwnsPagers = true;
             IncrementalBackupEnabled = false;
 
@@ -156,9 +154,7 @@ namespace Voron
             _log = LoggingSource.Instance.GetLogger<StorageEnvironment>(tempPath);
         }
 
-        public int ScratchBufferOverflowTimeout { get; set; }
-
-
+       
         public static StorageEnvironmentOptions CreateMemoryOnly(string name = null, string configTempPath = null)
         {
             if (configTempPath == null)

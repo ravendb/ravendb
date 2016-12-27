@@ -184,7 +184,7 @@ namespace FastTests.Server.Documents
                 }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
                     var putResult = _documentDatabase.DocumentsStorage.Put(ctx, "users/1", null, doc);
-                    Assert.Equal(1, putResult.ETag);
+                    Assert.Equal(1, putResult.Etag);
                 }
 
                 ctx.Transaction.Commit();
@@ -206,7 +206,7 @@ namespace FastTests.Server.Documents
                 }, "users/2", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
                     var putResult = _documentDatabase.DocumentsStorage.Put(ctx, "users/2", null, doc);
-                    Assert.Equal(2, putResult.ETag);
+                    Assert.Equal(2, putResult.Etag);
                 }
 
                 ctx.Transaction.Commit();
@@ -230,7 +230,7 @@ namespace FastTests.Server.Documents
                 }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
                     var putResult = _documentDatabase.DocumentsStorage.Put(ctx, "users/1", null, doc);
-                    Assert.Equal(1, putResult.ETag);
+                    Assert.Equal(1, putResult.Etag);
                     _documentDatabase.DocumentsStorage.Delete(ctx, "users/1", null);
                 }
 
@@ -256,7 +256,7 @@ namespace FastTests.Server.Documents
                     //this should be 3 because in the use-case of this test,
                     //the tombstone that was created when users/1 was deleted, will have etag == 2
                     //thus, next document that is created will have etag == 3
-                    Assert.Equal(3, putResult.ETag);
+                    Assert.Equal(3, putResult.Etag);
                 }
 
                 ctx.Transaction.Commit();
@@ -523,7 +523,7 @@ namespace FastTests.Server.Documents
                     }, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                     {
                         var putResult = _documentDatabase.DocumentsStorage.Put(ctx, key, null, doc);
-                        Assert.Equal(i, putResult.ETag);
+                        Assert.Equal(i, putResult.Etag);
                     }
                 }
                 ctx.Transaction.Commit();
@@ -548,7 +548,7 @@ namespace FastTests.Server.Documents
                 }, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
                     var putResult = _documentDatabase.DocumentsStorage.Put(ctx, key, null, doc);
-                    Assert.True(putResult.ETag >= 5);
+                    Assert.True(putResult.Etag >= 5);
                     Assert.Equal("users/5", putResult.Key);
                 }
                 ctx.Transaction.Commit();

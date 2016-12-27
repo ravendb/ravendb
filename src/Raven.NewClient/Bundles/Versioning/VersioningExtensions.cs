@@ -1,9 +1,7 @@
-
-using System;
-using System.Linq;
 using System.Threading.Tasks;
 using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Document.Async;
+using Raven.NewClient.Client.Commands;
+using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Bundles.Versioning
 {
@@ -14,12 +12,24 @@ namespace Raven.NewClient.Client.Bundles.Versioning
         /// </summary>
         public static T[] GetRevisionsFor<T>(this ISyncAdvancedSessionOperation session, string id, int start, int pageSize)
         {
-            throw new NotImplementedException();
-            /* var inMemoryDocumentSessionOperations = ((InMemoryDocumentSessionOperations)session);
-             var jsonDocuments = ((DocumentSession)session).DatabaseCommands.GetRevisionsFor(id, start, pageSize);
-             return jsonDocuments
-                 .Select(inMemoryDocumentSessionOperations.TrackEntity<T>)
-                 .ToArray();*/
+            var getRevisionsOperation = new GetRevisionOperation();
+            var command = getRevisionsOperation.CreateRequest(id, start, pageSize);
+            session.RequestExecuter.Execute(command, session.Context);
+            return ProcessResults<T>(session, command);
+        }
+
+        private static T[] ProcessResults<T>(IAdvancedDocumentSessionOperations session, GetRevisionCommand command)
+        {
+            var results = command.Result.Results;
+            var res = new T[results.Length];
+            for (int i = 0; i < results.Length; i++)
+            {
+                var obj = (BlittableJsonReaderObject) results[i];
+                object key;
+                obj.TryGetMember("Id", out key);
+                res[i] = (T) session.ConvertToEntity(typeof(T), key.ToString(), obj);
+            }
+            return res;
         }
 
         /// <summary>
@@ -27,12 +37,10 @@ namespace Raven.NewClient.Client.Bundles.Versioning
         /// </summary>
         public static async Task<T[]> GetRevisionsForAsync<T>(this IAsyncAdvancedSessionOperations session, string id, int start = 0, int pageSize = 25)
         {
-            throw new NotImplementedException();
-            /*var inMemoryDocumentSessionOperations = (InMemoryDocumentSessionOperations)session;
-            var jsonDocuments = await ((AsyncDocumentSession)session).AsyncDatabaseCommands.GetRevisionsForAsync(id, start, pageSize).ConfigureAwait(false);
-            return jsonDocuments
-             .Select(x => (T)inMemoryDocumentSessionOperations.ConvertToEntity(typeof(T),x.Key + "/__revisions", x.DataAsJson, x.Metadata))
-             .ToArray();*/
+            var getRevisionsOperation = new GetRevisionOperation();
+            var command = getRevisionsOperation.CreateRequest(id, start, pageSize);
+            await session.RequestExecuter.ExecuteAsync(command, session.Context).ConfigureAwait(false);
+            return ProcessResults<T>(session, command);
         }
     }
 }

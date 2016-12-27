@@ -147,7 +147,7 @@ namespace NewClientTests.NewClient
 
                     WaitForIndexing(store);
                 }
-				
+                
                 using (var newSession = store.OpenSession())
                 {
                     var queryResult = newSession.Query<DogsIndex.Result, DogsIndex>()

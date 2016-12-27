@@ -38,13 +38,13 @@ namespace Raven.Server.Documents
         private static readonly Slice AllDocsEtagsSlice;
         private static readonly Slice TombstonesSlice;
         private static readonly Slice KeyAndChangeVectorSlice;
- 
+
         private static readonly TableSchema DocsSchema = new TableSchema();
         private static readonly Slice TombstonesPrefix;
         private static readonly Slice DeletedEtagsSlice;
         private static readonly TableSchema ConflictsSchema = new TableSchema();
         private static readonly TableSchema TombstonesSchema = new TableSchema();
-        private static readonly TableSchema CollectionsSchema = new TableSchema();        
+        private static readonly TableSchema CollectionsSchema = new TableSchema();
 
         private readonly DocumentDatabase _documentDatabase;
 
@@ -816,7 +816,7 @@ namespace Raven.Server.Documents
             return result;
         }
 
-        public bool Delete(DocumentsOperationContext context, string key, long? expectedEtag)
+        public DeleteOperationResult? Delete(DocumentsOperationContext context, string key, long? expectedEtag)
         {
             Slice keySlice;
             using (DocumentKeyWorker.GetSliceFromKey(context, key, out keySlice))
@@ -825,7 +825,13 @@ namespace Raven.Server.Documents
             }
         }
 
-        public bool Delete(DocumentsOperationContext context,
+        public struct DeleteOperationResult
+        {
+            public long Etag;
+            public CollectionName Collection;
+        }
+
+        public DeleteOperationResult? Delete(DocumentsOperationContext context,
             Slice loweredKey,
             string key,
             long? expectedEtag,
@@ -833,7 +839,7 @@ namespace Raven.Server.Documents
         {
             var result = GetDocumentOrTombstone(context, loweredKey);
             if (result.Item2 != null)
-                return false; //NOP, already deleted
+                return null; //NOP, already deleted
 
             var doc = result.Item1;
             if (doc == null)
@@ -844,7 +850,7 @@ namespace Raven.Server.Documents
 
                 if (_hasConflicts != 0)
                     ThrowDocumentConflictIfNeeded(context, loweredKey);
-                return false;
+                return null;
             }
 
             if (expectedEtag != null && doc.Etag != expectedEtag)
@@ -872,7 +878,7 @@ namespace Raven.Server.Documents
             int keySize;
             var keyPtr = tvr.Read(2, out keySize);
 
-            CreateTombstone(context,
+            var etag = CreateTombstone(context,
                 lowerKey,
                 lowerSize,
                 keyPtr,
@@ -899,15 +905,13 @@ namespace Raven.Server.Documents
                 IsSystemDocument = collectionName.IsSystem,
             });
 
-            return true;
+            return new DeleteOperationResult
+            {
+                Etag = etag,
+                Collection = collectionName
+            };
         }
 
-        private void ThrowDocumentConflictIfNeeded(DocumentsOperationContext context, string key)
-        {
-            var conflicts = GetConflictsFor(context, key);
-            if (conflicts.Count > 0)
-                throw new DocumentConflictException(key, conflicts);
-        }
 
         private void ThrowDocumentConflictIfNeeded(DocumentsOperationContext context, Slice loweredKey)
         {
@@ -1039,7 +1043,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void CreateTombstone(
+        private long CreateTombstone(
             DocumentsOperationContext context,
             byte* lowerKey, int lowerSize,
             byte* keyPtr, int keySize,
@@ -1086,6 +1090,7 @@ namespace Raven.Server.Documents
                     table.Insert(tbv);
                 }
             }
+            return newEtag;
         }
 
         public void DeleteConflictsFor(DocumentsOperationContext context, string key)
@@ -1125,21 +1130,21 @@ namespace Raven.Server.Documents
                 {
                     foreach (var tvr in result.Results)
                     {
-                        deleted = true;
+                    deleted = true;
 
-                        int size;
-                        var cve = tvr.Read(1, out size);
-                        var vector = new ChangeVectorEntry[size/sizeof(ChangeVectorEntry)];
-                        fixed (ChangeVectorEntry* pVector = vector)
-                        {
-                            Memory.Copy((byte*) pVector, cve, size);
-                        }
-                        list.Add(vector);
-
-                        conflictsTable.Delete(tvr.Id);
-                        break;
+                    int size;
+                    var cve = tvr.Read(1, out size);
+                    var vector = new ChangeVectorEntry[size / sizeof(ChangeVectorEntry)];
+                    fixed (ChangeVectorEntry* pVector = vector)
+                    {
+                        Memory.Copy((byte*)pVector, cve, size);
                     }
+                    list.Add(vector);
+
+                    conflictsTable.Delete(tvr.Id);
+                    break;
                 }
+            }
             }
 
             // once this value has been set, we can't set it to false
@@ -1421,14 +1426,21 @@ namespace Raven.Server.Documents
             }
         }
 
-        public PutResult Put(DocumentsOperationContext context, string key, long? expectedEtag,
+        public struct PutOperationResults
+        {
+            public string Key;
+            public long Etag;
+            public CollectionName Collection;
+        }
+
+        public PutOperationResults Put(DocumentsOperationContext context, string key, long? expectedEtag,
             BlittableJsonReaderObject document,
             ChangeVectorEntry[] changeVector = null)
         {
             if (context.Transaction == null)
             {
                 ThrowPutRequiresTransaction();
-                return null;// never reached
+                return default(PutOperationResults);// never reached
             }
 
             var collectionName = ExtractCollectionName(context, key, document);
@@ -1552,10 +1564,11 @@ namespace Raven.Server.Documents
 
             _documentDatabase.Metrics.DocPutsPerSecond.Mark();
 
-            return new PutResult
+            return new PutOperationResults
             {
-                ETag = newEtag,
-                Key = key
+                Etag = newEtag,
+                Key = key,
+                Collection = collectionName
             };
         }
 

@@ -173,7 +173,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (valueType == ValueType.String)
             {
-                yield return GetOrCreateField(path, (string)value, null, null, storage, indexing, termVector);
+                yield return GetOrCreateField(path, value.ToString(), null, null, storage, indexing, termVector);
                 yield break;
             }
 
@@ -368,11 +368,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (value is AbstractField) return ValueType.Lucene;
 
+            if (value is char) return ValueType.String;
+
             if (value is IConvertible) return ValueType.Convertible;
 
             if (value is BlittableJsonReaderObject) return ValueType.BlittableJsonObject;
 
             if (IsNumber(value)) return ValueType.Numeric;
+
 
             return ValueType.ConvertToJson;
         }
@@ -471,7 +474,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         {
             var fieldName = field.Name + Constants.Indexing.Fields.RangeFieldSuffix;
 
-            var cacheKey = new FieldCacheKey(field.Name, null, storage, termVector, _multipleItemsSameFieldCount.ToArray());
+            var cacheKey = new FieldCacheKey(field.Name, null, storage, termVector,
+                _multipleItemsSameFieldCount.ToArray());
 
             NumericField numericField;
             CachedFieldItem<NumericField> cached;
@@ -495,7 +499,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             {
                 case NumberParseResult.Double:
                     if (field.SortOption == SortOptions.NumericLong)
-                        yield return numericField.SetLongValue((long)doubleValue);
+                        yield return numericField.SetLongValue((long) doubleValue);
                     else
                         yield return numericField.SetDoubleValue(doubleValue);
                     break;

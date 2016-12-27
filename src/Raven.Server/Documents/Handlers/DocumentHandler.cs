@@ -397,7 +397,7 @@ namespace Raven.Server.Documents.Handlers
             public BlittableJsonReaderObject Document;
             public DocumentDatabase Database;
             public ConcurrencyException ConcurrencyException;
-            public PutResult PutResult;
+            public DocumentsStorage.PutOperationResults PutResult;
 
             public override void Execute(DocumentsOperationContext context, RavenTransaction tx)
             {
@@ -461,7 +461,7 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteComma();
 
                     writer.WritePropertyName(("Etag"));
-                    writer.WriteInteger(cmd.PutResult.ETag ?? -1);
+                    writer.WriteInteger(cmd.PutResult.Etag);
 
                     writer.WriteEndObject();
                 }

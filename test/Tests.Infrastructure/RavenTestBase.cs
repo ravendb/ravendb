@@ -227,7 +227,7 @@ namespace FastTests
             store.DatabaseCommands.GlobalAdmin.CreateDatabase(doc);
             store.AfterDispose += (sender, args) =>
             {
-                if (CreatedStores.Contains(store) == false)
+                if (CreatedStores.TryRemove(store) == false)
                     return; // can happen if we are wrapping the store inside sharded one
 
                 if (Server.Disposed == false)
@@ -239,7 +239,6 @@ namespace FastTests
                     store.DatabaseCommands.GlobalAdmin.DeleteDatabase(name, hardDelete: hardDelete);
                 }
 
-                CreatedStores.TryRemove(store);
             };
             CreatedStores.Add(store);
             return store;

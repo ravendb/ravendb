@@ -136,9 +136,11 @@ namespace Raven.Server.Documents.Patch
                 };
             }
 
+            var putResult = new DocumentsStorage.PutOperationResults();
+
             if (document == null)
             {
-                _database.DocumentsStorage.Put(context, documentKey, null, modifiedDocument);
+                putResult = _database.DocumentsStorage.Put(context, documentKey, null, modifiedDocument);
             }
             else
             {
@@ -152,9 +154,16 @@ namespace Raven.Server.Documents.Patch
 
                 if (isModified)
                 {
-                    _database.DocumentsStorage.Put(context, document.Key, document.Etag, modifiedDocument);
+                    putResult = _database.DocumentsStorage.Put(context, document.Key, document.Etag,
+                        modifiedDocument);
                     result.PatchResult = PatchResult.Patched;
                 }
+            }
+
+            if (putResult.Etag != 0)
+            {
+                result.Etag = putResult.Etag;
+                result.Collection = putResult.Collection;
             }
 
             return result;
