@@ -323,6 +323,8 @@ namespace Raven.Client.Document
                             if (done == _disposedTask.Task)
                                 waitingForAck = false; // we will only wait once
 
+                            Console.WriteLine(_localId + " :: receivedMessage=" + receivedMessage?.Type);
+
                             switch (receivedMessage?.Type)
                             {
                                 case SubscriptionConnectionServerMessage.MessageType.Data:
@@ -363,6 +365,7 @@ namespace Raven.Client.Document
 
                         SendAck(_lastReceivedEtag, tcpStream);
                         waitingForAck = true;
+                        Console.WriteLine(_localId + " :: Sent Ack with etag=" + _lastReceivedEtag);
                         readObjectTask = ReadNextObject(jsonReader, true);
                     }
                 }
