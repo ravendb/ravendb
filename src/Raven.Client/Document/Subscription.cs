@@ -295,11 +295,12 @@ namespace Raven.Client.Document
                     var incomingBatch = new List<RavenJObject>();
                     long lastReceivedEtag = 0;
                     bool waitingForAck = false;
-                    while (_proccessingCts.IsCancellationRequested == false)
+                    bool exitAfterConfirm = false;
+                    while (_proccessingCts.IsCancellationRequested == false || waitingForAck)
                     {
                         BeforeBatch();
                         bool endOfBatch = false;
-                        while (endOfBatch == false && _proccessingCts.IsCancellationRequested == false)
+                        while ((endOfBatch == false && _proccessingCts.IsCancellationRequested == false) || waitingForAck)
                         {
                             bool track = false;
                             done = await Task.WhenAny(readObjectTask, _disposedTask.Task).ConfigureAwait(false);
@@ -335,12 +336,14 @@ namespace Raven.Client.Document
                                     AfterBatch(incomingBatch.Count);
                                     incomingBatch.Clear();
                                     waitingForAck = false;
+                                    if (_proccessingCts.IsCancellationRequested)
+                                        exitAfterConfirm = true;
                                     break;
                                 case SubscriptionConnectionServerMessage.MessageType.Error:
                                     switch (receivedMessage.Status)
                                     {
                                         case SubscriptionConnectionServerMessage.ConnectionStatus.Closed:
-                                            throw new SubscriptionClosedException(receivedMessage.Exception??string.Empty);
+                                            throw new SubscriptionClosedException(receivedMessage.Exception ?? string.Empty);
                                         default:
                                             throw new Exception($"Connection terminated by server. Exception: {receivedMessage.Exception ?? "None"}");
                                     }
@@ -355,6 +358,9 @@ namespace Raven.Client.Document
                         {
                             NotifySubscribers(curDoc, out lastReceivedEtag);
                         }
+
+                        if (exitAfterConfirm)
+                            break;
 
                         SendAck(lastReceivedEtag, tcpStream);
                         waitingForAck = true;
