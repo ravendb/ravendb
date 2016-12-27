@@ -71,13 +71,13 @@ namespace Raven.NewClient.Client.Http
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName(context.GetLazyString(nameof(Topology.LeaderNode)));
-                    WriteNode(writer, topology.LeaderNode, context);
+                    WriteNode(writer, topology.LeaderNode.Node, context);
 
-                    writer.WritePropertyName(context.GetLazyString(nameof(Topology.Nodes)));
+                    writer.WritePropertyName(context.GetLazyString(nameof(Topology.Outgoing)));
                     writer.WriteStartArray();
-                    foreach (var node in topology.Nodes)
+                    foreach (var outgoing in topology.Outgoing)
                     {
-                        WriteNode(writer, node, context);
+                        WriteNode(writer, outgoing.Node, context);
                     }
                     writer.WriteEndArray();
 

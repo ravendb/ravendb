@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Replication
         private ReplicationDocument _replicationDocument;
 
         public IEnumerable<IncomingConnectionInfo> IncomingConnections => _incoming.Values.Select(x => x.ConnectionInfo);
-        public IEnumerable<ReplicationDestination> OutgoingConnections => _outgoing.Select(x => x.Destination);
+        public IEnumerable<ReplicationDestination> OutgoingConnections => Outgoing.Select(x => x.Destination);
 
         private readonly ConcurrentQueue<TaskCompletionSource<object>> _waitForReplicationTasks = new ConcurrentQueue<TaskCompletionSource<object>>();
 
@@ -57,9 +57,11 @@ namespace Raven.Server.Documents.Replication
         public IReadOnlyDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>> IncomingRejectionStats => _incomingRejectionStats;
         public IEnumerable<ReplicationDestination> ReconnectQueue => _reconnectQueue.Select(x => x.Destination);
 
+        public IReadOnlyCollection<OutgoingReplicationHandler> Outgoing => _outgoing;
+
         public long? GetLastReplicatedEtagForDestination(ReplicationDestination dest)
         {
-            foreach (var replicationHandler in _outgoing)
+            foreach (var replicationHandler in Outgoing)
             {
                 if (replicationHandler.Destination.IsMatch(dest))
                     return replicationHandler._lastSentDocumentEtag;
@@ -371,7 +373,7 @@ namespace Raven.Server.Documents.Replication
                 _log.Info("System document change detected. Starting and stopping outgoing replication threads.");
 
 
-            foreach (var instance in _outgoing)
+            foreach (var instance in Outgoing)
                 instance.Dispose();
 
             _outgoing.Clear();
@@ -417,7 +419,7 @@ namespace Raven.Server.Documents.Replication
             foreach (var incoming in _incoming)
                 incoming.Value.Dispose();
 
-            foreach (var outgoing in _outgoing)
+            foreach (var outgoing in Outgoing)
                 outgoing.Dispose();
 
         }

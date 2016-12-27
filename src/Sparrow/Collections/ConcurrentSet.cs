@@ -9,7 +9,7 @@ using System.Linq;
 namespace Sparrow.Collections
 {
     [DebuggerTypeProxy(typeof(ConcurrentSet<>.DebugProxy))]
-    public class ConcurrentSet<T> : IEnumerable<T>
+    public class ConcurrentSet<T> : ICollection<T>, IReadOnlyCollection<T>
     {
         public class DebugProxy
         {
@@ -36,7 +36,10 @@ namespace Sparrow.Collections
             _inner = new ConcurrentDictionary<T, object>(comparer);
         }
 
+        public bool Remove(T item) => _inner.Keys.Remove(item);
+
         public int Count => _inner.Count;
+        public bool IsReadOnly => _inner.Keys.IsReadOnly;
 
         public void Add(T item)
         {
@@ -51,6 +54,11 @@ namespace Sparrow.Collections
         public bool Contains(T item)
         {
             return _inner.ContainsKey(item);
+        }
+
+        public void CopyTo(T[] array, int arrayIndex)
+        {
+            _inner.Keys.CopyTo(array, arrayIndex);
         }
 
         public bool TryRemove(T item)
@@ -78,5 +86,6 @@ namespace Sparrow.Collections
         {
             return Count.ToString("#,#", CultureInfo.InvariantCulture);
         }
+
     }
 }
