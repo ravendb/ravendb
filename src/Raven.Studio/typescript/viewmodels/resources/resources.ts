@@ -48,7 +48,7 @@ class resources extends viewModelBase {
     constructor() {
         super();
 
-        this.bindToCurrentInstance("toggleResource", "toggleDatabaseIndexing", "deleteResource");
+        this.bindToCurrentInstance("toggleResource", "toggleDatabaseIndexing", "deleteResource", "activateResource");
 
         this.initObservables();
     }
@@ -371,15 +371,15 @@ class resources extends viewModelBase {
         app.showBootstrapDialog(createDbView);
     }
 
-    activateResource(qualifiedName: string) {
-        let resource = this.resourcesManager.resources().filter(x => x.qualifiedName === qualifiedName)[0];
+    activateResource(rsInfo: resourceInfo) {
+        let resource = this.resourcesManager.resources().filter(x => x.qualifiedName === rsInfo.qualifiedName)[0];
         if (!resource)
             return;
 
         activeResourceTracker.default.resource(resource);
         resource.activate();
 
-        let resourceOnPage = this.resources().sortedResources().find(rs => rs.qualifiedName === qualifiedName);
+        let resourceOnPage = this.resources().sortedResources().find(rs => rs.qualifiedName === rsInfo.qualifiedName);
         if (!resourceOnPage)
             return;
 
