@@ -76,7 +76,6 @@ abstract class resourceCreationModel {
         const maxLength = 248;
 
         const rg1 = /^[^*?"<>\|]*$/; // forbidden characters * ? " < > |
-        const rg2 = /[\\//]{2,}/;    // multiple '\', '/' is forbidden
         const rg3 = /^(nul|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
 
         observable.extend({
@@ -88,11 +87,6 @@ abstract class resourceCreationModel {
                 validator: (val: string) => rg1.test(val),
                 message: `{0} path can't contain any of the following characters: * ? " < > |`,
                 params: name
-            },
-            {
-                validator: (val: string) => !(rg2.test(val)),
-                message: `{0} path can't contain multiple characters: \\ / `,
-                params: name                    
             },
             {
                validator: (val: string) => !rg3.test(val),
