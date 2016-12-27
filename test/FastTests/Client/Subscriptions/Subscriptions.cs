@@ -1,19 +1,9 @@
-﻿using Raven.Client.Connection.Implementation;
-using Raven.Client.Document;
-using Raven.Json.Linq;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions.Subscriptions;
-using Raven.Abstractions.Util;
-using Raven.Client;
-using Raven.Client.Extensions;
 using Xunit;
 using Raven.Tests.Notifications;
 using Sparrow;
@@ -27,7 +17,7 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionCriteria = new Raven.Abstractions.Data.SubscriptionCriteria
+                var subscriptionCriteria = new SubscriptionCriteria
                 {
                     Collection = "People",
                 };
@@ -90,7 +80,7 @@ namespace FastTests.Client.Subscriptions
                 var lastEtag = store.GetLastWrittenEtag() ?? 0;
                 await CreateDocuments(store, 5);
 
-                var subscriptionCriteria = new Raven.Abstractions.Data.SubscriptionCriteria
+                var subscriptionCriteria = new SubscriptionCriteria
                 {
                     Collection = "Things",
                 };

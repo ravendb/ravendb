@@ -209,6 +209,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     }
                     catch (Exception)
                     {
+                        // ignored
                     }
                 }
                 finally
@@ -238,6 +239,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         }
                         catch
                         {
+                            // ignored
                         }
                     }
                     tcpConnectionOptions.Dispose();
@@ -485,6 +487,7 @@ namespace Raven.Server.Documents.TcpHandlers
             }
             catch (Exception)
             {
+                // ignored
             }
         }
     }

@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -50,9 +49,6 @@ namespace Raven.Client.Document
         private NetworkStream _networkStream;
         private readonly TaskCompletionSource<object> _disposedTask = new TaskCompletionSource<object>();
 
-        private static long Counter;
-
-        public long _localId = Interlocked.Increment(ref Counter);
         private long _lastReceivedEtag;
 
         internal Subscription(SubscriptionConnectionOptions options,
@@ -84,7 +80,7 @@ namespace Raven.Client.Document
             }
             catch
             {
-
+                // ignored
             }
         }
         /// <summary>
@@ -254,16 +250,16 @@ namespace Raven.Client.Document
                     break;
                 case SubscriptionConnectionServerMessage.ConnectionStatus.InUse:
                     throw new SubscriptionInUseException(
-                        $"Subscription With Id {this._options.SubscriptionId} cannot be opened, because it's in use and the connection strategy is {this._options.Strategy}");
+                        $"Subscription With Id {_options.SubscriptionId} cannot be opened, because it's in use and the connection strategy is {_options.Strategy}");
                 case SubscriptionConnectionServerMessage.ConnectionStatus.Closed:
                     throw new SubscriptionClosedException(
-                        $"Subscription With Id {this._options.SubscriptionId} cannot be opened, because it was closed");
+                        $"Subscription With Id {_options.SubscriptionId} cannot be opened, because it was closed");
                 case SubscriptionConnectionServerMessage.ConnectionStatus.NotFound:
                     throw new SubscriptionDoesNotExistException(
-                        $"Subscription With Id {this._options.SubscriptionId} cannot be opened, because it does not exist");
+                        $"Subscription With Id {_options.SubscriptionId} cannot be opened, because it does not exist");
                 default:
                     throw new ArgumentException(
-                        $"Subscription {this._options.SubscriptionId} could not be opened, reason: {connectionStatus.Status}");
+                        $"Subscription {_options.SubscriptionId} could not be opened, reason: {connectionStatus.Status}");
             }
         }
 
@@ -317,8 +313,7 @@ namespace Raven.Client.Document
                                     break;
                             }
 
-                            SubscriptionConnectionServerMessage receivedMessage = null;
-                            receivedMessage = await readObjectTask.ConfigureAwait(false);
+                            var receivedMessage = await readObjectTask.ConfigureAwait(false);
 
                             if (done == _disposedTask.Task)
                                 waitingForAck = false; // we will only wait once
@@ -366,7 +361,6 @@ namespace Raven.Client.Document
 
                         SendAck(_lastReceivedEtag, tcpStream);
                         waitingForAck = true;
-                        Console.WriteLine(_localId + " :: Sent Ack with etag=" + _lastReceivedEtag);
                         readObjectTask = ReadNextObject(jsonReader, true);
                     }
                 }
@@ -512,7 +506,6 @@ namespace Raven.Client.Document
                             _options.SubscriptionId), e);
                 }
             }
-            return;
         }
 
         private async Task<bool> TryHandleRejectedConnection(Exception ex, bool reopenTried)
@@ -566,6 +559,7 @@ namespace Raven.Client.Document
                 }
                 catch (Exception)
                 {
+                    // ignored
                 }
             }
             if (_tcpClient != null)
@@ -577,7 +571,7 @@ namespace Raven.Client.Document
                 }
                 catch (Exception)
                 {
-
+                    // ignored
                 }
             }
         }
