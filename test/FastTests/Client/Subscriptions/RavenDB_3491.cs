@@ -202,9 +202,6 @@ namespace FastTests.Client.Subscriptions
                     }, user2Etag ?? 0);
 
 
-                    Console.WriteLine($"user2Etag={user2Etag}");
-
-
                     var users = new List<RavenJObject>();
 
                     using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions
@@ -212,8 +209,6 @@ namespace FastTests.Client.Subscriptions
                         SubscriptionId = subscriptionId
                     }))
                     {
-                        Console.WriteLine($"subscriptionId={subscriptionId}");
-
                         var docs = new BlockingCollection<RavenJObject>();
                         var keys = new BlockingCollection<string>();
                         var ages = new BlockingCollection<int>();
@@ -225,8 +220,6 @@ namespace FastTests.Client.Subscriptions
 
                         await subscription.StartAsync();
 
-                        Debugprint(docs, keys, ages);
-
                         RavenJObject doc;
                         Assert.True(docs.TryTake(out doc, waitForDocTimeout));
                         users.Add(doc);
@@ -236,8 +229,6 @@ namespace FastTests.Client.Subscriptions
                         users.Add(doc);
                         var cnt = users.Count;
                         Assert.Equal(3, cnt);
-
-                        Debugprint(docs, keys, ages);
 
                         string key;
                         Assert.True(keys.TryTake(out key, waitForDocTimeout));
@@ -249,8 +240,6 @@ namespace FastTests.Client.Subscriptions
                         Assert.True(keys.TryTake(out key, waitForDocTimeout));
                         Assert.Equal("users/5", key);
 
-                        Debugprint(docs, keys, ages);
-
                         int age;
                         Assert.True(ages.TryTake(out age, waitForDocTimeout));
                         Assert.Equal(30, age);
@@ -260,14 +249,8 @@ namespace FastTests.Client.Subscriptions
 
                         Assert.True(ages.TryTake(out age, waitForDocTimeout));
                         Assert.Equal(34, age);
-
-                        Debugprint(docs, keys, ages);
-
-
                     }
                 }
-
-
 
                 using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions
                 {
@@ -275,62 +258,17 @@ namespace FastTests.Client.Subscriptions
                 }))
                 {
 
-                    Console.WriteLine($"subscriptionId=${subscriptionId}");
-
-
-
                     var docs = new BlockingCollection<RavenJObject>();
 
-                    Debugprint(docs);
-
-
                     subscription.Subscribe(o => docs.Add(o));
-
-                    Debugprint(docs);
 
                     await subscription.StartAsync();
 
                     RavenJObject item;
-                    Debugprint(docs);
                     var tryTake = docs.TryTake(out item, TimeSpan.FromMilliseconds(250));
-                    if (tryTake)
-                        Console.WriteLine(item);
-
-                    if (tryTake == true)
-                    {
-                        Debugprint(docs);
-
-                        Console.WriteLine($"********************** FAILED *******************");
-
-                        Debugprint(docs);
-
-                    }
-
-                    Debugprint(docs);
-
                     Assert.False(tryTake);
-
-                    Debugprint(docs);
-
-                    Console.WriteLine($"___SUCCESS___");
-
-                    Debugprint(docs);
                 }
             }
-        }
-
-        private static int cnt = 0;
-
-        private static void Debugprint(BlockingCollection<RavenJObject> docs, BlockingCollection<string> keys = null, BlockingCollection<int> ages=null )
-        {
-            //Console.WriteLine($"{++cnt} : ==========================");
-            Console.WriteLine($"{++cnt} : docs.Count={docs.Count}");
-            //docs.ForEach(x => Console.WriteLine("==> " + x));
-
-            //if (keys != null) Console.WriteLine($"{++cnt} : keys.Count={keys.Count}");
-            //if (ages != null) Console.WriteLine($"{++cnt} : ages.Count={ages.Count}");
-
-            Console.Out.Flush();
         }
     }
 }

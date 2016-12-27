@@ -323,8 +323,6 @@ namespace Raven.Client.Document
                             if (done == _disposedTask.Task)
                                 waitingForAck = false; // we will only wait once
 
-                            Console.WriteLine(_localId + " :: receivedMessage=" + receivedMessage?.Type);
-
                             switch (receivedMessage?.Type)
                             {
                                 case SubscriptionConnectionServerMessage.MessageType.Data:
@@ -346,7 +344,6 @@ namespace Raven.Client.Document
                                             throw new SubscriptionClosedException(receivedMessage.Exception ?? string.Empty);
                                         default:
                                         {
-                                            Console.WriteLine(_localId + " -- " + receivedMessage.Exception);
                                             throw new Exception(
                                                 $"Connection terminated by server. Exception: {receivedMessage.Exception ?? "None"}");
                                         }
