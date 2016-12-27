@@ -345,7 +345,11 @@ namespace Raven.Client.Document
                                         case SubscriptionConnectionServerMessage.ConnectionStatus.Closed:
                                             throw new SubscriptionClosedException(receivedMessage.Exception ?? string.Empty);
                                         default:
-                                            throw new Exception($"Connection terminated by server. Exception: {receivedMessage.Exception ?? "None"}");
+                                        {
+                                            Console.WriteLine(_localId + " -- " + receivedMessage.Exception);
+                                            throw new Exception(
+                                                $"Connection terminated by server. Exception: {receivedMessage.Exception ?? "None"}");
+                                        }
                                     }
                                                                         
                                 default:
