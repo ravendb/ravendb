@@ -4,7 +4,9 @@
     "test",
     "bench",
     "libs",
-    "tools"
+    "tools",
+    "tests",
+    "ClientTests"
   ],
   "sdk": {
     "version": "1.0.0-preview2-1-003177",

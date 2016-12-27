@@ -23,11 +23,13 @@ namespace Tryouts
         {
             for (int i = 0; i < 100; i++)
             {
-                Console.WriteLine(i);
-                using (var a = new FastTests.Client.Subscriptions.Subscriptions())
+                Console.WriteLine(i); 
+                using (var a = new NewClientTests.NewClient.FastTests.Versioning.Versioning())
                 {
-                    a.SubscriptionSimpleTakeOverStrategy().Wait();
+                    a.WillDeleteRevisionsIfDeleted_OnlyIfPurgeOnDeleteIsTrue().Wait();
                 }
+                Console.WriteLine(i);
+
             }
         }
     }
