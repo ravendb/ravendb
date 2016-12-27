@@ -366,21 +366,17 @@ namespace Rachis.Behaviors
                 return;
             }
 
-
+            Debug.Assert(resp.From != null);
             if (resp.Success == false)
             {
-                _nextIndexes[resp.From] = resp.LastLogIndex - 1;
-                _matchIndexes[resp.From] = 0;
-
+                UpdateNodeIndexes(resp, resp.LastLogIndex - 1, 0);
                 if (_log.IsDebugEnabled)
-                    _log.Debug("Received Success = false in AppendEntriesResponse from {1}. Now _nextIndexes[{1}] = {0}. Reason: {2}",
-                    _nextIndexes[resp.From], resp.From, resp.Message);
+                    _log.Debug($"Appended entries for {resp.From} failed. Reason: {resp.Message}");
                 return;
             }
 
-            Debug.Assert(resp.From != null);
-            _nextIndexes[resp.From] = resp.LastLogIndex + 1;
-            _matchIndexes[resp.From] = resp.LastLogIndex;
+            UpdateNodeIndexes(resp, resp.LastLogIndex + 1, resp.LastLogIndex);
+
             _lastContact[resp.From] = DateTime.UtcNow;
             if (_log.IsDebugEnabled)
                 _log.Debug("Follower ({0}) has LastLogIndex = {1}", resp.From, resp.LastLogIndex);
@@ -441,6 +437,45 @@ namespace Rachis.Behaviors
                 Engine.EngineStatistics.ReportCommitIndex(result.AssignedIndex);
                 result.Complete();
             }
+        }
+
+        private void UpdateNodeIndexes(AppendEntriesResponse resp, long defaultNextIndex, long defaultMatchIndex)
+        {
+            if (resp.MidpointIndex == null || resp.MidpointTerm == null) // no information, just go back one step
+            {
+                _nextIndexes[resp.From] = defaultNextIndex;
+                _matchIndexes[resp.From] = defaultMatchIndex;
+
+                if (_log.IsDebugEnabled)
+                    _log.Debug($"UpdateNodeIndexes: No midpoint index. Using default next index {defaultNextIndex}");
+            }
+            else
+            {
+                var midpointIndex = resp.MidpointIndex.Value;
+                var myMidpointTerm = Engine.PersistentState.TermFor(midpointIndex) ?? 0;
+                if (myMidpointTerm == resp.MidpointTerm.Value)
+                {
+                    // we know that we are a match on the middle, so let us set the 
+                    // next attempt to be half way from the midpoint to the end
+                    _nextIndexes[resp.From] = midpointIndex + Math.Abs(resp.LastLogIndex - midpointIndex) / 2;
+                    _matchIndexes[resp.From] = midpointIndex;
+
+                    if (_log.IsDebugEnabled)
+                        _log.Debug($"UpdateNodeIndexes: Got match for mindpoint index: {midpointIndex}, term: {myMidpointTerm}.");
+                }
+                else
+                {
+                    // we don't have a match, so we need to go backward yet
+                    _nextIndexes[resp.From] = midpointIndex - Math.Abs(resp.LastLogIndex - midpointIndex) / 2;
+                    _matchIndexes[resp.From] = 0;
+
+                    if (_log.IsDebugEnabled)
+                        _log.Debug($"UpdateNodeIndexes: Got mismatch for mindpoint index: {midpointIndex}, leader term: {myMidpointTerm}, follower term: {resp.MidpointTerm.Value}");
+                }
+            }
+
+            if (_log.IsDebugEnabled)
+                _log.Debug($"UpdateNodeIndexes operation result for {resp.From}: _nextIndexes = {_nextIndexes[resp.From]}, _matchIndexes = {_matchIndexes[resp.From]}.");
         }
 
         private void PromoteNodeToVoter(AppendEntriesResponse resp)

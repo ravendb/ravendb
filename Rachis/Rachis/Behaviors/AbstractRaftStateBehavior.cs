@@ -416,6 +416,8 @@ namespace Rachis.Behaviors
 
         public virtual AppendEntriesResponse Handle(AppendEntriesRequest req)
         {
+            var lastLogIndex = Engine.PersistentState.LastLogEntry().Index;
+
             if (FromOurTopology(req) == false)
             {
                 _log.Info("Got an append entries message outside my cluster topology (id: {0}), ignoring", req.ClusterTopologyId);
@@ -423,7 +425,7 @@ namespace Rachis.Behaviors
                 {
                     Success = false,
                     CurrentTerm = Engine.PersistentState.CurrentTerm,
-                    LastLogIndex = Engine.PersistentState.LastLogEntry().Index,
+                    LastLogIndex = lastLogIndex,
                     LeaderId = Engine.CurrentLeader,
                     Message = "Cannot accept append entries from a node outside my cluster. My topology id is: " + Engine.CurrentTopology.TopologyId,
                     From = Engine.Name,
@@ -443,7 +445,7 @@ namespace Rachis.Behaviors
                 {
                     Success = false,
                     CurrentTerm = Engine.PersistentState.CurrentTerm,
-                    LastLogIndex = Engine.PersistentState.LastLogEntry().Index,
+                    LastLogIndex = lastLogIndex,
                     LeaderId = Engine.CurrentLeader,
                     Message = msg,
                     From = Engine.Name,
@@ -465,10 +467,13 @@ namespace Rachis.Behaviors
             var prevTerm = Engine.PersistentState.TermFor(req.PrevLogIndex) ?? 0;
             if (prevTerm != req.PrevLogTerm)
             {
-                var msg = string.Format(
-                    "Rejecting append entries because msg previous term {0} is not the same as the persisted current term {1} at log index {2}",
-                    req.PrevLogTerm, prevTerm, req.PrevLogIndex);
+                var midpointIndex = req.PrevLogIndex / 2;
+                var midpointTerm = Engine.PersistentState.TermFor(midpointIndex) ?? 0;
+
+                var msg = $"Rejecting append entries because msg previous term {req.PrevLogTerm} is not the same as the persisted current term {prevTerm}" +
+                          $" at log index {req.PrevLogIndex}. Midpoint index {midpointIndex}, midpoint term: {midpointTerm}";
                 _log.Info(msg);
+                
                 return new AppendEntriesResponse
                 {
                     Success = false,
@@ -476,6 +481,8 @@ namespace Rachis.Behaviors
                     LastLogIndex = req.PrevLogIndex,
                     Message = msg,
                     LeaderId = Engine.CurrentLeader,
+                    MidpointIndex = midpointIndex,
+                    MidpointTerm = midpointTerm,
                     From = Engine.Name,
                     ClusterTopologyId = Engine.CurrentTopology.TopologyId,
                 };
@@ -483,6 +490,15 @@ namespace Rachis.Behaviors
 
             LastHeartbeatTime = DateTime.UtcNow;
             LastMessageTime = DateTime.UtcNow;
+
+            var appendEntriesResponse = new AppendEntriesResponse
+            {
+                Success = true,
+                CurrentTerm = Engine.PersistentState.CurrentTerm,
+                From = Engine.Name,
+                ClusterTopologyId = Engine.CurrentTopology.TopologyId,
+            };
+
             if (req.Entries.Length > 0)
             {
                 if (_log.IsDebugEnabled)
@@ -511,7 +527,20 @@ namespace Rachis.Behaviors
                 }
 
                 if (skip != req.Entries.Length)
+                {
                     Engine.PersistentState.AppendToLog(Engine, req.Entries.Skip(skip), req.PrevLogIndex + skip);
+                }
+                else
+                {
+                    // if we skipped the whole thing, this is fine, but let us hint to the leader that we are more 
+                    // up to date then it thinks
+                    var lastReceivedIndex = req.Entries[req.Entries.Length - 1].Index;
+                    appendEntriesResponse.MidpointIndex = lastReceivedIndex + (lastLogIndex - lastReceivedIndex) / 2;
+                    appendEntriesResponse.MidpointTerm = Engine.PersistentState.TermFor(appendEntriesResponse.MidpointIndex.Value) ?? 0;
+
+                    _log.Info($"Got {req.Entries.Length} entires from index {req.Entries[0].Index} with term {req.Entries[0].Term} skipping all. " +
+                              $"Setting midpoint index to {appendEntriesResponse.MidpointIndex} with term {appendEntriesResponse.MidpointTerm}.");
+                }
 
                 var topologyChange = req.Entries.LastOrDefault(x => x.IsTopologyChange == true);
 
@@ -536,7 +565,7 @@ namespace Rachis.Behaviors
             }
 
             var lastIndex = req.Entries.Length == 0 ?
-                Engine.PersistentState.LastLogEntry().Index :
+                lastLogIndex :
                 req.Entries[req.Entries.Length - 1].Index;
             try
             {				
@@ -546,14 +575,8 @@ namespace Rachis.Behaviors
                     CommitEntries(req.Entries, nextCommitIndex);
                 }
 
-                return new AppendEntriesResponse
-                {
-                    Success = true,
-                    CurrentTerm = Engine.PersistentState.CurrentTerm,
-                    LastLogIndex = Engine.PersistentState.LastLogEntry().Index,
-                    From = Engine.Name,
-                    ClusterTopologyId = Engine.CurrentTopology.TopologyId,
-                };
+                appendEntriesResponse.LastLogIndex = lastLogIndex;
+                return appendEntriesResponse;
             }
             catch (Exception e)
             {
@@ -561,7 +584,7 @@ namespace Rachis.Behaviors
                 {
                     Success = false,
                     CurrentTerm = Engine.PersistentState.CurrentTerm,
-                    LastLogIndex = Engine.PersistentState.LastLogEntry().Index,
+                    LastLogIndex = lastLogIndex,
                     Message = "Failed to apply new entries. Reason: " + e,
                     From = Engine.Name,
                     ClusterTopologyId = Engine.CurrentTopology.TopologyId,
