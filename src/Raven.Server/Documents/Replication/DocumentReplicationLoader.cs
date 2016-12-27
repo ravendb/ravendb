@@ -475,6 +475,7 @@ namespace Raven.Server.Documents.Replication
             var sp = Stopwatch.StartNew();
             while (true)
             {
+                var waitForNextReplicationAsync = WaitForNextReplicationAsync();
                 var past = ReplicatedPast(lastEtag);
                 if (past >= numberOfReplicasToWaitFor)
                     return past;
@@ -484,8 +485,13 @@ namespace Raven.Server.Documents.Replication
                     return ReplicatedPast(lastEtag);
 
                 var timeout = Task.Delay(remaining);
-
-                if (await Task.WhenAny(WaitForNextReplicationAsync(), timeout) == timeout)
+                try
+                {
+                    if (await Task.WhenAny(waitForNextReplicationAsync, timeout) == timeout)
+                    {
+                        return ReplicatedPast(lastEtag);
+                    }
+                } catch(OperationCanceledException)
                 {
                     return ReplicatedPast(lastEtag);
                 }
