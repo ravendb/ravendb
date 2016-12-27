@@ -4,7 +4,7 @@
             <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
                 <i class="fa fa-times"></i>
             </button>
-            <h4 class="modal-title">Sure?</h4>
+            <h4 class="modal-title">Are you sure?</h4>
         </div>
         <div class="modal-body">
             <div data-bind="visible: resourcesToDelete.length === 1">
@@ -25,19 +25,7 @@
 
             <form class="form-horizontal">
                 <div class="form-group">
-                    <label class="col-sm-4 control-label">Delete options</label>
                     <div class="col-sm-8">
-                        <div class="btn-group">
-                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                                <span data-bind="visible: isKeepingFiles">Keep files on disk</span>
-                                <span data-bind="visible: !isKeepingFiles()">Delete everything</span>
-                                <span class="caret"></span>
-                            </button>
-                            <ul class="dropdown-menu" role="menu">
-                                <li><a href="#" data-bind="click: keepFiles" title="Keep the physical database files on disk">Keep files on disk</a></li>
-                                <li><a href="#" data-bind="click: deleteEverything" title="Delete all the on-disk files for this database">Delete everything</a></li>
-                            </ul>
-                        </div>
                         <p class="help-block" data-bind="visible: resourcesToDelete.length > 1">
                             <i class="fa fa-info-circle"></i> Delete options will be applied to all of the deleted resources.
                         </p>
@@ -45,9 +33,14 @@
                 </div>
             </form>
         </div>
+
         <div class="modal-footer">
-            <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
-            <button type="button" class="btn btn-danger" data-bind="click: confirm">Delete</button>
+            <div class="row">
+                <label class="col-xs-4 col-sm-3 control-label">Delete options:</label>
+                <button data-bind="click: keepFiles" type="button" class="col-sm-3 btn btn-danger" title="Keep the physical database files on disk">Keep files on disk</button>
+                <button data-bind="click: deleteEverything" type="button" class="col-sm-3 btn btn-danger" title="Delete all the on-disk files for this database">Delete everything</button>
+                <button type="button" class="col-sm-2 btn btn-default" data-bind="click: cancel">Cancel</button>
+            </div>
         </div>
     </div>
 </div>
