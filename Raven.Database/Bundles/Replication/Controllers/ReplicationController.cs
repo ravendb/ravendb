@@ -568,8 +568,17 @@ namespace Raven.Database.Bundles.Replication.Controllers
                 replicas = Math.Min(destinations.Length, replicas);
             }
             Etag innerEtag = Etag.Parse(etag);
-            await ReplicationTask.WaitForReplicationAsync(innerEtag, timeout, replicas, majority, true).ConfigureAwait(false);
 
+            int numberOfReplicasToWaitFor = majority ? replicationTask.GetSizeOfMajorityFromActiveReplicationDestination(replicas) : replicas;
+
+            var numberOfReplicatesPast = await replicationTask.WaitForReplicationAsync(innerEtag, timeout, numberOfReplicasToWaitFor).ConfigureAwait(false);
+
+            if (numberOfReplicatesPast < numberOfReplicasToWaitFor)
+            {
+                throw new TimeoutException(
+                    $"Could not verify that etag {innerEtag} was replicated to {numberOfReplicasToWaitFor} servers in {timeout}. So far, it only replicated to {numberOfReplicatesPast}");
+            }
+            //If we got here than we finished replicating to the required amount of servers.
             return GetEmptyMessage();
         }
 
