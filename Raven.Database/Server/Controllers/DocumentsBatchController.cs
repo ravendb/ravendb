@@ -235,10 +235,20 @@ namespace Raven.Database.Server.Controllers
                 }
                 return;
             }
-            if (lastResultWithEtag != null)
+            //what can we do if we don't have this?
+            if (lastResultWithEtag == null)
+                return;
+
+            int numberOfReplicasToWaitFor = majority ? replicationTask.GetSizeOfMajorityFromActiveReplicationDestination(replicas) : replicas;
+
+            var numberOfReplicatesPast = await replicationTask.WaitForReplicationAsync(lastResultWithEtag.Etag, timeout, numberOfReplicasToWaitFor).ConfigureAwait(false);
+
+            if (numberOfReplicatesPast < numberOfReplicasToWaitFor && throwOnTimeout)
             {
-                await replicationTask.WaitForReplicationAsync(lastResultWithEtag.Etag, timeout, replicas, majority, throwOnTimeout).ConfigureAwait(false);
+                throw new TimeoutException(
+                    $"Could not verify that etag {lastResultWithEtag.Etag} was replicated to {numberOfReplicasToWaitFor} servers in {timeout}. So far, it only replicated to {numberOfReplicatesPast}");
             }
+            //If we got here than we are either ignoring timeouts or we finished replicating to the required amount of servers.
         }
 
         [HttpDelete]
