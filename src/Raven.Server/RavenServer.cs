@@ -355,13 +355,19 @@ namespace Raven.Server
                         tcp.Operation = header.Operation;
                         var databaseLoadingTask = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(header.DatabaseName);
                         if (databaseLoadingTask == null)
-                            throw new DatabaseDoesNotExistsException("There is no database named " + header.DatabaseName);
+                        {
+                            ThrowNoSuchDatabase(header);
+                            return;// never hit
+                        }
 
                         var databaseLoadTimeout = ServerStore.DatabasesLandlord.DatabaseLoadTimeout;
 
-                        if (await Task.WhenAny(databaseLoadingTask, Task.Delay(databaseLoadTimeout)) != databaseLoadingTask)
-                            throw new InvalidOperationException(
-                                $"Timeout when loading database {header.DatabaseName}, try again later");
+                        if (databaseLoadingTask.IsCompleted == false)
+                        {
+                            var resultingTask = await Task.WhenAny(databaseLoadingTask, Task.Delay(databaseLoadTimeout));
+                            if (resultingTask != databaseLoadingTask)
+                                ThrowTimeoutOnDatbaseLoad(header);
+                        }
 
                         tcp.DocumentDatabase = await databaseLoadingTask;
                         tcp.DocumentDatabase.RunningTcpConnections.Add(tcp);
@@ -416,6 +422,17 @@ namespace Raven.Server
                 }
 
             });
+        }
+
+        private static void ThrowTimeoutOnDatbaseLoad(TcpConnectionHeaderMessage header)
+        {
+            throw new InvalidOperationException(
+                $"Timeout when loading database {header.DatabaseName}, try again later");
+        }
+
+        private static void ThrowNoSuchDatabase(TcpConnectionHeaderMessage header)
+        {
+            throw new DatabaseDoesNotExistsException("There is no database named " + header.DatabaseName);
         }
 
         public RequestRouter Router { get; private set; }
