@@ -218,7 +218,9 @@ namespace Raven.Server.Documents.Replication
                                 using (_configurationContext.OpenReadTransaction())
                                     currentEtag = _database.IndexMetadataPersistence.ReadLastEtag(_configurationContext.Transaction.InnerTransaction);
 
-                                if (currentEtag != indexAndTransformerSender.LastEtag)
+                               
+                                if (_destination.SkipIndexReplication == false &&
+                                    currentEtag != indexAndTransformerSender.LastEtag)
                                 {
                                     indexAndTransformerSender.ExecuteReplicationOnce();
                                 }
