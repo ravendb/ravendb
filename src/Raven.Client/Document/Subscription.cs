@@ -288,8 +288,7 @@ namespace Raven.Client.Document
                     Task.Run(() => successfullyConnected.TrySetResult(null));
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
-                    readObjectTask = ReadNextObject(jsonReader, false);
-
+                    readObjectTask = ReadNextObject(jsonReader, waitForAck: false);
 
                     if (_proccessingCts.IsCancellationRequested)
                         return;
@@ -303,22 +302,24 @@ namespace Raven.Client.Document
                         bool endOfBatch = false;
                         while ((endOfBatch == false && _proccessingCts.IsCancellationRequested == false) || waitingForAck)
                         {
-                            if (readObjectTask == null)
-                                readObjectTask = ReadNextObject(jsonReader, waitingForAck);
-
                             done = await Task.WhenAny(readObjectTask, _disposedTask.Task).ConfigureAwait(false);
+                            SubscriptionConnectionServerMessage receivedMessage;
                             if (done == _disposedTask.Task)
                             {
                                 if (waitingForAck == false)
                                     break;
+                                waitingForAck = false; // we will only wait once
+                                receivedMessage = await readObjectTask.ConfigureAwait(false);
+                            }
+                            else
+                            {
+                                receivedMessage = await readObjectTask.ConfigureAwait(false);
+                                if (receivedMessage == null)
+                                    break; // cancelled
+                                readObjectTask = ReadNextObject(jsonReader, waitForAck: true);
                             }
 
-                            var receivedMessage = await readObjectTask.ConfigureAwait(false);
-
-                            if (done == _disposedTask.Task)
-                                waitingForAck = false; // we will only wait once
-
-                            switch (receivedMessage?.Type)
+                            switch (receivedMessage.Type)
                             {
                                 case SubscriptionConnectionServerMessage.MessageType.Data:
                                     incomingBatch.Add(receivedMessage.Data);
@@ -348,7 +349,6 @@ namespace Raven.Client.Document
                                     throw new ArgumentException(
                                         $"Unrecognized message '{receivedMessage?.Type}' type received from server");
                             }
-                            readObjectTask = null;
                         }
 
                         if (_proccessingCts.IsCancellationRequested)
@@ -361,7 +361,6 @@ namespace Raven.Client.Document
 
                         SendAck(_lastReceivedEtag, tcpStream);
                         waitingForAck = true;
-                        readObjectTask = ReadNextObject(jsonReader, true);
                     }
                 }
             }
