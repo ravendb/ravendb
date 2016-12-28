@@ -24,14 +24,10 @@ namespace Tryouts
         {
             for (int i = 0; i < 100; i++)
             {
-                Console.WriteLine(i); 
-                using (var a = new RavenDB_72())
+                Console.WriteLine(i);
+                var a = new FastTests.Sparrow.ChangeThreadPriorityTest();
                 {
-                    a.CanWork2();
-                }
-                using (var a = new RavenDB_72())
-                {
-                    a.CanWork();
+                    a.StartChangeThreadPriority();
                 }
                 Console.WriteLine(i);
 

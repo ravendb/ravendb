@@ -37,7 +37,7 @@ namespace FastTests.Sparrow
             thread.Join();
             lock (this)
             {
-                Assert.True(threadPriority == ThreadPriority.Highest);
+                Assert.True(threadPriority == ThreadPriority.Lowest);
                 if (e != null)
                     Assert.False(true, e.ToString());
             }
