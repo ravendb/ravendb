@@ -10,12 +10,12 @@ class deleteResourceConfirm extends confirmViewModelBase<deleteResourceConfirmRe
 
     keepFiles() {
         this.isKeepingFiles(true);
-        super.confirm();
+        this.confirm();
     }
 
     deleteEverything() {
         this.isKeepingFiles(false);
-        super.confirm();
+        this.confirm();
     }
 
     protected getCofirmButton(): HTMLElement {
