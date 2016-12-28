@@ -17,8 +17,9 @@ namespace Sparrow.Json
         private long _used;
 
         private List<Tuple<IntPtr, long, NativeMemory.ThreadStats>> _olderBuffers;
+#if !MEM_GUARD
         private SortedList<long, AllocatedMemoryData> _fragements;
-
+#endif
         private bool _isDisposed;
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ArenaMemoryAllocator>("ArenaMemoryAllocator");
         private NativeMemory.ThreadStats _allocatingThread;
@@ -70,7 +71,13 @@ namespace Sparrow.Json
         {
             if (_isDisposed)
                 ThrowAlreadyDisposedException();
-
+#if MEM_GUARD
+            return new AllocatedMemoryData
+            {
+                Address = GuardedMemory.Allocate(size),
+                SizeInBytes = size
+            };
+#else
             if (_used + size > _allocated)
                 GrowArena(size);
 
@@ -84,6 +91,7 @@ namespace Sparrow.Json
             _used += size;
 
             return allocation;
+#endif
         }
 
         private void ThrowAlreadyDisposedException()
@@ -141,7 +149,9 @@ namespace Sparrow.Json
         {
             // Reset current arena buffer
             _ptrCurrent = _ptrStart;
+#if !MEM_GUARD
             _fragements?.Clear();
+#endif
 
             // Free old buffers not being used anymore
             if (_olderBuffers == null)
@@ -214,6 +224,9 @@ namespace Sparrow.Json
 
         public void Return(AllocatedMemoryData allocation)
         {
+#if MEM_GUARD
+            GuardedMemory.Free(allocation.Address);
+#else
             if (allocation.Address != _ptrCurrent - allocation.SizeInBytes ||
                 allocation.Address < _ptrStart)
             {
@@ -250,6 +263,7 @@ namespace Sparrow.Json
                 _used -= highest.SizeInBytes;
                 _ptrCurrent -= highest.SizeInBytes;
             }
+#endif
         }
     }
 
