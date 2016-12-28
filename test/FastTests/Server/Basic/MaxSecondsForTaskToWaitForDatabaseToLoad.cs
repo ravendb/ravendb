@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using Raven.Abstractions.Connection;
 using Raven.Server.Config.Settings;
 using Xunit;
@@ -13,7 +14,7 @@ namespace FastTests.Server.Basic
         {
             DoNotReuseServer();
             Server.Configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(1, TimeUnit.Milliseconds);
-
+            Server.ServerStore.DatabasesLandlord.OnDatabaseLoaded += s => Thread.Sleep(100);// force timeout
             var tryLoad = new Action((delegate
             {
                 using (var store = GetDocumentStore())
