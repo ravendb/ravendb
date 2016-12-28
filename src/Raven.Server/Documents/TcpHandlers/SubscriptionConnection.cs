@@ -288,7 +288,6 @@ namespace Raven.Server.Documents.TcpHandlers
                     while (CancellationTokenSource.IsCancellationRequested == false)
                     {
                         dbContext.ResetAndRenew();
-                       // TcpConnection.Context.ResetAndRenew();
 
                         bool anyDocumentsSentInCurrentIteration = false;
                         using (dbContext.OpenReadTransaction())
@@ -369,7 +368,8 @@ namespace Raven.Server.Documents.TcpHandlers
                                         clientReply = JsonDeserializationServer.SubscriptionConnectionClientMessage(reply);
                                     }
 
-                                    TcpConnection.Context.ResetAndRenew();
+                                    TcpConnection.ResetAndRenew();
+
                                     replyFromClientTask = TcpConnection.MultiDocumentParser.ParseToMemoryAsync("client reply");
                                     break;
                                 }
