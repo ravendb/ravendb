@@ -17,6 +17,7 @@ import getResourceCommand = require("commands/resources/getResourceCommand");
 import resourceInfo = require("models/resources/info/resourceInfo");
 import databaseInfo = require("models/resources/info/databaseInfo");
 import filesystemInfo = require("models/resources/info/filesystemInfo");
+import activeResourceTracker = require("common/shell/activeResourceTracker");
 
 class resources extends viewModelBase {
 
@@ -47,7 +48,7 @@ class resources extends viewModelBase {
     constructor() {
         super();
 
-        this.bindToCurrentInstance("toggleResource", "toggleDatabaseIndexing", "deleteResource");
+        this.bindToCurrentInstance("toggleResource", "toggleDatabaseIndexing", "deleteResource", "activateResource");
 
         this.initObservables();
     }
@@ -103,6 +104,7 @@ class resources extends viewModelBase {
         return new getResourcesCommand()
             .execute()
             .done(info => this.resources(info));
+
     }
 
     // Fetch single resource info
@@ -116,22 +118,21 @@ class resources extends viewModelBase {
             case "Write": 
                 if (resource) {
                     // Relevant for disable/enable...
-                    this.getResourceInfo(resource.qualifier, resource.name)
-                        .done(result => resource.update(result));
+                    resource.updateStats();
                 } else {
                     // Need to add a new resource for a newly created database
-                    let notificationData = resourceInfo.extractQualifierAndNameFromNotification(e.Id);
-                    this.getResourceInfo(notificationData.qualifier, notificationData.name)
-                        .done((result: Raven.Client.Data.ResourceInfo) => {
-                            this.resources().addResource(result, notificationData.qualifier);
-                         });
+                    this.addNewResource(e.Id);
                 }
                 break;
 
             case "Loaded":
+                if (!resource) {
+                    // if never got the "Write" notification
+                    resource = this.addNewResource(e.Id);
+                }
+
                 // An existing database turned ONLINE, get its stats
-                this.getResourceInfo(resource.qualifier, resource.name)
-                    .done(result => resource.update(result));               
+                resource.updateStats();
                 break;
 
             case "Delete":
@@ -140,6 +141,28 @@ class resources extends viewModelBase {
                     this.removeResource(resource);
                 }
                 break;
+        }
+    }
+
+    addNewResource(resourceId: string): resourceInfo {
+        let notificationData = resourceInfo.extractQualifierAndNameFromNotification(resourceId);
+        let newResourceInfo = this.getNewResource(notificationData.qualifier, notificationData.name);
+        this.resources().addResource(newResourceInfo, notificationData.qualifier);
+        return newResourceInfo;
+    }
+
+    private getNewResource(resourceType: string, resourceName: string): resourceInfo {
+        switch (resourceType) {
+            case "db":
+                return databaseInfo.empty(resourceName);
+
+            //TODO: implemet fs, cs, ts
+            /*case "fs":
+                break;
+            case "cs":
+                break;
+            case "ts":
+                break;*/
         }
     }
 
@@ -348,6 +371,20 @@ class resources extends viewModelBase {
         app.showBootstrapDialog(createDbView);
     }
 
+    activateResource(rsInfo: resourceInfo) {
+        let resource = this.resourcesManager.resources().filter(x => x.qualifiedName === rsInfo.qualifiedName)[0];
+        if (!resource)
+            return;
+
+        activeResourceTracker.default.resource(resource);
+        resource.activate();
+
+        let resourceOnPage = this.resources().sortedResources().find(rs => rs.qualifiedName === rsInfo.qualifiedName);
+        if (!resourceOnPage)
+            return;
+
+        resourceOnPage.updateStats();
+    }
 
     /* TODO: cluster related work
 
