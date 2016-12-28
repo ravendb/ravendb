@@ -4,8 +4,8 @@ using Raven.Abstractions.Indexing;
 using Xunit;
 using System.Linq;
 using FastTests;
-using Lucene.Net.Analysis.Standard;
 using Raven.Client.Indexing;
+using Lucene.Net.Analysis;
 
 namespace SlowTests.Issues
 {
@@ -55,7 +55,7 @@ namespace SlowTests.Issues
 
                     session.SaveChanges();
                 }
-                var opt = new IndexFieldOptions {Analyzer = typeof(StandardAnalyzer).AssemblyQualifiedName,Indexing = FieldIndexing.Analyzed };
+                var opt = new IndexFieldOptions {Analyzer = typeof(Lucene.Net.Analysis.Standard.StandardAnalyzer).AssemblyQualifiedName,Indexing = FieldIndexing.Analyzed };
 
                 store.DatabaseCommands.PutIndex("test", new IndexDefinition
                 {

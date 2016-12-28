@@ -10,14 +10,16 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
 
 using Xunit;
 using System.Linq;
+using FastTests;
+using Raven.Client.Data;
+using Raven.Client.Indexing;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_302 : RavenTest
+    public class RavenDB_302 : RavenTestBase
     {
         [DataContract]
         public class Item
@@ -29,7 +31,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void CanQueryUsingDefaultField()
         {
-            using(var s = NewDocumentStore())
+            using(var s = GetDocumentStore())
             {
                 using (var session = s.OpenSession())
                 {
@@ -73,7 +75,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void CanQueryUsingDefaultField_StaticIndex()
         {
-            using (var s = NewDocumentStore())
+            using (var s = GetDocumentStore())
             {
                 new Index().Execute(s);
 
@@ -99,7 +101,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void CanQueryUsingDefaultField_Facets()
         {
-            using (var s = NewDocumentStore())
+            using (var s = GetDocumentStore())
             {
                 new Index().Execute(s);
 
@@ -130,9 +132,10 @@ namespace Raven.Tests.Issues
 
                     GC.KeepAlive(x.ToList());// wait for the index to complete
 
-                    var ravenfacets = s.DatabaseCommands.GetFacets("Index",
-                        new IndexQuery { Query = x.ToString(), DefaultField = "Query" },
-                        "Raven/Facets/LastName");
+                    var indexQuery = new IndexQuery {Query = x.ToString(), DefaultField = "Query"};
+                    var facet = FacetQuery.Create("Index", indexQuery,"Raven/Facets/LastName",null,0,null);
+
+                    var ravenfacets = s.DatabaseCommands.GetFacets(facet);
 
                     Assert.Equal(1, ravenfacets.Results["LastName"].Values.First(y=>y.Range == "brown").Hits);
                 }
@@ -142,15 +145,11 @@ namespace Raven.Tests.Issues
         [Fact]
         public void CanQueryUsingDefaultField_Remote()
         {
-            using(GetNewServer())
-            using (var s = new DocumentStore
-            {
-                Url = "http://localhost:8079"
-            }.Initialize())
+            using (var s = GetDocumentStore())
             {
                 s.DatabaseCommands.PutIndex("items_by_ver", new IndexDefinition
                 {
-                    Map = "from doc in docs.Items select new { doc.Version }"
+                    Maps = {"from doc in docs.Items select new { doc.Version }" }
                 });
                 using (var session = s.OpenSession())
                 {

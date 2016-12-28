@@ -1,14 +1,14 @@
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
 using Raven.Client.Linq.Indexing;
-using Raven.Tests.Common;
 
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_478 : RavenTest
+    public class RavenDB_478 : RavenTestBase
     {
         public class ProductContent
         {
@@ -59,7 +59,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void IndexWithBoost()
         {
-            using(var store = NewDocumentStore())
+            using(var store = GetDocumentStore())
             {
                 new ContentSearchIndex().Execute(store);
             }

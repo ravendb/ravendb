@@ -5,16 +5,16 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
 
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_334 : RavenTest
+    public class RavenDB_334 : RavenTestBase
     {
         public class Foo
         {
@@ -51,7 +51,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void CanGetUtcFromDate()
         {
-            using(var documentStore = NewDocumentStore())
+            using(var documentStore = GetDocumentStore())
             {
                 new FooIndex().Execute(documentStore);
                 new FooTransformer().Execute(documentStore);

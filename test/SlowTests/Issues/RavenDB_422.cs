@@ -1,18 +1,18 @@
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
 
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_422 : RavenTest
+    public class RavenDB_422 : RavenTestBase
     {
         [Fact]
         public void UsingStoreAllFields()
         {
-            using(var store = NewDocumentStore())
+            using(var store = GetDocumentStore())
             {
                 new UserIndex().Execute(store);
                 using(var session = store.OpenSession())

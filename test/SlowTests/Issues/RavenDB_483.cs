@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
 
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_483 : NoDisposalNeeded
     {
@@ -66,7 +66,7 @@ namespace Raven.Tests.Issues
             const string expected = @"docs.People.Select(p => new {
     DateTime = ((DateTime ? ) null)
 })";
-            Assert.Equal(expected, indexDefinition.Map);
+            Assert.Equal(expected, indexDefinition.Maps.First());
         }
     }
 }
