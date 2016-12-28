@@ -522,7 +522,10 @@ namespace Raven.Server.Documents.Replication
         {
             if(_log.IsInfoEnabled)
                 _log.Info($"Disposing OutgoingReplicationHandler ({FromToString})");
+
             _database.Notifications.OnDocumentChange -= OnDocumentChange;
+            _database.Notifications.OnIndexChange -= OnIndexChange;
+            _database.Notifications.OnTransformerChange -= OnTransformerChange;
 
             _cts.Cancel();
             try

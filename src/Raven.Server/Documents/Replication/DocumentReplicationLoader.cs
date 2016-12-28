@@ -181,7 +181,7 @@ namespace Raven.Server.Documents.Replication
                     {
                         if (_log.IsInfoEnabled)
                         {
-                            _log.Info($"Failed to start outgoing replciation to {failure.Destination}", e);
+                            _log.Info($"Failed to start outgoing replication to {failure.Destination}", e);
                         }
                     }
                 }
@@ -284,6 +284,9 @@ namespace Raven.Server.Documents.Replication
 
             foreach (var destination in _replicationDocument.Destinations)
             {
+                if(destination.Disabled)
+                    continue;
+
                 AddAndStartOutgoingReplication(destination);
                 if (_log.IsInfoEnabled)
                     _log.Info($"Initialized outgoing replication for [{destination.Database}/{destination.Url}]");
@@ -298,7 +301,7 @@ namespace Raven.Server.Documents.Replication
             var outgoingReplication = new OutgoingReplicationHandler(_database, destination);
             outgoingReplication.Failed += OnOutgoingSendingFailed;
             outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
-            _outgoing.TryAdd(outgoingReplication); // can't fail, this is a brand new instace
+            _outgoing.TryAdd(outgoingReplication); // can't fail, this is a brand new instance
             _outgoingFailureInfo.TryAdd(destination, new ConnectionFailureInfo
             {
                 Destination = destination
@@ -370,12 +373,17 @@ namespace Raven.Server.Documents.Replication
             if (_log.IsInfoEnabled)
                 _log.Info("System document change detected. Starting and stopping outgoing replication threads.");
 
+            //prevent reconnecting to a destination that we shouldn't in case we have flaky network
+            _reconnectQueue.Clear();
 
             foreach (var instance in _outgoing)
+            {
+                instance.Failed -= OnOutgoingSendingFailed;
+                instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
                 instance.Dispose();
+            }
 
             _outgoing.Clear();
-
             _outgoingFailureInfo.Clear();
 
             InitializeOutgoingReplications();
