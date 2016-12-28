@@ -41,7 +41,7 @@ namespace Voron.Platform.Posix
             }
 
             int result;
-            if ((options.SafePosixOpenFlags & OpenFlagsThatAreDifferentBetweenPlatforms.O_DIRECT) == 0)
+            if ((options.SafePosixOpenFlags & PerPlatformValues.OpenFlags.O_DIRECT) == 0)
             {
                 // fallocate doesn't supported, we'll use lseek instead
                 result = Syscall.AllocateUsingLseek(_fd, journalSize);

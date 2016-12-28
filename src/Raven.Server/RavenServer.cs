@@ -214,6 +214,7 @@ namespace Raven.Server
                     var listener = new TcpListener(ipAddress, port);
                     status.Listeners.Add(listener);
                     status.Port = port;
+                    listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
                     listener.Start();
                     for (int i = 0; i < 4; i++)
                     {

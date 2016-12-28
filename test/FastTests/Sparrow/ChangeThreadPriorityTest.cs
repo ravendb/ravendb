@@ -19,7 +19,7 @@ namespace FastTests.Sparrow
                 try
                 {
                     Assert.True(Threading.GetCurrentThreadPriority() == ThreadPriority.Normal);
-                    Threading.SetCurrentThreadPriority(ThreadPriority.Highest);
+                    Threading.SetCurrentThreadPriority(ThreadPriority.Lowest);
                     lock (this)
                     {
                         threadPriority = Threading.GetCurrentThreadPriority();
