@@ -221,7 +221,6 @@ class resourcesManager {
         const incomingResources = incomingData.sortedResources().map(x => x.asResource());
 
         const deletedResources = _.differenceBy(existingResources(), incomingResources, x => x.qualifiedName);
-
         existingResources.removeAll(deletedResources);
 
         incomingResources.forEach(incomingResource => {
@@ -230,7 +229,8 @@ class resourcesManager {
             if (matchedExistingRs) {
                 matchedExistingRs.updateUsing(incomingResource);
             } else {
-                existingResources.push(incomingResource); //TODO: it isn't sorted
+                let locationToInsert = _.sortedIndexBy(existingResources(), incomingResource, function (item) { return item.qualifiedName });
+                existingResources.splice(locationToInsert, 0, incomingResource);
             }
         });
     }
