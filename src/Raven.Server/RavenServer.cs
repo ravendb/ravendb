@@ -357,7 +357,9 @@ namespace Raven.Server
                         if (databaseLoadingTask == null)
                             throw new DatabaseDoesNotExistsException("There is no database named " + header.DatabaseName);
 
-                        if (await Task.WhenAny(databaseLoadingTask, Task.Delay(5000)) != databaseLoadingTask)
+                        var databaseLoadTimeout = ServerStore.DatabasesLandlord.DatabaseLoadTimeout;
+
+                        if (await Task.WhenAny(databaseLoadingTask, Task.Delay(databaseLoadTimeout)) != databaseLoadingTask)
                             throw new InvalidOperationException(
                                 $"Timeout when loading database {header.DatabaseName}, try again later");
 
