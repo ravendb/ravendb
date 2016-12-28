@@ -54,7 +54,7 @@ namespace Voron.Impl.Paging
                 // it means the page size is 64KB
                 // we have special handling for this in AllocateNewNode
 
-                Debug.Assert(PageSize == Constants.Storage.MaxPageSize);
+                Debug.Assert(PageSize == Constants.Compression.MaxPageSize);
 
                 upper = ushort.MaxValue;
             }
@@ -62,7 +62,7 @@ namespace Voron.Impl.Paging
             return new TreePage((byte*)_tempPage.ToPointer(), PageSize)
             {
                 Upper = upper,
-                Lower = (ushort) Constants.TreePageHeaderSize,
+                Lower = (ushort) Constants.Tree.PageHeaderSize,
                 TreeFlags = TreePageFlags.None,
             };
         }

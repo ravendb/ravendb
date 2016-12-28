@@ -188,8 +188,7 @@ namespace SlowTests.Voron
                 return null;
 
             Slice item2;
-            Slice.External(txh.Allocator, (byte*) node + node->KeySize + Constants.NodeHeaderSize,
-                (ushort) node->DataSize, ByteStringType.Immutable, out item2);
+            Slice.External(txh.Allocator, (byte*)node + node->KeySize + Constants.Tree.NodeHeaderSize, (ushort) node->DataSize, ByteStringType.Immutable, out item2);
             return Tuple.Create(item1, item2);
         }
     }

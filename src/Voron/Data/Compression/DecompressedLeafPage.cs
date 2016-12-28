@@ -47,7 +47,7 @@ namespace Voron.Data.Compression
             if (CalcSizeUsed() < Original.PageMaxSpace)
             {
                 // no need to compress
-                Original.Lower = (ushort)Constants.TreePageHeaderSize;
+                Original.Lower = (ushort)Constants.Tree.PageHeaderSize;
                 Original.Upper = (ushort)Original.PageSize;
                 Original.Flags &= ~PageFlags.Compressed;
 

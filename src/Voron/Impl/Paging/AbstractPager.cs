@@ -3,17 +3,12 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Utils;
 using Voron.Data;
-using Voron.Data.BTrees;
 using Voron.Exceptions;
-using Voron.Platform.Win32;
 using Voron.Global;
-using static System.Runtime.InteropServices.Marshal;
 
 namespace Voron.Impl.Paging
 {
@@ -86,10 +81,10 @@ namespace Voron.Impl.Paging
             _options = options;
             _pageSize = _options.PageSize;
             UsePageProtection = usePageProtection;
-            Debug.Assert((_pageSize - Constants.TreePageHeaderSize) / Constants.MinKeysInPage >= 1024);
+            Debug.Assert((_pageSize - Constants.Tree.PageHeaderSize) / Constants.Tree.MinKeysInPage >= 1024);
 
 
-            PageMaxSpace = _pageSize - Constants.TreePageHeaderSize;
+            PageMaxSpace = _pageSize - Constants.Tree.PageHeaderSize;
             NodeMaxSize = PageMaxSpace / 2 - 1;
 
             // MaxNodeSize is usually persisted as an unsigned short. Therefore, we must ensure it is not possible to have an overflow.
@@ -142,7 +137,7 @@ namespace Voron.Impl.Paging
             private set;
         }
 
-        public static readonly int RequiredSpaceForNewNode = Constants.NodeHeaderSize + Constants.NodeOffsetSize;
+        public const int RequiredSpaceForNewNode = Constants.Tree.NodeHeaderSize + Constants.Tree.NodeOffsetSize;
 
 
         private PagerState _pagerState;
@@ -288,7 +283,7 @@ namespace Voron.Impl.Paging
         public abstract void ReleaseAllocationInfo(byte* baseAddress, long size);
 
         // NodeMaxSize - RequiredSpaceForNewNode for 4Kb page is 2038, so we drop this by a bit
-        public static readonly int MaxKeySize = 2038 - RequiredSpaceForNewNode;
+        public const int MaxKeySize = 2038 - RequiredSpaceForNewNode;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsKeySizeValid(int keySize)

@@ -359,7 +359,7 @@ namespace Voron.Data.BTrees
 
         public bool ShouldGoToOverflowPage(int len)
         {
-            return len + Constants.NodeHeaderSize > _llt.DataPager.NodeMaxSize;
+            return len + Constants.Tree.NodeHeaderSize > _llt.DataPager.NodeMaxSize;
         }
 
         private long WriteToOverflowPages(int overflowSize, out byte* dataPos)
@@ -368,7 +368,7 @@ namespace Voron.Data.BTrees
             var overflowPageStart = AllocateNewPage(_llt, TreePageFlags.Value, numberOfPages);
             overflowPageStart.Flags = PageFlags.Overflow | PageFlags.VariableSizeTreePage;
             overflowPageStart.OverflowSize = overflowSize;
-            dataPos = overflowPageStart.Base + Constants.TreePageHeaderSize;
+            dataPos = overflowPageStart.Base + Constants.Tree.PageHeaderSize;
 
             State.RecordNewPage(overflowPageStart, numberOfPages);
 
@@ -820,7 +820,7 @@ namespace Voron.Data.BTrees
             var page = new TreePage(newPage.Pointer, tx.PageSize)
             {
                 Flags = PageFlags.VariableSizeTreePage | (num == 1 ? PageFlags.Single : PageFlags.Overflow),
-                Lower = (ushort)Constants.TreePageHeaderSize,
+                Lower = (ushort)Constants.Tree.PageHeaderSize,
                 TreeFlags = flags,
                 Upper = (ushort)tx.PageSize,
                 Dirty = true
@@ -994,10 +994,10 @@ namespace Voron.Data.BTrees
             if (node->Flags == TreeNodeFlags.PageRef)
             {
                 var overFlowPage = GetReadOnlyTreePage(node->PageNumber);
-                return overFlowPage.Base + Constants.TreePageHeaderSize;
+                return overFlowPage.Base + Constants.Tree.PageHeaderSize;
             }
 
-            return (byte*)node + node->KeySize + Constants.NodeHeaderSize;
+            return (byte*)node + node->KeySize + Constants.Tree.NodeHeaderSize;
         }
 
         public List<long> AllPages()
@@ -1108,7 +1108,7 @@ namespace Voron.Data.BTrees
 
                     writtableOverflowPage.Flags = PageFlags.Overflow | PageFlags.VariableSizeTreePage;
                     writtableOverflowPage.OverflowSize = len;
-                    pos = writtableOverflowPage.Base + Constants.TreePageHeaderSize;
+                    pos = writtableOverflowPage.Base + Constants.Tree.PageHeaderSize;
 
                     PageModified?.Invoke(writtableOverflowPage.PageNumber);
 
@@ -1189,10 +1189,10 @@ namespace Voron.Data.BTrees
             if (node->Flags == TreeNodeFlags.PageRef)
             {
                 var overFlowPage = GetReadOnlyTreePage(node->PageNumber);
-                return overFlowPage.Base + Constants.TreePageHeaderSize;
+                return overFlowPage.Base + Constants.Tree.PageHeaderSize;
             }
 
-            return (byte*)node + node->KeySize + Constants.NodeHeaderSize;
+            return (byte*)node + node->KeySize + Constants.Tree.NodeHeaderSize;
         }
 
         public Slice GetData(TreeNodeHeader* node)
@@ -1204,12 +1204,12 @@ namespace Voron.Data.BTrees
                 var overFlowPage = GetReadOnlyPage(node->PageNumber);
                 if (overFlowPage.OverflowSize > ushort.MaxValue)
                     throw new InvalidOperationException("Cannot convert big data to a slice, too big");
-                Slice.External(Llt.Allocator, overFlowPage.Pointer + Constants.TreePageHeaderSize,
+                Slice.External(Llt.Allocator, overFlowPage.Pointer + Constants.Tree.PageHeaderSize,
                     (ushort)overFlowPage.OverflowSize, out outputDataSlice);
             }
             else
             {
-                Slice.External(Llt.Allocator, (byte*)node + node->KeySize + Constants.NodeHeaderSize,
+                Slice.External(Llt.Allocator, (byte*)node + node->KeySize + Constants.Tree.NodeHeaderSize,
                     (ushort)node->DataSize, out outputDataSlice);
             }
 
@@ -1225,9 +1225,9 @@ namespace Voron.Data.BTrees
                 Debug.Assert(overFlowPage.IsOverflow, "Requested overflow page but got " + overFlowPage.Flags);
                 Debug.Assert(overFlowPage.OverflowSize > 0, "Overflow page cannot be size equal 0 bytes");
 
-                return new ValueReader(overFlowPage.Pointer + Constants.TreePageHeaderSize, overFlowPage.OverflowSize);
+                return new ValueReader(overFlowPage.Pointer + Constants.Tree.PageHeaderSize, overFlowPage.OverflowSize);
             }
-            return new ValueReader((byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize);
+            return new ValueReader((byte*)node + node->KeySize + Constants.Tree.NodeHeaderSize, node->DataSize);
         }
     }
 }

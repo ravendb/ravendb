@@ -205,7 +205,7 @@ namespace Voron.Debugging
                         {
                             case TreeNodeFlags.MultiValuePageRef:
                                 {
-                                    var multiValueTreeHeader = (TreeRootHeader*)((byte*)currentNode + currentNode->KeySize + Constants.NodeHeaderSize);
+                                    var multiValueTreeHeader = (TreeRootHeader*)((byte*)currentNode + currentNode->KeySize + Constants.Tree.NodeHeaderSize);
 
                                     Debug.Assert(multiValueTreeHeader->Flags == TreeFlags.MultiValue);
 
@@ -225,7 +225,7 @@ namespace Voron.Debugging
                             case TreeNodeFlags.PageRef:
                                 {
                                     var overFlowPage = tree.GetReadOnlyTreePage(currentNode->PageNumber);
-                                    var nestedPage = GetNestedMultiValuePage(tree, overFlowPage.Base + Constants.TreePageHeaderSize, currentNode);
+                                    var nestedPage = GetNestedMultiValuePage(tree, overFlowPage.Base + Constants.Tree.PageHeaderSize, currentNode);
 
                                     multiValues.NumberOfEntries += nestedPage.NumberOfEntries;
                                     break;
@@ -257,7 +257,7 @@ namespace Voron.Debugging
                 {
                     var numberOfPages = tree.Llt.DataPager.GetNumberOfOverflowPages(page.OverflowSize);
 
-                    densities.Add(((double)(page.OverflowSize + Constants.TreePageHeaderSize)) / (numberOfPages * pageSize));
+                    densities.Add(((double)(page.OverflowSize + Constants.Tree.PageHeaderSize)) / (numberOfPages * pageSize));
 
                     i += numberOfPages - 1;
                 }
@@ -266,7 +266,7 @@ namespace Voron.Debugging
                     if ((page.Flags & PageFlags.FixedSizeTreePage) == PageFlags.FixedSizeTreePage)
                     {
                         var fstp = new FixedSizeTreePage(page.Pointer, tree.Llt.PageSize);
-                        var sizeUsed = Constants.FixedSizeTreePageHeaderSize +
+                        var sizeUsed = Constants.FixedSizeTree.PageHeaderSize +
                             fstp.NumberOfEntries * (fstp.IsLeaf ? fstp.ValueSize : FixedSizeTree.BranchEntrySize);
                         densities.Add((double)sizeUsed / pageSize);
                     }
@@ -292,7 +292,7 @@ namespace Voron.Debugging
             {
                 var page = tree.Llt.GetPage(pageNumber);
                 var fstp = new FixedSizeTreePage(page.Pointer, tree.Llt.PageSize);
-                var sizeUsed = Constants.FixedSizeTreePageHeaderSize +
+                var sizeUsed = Constants.FixedSizeTree.PageHeaderSize +
                                fstp.NumberOfEntries * (fstp.IsLeaf ? fstp.ValueSize : FixedSizeTree.BranchEntrySize);
                 densities.Add((double)sizeUsed / pageSize);
             }

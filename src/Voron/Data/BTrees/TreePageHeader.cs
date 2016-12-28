@@ -5,6 +5,8 @@ namespace Voron.Data.BTrees
     [StructLayout(LayoutKind.Explicit, Pack = 1)]
     public struct TreePageHeader
     {
+        public const int SizeOf = 18;
+
         [FieldOffset(0)]
         public long PageNumber;
 

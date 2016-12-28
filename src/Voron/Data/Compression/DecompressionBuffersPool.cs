@@ -58,7 +58,7 @@ namespace Voron.Data.Compression
             if (pageSize < _options.PageSize)
                 ThrowInvalidPageSize(pageSize);
 
-            if (pageSize > Constants.Storage.MaxPageSize)
+            if (pageSize > Constants.Compression.MaxPageSize)
                 ThrowPageSizeTooBig(pageSize);
 
             Debug.Assert(pageSize == Bits.NextPowerOf2(pageSize));
@@ -138,7 +138,7 @@ namespace Voron.Data.Compression
 
         private static void ThrowPageSizeTooBig(int pageSize)
         {
-            throw new ArgumentException($"Max page size is {Constants.Storage.MaxPageSize} while you requested {pageSize} bytes");
+            throw new ArgumentException($"Max page size is {Constants.Compression.MaxPageSize} while you requested {pageSize} bytes");
         }
 
         private void ThrowInvalidPageSize(int pageSize)
@@ -159,7 +159,7 @@ namespace Voron.Data.Compression
                     return;
 
                 _pool = new[] { new ConcurrentQueue<DecompressionBuffer>() };
-                _compressionPager = CreateDecompressionPager(DecompressedPagesCache.Size * Constants.Storage.MaxPageSize);
+                _compressionPager = CreateDecompressionPager(DecompressedPagesCache.Size * Constants.Compression.MaxPageSize);
                 _oldPagers = ImmutableAppendOnlyList<AbstractPager>.Empty;
                 _initialized = true;
             }

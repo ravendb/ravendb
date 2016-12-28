@@ -379,7 +379,7 @@ namespace Voron.Data.BTrees
         {
             Slice keyToInsert = _newKey;
 
-            int pageSize = TreeSizeOf.NodeEntry(_tx.DataPager.PageMaxSpace, keyToInsert, _len) + Constants.NodeOffsetSize;
+            int pageSize = TreeSizeOf.NodeEntry(_tx.DataPager.PageMaxSpace, keyToInsert, _len) + Constants.Tree.NodeOffsetSize;
 
             if (toRight == false)
             {

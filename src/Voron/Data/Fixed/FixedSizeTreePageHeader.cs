@@ -12,6 +12,8 @@ namespace Voron.Data.Fixed
     [StructLayout(LayoutKind.Explicit, Pack = 1)]
     public struct FixedSizeTreePageHeader
     {
+        public const int SizeOf = 16;
+
         [FieldOffset(0)]
         public long PageNumber;
 

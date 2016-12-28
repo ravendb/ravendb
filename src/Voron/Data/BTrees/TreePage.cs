@@ -76,7 +76,7 @@ namespace Voron.Data.BTrees
         public ushort* KeysOffsets
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return (ushort*)(Base + Constants.TreePageHeaderSize); }
+            get { return (ushort*)(Base + Constants.Tree.PageHeaderSize); }
         }
 
 
@@ -215,7 +215,7 @@ namespace Voron.Data.BTrees
                 // we can calculate the number of entries by getting the size and dividing
                 // in 2, since that is the size of the offsets we use
 
-                return (ushort)((Header->Lower - Constants.TreePageHeaderSize) >> 1);
+                return (ushort)((Header->Lower - Constants.Tree.PageHeaderSize) >> 1);
             }
         }
 
@@ -224,7 +224,7 @@ namespace Voron.Data.BTrees
             Debug.Assert(index >= 0 || index < NumberOfEntries);
 
             var node = GetNode(index);
-            Memory.Set((byte*) node, 0, node->GetNodeSize() - Constants.NodeOffsetSize);
+            Memory.Set((byte*) node, 0, node->GetNodeSize() - Constants.Tree.NodeOffsetSize);
 
             ushort* offsets = KeysOffsets;
             for (int i = index + 1; i < NumberOfEntries; i++)
@@ -232,7 +232,7 @@ namespace Voron.Data.BTrees
                 offsets[i - 1] = offsets[i];
             }
 
-            Lower -= (ushort)Constants.NodeOffsetSize;
+            Lower -= (ushort)Constants.Tree.NodeOffsetSize;
         }
 
         public byte* AddPageRefNode(int index, Slice key, long pageNumber)
@@ -251,7 +251,7 @@ namespace Voron.Data.BTrees
             var node = CreateNode(index, key, TreeNodeFlags.Data, dataSize);
             node->DataSize = dataSize;
 
-            return (byte*)node + Constants.NodeHeaderSize + key.Size;
+            return (byte*)node + Constants.Tree.NodeHeaderSize + key.Size;
         }
 
         public byte* AddMultiValueNode(int index, Slice key, int dataSize)
@@ -262,7 +262,7 @@ namespace Voron.Data.BTrees
             var node = CreateNode(index, key, TreeNodeFlags.MultiValuePageRef, dataSize);
             node->DataSize = dataSize;
 
-            return (byte*)node + Constants.NodeHeaderSize + key.Size;
+            return (byte*)node + Constants.Tree.NodeHeaderSize + key.Size;
         }
 
         public void AddCompressionTombstoneNode(int index, Slice key)
@@ -304,7 +304,7 @@ namespace Voron.Data.BTrees
             Debug.Assert(key.Size <= ushort.MaxValue);
             node->KeySize = (ushort) key.Size;
             if (key.Options == SliceOptions.Key && node->KeySize > 0)
-                key.CopyTo((byte*)node + Constants.NodeHeaderSize);
+                key.CopyTo((byte*)node + Constants.Tree.NodeHeaderSize);
 
             return node;
         }
@@ -317,7 +317,7 @@ namespace Voron.Data.BTrees
         {
             var index = NumberOfEntries;
 
-            Debug.Assert(HasSpaceFor(TreeSizeOf.NodeEntryWithAnotherKey(other, key) + Constants.NodeOffsetSize));
+            Debug.Assert(HasSpaceFor(TreeSizeOf.NodeEntryWithAnotherKey(other, key) + Constants.Tree.NodeOffsetSize));
 
             var nodeSize = TreeSizeOf.NodeEntryWithAnotherKey(other, key);
 
@@ -330,7 +330,7 @@ namespace Voron.Data.BTrees
             newNode->Flags = other->Flags;
 
             if (key.Options == SliceOptions.Key && key.Size > 0)
-                key.CopyTo((byte*)newNode + Constants.NodeHeaderSize);
+                key.CopyTo((byte*)newNode + Constants.Tree.NodeHeaderSize);
 
             if (IsBranch || other->Flags == (TreeNodeFlags.PageRef))
             {
@@ -339,8 +339,8 @@ namespace Voron.Data.BTrees
                 return;
             }
             newNode->DataSize = other->DataSize;
-            Memory.Copy((byte*)newNode + Constants.NodeHeaderSize + key.Size,
-                                 (byte*)other + Constants.NodeHeaderSize + other->KeySize,
+            Memory.Copy((byte*)newNode + Constants.Tree.NodeHeaderSize + key.Size,
+                                 (byte*)other + Constants.Tree.NodeHeaderSize + other->KeySize,
                                  other->DataSize);
         }
 
@@ -350,19 +350,19 @@ namespace Voron.Data.BTrees
 
             int upper;
 
-            if (Upper == ushort.MaxValue && PageSize == Constants.Storage.MaxPageSize)
-                upper = Constants.Storage.MaxPageSize;
+            if (Upper == ushort.MaxValue && PageSize == Constants.Compression.MaxPageSize)
+                upper = Constants.Compression.MaxPageSize;
             else
                 upper = header->Upper;
             
             var newNodeOffset = (ushort)(upper - nodeSize);
-            Debug.Assert(newNodeOffset >= header->Lower + Constants.NodeOffsetSize);
+            Debug.Assert(newNodeOffset >= header->Lower + Constants.Tree.NodeOffsetSize);
 
             var node = (TreeNodeHeader*)(Base + newNodeOffset);
             KeysOffsets[index] = newNodeOffset;            
 
             header->Upper = newNodeOffset;
-            header->Lower += Constants.NodeOffsetSize;
+            header->Lower += Constants.Tree.NodeOffsetSize;
                         
             node->Flags = 0;
             return node;
@@ -419,9 +419,9 @@ namespace Voron.Data.BTrees
                         copy.CopyNodeDataToEndOfPage(node, slice);
                 }
 
-                Memory.Copy(Base + Constants.TreePageHeaderSize,
-                            copy.Base + Constants.TreePageHeaderSize,
-                            PageSize - Constants.TreePageHeaderSize);
+                Memory.Copy(Base + Constants.Tree.PageHeaderSize,
+                            copy.Base + Constants.Tree.PageHeaderSize,
+                            PageSize - Constants.Tree.PageHeaderSize);
 
                 Upper = copy.Upper;
                 Lower = copy.Lower;
@@ -515,7 +515,7 @@ namespace Voron.Data.BTrees
                 for (int i = 0; i < numberOfEntries; i++)
                 {
                     var node = tempPage.GetNode(i);
-                    var size = node->GetNodeSize() - Constants.NodeOffsetSize;
+                    var size = node->GetNodeSize() - Constants.Tree.NodeOffsetSize;
                     size += size & 1;
                     Memory.Copy(Base + upper - size, (byte*)node, size);
                     upper -= size;
@@ -547,13 +547,13 @@ namespace Voron.Data.BTrees
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetRequiredSpace(Slice key, int len)
         {
-            return TreeSizeOf.NodeEntry(PageMaxSpace, key, len) + Constants.NodeOffsetSize;
+            return TreeSizeOf.NodeEntry(PageMaxSpace, key, len) + Constants.Tree.NodeOffsetSize;
         }
 
         public int PageMaxSpace
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get{ return PageSize - Constants.TreePageHeaderSize; }
+            get{ return PageSize - Constants.Tree.PageHeaderSize; }
         }
 
         public PageFlags Flags

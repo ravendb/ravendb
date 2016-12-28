@@ -15,7 +15,7 @@ namespace Voron.Data.Compression
         {
             if (defrag)
             {
-                if (page.CalcSizeUsed() != page.SizeUsed - Constants.TreePageHeaderSize) // check if the page really requires defrag
+                if (page.CalcSizeUsed() != page.SizeUsed - Constants.Tree.PageHeaderSize) // check if the page really requires defrag
                     page.Defrag(tx);
             }
 
@@ -27,8 +27,8 @@ namespace Voron.Data.Compression
             var tempPage = temp.GetTempPage();
 
             var compressionInput = page.Base + page.Upper;
-            var compressionResult = tempPage.Base + Constants.TreePageHeaderSize + Constants.Compression.HeaderSize; // temp compression result has compressed values at the beginning of the page
-            var offsetsSize = page.NumberOfEntries * Constants.NodeOffsetSize;
+            var compressionResult = tempPage.Base + Constants.Tree.PageHeaderSize + Constants.Compression.HeaderSize; // temp compression result has compressed values at the beginning of the page
+            var offsetsSize = page.NumberOfEntries * Constants.Tree.NodeOffsetSize;
 
             var compressionOutput = compressionResult + offsetsSize;
 
@@ -36,7 +36,7 @@ namespace Voron.Data.Compression
                 compressionInput,
                 compressionOutput,
                 valuesSize,
-                tempPage.PageSize - (Constants.TreePageHeaderSize + Constants.Compression.HeaderSize) - offsetsSize);
+                tempPage.PageSize - (Constants.Tree.PageHeaderSize + Constants.Compression.HeaderSize) - offsetsSize);
 
             if (compressedSize == 0 || compressedSize > valuesSize)
             {
@@ -54,17 +54,17 @@ namespace Voron.Data.Compression
                 compressedOffsets[i] = (ushort)(offsets[i] - page.Upper);
             }
             
-            var compressionSectionSize = compressedSize + offsetsSize;  
+            var compressionSectionSize = compressedSize + offsetsSize;
 
-            var sizeLeftInDecomressedPage = Constants.Storage.MaxPageSize - page.SizeUsed;
-            var sizeLeftForUncompressedEntries = tx.PageSize - (Constants.TreePageHeaderSize + Constants.Compression.HeaderSize + compressionSectionSize);
+            var sizeLeftInDecompressedPage = Constants.Compression.MaxPageSize - page.SizeUsed;
+            var sizeLeftForUncompressedEntries = tx.PageSize - (Constants.Tree.PageHeaderSize + Constants.Compression.HeaderSize + compressionSectionSize);
 
-            if (sizeLeftForUncompressedEntries > sizeLeftInDecomressedPage)
+            if (sizeLeftForUncompressedEntries > sizeLeftInDecompressedPage)
             {
                 // expand compression section to prevent from adding next uncompressed entries what would result in
                 // exceeding MaxPageSize after the decompression
 
-                compressionSectionSize += sizeLeftForUncompressedEntries - sizeLeftInDecomressedPage;
+                compressionSectionSize += sizeLeftForUncompressedEntries - sizeLeftInDecompressedPage;
             }
             
             compressionSectionSize += compressionSectionSize & 1; // ensure 2-byte alignment
@@ -72,11 +72,11 @@ namespace Voron.Data.Compression
             // check that after decompression we won't exceed MaxPageSize
             Debug.Assert(page.SizeUsed + // page header, node offsets, existing entries
                          (tx.PageSize - // space that can be still used to insert next uncompressed entries
-                          (Constants.TreePageHeaderSize + Constants.Compression.HeaderSize + compressionSectionSize)) 
-                         <= Constants.Storage.MaxPageSize);
+                          (Constants.Tree.PageHeaderSize + Constants.Compression.HeaderSize + compressionSectionSize)) 
+                         <= Constants.Compression.MaxPageSize);
 
-            Memory.Copy(tempPage.Base, page.Base, Constants.TreePageHeaderSize);
-            tempPage.Lower = (ushort)(Constants.TreePageHeaderSize + Constants.Compression.HeaderSize + compressionSectionSize);
+            Memory.Copy(tempPage.Base, page.Base, Constants.Tree.PageHeaderSize);
+            tempPage.Lower = (ushort)(Constants.Tree.PageHeaderSize + Constants.Compression.HeaderSize + compressionSectionSize);
             tempPage.Upper = (ushort)tempPage.PageSize;
 
             Debug.Assert(tempPage.Lower <= tempPage.Upper);
@@ -109,10 +109,10 @@ namespace Voron.Data.Compression
 
             writePtr -= header->SectionSize;
 
-            Memory.Copy(writePtr, compressed.CompressionOutputPtr, compressed.Header.CompressedSize + header->NumberOfCompressedEntries * Constants.NodeOffsetSize);
+            Memory.Copy(writePtr, compressed.CompressionOutputPtr, compressed.Header.CompressedSize + header->NumberOfCompressedEntries * Constants.Tree.NodeOffsetSize);
 
             dest.Flags |= PageFlags.Compressed;
-            dest.Lower = (ushort)Constants.TreePageHeaderSize;
+            dest.Lower = (ushort)Constants.Tree.PageHeaderSize;
             dest.Upper = (ushort)(writePtr - dest.Base);
 
             Debug.Assert((dest.Upper & 1) == 0);

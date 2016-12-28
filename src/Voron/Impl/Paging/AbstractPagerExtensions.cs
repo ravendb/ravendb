@@ -33,7 +33,7 @@ namespace Voron.Impl.Paging
 
         public static int GetNumberOfOverflowPages(this AbstractPager pager, long overflowSize)
         {
-            overflowSize += Constants.TreePageHeaderSize;
+            overflowSize += Constants.Tree.PageHeaderSize;
             return checked((int)(overflowSize / pager.PageSize) + (overflowSize % pager.PageSize == 0 ? 0 : 1));
         }
     }
