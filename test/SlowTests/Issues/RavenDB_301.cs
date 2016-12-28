@@ -4,24 +4,20 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Linq;
+using FastTests;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
 
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_301 : RavenTest
+    public class RavenDB_301 : RavenTestBase
     {
         [Fact]
         public void CanUseTertiaryIncludes()
         {
-            using(GetNewServer())
-            using(var store = new DocumentStore
-            {
-                Url = "http://localhost:8079"
-            }.Initialize())
+            using(var store = GetDocumentStore())
             {
                 new Index().Execute(store);
                 new IndexTransformer().Execute(store);
