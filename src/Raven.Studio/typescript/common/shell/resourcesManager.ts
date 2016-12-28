@@ -229,7 +229,7 @@ class resourcesManager {
             if (matchedExistingRs) {
                 matchedExistingRs.updateUsing(incomingResource);
             } else {
-                let locationToInsert = _.sortedIndexBy(existingResources(), incomingResource, function (item) { return item.qualifiedName });
+                let locationToInsert = _.sortedIndexBy(existingResources(), incomingResource, (item: resource) => item.qualifiedName );
                 existingResources.splice(locationToInsert, 0, incomingResource);
             }
         });
