@@ -307,5 +307,114 @@ namespace NewClientTests.NewClient.Server.Replication
                 Assert.Equal(31, replicated2.Age);
             }
         }
+
+        [Fact]
+        public void DeleteDestinationShouldWork()
+        {
+            var dbName1 = DbName + "-1";
+            var dbName2 = DbName + "-2";
+            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
+            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
+            {
+                SetupReplication(store1, store2);
+                using (var session = store1.OpenSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges();
+                    session.Store(new User
+                    {
+                        Name = "John Snow",
+                        Age = 30
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store2.OpenSession())
+                {
+                    Assert.NotNull(session.Load<User>("users/1"));
+                }
+
+                DeleteReplication(store1, store2);
+
+                using (var session = store1.OpenSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges();
+                    session.Store(new User
+                    {
+                        Name = "Ghost",
+                        Age = 30
+                    }, "users/2");
+                    session.SaveChanges();
+                }
+
+                using (var session = store2.OpenSession())
+                {
+                    var s = session.Load<User>("users/2");
+                    Assert.Null(s);
+                }
+            }
+        }
+
+        [Fact]
+        public void DisableDestinationShouldWork()
+        {
+            var dbName1 = DbName + "-1";
+            var dbName2 = DbName + "-2";
+            using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
+            using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
+            {
+                SetupReplication(store1, store2);
+                using (var session = store1.OpenSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges();
+                    session.Store(new User
+                    {
+                        Name = "John Snow",
+                        Age = 30
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store2.OpenSession())
+                {
+                    Assert.NotNull(session.Load<User>("users/1"));
+                }
+
+                EnableOrDisableReplication(store1, store2, true);
+
+                using (var session = store1.OpenSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges();
+                    session.Store(new User
+                    {
+                        Name = "Ghost",
+                        Age = 30
+                    }, "users/2");
+                    session.SaveChanges();
+                }
+
+                using (var session = store2.OpenSession())
+                {
+                    var s = session.Load<User>("users/2");
+                    Assert.Null(s);
+                }
+
+                EnableOrDisableReplication(store1, store2);
+                using (var session = store1.OpenSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges();
+                    session.Store(new User
+                    {
+                        Name = "John Snow",
+                        Age = 30
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store2.OpenSession())
+                {
+                    Assert.NotNull(session.Load<User>("users/1"));
+                }
+            }
+        }
     }
 }
