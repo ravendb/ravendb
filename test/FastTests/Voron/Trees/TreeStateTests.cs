@@ -70,8 +70,8 @@ namespace FastTests.Voron.Trees
 
                 tx.Commit();
 
-                Assert.Equal(50, tree.State.PageCount);
-                Assert.Equal(38, tree.State.LeafPages);
+                Assert.Equal(57, tree.State.PageCount);
+                Assert.Equal(45, tree.State.LeafPages);
                 Assert.Equal(3, tree.State.BranchPages);
                 Assert.Equal(9, tree.State.OverflowPages);
                 Assert.Equal(3, tree.State.Depth);				
@@ -90,9 +90,9 @@ namespace FastTests.Voron.Trees
                 tx.Commit();
 
 
-                Assert.Equal(31, tree.AllPages().Count);
-                Assert.Equal(31, tree.State.PageCount);
-                Assert.Equal(22, tree.State.LeafPages);
+                Assert.Equal(35, tree.AllPages().Count);
+                Assert.Equal(35, tree.State.PageCount);
+                Assert.Equal(26, tree.State.LeafPages);
                 Assert.Equal(3, tree.State.BranchPages);
                 Assert.Equal(6, tree.State.OverflowPages);
                 Assert.Equal(3, tree.State.Depth);

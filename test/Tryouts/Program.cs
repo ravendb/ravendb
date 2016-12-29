@@ -26,9 +26,9 @@ namespace Tryouts
             {
                 
                 Console.WriteLine(i);
-                using (var a = new SlowTests.Tests.DistinctFacets.FromUser())
+                using (var a = new FastTests.Voron.Trees.TreeStateTests())
                 {
-                    a.ShouldFacetsWork();
+                    a.HasReducedNumberOfPagesAfterRemovingHalfOfEntries();
                 }
             }
         }

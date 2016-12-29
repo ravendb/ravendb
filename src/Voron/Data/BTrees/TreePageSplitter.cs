@@ -86,6 +86,13 @@ namespace Voron.Data.BTrees
                 {
                     _pageDecompressed = _tree.DecompressPage(_page);
                     _pageDecompressed.Search(_tx, _newKey);
+                    if (_pageDecompressed.LastMatch == 0)
+                    {
+                        // we are going to insert the value in a bit, but it might have 
+                        // been in the compressed portion and not removed by the calling
+                        // code
+                        _tree.RemoveLeafNode(_pageDecompressed);
+                    }
                     _page = _pageDecompressed;
                 }
 

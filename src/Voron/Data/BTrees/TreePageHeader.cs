@@ -2,10 +2,10 @@
 
 namespace Voron.Data.BTrees
 {
-    [StructLayout(LayoutKind.Explicit, Pack = 1)]
+    [StructLayout(LayoutKind.Explicit, Pack = 1, Size = PageHeader.SizeOf)]
     public struct TreePageHeader
     {
-        public const int SizeOf = 18;
+        public const int SizeOf = PageHeader.SizeOf > 18 ? PageHeader.SizeOf : 18;
 
         [FieldOffset(0)]
         public long PageNumber;
