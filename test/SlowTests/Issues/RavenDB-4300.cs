@@ -3,15 +3,16 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Linq;
+using FastTests;
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Util;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
+using Raven.Client.Util;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_4300 : RavenTestBase
     {
@@ -23,7 +24,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void Escaping_Beforehand_Works()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ExampleIndex().Execute(store);
                 Populate(store);
@@ -46,7 +47,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void No_Escaping_Causes_Error()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new ExampleIndex().Execute(store);
                 Populate(store);
@@ -79,12 +80,13 @@ namespace Raven.Tests.Issues
                 session.SaveChanges();
             }
         }
-        public class Example
+
+        private class Example
         {
             public string Name { get; set; }
         }
 
-        public class ExampleIndex : AbstractIndexCreationTask<Example, ExampleIndex.ReduceResult>
+        private class ExampleIndex : AbstractIndexCreationTask<Example, ExampleIndex.ReduceResult>
         {
             public ExampleIndex()
             {
@@ -102,6 +104,5 @@ namespace Raven.Tests.Issues
                 public string Name { get; set; }
             }
         }
-
     }
 }

@@ -11,6 +11,7 @@ using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Client.Data;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Queries.LuceneIntegration;
 
 namespace Raven.Server.Documents.Queries.Parse
@@ -681,6 +682,7 @@ This edge-case has a very slim chance of happening, but still we should not igno
             query.Boost = GetBoost();
             return query;
         }
+
         public LuceneASTNodeBase Node { get; set; }
         public string Boost { get; set; }
         public override string ToString()
@@ -693,9 +695,10 @@ This edge-case has a very slim chance of happening, but still we should not igno
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float GetBoost()
         {
-            return  Boost == null ? 1 : float.Parse(Boost);
+            return Boost == null ? 1 : float.Parse(Boost);
         }
-}
+
+    }
     public class PostfixModifiers
     {
         public string Boost { get; set; }
@@ -703,4 +706,3 @@ This edge-case has a very slim chance of happening, but still we should not igno
         public string Proximity { get; set; }
     }
 }
-
