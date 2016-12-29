@@ -163,7 +163,7 @@ namespace Voron.Data.Tables
             var pkTree = GetTree(_schema.Key);
             var readResult = pkTree?.Read(key);
             if (readResult == null)
-                  return false;
+                return false;
 
             id = readResult.Reader.ReadLittleEndianInt64();
             return true;
@@ -795,69 +795,62 @@ namespace Voron.Data.Tables
         public int DeleteBackwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long value, long numberOfEntriesToDelete)
         {
             if (numberOfEntriesToDelete < 0)
-                throw new ArgumentOutOfRangeException(nameof(numberOfEntriesToDelete), "Number of entries should not be negative");
+                ThrowNonNegativeNumberOfEntriesToDelete();
 
-            if (numberOfEntriesToDelete == 0)
-                return 0;
-
-            var toDelete = new List<long>();
+            int deleted = 0;
             var fst = GetFixedSizeTree(index);
-            using (var it = fst.Iterate())
+            // deleteing from a table can shift things around, so we delete 
+            // them one at a time
+            while (deleted < numberOfEntriesToDelete)
             {
-                if (it.Seek(value) == false && it.SeekToLast() == false)
-                    return 0;
-
-                do
+                using (var it = fst.Iterate())
                 {
-                    toDelete.Add(it.CreateReaderForCurrent().ReadLittleEndianInt64());
-                    numberOfEntriesToDelete--;
-                } while (numberOfEntriesToDelete > 0 && it.MovePrev());
+                    if (it.Seek(long.MinValue) == false)
+                        return deleted;
+
+                    if (it.CurrentKey > value)
+                        return deleted;
+
+                    Delete(it.CreateReaderForCurrent().ReadLittleEndianInt64());
+                    deleted++;
+                }
             }
 
-            foreach (var id in toDelete)
-                Delete(id);
-
-
-            return toDelete.Count;
+            return deleted;
         }
 
         public long DeleteForwardFrom(TableSchema.SchemaIndexDef index, Slice value, long numberOfEntriesToDelete)
         {
             if (numberOfEntriesToDelete < 0)
-                throw new ArgumentOutOfRangeException(nameof(numberOfEntriesToDelete), "Number of entries should not be negative");
+                ThrowNonNegativeNumberOfEntriesToDelete();
 
-            if (numberOfEntriesToDelete == 0)
-                return 0;
-
-            var toDelete = new List<long>();
+            int deleted = 0;
             var tree = GetTree(index);
-            using (var it = tree.Iterate(false))
+            while (deleted < numberOfEntriesToDelete)
             {
-                if (it.Seek(value) == false)
-                    return 0;
-
-                do
+                // deleteing from a table can shift things around, so we delete 
+                // them one at a time
+                using (var it = tree.Iterate(false))
                 {
+                    if (it.Seek(value) == false)
+                        return deleted;
                     var fst = GetFixedSizeTree(tree, it.CurrentKey.Clone(_tx.Allocator), 0);
                     using (var fstIt = fst.Iterate())
                     {
                         if (fstIt.Seek(long.MinValue) == false)
                             break;
 
-                        do
-                        {
-                            toDelete.Add(fstIt.CurrentKey);
-                            numberOfEntriesToDelete--;
-                        }
-                        while (numberOfEntriesToDelete > 0 && fstIt.MoveNext());
+                        Delete(fstIt.CurrentKey);
+                        deleted++;
                     }
                 }
-                while (numberOfEntriesToDelete > 0 && it.MoveNext());
             }
+            return deleted;
+        }
 
-            foreach (var id in toDelete)
-                Delete(id);
-            return toDelete.Count;
+        private static void ThrowNonNegativeNumberOfEntriesToDelete()
+        {
+            throw new ArgumentOutOfRangeException("Number of entries should not be negative");
         }
 
         public void PrepareForCommit()

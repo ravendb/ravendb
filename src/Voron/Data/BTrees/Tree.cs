@@ -416,7 +416,7 @@ namespace Voron.Data.BTrees
             return overflowPageStart.PageNumber;
         }
 
-        private void RemoveLeafNode(TreePage page)
+        internal void RemoveLeafNode(TreePage page)
         {
             var node = page.GetNode(page.LastSearchPosition);
             if (node->Flags == (TreeNodeFlags.PageRef)) // this is an overflow pointer
