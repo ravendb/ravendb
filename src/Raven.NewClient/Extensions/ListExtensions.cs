@@ -1,10 +1,23 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 
 namespace Raven.NewClient.Abstractions.Extensions
 {
     public static class ListExtensions
     {
+        public static bool ContentEquals<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, Dictionary<TKey, TValue> otherDictionary)
+        {
+            if (dictionary == null || 
+                otherDictionary == null || 
+                dictionary.Count != otherDictionary.Count)
+                return false;
+
+            return otherDictionary
+                        .OrderBy(kvp => kvp.Key)
+                        .SequenceEqual(dictionary.OrderBy(kvp => kvp.Key));
+        }
+
         public static void ForEach<T>(this IEnumerable<T> source, Action<T> action)
         {
             foreach (T element in source)

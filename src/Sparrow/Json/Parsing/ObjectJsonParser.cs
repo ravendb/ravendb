@@ -88,7 +88,7 @@ namespace Sparrow.Json.Parsing
 
         public DynamicJsonArray(IEnumerable<object> collection)
         {
-            Items = new Queue<object>(collection);
+            Items = collection == null ? new Queue<object>() : new Queue<object>(collection);
         }
 
         public void RemoveAt(int index)

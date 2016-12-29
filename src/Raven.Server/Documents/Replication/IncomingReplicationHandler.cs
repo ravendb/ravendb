@@ -962,6 +962,7 @@ namespace Raven.Server.Documents.Replication
             _documentsContext.Write(writer, new DynamicJsonValue
             {
                 [nameof(ReplicationMessageReply.Type)] = "Ok",
+                [nameof(ReplicationMessageReply.DbId)] = _database.DbId.ToString(),
                 [nameof(ReplicationMessageReply.MessageType)] = handledMessageType,
                 [nameof(ReplicationMessageReply.LastEtagAccepted)] = lastDocumentEtag,
                 [nameof(ReplicationMessageReply.LastIndexTransformerEtagAccepted)] = lastIndexOrTransformerEtag,

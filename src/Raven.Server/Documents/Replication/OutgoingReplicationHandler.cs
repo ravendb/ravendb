@@ -8,20 +8,17 @@ using System.Threading;
 using Raven.Server.Json;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
-using Raven.Client.Document;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using System.Net.Http;
 using Raven.Abstractions.Connection;
-using Raven.Client.Connection;
 using Raven.Client.Extensions;
 using Raven.Client.Replication.Messages;
-using Raven.Json.Linq;
 using Raven.Server.Alerts;
 using Raven.Server.Exceptions;
 using Raven.Server.Extensions;
+using Raven.Server.Utils;
 using Sparrow;
 
 namespace Raven.Server.Documents.Replication
@@ -33,7 +30,7 @@ namespace Raven.Server.Documents.Replication
         private readonly Logger _log;
         private readonly AsyncManualResetEvent _waitForChanges = new AsyncManualResetEvent();
         private readonly CancellationTokenSource _cts;
-        private readonly int _minimalHeartbeatInterval = 15 * 1000;// ms - 15 seconds
+        private readonly int _minimalHeartbeatInterval = 15 * 1000;// TODO: configuration
         private Thread _sendingThread;
 
         internal long _lastSentDocumentEtag;
@@ -53,6 +50,7 @@ namespace Raven.Server.Documents.Replication
         private JsonOperationContext.MultiDocumentParser _parser;
         internal DocumentsOperationContext _documentsContext;
         internal TransactionOperationContext _configurationContext;
+        internal TcpConnectionInfo _tcpConnectionInfo;
 
         internal CancellationToken CancellationToken => _cts.Token;
 
@@ -70,6 +68,7 @@ namespace Raven.Server.Documents.Replication
             _database.Notifications.OnDocumentChange += OnDocumentChange;
             _database.Notifications.OnIndexChange += OnIndexChange;
             _database.Notifications.OnTransformerChange += OnTransformerChange;
+            DestinationDbId = Guid.Empty.ToString();
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
         }
 
@@ -83,39 +82,19 @@ namespace Raven.Server.Documents.Replication
             _sendingThread.Start();
         }
 
-        private TcpConnectionInfo GetTcpInfo()
-        {
-            var convention = new DocumentConvention();
-            //since we use it only once when the connection is initialized, no reason to keep requestFactory around for long
-            using (var requestFactory = new HttpJsonRequestFactory(1))
-            using (var request = requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, string.Format("{0}/info/tcp",
-                MultiDatabase.GetRootDatabaseUrl(_destination.Url)),
-                HttpMethod.Get,
-                new OperationCredentials(_destination.ApiKey, CredentialCache.DefaultCredentials), convention)
-            {
-                Timeout = TimeSpan.FromSeconds(15)
-            }))
-            {
-
-                var result = request.ReadResponseJson();
-                var tcpConnectionInfo = convention.CreateSerializer().Deserialize<TcpConnectionInfo>(new RavenJTokenReader(result));
-                if (_log.IsInfoEnabled)
-                {
-                    _log.Info($"Will replicate to {_destination.Database} @ {_destination.Url} via {tcpConnectionInfo.Url}");
-                }
-                return tcpConnectionInfo;
-            }
-        }
-
         private void ReplicateToDestination()
         {
             try
             {
-                var connectionInfo = GetTcpInfo();
+                _tcpConnectionInfo = ReplicationUtils.GetTcpInfo(MultiDatabase.GetRootDatabaseUrl(_destination.Url), new OperationCredentials(_destination.ApiKey, CredentialCache.DefaultCredentials));
+                if (_log.IsInfoEnabled)
+                {
+                    _log.Info($"Will replicate to {_destination.Database} @ {_destination.Url} via {_tcpConnectionInfo.Url}");
+                }
 
                 using (_tcpClient = new TcpClient())
                 {
-                    ConnectSocket(connectionInfo, _tcpClient);
+                    ConnectSocket(_tcpConnectionInfo, _tcpClient);
 
                     using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out _documentsContext))
                     using (_database.ConfigurationStorage.ContextPool.AllocateOperationContext(out _configurationContext))
@@ -363,6 +342,8 @@ namespace Raven.Server.Documents.Replication
 
         public ReplicationDestination Destination => _destination;
 
+        public string DestinationDbId { get; private set; }
+
         internal void SendHeartbeat()
         {
             try
@@ -425,8 +406,13 @@ namespace Raven.Server.Documents.Replication
             {
                 case ReplicationMessageReply.ReplyType.Ok:
                     UpdateDestinationChangeVector(replicationBatchReply);
-                    OnSuccessfulTwoWaysCommunication();
-                    break;
+                    if (replicationBatchReply.MessageType != "Notify")
+                        OnSuccessfulTwoWaysCommunication();
+
+                    if (string.IsNullOrWhiteSpace(DestinationDbId))
+                        DestinationDbId = replicationBatchReply.DbId;
+
+                    break;                    
                 default:
                     var msg =
                         $"Received error from remote replication destination. Error received: {replicationBatchReply.Exception}";

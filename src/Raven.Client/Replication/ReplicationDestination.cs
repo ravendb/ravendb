@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Raven.Abstractions.Cluster;
 
 namespace Raven.Abstractions.Replication
@@ -112,12 +113,20 @@ namespace Raven.Abstractions.Replication
 
         public bool Equals(ReplicationDestination other) => IsEqualTo(other);
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool IsMatch(ReplicationDestination other)
         {
-            return
-                string.Equals(Url, other.Url, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(Database, other.Database, StringComparison.OrdinalIgnoreCase);
+            return IsMatch(other.Url,other.Database);
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool IsMatch(string url, string database)
+        {
+            return
+                string.Equals(Url, url, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(Database, database, StringComparison.OrdinalIgnoreCase);
+        }
+
 
         public bool IsEqualTo(ReplicationDestination other)
         {

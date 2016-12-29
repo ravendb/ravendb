@@ -9,6 +9,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
+using Raven.NewClient.Client.Http;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
@@ -40,7 +41,7 @@ namespace Raven.Server.Documents.Replication
         private ReplicationDocument _replicationDocument;
 
         public IEnumerable<IncomingConnectionInfo> IncomingConnections => _incoming.Values.Select(x => x.ConnectionInfo);
-        public IEnumerable<ReplicationDestination> OutgoingConnections => _outgoing.Select(x => x.Destination);
+        public IEnumerable<ReplicationDestination> OutgoingConnections => Outgoing.Select(x => x.Destination);
 
         private readonly ConcurrentQueue<TaskCompletionSource<object>> _waitForReplicationTasks = new ConcurrentQueue<TaskCompletionSource<object>>();
 
@@ -57,11 +58,26 @@ namespace Raven.Server.Documents.Replication
         public IReadOnlyDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>> IncomingRejectionStats => _incomingRejectionStats;
         public IEnumerable<ReplicationDestination> ReconnectQueue => _reconnectQueue.Select(x => x.Destination);
 
+        public IReadOnlyCollection<OutgoingReplicationHandler> Outgoing => _outgoing;
+
         public long? GetLastReplicatedEtagForDestination(ReplicationDestination dest)
         {
-            foreach (var replicationHandler in _outgoing)
+            foreach (var replicationHandler in Outgoing)
             {
                 if (replicationHandler.Destination.IsMatch(dest))
+                    return replicationHandler._lastSentDocumentEtag;
+            }
+            return null;
+        }
+
+        public long? GetLastReplicatedEtagForDestination(TopologyNode dest)
+        {
+            foreach (var replicationHandler in Outgoing)
+            {
+                if(dest?.Node?.Url == null || dest.Node == null) //precaution, should never be true
+                    continue;
+
+                if (replicationHandler.Destination.IsMatch(dest.Node.Url,dest.Node.Database))
                     return replicationHandler._lastSentDocumentEtag;
             }
             return null;
@@ -376,7 +392,7 @@ namespace Raven.Server.Documents.Replication
             //prevent reconnecting to a destination that we shouldn't in case we have flaky network
             _reconnectQueue.Clear();
 
-            foreach (var instance in _outgoing)
+            foreach (var instance in Outgoing)
             {
                 instance.Failed -= OnOutgoingSendingFailed;
                 instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
@@ -425,7 +441,7 @@ namespace Raven.Server.Documents.Replication
             foreach (var incoming in _incoming)
                 incoming.Value.Dispose();
 
-            foreach (var outgoing in _outgoing)
+            foreach (var outgoing in Outgoing)
                 outgoing.Dispose();
 
         }
@@ -497,13 +513,13 @@ namespace Raven.Server.Documents.Replication
                 {
                     if (await Task.WhenAny(waitForNextReplicationAsync, timeout) == timeout)
                     {
-                        return ReplicatedPast(lastEtag);
-                    }
+                    return ReplicatedPast(lastEtag);
+                }
                 } catch(OperationCanceledException)
                 {
                     return ReplicatedPast(lastEtag);
-                }
             }
+        }
         }
 
         private Task WaitForNextReplicationAsync()

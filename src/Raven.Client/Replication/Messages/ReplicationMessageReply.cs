@@ -11,6 +11,8 @@ namespace Raven.Client.Replication.Messages
             Error
         }
 
+        public string DbId { get; set; }
+
         public ReplyType Type { get; set; }
 
         public long LastEtagAccepted { get; set; }

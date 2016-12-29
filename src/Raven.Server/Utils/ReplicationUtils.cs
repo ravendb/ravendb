@@ -2,10 +2,16 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Lucene.Net.Support;
+using Raven.Abstractions.Connection;
+using Raven.Abstractions.Data;
+using Raven.Client.Connection;
+using Raven.Client.Document;
 using Raven.Client.Replication.Messages;
+using Raven.Json.Linq;
 using Raven.Server.Documents;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
@@ -20,6 +26,25 @@ namespace Raven.Server.Utils
 {
     public static unsafe class ReplicationUtils
     {
+        public static TcpConnectionInfo GetTcpInfo(string databaseUrl, OperationCredentials operationCredentials, int timeoutSeconds = 15)
+        {
+            var convention = new DocumentConvention();
+            //since we use it only once when the connection is initialized, no reason to keep requestFactory around for long
+            using (var requestFactory = new HttpJsonRequestFactory(1))
+            using (var request = requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, string.Format("{0}/info/tcp", databaseUrl),
+                HttpMethod.Get,
+                operationCredentials, convention)
+            {
+                Timeout = TimeSpan.FromSeconds(timeoutSeconds)
+            }))
+            {
+                var result = request.ReadResponseJson();
+                var tcpConnectionInfo = convention.CreateSerializer().Deserialize<TcpConnectionInfo>(new RavenJTokenReader(result));
+                return tcpConnectionInfo;
+            }
+        }
+
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string ChangeVectorToString(Dictionary<Guid, long> changeVector)
         {
