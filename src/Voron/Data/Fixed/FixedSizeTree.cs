@@ -1101,6 +1101,20 @@ namespace Voron.Data.Fixed
             if (_cursor.Count == 0)
             {
                 // root page
+                if (page.IsBranch && page.NumberOfEntries == 1)
+                {
+                    var childPage = PageValueFor(page, 0);
+                    var rootPageNum = page.PageNumber;
+                    Memory.Copy(page.Pointer, GetReadOnlyPage(childPage).Pointer, _tx.DataPager.PageSize);
+                    page.PageNumber = rootPageNum;//overwritten by copy
+
+                    if (largeTreeHeader != null)
+                        largeTreeHeader->Depth--;
+
+                    FreePage(childPage);
+                    largeTreeHeader->PageCount--;
+                    return page;
+                }
                 if (largeTreeHeader->NumberOfEntries <= _maxEmbeddedEntries)
                 {
                     System.Diagnostics.Debug.Assert(page.IsLeaf);
@@ -1121,20 +1135,6 @@ namespace Voron.Data.Fixed
 
                     FreePage(page.PageNumber);
                 }
-                else if (page.IsBranch && page.NumberOfEntries == 1)
-                {
-                    var childPage = PageValueFor(page, 0);
-                    var rootPageNum = page.PageNumber;
-                    Memory.Copy(page.Pointer, GetReadOnlyPage(childPage).Pointer, _tx.DataPager.PageSize);
-                    page.PageNumber = rootPageNum;//overwritten by copy
-
-                    if (largeTreeHeader != null)
-                        largeTreeHeader->Depth--;
-
-                    FreePage(childPage);
-                    largeTreeHeader->PageCount--;
-                }
-
                 return null;
             }
 
