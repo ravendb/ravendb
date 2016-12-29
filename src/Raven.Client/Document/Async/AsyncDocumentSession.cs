@@ -23,6 +23,7 @@ using System.Diagnostics;
 using System.Dynamic;
 using Raven.Client.Data;
 using Raven.Client.Data.Queries;
+using Raven.Imports.Newtonsoft.Json.Linq;
 
 namespace Raven.Client.Document.Async
 {
@@ -365,7 +366,7 @@ namespace Raven.Client.Document.Async
                                         .ContinueWith(task => (IEnumerable<T>)task.Result.Select(TrackEntity<T>).ToList(), token);
         }
 
-        public Task<IEnumerable<TResult>> LoadStartingWithAsync<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25,
+        public async Task<IEnumerable<TResult>> LoadStartingWithAsync<TTransformer, TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25,
                                                             string exclude = null, RavenPagingInformation pagingInformation = null,
                                                             Action<ILoadConfiguration> configure = null,
                                                             string skipAfter = null, CancellationToken token = default(CancellationToken)) where TTransformer : AbstractTransformerCreationTask, new()
@@ -373,17 +374,35 @@ namespace Raven.Client.Document.Async
             var transformer = new TTransformer().TransformerName;
 
             var configuration = new RavenLoadConfiguration();
-            if (configure != null)
-            {
-                configure(configuration);
-            }
+            configure?.Invoke(configuration);
 
-            return AsyncDatabaseCommands.StartsWithAsync(keyPrefix, matches, start, pageSize, exclude: exclude,
-                                                         pagingInformation: pagingInformation, transformer: transformer,
-                                                         transformerParameters: configuration.TransformerParameters,
-                                                         skipAfter: skipAfter, token: token)
-                                        .ContinueWith(
-                                            task => (IEnumerable<TResult>)task.Result.Select(TrackEntity<TResult>).ToList(), token);
+            var documents = await AsyncDatabaseCommands
+                .StartsWithAsync(
+                    keyPrefix,
+                    matches,
+                    start,
+                    pageSize,
+                    exclude: exclude,
+                    pagingInformation: pagingInformation,
+                    transformer: transformer,
+                    transformerParameters: configuration.TransformerParameters,
+                    skipAfter: skipAfter,
+                    token: token)
+                 .ConfigureAwait(false);
+
+            return documents
+                .SelectMany(document => document.DataAsJson.Value<RavenJArray>("$values"))
+                .Select(value =>
+                {
+                    if (value == null)
+                        return default(TResult);
+
+                    if (value.Type != JTokenType.Object)
+                        return value.JsonDeserialization<TResult>();
+
+                    return (TResult)ProjectionToInstance((RavenJObject)value, typeof(TResult));
+                })
+                .ToArray();
         }
 
         public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, CancellationToken token = default(CancellationToken))

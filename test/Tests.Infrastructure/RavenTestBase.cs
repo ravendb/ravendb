@@ -274,7 +274,10 @@ namespace FastTests
             while (sp.Elapsed < timeout.Value)
             {
                 var databaseStatistics = databaseCommands.GetStatistics();
-                if (databaseStatistics.Indexes.All(x => x.IsStale == false))
+                var indexes = databaseStatistics.Indexes
+                    .Where(x => x.State != IndexState.Disabled);
+
+                if (indexes.All(x => x.IsStale == false))
                     return;
 
                 if (databaseStatistics.Indexes.Any(x => x.State == IndexState.Error))

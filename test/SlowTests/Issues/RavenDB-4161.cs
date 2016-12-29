@@ -3,22 +3,23 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_4161 : RavenTest
+    public class RavenDB_4161 : RavenTestBase
     {
         [Fact]
         public void CanUseTransfromer()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Token_Id().Execute(store);
                 using (IDocumentSession session = store.OpenSession())
@@ -50,7 +51,7 @@ namespace Raven.Tests.Issues
 
                     Assert.Equal(fooTokens, fromQuery, StringComparer.OrdinalIgnoreCase);
 
-                    Assert.Equal(token2.Id, session.Load<Token_Id,string>(token2.Id));
+                    Assert.Equal(token2.Id, session.Load<Token_Id, string>(token2.Id));
 
                     Assert.Equal(token.Id, session.Advanced.Lazily.Load<Token_Id, string>(token.Id).Value);
 
@@ -61,7 +62,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public async Task CanUseTransfromerAsync()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 await new Token_Id().ExecuteAsync(store);
 
@@ -98,14 +99,14 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class Token
+        private class Token
         {
             public string Id { get; set; }
             public string Name { get; set; }
             public string Data { get; set; }
         }
 
-        public class Token_Id : AbstractTransformerCreationTask<Token>
+        private class Token_Id : AbstractTransformerCreationTask<Token>
         {
             public Token_Id()
             {
