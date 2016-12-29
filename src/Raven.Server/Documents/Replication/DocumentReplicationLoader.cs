@@ -271,7 +271,6 @@ namespace Raven.Server.Documents.Replication
 
         private void InitializeOutgoingReplications()
         {
-            _numberOfSiblings = 0;
             _replicationDocument = GetReplicationDocument();
             if (_replicationDocument?.Destinations == null || //precaution
                 _replicationDocument.Destinations.Count == 0)
