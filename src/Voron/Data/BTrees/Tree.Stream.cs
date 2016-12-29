@@ -44,7 +44,6 @@ namespace Voron.Data.BTrees
                 DeleteStream(key);
             }
 
-            var remainingSize = stream.Length;
             if (_localBuffer == null)
                 _localBuffer = new byte[16*1024];
 
@@ -53,6 +52,7 @@ namespace Voron.Data.BTrees
                 var chunkDetails = new ChunkDetails();
                 using (Slice.External(_tx.Allocator, (byte*)&chunkDetails, sizeof(ChunkDetails), out value))
                 {
+                    var remainingSize = stream.Length;
                     chunkDetails.PageNumber = remainingSize;
                     chunkDetails.ChunkSize = version + 1;
                     tree.Add(StreamSizeValue, value); // marker for the file size
@@ -92,19 +92,6 @@ namespace Voron.Data.BTrees
                             read = stream.Read(_localBuffer, 0, _localBuffer.Length);
                             bufferPos = 0;
                         } while (true);
-                    }
-                }
-                stream.Position = 0;
-                var readStream = ReadStream(key);
-                if (stream.Length != readStream.Length)
-                {
-                    Console.WriteLine("WH!?");
-                }
-                for (int i = 0; i < stream.Length; i++)
-                {
-                    if (stream.ReadByte() != readStream.ReadByte())
-                    {
-                        Console.WriteLine("HASH?!");
                     }
                 }
             }
