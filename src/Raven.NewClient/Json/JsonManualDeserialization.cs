@@ -58,8 +58,10 @@ namespace Raven.NewClient.Json
         }
 
         public static TopologyNode ConvertToTopologyNode(BlittableJsonReaderObject json)
-        {
+        {            
             var nodeList = ToDictionary(json, "NodeList", nodeInfoConverter);
+            if (nodeList.Count == 0)
+                return null;
             var adjacencyList = ToDictionaryOfStringArray(json, "NodeAdjacency");
 
             var initialNode = nodeList.FirstOrDefault(n => n.Value.IsInitialNode);

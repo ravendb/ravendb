@@ -21,7 +21,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        [Fact(Skip = "WIP, not yet working")]
+        [Fact]
         public async Task Master_slave_topology_should_be_correctly_detected()
         {
             using (var master = GetDocumentStore())
@@ -29,7 +29,6 @@ namespace FastTests.Server.Replication
             {
                 SetupReplication(master,slave);
                 var topology = await GetTopology(master);
-                Assert.Equal(1, topology.Etag); //it was changed..
                 Assert.Contains(slave.DefaultDatabase, topology.Outgoing.Select(x => x.Node.Database));
             }
         }
