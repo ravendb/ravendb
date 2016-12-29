@@ -110,7 +110,8 @@ namespace Raven.Server.ServerWide
                 : StorageEnvironmentOptions.ForPath(System.IO.Path.Combine(Configuration.Core.DataDirectory,"System"));
 
             options.SchemaVersion = 2;
-
+            options.RunWithSparseMmapPagerConfiguration = Configuration.Core.RunWithSparseMmapPager;
+			
             try
             {
                 StorageEnvironment.MaxConcurrentFlushes = Configuration.Storage.MaxConcurrentFlushes;
