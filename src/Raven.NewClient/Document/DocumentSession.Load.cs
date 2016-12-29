@@ -174,11 +174,11 @@ namespace Raven.NewClient.Client.Document
             return loadOeration.GetDocuments<T>();
         }
 
-        public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes)
+        public T[] LoadInternal<T>(string[] ids, string[] includes)
         {
             var loadOeration = new LoadOperation(this);
             loadOeration.ByIds(ids);
-            loadOeration.WithIncludes(includes?.Select(x => x.Key).ToArray());
+            loadOeration.WithIncludes(includes);
 
             var command = loadOeration.CreateRequest();
             if (command != null)
@@ -211,7 +211,7 @@ namespace Raven.NewClient.Client.Document
             return loadTransformerOeration.GetTransformedDocuments<T>(command?.Result);
         }
 
-        public T[] LoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, object> transformerParameters = null)
+        public T[] LoadInternal<T>(string[] ids, string[] includes, string transformer, Dictionary<string, object> transformerParameters = null)
         {
             if (transformer == null)
                 throw new ArgumentNullException("transformer");
@@ -221,7 +221,7 @@ namespace Raven.NewClient.Client.Document
             var loadTransformerOeration = new LoadTransformerOperation(this);
             loadTransformerOeration.ByIds(ids);
             loadTransformerOeration.WithTransformer(transformer, transformerParameters);
-            loadTransformerOeration.WithIncludes(includes?.Select(x => x.Key).ToArray());
+            loadTransformerOeration.WithIncludes(includes);
 
             var command = loadTransformerOeration.CreateRequest();
             if (command != null)

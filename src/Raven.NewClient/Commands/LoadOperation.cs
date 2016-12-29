@@ -16,9 +16,13 @@ namespace Raven.NewClient.Client.Commands
         private string[] _includes;
         private readonly List<string> _idsToCheckOnServer = new List<string>();
 
-        public LoadOperation(InMemoryDocumentSessionOperations session)
+        public LoadOperation(InMemoryDocumentSessionOperations session, string[] ids = null, string[] includes = null)
         {
             _session = session;
+            if (ids != null)
+                _ids = ids;
+            if (includes != null)
+                _includes = includes;
         }
 
         public GetDocumentCommand CreateRequest()

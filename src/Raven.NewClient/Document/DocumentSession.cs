@@ -6,16 +6,20 @@
 
 using Raven.NewClient.Client.Connection;
 using System;
+using System.Diagnostics;
 using System.Linq.Expressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Document.Batches;
 using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Linq;
+using System.Linq;
+using Raven.NewClient.Abstractions.Data;
+using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Document
 {
@@ -159,7 +163,100 @@ namespace Raven.NewClient.Client.Document
 
         public ResponseTimeInformation ExecuteAllPendingLazyOperations()
         {
-            throw new NotImplementedException();
+            if (pendingLazyOperations.Count == 0)
+                return new ResponseTimeInformation();
+
+            try
+            {
+                var sw = Stopwatch.StartNew();
+
+                IncrementRequestCount();
+
+                var responseTimeDuration = new ResponseTimeInformation();
+
+                while (ExecuteLazyOperationsSingleStep(responseTimeDuration))
+                {
+                    Thread.Sleep(100);
+                }
+
+                responseTimeDuration.ComputeServerTotal();
+
+
+                foreach (var pendingLazyOperation in pendingLazyOperations)
+                {
+                    Action<object> value;
+                    if (onEvaluateLazy.TryGetValue(pendingLazyOperation, out value))
+                        value(pendingLazyOperation.Result);
+                }
+                responseTimeDuration.TotalClientDuration = sw.Elapsed;
+                return responseTimeDuration;
+            }
+            finally
+            {
+                pendingLazyOperations.Clear();
+            }
+        }
+
+        private bool ExecuteLazyOperationsSingleStep(ResponseTimeInformation responseTimeInformation)
+        {
+            //WIP - Not final
+            var disposables = pendingLazyOperations.Select(x => x.EnterContext()).Where(x => x != null).ToList();
+            try
+            {
+                var requests = pendingLazyOperations.Select(x => x.CreateRequest()).ToList();
+                var multiGetOperation = new MultiGetOperation(this);
+                var multiGetCommand = multiGetOperation.CreateRequest(requests);
+                RequestExecuter.Execute(multiGetCommand, Context);
+                var responses = multiGetCommand.Result;
+
+                for ( int i = 0; i < pendingLazyOperations.Count; i++)
+                {
+                    long totalTime;
+                    object tempReqTime;
+                    var response = (BlittableJsonReaderObject)responses.Results[i];
+                    object headers;
+                    response.TryGetMember("Headers", out headers);
+                    ((BlittableJsonReaderObject) headers).TryGetMember(Constants.Headers.RequestTime, out tempReqTime);
+
+                    long.TryParse(tempReqTime?.ToString(), out totalTime);
+
+                    responseTimeInformation.DurationBreakdown.Add(new ResponseTimeItem
+                    {
+                        Url = requests[i].UrlAndQuery,
+                        Duration = TimeSpan.FromMilliseconds(totalTime)
+                    });
+                    object status;
+                    response.TryGetMember("Status", out status);
+                    switch ((Int64)status)
+                    {
+                        case 0:   // aggressively cached
+                        case 200: // known non error values
+                        case 201:
+                        case 203:
+                        case 204:
+                        case 304:
+                        case 404:
+                            break;
+                        default:
+                            throw new InvalidOperationException("Got an error from server, status code: " + (int)status +
+                                                            Environment.NewLine + response);
+                    }
+
+                    pendingLazyOperations[i].HandleResponse(response);
+                    if (pendingLazyOperations[i].RequiresRetry)
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            finally
+            {
+                foreach (var disposable in disposables)
+                {
+                    disposable.Dispose();
+                }
+            }
         }
     }
 }

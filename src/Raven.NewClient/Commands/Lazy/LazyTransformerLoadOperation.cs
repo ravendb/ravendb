@@ -5,10 +5,12 @@ using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
+using Raven.NewClient.Client.Document.Batches;
 using Raven.NewClient.Client.Shard;
+using Sparrow.Json;
 
 
-namespace Raven.NewClient.Client.Document.Batches
+namespace Raven.NewClient.Client.Commands.Lazy
 {
     public class LazyTransformerLoadOperation<T> : ILazyOperation
     {
@@ -53,13 +55,14 @@ namespace Raven.NewClient.Client.Document.Batches
 
         public bool RequiresRetry { get; set; }
 
-        public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
+        public void HandleResponses(BlittableJsonReaderObject[] responses, ShardStrategy shardStrategy)
         {
-            var response = responses.OrderBy(x => x.Status).First(); // this way, 200 response is higher than 404
-            HandleResponse(response);
+            throw new NotImplementedException();
+           /* var response = responses.OrderBy(x => x.Status).First(); // this way, 200 response is higher than 404
+            HandleResponse(response);*/
         }
 
-        public void HandleResponse(GetResponse response)
+        public void HandleResponse(BlittableJsonReaderObject response)
         {
             throw new NotImplementedException();
             /*if (response.RequestHasErrors())

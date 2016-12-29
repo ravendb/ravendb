@@ -1,14 +1,10 @@
 using System;
 using System.Collections.Specialized;
-using System.Text;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Shard;
-
-using System.Linq;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
+using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Document.Batches
 {
@@ -52,7 +48,7 @@ namespace Raven.NewClient.Client.Document.Batches
         public QueryResult QueryResult { get; set; }
 
         public bool RequiresRetry { get; set; }
-        public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
+        public void HandleResponses(BlittableJsonReaderObject[] responses, ShardStrategy shardStrategy)
         {
             throw new NotImplementedException();
             /* var count = responses.Count(x => x.Status == 404);
@@ -75,7 +71,7 @@ namespace Raven.NewClient.Client.Document.Batches
              QueryResult = queryResult;*/
         }
 
-        public void HandleResponse(GetResponse response)
+        public void HandleResponse(BlittableJsonReaderObject response)
         {
             throw new NotImplementedException();
             /*if (response.ForceRetry)

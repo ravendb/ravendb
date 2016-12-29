@@ -1,28 +1,28 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
+using Raven.NewClient.Client.Document.Batches;
 using Raven.NewClient.Client.Shard;
+using Sparrow.Json;
 
 
-namespace Raven.NewClient.Client.Document.Batches
+namespace Raven.NewClient.Client.Commands.Lazy
 {
     public class LazyLoadOperation<T> : ILazyOperation
     {
         private readonly LoadOperation loadOperation;
         private readonly string[] ids;
         private readonly string transformer;
-        private readonly KeyValuePair<string, Type>[] includes;
+        private readonly string[] includes;
 
         public LazyLoadOperation(
             LoadOperation loadOperation,
             string[] ids,
-            KeyValuePair<string, Type>[] includes,
+            string[] includes,
             string transformer = null)
         {
             this.loadOperation = loadOperation;
@@ -59,7 +59,7 @@ namespace Raven.NewClient.Client.Document.Batches
         public QueryResult QueryResult { get; set; }
         public bool RequiresRetry { get; set; }
 
-        public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
+        public void HandleResponses(BlittableJsonReaderObject[] responses, ShardStrategy shardStrategy)
         {
             throw new NotImplementedException();
             /*var list = new List<LoadResult>(
@@ -96,39 +96,48 @@ namespace Raven.NewClient.Client.Document.Batches
 */
         }
 
-        public void HandleResponse(GetResponse response)
+        public void HandleResponse(BlittableJsonReaderObject response)
         {
-            throw new NotImplementedException();
 
-            /*if (response.ForceRetry)
+            object forceRetry;
+            response.TryGetMember("ForceRetry", out forceRetry);
+
+            if (( forceRetry!= null) && ((bool)forceRetry))
             {
                 Result = null;
                 RequiresRetry = true;
                 return;
             }
 
-            var result = response.Result;
+            object result;
+            response.TryGetMember("Result", out result);
 
-            var multiLoadResult = new LoadResult
+            object include;
+            object res;
+
+            ((BlittableJsonReaderObject)result).TryGetMember("Results", out res);
+            ((BlittableJsonReaderObject)result).TryGetMember("Includes", out include);
+
+            var multiLoadResult = new GetDocumentResult()
             {
-                Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
-                Results = result.Value<RavenJArray>("Results").Select(x => x as RavenJObject).ToList()
+                Includes = (BlittableJsonReaderArray)include,
+                Results = (BlittableJsonReaderArray)res
             };
-            HandleResponse(multiLoadResult);*/
+            HandleResponse(multiLoadResult);
         }
 
-        /*private void HandleResponse(LoadResult loadResult)
+        private void HandleResponse(GetDocumentResult loadResult)
         {
-            throw new NotImplementedException();
-            /*  RequiresRetry = loadOperation.SetResult(loadResult);
+              loadOperation.SetResult(loadResult);
               if (RequiresRetry == false)
-                  Result = loadOperation.Complete<T>();#1#
-        }*/
+                  Result = loadOperation.GetDocuments<T>();
+        }
 
         public IDisposable EnterContext()
         {
-            throw new NotImplementedException();
-            /* return loadOperation.EnterLoadContext();*/
+            return null;
+            //throw new NotImplementedException();
+            //return loadOperation.EnterLoadContext();
         }
     }
 }
