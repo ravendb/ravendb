@@ -307,10 +307,16 @@ namespace Voron.Impl
         private PagerStateCacheItem _lastScratchFileUsed = new PagerStateCacheItem(InvalidScratchFile, null);
         private bool _disposed;
 
-        public Page GetPage(long pageNumber)
+        public class PagerRef
+        {
+            public AbstractPager Pager;
+            public long PagerPageNumber;
+        }
+
+        public Page GetPage(long pageNumber, PagerRef pagerRef = null)
         {
             if (_disposed)
-                throw new ObjectDisposedException("Transaction");
+                ThrowObjectDisposed();
 
             // Check if we can hit the lowest level locality cache.
             Page p;
@@ -333,12 +339,12 @@ namespace Voron.Impl
                     }
                 }
 
-                p = _env.ScratchBufferPool.ReadPage(this, value.ScratchFileNumber, value.PositionInScratchBuffer, state);
+                p = _env.ScratchBufferPool.ReadPage(this, value.ScratchFileNumber, value.PositionInScratchBuffer, state, pagerRef);
                 Debug.Assert(p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from scratch", pageNumber, p.PageNumber));
             }
             else
             {
-                var pageFromJournal = _journal.ReadPage(this, pageNumber, _scratchPagerStates);
+                var pageFromJournal = _journal.ReadPage(this, pageNumber, _scratchPagerStates, pagerRef);
                 if (pageFromJournal != null)
                 {
                     p = pageFromJournal.Value;
@@ -348,6 +354,8 @@ namespace Voron.Impl
                 else
                 {
                     p = DataPager.ReadPage(this, pageNumber);
+                    if (pagerRef != null)
+                        pagerRef.Pager = DataPager;
                     Debug.Assert(p.PageNumber == pageNumber,
                         string.Format("Requested ReadOnly page #{0}. Got #{1} from data file", pageNumber, p.PageNumber));
                 }
@@ -356,6 +364,11 @@ namespace Voron.Impl
             TrackReadOnlyPage(p);
 
             return p;
+        }
+
+        private static void ThrowObjectDisposed()
+        {
+            throw new ObjectDisposedException("Transaction");
         }
 
         public Page AllocatePage(int numberOfPages, long? pageNumber = null, Page? previousPage = null, bool zeroPage = true)
