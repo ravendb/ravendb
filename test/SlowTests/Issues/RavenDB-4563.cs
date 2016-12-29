@@ -7,7 +7,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_4563 : RavenTestBase
     {
-        [Fact(Skip = "RavenDB-5861")]
+        [Fact(Skip = "RavenDB-5981")]
         public void bulk_insert_throws_when_server_is_down()
         {
             DoNotReuseServer();
