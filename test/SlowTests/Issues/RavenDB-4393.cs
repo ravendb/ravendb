@@ -1,29 +1,26 @@
 ﻿using System;
 using System.Linq;
-
+using FastTests;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
 using Xunit;
 
-namespace Testing
+namespace SlowTests.Issues
 {
-
-    public class RavenDB_4393 : RavenTest
+    public class RavenDB_4393 : RavenTestBase
     {
-        public class FailedMessage
+        private class FailedMessage
         {
             public string Id { get; set; }
         }
 
-        public class ProcessedMessage
+        private class ProcessedMessage
         {
             public string Id { get; set; }
             public TimeSpan CriticalTime { get; set; }
         }
 
-        public class MessagesViewIndex : AbstractMultiMapIndexCreationTask<MessagesViewIndex.SortAndFilterOptions>
+        private class MessagesViewIndex : AbstractMultiMapIndexCreationTask<MessagesViewIndex.SortAndFilterOptions>
         {
             public class SortAndFilterOptions
             {
@@ -50,7 +47,7 @@ namespace Testing
         [Fact]
         public void SampleTestMethod()
         {
-            using (IDocumentStore store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new MessagesViewIndex().Execute(store);
 
