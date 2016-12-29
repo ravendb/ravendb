@@ -20,6 +20,7 @@ import resourceInfo = require("models/resources/info/resourceInfo");
 import databaseInfo = require("models/resources/info/databaseInfo");
 import filesystemInfo = require("models/resources/info/filesystemInfo");
 import database = require("models/resources/database");
+import EVENTS = require("common/constants/events");
 
 class resources extends viewModelBase {
 
@@ -141,6 +142,12 @@ class resources extends viewModelBase {
                 // Delete database from page resources if exists (because maybe another client did the delete..)
                 if (resource) {
                     this.removeResource(resource);
+
+                    let resourceFromHeader = this.resourcesManager.resources().find(x => x.qualifiedName === resource.qualifiedName);
+                    if (!resourceFromHeader)
+                        return;
+
+                    ko.postbox.publish(EVENTS.Resource.Disconnect, { resource: resourceFromHeader });
                 }
                 break;
         }
@@ -247,9 +254,15 @@ class resources extends viewModelBase {
         }
     }
 
-    private removeResource(resource: resourceInfo) {
-        this.resources().sortedResources.remove(resource);
-        this.selectedResources.remove(resource.qualifiedName);
+    private removeResource(rsInfo: resourceInfo) {
+        this.resources().sortedResources.remove(rsInfo);
+        this.selectedResources.remove(rsInfo.qualifiedName);
+
+        let resource = this.resourcesManager.resources().find(x => x.qualifiedName === rsInfo.qualifiedName);
+        if (!resource)
+            return;
+
+        ko.postbox.publish(EVENTS.Resource.Disconnect, { resource: resource });
     }
 
     toggleSelectedResources() {
