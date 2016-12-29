@@ -93,7 +93,7 @@ namespace Voron.Data.BTrees
         public static Tree Create(LowLevelTransaction llt, Transaction tx, TreeFlags flags = TreeFlags.None, RootObjectType type = RootObjectType.VariableSizeTree, PageLocator pageLocator = null)
         {
             if (type != RootObjectType.VariableSizeTree && type != RootObjectType.Table)
-                throw new ArgumentException($"Only valid types are {nameof(RootObjectType.VariableSizeTree)} or {nameof(RootObjectType.Table)}.", nameof(type));
+                ThrowInvalidTreeCreateType();
 
             var newRootPage = AllocateNewPage(llt, TreePageFlags.Leaf, 1);
             var tree = new Tree(llt, tx, newRootPage.PageNumber, pageLocator)
@@ -111,6 +111,13 @@ namespace Voron.Data.BTrees
 
             tree.State.RecordNewPage(newRootPage, 1);
             return tree;
+        }
+
+        private static void ThrowInvalidTreeCreateType()
+        {
+            throw new ArgumentException(
+                $"Only valid types are {nameof(RootObjectType.VariableSizeTree)} or {nameof(RootObjectType.Table)}.",
+                "type");
         }
 
         /// <summary>
@@ -169,15 +176,28 @@ namespace Voron.Data.BTrees
 
         private static void ValidateValueLength(Stream value)
         {
-            if (value == null) throw new ArgumentNullException(nameof(value));
-
+            if (value == null)
+                ThrowNullReferenceException();
+            Debug.Assert(value != null);
             if (value.Length > int.MaxValue)
-                throw new ArgumentException("Cannot add a value that is over 2GB in size", nameof(value));
+                ThrowValueTooLarge();
+        }
+
+        private static void ThrowValueTooLarge()
+        {
+            throw new ArgumentException("Cannot add a value that is over 2GB in size");
+        }
+
+        private static void ThrowNullReferenceException()
+        {
+            throw new ArgumentNullException();
         }
 
         public void Add(Slice key, byte[] value)
         {
-            if (value == null) throw new ArgumentNullException(nameof(value));
+            if (value == null)
+                ThrowNullReferenceException();
+            Debug.Assert(value != null);
 
             State.IsModified = true;
             var pos = DirectAdd(key, value.Length);
@@ -191,7 +211,7 @@ namespace Voron.Data.BTrees
         public void Add(Slice key, Slice value)
         {
             if (!value.HasValue)
-                throw new ArgumentNullException(nameof(value));
+                ThrowNullReferenceException();
 
             State.IsModified = true;
             var pos = DirectAdd(key, value.Size);
@@ -232,11 +252,11 @@ namespace Voron.Data.BTrees
             }
             else
             {
-                throw new ArgumentException("Cannot add a value in a read only transaction");
+                ThreadCannotAddInReadTx();
             }
 
             if (AbstractPager.IsKeySizeValid(key.Size) == false)
-                throw new ArgumentException($"Key size is too big, must be at most {AbstractPager.MaxKeySize} bytes, but was {(key.Size + AbstractPager.RequiredSpaceForNewNode)}", nameof(key));
+                ThrowInvalidKeySize(key);
 
             Func<Slice, TreeCursor> cursorConstructor;
             TreeNodeHeader* node;
@@ -323,12 +343,31 @@ namespace Voron.Data.BTrees
                     dataPos = page.AddMultiValueNode(lastSearchPosition, key, len);
                     break;
                 default:
-                    throw new NotSupportedException("Unknown node type for direct add operation: " + nodeType);
+                    ThrowUnknownNodeTypeAddOperation(nodeType);
+                    dataPos = null; // never executed
+                    break;
             }
 
             page.DebugValidate(this, State.RootPageNumber);
 
             return overFlowPos == null ? dataPos : overFlowPos;
+        }
+
+        private static void ThrowUnknownNodeTypeAddOperation(TreeNodeFlags nodeType)
+        {
+            throw new NotSupportedException("Unknown node type for direct add operation: " + nodeType);
+        }
+
+        private static void ThrowInvalidKeySize(Slice key)
+        {
+            throw new ArgumentException(
+                $"Key size is too big, must be at most {AbstractPager.MaxKeySize} bytes, but was {(key.Size + AbstractPager.RequiredSpaceForNewNode)}",
+                nameof(key));
+        }
+
+        private static void ThreadCannotAddInReadTx()
+        {
+            throw new ArgumentException("Cannot add a value in a read only transaction");
         }
 
         public TreePage ModifyPage(TreePage page)
