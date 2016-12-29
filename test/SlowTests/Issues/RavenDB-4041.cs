@@ -1,20 +1,20 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_4041 : RavenTestBase
     {
         [Fact]
         public void streaming_returns_metadata()
         {
-            using (var store = NewRemoteDocumentStore(fiddler: true))
+            using (var store = GetDocumentStore())
             {
                 var index = new Customers_ByName();
                 index.Execute(store);
@@ -39,10 +39,10 @@ namespace Raven.Tests.Issues
 
                         Assert.NotNull(enumerator.Current.Key);
                         Assert.NotNull(enumerator.Current.Etag);
-                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.RavenClrType));
-                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.RavenEntityName));
-                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.LastModified));
-                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.RavenLastModified));
+                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Headers.RavenClrType));
+                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Headers.RavenEntityName));
+                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Headers.LastModified));
+                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Headers.RavenLastModified));
                     }
                 }
             }
@@ -51,7 +51,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public async Task streaming_returns_metadata_async()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var index = new Customers_ByName();
                 index.Execute(store);
@@ -76,10 +76,10 @@ namespace Raven.Tests.Issues
 
                         Assert.NotNull(enumerator.Current.Key);
                         Assert.NotNull(enumerator.Current.Etag);
-                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.RavenClrType));
-                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.RavenEntityName));
-                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.LastModified));
-                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.RavenLastModified));
+                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Headers.RavenClrType));
+                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Headers.RavenEntityName));
+                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Headers.LastModified));
+                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Headers.RavenLastModified));
                     }
                 }
             }
@@ -88,7 +88,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void streaming_query_returns_metadata()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var index = new Customers_ByName();
                 index.Execute(store);
@@ -114,11 +114,11 @@ namespace Raven.Tests.Issues
 
                         Assert.NotNull(enumerator.Current.Key);
                         Assert.NotNull(enumerator.Current.Etag);
-                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.RavenClrType));
-                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.RavenEntityName));
-                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.TemporaryScoreValue));
-                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.LastModified));
-                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.RavenLastModified));
+                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Headers.RavenClrType));
+                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Headers.RavenEntityName));
+                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Metadata.IndexScore));
+                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Headers.LastModified));
+                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Headers.RavenLastModified));
                     }
                 }
             }
@@ -127,7 +127,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public async Task streaming_query_returns_metadata_async()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var index = new Customers_ByName();
                 index.Execute(store);
@@ -153,11 +153,11 @@ namespace Raven.Tests.Issues
 
                         Assert.NotNull(enumerator.Current.Key);
                         Assert.NotNull(enumerator.Current.Etag);
-                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.RavenClrType));
-                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.RavenEntityName));
-                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.TemporaryScoreValue));
-                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.LastModified));
-                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.RavenLastModified));
+                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Headers.RavenClrType));
+                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Headers.RavenEntityName));
+                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Metadata.IndexScore));
+                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Headers.LastModified));
+                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Headers.RavenLastModified));
                     }
                 }
             }
@@ -166,7 +166,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void returns_metadata()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var index = new Customers_ByName();
                 index.Execute(store);
@@ -189,10 +189,10 @@ namespace Raven.Tests.Issues
 
                     var metadata = session.Advanced.GetMetadataFor(customer);
                     Assert.NotNull(metadata.Value<string>("@etag"));
-                    Assert.NotNull(metadata.Value<string>(Constants.RavenClrType));
-                    Assert.NotNull(metadata.Value<string>(Constants.RavenEntityName));
-                    Assert.NotNull(metadata.Value<string>(Constants.LastModified));
-                    Assert.NotNull(metadata.Value<string>(Constants.RavenLastModified));
+                    Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenClrType));
+                    Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenEntityName));
+                    Assert.NotNull(metadata.Value<string>(Constants.Headers.LastModified));
+                    Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenLastModified));
                 }
             }
         }
@@ -200,7 +200,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void returns_metadata_async()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var index = new Customers_ByName();
                 index.Execute(store);
@@ -224,10 +224,10 @@ namespace Raven.Tests.Issues
 
                     var metadata = session.Advanced.GetMetadataFor(customer);
                     Assert.NotNull(metadata.Value<string>("@etag"));
-                    Assert.NotNull(metadata.Value<string>(Constants.RavenClrType));
-                    Assert.NotNull(metadata.Value<string>(Constants.RavenEntityName));
-                    Assert.NotNull(metadata.Value<string>(Constants.LastModified));
-                    Assert.NotNull(metadata.Value<string>(Constants.RavenLastModified));
+                    Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenClrType));
+                    Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenEntityName));
+                    Assert.NotNull(metadata.Value<string>(Constants.Headers.LastModified));
+                    Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenLastModified));
                 }
             }
         }
@@ -235,7 +235,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void load_returns_metadata()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var index = new Customers_ByName();
                 index.Execute(store);
@@ -258,10 +258,10 @@ namespace Raven.Tests.Issues
 
                     var metadata = session.Advanced.GetMetadataFor(customer);
                     Assert.NotNull(metadata.Value<string>("@etag"));
-                    Assert.NotNull(metadata.Value<string>(Constants.RavenClrType));
-                    Assert.NotNull(metadata.Value<string>(Constants.RavenEntityName));
-                    Assert.NotNull(metadata.Value<string>(Constants.LastModified));
-                    Assert.NotNull(metadata.Value<string>(Constants.RavenLastModified));
+                    Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenClrType));
+                    Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenEntityName));
+                    Assert.NotNull(metadata.Value<string>(Constants.Headers.LastModified));
+                    Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenLastModified));
                 }
             }
         }
@@ -269,7 +269,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public async Task load_returns_metadata_async()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var index = new Customers_ByName();
                 index.Execute(store);
@@ -292,10 +292,10 @@ namespace Raven.Tests.Issues
 
                     var metadata = session.Advanced.GetMetadataFor(customer);
                     Assert.NotNull(metadata.Value<string>("@etag"));
-                    Assert.NotNull(metadata.Value<string>(Constants.RavenClrType));
-                    Assert.NotNull(metadata.Value<string>(Constants.RavenEntityName));
-                    Assert.NotNull(metadata.Value<string>(Constants.LastModified));
-                    Assert.NotNull(metadata.Value<string>(Constants.RavenLastModified));
+                    Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenClrType));
+                    Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenEntityName));
+                    Assert.NotNull(metadata.Value<string>(Constants.Headers.LastModified));
+                    Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenLastModified));
                 }
             }
         }
@@ -303,7 +303,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void load_with_big_key_returns_metadata()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var index = new Customers_ByName();
                 index.Execute(store);
@@ -325,17 +325,17 @@ namespace Raven.Tests.Issues
 
                 Assert.NotNull(customer.Etag);
                 Assert.NotNull(customer.LastModified);
-                Assert.NotNull(customer.Metadata.Value<string>(Constants.RavenClrType));
-                Assert.NotNull(customer.Metadata.Value<string>(Constants.RavenEntityName));
-                Assert.NotNull(customer.Metadata.Value<string>(Constants.LastModified));
-                Assert.NotNull(customer.Metadata.Value<string>(Constants.RavenLastModified));
+                Assert.NotNull(customer.Metadata.Value<string>(Constants.Headers.RavenClrType));
+                Assert.NotNull(customer.Metadata.Value<string>(Constants.Headers.RavenEntityName));
+                Assert.NotNull(customer.Metadata.Value<string>(Constants.Headers.LastModified));
+                Assert.NotNull(customer.Metadata.Value<string>(Constants.Headers.RavenLastModified));
             }
         }
 
         [Fact]
         public async Task load_with_big_key_returns_metadata_async()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var index = new Customers_ByName();
                 index.Execute(store);
@@ -357,17 +357,17 @@ namespace Raven.Tests.Issues
 
                 Assert.NotNull(customer.Etag);
                 Assert.NotNull(customer.LastModified);
-                Assert.NotNull(customer.Metadata.Value<string>(Constants.RavenClrType));
-                Assert.NotNull(customer.Metadata.Value<string>(Constants.RavenEntityName));
-                Assert.NotNull(customer.Metadata.Value<string>(Constants.LastModified));
-                Assert.NotNull(customer.Metadata.Value<string>(Constants.RavenLastModified));
+                Assert.NotNull(customer.Metadata.Value<string>(Constants.Headers.RavenClrType));
+                Assert.NotNull(customer.Metadata.Value<string>(Constants.Headers.RavenEntityName));
+                Assert.NotNull(customer.Metadata.Value<string>(Constants.Headers.LastModified));
+                Assert.NotNull(customer.Metadata.Value<string>(Constants.Headers.RavenLastModified));
             }
         }
 
         [Fact]
         public void multi_load_returns_metadata()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var index = new Customers_ByName();
                 index.Execute(store);
@@ -394,10 +394,10 @@ namespace Raven.Tests.Issues
 
                         var metadata = session.Advanced.GetMetadataFor(customer);
                         Assert.NotNull(metadata.Value<string>("@etag"));
-                        Assert.NotNull(metadata.Value<string>(Constants.RavenClrType));
-                        Assert.NotNull(metadata.Value<string>(Constants.RavenEntityName));
-                        Assert.NotNull(metadata.Value<string>(Constants.LastModified));
-                        Assert.NotNull(metadata.Value<string>(Constants.RavenLastModified));
+                        Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenClrType));
+                        Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenEntityName));
+                        Assert.NotNull(metadata.Value<string>(Constants.Headers.LastModified));
+                        Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenLastModified));
                     }
                 }
             }
@@ -406,7 +406,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void load_lazily_returns_metadata()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var index = new Customers_ByName();
                 index.Execute(store);
@@ -430,10 +430,10 @@ namespace Raven.Tests.Issues
 
                     var metadata = session.Advanced.GetMetadataFor(customer);
                     Assert.NotNull(metadata.Value<string>("@etag"));
-                    Assert.NotNull(metadata.Value<string>(Constants.RavenClrType));
-                    Assert.NotNull(metadata.Value<string>(Constants.RavenEntityName));
-                    Assert.NotNull(metadata.Value<string>(Constants.LastModified));
-                    Assert.NotNull(metadata.Value<string>(Constants.RavenLastModified));
+                    Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenClrType));
+                    Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenEntityName));
+                    Assert.NotNull(metadata.Value<string>(Constants.Headers.LastModified));
+                    Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenLastModified));
                 }
             }
         }
@@ -441,7 +441,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void load_lazily_returns_metadata_async()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var index = new Customers_ByName();
                 index.Execute(store);
@@ -465,10 +465,10 @@ namespace Raven.Tests.Issues
 
                     var metadata = session.Advanced.GetMetadataFor(customer);
                     Assert.NotNull(metadata.Value<string>("@etag"));
-                    Assert.NotNull(metadata.Value<string>(Constants.RavenClrType));
-                    Assert.NotNull(metadata.Value<string>(Constants.RavenEntityName));
-                    Assert.NotNull(metadata.Value<string>(Constants.LastModified));
-                    Assert.NotNull(metadata.Value<string>(Constants.RavenLastModified));
+                    Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenClrType));
+                    Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenEntityName));
+                    Assert.NotNull(metadata.Value<string>(Constants.Headers.LastModified));
+                    Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenLastModified));
                 }
             }
         }
@@ -476,7 +476,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void get_returns_metadata()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var index = new Customers_ByName();
                 index.Execute(store);
@@ -497,17 +497,17 @@ namespace Raven.Tests.Issues
 
                 Assert.NotNull(customer.Etag);
                 Assert.NotNull(customer.LastModified);
-                Assert.NotNull(customer.Metadata.Value<string>(Constants.RavenClrType));
-                Assert.NotNull(customer.Metadata.Value<string>(Constants.RavenEntityName));
-                Assert.NotNull(customer.Metadata.Value<string>(Constants.LastModified));
-                Assert.NotNull(customer.Metadata.Value<string>(Constants.RavenLastModified));
+                Assert.NotNull(customer.Metadata.Value<string>(Constants.Headers.RavenClrType));
+                Assert.NotNull(customer.Metadata.Value<string>(Constants.Headers.RavenEntityName));
+                Assert.NotNull(customer.Metadata.Value<string>(Constants.Headers.LastModified));
+                Assert.NotNull(customer.Metadata.Value<string>(Constants.Headers.RavenLastModified));
             }
         }
 
         [Fact]
         public async Task get_returns_metadata_async()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var index = new Customers_ByName();
                 index.Execute(store);
@@ -528,32 +528,32 @@ namespace Raven.Tests.Issues
 
                 Assert.NotNull(customer.Etag);
                 Assert.NotNull(customer.LastModified);
-                Assert.NotNull(customer.Metadata.Value<string>(Constants.RavenClrType));
-                Assert.NotNull(customer.Metadata.Value<string>(Constants.RavenEntityName));
-                Assert.NotNull(customer.Metadata.Value<string>(Constants.LastModified));
-                Assert.NotNull(customer.Metadata.Value<string>(Constants.RavenLastModified));
+                Assert.NotNull(customer.Metadata.Value<string>(Constants.Headers.RavenClrType));
+                Assert.NotNull(customer.Metadata.Value<string>(Constants.Headers.RavenEntityName));
+                Assert.NotNull(customer.Metadata.Value<string>(Constants.Headers.LastModified));
+                Assert.NotNull(customer.Metadata.Value<string>(Constants.Headers.RavenLastModified));
             }
         }
 
-        public class Customer
+        private class Customer
         {
             public string Id { get; set; }
             public string Name { get; set; }
             public string Address { get; set; }
         }
 
-        public class Customers_ByName : AbstractIndexCreationTask<Customer>
+        private class Customers_ByName : AbstractIndexCreationTask<Customer>
         {
             public Customers_ByName()
             {
                 Map = customers => from customer in customers
-                    select new
-                    {
-                        customer.Name
-                    };
+                                   select new
+                                   {
+                                       customer.Name
+                                   };
             }
         }
     }
 }
- 
+
 

@@ -3,22 +3,19 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
-using Raven.Abstractions.Data;
+using FastTests;
 using Raven.Client;
-using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Database.Config;
-using Raven.Tests.Common;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB4142 : RavenTest
+    public class RavenDB4142 : RavenTestBase
     {
-        public class Orders_Triggers : AbstractScriptedIndexCreationTask<Order, Orders_Triggers.Result>
+        private class Orders_Triggers : AbstractScriptedIndexCreationTask<Order, Orders_Triggers.Result>
         {
             public class Result
             {
@@ -55,7 +52,7 @@ namespace Raven.Tests.Issues
             ";
             }
         }
-        public class Company
+        private class Company
         {
             public Company()
             {
@@ -67,14 +64,14 @@ namespace Raven.Tests.Issues
             public bool HasOrders { get; set; }
         }
 
-        public class Order
+        private class Order
         {
             public string Id { get; set; }
             public string Company { get; set; }
             public List<Line> Lines { get; set; }
         }
 
-        public class Line
+        private class Line
         {
             public int Quantity { get; set; }
             public int PricePerUnit { get; set; }
@@ -82,13 +79,13 @@ namespace Raven.Tests.Issues
         }
 
 
-        public static void CreateIndexes(IDocumentStore store)
+        private static void CreateIndexes(IDocumentStore store)
         {
             new Orders_Triggers().Execute(store.DatabaseCommands, store.Conventions);
             //new Companies_ByName().Execute(store.DatabaseCommands, store.Conventions);
         }
 
-        public static Company CreateCompany(IDocumentStore store)
+        private static Company CreateCompany(IDocumentStore store)
         {
             using (var session = store.OpenSession())
             {
@@ -104,7 +101,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public static void CreateTwoOrders(IDocumentStore store, string companyId)
+        private static void CreateTwoOrders(IDocumentStore store, string companyId)
         {
             using (var session = store.OpenSession())
             {
@@ -138,10 +135,11 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-5865")]
         public void CanHandlePutAndLoadOnTheSameDocumentInScriptedIndexesInSameBatch()
         {
-            using (var store = NewDocumentStore(activeBundles: "ScriptedIndexResults"))
+            //using (var store = GetDocumentStore(activeBundles: "ScriptedIndexResults"))
+            using (var store = GetDocumentStore())
             {
 
                 CreateIndexes(store);

@@ -1,17 +1,17 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Common.Dto.Faceted;
+using SlowTests.Core.Utils.Entities.Faceted;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_3758 : RavenTest
+    public class RavenDB_3758 : RavenTestBase
     {
-        public class Orders_All : AbstractIndexCreationTask<Order>
+        private class Orders_All : AbstractIndexCreationTask<Order>
         {
             public override string IndexName
             {
@@ -24,13 +24,13 @@ namespace Raven.Tests.Issues
                       from order in orders
                       select new { order.Currency, order.Product, order.Total, order.Quantity, order.Region };
 
-                Sort(x => x.Total, SortOptions.Double);
-                Sort(x => x.Quantity, SortOptions.Int);
-                Sort(x => x.Region, SortOptions.Long);
+                Sort(x => x.Total, SortOptions.NumericDouble);
+                Sort(x => x.Quantity, SortOptions.NumericLong);
+                Sort(x => x.Region, SortOptions.NumericLong);
             }
         }
 
-        public class Orders_All_Changed : AbstractIndexCreationTask<Order>
+        private class Orders_All_Changed : AbstractIndexCreationTask<Order>
         {
             public override string IndexName
             {
@@ -43,13 +43,13 @@ namespace Raven.Tests.Issues
                       from order in orders
                       select new { order.Currency, order.Product, order.Total, order.Quantity, order.Region, order.At };
 
-                Sort(x => x.Total, SortOptions.Double);
-                Sort(x => x.Quantity, SortOptions.Int);
-                Sort(x => x.Region, SortOptions.Long);
+                Sort(x => x.Total, SortOptions.NumericDouble);
+                Sort(x => x.Quantity, SortOptions.NumericLong);
+                Sort(x => x.Region, SortOptions.NumericLong);
             }
         }
 
-        public class Orders_All_Changed2 : AbstractIndexCreationTask<Order>
+        private class Orders_All_Changed2 : AbstractIndexCreationTask<Order>
         {
             public override string IndexName
             {
@@ -62,17 +62,17 @@ namespace Raven.Tests.Issues
                       from order in orders
                       select new { order.Currency, order.Product, order.Total, order.Quantity, order.Region, order.At, order.Tax };
 
-                Sort(x => x.Total, SortOptions.Double);
-                Sort(x => x.Quantity, SortOptions.Int);
-                Sort(x => x.Region, SortOptions.Long);
-                Sort(x => x.Tax, SortOptions.Float);
+                Sort(x => x.Total, SortOptions.NumericDouble);
+                Sort(x => x.Quantity, SortOptions.NumericLong);
+                Sort(x => x.Region, SortOptions.NumericLong);
+                Sort(x => x.Tax, SortOptions.NumericDouble);
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-5919")]
         public void Can_Overwrite_Side_By_Side_Index()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Orders_All().Execute(store);
                 using (var session = store.OpenSession())
@@ -95,10 +95,10 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-5919")]
         public async Task Can_Overwrite_Side_By_Side_Index_Async()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Orders_All().Execute(store);
                 using (var session = store.OpenSession())

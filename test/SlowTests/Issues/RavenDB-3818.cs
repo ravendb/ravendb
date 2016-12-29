@@ -1,32 +1,31 @@
 using System.Globalization;
 using System.Linq;
-using Raven.Client;
+using FastTests;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Tests.Helpers;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_3818 : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "RavenDB-5988")]
         public void SparialSearchWithDistanceErrorPercent()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
                 using (var session = documentStore.OpenSession())
                 {
 
                     //Point(12.556675672531128 55.675285554217), corner of the bounding rectangle below
-                    var nearbyPoints1 = (RavenQueryInspector<Entity>) session.Query<Entity, EntitySpatialIndex>()
+                    var nearbyPoints1 = (RavenQueryInspector<Entity>)session.Query<Entity, EntitySpatialIndex>()
                         .Customize(x =>
                             x.WithinRadiusOf(fieldName: "Coordinates", radius: 1, latitude: 55.675285554217, longitude: 12.556675672531128, distErrorPercent: 0.025));
-                    
+
                     var queryUrl1 = nearbyPoints1.GetIndexQuery(false).GetIndexQueryUrl(string.Empty, string.Empty, string.Empty);
                     Assert.NotNull(queryUrl1.Contains("distErrorPercent=0.025"));
 
-                    var nearbyPoints2 = (RavenQueryInspector<Entity>) session.Query<Entity, EntitySpatialIndex>()
+                    var nearbyPoints2 = (RavenQueryInspector<Entity>)session.Query<Entity, EntitySpatialIndex>()
                         .Customize(x =>
                             x.WithinRadiusOf(fieldName: "Coordinates", radius: 1, latitude: 55.675285554217, longitude: 12.556675672531128, distErrorPercent: 0.01));
                     var queryUrl2 = nearbyPoints2.GetIndexQuery(false).GetIndexQueryUrl(string.Empty, string.Empty, string.Empty);
@@ -35,13 +34,13 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class Entity
+        private class Entity
         {
             public string Id { get; set; }
             public Geolocation Geolocation { get; set; }
         }
 
-        public class Geolocation
+        private class Geolocation
         {
             public double Lon { get; set; }
             public double Lat { get; set; }
@@ -56,7 +55,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class EntitySpatialIndex : AbstractIndexCreationTask<Entity>
+        private class EntitySpatialIndex : AbstractIndexCreationTask<Entity>
         {
             public EntitySpatialIndex()
             {

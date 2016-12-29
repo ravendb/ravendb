@@ -11,7 +11,6 @@ using FastTests.Server.Documents.Patching;
 using FastTests.Server.Documents.Replication;
 using FastTests.Server.Documents.SqlReplication;
 using Raven.Client.Document;
-using Raven.Tests.Issues;
 using SlowTests.Core.Commands;
 using Sparrow.Json;
 using Sparrow.Logging;
