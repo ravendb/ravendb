@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
+using Sparrow.Utils;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Compression;
@@ -61,7 +62,8 @@ namespace Voron
             new LowLevelTransaction.WriteTransactionPool();
         internal ExceptionDispatchInfo CatastrophicFailure;
         private readonly WriteAheadJournal _journal;
-        private readonly object _txWriter = new object();
+        private readonly SemaphoreSlim _transactionWriter = new SemaphoreSlim(1,1);
+        private NativeMemory.ThreadStats _currentTransactionHolder;
         private readonly AsyncManualResetEvent _writeTransactionRunning = new AsyncManualResetEvent();
         internal readonly ThreadHoppingReaderWriterLock FlushInProgressLock = new ThreadHoppingReaderWriterLock();
         private readonly ReaderWriterLockSlim _txCommit = new ReaderWriterLockSlim();
@@ -451,15 +453,14 @@ namespace Voron
 
                     if (FlushInProgressLock.IsWriteLockHeld == false)
                         flushInProgressReadLockTaken = FlushInProgressLock.TryEnterReadLock(wait);
-                    if(Monitor.IsEntered(_txWriter))
-                        ThrowOnRecursiveWriteTransaction();
-                    Monitor.TryEnter(_txWriter, wait, ref txLockTaken);
+
+                    txLockTaken = _transactionWriter.Wait(wait);
                     if (txLockTaken == false || (flushInProgressReadLockTaken == false && FlushInProgressLock.IsWriteLockHeld == false))
                     {
                         GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
                         ThrowOnTimeoutWaitingForWriteTxLock(wait);
                     }
-
+                    _currentTransactionHolder = NativeMemory.ThreadAllocations.Value;
                     _writeTransactionRunning.SetByAsyncCompletion();
 
                     if (_endOfDiskSpace != null)
@@ -502,7 +503,7 @@ namespace Voron
             {
                 if (txLockTaken)
                 {
-                    Monitor.Exit(_txWriter);
+                    _transactionWriter.Release();
                 }
                 if (flushInProgressReadLockTaken)
                 {
@@ -512,15 +513,17 @@ namespace Voron
             }
         }
 
-        private static void ThrowOnRecursiveWriteTransaction()
+        private void ThrowOnTimeoutWaitingForWriteTxLock(TimeSpan wait)
         {
-            throw new InvalidOperationException("A write transaction is already opened by this thread");
-        }
+            var copy = _currentTransactionHolder;
+            if(copy == NativeMemory.ThreadAllocations.Value)
+            {
+                throw new InvalidOperationException("A write transaction is already opened by this thread");
+            }
 
-        private static void ThrowOnTimeoutWaitingForWriteTxLock(TimeSpan wait)
-        {
             throw new TimeoutException("Waited for " + wait +
-                                       " for transaction write lock, but could not get it");
+                                       " for transaction write lock, but could not get it, the tx is currenly owned by " +
+                                       $"thread {copy.Id} - {copy.Name}");
         }
 
         public long CurrentReadTransactionId => Volatile.Read(ref _transactionsCounter);
@@ -604,7 +607,8 @@ namespace Voron
                     GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
             }
 
-            Monitor.Exit(_txWriter);
+            _currentTransactionHolder = null;
+            _transactionWriter.Release();
             
             if (tx.FlushInProgressLockTaken)
                 FlushInProgressLock.ExitReadLock();
