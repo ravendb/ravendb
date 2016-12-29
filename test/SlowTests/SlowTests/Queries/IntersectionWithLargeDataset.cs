@@ -16,7 +16,7 @@ namespace SlowTests.SlowTests.Queries
 {
     public class IntersectionQueryWithLargeDataset : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "ChunkedSparseMmapStream")]
         public void CanPerformIntersectionQuery_Embedded()
         {
             using (var store = GetDocumentStore())
