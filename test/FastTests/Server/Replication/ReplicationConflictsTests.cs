@@ -52,7 +52,7 @@ namespace FastTests.Server.Documents.Replication
                 new ChangeVectorEntry { DbId = dbIds[1], Etag = 2 },
                 new ChangeVectorEntry { DbId = dbIds[2], Etag = 3 },
             };
-
+            
             Assert.Equal(IncomingReplicationHandler.ConflictStatus.AlreadyMerged, IncomingReplicationHandler.GetConflictStatus(remote, local));
         }
 

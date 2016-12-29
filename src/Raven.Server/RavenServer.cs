@@ -16,6 +16,7 @@ using Raven.Client.Json;
 using Raven.Server.Alerts;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Exceptions;
 using Raven.Server.Routing;
@@ -334,11 +335,8 @@ namespace Raven.Server
                             tcpClient
                         }
                     };
-                    tcp.DisposeOnConnectionClose.Add(
-                        _tcpContextPool.AllocateOperationContext(out tcp.Context)
-                        );
 
-
+                    tcp.DisposeOnConnectionClose.Add(_tcpContextPool.AllocateOperationContext(out tcp.Context));
                     tcp.MultiDocumentParser = tcp.Context.ParseMultiFrom(stream);
 
                     try
@@ -353,6 +351,11 @@ namespace Raven.Server
                             }
                         }
                         tcp.Operation = header.Operation;
+
+                        //precaution, should never happen...
+                        if(string.IsNullOrWhiteSpace(header.DatabaseName))
+                            throw new DatabaseDoesNotExistsException("Cannot continue with the request because database name is empty.");
+
                         var databaseLoadingTask = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(header.DatabaseName);
                         if (databaseLoadingTask == null)
                         {
@@ -383,6 +386,10 @@ namespace Raven.Server
                             case TcpConnectionHeaderMessage.OperationTypes.Replication:
                                 var documentReplicationLoader = tcp.DocumentDatabase.DocumentReplicationLoader;
                                 documentReplicationLoader.AcceptIncomingConnection(tcp);
+                                break;
+                            case TcpConnectionHeaderMessage.OperationTypes.TopologyDiscovery:
+                                var topologyDiscoveryHandler = new ReplicationTopologyDiscoveryHandler(tcp.DocumentDatabase.DbId);
+                                topologyDiscoveryHandler.AcceptIncomingConnectionAndRespond(tcp);                                                        
                                 break;
                             default:
                                 throw new InvalidOperationException("Unknown operation for tcp " + header.Operation);

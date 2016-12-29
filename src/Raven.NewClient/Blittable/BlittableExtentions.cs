@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.NewClient.Client.Http;
+using Raven.NewClient.Client.Json;
 using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Document.Blittable
 {
     public static class BlittableExtentions
-    {
+    {      
         /// <summary>
         /// 
         /// </summary>

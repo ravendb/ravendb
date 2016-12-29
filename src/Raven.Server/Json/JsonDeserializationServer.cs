@@ -6,9 +6,13 @@ using Raven.Client.Data;
 using Raven.Client.Indexing;
 using Raven.Client.Replication.Messages;
 using Raven.Client.Smuggler;
+using Raven.NewClient.Client.Http;
+using Raven.NewClient.Json;
+using Raven.NewClient.Replication.Messages;
 using Raven.Server.Commercial;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.PeriodicExport;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.SqlReplication;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.ServerWide.BackgroundTasks;
@@ -19,6 +23,14 @@ namespace Raven.Server.Json
 {
     public class JsonDeserializationServer : JsonDeserializationBase
     {
+        public static readonly Func<BlittableJsonReaderObject, TopologyDiscoveryHeader> TopologyDiscoveryHeader = GenerateJsonDeserializationRoutine<TopologyDiscoveryHeader>();
+
+        public static readonly Func<BlittableJsonReaderObject, TopologyDiscoveryHeader> DiscoveryHeader = GenerateJsonDeserializationRoutine<TopologyDiscoveryHeader>();
+
+        public static readonly Func<BlittableJsonReaderObject, Topology> ClusterTopology = JsonManualDeserialization.ConvertToTopology;
+
+        public static readonly Func<BlittableJsonReaderObject, ServerNode> ServerNode = GenerateJsonDeserializationRoutine<ServerNode>();
+
         public static readonly Func<BlittableJsonReaderObject, DatabaseSmugglerOptions> DatabaseSmugglerOptions = GenerateJsonDeserializationRoutine<DatabaseSmugglerOptions>();
 
         public static readonly Func<BlittableJsonReaderObject, ReplicationMessageReply> ReplicationMessageReply = GenerateJsonDeserializationRoutine<ReplicationMessageReply>();

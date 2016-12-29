@@ -73,7 +73,7 @@ namespace Sparrow.Json
                     throw new InvalidOperationException($"Could not build json parser for {typeof(T).FullName}", e);
                 };
             }
-        }
+        }        
 
         private static Expression GetValue(string propertyName, Type propertyType, ParameterExpression json, Dictionary<Type, ParameterExpression> vars)
         {
@@ -180,7 +180,7 @@ namespace Sparrow.Json
             // throw new InvalidOperationException($"We weren't able to convert the property '{propertyName}' of type '{type}'.");
         }
 
-        private static object GetConverterFromCache(Type propertyType)
+        protected static object GetConverterFromCache(Type propertyType)
         {
             object converter;
             if (DeserializedTypes.TryGetValue(propertyType, out converter) == false)
@@ -204,7 +204,7 @@ namespace Sparrow.Json
             return value;
         }
 
-        private static Dictionary<string, T> ToDictionary<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter)
+        protected static Dictionary<string, T> ToDictionary<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter)
         {
             var dic = new Dictionary<string, T>(StringComparer.OrdinalIgnoreCase);
 
@@ -243,7 +243,7 @@ namespace Sparrow.Json
             return dic;
         }
 
-        private static Dictionary<string, string> ToDictionaryOfString(BlittableJsonReaderObject json, string name)
+        protected static Dictionary<string, string> ToDictionaryOfString(BlittableJsonReaderObject json, string name)
         {
             var dic = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
@@ -263,7 +263,7 @@ namespace Sparrow.Json
             return dic;
         }
 
-        private static Dictionary<string, string[]> ToDictionaryOfStringArray(BlittableJsonReaderObject json, string name)
+        protected static Dictionary<string, string[]> ToDictionaryOfStringArray(BlittableJsonReaderObject json, string name)
         {
             var dic = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
 
@@ -353,8 +353,7 @@ namespace Sparrow.Json
             return collection.ToArray();
         }
 
-
-        private static T ToObject<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter) where T : new()
+        protected static T ToObject<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter) where T : new()
         {
             BlittableJsonReaderObject obj;
             if (json.TryGet(name, out obj) == false || obj == null)
@@ -363,7 +362,7 @@ namespace Sparrow.Json
             return converter(obj);
         }
 
-        private static List<T> ToList<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter)
+        protected static List<T> ToList<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter)
         {
             var list = new List<T>();
 

@@ -1,4 +1,5 @@
-﻿using Raven.NewClient.Client.Metrics;
+﻿using System;
+using Raven.NewClient.Client.Metrics;
 
 namespace Raven.NewClient.Client.Http
 {
@@ -9,6 +10,7 @@ namespace Raven.NewClient.Client.Http
         public string ApiKey;
         public string CurrentToken;
         public bool IsFailed;
+        public string DbId;
 
         private readonly EWMA _ewma = new EWMA(EWMA.M1Alpha, 1, TimeUnit.Milliseconds);
         private const double SwitchBackRatio = 0.75;
