@@ -52,7 +52,6 @@ namespace Raven.Server.Indexing
         public override object Clone()
         {
             ThrowIfDisposed();
-            ThrowIfCancellationRequested();
 
             var clone = (VoronIndexInput)base.Clone();
             GC.SuppressFinalize(clone);
@@ -67,7 +66,6 @@ namespace Raven.Server.Indexing
         public override byte ReadByte()
         {
             ThrowIfDisposed();
-            ThrowIfCancellationRequested();
 
             _stream.UpdateCurrentTransaction(_currentTransaction.Value);
             var readByte = _stream.ReadByte();
@@ -80,7 +78,6 @@ namespace Raven.Server.Indexing
         public override void ReadBytes(byte[] buffer, int offset, int len)
         {
             ThrowIfDisposed();
-            ThrowIfCancellationRequested();
 
             _stream.UpdateCurrentTransaction(_currentTransaction.Value);
             _stream.ReadEntireBlock(buffer, offset, len);
@@ -89,7 +86,6 @@ namespace Raven.Server.Indexing
         public override void Seek(long pos)
         {
             ThrowIfDisposed();
-            ThrowIfCancellationRequested();
 
             _stream.Seek(pos, SeekOrigin.Begin);
         }
@@ -114,7 +110,6 @@ namespace Raven.Server.Indexing
             get
             {
                 ThrowIfDisposed();
-                ThrowIfCancellationRequested();
                 return _stream.Position;
             }
         }
@@ -122,18 +117,30 @@ namespace Raven.Server.Indexing
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ThrowIfDisposed()
         {
-            if(_currentTransaction.Value == null)
-                throw new ObjectDisposedException("No Transaction in thread");
+            if (_currentTransaction.Value == null)
+            {
+                ThrowDisposed();
+                return; // never hit
+            }
             if (_currentTransaction.Value.LowLevelTransaction.IsDisposed)
-                throw new ObjectDisposedException("No Transaction in thread");
+                ThrowTransactionDisposed();
+            if (_cts.IsCancellationRequested)
+                ThrowCancelled();
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void ThrowIfCancellationRequested()
+        private static void ThrowTransactionDisposed()
         {
-            if (_cts.IsCancellationRequested)
-                throw new OperationCanceledException("VoronIndexInput");
+            throw new ObjectDisposedException("No Transaction in thread");
         }
-                    
+
+        private static void ThrowDisposed()
+        {
+            throw new ObjectDisposedException("No Transaction in thread");
+        }
+
+        private static void ThrowCancelled()
+        {
+            throw new OperationCanceledException("VoronIndexInput");
+        }
     }
 }
