@@ -1,20 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Text;
-using System.Threading.Tasks;
-using FastTests.Client.Subscriptions;
-using FastTests.Server.Basic;
-using FastTests.Server.Documents.Alerts;
-using FastTests.Server.Documents.Patching;
-using FastTests.Server.Documents.Replication;
-using FastTests.Server.Documents.SqlReplication;
-using Raven.Client.Document;
-using Raven.Tests.Issues;
-using SlowTests.Core.Commands;
-using Sparrow.Json;
-using Sparrow.Logging;
 
 namespace Tryouts
 {
@@ -26,9 +10,9 @@ namespace Tryouts
             {
                 
                 Console.WriteLine(i);
-                using (var a = new FastTests.Voron.Trees.TreeStateTests())
+                using (var a = new FastTests.Server.Documents.Indexing.Debugging.RavenDB_5577())
                 {
-                    a.HasReducedNumberOfPagesAfterRemovingHalfOfEntries();
+                    a.Getting_trees();
                 }
             }
         }
