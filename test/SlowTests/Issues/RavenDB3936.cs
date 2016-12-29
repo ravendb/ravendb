@@ -1,21 +1,18 @@
 using System.Collections.Generic;
-using System.Configuration;
 using System.Linq;
 using System.Threading.Tasks;
-using Lucene.Net.Support;
+using FastTests;
 using Raven.Client;
-using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.Client.Shard;
-using Raven.Tests.Helpers;
 using Raven.Client.Linq;
+using Raven.Client.Shard;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class ShardingWithAsyncTransformer : RavenTestBase
     {
-        public class Profile
+        private class Profile
         {
             public string Id { get; set; }
 
@@ -24,7 +21,7 @@ namespace Raven.Tests.Issues
             public string Location { get; set; }
         }
 
-        public class Transformer : AbstractTransformerCreationTask<Profile>
+        private class Transformer : AbstractTransformerCreationTask<Profile>
         {
             public Transformer()
             {
@@ -34,22 +31,23 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class Result
+        private class Result
         {
+#pragma warning disable 649
             public string Name;
+#pragma warning restore 649
         }
+
         [Fact]
         public async Task CanUseAsyncTransformer()
         {
-            var server1 = GetNewServer(8079);
-            var server2 = GetNewServer(8078);
+            var store1 = GetDocumentStore();
+            var store2 = GetDocumentStore();
             var shards = new Dictionary<string, IDocumentStore>
             {
-                {"Shard1", new DocumentStore{Url = server1.Configuration.ServerUrl}},
-                {"Shard2", new DocumentStore{Url = server2.Configuration.ServerUrl}},
+                {"Shard1", store1},
+                {"Shard2", store2}
             };
-
-
 
             var shardStrategy = new ShardStrategy(shards);
             shardStrategy.ShardingOn<Profile>(x => x.Location);
@@ -58,7 +56,6 @@ namespace Raven.Tests.Issues
             {
                 shardedDocumentStore.Initialize();
                 new Transformer().Execute(shardedDocumentStore);
-
 
                 using (var session = shardedDocumentStore.OpenAsyncSession())
                 {
@@ -73,7 +70,7 @@ namespace Raven.Tests.Issues
                 using (var session = shardedDocumentStore.OpenAsyncSession())
                 {
                     var results = await session.Query<Profile>()
-                        .Customize(x=>x.WaitForNonStaleResults())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(x => x.Name == "Oren")
                         .TransformWith<Transformer, Result>()
                         .ToListAsync();

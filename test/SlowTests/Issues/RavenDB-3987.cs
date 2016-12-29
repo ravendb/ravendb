@@ -1,29 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
+﻿using System.Linq;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
+using FastTests;
 using Raven.Abstractions.Extensions;
-using Raven.Client;
-using Raven.Client.Connection;
 using Raven.Client.Indexes;
-using Raven.Database.Plugins.Builtins.Monitoring.Snmp.Objects.Database.Statistics;
-using Raven.Tests.Common;
 using Xunit;
-using Raven.Tests.Helpers;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_3987 : RavenTest
+    public class RavenDB_3987 : RavenTestBase
     {
-        public class Person
+        private class Person
         {
             public string Name;
             public int Age;
         }
 
-        public class Person_ByName : AbstractIndexCreationTask<Person>
+        private class Person_ByName : AbstractIndexCreationTask<Person>
         {
             public Person_ByName()
             {
@@ -35,7 +27,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class Person_ByAge : AbstractIndexCreationTask<Person>
+        private class Person_ByAge : AbstractIndexCreationTask<Person>
         {
             public Person_ByAge()
             {
@@ -47,7 +39,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public static Person[] GetNewPersons()
+        private static Person[] GetNewPersons()
         {
             return new Person[]
             {
@@ -97,23 +89,23 @@ namespace Raven.Tests.Issues
         [Fact]
         public async Task DeleteByIndexAsync()
         {
-            using (var server = GetNewServer())
+            using (var store = GetDocumentStore())
             {
-                using (var session = server.DocumentStore.OpenAsyncSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     var persons = GetNewPersons();
-                    foreach(var person in persons)
+                    foreach (var person in persons)
                         await session.StoreAsync(person);
 
                     await session.SaveChangesAsync();
                 }
 
-                new Person_ByName().Execute(server.DocumentStore);
-                new Person_ByAge().Execute(server.DocumentStore);
+                new Person_ByName().Execute(store);
+                new Person_ByAge().Execute(store);
 
-                WaitForIndexing(server.DocumentStore);
+                WaitForIndexing(store);
 
-                using (var session = server.DocumentStore.OpenAsyncSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     var operation1 = await session.Advanced.DeleteByIndexAsync<Person>("Person/ByName", x => x.Name == "Bob");
                     await operation1.WaitForCompletionAsync();
@@ -124,7 +116,7 @@ namespace Raven.Tests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                using (var session = server.DocumentStore.OpenAsyncSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     var persons = await session.Advanced.AsyncDocumentQuery<Person>().ToListAsync();
 
@@ -137,21 +129,21 @@ namespace Raven.Tests.Issues
         [Fact]
         public void DeleteByIndex()
         {
-            using (var server = GetNewServer())
+            using (var store = GetDocumentStore())
             {
-                using (var session = server.DocumentStore.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     var persons = GetNewPersons();
                     persons.ForEach(x => session.Store(x));
                     session.SaveChanges();
                 }
 
-                new Person_ByName().Execute(server.DocumentStore);
-                new Person_ByAge().Execute(server.DocumentStore);
+                new Person_ByName().Execute(store);
+                new Person_ByAge().Execute(store);
 
-                WaitForIndexing(server.DocumentStore);
+                WaitForIndexing(store);
 
-                using (var session = server.DocumentStore.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     var operation1 = session.Advanced.DeleteByIndex<Person>("Person/ByName", x => x.Name == "Bob");
                     operation1.WaitForCompletion();
@@ -162,7 +154,7 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                using (var session = server.DocumentStore.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     var persons = session.Query<Person>().ToList();
 

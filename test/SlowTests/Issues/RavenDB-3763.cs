@@ -2,28 +2,27 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client;
-using Raven.Client.Embedded;
+using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Tests.Helpers;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_3736
     {
         public class IsInTriggersSyncFromAsync : RavenTestBase
         {
-            private readonly EmbeddableDocumentStore store;
+            private readonly DocumentStore _store;
 
             public IsInTriggersSyncFromAsync()
             {
-                store = NewDocumentStore();
+                _store = GetDocumentStore();
 
-
-                new Index().Execute(store);
-                using (var session = store.OpenSession())
+                new Index().Execute(_store);
+                using (var session = _store.OpenSession())
                 {
                     session.Store(new Entity
                     {
@@ -36,13 +35,12 @@ namespace Raven.Tests.Issues
                     });
                     session.SaveChanges();
                 }
-
             }
 
             [Fact]
             public async Task IsInTriggersSyncFromAsyncException()
             {
-                using (var session = store.OpenAsyncSession())
+                using (var session = _store.OpenAsyncSession())
                 {
                     var queryToken = "ABC";
                     try
@@ -61,7 +59,7 @@ namespace Raven.Tests.Issues
             [Fact]
             public async Task IsInTriggersSyncFromAsyncWorks()
             {
-                using (var session = store.OpenAsyncSession())
+                using (var session = _store.OpenAsyncSession())
                 {
                     var queryToken = "ABC";
                     var entity = await session.Query<Entity, Index>()
@@ -75,7 +73,7 @@ namespace Raven.Tests.Issues
             [Fact]
             public async Task WithoutIsInItWorks()
             {
-                using (var session = store.OpenAsyncSession())
+                using (var session = _store.OpenAsyncSession())
                 {
                     var entity = await session.Query<Entity, Index>()
                         .Customize(q => q.WaitForNonStaleResults())
@@ -86,12 +84,13 @@ namespace Raven.Tests.Issues
                 }
             }
 
-            internal class Entity
+            private class Entity
             {
                 public string Id { get; set; }
                 public List<string> Tokens { get; set; }
             }
-            internal class Index : AbstractIndexCreationTask<Entity>
+
+            private class Index : AbstractIndexCreationTask<Entity>
             {
                 public Index()
                 {

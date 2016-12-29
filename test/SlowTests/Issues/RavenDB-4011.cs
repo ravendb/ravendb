@@ -1,22 +1,16 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Tests.Helpers;
-using Raven.Tests.MailingList;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_4011 : RavenTestBase
     {
-        private static void CreateIndexes(IDocumentStore docStore)
-        {
-            new SortTest.Articles_byArticleId().Execute(docStore);
-        }
-
-        public class Entity
+        private class Entity
         {
             public int OrganizationId;
             public long HistoryCode;
@@ -26,7 +20,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void get_index_names()
         {
-            using (IDocumentStore store = NewDocumentStore())
+            using (IDocumentStore store = GetDocumentStore())
             {
                 for (int i = 1; i <= 10; i++)
                 {
@@ -47,15 +41,15 @@ namespace Raven.Tests.Issues
                     IndexDefinitionBuilder<Entity> builder = new IndexDefinitionBuilder<Entity>
                     {
                         Map = entities => from e in entities
-                            select new
-                            {
-                                Id = e.OrganizationId,
-                                Code = e.HistoryCode,
-                                Case = e.CaseId
-                            }
+                                          select new
+                                          {
+                                              Id = e.OrganizationId,
+                                              Code = e.HistoryCode,
+                                              Case = e.CaseId
+                                          }
                     };
 
-                    store.DatabaseCommands.PutIndex("TestIndex/Numer"+i , builder.ToIndexDefinition(store.Conventions));
+                    store.DatabaseCommands.PutIndex("TestIndex/Numer" + i, builder.ToIndexDefinition(store.Conventions));
                 }
 
                 WaitForIndexing(store);

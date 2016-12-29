@@ -1,15 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices.ComTypes;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Xunit;
 using Raven.Client.Linq;
-using Sparrow.Json;
+using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_72 : RavenTestBase
     {
@@ -30,7 +28,7 @@ namespace Raven.Tests.Issues
                 // Now lets do our query.
                 using (IDocumentSession documentSession = store.OpenSession())
                 {
-                  
+
                     var query = documentSession
                         .Query<Users_ByDisplayNameReversed.Result, Users_ByDisplayNameReversed>()
                         .Customize(x => x.WaitForNonStaleResults())
@@ -42,8 +40,8 @@ namespace Raven.Tests.Issues
                     Assert.NotEmpty(users);
                 }
 
-                var stats = await store.AsyncDatabaseCommands.GetIndexErrorsAsync();   
-                Assert.Equal(0,stats[0].Errors.Length);
+                var stats = await store.AsyncDatabaseCommands.GetIndexErrorsAsync();
+                Assert.Equal(0, stats[0].Errors.Length);
             }
         }
 
@@ -82,13 +80,13 @@ namespace Raven.Tests.Issues
         }
 
 
-        public class User
+        private class User
         {
             public string Id { get; set; }
             public string DisplayName { get; set; }
         }
 
-        public class Users_ByDisplayNameReversed : AbstractIndexCreationTask<User, Users_ByDisplayNameReversed.Result>
+        private class Users_ByDisplayNameReversed : AbstractIndexCreationTask<User, Users_ByDisplayNameReversed.Result>
         {
             public class Result
             {
@@ -101,19 +99,19 @@ namespace Raven.Tests.Issues
             {
                 Map = users => from doc in users
                                select new
-                              {
-                                  Id = doc.Id,
-                                  DisplayName = doc.DisplayName,
-                                  DisplayNameReversed = doc.DisplayName.Reverse()
-                              };
+                               {
+                                   Id = doc.Id,
+                                   DisplayName = doc.DisplayName,
+                                   DisplayNameReversed = doc.DisplayName.Reverse()
+                               };
 
                 //Index(x => x.DisplayNameReversed, FieldIndexing.NotAnalyzed);
             }
 
-            
+
         }
 
-        public class Users_ByDisplayNameReversed2 : AbstractIndexCreationTask<User, Users_ByDisplayNameReversed.Result>
+        private class Users_ByDisplayNameReversed2 : AbstractIndexCreationTask<User, Users_ByDisplayNameReversed.Result>
         {
             public class Result
             {

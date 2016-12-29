@@ -3,23 +3,24 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Collections.Generic;
-using Raven.Abstractions.Data;
-using Raven.Tests.Common;
+using FastTests;
+using Raven.Client.Data;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_4144 : RavenTest
+    public class RavenDB_4144 : RavenTestBase
     {
         [Fact]
         public void can_save_javascript_array_values()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var foo = new Foo
                 {
-                    List = {"test"}
+                    List = { "test" }
                 };
 
                 using (var session = store.OpenSession())
@@ -28,7 +29,7 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                store.DatabaseCommands.Patch(foo.Id, new ScriptedPatchRequest
+                store.DatabaseCommands.Patch(foo.Id, new PatchRequest
                 {
                     Script = @"var list = ['my', 'list']; 
                                 for(var x in list){
@@ -39,7 +40,7 @@ namespace Raven.Tests.Issues
                 using (var session = store.OpenSession())
                 {
                     var loaded = session.Load<Foo>(foo.Id);
-                    Assert.Equal(new List<string> {"my", "list"}, loaded.List);
+                    Assert.Equal(new List<string> { "my", "list" }, loaded.List);
                 }
             }
         }
@@ -47,7 +48,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void can_use_non_existing_function1()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var foo = new Foo
                 {
@@ -60,7 +61,7 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                store.DatabaseCommands.Patch(foo.Id, new ScriptedPatchRequest
+                store.DatabaseCommands.Patch(foo.Id, new PatchRequest
                 {
                     Script = @"var test = ['My', 'Array'];
                                this.Name = test.RemoveWhere;"
@@ -77,7 +78,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void can_use_non_existing_function2()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var foo = new Foo
                 {
@@ -90,7 +91,7 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                store.DatabaseCommands.Patch(foo.Id, new ScriptedPatchRequest
+                store.DatabaseCommands.Patch(foo.Id, new PatchRequest
                 {
                     Script = @"var test = ['My', 'Array'];
                                this.Name = function() {}"
@@ -107,7 +108,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void can_use_non_existing_function3()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var foo = new Foo
                 {
@@ -120,7 +121,7 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                store.DatabaseCommands.Patch(foo.Id, new ScriptedPatchRequest
+                store.DatabaseCommands.Patch(foo.Id, new PatchRequest
                 {
                     Script = @"function myConverter(str) {
                                   return str + ' whoeeehoeee'
@@ -139,7 +140,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void can_evaluate_function()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var foo = new Foo
                 {
@@ -152,7 +153,7 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                store.DatabaseCommands.Patch(foo.Id, new ScriptedPatchRequest
+                store.DatabaseCommands.Patch(foo.Id, new PatchRequest
                 {
                     Script = @"function myConverter(str) {
                                   return str + ' whoeeehoeee'
@@ -168,11 +169,11 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class Foo
+        private class Foo
         {
             public Foo()
             {
-                List = new List<string>();    
+                List = new List<string>();
             }
 
             public string Id { get; set; }

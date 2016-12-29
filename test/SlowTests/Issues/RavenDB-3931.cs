@@ -3,15 +3,15 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
+
 using System.Collections.Generic;
 using System.IO;
+using FastTests;
 using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Tests.Common;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_3931 : NoDisposalNeeded
     {
