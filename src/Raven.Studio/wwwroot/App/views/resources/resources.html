@@ -78,7 +78,7 @@
     <div data-bind="foreach: resources().sortedResources">
         <div class="panel resource" data-bind="scrollTo: isCurrentlyActiveResource(), visible: !filteredOut(), attr: { class: 'panel resource ' + badgeClass() + ' ' + (isCurrentlyActiveResource() ? 'active' : '') }">
             <div class="padding padding-sm">
-                <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
+                <div data-bind="click: $root.activateResource, attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
                 <div class="row">
                     <div class="col-xs-12 col-sm-6 col-xl-4 info-container">
                         <div class="checkbox">
@@ -91,10 +91,14 @@
                             <a data-bind="attr: { title: name, href: $root.resourceUrl($data) }, text: name, visible: canNavigateToResource()" href="#"></a>
                         </h3>
                     </div>
-                    <div class="col-xs-12 col-sm-12 col-xl-6 vertical-divider properties-container" data-bind="template: { name: 'properties-template' }">
+                    <div class="col-xs-12 col-sm-12 col-xl-5 vertical-divider properties-container" data-bind="template: { name: 'properties-template' }">
                   
                     </div>
-                    <div class="col-xs-12 col-sm-6 col-xl-2 actions-container">
+                    <div class="col-xs-12 col-sm-6 col-xl-3 actions-container">
+                        <span data-bind="visible: isLoading">
+                            <i class="fa fa-spinner fa-spin fa-2x"></i>&nbsp;&nbsp;
+                        </span>
+
                         <div class="actions">
                             <div class="btn-toolbar pull-right-sm" role="toolbar">
                                 <div class="btn-group">

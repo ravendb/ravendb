@@ -30,21 +30,22 @@ class resourcesInfo {
 
         switch (resourceType) {
             case "db":
-               
+
                 let dto = newResourceInfo as Raven.Client.Data.DatabaseInfo;
                 resourceToAdd = new databaseInfo(dto);
                 break;
 
-            //TODO: implemet fs, cs, ts
-            //case "fs":
-            //    break;
-            //case "cs":
-            //    break;
-            //case "ts":
-            //    break;
+            //TODO: implemet fs, cs, ts		
+            //case "fs":		
+            //    break;		
+            //case "cs":		
+            //    break;		
+            //case "ts":		
+            //    break;	
+                	
         }
 
-        let locationToInsert = _.sortedIndexBy(this.sortedResources(), resourceToAdd, function(item) { return item.name.toLowerCase() });
+        let locationToInsert = _.sortedIndexBy(this.sortedResources(), resourceToAdd, function (item) { return item.name.toLowerCase() });
         this.sortedResources.splice(locationToInsert, 0, resourceToAdd);
     }
 

@@ -3,6 +3,7 @@
 import resource = require("models/resources/resource");
 import generalUtils = require("common/generalUtils");
 import activeResourceTracker = require("common/shell/activeResourceTracker");
+import getResourceCommand = require("commands/resources/getResourceCommand");
 
 abstract class resourceInfo {
 
@@ -31,9 +32,10 @@ abstract class resourceInfo {
     badgeClass: KnockoutComputed<string>;
     badgeText: KnockoutComputed<string>;
     online: KnockoutComputed<boolean>;
+    isLoading: KnockoutComputed<boolean>;
 
     canNavigateToResource: KnockoutComputed<boolean>;
-    
+
     static extractQualifierAndNameFromNotification(input: string): { qualifier: string, name: string } {
         return { qualifier: input.substr(0, 2), name: input.substr(3) };
     }
@@ -121,6 +123,7 @@ abstract class resourceInfo {
             if (!this.licensed()) {
                 return "state-danger";
             }
+
             if (this.disabled()) {
                 return "state-warning";
             }
@@ -128,7 +131,8 @@ abstract class resourceInfo {
             if (this.online()) {
                 return "state-success";
             }
-            return ""; // offline
+
+            return "state-offline"; // offline
         });
 
         this.badgeText = ko.pureComputed(() => {
@@ -159,6 +163,12 @@ abstract class resourceInfo {
             }
 
             return currentResource.qualifiedName === this.qualifiedName;
+        });
+
+        this.isLoading = ko.pureComputed(() => {
+            return this.isCurrentlyActiveResource() &&
+                this.online() === false &&
+                this.disabled() === false;
         });
     }
 }
