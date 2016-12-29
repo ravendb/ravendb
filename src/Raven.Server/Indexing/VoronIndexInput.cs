@@ -34,6 +34,11 @@ namespace Raven.Server.Indexing
             OpenInternal();
         }
 
+        public override string ToString()
+        {
+            return _name;
+        }
+
         private void OpenInternal()
         {
             var fileTree = _currentTransaction.Value.ReadTree("Files");

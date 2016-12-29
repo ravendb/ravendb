@@ -24,6 +24,11 @@ namespace Voron.Data
         public override bool CanWrite => false;
         public override long Length { get; }
 
+        public override string ToString()
+        {
+            return Name.ToString();
+        }
+
         public ChunkedSparseMmapStream(Slice name, Tree.ChunkDetails[] chunksDetails, LowLevelTransaction llt)
         {
             Name = name;
