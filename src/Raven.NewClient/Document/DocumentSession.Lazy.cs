@@ -11,7 +11,9 @@ using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document.Batches;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Linq;
-
+using System.Linq;
+using Raven.NewClient.Client.Commands;
+using Raven.NewClient.Client.Commands.Lazy;
 
 namespace Raven.NewClient.Client.Document
 {
@@ -25,75 +27,180 @@ namespace Raven.NewClient.Client.Document
             throw new NotImplementedException();
         }
 
-        Lazy<TResult[]> ILazySessionOperations.Load<TResult>(IEnumerable<string> ids)
+        /// <summary>
+        /// Loads the specified ids.
+        /// </summary>
+        Lazy<T[]> ILazySessionOperations.Load<T>(IEnumerable<string> ids)
         {
-            throw new NotImplementedException();
+            return Lazily.Load<T>(ids, null);
         }
 
-        public Lazy<TResult[]> Load<TResult>(IEnumerable<string> ids, Action<TResult[]> onEval)
+        /// <summary>
+        /// Loads the specified ids and a function to call when it is evaluated
+        /// </summary>
+        Lazy<T[]> ILazySessionOperations.Load<T>(IEnumerable<string> ids, Action<T[]> onEval)
         {
-            throw new NotImplementedException();
+            return LazyLoadInternal(ids.ToArray(), new string[0], onEval);
         }
 
-        Lazy<TResult> ILazySessionOperations.Load<TResult>(string id)
+        /// <summary>
+        /// Loads the specified id.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="id">The id.</param>
+        /// <returns></returns>
+        Lazy<T> ILazySessionOperations.Load<T>(string id)
         {
-            throw new NotImplementedException();
+            return Lazily.Load(id, (Action<T>)null);
         }
 
-        public Lazy<TResult> Load<TResult>(string id, Action<TResult> onEval)
+        /// <summary>
+        /// Loads the specified id and a function to call when it is evaluated
+        /// </summary>
+        Lazy<T> ILazySessionOperations.Load<T>(string id, Action<T> onEval)
         {
-            throw new NotImplementedException();
+            if (IsLoaded(id))
+                return new Lazy<T>(() => Load<T>(id));
+            //TODO - DisableAllCaching
+            var lazyLoadOperation = new LazyLoadOperation<T>(new LoadOperation(this, new []{id}), id);
+            return AddLazyOperation(lazyLoadOperation, onEval);
         }
 
-        Lazy<TResult> ILazySessionOperations.Load<TResult>(ValueType id)
+        internal Lazy<T> AddLazyOperation<T>(ILazyOperation operation, Action<T> onEval)
         {
-            throw new NotImplementedException();
+            pendingLazyOperations.Add(operation);
+            var lazyValue = new Lazy<T>(() =>
+            {
+                ExecuteAllPendingLazyOperations();
+                return GetOperationResult<T>(operation.Result);
+            });
+
+            if (onEval != null)
+                onEvaluateLazy[operation] = theResult => onEval(GetOperationResult<T>(theResult));
+
+            return lazyValue;
         }
 
-        public Lazy<TResult> Load<TResult>(ValueType id, Action<TResult> onEval)
+        /// <summary>
+        /// Loads the specified entities with the specified id after applying
+        /// conventions on the provided id to get the real document id.
+        /// </summary>
+        /// <remarks>
+        /// This method allows you to call:
+        /// Load{Post}(1)
+        /// And that call will internally be translated to 
+        /// Load{Post}("posts/1");
+        /// 
+        /// Or whatever your conventions specify.
+        /// </remarks>
+        Lazy<T> ILazySessionOperations.Load<T>(ValueType id)
         {
-            throw new NotImplementedException();
+            return Lazily.Load(id, (Action<T>)null);
         }
 
-        Lazy<TResult[]> ILazySessionOperations.Load<TResult>(params ValueType[] ids)
+        /// <summary>
+        /// Loads the specified entities with the specified id after applying
+        /// conventions on the provided id to get the real document id.
+        /// </summary>
+        /// <remarks>
+        /// This method allows you to call:
+        /// Load{Post}(1)
+        /// And that call will internally be translated to 
+        /// Load{Post}("posts/1");
+        /// 
+        /// Or whatever your conventions specify.
+        /// </remarks>
+        Lazy<T> ILazySessionOperations.Load<T>(ValueType id, Action<T> onEval)
         {
-            throw new NotImplementedException();
+            var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
+            return Lazily.Load(documentKey, onEval);
         }
 
-        Lazy<TResult[]> ILazySessionOperations.Load<TResult>(IEnumerable<ValueType> ids)
+        Lazy<T[]> ILazySessionOperations.Load<T>(params ValueType[] ids)
         {
-            throw new NotImplementedException();
+            var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+            return Lazily.Load<T>(documentKeys);
         }
 
-        public Lazy<TResult[]> Load<TResult>(IEnumerable<ValueType> ids, Action<TResult[]> onEval)
+        Lazy<T[]> ILazySessionOperations.Load<T>(IEnumerable<ValueType> ids)
         {
-            throw new NotImplementedException();
+            var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+            return Lazily.Load<T>(documentKeys);
         }
 
-        Lazy<TResult> ILazySessionOperations.Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure, Action<TResult> onEval)
+        Lazy<T[]> ILazySessionOperations.Load<T>(IEnumerable<ValueType> ids, Action<T[]> onEval)
         {
-            throw new NotImplementedException();
+            var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+            return LazyLoadInternal(documentKeys.ToArray(), new string[0], onEval);
         }
 
-        public Lazy<TResult> Load<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null, Action<TResult> onEval = null)
+        Lazy<TResult> ILazySessionOperations.Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure,
+            Action<TResult> onEval)
         {
-            throw new NotImplementedException();
+            var transformer = new TTransformer().TransformerName;
+            var ids = new[] {id};
+            var configuration = new RavenLoadConfiguration();
+            if (configure != null)
+                configure(configuration);
+
+            var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(
+                ids,
+                transformer,
+                configuration.TransformerParameters,
+                new LoadTransformerOperation(this),
+                singleResult: true);
+
+            return AddLazyOperation(lazyLoadOperation, onEval);
         }
 
-        public Lazy<TResult[]> Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null, Action<TResult> onEval = null) where TTransformer : AbstractTransformerCreationTask, new()
+        Lazy<TResult> ILazySessionOperations.Load<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure, Action<TResult> onEval)
         {
-            throw new NotImplementedException();
+            var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
+            var ids = new[] { id };
+            var configuration = new RavenLoadConfiguration();
+            if (configure != null)
+                configure(configuration);
+
+            var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(
+                ids,
+                transformer,
+                configuration.TransformerParameters,
+                new LoadTransformerOperation(this),
+                singleResult: true);
+
+            return AddLazyOperation(lazyLoadOperation, onEval);
         }
 
-        public Lazy<TResult[]> Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null, Action<TResult> onEval = null)
+        Lazy<TResult[]> ILazySessionOperations.Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure, Action<TResult> onEval)
         {
-            throw new NotImplementedException();
+            return Lazily.Load(ids, typeof(TTransformer), configure, onEval);
         }
 
-        Lazy<TResult[]> ILazySessionOperations.LoadStartingWith<TResult>(string keyPrefix, string matches, int start, int pageSize,
-            string exclude, RavenPagingInformation pagingInformation, string skipAfter)
+        Lazy<TResult[]> ILazySessionOperations.Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure, Action<TResult> onEval)
         {
-            throw new NotImplementedException();
+            var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
+
+            var configuration = new RavenLoadConfiguration();
+            if (configure != null)
+                configure(configuration);
+
+            var idsArray = ids.ToArray();
+
+            var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(
+                idsArray,
+                transformer,
+                configuration.TransformerParameters,
+                new LoadTransformerOperation(this),
+                singleResult: false);
+
+            return AddLazyOperation<TResult[]>(lazyLoadOperation, null);
+        }
+
+        Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter)
+        {
+            var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, pagingInformation, skipAfter);
+
+            return AddLazyOperation<T[]>(operation, null);
         }
 
 
@@ -107,9 +214,19 @@ namespace Raven.NewClient.Client.Document
             throw new NotImplementedException();
         }
 
-        public Lazy<T[]> LazyLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval)
+        /// <summary>
+        /// Register to lazily load documents and include
+        /// </summary>
+        public Lazy<T[]> LazyLoadInternal<T>(string[] ids, string[] includes, Action<T[]> onEval)
         {
-            throw new NotImplementedException();
+            if (CheckIfIdAlreadyIncluded(ids, includes))
+            {
+                return new Lazy<T[]>(() => ids.Select(Load<T>).ToArray());
+            }
+            var loadOperation = new LoadOperation(this, ids, includes);
+            var lazyOp = new LazyLoadOperation<T>(loadOperation, ids, includes);
+            return AddLazyOperation(lazyOp, onEval);
         }
+
     }
 }

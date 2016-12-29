@@ -1202,7 +1202,8 @@ namespace Raven.Client.Connection.Async
                     }
 
                     await request.WriteAsync(postedData).ConfigureAwait(false);
-                    var result = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+                    var json = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                    var result = json.Value<RavenJArray>("Results");
                     var responses = convention.CreateSerializer().Deserialize<GetResponse[]>(new RavenJTokenReader(result));
 
                     await multiGetOperation.TryResolveConflictOrCreateConcurrencyException(responses, (key, conflictDoc, etag) => TryResolveConflictOrCreateConcurrencyException(operationMetadata, key, conflictDoc, etag, token)).ConfigureAwait(false);

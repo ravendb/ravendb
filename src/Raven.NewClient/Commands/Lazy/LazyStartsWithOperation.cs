@@ -4,21 +4,17 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Data.Queries;
+using Raven.NewClient.Client.Document.Batches;
+using Raven.NewClient.Client.Shard;
+using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Document.Batches
+namespace Raven.NewClient.Client.Commands.Lazy
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-
-    using Raven.NewClient.Abstractions.Data;
-    using Raven.NewClient.Client.Connection;
-    using Raven.NewClient.Client.Extensions;
-    using Raven.NewClient.Client.Shard;
-    
-
+   
     public class LazyStartsWithOperation<T> : ILazyOperation
     {
         private readonly string keyPrefix;
@@ -78,7 +74,7 @@ namespace Raven.NewClient.Client.Document.Batches
 
         public bool RequiresRetry { get; set; }
 
-        public void HandleResponse(GetResponse response)
+        public void HandleResponse(BlittableJsonReaderObject response)
         {
             throw new NotImplementedException();
             /*if (response.RequestHasErrors())
@@ -99,7 +95,7 @@ namespace Raven.NewClient.Client.Document.Batches
                 .ToArray();*/
         }
 
-        public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
+        public void HandleResponses(BlittableJsonReaderObject[] responses, ShardStrategy shardStrategy)
         {
             throw new NotImplementedException();
             /*if (responses.Any(x => x.RequestHasErrors()))

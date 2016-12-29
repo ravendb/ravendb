@@ -135,6 +135,11 @@ namespace SlowTests.Tests.MultiGet
             }
         }
 
+        public class Results
+        {
+            public GetResponse[] results;
+        }
+
         [Fact]
         public async Task CanHandleCaching()
         {
@@ -170,14 +175,14 @@ namespace SlowTests.Tests.MultiGet
                     stream.Flush();
                 }
 
-                GetResponse[] results;
+                Results results;
                 using (var resp = await request.GetResponseAsync())
                 using (var stream = resp.GetResponseStream())
                 {
                     var result = new StreamReader(stream).ReadToEnd();
-                    results = JsonConvert.DeserializeObject<GetResponse[]>(result, Default.Converters);
-                    Assert.True(results[0].Headers.ContainsKey("ETag"));
-                    Assert.True(results[1].Headers.ContainsKey("ETag"));
+                    results = JsonConvert.DeserializeObject<Results>(result, Default.Converters);
+                    Assert.True(results.results[0].Headers.ContainsKey("ETag"));
+                    Assert.True(results.results[1].Headers.ContainsKey("ETag"));
                 }
 
                 request = (HttpWebRequest)WebRequest.Create(store.Url.ForDatabase(store.DefaultDatabase) + "/multi_get");
@@ -193,7 +198,7 @@ namespace SlowTests.Tests.MultiGet
                             Query = "?id=users/1",
                             Headers =
                             {
-                                {"If-None-Match", results[0].Headers["ETag"]}
+                                {"If-None-Match", results.results[0].Headers["ETag"]}
                             }
                         },
                         new GetRequest
@@ -202,7 +207,7 @@ namespace SlowTests.Tests.MultiGet
                             Query = "?id=users/2",
                             Headers =
                             {
-                                {"If-None-Match", results[1].Headers["ETag"]}
+                                {"If-None-Match", results.results[1].Headers["ETag"]}
                             }
                         },
                     });
@@ -214,9 +219,9 @@ namespace SlowTests.Tests.MultiGet
                 using (var stream = resp.GetResponseStream())
                 {
                     var result = new StreamReader(stream).ReadToEnd();
-                    results = JsonConvert.DeserializeObject<GetResponse[]>(result, Default.Converters);
-                    Assert.Equal(304, results[0].Status);
-                    Assert.Equal(304, results[1].Status);
+                    results = JsonConvert.DeserializeObject<Results>(result, Default.Converters);
+                    Assert.Equal(304, results.results[0].Status);
+                    Assert.Equal(304, results.results[1].Status);
                 }
             }
         }

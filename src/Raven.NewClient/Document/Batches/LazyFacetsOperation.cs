@@ -6,6 +6,7 @@ using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Shard;
+using Sparrow.Json;
 
 
 namespace Raven.NewClient.Client.Document.Batches
@@ -35,7 +36,7 @@ namespace Raven.NewClient.Client.Document.Batches
         public QueryResult QueryResult { get; set; }
         public bool RequiresRetry { get; private set; }
 
-        public void HandleResponse(GetResponse response)
+        public void HandleResponse(BlittableJsonReaderObject response)
         {
             throw new NotImplementedException();
             /*if (response.RequestHasErrors())
@@ -47,7 +48,7 @@ namespace Raven.NewClient.Client.Document.Batches
             Result = result.JsonDeserialization<FacetedQueryResult>();*/
         }
 
-        public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
+        public void HandleResponses(BlittableJsonReaderObject[] responses, ShardStrategy shardStrategy)
         {
             throw new NotImplementedException();
 
