@@ -32,9 +32,10 @@ abstract class resourceInfo {
     badgeClass: KnockoutComputed<string>;
     badgeText: KnockoutComputed<string>;
     online: KnockoutComputed<boolean>;
+    isLoading: KnockoutComputed<boolean>;
 
     canNavigateToResource: KnockoutComputed<boolean>;
-    
+
     static extractQualifierAndNameFromNotification(input: string): { qualifier: string, name: string } {
         return { qualifier: input.substr(0, 2), name: input.substr(3) };
     }
@@ -163,12 +164,12 @@ abstract class resourceInfo {
 
             return currentResource.qualifiedName === this.qualifiedName;
         });
-    }
 
-    updateStats(): JQueryPromise<Raven.Client.Data.ResourceInfo> {
-        return new getResourceCommand(this.qualifier, this.name)
-            .execute()
-            .done(result => this.update(result));
+        this.isLoading = ko.pureComputed(() => {
+            return this.isCurrentlyActiveResource() &&
+                this.online() === false &&
+                this.disabled() === false;
+        });
     }
 }
 

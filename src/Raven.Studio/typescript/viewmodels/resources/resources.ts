@@ -17,7 +17,6 @@ import getResourceCommand = require("commands/resources/getResourceCommand");
 import resourceInfo = require("models/resources/info/resourceInfo");
 import databaseInfo = require("models/resources/info/databaseInfo");
 import filesystemInfo = require("models/resources/info/filesystemInfo");
-import activeResourceTracker = require("common/shell/activeResourceTracker");
 
 class resources extends viewModelBase {
 
@@ -107,36 +106,37 @@ class resources extends viewModelBase {
 
     }
 
-    // Fetch single resource info
+    // fetch single resource info
     private fetchResource(e: globalAlertNotification) {
 
-        // First find if database already exists in the page resources
+        // first find if resource already exists in the page
         let resource = this.resources().sortedResources().find(rs => rs.qualifiedName === e.Id);
        
         switch (e.Operation) {
 
             case "Write": 
                 if (resource) {
-                    // Relevant for disable/enable...
-                    resource.updateStats();
+                    // relevant for disable/enable...
+                    this.getResourceInfo(resource.qualifier, resource.name, (result) => resource.update(result));
                 } else {
-                    // Need to add a new resource for a newly created database
+                    // need to add a new resource for a newly created database
                     this.addNewResource(e.Id);
                 }
                 break;
 
             case "Loaded":
                 if (!resource) {
-                    // if never got the "Write" notification
-                    resource = this.addNewResource(e.Id);
+                    // an existing database turned ONLINE, get its stats
+                    this.addNewResource(e.Id);
+                    break;
                 }
 
-                // An existing database turned ONLINE, get its stats
-                resource.updateStats();
+                // if never got the "Write" notification
+                this.getResourceInfo(resource.qualifier, resource.name, (result) => resource.update(result));
                 break;
 
             case "Delete":
-                // Delete database from page resources if exists (because maybe another client did the delete..)
+                // delete database from page resources if exists (because maybe another client did the delete..)
                 if (resource) {
                     this.removeResource(resource);
                 }
@@ -144,30 +144,16 @@ class resources extends viewModelBase {
         }
     }
 
-    addNewResource(resourceId: string): resourceInfo {
+    addNewResource(resourceId: string) {
         let notificationData = resourceInfo.extractQualifierAndNameFromNotification(resourceId);
-        let newResourceInfo = this.getNewResource(notificationData.qualifier, notificationData.name);
-        this.resources().addResource(newResourceInfo, notificationData.qualifier);
-        return newResourceInfo;
+        this.getResourceInfo(notificationData.qualifier, notificationData.name,
+            (result: Raven.Client.Data.ResourceInfo) => this.resources().addResource(result, notificationData.qualifier));
     }
 
-    private getNewResource(resourceType: string, resourceName: string): resourceInfo {
-        switch (resourceType) {
-            case "db":
-                return databaseInfo.empty(resourceName);
-
-            //TODO: implemet fs, cs, ts
-            /*case "fs":
-                break;
-            case "cs":
-                break;
-            case "ts":
-                break;*/
-        }
-    }
-
-    private getResourceInfo(resourceType: string, resourceName: string): JQueryPromise<Raven.Client.Data.ResourceInfo> {
-        return new getResourceCommand(resourceType, resourceName).execute();
+    getResourceInfo(resourceType: string, resourceName: string, afterGet: (dto: Raven.Client.Data.ResourceInfo) => void) {
+        new getResourceCommand(resourceType, resourceName)
+            .execute()
+            .done((result: Raven.Client.Data.ResourceInfo) => afterGet(result))
     }
 
     private filterResources(): void {
@@ -372,18 +358,17 @@ class resources extends viewModelBase {
     }
 
     activateResource(rsInfo: resourceInfo) {
-        let resource = this.resourcesManager.resources().filter(x => x.qualifiedName === rsInfo.qualifiedName)[0];
+        let resource = this.resourcesManager.resources().find(x => x.qualifiedName === rsInfo.qualifiedName);
         if (!resource)
             return;
 
-        activeResourceTracker.default.resource(resource);
         resource.activate();
 
         let resourceOnPage = this.resources().sortedResources().find(rs => rs.qualifiedName === rsInfo.qualifiedName);
         if (!resourceOnPage)
             return;
-
-        resourceOnPage.updateStats();
+        
+        this.getResourceInfo(resource.qualifier, resource.name, (result) => resourceOnPage.update(result));
     }
 
     /* TODO: cluster related work
