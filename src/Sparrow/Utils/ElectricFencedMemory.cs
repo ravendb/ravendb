@@ -5,7 +5,7 @@ using System.Security;
 
 namespace Sparrow.Utils
 {
-    public static unsafe class GuardedMemory
+    public static unsafe class ElectricFencedMemory
     {
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern byte* VirtualAlloc(byte* lpAddress, UIntPtr dwSize,
@@ -41,9 +41,7 @@ namespace Sparrow.Utils
         private enum FreeType : uint
         {
             MEM_DECOMMIT = 0x4000,
-            MEM_RELEASE = 0x8000
         }
-
 
         public static byte* Allocate(int size)
         {
@@ -69,8 +67,10 @@ namespace Sparrow.Utils
 
             var firstWritablePage = virtualAlloc + 4096;
 
-            memset(firstWritablePage, 0xED, 4096 - remaining);
-
+            memset(firstWritablePage, 0xED, 4096 * sizeInPages); // don't assume zero'ed mem
+            if (remaining == 0)
+                return firstWritablePage;
+            // give the memory out so its end would be at the 2nd guard page
             return firstWritablePage + (4096 - remaining);
 
         }
@@ -86,6 +86,7 @@ namespace Sparrow.Utils
             }
             MemoryProtection protect;
             var address = firstWritablePage - 4096;
+            // this will access the memory, which will error if this was already freed
             if (VirtualProtect(address, (UIntPtr)4096, MemoryProtection.READWRITE, out protect) ==
                 false)
                 throw new Win32Exception();
@@ -97,5 +98,4 @@ namespace Sparrow.Utils
                 throw new Win32Exception();
         }
     }
-
 }

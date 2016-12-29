@@ -24,13 +24,12 @@ namespace Tryouts
         {
             for (int i = 0; i < 100; i++)
             {
+                
                 Console.WriteLine(i);
-                var a = new FastTests.Sparrow.ChangeThreadPriorityTest();
+                using (var a = new SlowTests.Tests.DistinctFacets.FromUser())
                 {
-                    a.StartChangeThreadPriority();
+                    a.ShouldFacetsWork();
                 }
-                Console.WriteLine(i);
-
             }
         }
     }

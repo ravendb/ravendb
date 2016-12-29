@@ -74,7 +74,7 @@ namespace Sparrow.Json
 #if MEM_GUARD
             return new AllocatedMemoryData
             {
-                Address = GuardedMemory.Allocate(size),
+                Address = ElectricFencedMemory.Allocate(size),
                 SizeInBytes = size
             };
 #else
@@ -225,7 +225,10 @@ namespace Sparrow.Json
         public void Return(AllocatedMemoryData allocation)
         {
 #if MEM_GUARD
-            GuardedMemory.Free(allocation.Address);
+#if MEM_GUARD_STACK
+            allocation.FreedBy = Environment.StackTrace;
+#endif
+            ElectricFencedMemory.Free(allocation.Address);
 #else
             if (allocation.Address != _ptrCurrent - allocation.SizeInBytes ||
                 allocation.Address < _ptrStart)
@@ -272,5 +275,9 @@ namespace Sparrow.Json
         public byte* Address;
         public int SizeInBytes;
         public NativeMemory.ThreadStats AllocatingThread;
+#if MEM_GUARD_STACK
+        public string AllocatedBy = Environment.StackTrace;
+        public string FreedBy ;
+#endif
     }
 }

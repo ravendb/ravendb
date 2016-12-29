@@ -152,6 +152,10 @@ namespace Sparrow.Json
                 _tempBuffer.Address == null ||
                 _tempBuffer.SizeInBytes < requestedSize)
             {
+                if (_tempBuffer != null && _tempBuffer.Address != null)
+                {
+                    _arenaAllocator.Return(_tempBuffer);
+                }
                 _tempBuffer = GetMemory(Math.Max(_tempBuffer?.SizeInBytes ?? 0, requestedSize));
             }
 
@@ -672,7 +676,10 @@ namespace Sparrow.Json
         protected internal virtual unsafe void Reset()
         {
             if (_tempBuffer != null)
+            {
+                _arenaAllocator.Return(_tempBuffer);
                 _tempBuffer.Address = null;
+            }
 
             foreach (var builder in _liveReaders)
             {
