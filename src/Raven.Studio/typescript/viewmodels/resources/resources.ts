@@ -9,6 +9,8 @@ import disableResourceToggleConfirm = require("viewmodels/resources/disableResou
 import disableResourceToggleCommand = require("commands/resources/disableResourceToggleCommand");
 import toggleIndexingCommand = require("commands/database/index/toggleIndexingCommand");
 import deleteResourceCommand = require("commands/resources/deleteResourceCommand");
+import loadResourceCommand = require("commands/resources/loadResourceCommand");
+
 import globalAlertNotification = Raven.Server.Alerts.GlobalAlertNotification;
 
 import resourcesInfo = require("models/resources/info/resourcesInfo");
@@ -17,6 +19,7 @@ import getResourceCommand = require("commands/resources/getResourceCommand");
 import resourceInfo = require("models/resources/info/resourceInfo");
 import databaseInfo = require("models/resources/info/databaseInfo");
 import filesystemInfo = require("models/resources/info/filesystemInfo");
+import database = require("models/resources/database");
 
 class resources extends viewModelBase {
 
@@ -311,6 +314,12 @@ class resources extends viewModelBase {
 
         if (matchedResource) {
             matchedResource.disabled(result.disabled);
+
+            // If Enabling a resource (that is selected from the top) than we want it to be Online(Loaded)
+            if (matchedResource.isCurrentlyActiveResource() && !matchedResource.disabled()) {
+                new loadResourceCommand(matchedResource.asResource())
+                    .execute();
+            }
         }
     }
 
