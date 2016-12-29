@@ -7,6 +7,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
+using Raven.Client.Util;
 using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Client.Data

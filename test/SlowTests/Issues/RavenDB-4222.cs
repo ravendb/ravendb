@@ -1,34 +1,32 @@
 // -----------------------------------------------------------------------
-//  <copyright file="RavenDB-4221.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="RavenDB-4222.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System.Linq;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Tests.Common;
+using FastTests;
+using Raven.Client.Indexing;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_4221 : RavenTest
+    public class RavenDB_4222 : RavenTestBase
     {
         [Fact]
-        public void DisabledIndexIsUpdatedAfterSettingPriority()
+        public void DontUpdateDisabledIndex()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var indexName = "test";
                 store.DatabaseCommands.PutIndex(indexName, new IndexDefinition
                 {
                     Name = indexName,
-                    Map = @"from doc in docs.Orders
+                    Maps = { @"from doc in docs.Orders
 select new{
 doc.Name
-}"
+}" }
                 });
-
-                store.DatabaseCommands.SetIndexPriority(indexName, IndexingPriority.Disabled);
 
                 using (var session = store.OpenSession())
                 {
@@ -43,23 +41,25 @@ doc.Name
                 using (var session = store.OpenSession())
                 {
                     var result = session.Query<Order>(indexName).ToList();
-                    Assert.Equal(0, result.Count);
+                    Assert.Equal(1, result.Count);
                 }
-
                 var stats = store.DatabaseCommands.GetStatistics();
                 Assert.Equal(1, stats.CountOfDocuments);
 
-                store.DatabaseCommands.SetIndexPriority(indexName, IndexingPriority.Normal);
+                store.DatabaseCommands.Admin.DisableIndex(indexName);
 
-                WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
-                    var result = session.Query<Order>(indexName).ToList();
-                    Assert.Equal(1, result.Count);
+                    session.Delete("orders/1");
+                    session.SaveChanges();
                 }
 
+                WaitForIndexing(store);
                 stats = store.DatabaseCommands.GetStatistics();
-                Assert.Equal(1, stats.CountOfDocuments);
+                Assert.Equal(0, stats.CountOfDocuments);
+
+                var testIndex = store.DatabaseCommands.GetIndexStatistics(indexName);
+                Assert.Equal(1, testIndex.EntriesCount);
             }
         }
 

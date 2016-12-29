@@ -18,8 +18,10 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Data;
 using Raven.Client.Data.Queries;
+using Raven.Imports.Newtonsoft.Json.Linq;
 
 namespace Raven.Client.Document
 {
@@ -1024,17 +1026,31 @@ namespace Raven.Client.Document
             var transformer = new TTransformer().TransformerName;
 
             var configuration = new RavenLoadConfiguration();
-            if (configure != null)
-            {
-                configure(configuration);
-            }
+            configure?.Invoke(configuration);
 
-            return
-                DatabaseCommands.StartsWith(keyPrefix, matches, start, pageSize, exclude: exclude,
-                                            pagingInformation: pagingInformation, transformer: transformer, transformerParameters: configuration.TransformerParameters,
-                                            skipAfter: skipAfter)
-                                .Select(TrackEntity<TResult>)
-                                .ToArray();
+            return DatabaseCommands
+                .StartsWith(
+                    keyPrefix,
+                    matches,
+                    start,
+                    pageSize,
+                    exclude: exclude,
+                    pagingInformation: pagingInformation,
+                    transformer: transformer,
+                    transformerParameters: configuration.TransformerParameters,
+                    skipAfter: skipAfter)
+                .SelectMany(document => document.DataAsJson.Value<RavenJArray>("$values"))
+                .Select(value =>
+                {
+                    if (value == null)
+                        return default(TResult);
+
+                    if (value.Type != JTokenType.Object)
+                        return value.JsonDeserialization<TResult>();
+
+                    return (TResult)ProjectionToInstance((RavenJObject)value, typeof(TResult));
+                })
+                .ToArray();
         }
 
         public Lazy<TResult[]> MoreLikeThis<TResult>(MoreLikeThisQuery query)

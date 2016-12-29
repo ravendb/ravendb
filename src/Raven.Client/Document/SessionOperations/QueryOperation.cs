@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using Raven.Client.Connection;
 using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Json.Linq;
 using Raven.Client.Data;
@@ -134,8 +135,22 @@ namespace Raven.Client.Document.SessionOperations
                 if (usedTransformer)
                 {
                     var values = result.Value<RavenJArray>("$values");
-                    foreach (RavenJObject value in values)
-                        list.Add(Deserialize<T>(value));
+                    foreach (var value in values)
+                    {
+                        if (value == null)
+                        {
+                            list.Add(default(T));
+                            continue;
+                        }
+
+                        if (value.Type != JTokenType.Object)
+                        {
+                            list.Add(value.JsonDeserialization<T>());
+                            continue;
+                        }
+
+                        list.Add(Deserialize<T>((RavenJObject)value));
+                    }
 
                     continue;
                 }
