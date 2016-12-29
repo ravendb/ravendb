@@ -245,6 +245,8 @@ namespace Raven.Server.Web.System
                 if (isHardDelete)
                     DatabaseHelper.DeleteDatabaseFiles(configuration);
             });
+
+            ServerStore.DatabaseInfoCache.Delete(name);
         }
     }
 }
