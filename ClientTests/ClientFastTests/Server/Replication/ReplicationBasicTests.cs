@@ -319,7 +319,7 @@ namespace NewClientTests.NewClient.Server.Replication
                 SetupReplication(store1, store2);
                 using (var session = store1.OpenSession())
                 {
-                    session.Advanced.WaitForReplicationAfterSaveChanges();
+                    session.Advanced.WaitForReplicationAfterSaveChanges(timeout:TimeSpan.FromSeconds(30));
                     session.Store(new User
                     {
                         Name = "John Snow",
@@ -348,8 +348,7 @@ namespace NewClientTests.NewClient.Server.Replication
 
                 using (var session = store2.OpenSession())
                 {
-                    var s = session.Load<User>("users/2");
-                    Assert.Null(s);
+                    Assert.Null(session.Load<User>("users/2"));
                 }
             }
         }
