@@ -358,21 +358,12 @@ namespace Raven.Database.Raft
                 if (raftEngine.Options.SelfConnection == node)
                 {
                     await raftEngine.StepDownAsync().ConfigureAwait(false);
-                    raftEngine.WaitForLeader();
+                    raftEngine.WaitForLeaderConfirmed();
                 }
                 else
                 {
-                    // before we send remove from cluster wait until configuration will be propaged
-                    // to avoid: Cannot modify the cluster topology when the committed index ___ is in term ___ but the current term is ___
-                    // Wait until the leader finishes committing entries from the current term and try again
-                    await Task.Delay(raftEngine.Options.HeartbeatTimeout * 2).ConfigureAwait(false);
-
                     // remove node from cluster by excluding it from topology
                     await raftEngine.RemoveFromClusterAsync(node).ConfigureAwait(false);
-
-                    // since both remove from cluster and sendInitialize new cluster are send from current leader
-                    // we have to wait for first topology to apply on removing node
-                    await Task.Delay(raftEngine.Options.HeartbeatTimeout*2).ConfigureAwait(false);
 
                     // send information to leaved node to create new single node topology
                     await SendInitializeNewClusterForAsync(node).ConfigureAwait(false);

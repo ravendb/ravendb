@@ -18,8 +18,8 @@ namespace Raven.Tests.Raft
         private List<DocumentStore> clusterStores;
 
         [Theory]
-        [InlineData(2)]
         [InlineData(3)]
+        [InlineData(5)]
         public void CanLeaveLeaderFromClusterFromLeader(int nodesCount)
         {
             clusterStores = CreateRaftCluster(nodesCount);
@@ -28,8 +28,8 @@ namespace Raven.Tests.Raft
         }
 
         [Theory]
-        [InlineData(2)]
         [InlineData(3)]
+        [InlineData(5)]
         public void CanLeaveLeaderFromClusterFromNonLeader(int nodesCount)
         {
             clusterStores = CreateRaftCluster(nodesCount);
@@ -39,8 +39,8 @@ namespace Raven.Tests.Raft
 
 
         [Theory]
-        [InlineData(2)]
         [InlineData(3)]
+        [InlineData(5)]
         public void CanLeaveNonLeaderFromClusterFromLeader(int nodesCount)
         {
             clusterStores = CreateRaftCluster(nodesCount);
@@ -49,8 +49,8 @@ namespace Raven.Tests.Raft
         }
 
         [Theory]
-        [InlineData(2)]
         [InlineData(3)]
+        [InlineData(5)]
         public void CanLeaveNonLeaderFromClusterFromNonLeader(int nodesCount)
         {
             clusterStores = CreateRaftCluster(nodesCount);
