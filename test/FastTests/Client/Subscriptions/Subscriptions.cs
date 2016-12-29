@@ -141,7 +141,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-5986")]
         public async Task SubscriptionWaitStrategy()
         {
             using (var store = GetDocumentStore())
