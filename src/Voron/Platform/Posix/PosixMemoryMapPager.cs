@@ -16,8 +16,8 @@ namespace Voron.Platform.Posix
         public readonly long SysPageSize;
         private long _totalAllocationSize;
         private readonly bool _isSyncDirAllowed;
-        private bool _copyOnWriteMode;
-        
+        private readonly bool _copyOnWriteMode;
+        public override long TotalAllocationSize => _totalAllocationSize;
         public PosixMemoryMapPager(StorageEnvironmentOptions options,string file, long? initialFileSize = null,
             bool usePageProtection = false) : base(options, usePageProtection)
         {
@@ -56,7 +56,9 @@ namespace Voron.Platform.Posix
                 PosixHelper.ThrowLastError(err, "sync dir for " + file);
             }
 
-            NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
+            NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize +
+                                   ((_totalAllocationSize % Constants.Storage.PageSize) == 0 ? 0 : 1);
+
             SetPagerState(CreatePagerState());
         }
 

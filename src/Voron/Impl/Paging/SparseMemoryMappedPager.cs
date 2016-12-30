@@ -115,8 +115,11 @@ namespace Voron.Impl.Paging
 
             NumberOfAllocatedPages = _totalAllocationSize/ Constants.Storage.PageSize;
 
+
             SetPagerState(CreatePagerState());
         }
+
+        public override long TotalAllocationSize => _totalAllocationSize;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private long NearestSizeToAllocationGranularity(long size)

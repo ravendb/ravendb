@@ -172,6 +172,8 @@ namespace Voron.Impl.Journal
                             lastSyncedJournal = journalNumber;
                         }
 
+                        pager.Dispose(); // need to close it before we open the journal writer
+
                         if (lastSyncedTxId != -1 && (journalReader.RequireHeaderUpdate || journalNumber == logInfo.CurrentJournal))
                         {
                             var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber,

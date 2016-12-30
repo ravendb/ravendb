@@ -32,7 +32,7 @@ namespace Voron.Platform.Win32
         private readonly MemoryMappedFileAccess _memoryMappedFileAccess;
         private bool _copyOnWriteMode;
         private readonly Logger _logger;
-
+        public override long TotalAllocationSize => _totalAllocationSize;
         [StructLayout(LayoutKind.Explicit)]
         public struct SplitValue
         {
@@ -126,7 +126,8 @@ namespace Voron.Platform.Win32
                 _totalAllocationSize = fileLength;
             }
 
-            NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
+            NumberOfAllocatedPages = _totalAllocationSize/Constants.Storage.PageSize +
+                                     ((_totalAllocationSize%Constants.Storage.PageSize) == 0 ? 0 : 1);
             SetPagerState(CreatePagerState());
         }
 

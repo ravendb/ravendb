@@ -26,7 +26,7 @@ namespace Voron.Platform.Posix
         private int _fd;
         public readonly long SysPageSize;
         private long _totalAllocationSize;
-        
+        public override long TotalAllocationSize => _totalAllocationSize;
         public PosixTempMemoryMapPager(StorageEnvironmentOptions options, string file, long? initialFileSize = null)
             : base(options)
         {

@@ -128,6 +128,7 @@ namespace Voron.Impl.Paging
         private PagerState _pagerState;
 
         public long NumberOfAllocatedPages { get; protected set; }
+        public abstract long TotalAllocationSize { get; }
 
         protected abstract string GetSourceName();
 
