@@ -38,14 +38,13 @@ namespace Raven.Server.Web.System
                     throw new InvalidOperationException($"Resource type is not valid: '{resourceType}'");
             }
 
-            var names = HttpContext.Request.Query["name"];
-            if (names.Count == 0)
-                throw new ArgumentException("Query string \'name\' is mandatory, but wasn\'t specified");
+            var names = GetStringValuesQueryString("name");
             var disableRequested = GetBoolValueQueryString("disable").Value;
 
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            using (context.OpenReadTransaction())
             {
                 writer.WriteStartArray();
                 var first = true;
@@ -56,18 +55,15 @@ namespace Raven.Server.Web.System
                     first = false;
 
                     var dbId = resourcePrefix + name;
-                    BlittableJsonReaderObject dbDoc;
-                    using (var tx = context.OpenReadTransaction())
-                    {
-                        dbDoc = ServerStore.Read(context, dbId);
-                    }
+                    var dbDoc = ServerStore.Read(context, dbId);
+                    
                     if (dbDoc == null)
                     {
                         context.Write(writer, new DynamicJsonValue
                         {
-                            ["name"] = name,
-                            ["success"] = false,
-                            ["reason"] = "database not found",
+                            ["Name"] = name,
+                            ["Success"] = false,
+                            ["Reason"] = "database not found",
                         });
                         continue;
                     }
@@ -84,10 +80,10 @@ namespace Raven.Server.Web.System
                         var state = disableRequested ? "disabled" : "enabled";
                         context.Write(writer, new DynamicJsonValue
                         {
-                            ["name"] = name,
-                            ["success"] = false,
-                            ["disabled"] = disableRequested,
-                            ["reason"] = $"Database already {state}",
+                            ["Name"] = name,
+                            ["Success"] = false,
+                            ["Disabled"] = disableRequested,
+                            ["Reason"] = $"Database already {state}",
                         });
                         continue;
                     }
@@ -111,9 +107,9 @@ namespace Raven.Server.Web.System
 
                     context.Write(writer, new DynamicJsonValue
                     {
-                        ["name"] = name,
-                        ["success"] = true,
-                        ["disabled"] = disableRequested,
+                        ["Name"] = name,
+                        ["Success"] = true,
+                        ["Disabled"] = disableRequested,
                     });
                 }
                 writer.WriteEndArray();

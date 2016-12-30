@@ -13,7 +13,7 @@ class getOperationCommand extends commandBase {
     }
 
     execute(): JQueryPromise<Raven.Server.Documents.PendingOperation> {
-        const url = endpoints.databases.operations.operation;
+        const url = endpoints.databases.operations.operations;
 
         const args = {
             id: this.operationId
