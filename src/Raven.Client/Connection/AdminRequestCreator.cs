@@ -39,7 +39,7 @@ namespace Raven.Client.Connection
             MultiDatabase.AssertValidName(databaseDocument.Id);
             doc = RavenJObject.FromObject(databaseDocument);
 
-            return createRequestForSystemDatabase("/admin/databases/" + Uri.EscapeDataString(databaseDocument.Id), HttpMethods.Put);
+            return createRequestForSystemDatabase("/admin/databases?name=" + Uri.EscapeDataString(databaseDocument.Id), HttpMethods.Put);
         }
 
         public HttpJsonRequest DeleteDatabase(string databaseName, bool hardDelete)
