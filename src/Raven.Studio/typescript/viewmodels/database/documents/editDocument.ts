@@ -266,7 +266,7 @@ class editDocument extends viewModelBase {
     }
 
     documentChangeNotification(n: Raven.Abstractions.Data.DocumentChangeNotification): void {
-        if (this.isSaving() || n.Etag === this.metadata().etag) {
+        if (this.isSaving() || n.Etag === this.metadata().etag()) {
             return;
         }
 
@@ -360,13 +360,14 @@ class editDocument extends viewModelBase {
         folds.map(f => this.docEditor.getSession().expandFold(f));
     }
 
-    saveAsNew() {
-        let docId = this.userSpecifiedId();
-        const slashPosition = docId.indexOf("/", 0);
-        if (slashPosition !== -1) {
-            docId = docId.substr(0, slashPosition + 1);
-        }
-        this.saveInternal(docId, true);
+    createClone() {
+        // Show current document as a new document..
+        this.isCreatingNewDocument(true);
+
+        // Clear data..
+        this.userSpecifiedId("");
+        this.metadata().etag(null);
+        this.metadata().ravenLastModified(null);
     }
 
     saveDocument() {

@@ -120,7 +120,7 @@ class apiKeys extends viewModelBase {
         this.apiKeys().forEach(key => {
             var serverKey = serverKeys.find(k => k.Key === key.getId());
             if (serverKey) {
-                key.__metadata.etag = serverKey.Etag;
+                key.__metadata.etag(serverKey.Etag);
                 key.__metadata.lastModified = serverKey.Metadata["Last-Modified"]; //TODO last -modified is not longer used? use Raven-Last-Modified
             }
         });
