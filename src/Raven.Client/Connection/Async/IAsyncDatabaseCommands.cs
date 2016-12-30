@@ -644,6 +644,26 @@ namespace Raven.Client.Connection.Async
         ///     Begins a restore operation.
         /// </summary>
         Task<Operation> StartRestoreAsync(DatabaseRestoreRequest restoreRequest, CancellationToken token = default(CancellationToken));
+
+        /// <summary>
+        /// Store new api key
+        /// </summary>
+        Task PutApiKeyAsync(string name, ApiKeyDefinition apiKeyData, CancellationToken token = default(CancellationToken));
+
+        /// <summary>
+        /// Retrieve existing api key
+        /// </summary>
+        Task<ApiKeyDefinition> GetApiKeyAsync(string name, CancellationToken token = default(CancellationToken));
+
+        /// <summary>
+        /// Delete existing api key
+        /// </summary>
+        Task DeleteApiKeyAsync(string name, CancellationToken token = default(CancellationToken));
+
+        /// <summary>
+        /// Get all existing api keys
+        /// </summary>
+        Task<NamedApiKeyDefinition[]> GetApiKeysAsync(int start, int pageSize, CancellationToken token = default(CancellationToken));
     }
 
     public interface IAsyncAdminDatabaseCommands
@@ -686,7 +706,7 @@ namespace Raven.Client.Connection.Async
         /// <summary>
         /// Compacts given index.
         /// </summary>
-        Task<Operation>CompactIndexAsync(string name, CancellationToken token = default(CancellationToken));
+        Task<Operation> CompactIndexAsync(string name, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         /// Enables given index. This will be a no-op if index is already enabled.

@@ -1308,5 +1308,24 @@ namespace Raven.Server.Json
                 first = false;
             }
         }
+
+        public static void WriteResults<T>(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<T> items, Action<BlittableJsonTextWriter, JsonOperationContext, T> onWrite)
+        {
+            writer.WritePropertyName("Results");
+
+            writer.WriteStartArray();
+            var first = true;
+            foreach (var item in items)
+            {
+                if (first == false)
+                    writer.WriteComma();
+
+                first = false;
+
+                onWrite(writer, context, item);
+            }
+
+            writer.WriteEndArray();
+        }
     }
 }
