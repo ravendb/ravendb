@@ -76,20 +76,13 @@ namespace Raven.Server.Documents.Handlers
                     transformerDefinitions = new[] { transformer.Definition };
                 }
 
-                writer.WriteStartArray();
-
-                var isFirst = true;
-                foreach (var transformerDefinition in transformerDefinitions)
+                writer.WriteStartObject();
+                writer.WriteResults(context, transformerDefinitions, (w, c, definition) =>
                 {
-                    if (isFirst == false)
-                        writer.WriteComma();
+                    w.WriteTransformerDefinition(c, definition);
+                });
 
-                    isFirst = false;
-
-                    writer.WriteTransformerDefinition(context, transformerDefinition);
-                }
-
-                writer.WriteEndArray();
+                writer.WriteEndObject();
             }
 
             return Task.CompletedTask;

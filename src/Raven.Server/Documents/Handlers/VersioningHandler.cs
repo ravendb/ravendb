@@ -23,14 +23,14 @@ namespace Raven.Server.Documents.Handlers
             if (versioningStorage == null)
                 throw new InvalidOperationException("Versioning is disabled");
 
-            var key = GetQueryStringValueAndAssertIfSingleAndNotEmpty("key");
+            var key = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                int start = GetIntValueQueryString("start", false) ?? 0;
-                int take = GetIntValueQueryString("pageSize", false) ?? 25;
+                int start = GetStart();
+                int take = GetPageSize();
                 var revisions = versioningStorage.GetRevisions(context, key, start, take).ToList();
 
                 long actualEtag = revisions.Count == 0 ? int.MinValue : revisions[revisions.Count - 1].Etag;
