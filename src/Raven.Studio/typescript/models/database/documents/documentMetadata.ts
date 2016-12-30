@@ -7,10 +7,10 @@ class documentMetadata {
     id: string;
     tempIndexScore: number;
     lastModified: string;
-    ravenLastModified: string;
-    etag: number;
     nonStandardProps: Array<string>;
-
+   
+    etag = ko.observable<number>(null);
+    ravenLastModified = ko.observable<string>(null);
     lastModifiedFullDate: KnockoutComputed<string>;
     lastModifiedAsAgo: KnockoutComputed<string>;
     now = ko.observable(new Date());
@@ -25,25 +25,26 @@ class documentMetadata {
             this.lastModified = dto['Last-Modified'];
 
             setInterval(() => this.now(new Date()), 60*1000);
-
-            this.ravenLastModified = dto['Raven-Last-Modified'];
+           
+            this.ravenLastModified(dto['Raven-Last-Modified']);
             this.lastModifiedAsAgo = ko.computed(() => {
-                if (!!this.ravenLastModified) {
-                    const lastModifiedMoment = moment(this.ravenLastModified);
+                if (!!this.ravenLastModified()) {
+                    const lastModifiedMoment = moment(this.ravenLastModified());
                     return lastModifiedMoment.from(this.now());
                 }
                 return "";
             });
 
             this.lastModifiedFullDate = ko.computed(() => {
-                if (!!this.ravenLastModified) {
-                    const lastModifiedMoment = moment(this.ravenLastModified);
+                if (!!this.ravenLastModified()) {
+                    const lastModifiedMoment = moment(this.ravenLastModified());
                     const fullTimeSinceUtc = lastModifiedMoment.utc().format("DD/MM/YYYY HH:mm (UTC)");
                     return fullTimeSinceUtc;
                 }
                 return "";
             });
-            this.etag = dto['@etag'];
+
+            this.etag(dto['@etag']);
 
             for (var property in dto) {
                 if (property.toUpperCase() !== 'Raven-Entity-Name'.toUpperCase() &&
@@ -71,8 +72,8 @@ class documentMetadata {
             '@id': this.id,
             'Temp-Index-Score': this.tempIndexScore,
             'Last-Modified': this.lastModified,
-            'Raven-Last-Modified': this.ravenLastModified,
-            '@etag': this.etag
+            'Raven-Last-Modified': this.ravenLastModified(),
+            '@etag': this.etag()
         };
 
         if (this.nonStandardProps) {

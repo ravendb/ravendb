@@ -166,7 +166,7 @@ class scriptedIndexes extends viewModelBase {
             var index = this.allScriptedIndexes()[i];
             var serverIndex = serverIndexes.find(k => k.Key === index.getId());
             if (serverIndex && !serverIndex.Deleted) {
-                index.__metadata.etag = serverIndex.Etag;
+                index.__metadata.etag(serverIndex.Etag);
                 index.__metadata.lastModified = serverIndex.Metadata['Last-Modified']; //TODO last -modified is not longer used? use Raven-Last-Modified
             }
             else if (serverIndex && serverIndex.Deleted) { //remove mark to deleted index
