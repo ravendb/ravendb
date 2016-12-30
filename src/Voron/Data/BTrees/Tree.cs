@@ -476,7 +476,7 @@ namespace Voron.Data.BTrees
         internal TreePage GetReadOnlyTreePage(long pageNumber)
         {
             var page = _pageLocator.GetReadOnlyPage(pageNumber);
-            return new TreePage(page.Pointer, _pageLocator.PageSize);
+            return new TreePage(page.Pointer, Constants.Storage.PageSize);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -489,7 +489,7 @@ namespace Voron.Data.BTrees
         internal TreePage GetWriteableTreePage(long pageNumber)
         {
             var page = _pageLocator.GetWritablePage(pageNumber);
-            return new TreePage(page.Pointer, _pageLocator.PageSize);
+            return new TreePage(page.Pointer, Constants.Storage.PageSize);
         }
 
         internal TreePage FindPageFor(Slice key, out TreeNodeHeader* node)
@@ -856,12 +856,12 @@ namespace Voron.Data.BTrees
         private static TreePage AllocateNewPage(LowLevelTransaction tx, TreePageFlags flags, int num, long? pageNumber = null)
         {
             var newPage = tx.AllocatePage(num, pageNumber);
-            var page = new TreePage(newPage.Pointer, tx.PageSize)
+            var page = new TreePage(newPage.Pointer, Constants.Storage.PageSize)
             {
                 Flags = PageFlags.VariableSizeTreePage | (num == 1 ? PageFlags.Single : PageFlags.Overflow),
-                Lower = (ushort)Constants.Tree.PageHeaderSize,
+                Lower = Constants.Tree.PageHeaderSize,
                 TreeFlags = flags,
-                Upper = (ushort)tx.PageSize,
+                Upper = Constants.Storage.PageSize,
                 Dirty = true
             };
             return page;

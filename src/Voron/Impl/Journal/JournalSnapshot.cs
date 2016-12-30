@@ -8,7 +8,7 @@ namespace Voron.Impl.Journal
     {
         public long Number;
         public PageTable PageTranslationTable;
-        public long AvailablePages;
+        public long Available4Kbs;
         public long LastTransaction;
         public JournalFile FileInstance;
 

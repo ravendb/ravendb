@@ -18,13 +18,12 @@ namespace Voron.Impl.Paging
 
         public static ConcurrentDictionary<string, uint> PhysicalDrivePerMountCache = new ConcurrentDictionary<string, uint>();
 
-        protected int MinIncreaseSize => 16 * _pageSize; // 64 KB with 4Kb pages. 
+        protected int MinIncreaseSize => 16 * Constants.Size.Kilobyte;
 
         protected int MaxIncreaseSize => Constants.Size.Gigabyte;
 
         private long _increaseSize;
         private DateTime _lastIncrease;
-        private readonly int _pageSize;
         private readonly object _pagerStateModificationLocker = new object();
         public bool UsePageProtection { get; } = false;
 
@@ -74,17 +73,17 @@ namespace Voron.Impl.Paging
             get { return _debugInfo; }
         }
 
+        public const int PageMaxSpace = Constants.Storage.PageSize - Constants.Tree.PageHeaderSize;
+
         public string FileName;
 
         protected AbstractPager(StorageEnvironmentOptions options, bool usePageProtection = false)
         {
             _options = options;
-            _pageSize = _options.PageSize;
             UsePageProtection = usePageProtection;
-            Debug.Assert((_pageSize - Constants.Tree.PageHeaderSize) / Constants.Tree.MinKeysInPage >= 1024);
+            Debug.Assert((Constants.Storage.PageSize - Constants.Tree.PageHeaderSize) / Constants.Tree.MinKeysInPage >= 1024);
 
 
-            PageMaxSpace = _pageSize - Constants.Tree.PageHeaderSize;
             NodeMaxSize = PageMaxSpace / 2 - 1;
 
             // MaxNodeSize is usually persisted as an unsigned short. Therefore, we must ensure it is not possible to have an overflow.
@@ -98,12 +97,6 @@ namespace Voron.Impl.Paging
         }
 
         public StorageEnvironmentOptions Options => _options;
-
-        public int PageSize
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _pageSize; }
-        }
 
         public int PageMinSpace
         {
@@ -122,14 +115,6 @@ namespace Voron.Impl.Paging
         }
 
         public int NodeMaxSize
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get;
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private set;
-        }
-
-        public int PageMaxSpace
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get;
@@ -158,7 +143,7 @@ namespace Voron.Impl.Paging
 
             tx?.EnsurePagerStateReference(state);
 
-            return state.MapBase + pageNumber * _pageSize;
+            return state.MapBase + pageNumber * Constants.Storage.PageSize;
         }
 
         public abstract void Sync();
@@ -174,8 +159,8 @@ namespace Voron.Impl.Paging
 
             // this ensure that if we want to get a range that is more than the current expansion
             // we will increase as much as needed in one shot
-            var minRequested = (requestedPageNumber + numberOfPages) * _pageSize;
-            var allocationSize = Math.Max(NumberOfAllocatedPages * _pageSize, PageSize);
+            var minRequested = (requestedPageNumber + numberOfPages) * Constants.Storage.PageSize;
+            var allocationSize = Math.Max(NumberOfAllocatedPages * Constants.Storage.PageSize, Constants.Storage.PageSize);
             while (minRequested > allocationSize)
             {
                 allocationSize = GetNewLength(allocationSize);
@@ -349,7 +334,7 @@ namespace Voron.Impl.Paging
                 _pagerState = newPagerState;
             }
 
-            var toWrite = numberOfPages * _abstractPager.PageSize;
+            var toWrite = numberOfPages * Constants.Storage.PageSize;
             byte* destination = _abstractPager.AcquirePagePointer(null, pageNumber, _pagerState);
 
             _abstractPager.UnprotectPageRange(destination, (ulong)toWrite);

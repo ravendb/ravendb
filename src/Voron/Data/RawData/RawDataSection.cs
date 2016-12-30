@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
 using Voron.Exceptions;
+using Voron.Global;
 using Voron.Impl;
 
 namespace Voron.Data.RawData
@@ -16,8 +17,7 @@ namespace Voron.Data.RawData
         private PageLocator _pageLocator;
 
         protected readonly LowLevelTransaction _tx;
-        protected readonly int _pageSize;
-
+        
         public readonly int MaxItemSize;
 
         protected RawDataSmallSectionPageHeader* _sectionHeader;
@@ -33,10 +33,9 @@ namespace Voron.Data.RawData
         {
             PageNumber = pageNumber;
             _tx = tx;
-            _pageSize = _tx.DataPager.PageSize;
             _pageLocator = tx.PersistentContext.AllocatePageLocator(tx);
 
-            MaxItemSize = (_pageSize - sizeof(RawDataSmallPageHeader)) / 2;
+            MaxItemSize = (Constants.Storage.PageSize - sizeof(RawDataSmallPageHeader)) / 2;
 
             _sectionHeader = (RawDataSmallSectionPageHeader*)_pageLocator.GetReadOnlyPage(pageNumber).Pointer;
         }
@@ -46,7 +45,7 @@ namespace Voron.Data.RawData
 
         public int AllocatedSize => _sectionHeader->AllocatedSize;
 
-        public int Size => _sectionHeader->NumberOfPages * _pageSize;
+        public int Size => _sectionHeader->NumberOfPages * Constants.Storage.PageSize;
 
         public int NumberOfPages => _sectionHeader->NumberOfPages;
 
@@ -63,8 +62,8 @@ namespace Voron.Data.RawData
         {
             if (Contains(id) == false)
             {
-                var posInPage = (int)(id % _pageSize);
-                var pageNumberInSection = (id - posInPage) / _pageSize;
+                var posInPage = (int)(id % Constants.Storage.PageSize);
+                var pageNumberInSection = (id - posInPage) / Constants.Storage.PageSize;
                 var pageHeaderForId = PageHeaderFor(pageNumberInSection);
 
                 // this is in another section, cannot free it directly, so we'll forward to the right section
@@ -83,14 +82,14 @@ namespace Voron.Data.RawData
             {
                 var pageHeader = PageHeaderFor(_sectionHeader->PageNumber + i + 1);
                 var offset = sizeof(RawDataSmallPageHeader);
-                while (offset < _pageSize)
+                while (offset < Constants.Storage.PageSize)
                 {
                     var sizes = (RawDataEntrySizes*)((byte*)pageHeader + offset);
                     if (sizes->UsedSize != -1)
                     {
-                        var currentId = (pageHeader->PageNumber * _pageSize) + offset;
+                        var currentId = (pageHeader->PageNumber * Constants.Storage.PageSize) + offset;
 
-                        var posInPage = (int)(currentId % _tx.DataPager.PageSize);
+                        var posInPage = (int)(currentId % Constants.Storage.PageSize);
 
                         if (posInPage >= pageHeader->NextAllocation)
                             break;
@@ -109,7 +108,7 @@ namespace Voron.Data.RawData
         public int NumberOfEntries => _sectionHeader->NumberOfEntries;
 
         public int OverheadSize
-            => _pageSize /* header page*/+
+            => Constants.Storage.PageSize /* header page*/+
                _sectionHeader->NumberOfEntries * (sizeof(ushort) * 2) /*per entry*/+
                _sectionHeader->NumberOfPages * sizeof(RawDataSmallPageHeader);
 
@@ -122,14 +121,14 @@ namespace Voron.Data.RawData
                 {
                     total += AvailableSpace[i];
                 }
-                return 1 - (total / (double)(_sectionHeader->NumberOfPages * _pageSize));
+                return 1 - (total / (double)(_sectionHeader->NumberOfPages * Constants.Storage.PageSize));
             }
         }
 
         public bool Contains(long id)
         {
-            var posInPage = (int)(id % _pageSize);
-            var pageNumberInSection = (id - posInPage) / _pageSize;
+            var posInPage = (int)(id % Constants.Storage.PageSize);
+            var pageNumberInSection = (id - posInPage) / Constants.Storage.PageSize;
 
             return (pageNumberInSection > _sectionHeader->PageNumber &&
                     pageNumberInSection <= _sectionHeader->PageNumber + _sectionHeader->NumberOfPages);
@@ -149,8 +148,8 @@ namespace Voron.Data.RawData
             if (_tx.Flags == TransactionFlags.Read)
                 ThrowReadOnlyTransaction(id);
 
-            var posInPage = (int)(id % _pageSize);
-            var pageNumberInSection = (id - posInPage) / _pageSize;
+            var posInPage = (int)(id % Constants.Storage.PageSize);
+            var pageNumberInSection = (id - posInPage) / Constants.Storage.PageSize;
             var pageHeader = PageHeaderFor(pageNumberInSection);
 
             if (posInPage >= pageHeader->NextAllocation)
@@ -188,8 +187,8 @@ namespace Voron.Data.RawData
 
         public static byte* DirectRead(LowLevelTransaction tx, long id, out int size)
         {
-            var posInPage = (int)(id % tx.PageSize);
-            var pageNumberInSection = (id - posInPage) / tx.PageSize;
+            var posInPage = (int)(id % Constants.Storage.PageSize);
+            var pageNumberInSection = (id - posInPage) / Constants.Storage.PageSize;
             var pageHeader = PageHeaderFor(tx, pageNumberInSection);
 
             if (posInPage >= pageHeader->NextAllocation)
@@ -217,8 +216,8 @@ namespace Voron.Data.RawData
 
         public long GetSectionPageNumber(long id)
         {
-            var posInPage = (int)(id % _pageSize);
-            var pageNumberInSection = (id - posInPage) / _pageSize;
+            var posInPage = (int)(id % Constants.Storage.PageSize);
+            var pageNumberInSection = (id - posInPage) / Constants.Storage.PageSize;
             var pageHeader = PageHeaderFor(pageNumberInSection);
             var sectionPageNumber = pageHeader->PageNumber - pageHeader->PageNumberInSection - 1;
             return sectionPageNumber;
@@ -255,8 +254,8 @@ namespace Voron.Data.RawData
             if (_tx.Flags == TransactionFlags.Read)
                 ThrowReadOnlyTransaction(id);
 
-            var posInPage = (int)(id % _pageSize);
-            var pageNumberInSection = (id - posInPage) / _pageSize;
+            var posInPage = (int)(id % Constants.Storage.PageSize);
+            var pageNumberInSection = (id - posInPage) / Constants.Storage.PageSize;
             var pageHeader = PageHeaderFor(pageNumberInSection);
 
             if (Contains(id) == false)

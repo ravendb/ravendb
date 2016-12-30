@@ -38,10 +38,10 @@ namespace Voron.Util
 
         public void ToStream(AbstractPager src, long startPage, long numberOfPages, Stream output)
         {
-            if((_buffer.Length % src.PageSize) != 0)
+            if((_buffer.Length % Constants.Storage.PageSize) != 0)
                 throw new ArgumentException("The buffer length must be a multiple of the page size");
 
-            var steps = _buffer.Length/src.PageSize;
+            var steps = _buffer.Length/ Constants.Storage.PageSize;
 
             using(var tempTx = new TempPagerTransaction())
             fixed (byte* pBuffer = _buffer)
@@ -51,8 +51,8 @@ namespace Voron.Util
                     var pagesToCopy = (int) (i + steps > numberOfPages ? numberOfPages - i : steps);
                     src.EnsureMapped(tempTx, i, pagesToCopy);
                     var ptr = src.AcquirePagePointer(tempTx, i);
-                    Memory.Copy(pBuffer, ptr, pagesToCopy*src.PageSize);
-                    output.Write(_buffer, 0, pagesToCopy * src.PageSize);
+                    Memory.Copy(pBuffer, ptr, pagesToCopy* Constants.Storage.PageSize);
+                    output.Write(_buffer, 0, pagesToCopy * Constants.Storage.PageSize);
 
                 }
             }

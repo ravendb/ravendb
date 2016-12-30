@@ -115,8 +115,6 @@ namespace Voron.Impl
 
         public long Id => _id;
 
-        public readonly int PageSize;
-
         public bool Committed { get; private set; }
 
         public bool RolledBack { get; private set; }
@@ -142,8 +140,6 @@ namespace Voron.Impl
 
             PersistentContext = transactionPersistentContext;
             Flags = flags;
-
-            PageSize = DataPager.PageSize;
 
             var scratchPagerStates = env.ScratchBufferPool.GetPagerStatesOfAllScratches();
             foreach (var scratchPagerState in scratchPagerStates.Values)
@@ -380,7 +376,7 @@ namespace Voron.Impl
 
             Debug.Assert(overflowSize >= 0);
 
-            long numberOfPages = (overflowSize / PageSize) + (overflowSize % PageSize == 0 ? 0 : 1);
+            long numberOfPages = (overflowSize / Constants.Storage.PageSize) + (overflowSize % Constants.Storage.PageSize == 0 ? 0 : 1);
 
             var overflowPage = AllocatePage((int)numberOfPages, pageNumber, previousPage, zeroPage);
             overflowPage.Flags = PageFlags.Overflow;

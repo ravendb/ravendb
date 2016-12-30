@@ -4,6 +4,7 @@ using System.IO;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
+using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.FileHeaders;
 
@@ -221,7 +222,7 @@ namespace Voron.Debugging
                         s = "[smallest]";
 
                     var fstPage = tx.GetPage(pageNum);
-                    RenderFixedSizeTreePage(tx, new FixedSizeTreePage(fstPage.Pointer, tx.PageSize), sw, header, s, false);
+                    RenderFixedSizeTreePage(tx, new FixedSizeTreePage(fstPage.Pointer, Constants.Storage.PageSize), sw, header, s, false);
                 }
             }
 

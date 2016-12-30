@@ -5,6 +5,7 @@ using Voron.Data.Compression;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.FreeSpace;
+using Voron.Impl.Paging;
 
 namespace Voron.Data.BTrees
 {
@@ -398,7 +399,7 @@ namespace Voron.Data.BTrees
         {
             Slice keyToInsert = _newKey;
 
-            int pageSize = TreeSizeOf.NodeEntry(_tx.DataPager.PageMaxSpace, keyToInsert, _len) + Constants.Tree.NodeOffsetSize;
+            int pageSize = TreeSizeOf.NodeEntry(AbstractPager.PageMaxSpace, keyToInsert, _len) + Constants.Tree.NodeOffsetSize;
 
             if (toRight == false)
             {

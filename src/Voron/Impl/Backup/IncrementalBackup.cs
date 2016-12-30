@@ -105,7 +105,7 @@ namespace Voron.Impl.Backup
                 if (env.Journal.CurrentFile != null)
                 {
                     lastWrittenLogFile = env.Journal.CurrentFile.Number;
-                    lastWrittenLogPage = env.Journal.CurrentFile.WritePagePosition;
+                    lastWrittenLogPage = env.Journal.CurrentFile.WritePosIn4KbPosition;
                 }
 
                 // txw.Commit(); intentionally not committing
@@ -141,14 +141,14 @@ namespace Voron.Impl.Backup
                         usedJournals.Add(journalFile);
 
                         var startBackupAt = 0L;
-                        long pagesToCopy = journalFile.JournalWriter.NumberOfAllocatedPages;
+                        long pagesToCopy = journalFile.JournalWriter.NumberOfAllocated4Kb;
                         if (journalFile.Number == backupInfo.LastBackedUpJournal)
                         {
                             startBackupAt = backupInfo.LastBackedUpJournalPage + 1;
                             pagesToCopy -= startBackupAt;
                         }
 
-                        if (startBackupAt >= journalFile.JournalWriter.NumberOfAllocatedPages) // nothing to do here
+                        if (startBackupAt >= journalFile.JournalWriter.NumberOfAllocated4Kb) // nothing to do here
                             continue;
 
                         var part =
@@ -158,7 +158,7 @@ namespace Voron.Impl.Backup
                         Debug.Assert(part != null);
 
                         if (journalFile.Number == lastWrittenLogFile)
-                            pagesToCopy -= (journalFile.JournalWriter.NumberOfAllocatedPages - lastWrittenLogPage);
+                            pagesToCopy -= (journalFile.JournalWriter.NumberOfAllocated4Kb - lastWrittenLogPage);
 
                         using (var stream = part.Open())
                         {
@@ -171,7 +171,7 @@ namespace Voron.Impl.Backup
                         {
                             lastBackedUpPage = startBackupAt + pagesToCopy - 1;
                             // we used all of this file, so the next backup should start in the next file
-                            if (lastBackedUpPage == (journalFile.JournalWriter.NumberOfAllocatedPages - 1))
+                            if (lastBackedUpPage == (journalFile.JournalWriter.NumberOfAllocated4Kb - 1))
                             {
                                 lastBackedUpPage = -1;
                                 lastBackedUpFile++;

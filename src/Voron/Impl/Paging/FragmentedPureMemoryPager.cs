@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Voron.Data.BTrees;
+using Voron.Global;
 using Voron.Impl.Journal;
 using Voron.Util;
 
@@ -16,7 +17,7 @@ namespace Voron.Impl.Paging
             : base(options)
         {
             _buffers = buffers;
-            NumberOfAllocatedPages = buffers.Sum(x => x.SizeInPages);
+            NumberOfAllocatedPages = buffers.Sum(x => x.SizeIn4Kbs);
             FileName = ":memory:";
         }
 
@@ -30,10 +31,10 @@ namespace Voron.Impl.Paging
             long page = 0;
             foreach (var buffer in _buffers)
             {
-                if (page + buffer.SizeInPages > pageNumber)
-                    return buffer.Pointer + ((pageNumber - page)* PageSize);
+                if (page + buffer.SizeIn4Kbs > pageNumber)
+                    return buffer.Pointer + ((pageNumber - page)* Constants.Storage.PageSize);
 
-                page += buffer.SizeInPages;
+                page += buffer.SizeIn4Kbs;
             }
             throw new InvalidOperationException("Could not find a matching page number: " + pageNumber);
         }

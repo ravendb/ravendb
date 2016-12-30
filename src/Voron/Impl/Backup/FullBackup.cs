@@ -137,7 +137,7 @@ namespace Voron.Impl.Backup
                     if (env.Journal.CurrentFile != null)
                     {
                         lastWrittenLogFile = env.Journal.CurrentFile.Number;
-                        lastWrittenLogPage = env.Journal.CurrentFile.WritePagePosition - 1;
+                        lastWrittenLogPage = env.Journal.CurrentFile.WritePosIn4KbPosition - 1;
                     }
 
                     // txw.Commit(); intentionally not committing
@@ -167,7 +167,7 @@ namespace Voron.Impl.Backup
 
                         Debug.Assert(journalPart != null);
 
-                        long pagesToCopy = journalFile.JournalWriter.NumberOfAllocatedPages;
+                        long pagesToCopy = journalFile.JournalWriter.NumberOfAllocated4Kb;
                         if (journalFile.Number == lastWrittenLogFile)
                             pagesToCopy = lastWrittenLogPage + 1;
 

@@ -311,7 +311,7 @@ namespace Voron.Data.Fixed
         internal FixedSizeTreePage GetReadOnlyPage(long pageNumber)
         {
             var readOnlyPage = _pageLocator.GetReadOnlyPage(pageNumber);
-            return new FixedSizeTreePage(readOnlyPage.Pointer, _tx.PageSize);
+            return new FixedSizeTreePage(readOnlyPage.Pointer, Constants.Storage.PageSize);
         }
 
         private FixedSizeTreePage FindPageFor(long key)
@@ -347,7 +347,7 @@ namespace Voron.Data.Fixed
                 // relevant for a page which is currently being changed allocated
 
                 var page = _tx.AllocatePage(1);
-                allocatePage = new FixedSizeTreePage(page.Pointer, _tx.PageSize);
+                allocatePage = new FixedSizeTreePage(page.Pointer, Constants.Storage.PageSize);
             }
 
             allocatePage.Dirty = true;
@@ -379,7 +379,7 @@ namespace Voron.Data.Fixed
                 return page;
 
             var writablePage = _pageLocator.GetWritablePage(page.PageNumber);
-            var newPage = new FixedSizeTreePage(writablePage.Pointer, _tx.PageSize)
+            var newPage = new FixedSizeTreePage(writablePage.Pointer, Constants.Storage.PageSize)
             {
                 LastSearchPosition = page.LastSearchPosition,
                 LastMatch = page.LastMatch
@@ -1105,7 +1105,7 @@ namespace Voron.Data.Fixed
                 {
                     var childPage = PageValueFor(page, 0);
                     var rootPageNum = page.PageNumber;
-                    Memory.Copy(page.Pointer, GetReadOnlyPage(childPage).Pointer, _tx.DataPager.PageSize);
+                    Memory.Copy(page.Pointer, GetReadOnlyPage(childPage).Pointer, Constants.Storage.PageSize);
                     page.PageNumber = rootPageNum;//overwritten by copy
 
                     if (largeTreeHeader != null)
@@ -1140,7 +1140,7 @@ namespace Voron.Data.Fixed
 
 
             var sizeOfEntryInPage = (page.IsLeaf ? _entrySize : BranchEntrySize);
-            var minNumberOfEntriesBeforeRebalance = (_tx.DataPager.PageMaxSpace / sizeOfEntryInPage) / 4;
+            var minNumberOfEntriesBeforeRebalance = (Constants.Storage.PageSize / sizeOfEntryInPage) / 4;
             if (page.NumberOfEntries > minNumberOfEntriesBeforeRebalance)
             {
                 // if we have more than 25% of the entries that would fit in the page, there is nothing that needs to be done

@@ -19,7 +19,7 @@ namespace Voron.Impl.Journal
         internal class Buffer
         {
             public byte* Pointer;
-            public long SizeInPages;
+            public long SizeIn4Kbs;
         }
 
         private ImmutableAppendOnlyList<Buffer> _buffers = ImmutableAppendOnlyList<Buffer>.Empty;
@@ -30,10 +30,10 @@ namespace Voron.Impl.Journal
         public PureMemoryJournalWriter(StorageEnvironmentOptions options, long journalSize)
         {
             _options = options;
-            NumberOfAllocatedPages = (int)(journalSize/Constants.Storage.PageSize);
+            NumberOfAllocated4Kb = (int) (journalSize/(4*Constants.Size.Kilobyte));
         }
 
-        public int NumberOfAllocatedPages { get; }
+        public int NumberOfAllocated4Kb { get; }
         public bool Disposed { get; private set; }
         public bool DeleteOnClose { get; set; }
 
@@ -50,31 +50,31 @@ namespace Voron.Impl.Journal
             }		
         }
 
-        public bool Read(long pageNumber, byte* buffer, int count)
+        public bool Read(long positionBy4Kb, byte* buffer, int countBy4Kb)
         {
-            long currentPage = 0;
+            long current4Kb = 0;
             foreach (var current in _buffers)
             {
-                long offsetInPages = 0;
-                if (currentPage != pageNumber)
+                long offsetIn4Kb = 0;
+                if (current4Kb != positionBy4Kb)
                 {
-                    if (currentPage + current.SizeInPages <= pageNumber)
+                    if (current4Kb + current.SizeIn4Kbs <= current4Kb)
                     {
-                        currentPage += current.SizeInPages;
+                        current4Kb += current.SizeIn4Kbs;
                         continue;
                     }
-                    offsetInPages = pageNumber - currentPage;
+                    offsetIn4Kb = current4Kb - current4Kb;
                 }
 
-                var pagesAvailableToRead = (current.SizeInPages - offsetInPages);
-                var actualCount = Math.Min(count, (int)(pagesAvailableToRead * Constants.Storage.PageSize));
+                var pagesAvailableToRead = (current.SizeIn4Kbs - offsetIn4Kb);
+                var actualCount = Math.Min(countBy4Kb, (int)(pagesAvailableToRead * 4 * Constants.Size.Kilobyte));
 
-                Memory.Copy(buffer, current.Pointer + (offsetInPages * Constants.Storage.PageSize), actualCount);
+                Memory.Copy(buffer, current.Pointer + (offsetIn4Kb * 4 * Constants.Size.Kilobyte), actualCount);
                 buffer += actualCount;
-                count -= actualCount;
-                pageNumber += pagesAvailableToRead;
-                currentPage += pagesAvailableToRead;
-                if (count <= 0)
+                countBy4Kb -= actualCount;
+                positionBy4Kb += pagesAvailableToRead;
+                current4Kb += pagesAvailableToRead;
+                if (countBy4Kb <= 0)
                     return true;
             }
             return false;
@@ -90,12 +90,12 @@ namespace Voron.Impl.Journal
             Disposed = true;
             foreach (var buffer in _buffers)
             {
-                NativeMemory.Free(buffer.Pointer, buffer.SizeInPages*Constants.Storage.PageSize);
+                NativeMemory.Free(buffer.Pointer, buffer.SizeIn4Kbs*Constants.Storage.PageSize);
             }
             _buffers = ImmutableAppendOnlyList<Buffer>.Empty;
         }
 
-        public void WritePages(long position, byte* p, int numberOfPages)
+        public void Write(long position, byte* p, int numberOf4Kb)
         {
             _locker.EnterWriteLock();
             try
@@ -103,7 +103,7 @@ namespace Voron.Impl.Journal
                 if (position != _lastPos)
                     throw new InvalidOperationException("Journal writes must be to the next location in the journal");
 
-                var size = numberOfPages*Constants.Storage.PageSize;
+                var size = numberOf4Kb*4*Constants.Size.Kilobyte;
                 _lastPos += size;
 
                 var handle = NativeMemory.AllocateMemory(size);
@@ -111,11 +111,11 @@ namespace Voron.Impl.Journal
                 var buffer = new Buffer
                 {
                     Pointer = handle,
-                    SizeInPages = numberOfPages
+                    SizeIn4Kbs = numberOf4Kb
                 };
                 _buffers = _buffers.Append(buffer);
 
-                Memory.Copy(buffer.Pointer, p, numberOfPages * Constants.Storage.PageSize);
+                Memory.Copy(buffer.Pointer, p, numberOf4Kb * 4 * Constants.Size.Kilobyte);
             }
             finally
             {

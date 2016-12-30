@@ -57,7 +57,7 @@ namespace Voron.Data.Compression
             var compressionSectionSize = compressedSize + offsetsSize;
 
             var sizeLeftInDecompressedPage = Constants.Compression.MaxPageSize - page.SizeUsed;
-            var sizeLeftForUncompressedEntries = tx.PageSize - (Constants.Tree.PageHeaderSize + Constants.Compression.HeaderSize + compressionSectionSize);
+            var sizeLeftForUncompressedEntries = Constants.Storage.PageSize - (Constants.Tree.PageHeaderSize + Constants.Compression.HeaderSize + compressionSectionSize);
 
             if (sizeLeftForUncompressedEntries > sizeLeftInDecompressedPage)
             {
@@ -71,7 +71,7 @@ namespace Voron.Data.Compression
 
             // check that after decompression we won't exceed MaxPageSize
             Debug.Assert(page.SizeUsed + // page header, node offsets, existing entries
-                         (tx.PageSize - // space that can be still used to insert next uncompressed entries
+                         (Constants.Storage.PageSize - // space that can be still used to insert next uncompressed entries
                           (Constants.Tree.PageHeaderSize + Constants.Compression.HeaderSize + compressionSectionSize)) 
                          <= Constants.Compression.MaxPageSize);
 

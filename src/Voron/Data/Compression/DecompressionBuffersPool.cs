@@ -239,7 +239,7 @@ namespace Voron.Data.Compression
                 _size = size;
                 _pool = pool;
                 _index = index;
-                _pager.EnsureMapped(tx, _position, _size / _pager.PageSize);
+                _pager.EnsureMapped(tx, _position, _size / Constants.Storage.PageSize);
                 _ptr = _pager.AcquirePagePointer(tx, position);
 
                 TempPage = new TemporaryPage(_ptr, size) { ReturnTemporaryPageToPool = this };
@@ -249,7 +249,7 @@ namespace Voron.Data.Compression
 
             public void EnsureValidPointer(LowLevelTransaction tx)
             {
-                _pager.EnsureMapped(tx, _position, _size / _pager.PageSize);
+                _pager.EnsureMapped(tx, _position, _size / Constants.Storage.PageSize);
                 var p = _pager.AcquirePagePointer(tx, _position);
 
                 if (_ptr == p)

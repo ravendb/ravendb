@@ -6,10 +6,8 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
-using Voron.Impl;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
-using System.Collections.Generic;
 using Sparrow;
 using Sparrow.Platform.Posix;
 using Voron.Global;
@@ -24,13 +22,13 @@ namespace Voron.Platform.Posix
         private readonly StorageEnvironmentOptions _options;
         private readonly string _filename;
         private int _fd, _fdReads = -1;
-        private readonly int _maxNumberOfPagesPerSingleWrite;
+        private readonly int _maxNumberOf4KbPerSingleWrite;
 
         public PosixJournalWriter(StorageEnvironmentOptions options, string filename, long journalSize)
         {
             _options = options;
             _filename = filename;
-            _maxNumberOfPagesPerSingleWrite = int.MaxValue / Constants.Storage.PageSize;
+            _maxNumberOf4KbPerSingleWrite = int.MaxValue / (4*Constants.Size.Kilobyte);
 
             _fd = Syscall.open(filename, OpenFlags.O_WRONLY | options.PosixOpenFlags | OpenFlags.O_CREAT,
                 FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
@@ -60,7 +58,7 @@ namespace Voron.Platform.Posix
                 PosixHelper.ThrowLastError(err, "when syncing dir for on " + filename);
             }
 
-            NumberOfAllocatedPages = (int)(journalSize / Constants.Storage.PageSize);
+            NumberOfAllocated4Kb = (int) (journalSize/(4*Constants.Size.Kilobyte));
         }
 
         public void Dispose()
@@ -94,35 +92,35 @@ namespace Voron.Platform.Posix
         }
 
 
-        public unsafe void WritePages(long position, byte* p, int numberOfPages)
+        public unsafe void Write(long position, byte* p, int numberOf4Kb)
         {
-            while (numberOfPages > _maxNumberOfPagesPerSingleWrite)
+            while (numberOf4Kb > _maxNumberOf4KbPerSingleWrite)
             {
-                WriteFile(position, p, _maxNumberOfPagesPerSingleWrite);
+                WriteFile(position, p, _maxNumberOf4KbPerSingleWrite);
 
-                var nextChunkPosition = _maxNumberOfPagesPerSingleWrite * Constants.Storage.PageSize;
-                position += nextChunkPosition;
-                p += nextChunkPosition;
-                numberOfPages -= _maxNumberOfPagesPerSingleWrite;
+                position += _maxNumberOf4KbPerSingleWrite;
+                p += _maxNumberOf4KbPerSingleWrite * (4*Constants.Size.Kilobyte);
+                numberOf4Kb -= _maxNumberOf4KbPerSingleWrite;
             }
 
-            if (numberOfPages > 0)
-                WriteFile(position, p, numberOfPages);
+            if (numberOf4Kb > 0)
+                WriteFile(position, p, numberOf4Kb);
         }
 
-        private unsafe void WriteFile(long position, byte* p, int numberOfPages)
+        private unsafe void WriteFile(long position, byte* p, int numberOf4Kb)
         {
-            if (numberOfPages == 0)
+            if (numberOf4Kb == 0)
                 return; // nothing to do
 
-            var nNumberOfBytesToWrite = (ulong)numberOfPages*(ulong)Constants.Storage.PageSize;
+            var nNumberOfBytesToWrite = (ulong) numberOf4Kb*(4*Constants.Size.Kilobyte);
             long actuallyWritten = 0;
             long result;
             using (_options.IoMetrics.MeterIoRate(_filename, IoMetrics.MeterType.JournalWrite, (long)nNumberOfBytesToWrite))
             {
                 do
                 {
-                    result = Syscall.pwrite(_fd, p, nNumberOfBytesToWrite - (ulong)actuallyWritten, position);
+                    result = Syscall.pwrite(_fd, p, nNumberOfBytesToWrite - (ulong)actuallyWritten, 
+                        position * 4 * Constants.Size.Kilobyte);
                     if (result < 1)
                         break;
                     actuallyWritten += result;
@@ -146,7 +144,7 @@ namespace Voron.Platform.Posix
             }
         }
 
-        public int NumberOfAllocatedPages { get; }
+        public int NumberOfAllocated4Kb { get; }
 
         public bool Disposed { get; private set; }
 
@@ -157,7 +155,7 @@ namespace Voron.Platform.Posix
             return new PosixMemoryMapPager(_options, _filename);
         }
 
-        public unsafe bool Read(long pageNumber, byte* buffer, int count)
+        public unsafe bool Read(long positionBy4Kb, byte* buffer, int countBy4Kb)
         {
             if (_fdReads == -1)
             {
@@ -168,14 +166,14 @@ namespace Voron.Platform.Posix
                     PosixHelper.ThrowLastError(err, "when opening " + _filename);
                 }
             }
-            long position = pageNumber * Constants.Storage.PageSize;
+            long position = positionBy4Kb*(4*Constants.Size.Kilobyte);
 
-            while (count > 0)
+            while (countBy4Kb > 0)
             {
-                var result = Syscall.pread(_fdReads, buffer, (ulong)count, position);
+                var result = Syscall.pread(_fdReads, buffer, (ulong)(countBy4Kb * 4 * Constants.Size.Kilobyte), position);
                 if (result == 0) //eof
                     return false;
-                count -= (int)result;
+                countBy4Kb -= (int)result;
                 buffer += result;
                 position += result;
             }

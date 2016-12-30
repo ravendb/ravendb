@@ -227,11 +227,11 @@ namespace Voron.Impl.Journal
                 return false;
             }
             if (current->CompressedSize >
-                (_journalPager.NumberOfAllocatedPages - _readingPage) * _journalPager.PageSize)
+                (_journalPager.NumberOfAllocatedPages - _readingPage) * Constants.Storage.PageSize)
             {
                 // we can't read past the end of the journal
                 RequireHeaderUpdate = true;
-                options.InvokeRecoveryError(this, $"Compresses size {current->CompressedSize} is too big for the journal size {_journalPager.NumberOfAllocatedPages * _journalPager.PageSize}", null);
+                options.InvokeRecoveryError(this, $"Compresses size {current->CompressedSize} is too big for the journal size {_journalPager.NumberOfAllocatedPages * Constants.Storage.PageSize}", null);
                 return false;
             }
 

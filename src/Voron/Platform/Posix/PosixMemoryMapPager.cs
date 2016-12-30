@@ -56,7 +56,7 @@ namespace Voron.Platform.Posix
                 PosixHelper.ThrowLastError(err, "sync dir for " + file);
             }
 
-            NumberOfAllocatedPages = _totalAllocationSize / PageSize;
+            NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
             SetPagerState(CreatePagerState());
         }
 
@@ -120,7 +120,7 @@ namespace Voron.Platform.Posix
             SetPagerState(newPagerState);
 
             _totalAllocationSize += allocationSize;
-            NumberOfAllocatedPages = _totalAllocationSize/ PageSize;
+            NumberOfAllocatedPages = _totalAllocationSize/ Constants.Storage.PageSize;
 
             return newPagerState;
         }

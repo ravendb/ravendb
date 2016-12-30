@@ -251,7 +251,7 @@ namespace SlowTests.Voron
             }
 
             var lastJournal = Env.Journal.GetCurrentJournalInfo().CurrentJournal;
-            var lastJournalPosition = Env.Journal.CurrentFile.WritePagePosition;
+            var lastJournalPosition = Env.Journal.CurrentFile.WritePosIn4KbPosition;
 
             StopDatabase();
 

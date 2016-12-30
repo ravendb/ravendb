@@ -3,6 +3,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using Sparrow.Platform.Posix;
 using Sparrow.Utils;
+using Voron.Global;
 using Voron.Impl;
 
 namespace Voron.Platform.Posix
@@ -47,7 +48,7 @@ namespace Voron.Platform.Posix
             _totalAllocationSize = NearestSizeToPageSize(initialFileSize ?? _totalAllocationSize);
             PosixHelper.AllocateFileSpace(_fd, (ulong)_totalAllocationSize, FileName);
 
-            NumberOfAllocatedPages = _totalAllocationSize / PageSize;
+            NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
             SetPagerState(CreatePagerState());
         }
 
@@ -99,7 +100,7 @@ namespace Voron.Platform.Posix
 
             SetPagerState(newPagerState);
 
-            NumberOfAllocatedPages = _totalAllocationSize / PageSize;
+            NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
 
             return newPagerState;
         }

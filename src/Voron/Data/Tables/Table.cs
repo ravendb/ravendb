@@ -6,6 +6,7 @@ using Sparrow;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Data.RawData;
+using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
 
@@ -21,8 +22,7 @@ namespace Voron.Data.Tables
         private FixedSizeTree _fstKey;
         private FixedSizeTree _inactiveSections;
         private FixedSizeTree _activeCandidateSection;
-        private readonly int _pageSize;
-
+        
         private readonly Dictionary<Slice, Tree> _treesBySliceCache = new Dictionary<Slice, Tree>(SliceComparer.Instance);
         private readonly Dictionary<Slice, Dictionary<Slice, FixedSizeTree>> _fixedSizeTreeCache = new Dictionary<Slice, Dictionary<Slice, FixedSizeTree>>(SliceComparer.Instance);
 
@@ -103,8 +103,7 @@ namespace Voron.Data.Tables
 
             _schema = schema;
             _tx = tx;
-            _pageSize = _tx.LowLevelTransaction.DataPager.PageSize;
-
+            
             _tableTree = tableTree;
             if (_tableTree == null)
                 throw new ArgumentNullException(nameof(tableTree), "Cannot open table " + Name);
@@ -133,7 +132,6 @@ namespace Voron.Data.Tables
         {
             _schema = schema;
             _tx = tx;
-            _pageSize = _tx.LowLevelTransaction.DataPager.PageSize;
         }
 
         public TableValueReader ReadByKey(Slice key)
@@ -171,10 +169,10 @@ namespace Voron.Data.Tables
 
         public byte* DirectRead(long id, out int size)
         {
-            var posInPage = id % _pageSize;
+            var posInPage = id % Constants.Storage.PageSize;
             if (posInPage == 0) // large
             {
-                var page = _tx.LowLevelTransaction.GetPage(id / _pageSize);
+                var page = _tx.LowLevelTransaction.GetPage(id / Constants.Storage.PageSize);
                 size = page.OverflowSize;
 
                 return page.Pointer + sizeof(PageHeader);
@@ -193,7 +191,7 @@ namespace Voron.Data.Tables
             int size = builder.Size;
 
             // first, try to fit in place, either in small or large sections
-            var prevIsSmall = id % _pageSize != 0;
+            var prevIsSmall = id % Constants.Storage.PageSize != 0;
             if (size + sizeof(RawDataSection.RawDataEntrySizes) < ActiveDataSmallSection.MaxItemSize)
             {
                 // We must read before we call TryWriteDirect, because it will modify the size
@@ -214,7 +212,7 @@ namespace Voron.Data.Tables
             }
             else if (prevIsSmall == false)
             {
-                var pageNumber = id / _pageSize;
+                var pageNumber = id / Constants.Storage.PageSize;
                 var page = _tx.LowLevelTransaction.GetPage(pageNumber);
                 var existingNumberOfPages = _tx.LowLevelTransaction.DataPager.GetNumberOfOverflowPages(page.OverflowSize);
                 var newNumberOfPages = _tx.LowLevelTransaction.DataPager.GetNumberOfOverflowPages(size);
@@ -255,10 +253,10 @@ namespace Voron.Data.Tables
 
             DeleteValueFromIndex(id, new TableValueReader(ptr, size));
 
-            var largeValue = (id % _pageSize) == 0;
+            var largeValue = (id % Constants.Storage.PageSize) == 0;
             if (largeValue)
             {
-                var page = _tx.LowLevelTransaction.GetPage(id / _pageSize);
+                var page = _tx.LowLevelTransaction.GetPage(id / Constants.Storage.PageSize);
                 var numberOfPages = _tx.LowLevelTransaction.DataPager.GetNumberOfOverflowPages(page.OverflowSize);
                 _overflowPageCount -= numberOfPages;
                 stats->OverflowPageCount = _overflowPageCount;
@@ -379,7 +377,7 @@ namespace Voron.Data.Tables
                 pos = page.Pointer + sizeof(PageHeader);
 
                 builder.CopyTo(pos);
-                id = page.PageNumber * _pageSize;
+                id = page.PageNumber * Constants.Storage.PageSize;
             }
 
             InsertIndexValuesFor(id, new TableValueReader(pos, size));
@@ -418,7 +416,7 @@ namespace Voron.Data.Tables
 
                 pos = page.Pointer + sizeof(PageHeader);
 
-                id = page.PageNumber * _pageSize;
+                id = page.PageNumber * Constants.Storage.PageSize;
             }
 
             // Memory copy into final position.
@@ -894,7 +892,7 @@ namespace Voron.Data.Tables
 
         public TableReport GetReport(bool calculateExactSizes)
         {
-            var overflowSize = _overflowPageCount * _pageSize;
+            var overflowSize = _overflowPageCount * Constants.Storage.PageSize;
             var report = new TableReport(overflowSize, overflowSize, calculateExactSizes)
             {
                 Name = Name.ToString(),

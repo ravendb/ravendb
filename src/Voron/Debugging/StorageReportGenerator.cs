@@ -121,7 +121,7 @@ namespace Voron.Debugging
             return journals.Select(journal => new JournalReport
             {
                 Number = journal.Number,
-                AllocatedSpaceInBytes = PagesToBytes(journal.JournalWriter.NumberOfAllocatedPages)
+                AllocatedSpaceInBytes = PagesToBytes(journal.JournalWriter.NumberOfAllocated4Kb)
             }).ToList();
         }
 
@@ -145,8 +145,8 @@ namespace Voron.Debugging
                 OverflowPages = 0,
                 PageCount = fst.PageCount,
                 Density = density,
-                AllocatedSpaceInBytes = fst.PageCount * fst.Llt.PageSize,
-                UsedSpaceInBytes = calculateExactSizes ? (long)(fst.PageCount * fst.Llt.PageSize * density) : -1,
+                AllocatedSpaceInBytes = fst.PageCount * Constants.Storage.PageSize,
+                UsedSpaceInBytes = calculateExactSizes ? (long)(fst.PageCount * Constants.Storage.PageSize * density) : -1,
                 MultiValues = null
             };
             return treeReport;
@@ -181,8 +181,8 @@ namespace Voron.Debugging
                 OverflowPages = tree.State.OverflowPages,
                 PageCount = tree.State.PageCount,
                 Density = density,
-                AllocatedSpaceInBytes = tree.State.PageCount * tree.Llt.PageSize,
-                UsedSpaceInBytes = calculateExactSizes ? (long)(tree.State.PageCount * tree.Llt.PageSize * density) : -1,
+                AllocatedSpaceInBytes = tree.State.PageCount * Constants.Storage.PageSize,
+                UsedSpaceInBytes = calculateExactSizes ? (long)(tree.State.PageCount * Constants.Storage.PageSize * density) : -1,
                 MultiValues = multiValues
             };
 
@@ -247,8 +247,7 @@ namespace Voron.Debugging
                 return null;
 
             var densities = new List<double>();
-            var pageSize = tree.Llt.DataPager.PageSize;
-
+            
             for (var i = 0; i < allPages.Count; i++)
             {
                 var page = tree.Llt.GetPage(allPages[i]);
@@ -257,7 +256,7 @@ namespace Voron.Debugging
                 {
                     var numberOfPages = tree.Llt.DataPager.GetNumberOfOverflowPages(page.OverflowSize);
 
-                    densities.Add(((double)(page.OverflowSize + Constants.Tree.PageHeaderSize)) / (numberOfPages * pageSize));
+                    densities.Add(((double)(page.OverflowSize + Constants.Tree.PageHeaderSize)) / (numberOfPages * Constants.Storage.PageSize));
 
                     i += numberOfPages - 1;
                 }
@@ -265,14 +264,14 @@ namespace Voron.Debugging
                 {
                     if ((page.Flags & PageFlags.FixedSizeTreePage) == PageFlags.FixedSizeTreePage)
                     {
-                        var fstp = new FixedSizeTreePage(page.Pointer, tree.Llt.PageSize);
+                        var fstp = new FixedSizeTreePage(page.Pointer, Constants.Storage.PageSize);
                         var sizeUsed = Constants.FixedSizeTree.PageHeaderSize +
                             fstp.NumberOfEntries * (fstp.IsLeaf ? fstp.ValueSize : FixedSizeTree.BranchEntrySize);
-                        densities.Add((double)sizeUsed / pageSize);
+                        densities.Add((double)sizeUsed / Constants.Storage.PageSize);
                     }
                     else
                     {
-                        densities.Add(((double)new TreePage(page.Pointer, pageSize).SizeUsed) / pageSize);
+                        densities.Add(((double)new TreePage(page.Pointer, Constants.Storage.PageSize).SizeUsed) / Constants.Storage.PageSize);
                     }
                 }
             }
@@ -286,15 +285,14 @@ namespace Voron.Debugging
                 return null;
 
             var densities = new List<double>();
-            var pageSize = tree.Llt.DataPager.PageSize;
-
+           
             foreach (var pageNumber in allPages)
             {
                 var page = tree.Llt.GetPage(pageNumber);
-                var fstp = new FixedSizeTreePage(page.Pointer, tree.Llt.PageSize);
+                var fstp = new FixedSizeTreePage(page.Pointer, Constants.Storage.PageSize);
                 var sizeUsed = Constants.FixedSizeTree.PageHeaderSize +
                                fstp.NumberOfEntries * (fstp.IsLeaf ? fstp.ValueSize : FixedSizeTree.BranchEntrySize);
-                densities.Add((double)sizeUsed / pageSize);
+                densities.Add((double)sizeUsed / Constants.Storage.PageSize);
             }
             return densities;
         }

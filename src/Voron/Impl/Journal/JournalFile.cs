@@ -20,7 +20,7 @@ namespace Voron.Impl.Journal
     {
         private readonly StorageEnvironment _env;
         private IJournalWriter _journalWriter;
-        private long _writePage;
+        private long _writePosIn4Kb;
         private bool _disposed;
         private int _refs;
         private readonly PageTable _pageTranslationTable = new PageTable();
@@ -35,7 +35,7 @@ namespace Voron.Impl.Journal
             Number = journalNumber;
             _env = env;
             _journalWriter = journalWriter;
-            _writePage = 0;
+            _writePosIn4Kb = 0;
             _unusedPages = new List<PagePosition>();
 
         }
@@ -58,12 +58,12 @@ namespace Voron.Impl.Journal
 #endif
         }
 
-        internal long WritePagePosition => _writePage;
+        internal long WritePosIn4KbPosition => _writePosIn4Kb;
 
         public long Number { get; }
 
 
-        public long AvailablePages => _journalWriter?.NumberOfAllocatedPages - _writePage ?? 0;
+        public long Available4Kbs => _journalWriter?.NumberOfAllocated4Kb - _writePosIn4Kb ?? 0;
 
         internal IJournalWriter JournalWriter => _journalWriter;
 
@@ -97,7 +97,7 @@ namespace Voron.Impl.Journal
             {
                 FileInstance = this,
                 Number = Number,
-                AvailablePages = AvailablePages,
+                Available4Kbs = Available4Kbs,
                 PageTranslationTable = _pageTranslationTable,
                 LastTransaction = lastTxId
             };
@@ -124,7 +124,7 @@ namespace Voron.Impl.Journal
         public void Write(LowLevelTransaction tx, CompressedPagesResult pages, LazyTransactionBuffer lazyTransactionScratch, int uncompressedPageCount)
         {
             var ptt = new Dictionary<long, PagePosition>(NumericEqualityComparer.Instance);           
-            var pageWritePos = _writePage;
+            var pageWritePos = _writePosIn4Kb;
 
 
             _unusedPagesHashSetPool.Clear();
@@ -132,20 +132,18 @@ namespace Voron.Impl.Journal
 
             lock (_locker)
             {
-                _writePage += pages.NumberOfPages;
+                _writePosIn4Kb += pages.NumberOf4Kbs;
 
                 Debug.Assert(!_unusedPages.Any(_unusedPagesHashSetPool.Contains));
                 _unusedPages.AddRange(_unusedPagesHashSetPool);
             }
             _unusedPagesHashSetPool.Clear();
 
-            var position = pageWritePos * Constants.Storage.PageSize;
-
             if (tx.IsLazyTransaction == false && (lazyTransactionScratch == null || lazyTransactionScratch.HasDataInBuffer() == false))
             {
                 try
                 {
-                    _journalWriter.WritePages(position, pages.Base, pages.NumberOfPages);
+                    _journalWriter.Write(pageWritePos, pages.Base, pages.NumberOf4Kbs);
                 }
                 catch (Exception e)
                 {
@@ -157,8 +155,8 @@ namespace Voron.Impl.Journal
             {
                 if (lazyTransactionScratch == null)
                     throw new InvalidOperationException("lazyTransactionScratch cannot be null if the transaction is lazy (or a previous one was)");
-                lazyTransactionScratch.EnsureSize(_journalWriter.NumberOfAllocatedPages);
-                lazyTransactionScratch.AddToBuffer(position, pages, uncompressedPageCount);
+                lazyTransactionScratch.EnsureSize(_journalWriter.NumberOfAllocated4Kb);
+                lazyTransactionScratch.AddToBuffer(pageWritePos, pages, uncompressedPageCount);
 
                 // non lazy tx will add itself to the buffer and then flush scratch to journal
                 if (tx.IsLazyTransaction == false ||
@@ -229,7 +227,7 @@ namespace Voron.Impl.Journal
 
         public void InitFrom(JournalReader journalReader)
         {
-            _writePage = journalReader.NextWritePage;
+            _writePosIn4Kb = journalReader.NextWritePage;
         }
 
         public bool DeleteOnClose { set { _journalWriter.DeleteOnClose = value; } }

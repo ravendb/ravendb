@@ -20,7 +20,7 @@ namespace FastTests.Voron.ScratchBuffer
             var buffer = new PureMemoryJournalWriter.Buffer
             {
                 Pointer = handle,
-                SizeInPages = numberOfPages
+                SizeIn4Kbs = numberOfPages
             };
 
             try
@@ -54,7 +54,7 @@ namespace FastTests.Voron.ScratchBuffer
             }
             finally
             {
-                NativeMemory.Free(handle, buffer.SizeInPages);
+                NativeMemory.Free(handle, buffer.SizeIn4Kbs);
             }
             
         }
