@@ -10,7 +10,7 @@ namespace Voron.Impl.Journal
         bool Disposed { get; }
         bool DeleteOnClose { get; set; }
         AbstractPager CreatePager();
-        bool Read(long positionBy4Kb, byte* buffer, int countBy4Kb);
+        bool Read(byte* buffer, long numOfBytes, long offsetInFile);
         void Truncate(long size);
     }
 }

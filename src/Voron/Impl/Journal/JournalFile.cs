@@ -115,7 +115,7 @@ namespace Voron.Impl.Journal
 
         public bool ReadTransaction(long pos, TransactionHeader* txHeader)
         {
-            return _journalWriter.Read(pos, (byte*)txHeader, sizeof(TransactionHeader));
+            return _journalWriter.Read((byte*)txHeader, sizeof(TransactionHeader), pos);
         }
 
         /// <summary>

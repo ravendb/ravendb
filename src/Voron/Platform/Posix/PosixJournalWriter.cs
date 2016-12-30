@@ -155,7 +155,7 @@ namespace Voron.Platform.Posix
             return new PosixMemoryMapPager(_options, _filename);
         }
 
-        public unsafe bool Read(long positionBy4Kb, byte* buffer, int countBy4Kb)
+        public unsafe bool Read(byte* buffer, long numOfBytes, long offsetInFile)
         {
             if (_fdReads == -1)
             {
@@ -166,16 +166,15 @@ namespace Voron.Platform.Posix
                     PosixHelper.ThrowLastError(err, "when opening " + _filename);
                 }
             }
-            long position = positionBy4Kb*(4*Constants.Size.Kilobyte);
 
-            while (countBy4Kb > 0)
+            while (numOfBytes > 0)
             {
-                var result = Syscall.pread(_fdReads, buffer, (ulong)(countBy4Kb * 4 * Constants.Size.Kilobyte), position);
+                var result = Syscall.pread(_fdReads, buffer, (ulong)numOfBytes, offsetInFile);
                 if (result == 0) //eof
                     return false;
-                countBy4Kb -= (int)result;
+                numOfBytes -= result;
                 buffer += result;
-                position += result;
+                offsetInFile += result;
             }
             return true;
         }

@@ -103,7 +103,7 @@ namespace Voron.Platform.Win32
             //return new SparseMemoryMappedPager(_options,_filename);
         }
 
-        public bool Read(long positionBy4Kb, byte* buffer, int countBy4Kb)
+        public bool Read(byte* buffer, long numOfBytes, long offsetInFile)
         {
             if (_readHandle == null)
             {
@@ -116,28 +116,27 @@ namespace Voron.Platform.Win32
                     IntPtr.Zero);
             }
 
-            long position = positionBy4Kb*(4*Constants.Size.Kilobyte);
             NativeOverlapped* nativeOverlapped = (NativeOverlapped*)NativeMemory.AllocateMemory(sizeof(NativeOverlapped));
             try
             {
-                nativeOverlapped->OffsetLow = (int)(position & 0xffffffff);
-                nativeOverlapped->OffsetHigh = (int) (position >> 32);
+                nativeOverlapped->OffsetLow = (int)(offsetInFile & 0xffffffff);
+                nativeOverlapped->OffsetHigh = (int) (offsetInFile >> 32);
                 nativeOverlapped->EventHandle = IntPtr.Zero;
-                while (countBy4Kb > 0)
+                while (numOfBytes > 0)
                 {
                     int read;
-                    if (Win32NativeFileMethods.ReadFile(_readHandle, buffer, countBy4Kb * 4 * Constants.Size.Kilobyte, out read, nativeOverlapped) == false)
+                    if (Win32NativeFileMethods.ReadFile(_readHandle, buffer, (int)Math.Min(numOfBytes, int.MaxValue), out read, nativeOverlapped) == false)
                     {
                         int lastWin32Error = Marshal.GetLastWin32Error();
                         if (lastWin32Error == Win32NativeFileMethods.ErrorHandleEof)
                             return false;
                         throw new Win32Exception(lastWin32Error);
                     }
-                    countBy4Kb -= read;
+                    numOfBytes -= read;
                     buffer += read;
-                    position += read;
-                    nativeOverlapped->OffsetLow = (int) (position & 0xffffffff);
-                    nativeOverlapped->OffsetHigh = (int) (position >> 32);
+                    offsetInFile += read;
+                    nativeOverlapped->OffsetLow = (int) (offsetInFile & 0xffffffff);
+                    nativeOverlapped->OffsetHigh = (int) (offsetInFile >> 32);
                 }
                 return true;
             }

@@ -59,28 +59,30 @@ namespace Voron.Util
         }
 
 
-        public void ToStream(StorageEnvironment env, JournalFile journal, long startPage, long pagesToCopy, Stream output)
+        public void ToStream(StorageEnvironment env, JournalFile journal, long start4Kb, long numberOf4KbsToCopy, Stream output)
         {
-            var maxNumOfPagesToCopyAtOnce = _buffer.Length/Constants.Storage.PageSize;
-            var page = startPage;
+            var maxNumOf4KbsToCopyAtOnce = _buffer.Length/(4*Constants.Size.Kilobyte);
+            var page = start4Kb;
 
             fixed (byte* ptr = _buffer)
             {
-                while (pagesToCopy > 0)
+                while (numberOf4KbsToCopy > 0)
                 {
-                    var pageCount = Math.Min(maxNumOfPagesToCopyAtOnce, pagesToCopy);
-                    var bytesCount = (int)(pageCount * Constants.Storage.PageSize);
+                    var pageCount = Math.Min(maxNumOf4KbsToCopyAtOnce, numberOf4KbsToCopy);
 
-                    if (journal.JournalWriter.Read(page, ptr, bytesCount) == false)
+                    if (journal.JournalWriter.Read(ptr, 
+                        pageCount * (4 * Constants.Size.Kilobyte), 
+                        page * (4 * Constants.Size.Kilobyte)) == false)
                          throw new InvalidOperationException("Could not read from journal #" + journal.Number + " " +
-                                    +bytesCount + " bytes.");
+                                    +pageCount + " pages.");
+                    var bytesCount = (int)(pageCount * (4 * Constants.Size.Kilobyte));
                     output.Write(_buffer, 0, bytesCount);
                     page += pageCount;
-                    pagesToCopy -= pageCount;
+                    numberOf4KbsToCopy -= pageCount;
                 }
             }
 
-            Debug.Assert(pagesToCopy == 0);
+            Debug.Assert(numberOf4KbsToCopy == 0);
         }
     }
 }

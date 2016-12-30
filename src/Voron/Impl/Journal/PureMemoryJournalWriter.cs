@@ -50,31 +50,32 @@ namespace Voron.Impl.Journal
             }		
         }
 
-        public bool Read(long positionBy4Kb, byte* buffer, int countBy4Kb)
+        public bool Read(byte* buffer, long numOfBytes, long offsetInFile)
         {
-            long current4Kb = 0;
+            long currentOffset = 0;
             foreach (var current in _buffers)
             {
-                long offsetIn4Kb = 0;
-                if (current4Kb != positionBy4Kb)
+                long offsetInPages = 0;
+                if (currentOffset != offsetInFile)
                 {
-                    if (current4Kb + current.SizeIn4Kbs <= current4Kb)
+                    var chunkSize = current.SizeIn4Kbs * 4 * Constants.Size.Kilobyte;
+                    if (currentOffset + chunkSize <= offsetInFile)
                     {
-                        current4Kb += current.SizeIn4Kbs;
+                        currentOffset += chunkSize;
                         continue;
                     }
-                    offsetIn4Kb = current4Kb - current4Kb;
+                    offsetInPages = offsetInFile - currentOffset;
                 }
 
-                var pagesAvailableToRead = (current.SizeIn4Kbs - offsetIn4Kb);
-                var actualCount = Math.Min(countBy4Kb, (int)(pagesAvailableToRead * 4 * Constants.Size.Kilobyte));
+                var bytesAvailableToRead = (current.SizeIn4Kbs * 4 * Constants.Size.Kilobyte - offsetInPages);
+                var actualCount = Math.Min(numOfBytes, bytesAvailableToRead);
 
-                Memory.Copy(buffer, current.Pointer + (offsetIn4Kb * 4 * Constants.Size.Kilobyte), actualCount);
+                Memory.Copy(buffer, current.Pointer + (offsetInPages * _options.PageSize), actualCount);
                 buffer += actualCount;
-                countBy4Kb -= actualCount;
-                positionBy4Kb += pagesAvailableToRead;
-                current4Kb += pagesAvailableToRead;
-                if (countBy4Kb <= 0)
+                numOfBytes -= actualCount;
+                offsetInFile += bytesAvailableToRead;
+                currentOffset += bytesAvailableToRead;
+                if (numOfBytes <= 0)
                     return true;
             }
             return false;
@@ -104,7 +105,7 @@ namespace Voron.Impl.Journal
                     throw new InvalidOperationException("Journal writes must be to the next location in the journal");
 
                 var size = numberOf4Kb*4*Constants.Size.Kilobyte;
-                _lastPos += size;
+                _lastPos += numberOf4Kb;
 
                 var handle = NativeMemory.AllocateMemory(size);
 

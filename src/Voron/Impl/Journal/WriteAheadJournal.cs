@@ -37,7 +37,7 @@ namespace Voron.Impl.Journal
         private long _journalIndex = -1;
 
         private bool _disposed;
-        
+
         private readonly JournalApplicator _journalApplicator;
         private readonly ModifyHeaderAction _updateLogInfo;
 
@@ -174,7 +174,7 @@ namespace Voron.Impl.Journal
 
                         if (lastSyncedTxId != -1 && (journalReader.RequireHeaderUpdate || journalNumber == logInfo.CurrentJournal))
                         {
-                            var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, 
+                            var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber,
                                 pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
                             var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber);
                             jrnlFile.InitFrom(journalReader);
@@ -189,7 +189,7 @@ namespace Voron.Impl.Journal
                             break;
                         }
                     }
-                    
+
                 }
             }
 
@@ -808,7 +808,7 @@ namespace Voron.Impl.Journal
                     long written = 0;
                     using (var meter = _waj._dataPager.Options.IoMetrics.MeterIoRate(_waj._dataPager.FileName, IoMetrics.MeterType.DataFlush, 0))
                     {
-                        using(var batchWrites = _waj._dataPager.BatchWriter())
+                        using (var batchWrites = _waj._dataPager.BatchWriter())
                         {
                             foreach (var pagePosition in pagesToWrite.Values)
                             {
@@ -926,11 +926,11 @@ namespace Voron.Impl.Journal
                     var totalSize = readTxHeader->CompressedSize + sizeof(TransactionHeader);
 
 
-                    var totalPages = (totalSize / Constants.Storage.PageSize) +
-                                     (totalSize % Constants.Storage.PageSize == 0 ? 0 : 1);
+                    var roundTo4Kb = (totalSize / (4 * Constants.Size.Kilobyte)) +
+                                     (totalSize % (4 * Constants.Size.Kilobyte) == 0 ? 0 : 1);
 
                     // We skip to the next transaction header.
-                    txPos += totalPages;
+                    txPos += roundTo4Kb * 4 * Constants.Size.Kilobyte;
                 }
             }
 
@@ -1126,12 +1126,12 @@ namespace Voron.Impl.Journal
             var totalSizeWritten = (write - outputBuffer) + sizeOfPagesHeader;
 
 
-            var fullTxBuffer = outputBuffer + (pageCountIncludingAllOverflowPages*Constants.Storage.PageSize) +
-                               diffOverheadInPages*Constants.Storage.PageSize;
+            var fullTxBuffer = outputBuffer + (pageCountIncludingAllOverflowPages * Constants.Storage.PageSize) +
+                               diffOverheadInPages * Constants.Storage.PageSize;
 
             var compressionBuffer = fullTxBuffer + sizeof(TransactionHeader);
 
-            var compressedLen =  LZ4.Encode64LongBuffer(
+            var compressedLen = LZ4.Encode64LongBuffer(
                 outputBuffer,
                 compressionBuffer,
                 totalSizeWritten,
@@ -1139,13 +1139,13 @@ namespace Voron.Impl.Journal
 
             // We need to account for the transaction header as part of the total length.
             var totalLength = compressedLen + sizeof(TransactionHeader);
-            var remainder = totalLength % (4*Constants.Size.Kilobyte);
-            int compressed4Kbs = checked((int)((totalLength / (4*Constants.Size.Kilobyte)) + (remainder == 0 ? 0 : 1)));
+            var remainder = totalLength % (4 * Constants.Size.Kilobyte);
+            int compressed4Kbs = checked((int)((totalLength / (4 * Constants.Size.Kilobyte)) + (remainder == 0 ? 0 : 1)));
 
             if (remainder != 0)
             {
                 // zero the remainder of the page
-                UnmanagedMemory.Set(compressionBuffer + totalLength, 0, 4*Constants.Size.Kilobyte - remainder);
+                UnmanagedMemory.Set(compressionBuffer + totalLength, 0, 4 * Constants.Size.Kilobyte - remainder);
             }
 
             var txHeaderPage = tx.GetTransactionHeaderPage();
@@ -1160,11 +1160,12 @@ namespace Voron.Impl.Journal
             var prepreToWriteToJournal = new CompressedPagesResult
             {
                 Base = fullTxBuffer,
-                NumberOf4Kbs = compressed4Kbs
+                NumberOf4Kbs = compressed4Kbs,
+                NumberOfUncompressedPages = pageCountIncludingAllOverflowPages
             };
             // Copy the transaction header to the output buffer. 
             Memory.Copy(fullTxBuffer, txHeaderBase, sizeof(TransactionHeader));
-            Debug.Assert(((long)fullTxBuffer % (4*Constants.Size.Kilobyte)) == 0, "Memory must be 4kb aligned");
+            Debug.Assert(((long)fullTxBuffer % (4 * Constants.Size.Kilobyte)) == 0, "Memory must be 4kb aligned");
             return prepreToWriteToJournal;
         }
 

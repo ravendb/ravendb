@@ -10,9 +10,9 @@ namespace Tryouts
             {
                 
                 Console.WriteLine(i);
-                using (var a = new FastTests.Server.Documents.Indexing.Debugging.RavenDB_5577())
+                using (var a = new FastTests.Voron.Compaction.StorageCompactionTests())
                 {
-                    a.Getting_trees();
+                    a.ShouldDeleteCurrentJournalEvenThoughItHasAvailableSpace();
                 }
             }
         }
