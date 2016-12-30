@@ -10,9 +10,9 @@ namespace Tryouts
             {
                 
                 Console.WriteLine(i);
-                using (var a = new FastTests.Voron.Compaction.StorageCompactionTests())
+                using (var a = new SlowTests.Tests.Linq.FlagsEnum())
                 {
-                    a.ShouldDeleteCurrentJournalEvenThoughItHasAvailableSpace();
+                    a.CanQueryUsingEnum();
                 }
             }
         }
