@@ -3,21 +3,15 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Net.Http;
+
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
-using Raven.Client.Connection.Implementation;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
-using Raven.Client.Document;
-using Raven.Client.Extensions;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -229,8 +223,13 @@ namespace Raven.Client.Connection.Async
         {
             using (var request = adminRequest.CreateGetApiKeyRequest(name))
             {
-                var json =
-                    (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                var json = (RavenJObject)await request
+                    .ReadResponseJsonAsync()
+                    .WithCancellation(token)
+                    .ConfigureAwait(false);
+
+                json = (RavenJObject)json.Value<RavenJArray>("Results")[0];
+
                 return json.Deserialize<ApiKeyDefinition>(innerAsyncServerClient.convention);
             }
         }
@@ -244,48 +243,16 @@ namespace Raven.Client.Connection.Async
             }
         }
 
-
-        public async Task<IEnumerable<NamedApiKeyDefinition>> GetAllApiKeys()
+        public async Task<NamedApiKeyDefinition[]> GetApiKeysAsync(int start, int pageSize, CancellationToken token = default(CancellationToken))
         {
-            HttpJsonRequest request = null;
-            HttpResponseMessage resp = null;
-            Stream stream;
-            try
+            using (var request = adminRequest.CreateGetAllApiKeyRequest(start, pageSize))
             {
-                request = adminRequest.CreateStreamApiKeysRequest();
-                resp = await request.ExecuteRawResponseAsync();
-                await resp.AssertNotFailingResponse().ConfigureAwait(false);
-                stream = await resp.GetResponseStreamWithHttpDecompression();
+                var result = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                var array = result.Value<RavenJArray>("Results");
 
-                return YieldResults(stream, request); // stream and request - must be disposed manually when YieldResults finishes
-            }
-            catch (Exception)
-            {
-                request?.Dispose();
-                resp?.Dispose();
-                throw;
-            }
-        }
-
-        private IEnumerable<NamedApiKeyDefinition> YieldResults(Stream stream, HttpJsonRequest request)
-        {
-            using (request)
-            using (stream)
-            using (var jtr = new JsonTextReader(new StreamReader(stream)))
-            {
-                if (jtr.Read() == false || jtr.TokenType != JsonToken.StartArray)
-                    throw new InvalidOperationException("Expected start array");
-                while (true)
-                {
-                    if (jtr.Read() == false)
-                        throw new InvalidOperationException("Unexpected EOF");
-
-                    if (jtr.TokenType == JsonToken.EndArray)
-                        break;
-
-                    var ravenJObject = RavenJObject.Load(jtr);
-                    yield return ravenJObject.Deserialize<NamedApiKeyDefinition>(new DocumentConvention());
-                }
+                return array
+                    .Select(x => x.JsonDeserialization<NamedApiKeyDefinition>())
+                    .ToArray();
             }
         }
 
