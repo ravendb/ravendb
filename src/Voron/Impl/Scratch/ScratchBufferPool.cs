@@ -4,6 +4,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Voron.Global;
 using Voron.Impl.Paging;
 
 namespace Voron.Impl.Scratch
@@ -155,7 +156,7 @@ namespace Voron.Impl.Scratch
             if (current.File.Size < _options.MaxScratchBufferSize)
                 return current.File.Allocate(tx, numberOfPages, size);
 
-            var minSize = numberOfPages * _options.PageSize;
+            var minSize = numberOfPages * Constants.Storage.PageSize;
             var requestedSize = Math.Max(minSize, Math.Min(_current.File.Size * 2, _options.MaxScratchBufferSize));
             // We need to ensure that _current stays constant through the codepath until return. 
             current = NextFile(minSize, requestedSize, tx);

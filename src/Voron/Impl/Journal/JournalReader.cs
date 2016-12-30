@@ -75,7 +75,7 @@ namespace Voron.Impl.Journal
             _recoveryPager.EnsureContinuous(0, numberOfPages);
             _recoveryPager.EnsureMapped(this, 0, numberOfPages);
             var outputPage = _recoveryPager.AcquirePagePointer(this, 0);
-            UnmanagedMemory.Set(outputPage, 0, (long)numberOfPages * options.PageSize);
+            UnmanagedMemory.Set(outputPage, 0, (long)numberOfPages * Constants.Storage.PageSize);
 
             try
             {
@@ -138,8 +138,8 @@ namespace Voron.Impl.Journal
 
         internal static int GetNumberOfPagesFromSize(StorageEnvironmentOptions options, long size)
         {
-            var lastPage = (size % options.PageSize == 0 ? 0 : 1);
-            return checked((int)(size / options.PageSize) + lastPage);
+            var lastPage = (size % Constants.Storage.PageSize == 0 ? 0 : 1);
+            return checked((int)(size / Constants.Storage.PageSize) + lastPage);
         }
 
         public void RecoverAndValidate(StorageEnvironmentOptions options)

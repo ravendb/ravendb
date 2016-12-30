@@ -25,7 +25,18 @@ namespace Voron.Global
 
         public static class Storage
         {
-            public const int PageSize = 4 * Size.Kilobyte;            
+            public const int PageSize = 4 * Size.Kilobyte;
+
+            static Storage()
+            {
+                GC.KeepAlive(new int[
+                    // this is a way to have static assert
+                    PageSize > ushort.MaxValue || PageSize < 4*Constants.Size.Kilobyte ||
+                    PageSize%Constants.Size.Sector != 0
+                        ? -1
+                        : 0
+                    ]);
+            }
         }
 
         public static class Compression

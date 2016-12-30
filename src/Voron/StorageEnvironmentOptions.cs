@@ -75,22 +75,8 @@ namespace Voron
             }
         }
 
-        public int PageSize
-        {
-            get { return _pageSize; }
-            set
-            {
-                if (value > ushort.MaxValue)
-                    throw new ArgumentOutOfRangeException(nameof(value), "PageSize must be less than " + ushort.MaxValue);
-                if (value < 4 * Constants.Size.Kilobyte)
-                    throw new ArgumentOutOfRangeException(nameof(value), $"PageSize must be higher than {4 * Constants.Size.Kilobyte} bytes");
-                if (value % Constants.Size.Sector != 0)
-                    throw new ArgumentException($"PageSize must be evenly divisible by {Constants.Size.Sector} (sector size)", nameof(value));
-
-                _pageSize = value;
-            }
-        }
-
+        public int PageSize => Constants.Storage.PageSize;
+        
         // if set to a non zero value, will check that the expected schema is there
         public int SchemaVersion { get; set; }
 
@@ -122,7 +108,6 @@ namespace Voron
         protected bool Disposed;
         private long _initialLogFileSize;
         private long _maxLogFileSize;
-        private int _pageSize;
         public IoMetrics IoMetrics { get; set; }
 
 
@@ -131,8 +116,6 @@ namespace Voron
         protected StorageEnvironmentOptions(string tempPath)
         {
             TempPath = tempPath;
-
-            PageSize = Constants.Storage.PageSize;
 
             ShouldUseKeyPrefix = name => false;
 

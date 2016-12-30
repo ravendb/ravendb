@@ -16,7 +16,6 @@ namespace FastTests.Voron.Trees
     {
         protected override void Configure(StorageEnvironmentOptions options)
         {
-            options.PageSize = 4 * Constants.Size.Kilobyte;
         }
 
         [Theory]

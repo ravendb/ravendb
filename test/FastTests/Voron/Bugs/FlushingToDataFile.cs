@@ -11,6 +11,7 @@ using System.Linq;
 using Sparrow;
 using Xunit;
 using Voron;
+using Voron.Global;
 using Voron.Impl;
 
 namespace FastTests.Voron.Bugs
@@ -20,7 +21,7 @@ namespace FastTests.Voron.Bugs
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.ManualFlushing = true;
-            options.MaxLogFileSize = 2 * options.PageSize;
+            options.MaxLogFileSize = 2 * Constants.Storage.PageSize;
         }
 
         [Fact]
@@ -30,7 +31,7 @@ namespace FastTests.Voron.Bugs
 
             new Random().NextBytes(value1);
 
-            Assert.Equal(2 * Env.Options.PageSize, Env.Options.MaxLogFileSize);
+            Assert.Equal(2 * Constants.Storage.PageSize, Env.Options.MaxLogFileSize);
 
             using (var tx = Env.WriteTransaction())
             {
@@ -83,7 +84,7 @@ namespace FastTests.Voron.Bugs
 
             new Random().NextBytes(value1);
 
-            Assert.Equal(2 * Env.Options.PageSize, Env.Options.MaxLogFileSize);
+            Assert.Equal(2 * Constants.Storage.PageSize, Env.Options.MaxLogFileSize);
 
             Env.FlushLogToDataFile();
 

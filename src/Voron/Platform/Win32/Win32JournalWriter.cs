@@ -8,6 +8,7 @@ using Microsoft.Win32.SafeHandles;
 using Sparrow;
 using Sparrow.Utils;
 using Voron.Exceptions;
+using Voron.Global;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 
@@ -39,11 +40,11 @@ namespace Voron.Platform.Win32
             if (_handle.IsInvalid)
                 throw new IOException("When opening file " + filename, new Win32Exception(Marshal.GetLastWin32Error()));
 
-            _maxNumberOfPagesPerSingleWrite = int.MaxValue/_options.PageSize;
+            _maxNumberOfPagesPerSingleWrite = int.MaxValue/Constants.Storage.PageSize;
 
             Win32NativeFileMethods.SetFileLength(_handle, journalSize);
 
-            NumberOfAllocatedPages = (int)(journalSize / _options.PageSize);
+            NumberOfAllocatedPages = (int)(journalSize / Constants.Storage.PageSize);
 
             _nativeOverlapped = (NativeOverlapped*) NativeMemory.AllocateMemory(sizeof (NativeOverlapped));
 
@@ -60,7 +61,7 @@ namespace Voron.Platform.Win32
             {
                 WriteFile(position, p, _maxNumberOfPagesPerSingleWrite);
 
-                var nextChunkPosition = _maxNumberOfPagesPerSingleWrite*_options.PageSize;
+                var nextChunkPosition = _maxNumberOfPagesPerSingleWrite*Constants.Storage.PageSize;
                 position += nextChunkPosition;
                 p += nextChunkPosition;
                 numberOfPages -= _maxNumberOfPagesPerSingleWrite;
@@ -79,7 +80,7 @@ namespace Voron.Platform.Win32
             Debug.Assert(_options.IoMetrics != null);
 
             bool writeSuccess;
-            var nNumberOfBytesToWrite = numberOfPages * _options.PageSize;
+            var nNumberOfBytesToWrite = numberOfPages * Constants.Storage.PageSize;
             using (_options.IoMetrics.MeterIoRate(_filename, IoMetrics.MeterType.JournalWrite, nNumberOfBytesToWrite))
             {
                 int written;
@@ -115,7 +116,7 @@ namespace Voron.Platform.Win32
                     IntPtr.Zero);
             }
 
-            long position = pageNumber * _options.PageSize;
+            long position = pageNumber * Constants.Storage.PageSize;
             NativeOverlapped* nativeOverlapped = (NativeOverlapped*)NativeMemory.AllocateMemory(sizeof(NativeOverlapped));
             try
             {

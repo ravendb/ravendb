@@ -734,8 +734,8 @@ namespace Voron
                     FreePagesOverhead = FreeSpaceHandling.GetFreePagesOverhead(tx),
                     RootPages = tx.RootObjects.State.PageCount,
                     UnallocatedPagesAtEndOfFile = _dataPager.NumberOfAllocatedPages - NextPageNumber,
-                    UsedDataFileSizeInBytes = (State.NextPageNumber - 1) * Options.PageSize,
-                    AllocatedDataFileSizeInBytes = numberOfAllocatedPages * Options.PageSize,
+                    UsedDataFileSizeInBytes = (State.NextPageNumber - 1) * Constants.Storage.PageSize,
+                    AllocatedDataFileSizeInBytes = numberOfAllocatedPages * Constants.Storage.PageSize,
                     NextWriteTransactionId = NextWriteTransactionId,
                     ActiveTransactions = ActiveTransactions.AllTransactions
                 };
@@ -870,7 +870,7 @@ namespace Voron
                 }
 
                 if (oldMode == TransactionsMode.Danger)
-                    Journal.TruncateJournal(Options.PageSize);
+                    Journal.TruncateJournal();
 
                 switch (mode)
                 {
@@ -886,7 +886,7 @@ namespace Voron
                         {
                             Options.PosixOpenFlags = 0;
                             Options.WinOpenFlags = Win32NativeFileAttributes.None;
-                            Journal.TruncateJournal(Options.PageSize);
+                            Journal.TruncateJournal();
                         }
                         break;
                     default:

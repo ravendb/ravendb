@@ -15,7 +15,7 @@ namespace Voron.Impl.Paging
 
         public TemporaryPage(StorageEnvironmentOptions options, int? pageSize = null)
         {
-            PageSize = pageSize ?? options.PageSize;
+            PageSize = pageSize ?? Constants.Storage.PageSize;
             _tempPageBuffer = new byte[PageSize];
             _tempPageHandle = GCHandle.Alloc(_tempPageBuffer, GCHandleType.Pinned);
             _tempPage = _tempPageHandle.AddrOfPinnedObject();

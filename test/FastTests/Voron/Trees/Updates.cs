@@ -1,21 +1,12 @@
 ﻿using System;
 using System.IO;
 using Xunit;
-using Voron;
 using Voron.Global;
 
 namespace FastTests.Voron.Trees
 {
     public class Updates : StorageTest
     {
-
-        protected override void Configure(StorageEnvironmentOptions options)
-        {
-            options.PageSize = 4 * Constants.Size.Kilobyte;
-
-            base.Configure(options);
-        }
-
         [Fact]
         public void CanUpdateVeryLargeValueAndThenDeleteIt()
         {

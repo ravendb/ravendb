@@ -18,8 +18,7 @@ namespace FastTests.Voron.Journal
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.ManualFlushing = true;
-            options.PageSize = 4 * Constants.Size.Kilobyte;
-            options.MaxLogFileSize = 5 * options.PageSize;
+            options.MaxLogFileSize = 5 * Constants.Storage.PageSize;
         }
 
         [Fact]

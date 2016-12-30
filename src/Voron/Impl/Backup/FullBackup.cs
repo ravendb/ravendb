@@ -44,7 +44,7 @@ namespace Voron.Impl.Backup
                 {
                     infoNotify("Voron backup started");
                     var dataPager = env.Options.DataPager;
-                    var copier = new DataCopier(env.Options.PageSize * 16);
+                    var copier = new DataCopier(Constants.Storage.PageSize * 16);
                     Backup(env, compression, infoNotify, backupStarted, dataPager, package, string.Empty,
                         copier);
 
@@ -75,7 +75,7 @@ namespace Voron.Impl.Backup
                         var basePath = Path.Combine(e.Folder, e.Name);
                         var env = e.Env;
                         var dataPager = env.Options.DataPager;
-                        var copier = new DataCopier(env.Options.PageSize * 16);
+                        var copier = new DataCopier(Constants.Storage.PageSize * 16);
                         Backup(env, compression, infoNotify, backupStarted, dataPager, package, basePath,
                             copier);
                     }
@@ -124,7 +124,7 @@ namespace Voron.Impl.Backup
                             long journalSize;
                             using (var pager = env.Options.OpenJournalPager(journalNum))
                             {
-                                journalSize = Bits.NextPowerOf2(pager.NumberOfAllocatedPages * env.Options.PageSize);
+                                journalSize = Bits.NextPowerOf2(pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
                             }
 
                             journalFile = new JournalFile(env, env.Options.CreateJournalWriter(journalNum, journalSize), journalNum);

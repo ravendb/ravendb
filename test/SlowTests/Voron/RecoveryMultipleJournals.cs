@@ -2,6 +2,7 @@
 using System.IO;
 using Voron;
 using Voron.Exceptions;
+using Voron.Global;
 using Xunit;
 
 namespace SlowTests.Voron
@@ -10,7 +11,7 @@ namespace SlowTests.Voron
     {
         protected override void Configure(StorageEnvironmentOptions options)
         {
-            options.MaxLogFileSize = 10 * options.PageSize;
+            options.MaxLogFileSize = 10 * Constants.Storage.PageSize;
             options.OnRecoveryError += (sender, args) => { }; // just shut it up
             options.ManualFlushing = true;
             options.MaxScratchBufferSize = 1 * 1024 * 1024 * 1024;
@@ -283,9 +284,9 @@ namespace SlowTests.Voron
                 FileAccess.ReadWrite,
                 FileShare.ReadWrite | FileShare.Delete))
             {
-                fileStream.Position = page * _options.PageSize;
+                fileStream.Position = page * Constants.Storage.PageSize;
 
-                var buffer = new byte[_options.PageSize];
+                var buffer = new byte[Constants.Storage.PageSize];
 
                 var remaining = buffer.Length;
                 var start = 0;
@@ -299,7 +300,7 @@ namespace SlowTests.Voron
                 }
 
                 buffer[pos] = 42;
-                fileStream.Position = page * _options.PageSize;
+                fileStream.Position = page * Constants.Storage.PageSize;
                 fileStream.Write(buffer, 0, buffer.Length);
             }
         }

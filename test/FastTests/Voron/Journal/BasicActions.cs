@@ -9,6 +9,7 @@ using System.IO;
 using Xunit;
 using Voron;
 using Voron.Data;
+using Voron.Global;
 
 namespace FastTests.Voron.Journal
 {
@@ -17,7 +18,7 @@ namespace FastTests.Voron.Journal
         // all tests here relay on the fact than one log file can contains max 10 pages
         protected override void Configure(StorageEnvironmentOptions options)
         {
-            options.MaxLogFileSize = 10 * options.PageSize;
+            options.MaxLogFileSize = 10 * Constants.Storage.PageSize;
 
             options.ManualFlushing = true;
         }

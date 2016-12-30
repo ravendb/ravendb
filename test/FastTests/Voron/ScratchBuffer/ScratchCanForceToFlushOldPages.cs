@@ -14,7 +14,6 @@ namespace FastTests.Voron.ScratchBuffer
     {
         protected override void Configure(StorageEnvironmentOptions options)
         {
-            options.PageSize = 4 * Constants.Size.Kilobyte;
             options.ManualFlushing = true;
             base.Configure(options);
         }

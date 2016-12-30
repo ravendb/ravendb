@@ -925,8 +925,8 @@ namespace Voron.Impl.Journal
                     var totalSize = readTxHeader->CompressedSize + sizeof(TransactionHeader);
 
 
-                    var totalPages = (totalSize / _waj._env.Options.PageSize) +
-                                     (totalSize % _waj._env.Options.PageSize == 0 ? 0 : 1);
+                    var totalPages = (totalSize / Constants.Storage.PageSize) +
+                                     (totalSize % Constants.Storage.PageSize == 0 ? 0 : 1);
 
                     // We skip to the next transaction header.
                     txPos += totalPages;
@@ -1065,7 +1065,7 @@ namespace Voron.Impl.Journal
         {
             //TODO: comment the memory outline that we write here
 
-            int pageSize = tx.Environment.Options.PageSize;
+            int pageSize = Constants.Storage.PageSize;
             var txPages = tx.GetTransactionPages();
             var numberOfPages = txPages.Count;
 
@@ -1170,12 +1170,12 @@ namespace Voron.Impl.Journal
             return prepreToWriteToJournal;
         }
 
-        public void TruncateJournal(int pageSize)
+        public void TruncateJournal()
         {
             // switching transactions modes requires to close jounal,
             // truncate it (in case of recovery) and create next journal file
             _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, null);
-            CurrentFile?.JournalWriter.Truncate(pageSize * CurrentFile.WritePagePosition);
+            CurrentFile?.JournalWriter.Truncate(Constants.Storage.PageSize * CurrentFile.WritePagePosition);
             CurrentFile = null;
         }
 

@@ -12,6 +12,7 @@ using Voron.Impl.Paging;
 using System.Collections.Generic;
 using Sparrow;
 using Sparrow.Platform.Posix;
+using Voron.Global;
 
 namespace Voron.Platform.Posix
 {
@@ -29,7 +30,7 @@ namespace Voron.Platform.Posix
         {
             _options = options;
             _filename = filename;
-            _maxNumberOfPagesPerSingleWrite = int.MaxValue / _options.PageSize;
+            _maxNumberOfPagesPerSingleWrite = int.MaxValue / Constants.Storage.PageSize;
 
             _fd = Syscall.open(filename, OpenFlags.O_WRONLY | options.PosixOpenFlags | OpenFlags.O_CREAT,
                 FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
@@ -59,7 +60,7 @@ namespace Voron.Platform.Posix
                 PosixHelper.ThrowLastError(err, "when syncing dir for on " + filename);
             }
 
-            NumberOfAllocatedPages = (int)(journalSize / _options.PageSize);
+            NumberOfAllocatedPages = (int)(journalSize / Constants.Storage.PageSize);
         }
 
         public void Dispose()
@@ -99,7 +100,7 @@ namespace Voron.Platform.Posix
             {
                 WriteFile(position, p, _maxNumberOfPagesPerSingleWrite);
 
-                var nextChunkPosition = _maxNumberOfPagesPerSingleWrite * _options.PageSize;
+                var nextChunkPosition = _maxNumberOfPagesPerSingleWrite * Constants.Storage.PageSize;
                 position += nextChunkPosition;
                 p += nextChunkPosition;
                 numberOfPages -= _maxNumberOfPagesPerSingleWrite;
@@ -114,7 +115,7 @@ namespace Voron.Platform.Posix
             if (numberOfPages == 0)
                 return; // nothing to do
 
-            var nNumberOfBytesToWrite = (ulong)numberOfPages*(ulong)_options.PageSize;
+            var nNumberOfBytesToWrite = (ulong)numberOfPages*(ulong)Constants.Storage.PageSize;
             long actuallyWritten = 0;
             long result;
             using (_options.IoMetrics.MeterIoRate(_filename, IoMetrics.MeterType.JournalWrite, (long)nNumberOfBytesToWrite))
@@ -167,7 +168,7 @@ namespace Voron.Platform.Posix
                     PosixHelper.ThrowLastError(err, "when opening " + _filename);
                 }
             }
-            long position = pageNumber * _options.PageSize;
+            long position = pageNumber * Constants.Storage.PageSize;
 
             while (count > 0)
             {

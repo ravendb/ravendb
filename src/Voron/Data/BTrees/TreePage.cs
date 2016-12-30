@@ -404,7 +404,7 @@ namespace Voron.Data.BTrees
             // this has the effect of compacting the page data and avoiding
             // internal page fragmentation
             TemporaryPage tmp;
-            using (PageSize <= tx.Environment.Options.PageSize ? 
+            using (PageSize <= Constants.Storage.PageSize ? 
                 tx.Environment.GetTemporaryPage(tx, out tmp) : 
                 tx.Environment.DecompressionBuffers.GetTemporaryPage(tx, PageSize, out tmp))
             {
@@ -495,7 +495,7 @@ namespace Voron.Data.BTrees
         internal void Defrag(LowLevelTransaction tx)
         {
             TemporaryPage tmp;
-            using (PageSize <= tx.Environment.Options.PageSize ?
+            using (PageSize <= Constants.Storage.PageSize ?
                tx.Environment.GetTemporaryPage(tx, out tmp) :
                tx.Environment.DecompressionBuffers.GetTemporaryPage(tx, PageSize, out tmp))
             {

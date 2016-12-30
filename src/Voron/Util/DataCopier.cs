@@ -8,6 +8,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using Sparrow;
+using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
@@ -60,7 +61,7 @@ namespace Voron.Util
 
         public void ToStream(StorageEnvironment env, JournalFile journal, long startPage, long pagesToCopy, Stream output)
         {
-            var maxNumOfPagesToCopyAtOnce = _buffer.Length/env.Options.PageSize;
+            var maxNumOfPagesToCopyAtOnce = _buffer.Length/Constants.Storage.PageSize;
             var page = startPage;
 
             fixed (byte* ptr = _buffer)
@@ -68,7 +69,7 @@ namespace Voron.Util
                 while (pagesToCopy > 0)
                 {
                     var pageCount = Math.Min(maxNumOfPagesToCopyAtOnce, pagesToCopy);
-                    var bytesCount = (int)(pageCount * env.Options.PageSize);
+                    var bytesCount = (int)(pageCount * Constants.Storage.PageSize);
 
                     if (journal.JournalWriter.Read(page, ptr, bytesCount) == false)
                          throw new InvalidOperationException("Could not read from journal #" + journal.Number + " " +

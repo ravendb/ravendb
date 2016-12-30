@@ -233,7 +233,7 @@ namespace Voron.Impl
 
             _transactionHeaderPage = allocation;
 
-            UnmanagedMemory.Set(page.Pointer, 0, Environment.Options.PageSize);
+            UnmanagedMemory.Set(page.Pointer, 0, Constants.Storage.PageSize);
             _txHeader = (TransactionHeader*)page.Pointer;
             _txHeader->HeaderMarker = Constants.TransactionHeaderMarker;
 
@@ -287,7 +287,7 @@ namespace Voron.Impl
             if (currentPage.IsOverflow)
             {
                 newPage = AllocateOverflowRawPage(currentPage.OverflowSize, num, currentPage, zeroPage: false);
-                pageSize = Environment.Options.PageSize *
+                pageSize = Constants.Storage.PageSize *
                            DataPager.GetNumberOfOverflowPages(currentPage.OverflowSize);
             }
             else
@@ -396,7 +396,7 @@ namespace Voron.Impl
 
             if (_env.Options.MaxStorageSize.HasValue) // check against quota
             {
-                var maxAvailablePageNumber = _env.Options.MaxStorageSize / Environment.Options.PageSize;
+                var maxAvailablePageNumber = _env.Options.MaxStorageSize / Constants.Storage.PageSize;
 
                 if (pageNumber > maxAvailablePageNumber)
                     ThrowQuotaExceededException(pageNumber, maxAvailablePageNumber);
@@ -437,7 +437,7 @@ namespace Voron.Impl
                 pageFromScratchBuffer.PositionInScratchBuffer);
 
             if (zeroPage)
-                UnmanagedMemory.Set(newPage.Pointer, 0, Environment.Options.PageSize * numberOfPages);
+                UnmanagedMemory.Set(newPage.Pointer, 0, Constants.Storage.PageSize * numberOfPages);
 
             newPage.PageNumber = pageNumber;
             newPage.Flags = PageFlags.Single;

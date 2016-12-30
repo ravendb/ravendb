@@ -11,7 +11,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading;
-
+using Voron.Global;
 using Voron.Util;
 
 namespace Voron.Impl.Journal
@@ -139,7 +139,7 @@ namespace Voron.Impl.Journal
             }
             _unusedPagesHashSetPool.Clear();
 
-            var position = pageWritePos * tx.Environment.Options.PageSize;
+            var position = pageWritePos * Constants.Storage.PageSize;
 
             if (tx.IsLazyTransaction == false && (lazyTransactionScratch == null || lazyTransactionScratch.HasDataInBuffer() == false))
             {

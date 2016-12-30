@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Voron;
+using Voron.Global;
 using Voron.Platform.Posix;
 using Voron.Platform.Win32;
 using Xunit;
@@ -100,7 +101,7 @@ namespace SlowTests.Voron
         [Fact]
         public void Should_be_able_to_allocate_new_pages_multiple_times()
         {
-            var numberOfPages = PagerInitialSize / Env.Options.PageSize;
+            var numberOfPages = PagerInitialSize / Constants.Storage.PageSize;
             for (int allocateMorePagesCount = 0; allocateMorePagesCount < 5; allocateMorePagesCount++)
             {
                 numberOfPages *= 2;

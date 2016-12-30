@@ -35,7 +35,7 @@ namespace Voron.Data.Compression
         public DecompressionBuffersPool(StorageEnvironmentOptions options)
         {
             _options = options;
-            _maxNumberOfPagesInScratchBufferPool = _options.MaxScratchBufferSize / _options.PageSize;
+            _maxNumberOfPagesInScratchBufferPool = _options.MaxScratchBufferSize / Constants.Storage.PageSize;
         }
 
         public AbstractPager CreateDecompressionPager(long initialSize)
@@ -55,7 +55,7 @@ namespace Voron.Data.Compression
 
         public IDisposable GetTemporaryPage(LowLevelTransaction tx, int pageSize, out TemporaryPage tmp)
         {
-            if (pageSize < _options.PageSize)
+            if (pageSize < Constants.Storage.PageSize)
                 ThrowInvalidPageSize(pageSize);
 
             if (pageSize > Constants.Compression.MaxPageSize)
@@ -110,7 +110,7 @@ namespace Voron.Data.Compression
 
             if (tmp == null)
             {
-                var allocationInPages = pageSize / _options.PageSize;
+                var allocationInPages = pageSize / Constants.Storage.PageSize;
 
                 lock (_decompressionPagerLock) // once we fill up the pool we won't be allocating additional pages frequently
                 {
@@ -144,7 +144,7 @@ namespace Voron.Data.Compression
         private void ThrowInvalidPageSize(int pageSize)
         {
             throw new ArgumentException(
-                $"Page cannot be smaller than {_options.PageSize} bytes while {pageSize} bytes were requested.");
+                $"Page cannot be smaller than {Constants.Storage.PageSize} bytes while {pageSize} bytes were requested.");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -168,12 +168,12 @@ namespace Voron.Data.Compression
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int GetTempPagesPoolIndex(int pageSize)
         {
-            if (pageSize == _options.PageSize)
+            if (pageSize == Constants.Storage.PageSize)
                 return 0;
 
             var index = 0;
 
-            while (pageSize > _options.PageSize)
+            while (pageSize > Constants.Storage.PageSize)
             {
                 pageSize >>= 1;
                 index++;
@@ -201,7 +201,7 @@ namespace Voron.Data.Compression
             if (_oldPagers.Count == 0)
                 return;
             
-            var necessaryPages = Interlocked.Read(ref _currentlyUsedBytes) / _options.PageSize;
+            var necessaryPages = Interlocked.Read(ref _currentlyUsedBytes) / Constants.Storage.PageSize;
 
             var availablePages = _compressionPager.NumberOfAllocatedPages;
 

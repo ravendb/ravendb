@@ -309,7 +309,7 @@ namespace Voron.Debugging
 
         private long PagesToBytes(long pageCount)
         {
-            return pageCount * _tx.Environment.Options.PageSize;
+            return pageCount * Constants.Storage.PageSize;
         }
     }
 }

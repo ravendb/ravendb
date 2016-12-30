@@ -9,6 +9,7 @@ using System.IO;
 using Xunit;
 using Voron;
 using Voron.Data;
+using Voron.Global;
 using Voron.Impl.Backup;
 
 namespace FastTests.Voron.Backups
@@ -18,7 +19,7 @@ namespace FastTests.Voron.Backups
         IncrementalBackupTestUtils IncrementalBackupTestUtils = new IncrementalBackupTestUtils();
         protected override void Configure(StorageEnvironmentOptions options)
         {
-            options.MaxLogFileSize = 1000 * options.PageSize;
+            options.MaxLogFileSize = 1000 * Constants.Storage.PageSize;
             options.IncrementalBackupEnabled = true;
             options.ManualFlushing = true;
         }
