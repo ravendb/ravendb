@@ -12,7 +12,7 @@ namespace Raven.Server.Web.System
 {
     public class EmptyMessageHandler : RequestHandler
     {
-        [RavenAction("/test/emptymessage", "GET")]
+        [RavenAction("/test/empty-message", "GET")]
         public Task Get()
         {
             HttpContext.Response.StatusCode = 200;

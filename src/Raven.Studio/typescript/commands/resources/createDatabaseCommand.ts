@@ -8,7 +8,7 @@ class createDatabaseCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-        const url = endpoints.global.adminDatabases.adminDatabases$ + this.databaseDocument.Id;
+        const url = endpoints.global.adminDatabases.adminDatabases + '?name=' + this.databaseDocument.Id;
         return this.put(url, JSON.stringify(this.databaseDocument), null, { dataType: undefined })
             .done(() => this.reportSuccess(this.databaseDocument.Id + " created"))
             .fail((response: JQueryXHR) => this.reportError("Failed to create database", response.responseText, response.statusText));
