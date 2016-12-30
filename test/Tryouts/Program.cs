@@ -10,9 +10,9 @@ namespace Tryouts
             {
                 
                 Console.WriteLine(i);
-                using (var a = new FastTests.Voron.Backups.Full())
+                using (var a = new FastTests.Voron.Storage.Restarts())
                 {
-                    a.CanBackupAndRestoreSmall();
+                    a.DataIsKeptAfterRestart();
                 }
             }
         }
