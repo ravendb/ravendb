@@ -389,7 +389,21 @@ namespace Voron
                 IJournalWriter value;
                 if (_logs.TryGetValue(name, out value))
                     return value;
-                value = new PureMemoryJournalWriter(this, journalSize);
+                var guid = Guid.NewGuid();
+                var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-{name}-{guid}";
+
+                if (RunningOnPosix)
+                {
+                    value = new PosixJournalWriter(this, Path.Combine(TempPath, filename), journalSize);
+                }
+                else
+                {
+                    value = new Win32FileJournalWriter(this, Path.Combine(TempPath, filename), journalSize, 
+                        Win32NativeFileAccess.GenericWrite,
+                        Win32NativeFileShare.Read|Win32NativeFileShare.Write|Win32NativeFileShare.Delete
+                        );
+                }
+
                 _logs[name] = value;
                 return value;
             }

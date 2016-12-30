@@ -28,12 +28,14 @@ namespace Voron.Platform.Win32
         private readonly int _maxNumberOfPagesPerSingleWrite;
         private volatile bool _disposed;
 
-        public Win32FileJournalWriter(StorageEnvironmentOptions options, string filename, long journalSize)
+        public Win32FileJournalWriter(StorageEnvironmentOptions options, string filename, long journalSize, 
+            Win32NativeFileAccess access = Win32NativeFileAccess.GenericWrite, 
+            Win32NativeFileShare shareMode = Win32NativeFileShare.Read)
         {
             _options = options;
             _filename = filename;
             _handle = Win32NativeFileMethods.CreateFile(filename,
-                Win32NativeFileAccess.GenericWrite, Win32NativeFileShare.Read, IntPtr.Zero,
+                access, shareMode, IntPtr.Zero,
                 Win32NativeFileCreationDisposition.OpenAlways,
                 options.WinOpenFlags, IntPtr.Zero);
 

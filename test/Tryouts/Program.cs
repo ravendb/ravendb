@@ -10,9 +10,9 @@ namespace Tryouts
             {
                 
                 Console.WriteLine(i);
-                using (var a = new SlowTests.Tests.Linq.FlagsEnum())
+                using (var a = new FastTests.Voron.Storage.Restarts())
                 {
-                    a.CanQueryUsingEnum();
+                    a.DataIsKeptAfterRestart();
                 }
             }
         }

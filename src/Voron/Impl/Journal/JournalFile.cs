@@ -227,7 +227,7 @@ namespace Voron.Impl.Journal
 
         public void InitFrom(JournalReader journalReader)
         {
-            _writePosIn4Kb = journalReader.NextWritePage;
+            _writePosIn4Kb = journalReader.Next4Kb;
         }
 
         public bool DeleteOnClose { set { _journalWriter.DeleteOnClose = value; } }
