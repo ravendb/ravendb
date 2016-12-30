@@ -13,7 +13,7 @@ namespace Raven.NewClient.Client.Commands
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            url = $"{node.Url}/admin/databases/{node.Database}";
+            url = $"{node.Url}/admin/databases?name={node.Database}";
             IsReadRequest = false;
 
             var request = new HttpRequestMessage

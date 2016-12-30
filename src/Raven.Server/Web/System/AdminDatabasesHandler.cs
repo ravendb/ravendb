@@ -23,12 +23,10 @@ namespace Raven.Server.Web.System
 {
     public class AdminDatabasesHandler : RequestHandler
     {
-        [RavenAction("/admin/databases/$", "GET", "/admin/databases/{databaseName:string}")]
+        [RavenAction("/admin/databases", "GET", "/admin/databases/{databaseName:string}")]
         public Task Get()
         {
-            var name = RouteMatch.Url.Substring(RouteMatch.MatchLength);
-            if (string.IsNullOrWhiteSpace(name))
-                throw new InvalidOperationException("Database name was not provided");
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
@@ -38,7 +36,7 @@ namespace Raven.Server.Web.System
                 var dbId = Constants.Database.Prefix + name;
                 long etag;
                 var dbDoc = ServerStore.Read(context, dbId, out etag);
-                
+
                 if (dbDoc == null)
                 {
                     HttpContext.Response.StatusCode = 404;
@@ -47,8 +45,6 @@ namespace Raven.Server.Web.System
 
                 UnprotectSecuredSettingsOfDatabaseDocument(dbDoc);
 
-                HttpContext.Response.StatusCode = 200;
-
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteDocument(context, new Document
@@ -56,7 +52,6 @@ namespace Raven.Server.Web.System
                         Etag = etag,
                         Data = dbDoc,
                     });
-                    writer.Flush();
                 }
             }
 
@@ -73,10 +68,10 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/databases/$", "PUT", "/admin/databases/{databaseName:string}")]
+        [RavenAction("/admin/databases", "PUT", "/admin/databases/{databaseName:string}")]
         public Task Put()
         {
-            var name = RouteMatch.Url.Substring(RouteMatch.MatchLength);
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
             string errorMessage;
             if (
@@ -135,7 +130,7 @@ namespace Raven.Server.Web.System
                 {
                     using (var tx = context.OpenWriteTransaction())
                     {
-                        newEtag = hasEtagInRequest ? ServerStore.Write(context, dbId, dbDoc, etag) : 
+                        newEtag = hasEtagInRequest ? ServerStore.Write(context, dbId, dbDoc, etag) :
                                                      ServerStore.Write(context, dbId, dbDoc);
                         tx.Commit();
                     }
@@ -148,7 +143,7 @@ namespace Raven.Server.Web.System
                     context.Write(writer, new DynamicJsonValue
                     {
                         ["ETag"] = newEtag,
-                        ["Key"]  = dbId
+                        ["Key"] = dbId
                     });
                     writer.Flush();
                 }
@@ -160,19 +155,9 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/databases", "DELETE", "/admin/databases?name={databaseName:string|multiple}&hard-delete={isHardDelete:bool|optional(false)}")]
         public Task DeleteQueryString()
         {
-            var names = HttpContext.Request.Query["name"];
-            if (names.Count == 0)
-                throw new ArgumentException("Query string \'name\' is mandatory, but wasn\'t specified");
-            return DeleteDatabases(names);
-        }
+            var names = GetStringValuesQueryString("name");
 
-        [RavenAction("/admin/databases/$", "DELETE", "/admin/databases/{databaseName:string}?hard-delete={isHardDelete:bool|optional(false)}")]
-        public Task Delete()
-        {
-            var name = RouteMatch.Url.Substring(RouteMatch.MatchLength);
-            if (string.IsNullOrWhiteSpace(name))
-                throw new InvalidOperationException("Database name was not provided");
-            return DeleteDatabases(new StringValues(name));
+            return DeleteDatabases(names);
         }
 
         private Task DeleteDatabases(StringValues names)
@@ -185,14 +170,14 @@ namespace Raven.Server.Web.System
                 var results = new List<DynamicJsonValue>();
                 foreach (var name in names)
                 {
-                    var configuration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(name, ignoreDisabledDatabase:true);
+                    var configuration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(name, ignoreDisabledDatabase: true);
                     if (configuration == null)
                     {
                         results.Add(new DynamicJsonValue
                         {
-                            ["name"] = name,
-                            ["deleted"] = false,
-                            ["reason"] = "database not found",
+                            ["Name"] = name,
+                            ["Deleted"] = false,
+                            ["Reason"] = "database not found",
                         });
 
                         continue;
@@ -202,29 +187,20 @@ namespace Raven.Server.Web.System
 
                     results.Add(new DynamicJsonValue
                     {
-                        ["name"] = name,
-                        ["deleted"] = true,
+                        ["Name"] = name,
+                        ["Deleted"] = true,
                     });
                 }
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    context.Write(writer, new DynamicJsonValue
+                    writer.WriteStartObject();
+                    writer.WriteResults(context, results, (w, c, result) =>
                     {
-                        ["Results"] = results
+                        c.Write(w, result);
                     });
 
-                    /*writer.WriteStartArray();
-                    var first = true;
-                    foreach (var result in results)
-                    {
-                        if (first == false)
-                            writer.WriteComma();
-                        first = false;
-
-                        context.Write(writer, result);
-                    }
-                    writer.WriteEndArray();*/
+                    writer.WriteEndObject();
                 }
             }
 

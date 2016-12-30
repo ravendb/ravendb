@@ -22,7 +22,7 @@ class savePeriodicExportSetupCommand extends commandBase {
                 'If-None-Match': this.setupToPersist.getEtag()
             }
         }
-        var url = this.globalConfig ? "/configuration/global/settings" : "/admin/databases/" + this.db.name;//TODO: use endpoints
+        var url = this.globalConfig ? "/configuration/global/settings" : "/admin/databases?name=" + this.db.name;//TODO: use endpoints
         var putArgs = JSON.stringify(this.setupToPersist.toDatabaseSettingsDto());
         return this.put(url, putArgs, null, jQueryOptions);
     }
