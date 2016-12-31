@@ -700,7 +700,7 @@ namespace Voron.Impl.Journal
 
             }
 
-            internal void SyncDataFile()
+            public void SyncDataFile()
             {
                 // This function can take a LONG time, and it needs to run concurrently with the
                 // rest of the system, so in order to handle this properly, we do:
@@ -753,7 +753,12 @@ namespace Voron.Impl.Journal
                         lastSyncedJournal = _lastFlushedJournalId;
                         lastSyncedTransactionId = _lastFlushedTransactionId;
                         SetLastReadTxHeader(_lastFlushedJournal, lastSyncedTransactionId, lastReadTxHeader);
-                        Debug.Assert(lastSyncedTransactionId == lastReadTxHeader->TransactionId);
+                        if (lastSyncedTransactionId != lastReadTxHeader->TransactionId)
+                        {
+                            VoronUnrecoverableErrorException.Raise(_waj._env,
+                                $"Error syncing the data file. The last sync tx is {lastSyncedTransactionId}, but the journal's last tx id is {lastReadTxHeader->TransactionId}, possible file corruption?"
+                            );
+                        }
 
                         _lastFlushedJournal = null;
                         _lastSyncTime = DateTime.UtcNow;
@@ -909,7 +914,7 @@ namespace Voron.Impl.Journal
                 });
             }
 
-            private void SetLastReadTxHeader(JournalFile file, long maxTransactionId, TransactionHeader* lastReadTxHeader)
+            public void SetLastReadTxHeader(JournalFile file, long maxTransactionId, TransactionHeader* lastReadTxHeader)
             {
                 var readTxHeader = stackalloc TransactionHeader[1];
 
@@ -1034,9 +1039,9 @@ namespace Voron.Impl.Journal
                     _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, tx);
                     CurrentFile = NextFile(journalEntry.NumberOf4Kbs);
                 }
-
+                
                 CurrentFile.Write(tx, journalEntry, _lazyTransactionBuffer, pageCount);
-
+                
                 if (CurrentFile.Available4Kbs == 0)
                 {
                     _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, tx);

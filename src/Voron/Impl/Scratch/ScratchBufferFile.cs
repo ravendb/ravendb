@@ -249,9 +249,9 @@ namespace Voron.Impl.Scratch
             }
         }
 
-        public int CopyPage(IPagerBatchWrites destPagerBatchWrites, long p, PagerState pagerState)
+        public int CopyPage(I4KbBatchWrites destI4KbBatchWrites, long p, PagerState pagerState)
         {
-            return _scratchPager.CopyPage(destPagerBatchWrites, p, pagerState);
+            return _scratchPager.CopyPage(destI4KbBatchWrites, p, pagerState);
         }
 
         public Page ReadPage(LowLevelTransaction tx, long p, PagerState pagerState = null)

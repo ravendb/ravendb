@@ -1,4 +1,10 @@
 ﻿using System;
+using System.Threading.Tasks;
+using FastTests.Voron;
+using Voron;
+using Voron.Global;
+using Voron.Impl.Scratch;
+using Xunit;
 
 namespace Tryouts
 {
@@ -6,17 +12,26 @@ namespace Tryouts
     {
         static void Main(string[] args)
         {
-            for (int i = 0; i < 100; i++)
+            //Parallel.For(0, 100, i =>
+            //{
+            //    Console.WriteLine(i);
+            //    using (var a = new SlowTests.Tests.Sorting.AlphaNumericSorting())
+            //    {
+            //        a.random_words_using_document_query_async().Wait();
+            //    }
+            //});
+            //for (int i = 0; i < 100; i++)
+            //{
+
+            //}
+
+            using (var a = new LazyTransactionsRespectPageBoundaries())
             {
-                
-                Console.WriteLine(i);
-                using (var a = new SlowTests.Voron.RecoveryMultipleJournals())
-                {
-                    a.ShouldThrowIfFirstTransactionIsCorruptedBecauseWeCannotAccessMetadataThen();
-                }
+                a.CanSyncWhenLazyTransactionsHasBufferedMultipleTransactions();
             }
         }
     }
+
 
 }
 

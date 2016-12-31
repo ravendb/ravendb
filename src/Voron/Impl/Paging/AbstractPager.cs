@@ -288,7 +288,7 @@ namespace Voron.Impl.Paging
             // nothing to do
         }
 
-        public virtual int CopyPage(IPagerBatchWrites destwPagerBatchWrites, long p, PagerState pagerState)
+        public virtual int CopyPage(I4KbBatchWrites destwI4KbBatchWrites, long p, PagerState pagerState)
         {
             var src = AcquirePagePointer(null, p, pagerState);
             var pageHeader = (PageHeader*)src;
@@ -297,36 +297,41 @@ namespace Voron.Impl.Paging
             {
                 numberOfPages = this.GetNumberOfOverflowPages(pageHeader->OverflowSize);
             }
-
-            destwPagerBatchWrites.Write(pageHeader->PageNumber, numberOfPages, src);
+            const int adjustPageSize = (Constants.Storage.PageSize)/(4*Constants.Size.Kilobyte);
+            destwI4KbBatchWrites.Write(pageHeader->PageNumber * adjustPageSize, numberOfPages * adjustPageSize, src);
 
             return numberOfPages;
         }
 
-        public virtual IPagerBatchWrites BatchWriter()
+        public virtual I4KbBatchWrites BatchWriter()
         {
-            return new PagerBatchWrites(this);
+            return new Simple4KbBatchWrites(this);
         }
     }
 
-    public interface IPagerBatchWrites : IDisposable
+    public interface I4KbBatchWrites : IDisposable
     {
-        unsafe void Write(long pageNumber, int numberOfPages, byte* source);
+        unsafe void Write(long posBy4Kbs, int numberOf4Kbs, byte* source);
     }
 
-    public unsafe class PagerBatchWrites : IPagerBatchWrites
+    public unsafe class Simple4KbBatchWrites : I4KbBatchWrites
     {
         private readonly AbstractPager _abstractPager;
         private PagerState _pagerState;
 
-        public PagerBatchWrites(AbstractPager abstractPager)
+        public Simple4KbBatchWrites(AbstractPager abstractPager)
         {
             _abstractPager = abstractPager;
             _pagerState = _abstractPager.GetPagerStateAndAddRefAtomically();
         }
 
-        public void Write(long pageNumber, int numberOfPages, byte* source)
+        public void Write(long posBy4Kbs, int numberOf4Kbs, byte* source)
         {
+            var pageNumber = posBy4Kbs / (Constants.Storage.PageSize / (4 * Constants.Size.Kilobyte));
+            var numberOfPages = numberOf4Kbs / (Constants.Storage.PageSize / (4 * Constants.Size.Kilobyte));
+            if (numberOf4Kbs % (Constants.Storage.PageSize / (4 * Constants.Size.Kilobyte)) != 0)
+                numberOfPages++;
+
             var newPagerState = _abstractPager.EnsureContinuous(pageNumber, numberOfPages);
             if (newPagerState != null)
             {
@@ -335,8 +340,9 @@ namespace Voron.Impl.Paging
                 _pagerState = newPagerState;
             }
 
-            var toWrite = numberOfPages * Constants.Storage.PageSize;
-            byte* destination = _abstractPager.AcquirePagePointer(null, pageNumber, _pagerState);
+            var toWrite = numberOf4Kbs*4*Constants.Size.Kilobyte;
+            byte* destination = _abstractPager.AcquirePagePointer(null, pageNumber, _pagerState)
+                                + (posBy4Kbs % (Constants.Storage.PageSize / (4 * Constants.Size.Kilobyte))*4*Constants.Size.Kilobyte);
 
             _abstractPager.UnprotectPageRange(destination, (ulong)toWrite);
 

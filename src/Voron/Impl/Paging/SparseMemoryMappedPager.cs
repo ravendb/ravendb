@@ -72,9 +72,9 @@ namespace Voron.Impl.Paging
             GetSystemInfo(out info);
             AllocationGranularity = info.allocationGranularity;
 
-            _handle = CreateFile(file, access, 
+            _handle = CreateFile(file, access,
                 Win32NativeFileShare.Read | Win32NativeFileShare.Write | Win32NativeFileShare.Delete, IntPtr.Zero,
-                Win32NativeFileCreationDisposition.OpenAlways, 
+                Win32NativeFileCreationDisposition.OpenAlways,
                 fileAttributes, IntPtr.Zero);
 
 
@@ -103,7 +103,7 @@ namespace Voron.Impl.Paging
                 if ((fileLength == 0) && initialFileSize.HasValue)
                     fileLength = initialFileSize.Value;
 
-                if ((_fileStream.Length == 0) || (fileLength%AllocationGranularity != 0))
+                if ((_fileStream.Length == 0) || (fileLength % AllocationGranularity != 0))
                 {
                     fileLength = NearestSizeToAllocationGranularity(fileLength);
 
@@ -113,7 +113,7 @@ namespace Voron.Impl.Paging
             }
 
 
-            NumberOfAllocatedPages = _totalAllocationSize/ Constants.Storage.PageSize;
+            NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
 
 
             SetPagerState(CreatePagerState());
@@ -124,11 +124,11 @@ namespace Voron.Impl.Paging
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private long NearestSizeToAllocationGranularity(long size)
         {
-            var modulos = size%AllocationGranularity;
+            var modulos = size % AllocationGranularity;
             if (modulos == 0)
                 return Math.Max(size, AllocationGranularity);
 
-            return (size/AllocationGranularity + 1)*AllocationGranularity;
+            return (size / AllocationGranularity + 1) * AllocationGranularity;
         }
 
         public override void EnsureMapped(IPagerLevelTransactionState tx, long pageNumber, int numberOfPages)
@@ -149,15 +149,15 @@ namespace Voron.Impl.Paging
                     return; // already mapped large enough here
             }
 
-            var ammountToMapInBytes = NearestSizeToAllocationGranularity((distanceFromStart + numberOfPages)* Constants.Storage.PageSize);
+            var ammountToMapInBytes = NearestSizeToAllocationGranularity((distanceFromStart + numberOfPages) * Constants.Storage.PageSize);
             MapPages(state, allocationStartPosition, ammountToMapInBytes);
         }
 
-        public override int CopyPage(IPagerBatchWrites destPagerBatchWrites, long pageNumber, PagerState pagerState)
+        public override int CopyPage(I4KbBatchWrites destI4KbBatchWrites, long pageNumber, PagerState pagerState)
         {
             var distanceFromStart = (pageNumber % 16);
             var allocationStartPosition = pageNumber - distanceFromStart;
-         
+
             var offset = new Win32MemoryMapPager.SplitValue { Value = (ulong)allocationStartPosition * (ulong)Constants.Storage.PageSize };
             var result = MapViewOfFileEx(_hFileMappingObject, _mmFileAccessType, offset.High,
                 offset.Low,
@@ -184,17 +184,18 @@ namespace Voron.Impl.Paging
 
                 pageHeader = (PageHeader*)(result + (distanceFromStart * Constants.Storage.PageSize));
             }
+            const int adjustPageSize = (Constants.Storage.PageSize) / (4 * Constants.Size.Kilobyte);
 
-            destPagerBatchWrites.Write(pageHeader->PageNumber, numberOfPages, (byte*)pageHeader);
+            destI4KbBatchWrites.Write(pageHeader->PageNumber * adjustPageSize, numberOfPages * adjustPageSize, (byte*)pageHeader);
 
             UnmapViewOfFile(result);
 
             return numberOfPages;
         }
 
-        public override IPagerBatchWrites BatchWriter()
+        public override I4KbBatchWrites BatchWriter()
         {
-            return new SparsePagerBatchWrites(this);
+            return new SparseI4KbBatchWrites(this);
         }
 
         public override byte* AcquirePagePointer(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)
@@ -222,24 +223,24 @@ namespace Voron.Impl.Paging
 
         private byte* ReturnPagePointerOrGrowAllocation(LoadedPage page, long distanceFromStart, TransactionState state, bool canUnmap)
         {
-            var pageHeader = (PageHeader*) (page.Pointer + (distanceFromStart * Constants.Storage.PageSize));
+            var pageHeader = (PageHeader*)(page.Pointer + (distanceFromStart * Constants.Storage.PageSize));
             if ((pageHeader->Flags & PageFlags.Overflow) != PageFlags.Overflow)
             {
                 // single page, already loaded, can return immediately.
-                return (byte*) pageHeader;
+                return (byte*)pageHeader;
             }
             // overflow, so need to make sure it is in the range we mapped.
             var numberOfOverflowPages = this.GetNumberOfOverflowPages(pageHeader->OverflowSize);
             if (numberOfOverflowPages + distanceFromStart < page.NumberOfPages)
             {
                 // the entire range is already mapped, can return immediately
-                return (byte*) pageHeader;
+                return (byte*)pageHeader;
             }
 
             if (canUnmap)
             {
-                Debug.Assert(state.AddressesToUnload[state.AddressesToUnload.Count-1] == new IntPtr(page.Pointer));
-                state.AddressesToUnload.RemoveAt(state.AddressesToUnload.Count-1);
+                Debug.Assert(state.AddressesToUnload[state.AddressesToUnload.Count - 1] == new IntPtr(page.Pointer));
+                state.AddressesToUnload.RemoveAt(state.AddressesToUnload.Count - 1);
 
                 UnmapViewOfFile(page.Pointer);
             }
@@ -251,7 +252,7 @@ namespace Voron.Impl.Paging
 
         private LoadedPage MapPages(TransactionState state, long startPage, long size)
         {
-            var offset = new Win32MemoryMapPager.SplitValue {Value = (ulong)startPage * (ulong)Constants.Storage.PageSize };
+            var offset = new Win32MemoryMapPager.SplitValue { Value = (ulong)startPage * (ulong)Constants.Storage.PageSize };
 
             if ((long)offset.Value + size > _fileStreamLength)
             {
@@ -260,7 +261,7 @@ namespace Voron.Impl.Paging
 
             var result = MapViewOfFileEx(_hFileMappingObject, _mmFileAccessType, offset.High,
                 offset.Low,
-                (UIntPtr) size, null);
+                (UIntPtr)size, null);
 
             if (result == null)
                 throw new Win32Exception();
@@ -269,7 +270,7 @@ namespace Voron.Impl.Paging
             var loadedPage = new LoadedPage
             {
                 Pointer = result,
-                NumberOfPages = (int) (size/ Constants.Storage.PageSize),
+                NumberOfPages = (int)(size / Constants.Storage.PageSize),
                 StartPage = startPage
             };
             state.LoadedPages[startPage] = loadedPage;
@@ -307,7 +308,7 @@ namespace Voron.Impl.Paging
 
             var newPager = new PagerState(this)
             {
-                Files = new[] {mmf},
+                Files = new[] { mmf },
                 MapBase = null,
                 AllocationInfos = new PagerState.AllocationInfo[0]
             };
@@ -323,33 +324,33 @@ namespace Voron.Impl.Paging
             {
                 foreach (var addr in state.AddressesToUnload)
                 {
-                    UnmapViewOfFile((byte*) addr);
+                    UnmapViewOfFile((byte*)addr);
                 }
             }
             lowLevelTransaction.SparsePagerTransactionState.Clear();
         }
 
-        private class SparsePagerBatchWrites : IPagerBatchWrites
+        private class SparseI4KbBatchWrites : I4KbBatchWrites
         {
             private readonly SparseMemoryMappedPager _parent;
             private readonly TransactionState _state = new TransactionState();
 
-            public SparsePagerBatchWrites(SparseMemoryMappedPager parent)
+            public SparseI4KbBatchWrites(SparseMemoryMappedPager parent)
             {
                 _parent = parent;
             }
 
-            public void Write(long pageNumber, int numberOfPages, byte* source)
+            public void Write(long posBy4Kbs, int numberOf4Kbs, byte* source)
             {
-                var distanceFromStart = (pageNumber % 16);
-                var allocationStartPosition = pageNumber - distanceFromStart;
+                var distanceFromStart = (posBy4Kbs % 16);
+                var allocationStartPosition = posBy4Kbs - distanceFromStart;
 
-                var ammountToMapInBytes = _parent.NearestSizeToAllocationGranularity((distanceFromStart + numberOfPages)* Constants.Storage.PageSize);
+                var ammountToMapInBytes = _parent.NearestSizeToAllocationGranularity((distanceFromStart + numberOf4Kbs) * Constants.Storage.PageSize);
 
                 LoadedPage page;
                 if (_state.LoadedPages.TryGetValue(allocationStartPosition, out page))
                 {
-                    if (page.NumberOfPages < distanceFromStart + numberOfPages)
+                    if (page.NumberOfPages < distanceFromStart + numberOf4Kbs)
                     {
                         UnmapViewOfFile(page.Pointer);
                         _state.AddressesToUnload.Remove(new IntPtr(page.Pointer));
@@ -361,8 +362,8 @@ namespace Voron.Impl.Paging
                     page = _parent.MapPages(_state, allocationStartPosition, ammountToMapInBytes);
                 }
 
-                var toWrite = numberOfPages * Constants.Storage.PageSize;
-                byte* destination = page.Pointer + distanceFromStart * Constants.Storage.PageSize;
+                var toWrite = numberOf4Kbs * 4 * Constants.Size.Kilobyte;
+                byte* destination = page.Pointer + (distanceFromStart * 4 * Constants.Size.Kilobyte);
 
                 _parent.UnprotectPageRange(destination, (ulong)toWrite);
 
@@ -380,7 +381,7 @@ namespace Voron.Impl.Paging
                     // afterward, we can call flush on this
                     FlushViewOfFile(loadedPage.Pointer, new IntPtr(loadedPage.NumberOfPages * Constants.Storage.PageSize));
                 }
-            
+
                 foreach (var ptr in _state.AddressesToUnload)
                 {
                     UnmapViewOfFile((byte*)ptr);

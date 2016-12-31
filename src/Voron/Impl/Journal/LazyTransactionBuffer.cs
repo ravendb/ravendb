@@ -41,7 +41,6 @@ namespace Voron.Impl.Journal
                 writer.Write(_lastUsedKbs,
                     pages.NumberOf4Kbs,
                     pages.Base);
-
             }
 
             _lastUsedKbs += pages.NumberOf4Kbs;
@@ -63,8 +62,8 @@ namespace Voron.Impl.Journal
             {
                 using (var tempTx = new TempPagerTransaction())
                 {
-                    var numberOfPages = (_lastUsedKbs * 4 * Constants.Size.Kilobyte) / Constants.Storage.PageSize;
-                    if ((_lastUsedKbs*4*Constants.Size.Kilobyte)%Constants.Storage.PageSize != 0)
+                    var numberOfPages = _lastUsedKbs / (Constants.Storage.PageSize/ (4 * Constants.Size.Kilobyte));
+                    if ((_lastUsedKbs%(Constants.Storage.PageSize/(4*Constants.Size.Kilobyte))) != 0)
                         numberOfPages++;
 
                     _lazyTransactionPager.EnsureMapped(tempTx, 0, numberOfPages);

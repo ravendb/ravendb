@@ -771,11 +771,6 @@ namespace Voron
             if (_options.ManualFlushing == false)
                 throw new NotSupportedException("Manual flushes are not set in the storage options, cannot manually flush!");
 
-            ForceLogFlushToDataFile();
-        }
-
-        public void ForceLogFlushToDataFile()
-        {
             _journal.Applicator.ApplyLogsToDataFile(_cancellationTokenSource.Token,
                 Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30));
         }

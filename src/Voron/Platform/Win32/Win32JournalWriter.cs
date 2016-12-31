@@ -25,7 +25,6 @@ namespace Voron.Platform.Win32
         private SafeFileHandle _handle;
         private SafeFileHandle _readHandle;
         private NativeOverlapped* _nativeOverlapped;
-        private readonly int _maxNumberOfPagesPerSingleWrite;
         private volatile bool _disposed;
 
         public Win32FileJournalWriter(StorageEnvironmentOptions options, string filename, long journalSize, 
@@ -42,8 +41,6 @@ namespace Voron.Platform.Win32
             if (_handle.IsInvalid)
                 throw new IOException("When opening file " + filename, new Win32Exception(Marshal.GetLastWin32Error()));
 
-            _maxNumberOfPagesPerSingleWrite = int.MaxValue/Constants.Storage.PageSize;
-
             Win32NativeFileMethods.SetFileLength(_handle, journalSize);
 
             NumberOfAllocated4Kb = (int) (journalSize/(4*Constants.Size.Kilobyte));
@@ -54,22 +51,23 @@ namespace Voron.Platform.Win32
             _nativeOverlapped->InternalHigh = IntPtr.Zero;
         }
 
-        public void Write(long position, byte* p, int numberOfPages)
+        public void Write(long posBy4Kb, byte* p, int numberOf4Kb)
         {
             if (Disposed)
                 throw new ObjectDisposedException("Win32JournalWriter");
 
-            while (numberOfPages > _maxNumberOfPagesPerSingleWrite)
+            const int maxNumberInSingleWrite = (int.MaxValue/(4*Constants.Size.Kilobyte));
+            while (numberOf4Kb > maxNumberInSingleWrite)
             {
-                WriteFile(position, p, _maxNumberOfPagesPerSingleWrite);
+                WriteFile(posBy4Kb, p, maxNumberInSingleWrite);
 
-                position += _maxNumberOfPagesPerSingleWrite;
-                p += _maxNumberOfPagesPerSingleWrite*Constants.Storage.PageSize;
-                numberOfPages -= _maxNumberOfPagesPerSingleWrite;
+                posBy4Kb += maxNumberInSingleWrite;
+                p += maxNumberInSingleWrite * 4 *Constants.Size.Kilobyte;
+                numberOf4Kb -= maxNumberInSingleWrite;
             }
 
-            if (numberOfPages > 0)
-                WriteFile(position, p, numberOfPages);
+            if (numberOf4Kb > 0)
+                WriteFile(posBy4Kb, p, numberOf4Kb);
         }
 
         private void WriteFile(long position, byte* p, int numberOf4Kb)

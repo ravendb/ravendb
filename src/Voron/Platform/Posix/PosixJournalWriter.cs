@@ -92,19 +92,19 @@ namespace Voron.Platform.Posix
         }
 
 
-        public unsafe void Write(long position, byte* p, int numberOf4Kb)
+        public unsafe void Write(long posBy4Kb, byte* p, int numberOf4Kb)
         {
             while (numberOf4Kb > _maxNumberOf4KbPerSingleWrite)
             {
-                WriteFile(position, p, _maxNumberOf4KbPerSingleWrite);
+                WriteFile(posBy4Kb, p, _maxNumberOf4KbPerSingleWrite);
 
-                position += _maxNumberOf4KbPerSingleWrite;
+                posBy4Kb += _maxNumberOf4KbPerSingleWrite;
                 p += _maxNumberOf4KbPerSingleWrite * (4*Constants.Size.Kilobyte);
                 numberOf4Kb -= _maxNumberOf4KbPerSingleWrite;
             }
 
             if (numberOf4Kb > 0)
-                WriteFile(position, p, numberOf4Kb);
+                WriteFile(posBy4Kb, p, numberOf4Kb);
         }
 
         private unsafe void WriteFile(long position, byte* p, int numberOf4Kb)
