@@ -87,14 +87,14 @@ namespace Raven.Server.Routing
         {
             var result = await Task.WhenAny(database, Task.Delay(databasesLandlord.DatabaseLoadTimeout));
             if (result != database)
-                ThrowDatabaseLoadTimeout(databaseName);
+                ThrowDatabaseLoadTimeout(databaseName, databasesLandlord.DatabaseLoadTimeout);
             context.Database = await database;
         }
 
-        private static void ThrowDatabaseLoadTimeout(StringSegment databaseName)
+        private static void ThrowDatabaseLoadTimeout(StringSegment databaseName, TimeSpan timeout)
         {
             throw new InvalidOperationException(
-                $"Timeout when loading database {databaseName}, try again later");
+                $"Timeout when loading database {databaseName} after {timeout}, try again later");
         }
 
         private static void ThrowDatabaseDoesNotExists(StringSegment databaseName)
