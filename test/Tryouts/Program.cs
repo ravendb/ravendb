@@ -10,9 +10,9 @@ namespace Tryouts
             {
                 
                 Console.WriteLine(i);
-                using (var a = new FastTests.Voron.LeafsCompression.RavenDB_5384())
+                using (var a = new SlowTests.Voron.Full())
                 {
-                    a.Leafs_compressed_CRUD(iterationCount: 26, size: 333, sequentialKeys: true, seed: 1);
+                    a.CanBackupAndRestore();
                 }
             }
         }

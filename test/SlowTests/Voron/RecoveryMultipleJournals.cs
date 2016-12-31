@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using Sparrow;
 using Voron;
 using Voron.Exceptions;
 using Voron.Global;
@@ -164,7 +165,7 @@ namespace SlowTests.Voron
 
             StopDatabase();
 
-            CorruptPage(lastJournal, page: 6, pos: 3);
+            CorruptJournal(lastJournal, posOf4KbInJrnl: 6);
 
             StartDatabase();
             using (var tx = Env.WriteTransaction())
@@ -220,7 +221,7 @@ namespace SlowTests.Voron
 
             StopDatabase();
 
-            CorruptPage(lastJournal - 1, page: 3, pos: 3);
+            CorruptJournal(lastJournal - 1, posOf4KbInJrnl: 3);
 
             StartDatabase();
             Assert.Equal(currentJournal, Env.Journal.GetCurrentJournalInfo().CurrentJournal);
@@ -255,7 +256,7 @@ namespace SlowTests.Voron
 
             StopDatabase();
 
-            CorruptPage(lastJournal - 3, lastJournalPosition + 1, 5);
+            CorruptJournal(lastJournal - 3, lastJournalPosition + 1);
 
             StartDatabase();
 
@@ -273,7 +274,7 @@ namespace SlowTests.Voron
 
         }
 
-        private void CorruptPage(long journal, long page, int pos)
+        private void CorruptJournal(long journal, long posOf4KbInJrnl)
         {
             _options.Dispose();
             _options = StorageEnvironmentOptions.ForPath(DataDir);
@@ -284,9 +285,9 @@ namespace SlowTests.Voron
                 FileAccess.ReadWrite,
                 FileShare.ReadWrite | FileShare.Delete))
             {
-                fileStream.Position = page * Constants.Storage.PageSize;
+                fileStream.Position = posOf4KbInJrnl * Constants.Size.Kilobyte * 4;
 
-                var buffer = new byte[Constants.Storage.PageSize];
+                var buffer = new byte[Constants.Size.Kilobyte * 4];
 
                 var remaining = buffer.Length;
                 var start = 0;
@@ -299,8 +300,8 @@ namespace SlowTests.Voron
                     remaining -= read;
                 }
 
-                buffer[pos] = 42;
-                fileStream.Position = page * Constants.Storage.PageSize;
+                Array.Clear(buffer,0, buffer.Length);
+                fileStream.Position = posOf4KbInJrnl * Constants.Size.Kilobyte * 4;
                 fileStream.Write(buffer, 0, buffer.Length);
             }
         }
@@ -314,7 +315,7 @@ namespace SlowTests.Voron
 
             StopDatabase();
 
-            CorruptPage(currentJournal, page: 0, pos: 150);
+            CorruptJournal(currentJournal, posOf4KbInJrnl: 0);
 
             Assert.Throws<VoronUnrecoverableErrorException>(() => StartDatabase());
         }
