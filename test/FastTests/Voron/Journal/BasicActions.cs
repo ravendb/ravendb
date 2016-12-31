@@ -26,10 +26,10 @@ namespace FastTests.Voron.Journal
         [Fact]
         public void CanUseMultipleLogFiles()
         {
-            var bytes = new byte[1024];
+            var bytes = new byte[Constants.Storage.PageSize/4];
             new Random().NextBytes(bytes);
 
-            for (var i = 0; i < 15; i++)
+            for (var i = 0; i < 30; i++)
             {
                 using (var tx = Env.WriteTransaction())
                 {
