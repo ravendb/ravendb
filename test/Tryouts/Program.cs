@@ -10,9 +10,9 @@ namespace Tryouts
             {
                 
                 Console.WriteLine(i);
-                using (var a = new FastTests.Voron.Storage.Restarts())
+                using (var a = new FastTests.Voron.Trees.Basic())
                 {
-                    a.DataIsKeptAfterRestart();
+                    a.CanAddEnoughToCausePageSplit();
                 }
             }
         }

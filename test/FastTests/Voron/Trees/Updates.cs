@@ -11,7 +11,7 @@ namespace FastTests.Voron.Trees
         public void CanUpdateVeryLargeValueAndThenDeleteIt()
         {
             var random = new Random();
-            var buffer = new byte[8192];
+            var buffer = new byte[Constants.Storage.PageSize*2];
             random.NextBytes(buffer);
 
             using (var tx = Env.WriteTransaction())
@@ -29,7 +29,7 @@ namespace FastTests.Voron.Trees
                 Assert.Equal(3, tree.State.OverflowPages);
             }
 
-            buffer = new byte[8192 * 2];
+            buffer = new byte[Constants.Storage.PageSize * 2 * 2];
             random.NextBytes(buffer);
 
             using (var tx = Env.WriteTransaction())

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Xunit;
 using Voron;
+using Voron.Data.BTrees;
 using Voron.Global;
 
 namespace FastTests.Voron.Trees
@@ -91,11 +92,14 @@ namespace FastTests.Voron.Trees
             {
                 Stream stream = StreamFor("value");
                 var tree = tx.CreateTree("foo");
-                for (int i = 0; i < 256; i++)
+                int i = 0;
+                var size = 0;
+                while (size < (Constants.Storage.PageSize+ Constants.Storage.PageSize/2))
                 {
                     stream.Position = 0;
-                    tree.Add("test-" + i, stream);
-
+                    var key = "test-" + i++;
+                    tree.Add(key, stream);
+                    size += Tree.CalcSizeOfEmbeddedEntry(key.Length, (int)stream.Length);
                 }
 
                 tx.Commit();

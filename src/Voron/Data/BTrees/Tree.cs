@@ -242,6 +242,12 @@ namespace Voron.Data.BTrees
             }
         }
 
+        public static int CalcSizeOfEmbeddedEntry(int keySize, int entrySize)
+        {
+            var size = (Constants.Tree.NodeHeaderSize + keySize + entrySize);
+            return size + (size & 1);
+        }
+
         public byte* DirectAdd(Slice key, int len, TreeNodeFlags nodeType = TreeNodeFlags.Data)
         {
             Debug.Assert(nodeType == TreeNodeFlags.Data || nodeType == TreeNodeFlags.MultiValuePageRef);
