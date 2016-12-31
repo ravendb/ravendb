@@ -10,9 +10,9 @@ namespace Tryouts
             {
                 
                 Console.WriteLine(i);
-                using (var a = new FastTests.Voron.Trees.Basic())
+                using (var a = new FastTests.Voron.MultiValueTree())
                 {
-                    a.CanAddEnoughToCausePageSplit();
+                    a.MultiDelete_Remains_One_Entry_The_Data_Is_Retrieved_With_MultiRead();
                 }
             }
         }

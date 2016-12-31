@@ -243,6 +243,8 @@ namespace Voron.Data.BTrees
             {
                 var nestedPage = new TreePage(DirectAccessFromHeader(item), (ushort)GetDataSize(item));
 
+                nestedPage.Search(_llt, value);// need to search the value in the nested page
+
                 if (nestedPage.LastMatch != 0) // value not found
                     return;
 

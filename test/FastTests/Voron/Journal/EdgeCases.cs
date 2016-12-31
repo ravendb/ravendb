@@ -36,7 +36,7 @@ namespace FastTests.Voron.Journal
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                var bytes = new byte[4 * Constants.Storage.PageSize];
+                var bytes = new byte[4 * Constants.Size.Kilobyte * 4];
                 new Random().NextBytes(bytes);
                 tree.Add("items/1", new MemoryStream(bytes));
                 tx.Commit();
@@ -45,7 +45,7 @@ namespace FastTests.Voron.Journal
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                var bytes = new byte[4 * Constants.Storage.PageSize];
+                var bytes = new byte[4 * Constants.Size.Kilobyte * 4];
                 new Random().NextBytes(bytes);
                 tree.Add("items/1", new MemoryStream(bytes));
                 tx.Commit();
@@ -54,7 +54,7 @@ namespace FastTests.Voron.Journal
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                var bytes = new byte[4 * Constants.Storage.PageSize];
+                var bytes = new byte[4 * Constants.Size.Kilobyte * 4];
                 new Random().NextBytes(bytes);
                 tree.Add("items/1", new MemoryStream(bytes));
                 tx.Commit();
