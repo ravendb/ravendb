@@ -197,7 +197,7 @@ namespace Voron.Impl.Journal
 
             _files = _files.AppendRange(journalFiles);
 
-            if (lastSyncedTxId == -1 && requireHeaderUpdate)
+            if (lastSyncedTxId < 0)
                 VoronUnrecoverableErrorException.Raise(_env,
                     "First transaction initializing the structure of Voron database is corrupted. Cannot access internal database metadata. Create a new database to recover.");
 

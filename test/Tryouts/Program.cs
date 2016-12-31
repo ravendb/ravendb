@@ -10,9 +10,9 @@ namespace Tryouts
             {
                 
                 Console.WriteLine(i);
-                using (var a = new FastTests.Voron.Journal.EdgeCases())
+                using (var a = new SlowTests.Voron.RecoveryMultipleJournals())
                 {
-                    a.TransactionCommitShouldSetCurrentLogFileToNullIfItIsFull();
+                    a.ShouldThrowIfFirstTransactionIsCorruptedBecauseWeCannotAccessMetadataThen();
                 }
             }
         }

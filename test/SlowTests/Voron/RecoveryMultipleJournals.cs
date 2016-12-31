@@ -300,7 +300,10 @@ namespace SlowTests.Voron
                     remaining -= read;
                 }
 
-                Array.Clear(buffer,0, buffer.Length);
+                for (int i = 0; i < buffer.Length; i++)
+                {
+                    buffer[i] = 42;
+                }
                 fileStream.Position = posOf4KbInJrnl * Constants.Size.Kilobyte * 4;
                 fileStream.Write(buffer, 0, buffer.Length);
             }
