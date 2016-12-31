@@ -110,9 +110,8 @@ class importDatabase extends viewModelBase {
                     this.importedFileName(importFileName);
                     db.importStatus("");
                 })
-                .fail(
-                    () => {
-                        db.importStatus("No sufficient diskspace for import, consider using Raven.Smuggler.exe directly.");
+                .fail((e: any) => {
+                        db.importStatus(e.responseJSON.Error + ", consider using Raven.Smuggler.exe directly.");
                         this.hasFileSelected(false);
                         this.importedFileName("");
                     }
