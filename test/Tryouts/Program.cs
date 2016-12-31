@@ -10,9 +10,9 @@ namespace Tryouts
             {
                 
                 Console.WriteLine(i);
-                using (var a = new FastTests.Voron.MultiValueTree())
+                using (var a = new FastTests.Voron.LeafsCompression.RavenDB_5384())
                 {
-                    a.MultiDelete_Remains_One_Entry_The_Data_Is_Retrieved_With_MultiRead();
+                    a.Leafs_compressed_CRUD(iterationCount: 26, size: 333, sequentialKeys: true, seed: 1);
                 }
             }
         }

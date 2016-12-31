@@ -14,7 +14,7 @@ namespace FastTests.Voron.Trees
         public void CanAddVeryLargeValue()
         {
             var random = new Random();
-            var buffer = new byte[8192];
+            var buffer = new byte[Constants.Storage.PageSize *2];
             random.NextBytes(buffer);
 
             List<long> allPages = null;
