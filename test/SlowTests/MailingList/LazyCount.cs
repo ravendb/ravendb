@@ -66,7 +66,7 @@ namespace SlowTests.MailingList
 
                     var enumerable = results.Value; //force evaluation
                     Assert.Equal(1, enumerable.Count());
-                    Assert.Equal(DateTime.Now.Year, stats.IndexTimestamp.Year);
+                    Assert.Equal(DateTime.UtcNow.Year, stats.IndexTimestamp.Year);
                     Assert.Equal(1, stats.TotalResults);
 
                     Assert.Equal(1, lazyCount.Value);
@@ -118,7 +118,7 @@ namespace SlowTests.MailingList
 
                     var enumerable = results.Value; //force evaluation
                     Assert.Equal(1, enumerable.Count());
-                    Assert.Equal(DateTime.Now.Year, stats.IndexTimestamp.Year);
+                    Assert.Equal(DateTime.UtcNow.Year, stats.IndexTimestamp.Year);
                     Assert.Equal(1, stats.TotalResults);
 
                     Assert.Equal(1, lazyCount.Value);
@@ -169,7 +169,7 @@ namespace SlowTests.MailingList
 
                     var enumerable = results.Value; //force evaluation
                     Assert.Equal(1, enumerable.Count());
-                    Assert.Equal(DateTime.Now.Year, stats.IndexTimestamp.Year);
+                    Assert.Equal(DateTime.UtcNow.Year, stats.IndexTimestamp.Year);
                     Assert.Equal(1, stats.TotalResults);
 
                     Assert.Equal(1, lazyCount.Value);
@@ -220,7 +220,7 @@ namespace SlowTests.MailingList
 
                     var enumerable = results.Value; //force evaluation
                     Assert.Equal(1, enumerable.Count());
-                    Assert.Equal(DateTime.Now.Year, stats.IndexTimestamp.Year);
+                    Assert.Equal(DateTime.UtcNow.Year, stats.IndexTimestamp.Year);
                     Assert.Equal(1, stats.TotalResults);
 
                     Assert.Equal(1, lazyCount.Value);
