@@ -20,15 +20,12 @@ namespace Tryouts
             //        a.random_words_using_document_query_async().Wait();
             //    }
             //});
-            //for (int i = 0; i < 100; i++)
+           
+
+            //using (var a = new LazyTransactionsRespectPageBoundaries())
             //{
-
+            //    a.CanSyncWhenLazyTransactionsHasBufferedMultipleTransactions();
             //}
-
-            using (var a = new LazyTransactionsRespectPageBoundaries())
-            {
-                a.CanSyncWhenLazyTransactionsHasBufferedMultipleTransactions();
-            }
         }
     }
 
