@@ -46,7 +46,7 @@ namespace Voron.Platform.Win32
 
             Win32NativeFileMethods.SetFileLength(_handle, journalSize);
 
-            NumberOfAllocated4Kb = (int)(journalSize / Constants.Storage.PageSize);
+            NumberOfAllocated4Kb = (int) (journalSize/(4*Constants.Size.Kilobyte));
 
             _nativeOverlapped = (NativeOverlapped*) NativeMemory.AllocateMemory(sizeof (NativeOverlapped));
 
