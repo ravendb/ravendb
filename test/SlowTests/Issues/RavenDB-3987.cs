@@ -110,6 +110,8 @@ namespace SlowTests.Issues
                     var operation1 = await session.Advanced.DeleteByIndexAsync<Person>("Person/ByName", x => x.Name == "Bob");
                     await operation1.WaitForCompletionAsync();
 
+                    WaitForIndexing(store);
+
                     var operation2 = await session.Advanced.DeleteByIndexAsync<Person, Person_ByAge>(x => x.Age < 35);
                     await operation2.WaitForCompletionAsync();
 
@@ -147,6 +149,8 @@ namespace SlowTests.Issues
                 {
                     var operation1 = session.Advanced.DeleteByIndex<Person>("Person/ByName", x => x.Name == "Bob");
                     operation1.WaitForCompletion();
+
+                    WaitForIndexing(store);
 
                     var operation2 = session.Advanced.DeleteByIndex<Person, Person_ByAge>(x => x.Age < 35);
                     operation2.WaitForCompletion();
