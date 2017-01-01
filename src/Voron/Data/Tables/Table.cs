@@ -192,7 +192,7 @@ namespace Voron.Data.Tables
 
             // first, try to fit in place, either in small or large sections
             var prevIsSmall = id % Constants.Storage.PageSize != 0;
-            if (size + sizeof(RawDataSection.RawDataEntrySizes) < ActiveDataSmallSection.MaxItemSize)
+            if (size + sizeof(RawDataSection.RawDataEntrySizes) < RawDataSection.MaxItemSize)
             {
                 // We must read before we call TryWriteDirect, because it will modify the size
                 int oldDataSize;
@@ -354,7 +354,7 @@ namespace Voron.Data.Tables
 
             byte* pos;
             long id;
-            if (size + sizeof(RawDataSection.RawDataEntrySizes) < ActiveDataSmallSection.MaxItemSize)
+            if (size + sizeof(RawDataSection.RawDataEntrySizes) < RawDataSection.MaxItemSize)
             {
                 id = AllocateFromSmallActiveSection(size);
 
@@ -397,7 +397,7 @@ namespace Voron.Data.Tables
 
             byte* pos;
             long id;
-            if (size + sizeof(RawDataSection.RawDataEntrySizes) < ActiveDataSmallSection.MaxItemSize)
+            if (size + sizeof(RawDataSection.RawDataEntrySizes) < RawDataSection.MaxItemSize)
             {
                 id = AllocateFromSmallActiveSection(size);
 
