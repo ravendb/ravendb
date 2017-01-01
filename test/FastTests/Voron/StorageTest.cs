@@ -191,8 +191,7 @@ namespace FastTests.Voron
             if (!SliceComparer.Equals(item1,key))
                 return null;
             Slice item2;
-            Slice.External(txh.Allocator, (byte*) node + node->KeySize + Constants.NodeHeaderSize,
-                (ushort) node->DataSize, out item2);
+            Slice.External(txh.Allocator, (byte*)node + node->KeySize + Constants.Tree.NodeHeaderSize, (ushort) node->DataSize, out item2);
             return Tuple.Create(item1, item2);
         }
     }

@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Voron.Global;
 using Voron.Impl.Paging;
 #if VALIDATE
 using System.Diagnostics;
@@ -25,7 +26,6 @@ namespace Voron.Impl.Scratch
         }
 
         private readonly AbstractPager _scratchPager;
-        private readonly int _pageSize;
         private readonly int _scratchNumber;
 
         private readonly Dictionary<long, LinkedList<PendingPage>> _freePagesBySize = new Dictionary<long, LinkedList<PendingPage>>(NumericEqualityComparer.Instance);
@@ -43,7 +43,6 @@ namespace Voron.Impl.Scratch
             _scratchPager = scratchPager;
             _scratchNumber = scratchNumber;
             _allocatedPagesCount = 0;
-            _pageSize = scratchPager.PageSize;
         }
 
         public void Reset(LowLevelTransaction tx)
@@ -90,7 +89,7 @@ namespace Voron.Impl.Scratch
 
         public int NumberOfAllocations => _allocatedPages.Count;
 
-        public long Size => _scratchPager.NumberOfAllocatedPages * _pageSize;
+        public long Size => _scratchPager.NumberOfAllocatedPages * Constants.Storage.PageSize;
 
         public long NumberOfAllocatedPages => _scratchPager.NumberOfAllocatedPages;
 
@@ -100,7 +99,7 @@ namespace Voron.Impl.Scratch
 
         public long SizeAfterAllocation(long sizeToAllocate)
         {
-            return (_lastUsedPage + sizeToAllocate) * _pageSize;
+            return (_lastUsedPage + sizeToAllocate) * Constants.Storage.PageSize;
         }
 
         public PageFromScratchBuffer Allocate(LowLevelTransaction tx, int numberOfPages, int sizeToAllocate)
@@ -250,9 +249,9 @@ namespace Voron.Impl.Scratch
             }
         }
 
-        public int CopyPage(IPagerBatchWrites destPagerBatchWrites, long p, PagerState pagerState)
+        public int CopyPage(I4KbBatchWrites destI4KbBatchWrites, long p, PagerState pagerState)
         {
-            return _scratchPager.CopyPage(destPagerBatchWrites, p, pagerState);
+            return _scratchPager.CopyPage(destI4KbBatchWrites, p, pagerState);
         }
 
         public Page ReadPage(LowLevelTransaction tx, long p, PagerState pagerState = null)

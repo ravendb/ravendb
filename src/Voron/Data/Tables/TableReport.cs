@@ -3,6 +3,7 @@ using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Data.RawData;
 using Voron.Debugging;
+using Voron.Global;
 
 namespace Voron.Data.Tables
 {
@@ -23,13 +24,13 @@ namespace Voron.Data.Tables
         public void AddStructure(FixedSizeTree fst, bool calculateExactSizes)
         {
             var report = StorageReportGenerator.GetReport(fst, calculateExactSizes);
-            AddStructure(report, fst.Llt.PageSize, calculateExactSizes);
+            AddStructure(report, Constants.Storage.PageSize, calculateExactSizes);
         }
 
         public void AddStructure(Tree tree, bool calculateExactSizes)
         {
             var report = StorageReportGenerator.GetReport(tree, calculateExactSizes);
-            AddStructure(report, tree.Llt.PageSize, calculateExactSizes);
+            AddStructure(report, Constants.Storage.PageSize, calculateExactSizes);
         }
 
         private void AddStructure(TreeReport report, int pageSize, bool calculateExactSizes)
@@ -46,13 +47,13 @@ namespace Voron.Data.Tables
         public void AddIndex(FixedSizeTree fst, bool calculateExactSizes)
         {
             var report = StorageReportGenerator.GetReport(fst, calculateExactSizes);
-            AddIndex(report, fst.Llt.PageSize, calculateExactSizes);
+            AddIndex(report, Constants.Storage.PageSize, calculateExactSizes);
         }
 
         public void AddIndex(Tree tree, bool calculateExactSizes)
         {
             var report = StorageReportGenerator.GetReport(tree, calculateExactSizes);
-            AddIndex(report, tree.Llt.PageSize, calculateExactSizes);
+            AddIndex(report, Constants.Storage.PageSize, calculateExactSizes);
         }
 
         private void AddIndex(TreeReport report, int pageSize, bool calculateExactSizes)

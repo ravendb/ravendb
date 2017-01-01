@@ -32,7 +32,7 @@ namespace Voron.Platform.Win32
         private readonly MemoryMappedFileAccess _memoryMappedFileAccess;
         private bool _copyOnWriteMode;
         private readonly Logger _logger;
-
+        public override long TotalAllocationSize => _totalAllocationSize;
         [StructLayout(LayoutKind.Explicit)]
         public struct SplitValue
         {
@@ -126,7 +126,8 @@ namespace Voron.Platform.Win32
                 _totalAllocationSize = fileLength;
             }
 
-            NumberOfAllocatedPages = _totalAllocationSize / PageSize;
+            NumberOfAllocatedPages = _totalAllocationSize/Constants.Storage.PageSize +
+                                     ((_totalAllocationSize%Constants.Storage.PageSize) == 0 ? 0 : 1);
             SetPagerState(CreatePagerState());
         }
 
@@ -207,7 +208,7 @@ namespace Voron.Platform.Win32
 #endif
 
             _totalAllocationSize += allocationSize;
-            NumberOfAllocatedPages = _totalAllocationSize / PageSize;
+            NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
 
             return newPagerState;
         }
@@ -407,7 +408,7 @@ namespace Voron.Platform.Win32
             var entries = new Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY[pagesToPrefetch.Count];
             for (int i = 0; i < entries.Length; i++)
             {
-                entries[i].NumberOfBytes = (IntPtr)(4 * PageSize);
+                entries[i].NumberOfBytes = (IntPtr)(4 * Constants.Storage.PageSize);
                 entries[i].VirtualAddress = AcquirePagePointer(null, pagesToPrefetch[i]);
             }
 

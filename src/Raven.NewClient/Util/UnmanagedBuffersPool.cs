@@ -118,7 +118,7 @@ namespace Raven.NewClient.Client.Util
             return new AllocatedMemoryData
             {
                 SizeInBytes = actualSize,
-                Address = NativeMemory.AllocateMemory(size,out stats),
+                Address = NativeMemory.AllocateMemory(actualSize, out stats),
                 AllocatingThread = stats
             };
         }

@@ -39,7 +39,7 @@ namespace Raven.Client.Connection
             MultiDatabase.AssertValidName(databaseDocument.Id);
             doc = RavenJObject.FromObject(databaseDocument);
 
-            return createRequestForSystemDatabase("/admin/databases/" + Uri.EscapeDataString(databaseDocument.Id), HttpMethods.Put);
+            return createRequestForSystemDatabase("/admin/databases?name=" + Uri.EscapeDataString(databaseDocument.Id), HttpMethods.Put);
         }
 
         public HttpJsonRequest DeleteDatabase(string databaseName, bool hardDelete)
@@ -137,9 +137,9 @@ namespace Raven.Client.Connection
             return createRequestForSystemDatabase("/admin/api-keys?name=" + name, HttpMethods.Delete);
         }
 
-        public HttpJsonRequest CreateStreamApiKeysRequest()
+        public HttpJsonRequest CreateGetAllApiKeyRequest(int start, int pageSize)
         {
-            return createRequestForSystemDatabase("/admin/apikeys/all", HttpMethods.Get);
+            return createRequestForSystemDatabase($"/admin/api-keys?start={start}&pageSize={pageSize}", HttpMethods.Get);
         }
 
         public HttpJsonRequest IndexesStatus(string serverUrl)

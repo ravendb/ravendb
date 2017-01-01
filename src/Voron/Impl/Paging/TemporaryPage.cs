@@ -15,7 +15,7 @@ namespace Voron.Impl.Paging
 
         public TemporaryPage(StorageEnvironmentOptions options, int? pageSize = null)
         {
-            PageSize = pageSize ?? options.PageSize;
+            PageSize = pageSize ?? Constants.Storage.PageSize;
             _tempPageBuffer = new byte[PageSize];
             _tempPageHandle = GCHandle.Alloc(_tempPageBuffer, GCHandleType.Pinned);
             _tempPage = _tempPageHandle.AddrOfPinnedObject();
@@ -54,7 +54,7 @@ namespace Voron.Impl.Paging
                 // it means the page size is 64KB
                 // we have special handling for this in AllocateNewNode
 
-                Debug.Assert(PageSize == Constants.Storage.MaxPageSize);
+                Debug.Assert(PageSize == Constants.Compression.MaxPageSize);
 
                 upper = ushort.MaxValue;
             }
@@ -62,7 +62,7 @@ namespace Voron.Impl.Paging
             return new TreePage((byte*)_tempPage.ToPointer(), PageSize)
             {
                 Upper = upper,
-                Lower = (ushort) Constants.TreePageHeaderSize,
+                Lower = (ushort) Constants.Tree.PageHeaderSize,
                 TreeFlags = TreePageFlags.None,
             };
         }

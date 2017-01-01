@@ -39,7 +39,7 @@ namespace Voron.Data.BTrees
             if (nodePos == null)
                 nodePos = _parentPage.NodePositionFor(_tx, separator); // select the appropriate place for this
 
-            if (_parentPage.HasSpaceFor(_tx, TreeSizeOf.BranchEntry(separator) + Constants.NodeOffsetSize) == false)
+            if (_parentPage.HasSpaceFor(_tx, TreeSizeOf.BranchEntry(separator) + Constants.Tree.NodeOffsetSize) == false)
             {
                 var pageSplitter = new TreePageSplitter(_tx, _tree, separator, -1, pageRefNumber, TreeNodeFlags.PageRef, _cursor);
 

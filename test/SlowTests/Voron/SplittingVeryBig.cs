@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using Voron;
+using Voron.Global;
 using Xunit;
 
 namespace SlowTests.Voron
@@ -10,7 +11,7 @@ namespace SlowTests.Voron
     {
         protected override void Configure(StorageEnvironmentOptions options)
         {
-            options.MaxLogFileSize = 10 * options.PageSize;
+            options.MaxLogFileSize = 10 * Constants.Storage.PageSize;
         }
 
         [Fact]
@@ -52,7 +53,7 @@ namespace SlowTests.Voron
             random.NextBytes(buffer);
 
             var options = StorageEnvironmentOptions.ForPath(DataDir);
-            options.MaxLogFileSize = 10 * options.PageSize;
+            options.MaxLogFileSize = 10 * Constants.Storage.PageSize;
 
             using (var env = new StorageEnvironment(options))
             {
@@ -70,7 +71,7 @@ namespace SlowTests.Voron
             }
 
             options = StorageEnvironmentOptions.ForPath(DataDir);
-            options.MaxLogFileSize = 10 * options.PageSize;
+            options.MaxLogFileSize = 10 * Constants.Storage.PageSize;
 
             using (var env = new StorageEnvironment(options))
             {

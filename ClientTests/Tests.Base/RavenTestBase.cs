@@ -177,7 +177,9 @@ namespace NewClientTests
 
         protected virtual DocumentStore GetDocumentStore([CallerMemberName] string caller = null,
             string dbSuffixIdentifier = null, string path = null,
-            Action<DatabaseDocument> modifyDatabaseDocument = null, string apiKey = null)
+            Action<DatabaseDocument> modifyDatabaseDocument = null, 
+            string apiKey = null,
+            bool deleteDbAfterDispose = true)
         {
             var name = caller != null ? $"{caller}_{Interlocked.Increment(ref _counter)}" : Guid.NewGuid().ToString("N");
 
@@ -232,16 +234,19 @@ namespace NewClientTests
 
                 Server.ServerStore.DatabasesLandlord.UnloadAndLock(name, () =>
                 {
-                    var dbId = Constants.Database.Prefix + name;
-                    using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
-                    using (var tx = context.OpenWriteTransaction())
+                    if (deleteDbAfterDispose)
                     {
-                        Server.ServerStore.Delete(context, dbId);
-                        tx.Commit();
-                    }
+                        var dbId = Constants.Database.Prefix + name;
+                        using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
+                        using (var tx = context.OpenWriteTransaction())
+                        {
+                            Server.ServerStore.Delete(context, dbId);
+                            tx.Commit();
+                        }
 
-                    if (databaseTask != null)
-                        DatabaseHelper.DeleteDatabaseFiles(databaseTask.Result.Configuration);
+                        if (databaseTask != null)
+                            DatabaseHelper.DeleteDatabaseFiles(databaseTask.Result.Configuration);
+                    }
                 });
 
                 CreatedStores.TryRemove(store);

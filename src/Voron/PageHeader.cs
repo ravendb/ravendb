@@ -8,9 +8,11 @@ namespace Voron.Data
     /// we should check every struct that ends with "PageHeader" to ensure no colisions happen in structures
     /// that share this layout.
     /// </summary>
-    [StructLayout(LayoutKind.Explicit, Size = 16, Pack = 1)]
+    [StructLayout(LayoutKind.Explicit, Size = SizeOf, Pack = 1)]
     public unsafe struct PageHeader
     {
+        public const int SizeOf = 64;
+
         [FieldOffset(0)]
         public long PageNumber;
 
@@ -21,6 +23,6 @@ namespace Voron.Data
         public PageFlags Flags;
 
         [FieldOffset(13)]
-        public fixed byte Padding[3]; // to 16 bytes
+        public fixed byte Padding[51]; // to 64 bytes
     }
 }

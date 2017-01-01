@@ -5,6 +5,8 @@ namespace Voron.Data.Compression
     [StructLayout(LayoutKind.Explicit, Pack = 1)]
     public struct CompressedNodesHeader
     {
+        public const int SizeOf = 8;
+
         [FieldOffset(0)]
         public ushort SectionSize;
 

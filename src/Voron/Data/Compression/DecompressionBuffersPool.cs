@@ -35,7 +35,7 @@ namespace Voron.Data.Compression
         public DecompressionBuffersPool(StorageEnvironmentOptions options)
         {
             _options = options;
-            _maxNumberOfPagesInScratchBufferPool = _options.MaxScratchBufferSize / _options.PageSize;
+            _maxNumberOfPagesInScratchBufferPool = _options.MaxScratchBufferSize / Constants.Storage.PageSize;
         }
 
         public AbstractPager CreateDecompressionPager(long initialSize)
@@ -55,10 +55,10 @@ namespace Voron.Data.Compression
 
         public IDisposable GetTemporaryPage(LowLevelTransaction tx, int pageSize, out TemporaryPage tmp)
         {
-            if (pageSize < _options.PageSize)
+            if (pageSize < Constants.Storage.PageSize)
                 ThrowInvalidPageSize(pageSize);
 
-            if (pageSize > Constants.Storage.MaxPageSize)
+            if (pageSize > Constants.Compression.MaxPageSize)
                 ThrowPageSizeTooBig(pageSize);
 
             Debug.Assert(pageSize == Bits.NextPowerOf2(pageSize));
@@ -110,7 +110,7 @@ namespace Voron.Data.Compression
 
             if (tmp == null)
             {
-                var allocationInPages = pageSize / _options.PageSize;
+                var allocationInPages = pageSize / Constants.Storage.PageSize;
 
                 lock (_decompressionPagerLock) // once we fill up the pool we won't be allocating additional pages frequently
                 {
@@ -138,13 +138,13 @@ namespace Voron.Data.Compression
 
         private static void ThrowPageSizeTooBig(int pageSize)
         {
-            throw new ArgumentException($"Max page size is {Constants.Storage.MaxPageSize} while you requested {pageSize} bytes");
+            throw new ArgumentException($"Max page size is {Constants.Compression.MaxPageSize} while you requested {pageSize} bytes");
         }
 
         private void ThrowInvalidPageSize(int pageSize)
         {
             throw new ArgumentException(
-                $"Page cannot be smaller than {_options.PageSize} bytes while {pageSize} bytes were requested.");
+                $"Page cannot be smaller than {Constants.Storage.PageSize} bytes while {pageSize} bytes were requested.");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -159,7 +159,7 @@ namespace Voron.Data.Compression
                     return;
 
                 _pool = new[] { new ConcurrentQueue<DecompressionBuffer>() };
-                _compressionPager = CreateDecompressionPager(DecompressedPagesCache.Size * Constants.Storage.MaxPageSize);
+                _compressionPager = CreateDecompressionPager(DecompressedPagesCache.Size * Constants.Compression.MaxPageSize);
                 _oldPagers = ImmutableAppendOnlyList<AbstractPager>.Empty;
                 _initialized = true;
             }
@@ -168,12 +168,12 @@ namespace Voron.Data.Compression
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int GetTempPagesPoolIndex(int pageSize)
         {
-            if (pageSize == _options.PageSize)
+            if (pageSize == Constants.Storage.PageSize)
                 return 0;
 
             var index = 0;
 
-            while (pageSize > _options.PageSize)
+            while (pageSize > Constants.Storage.PageSize)
             {
                 pageSize >>= 1;
                 index++;
@@ -201,7 +201,7 @@ namespace Voron.Data.Compression
             if (_oldPagers.Count == 0)
                 return;
             
-            var necessaryPages = Interlocked.Read(ref _currentlyUsedBytes) / _options.PageSize;
+            var necessaryPages = Interlocked.Read(ref _currentlyUsedBytes) / Constants.Storage.PageSize;
 
             var availablePages = _compressionPager.NumberOfAllocatedPages;
 
@@ -239,7 +239,7 @@ namespace Voron.Data.Compression
                 _size = size;
                 _pool = pool;
                 _index = index;
-                _pager.EnsureMapped(tx, _position, _size / _pager.PageSize);
+                _pager.EnsureMapped(tx, _position, _size / Constants.Storage.PageSize);
                 _ptr = _pager.AcquirePagePointer(tx, position);
 
                 TempPage = new TemporaryPage(_ptr, size) { ReturnTemporaryPageToPool = this };
@@ -249,7 +249,7 @@ namespace Voron.Data.Compression
 
             public void EnsureValidPointer(LowLevelTransaction tx)
             {
-                _pager.EnsureMapped(tx, _position, _size / _pager.PageSize);
+                _pager.EnsureMapped(tx, _position, _size / Constants.Storage.PageSize);
                 var p = _pager.AcquirePagePointer(tx, _position);
 
                 if (_ptr == p)

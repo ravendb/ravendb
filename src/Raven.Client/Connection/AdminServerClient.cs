@@ -5,15 +5,11 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
-using System.Collections.Generic;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Util;
 using Raven.Client.Connection.Async;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
-using Raven.Client.Extensions;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
@@ -131,9 +127,9 @@ namespace Raven.Client.Connection
             AsyncHelpers.RunSync(() => asyncAdminServerClient.DeleteApiKeyAsync(name));
         }
 
-        public IEnumerable<NamedApiKeyDefinition> GetAllApiKeys()
+        public NamedApiKeyDefinition[] GetApiKeys(int start, int pageSize)
         {
-            return  AsyncHelpers.RunSync(() => asyncAdminServerClient.GetAllApiKeys());
+            return AsyncHelpers.RunSync(() => asyncAdminServerClient.GetApiKeysAsync(start, pageSize));
         }
     }
 }

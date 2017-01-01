@@ -4,10 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Threading.Tasks;
-using NewClientTests;
-using Raven.Abstractions.Connection;
 using Xunit;
 using Raven.Tests.Core.Utils.Entities;
 using Raven.NewClient.Client.Bundles.Versioning;
@@ -123,7 +120,7 @@ namespace NewClientTests.NewClient.FastTests.Versioning
         {
             var path = NewDataPath();
             var company = new Company { Name = "Company Name" };
-            using (var store = GetDocumentStore(path: path))
+            using (var store = GetDocumentStore(path: path, deleteDbAfterDispose: false))
             {
                 await VersioningHelper.SetupVersioning(store);
                 using (var session = store.OpenAsyncSession())
@@ -137,7 +134,6 @@ namespace NewClientTests.NewClient.FastTests.Versioning
                     company3.Name = "Hibernating Rhinos";
                     await session.SaveChangesAsync();
                 }
-
             }
 
             using (var store = GetDocumentStore(path: path))

@@ -38,7 +38,6 @@ namespace Raven.Server.Documents.Replication
                 // we scan through the documents to send to the other side, we need to be careful about
                 // filtering a lot of documents, because we need to let the other side know about this, and 
                 // at the same time, we need to send a heartbeat to keep the tcp connection alive
-                var timeout = Debugger.IsAttached ? 60*1000 : 1000;
                 long maxEtag;
                 maxEtag = _lastEtag = _parent._lastSentDocumentEtag;
                 _parent.CancellationToken.ThrowIfCancellationRequested();
@@ -63,10 +62,15 @@ namespace Raven.Server.Documents.Replication
                     maxEtag = Math.Max(maxEtag, tombstones[tombstones.Count - 1].Etag);
                 }
 
+                long size = 0;
+
                 foreach (var doc in docs)
                 {
                     if (doc.Etag > maxEtag)
                         break;
+
+
+                    size += doc.Data.Size;
 
                     AddReplicationItemToBatch(new ReplicationBatchDocumentItem
                     {
@@ -75,6 +79,9 @@ namespace Raven.Server.Documents.Replication
                         Data = doc.Data,
                         Key = doc.Key
                     });
+
+                    if (size > 16*1024*1024)
+                        break; // we want to limit batch sizes to reasonable limits
                 }
 
                 foreach (var tombstone in tombstones)

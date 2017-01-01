@@ -9,6 +9,8 @@ import disableResourceToggleConfirm = require("viewmodels/resources/disableResou
 import disableResourceToggleCommand = require("commands/resources/disableResourceToggleCommand");
 import toggleIndexingCommand = require("commands/database/index/toggleIndexingCommand");
 import deleteResourceCommand = require("commands/resources/deleteResourceCommand");
+import loadResourceCommand = require("commands/resources/loadResourceCommand");
+
 import globalAlertNotification = Raven.Server.Alerts.GlobalAlertNotification;
 
 import resourcesInfo = require("models/resources/info/resourcesInfo");
@@ -17,6 +19,8 @@ import getResourceCommand = require("commands/resources/getResourceCommand");
 import resourceInfo = require("models/resources/info/resourceInfo");
 import databaseInfo = require("models/resources/info/databaseInfo");
 import filesystemInfo = require("models/resources/info/filesystemInfo");
+import database = require("models/resources/database");
+import EVENTS = require("common/constants/events");
 
 class resources extends viewModelBase {
 
@@ -47,7 +51,7 @@ class resources extends viewModelBase {
     constructor() {
         super();
 
-        this.bindToCurrentInstance("toggleResource", "toggleDatabaseIndexing", "deleteResource");
+        this.bindToCurrentInstance("toggleResource", "toggleDatabaseIndexing", "deleteResource", "activateResource");
 
         this.initObservables();
     }
@@ -103,48 +107,63 @@ class resources extends viewModelBase {
         return new getResourcesCommand()
             .execute()
             .done(info => this.resources(info));
+
     }
 
-    // Fetch single resource info
+    // fetch single resource info
     private fetchResource(e: globalAlertNotification) {
 
-        // First find if database already exists in the page resources
+        // first find if resource already exists in the page
         let resource = this.resources().sortedResources().find(rs => rs.qualifiedName === e.Id);
        
         switch (e.Operation) {
 
             case "Write": 
                 if (resource) {
-                    // Relevant for disable/enable...
-                    this.getResourceInfo(resource.qualifier, resource.name)
-                        .done(result => resource.update(result));
+                    // relevant for disable/enable...
+                    this.getResourceInfo(resource.qualifier, resource.name, (result) => resource.update(result));
                 } else {
-                    // Need to add a new resource for a newly created database
-                    let notificationData = resourceInfo.extractQualifierAndNameFromNotification(e.Id);
-                    this.getResourceInfo(notificationData.qualifier, notificationData.name)
-                        .done((result: Raven.Client.Data.ResourceInfo) => {
-                            this.resources().addResource(result, notificationData.qualifier);
-                         });
+                    // need to add a new resource for a newly created database
+                    this.addNewResource(e.Id);
                 }
                 break;
 
             case "Loaded":
-                // An existing database turned ONLINE, get its stats
-                this.getResourceInfo(resource.qualifier, resource.name)
-                    .done(result => resource.update(result));               
+                if (!resource) {
+                    // an existing database turned ONLINE, get its stats
+                    this.addNewResource(e.Id);
+                    break;
+                }
+
+                // if never got the "Write" notification
+                this.getResourceInfo(resource.qualifier, resource.name, (result) => resource.update(result));
                 break;
 
             case "Delete":
-                // Delete database from page resources if exists (because maybe another client did the delete..)
+                // delete database from page resources if exists (because maybe another client did the delete..)
                 if (resource) {
                     this.removeResource(resource);
+
+                    let resourceFromHeader = this.resourcesManager.resources().find(x => x.qualifiedName === resource.qualifiedName);
+                    if (!resourceFromHeader)
+                        return;
+
+                    ko.postbox.publish(EVENTS.Resource.Disconnect, { resource: resourceFromHeader });
                 }
                 break;
         }
     }
 
-    private getResourceInfo(resourceType: string, resourceName: string): JQueryPromise<Raven.Client.Data.ResourceInfo> {
-        return new getResourceCommand(resourceType, resourceName).execute();
+    addNewResource(resourceId: string) {
+        let notificationData = resourceInfo.extractQualifierAndNameFromNotification(resourceId);
+        this.getResourceInfo(notificationData.qualifier, notificationData.name,
+            (result: Raven.Client.Data.ResourceInfo) => this.resources().addResource(result, notificationData.qualifier));
+    }
+
+    getResourceInfo(resourceType: string, resourceName: string, afterGet: (dto: Raven.Client.Data.ResourceInfo) => void) {
+        new getResourceCommand(resourceType, resourceName)
+            .execute()
+            .done((result: Raven.Client.Data.ResourceInfo) => afterGet(result))
     }
 
     private filterResources(): void {
@@ -244,9 +263,15 @@ class resources extends viewModelBase {
         }
     }
 
-    private removeResource(resource: resourceInfo) {
-        this.resources().sortedResources.remove(resource);
-        this.selectedResources.remove(resource.qualifiedName);
+    private removeResource(rsInfo: resourceInfo) {
+        this.resources().sortedResources.remove(rsInfo);
+        this.selectedResources.remove(rsInfo.qualifiedName);
+
+        let resource = this.resourcesManager.resources().find(x => x.qualifiedName === rsInfo.qualifiedName);
+        if (!resource)
+            return;
+
+        ko.postbox.publish(EVENTS.Resource.Disconnect, { resource: resource });
     }
 
     toggleSelectedResources() {
@@ -311,6 +336,12 @@ class resources extends viewModelBase {
 
         if (matchedResource) {
             matchedResource.disabled(result.disabled);
+
+            // If Enabling a resource (that is selected from the top) than we want it to be Online(Loaded)
+            if (matchedResource.isCurrentlyActiveResource() && !matchedResource.disabled()) {
+                new loadResourceCommand(matchedResource.asResource())
+                    .execute();
+            }
         }
     }
 
@@ -348,6 +379,19 @@ class resources extends viewModelBase {
         app.showBootstrapDialog(createDbView);
     }
 
+    activateResource(rsInfo: resourceInfo) {
+        let resource = this.resourcesManager.resources().find(x => x.qualifiedName === rsInfo.qualifiedName);
+        if (!resource)
+            return;
+
+        resource.activate();
+
+        let resourceOnPage = this.resources().sortedResources().find(rs => rs.qualifiedName === rsInfo.qualifiedName);
+        if (!resourceOnPage)
+            return;
+        
+        this.getResourceInfo(resource.qualifier, resource.name, (result) => resourceOnPage.update(result));
+    }
 
     /* TODO: cluster related work
 

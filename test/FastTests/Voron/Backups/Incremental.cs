@@ -9,6 +9,7 @@ using System.IO;
 using Xunit;
 using Voron;
 using Voron.Data;
+using Voron.Global;
 using Voron.Impl.Backup;
 
 namespace FastTests.Voron.Backups
@@ -18,7 +19,7 @@ namespace FastTests.Voron.Backups
         IncrementalBackupTestUtils IncrementalBackupTestUtils = new IncrementalBackupTestUtils();
         protected override void Configure(StorageEnvironmentOptions options)
         {
-            options.MaxLogFileSize = 1000 * options.PageSize;
+            options.MaxLogFileSize = 1000 * Constants.Storage.PageSize;
             options.IncrementalBackupEnabled = true;
             options.ManualFlushing = true;
         }
@@ -169,13 +170,13 @@ namespace FastTests.Voron.Backups
                 tx.Commit();
             }
 
-            var usedPagesInJournal = Env.Journal.CurrentFile.WritePagePosition;
+            var usedPagesInJournal = Env.Journal.CurrentFile.WritePosIn4KbPosition;
 
             var backedUpPages = BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(0));
 
             Assert.Equal(usedPagesInJournal, backedUpPages);
 
-            var writePos = Env.Journal.CurrentFile.WritePagePosition;
+            var writePos = Env.Journal.CurrentFile.WritePosIn4KbPosition;
 
             using (var tx = Env.WriteTransaction())
             {
@@ -188,7 +189,7 @@ namespace FastTests.Voron.Backups
                 tx.Commit();
             }
 
-            var usedByLastTransaction = Env.Journal.CurrentFile.WritePagePosition - writePos;
+            var usedByLastTransaction = Env.Journal.CurrentFile.WritePosIn4KbPosition - writePos;
 
             backedUpPages = BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(1));
 
@@ -239,7 +240,7 @@ namespace FastTests.Voron.Backups
                 tx.Commit();
             }
 
-            var usedPagesInJournal = Env.Journal.CurrentFile.WritePagePosition;
+            var usedPagesInJournal = Env.Journal.CurrentFile.WritePosIn4KbPosition;
 
             var backedUpPages = BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(0));
 
@@ -247,9 +248,9 @@ namespace FastTests.Voron.Backups
 
             // We don't modify anything between backups - to create empty incremental backup
 
-            var writePos = Env.Journal.CurrentFile.WritePagePosition;
+            var writePos = Env.Journal.CurrentFile.WritePosIn4KbPosition;
 
-            var usedByLastTransaction = Env.Journal.CurrentFile.WritePagePosition - writePos;
+            var usedByLastTransaction = Env.Journal.CurrentFile.WritePosIn4KbPosition - writePos;
             Assert.Equal(0, usedByLastTransaction);
 
             backedUpPages = BackupMethods.Incremental.ToFile(Env, IncrementalBackupTestUtils.IncrementalBackupFile(1));

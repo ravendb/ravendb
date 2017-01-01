@@ -7,16 +7,16 @@ using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Routing;
 using Sparrow.Collections;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System
 {
     public class AdminWatchHandler : AdminRequestHandler
     {
+        private static readonly ArraySegment<byte> Heartbeat = new ArraySegment<byte>(new[] { (byte)'\r', (byte)'\n' });
+
         [RavenAction("/admin/watch", "GET", "/admin/watch")]
         public async Task GetChanges()
         {
-            var heartbeat = new ArraySegment<byte>(new[] { (byte)'\r', (byte)'\n' });
             var ms = new MemoryStream();
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             {
@@ -30,7 +30,7 @@ namespace Raven.Server.Web.System
                         if (tuple.Item1 == false)
                         {
                             await
-                                webSocket.SendAsync(heartbeat, WebSocketMessageType.Text, true,
+                                webSocket.SendAsync(Heartbeat, WebSocketMessageType.Text, true,
                                     ServerStore.ServerShutdown);
                             continue;
                         }

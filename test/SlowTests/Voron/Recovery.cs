@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Voron;
+using Voron.Global;
 using Xunit;
 
 namespace SlowTests.Voron
@@ -247,7 +248,7 @@ namespace SlowTests.Voron
             var count = 1000;
 
             var options = StorageEnvironmentOptions.ForPath(DataDir);
-            options.MaxLogFileSize = 10 * options.PageSize;
+            options.MaxLogFileSize = 10 * Constants.Storage.PageSize;
 
             using (var env = new StorageEnvironment(options))
             {
@@ -277,7 +278,7 @@ namespace SlowTests.Voron
             var expectedString = Encoding.UTF8.GetString(buffer);
 
             options = StorageEnvironmentOptions.ForPath(DataDir);
-            options.MaxLogFileSize = 10 * options.PageSize;
+            options.MaxLogFileSize = 10 * Constants.Storage.PageSize;
 
             using (var env = new StorageEnvironment(options))
             {

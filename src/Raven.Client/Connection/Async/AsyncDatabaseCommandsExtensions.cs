@@ -4,6 +4,7 @@ using System.Linq;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
 using Raven.Client.Data;
+using Raven.Client.Util;
 
 namespace Raven.Client.Connection.Async
 {

@@ -38,7 +38,7 @@ namespace Raven.Client.Document
             {
                 if (databaseCommands == null)
                 {
-                    var shardsToOperateOn = getShardsToOperateOn(new ShardRequestData { EntityType = typeof(T), Query = IndexQuery , IndexName = indexName});
+                    var shardsToOperateOn = getShardsToOperateOn(new ShardRequestData { EntityType = typeof(T), Query = IndexQuery, IndexName = indexName });
                     databaseCommands = shardsToOperateOn.Select(x => x.Item2).ToList();
                 }
                 return databaseCommands;
@@ -110,7 +110,9 @@ namespace Raven.Client.Document
                 disableEntitiesTracking = disableEntitiesTracking,
                 disableCaching = disableCaching,
                 showQueryTimings = showQueryTimings,
-                shouldExplainScores = shouldExplainScores
+                shouldExplainScores = shouldExplainScores,
+                resultsTransformer = resultsTransformer,
+                transformerParameters = transformerParameters,
             };
             documentQuery.AfterQueryExecuted(afterQueryExecutedCallback);
             return documentQuery;

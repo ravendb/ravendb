@@ -36,6 +36,7 @@ using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 using Raven.Client.Document.Async;
 using Raven.Client.Indexing;
+using Raven.Client.Util;
 using Raven.Imports.Newtonsoft.Json.Utilities;
 
 namespace Raven.Client.Document
@@ -1983,6 +1984,11 @@ If you really want to do in memory filtering on the data returned from the query
 
             var type = TypeSystem.GetNonNullableType(whereParams.Value.GetType());
 
+            if (conventions.SaveEnumsAsIntegers && type.IsEnum())
+            {
+                return ((int)whereParams.Value).ToString();
+            }
+
             if (type == typeof(bool))
             {
                 return (bool)whereParams.Value ? "true" : "false";
@@ -2019,7 +2025,7 @@ If you really want to do in memory filtering on the data returned from the query
             if (strValue != null)
             {
                 strValue = RavenQuery.Escape(strValue,
-                        whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
+                        whereParams.AllowWildcards && whereParams.IsAnalyzed, whereParams.IsAnalyzed);
 
                 return whereParams.IsAnalyzed ? strValue : String.Concat("[[", strValue, "]]");
             }

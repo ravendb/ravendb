@@ -5,18 +5,19 @@ namespace Raven.Server.Documents.Queries.Parse
     internal partial class LuceneQueryParser
     {
         public LuceneQueryParser() : base(null) { }
-        private bool inMethod;
+
+        private bool _inMethod;
         public bool InMethod
         {
             get
             {
-                return inMethod;
+                return _inMethod;
             }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set
             {
                 ((LuceneQueryScanner)Scanner).InMethod = value;
-                inMethod = value;
+                _inMethod = value;
             }
         }
         public void Parse(string s)

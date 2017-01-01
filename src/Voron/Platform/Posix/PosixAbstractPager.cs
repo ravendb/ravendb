@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
 using Voron.Data.BTrees;
+using Voron.Global;
 using Voron.Impl.Paging;
 using Voron.Platform.Win32;
 
@@ -65,7 +66,7 @@ namespace Voron.Platform.Posix
             if (pagesToPrefetch.Count == 0)
                 return;
 
-            long sizeToPrefetch = 4 * PageSize;
+            long sizeToPrefetch = 4 * Constants.Storage.PageSize;
 
             long size = 0;
             void* baseAddress = null;

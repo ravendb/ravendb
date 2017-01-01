@@ -197,8 +197,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private static unsafe uint CalculateQueryFieldsHash(FacetQuery query, JsonOperationContext context)
         {
-            var size = query.FieldsToFetch.Sum(x => x.Length);
-            var buffer = context.GetNativeTempBuffer(size);
+            int size = 0;
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var s in query.FieldsToFetch)
+            {
+                size += s.Length;
+            }
+            var buffer = context.GetNativeTempBuffer(size * sizeof(char));
             var destChars = (char*)buffer;
 
             var position = 0;

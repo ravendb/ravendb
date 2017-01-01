@@ -42,7 +42,7 @@ namespace SlowTests.MailingList
 
                     var enumerable = results.Value; //force evaluation
                     Assert.Equal(1, enumerable.Count());
-                    Assert.Equal(DateTime.Now.Year, stats.IndexTimestamp.Year);
+                    Assert.Equal(DateTime.UtcNow.Year, stats.IndexTimestamp.Year);
                     Assert.Equal(1, stats.TotalResults);
                 }
             }
@@ -80,7 +80,7 @@ namespace SlowTests.MailingList
 
                     var enumerable = results.Value; //force evaluation
                     Assert.Equal(1, enumerable.Count());
-                    Assert.Equal(DateTime.Now.Year, stats.IndexTimestamp.Year);
+                    Assert.Equal(DateTime.UtcNow.Year, stats.IndexTimestamp.Year);
                     Assert.Equal(1, stats.TotalResults);
                 }
             }
@@ -114,7 +114,7 @@ namespace SlowTests.MailingList
                     var results = query.Take(8).ToList();
 
                     Assert.Equal(1, results.Count());
-                    Assert.Equal(DateTime.Now.Year, stats.IndexTimestamp.Year);
+                    Assert.Equal(DateTime.UtcNow.Year, stats.IndexTimestamp.Year);
                     Assert.True(stats.TotalResults > 0);
                 }
             }
@@ -150,7 +150,7 @@ namespace SlowTests.MailingList
 
                     var enumerable = results.Value;//force evaluation
                     Assert.Equal(1, enumerable.Count());
-                    Assert.Equal(DateTime.Now.Year, stats.IndexTimestamp.Year);
+                    Assert.Equal(DateTime.UtcNow.Year, stats.IndexTimestamp.Year);
                     Assert.True(stats.TotalResults > 0);
                 }
             }
@@ -185,7 +185,7 @@ namespace SlowTests.MailingList
                     var results = query.Take(8).ToList();
 
                     Assert.Equal(1, results.Count());
-                    Assert.Equal(DateTime.Now.Year, stats.IndexTimestamp.Year);
+                    Assert.Equal(DateTime.UtcNow.Year, stats.IndexTimestamp.Year);
                     Assert.True(stats.TotalResults > 0);
                 }
             }

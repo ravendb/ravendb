@@ -46,10 +46,10 @@ namespace Raven.NewClient.Client.Http
 
             public void Release()
             {
-                if (Interlocked.Decrement(ref Usages) != 0)
+                if (Interlocked.Decrement(ref Usages) > 0)
                     return;
 
-                if (Interlocked.CompareExchange(ref Usages, int.MinValue, 0) != 0)
+                if (Interlocked.CompareExchange(ref Usages, -(1000 * 1000), 0) != 0)
                     return;
 
                 Cache._unmanagedBuffersPool.Return(Allocation);

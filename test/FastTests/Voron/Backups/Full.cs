@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Xunit;
 using Voron;
+using Voron.Global;
 using Voron.Impl.Backup;
 
 namespace FastTests.Voron.Backups
@@ -11,7 +12,7 @@ namespace FastTests.Voron.Backups
     {
         protected override void Configure(StorageEnvironmentOptions options)
         {
-            options.MaxLogFileSize = 1000 * options.PageSize;
+            options.MaxLogFileSize = 1000 * Constants.Storage.PageSize;
             options.ManualFlushing = true;
         }
 

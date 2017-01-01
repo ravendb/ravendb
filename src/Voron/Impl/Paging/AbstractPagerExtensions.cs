@@ -18,7 +18,7 @@ namespace Voron.Impl.Paging
 
         public static TreePage Read(this AbstractPager pager, IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)
         {
-            return new TreePage(pager.AcquirePagePointer(tx, pageNumber, pagerState), pager.PageSize);
+            return new TreePage(pager.AcquirePagePointer(tx, pageNumber, pagerState), Constants.Storage.PageSize);
         }
 
         public static bool WillRequireExtension(this AbstractPager pager, long requestedPageNumber, int numberOfPages)
@@ -33,8 +33,8 @@ namespace Voron.Impl.Paging
 
         public static int GetNumberOfOverflowPages(this AbstractPager pager, long overflowSize)
         {
-            overflowSize += Constants.TreePageHeaderSize;
-            return checked((int)(overflowSize / pager.PageSize) + (overflowSize % pager.PageSize == 0 ? 0 : 1));
+            overflowSize += Constants.Tree.PageHeaderSize;
+            return checked((int)(overflowSize / Constants.Storage.PageSize) + (overflowSize % Constants.Storage.PageSize == 0 ? 0 : 1));
         }
     }
 }

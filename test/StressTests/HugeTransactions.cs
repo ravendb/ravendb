@@ -11,6 +11,7 @@ using Xunit;
 using Voron;
 using Voron.Impl.Paging;
 using Sparrow.Compression;
+using Voron.Global;
 
 namespace StressTests
 {
@@ -182,8 +183,8 @@ namespace StressTests
         {
             var filename = $"{Path.GetTempPath()}{Path.DirectorySeparatorChar}TestBigCompression-{scratchName}";
             long bufferSize = LZ4.MaximumOutputLength(inputSize);
-            int bufferSizeInPages = checked((int)(bufferSize / env.Options.PageSize));
-            var pager = env.Options.CreateScratchPager(filename, bufferSizeInPages * env.Options.PageSize);
+            int bufferSizeInPages = checked((int)(bufferSize / Constants.Storage.PageSize));
+            var pager = env.Options.CreateScratchPager(filename, bufferSizeInPages * Constants.Storage.PageSize);
             pager.EnsureContinuous(0, bufferSizeInPages);
             buffer = pager.AcquirePagePointer(null, 0);
             return pager;

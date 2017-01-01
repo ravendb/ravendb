@@ -1,9 +1,13 @@
 ﻿using System;
+using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Abstractions.Data;
 using Raven.Client.Data;
+using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -13,141 +17,115 @@ namespace Raven.Server.Web.Authentication
     public class AdminApiKeysHandler : RequestHandler
     {
         [RavenAction("/admin/api-keys", "PUT", "/admin/api-keys?name={api-key-name:string}")]
-        public Task PutApiKey()
+        public Task Put()
         {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
             TransactionOperationContext ctx;
             using (ServerStore.ContextPool.AllocateOperationContext(out ctx))
             {
-                var name = HttpContext.Request.Query["name"];
+                var apiKey = ctx.ReadForDisk(RequestBodyStream(), name);
 
-                if (name.Count != 1)
-                {
-                    HttpContext.Response.StatusCode = 400;
-                    return HttpContext.Response.WriteAsync("'name' query string must have exactly one value");
-                }
-
-                if (string.IsNullOrEmpty(name[0]))
-                {
-                    HttpContext.Response.StatusCode = 400;
-                    return HttpContext.Response.WriteAsync("'name' query string must be non-empty");
-                }
-
-                var apiKey = ctx.ReadForDisk(RequestBodyStream(), name[0]);
-
-                var errorTask = ValidateApiKeyStructure(name[0], apiKey);
+                var errorTask = ValidateApiKeyStructure(name, apiKey);
                 if (errorTask != null)
                     return errorTask;
 
                 using (var tx = ctx.OpenWriteTransaction())
                 {
-                    ServerStore.Write(ctx, Constants.ApiKeyPrefix + name[0], apiKey);
+                    ServerStore.Write(ctx, Constants.ApiKeyPrefix + name, apiKey);
 
                     tx.Commit();
                 }
+
                 AccessToken value;
-                if (Server.AccessTokensByName.TryRemove(name[0], out value))
+                if (Server.AccessTokensByName.TryRemove(name, out value))
                 {
                     Server.AccessTokensById.TryRemove(value.Token, out value);
                 }
-                return Task.CompletedTask;
-            }
-        }
-
-        [RavenAction("/admin/api-keys", "GET", "/admin/api-keys?name={api-key-name:string}")]
-        public Task GetApiKey()
-        {
-            TransactionOperationContext ctx;
-            using (ServerStore.ContextPool.AllocateOperationContext(out ctx))
-            {
-                var name = HttpContext.Request.Query["name"];
-
-                if (name.Count != 1)
-                {
-                    HttpContext.Response.StatusCode = 400;
-                    return HttpContext.Response.WriteAsync("'name' query string must have exactly one value");
-                }
-
-                ctx.OpenReadTransaction();
-
-                var apiKey = ServerStore.Read(ctx, Constants.ApiKeyPrefix + name[0]);
-
-                if (apiKey == null)
-                {
-                    HttpContext.Response.StatusCode = 404;
-                    return Task.CompletedTask;
-                }
-
-                HttpContext.Response.StatusCode = 200;
-
-                ctx.Write(ResponseBodyStream(), apiKey);
 
                 return Task.CompletedTask;
             }
         }
 
         [RavenAction("/admin/api-keys", "DELETE", "/admin/api-keys?name={api-key-name:string}")]
-        public Task DeleteApiKey()
+        public Task Delete()
         {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
             TransactionOperationContext ctx;
             using (ServerStore.ContextPool.AllocateOperationContext(out ctx))
             {
-                var name = HttpContext.Request.Query["name"];
-
-                if (name.Count != 1)
-                {
-                    HttpContext.Response.StatusCode = 400;
-                    return HttpContext.Response.WriteAsync("'name' query string must have exactly one value");
-                }
-
                 using (var tx = ctx.OpenWriteTransaction())
                 {
-                    ServerStore.Delete(ctx, Constants.ApiKeyPrefix + name[0]);
+                    ServerStore.Delete(ctx, Constants.ApiKeyPrefix + name);
 
                     tx.Commit();
                 }
+
                 AccessToken value;
-                if (Server.AccessTokensByName.TryRemove(name[0], out value))
+                if (Server.AccessTokensByName.TryRemove(name, out value))
                 {
                     Server.AccessTokensById.TryRemove(value.Token, out value);
                 }
+
                 return Task.CompletedTask;
             }
         }
 
 
-        [RavenAction("/admin/apikeys/all", "GET", "/admin/apikeys/all")]
-        public Task GetAllGetApiKey()
+        [RavenAction("/admin/api-keys", "GET", "/admin/api-keys")]
+        public Task GetAll()
         {
+            var name = GetStringQueryString("name", required: false);
+
             var start = GetStart();
             var pageSize = GetPageSize();
 
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
             {
-                context.OpenReadTransaction();
+                ServerStore.Item[] apiKeys;
+                if (string.IsNullOrEmpty(name))
+                    apiKeys = ServerStore
+                        .StartingWith(context, Constants.ApiKeyPrefix, start, pageSize)
+                        .ToArray();
+                else
+                {
+                    var key = Constants.ApiKeyPrefix + name;
+                    var apiKey = ServerStore.Read(context, key);
+                    if (apiKey == null)
+                    {
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                        return Task.CompletedTask;
+                    }
 
+                    apiKeys = new[]
+                    {
+                        new ServerStore.Item
+                        {
+                            Data = apiKey,
+                            Key = key
+                        }
+                    };
+                }
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    writer.WriteStartArray();
-                    bool first = true;
-                    foreach (var item in ServerStore.StartingWith(context, Constants.ApiKeyPrefix, start, pageSize))
+                    writer.WriteStartObject();
+                    writer.WriteResults(context, apiKeys, (w, c, apiKey) =>
                     {
-                        if (first == false)
-                            writer.WriteComma();
-                        else
-                            first = false;
+                        var username = apiKey.Key.Substring(Constants.ApiKeyPrefix.Length);
 
-                        string username = item.Key.Substring(Constants.ApiKeyPrefix.Length);
-
-                        item.Data.Modifications = new DynamicJsonValue(item.Data)
+                        apiKey.Data.Modifications = new DynamicJsonValue(apiKey.Data)
                         {
-                            ["UserName"] = username
+                            [nameof(NamedApiKeyDefinition.UserName)] = username
                         };
-                        context.Write(writer, item.Data);
-                    }
-                    writer.WriteEndArray();
 
+                        c.Write(w, apiKey.Data);
+                    });
+
+                    writer.WriteEndObject();
                 }
             }
 

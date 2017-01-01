@@ -152,6 +152,10 @@ namespace Sparrow.Json
                 _tempBuffer.Address == null ||
                 _tempBuffer.SizeInBytes < requestedSize)
             {
+                if (_tempBuffer != null && _tempBuffer.Address != null)
+                {
+                    _arenaAllocator.Return(_tempBuffer);
+                }
                 _tempBuffer = GetMemory(Math.Max(_tempBuffer?.SizeInBytes ?? 0, requestedSize));
             }
 
@@ -474,10 +478,12 @@ namespace Sparrow.Json
             private readonly JsonOperationContext _context;
             private readonly Stream _stream;
             private readonly ManagedPinnedBuffer _buffer;
-            public readonly UnmanagedJsonParser _parser;
+            private readonly UnmanagedJsonParser _parser;
             private readonly BlittableJsonDocumentBuilder _writer;
             private ReturnBuffer _returnManagedBuffer;
             private int _bufferOffset;
+
+            public UnmanagedJsonParser Parser => _parser;
 
             public MultiDocumentParser(JsonOperationContext context, Stream stream)
             {
@@ -670,7 +676,10 @@ namespace Sparrow.Json
         protected internal virtual unsafe void Reset()
         {
             if (_tempBuffer != null)
+            {
+                _arenaAllocator.Return(_tempBuffer);
                 _tempBuffer.Address = null;
+            }
 
             foreach (var builder in _liveReaders)
             {

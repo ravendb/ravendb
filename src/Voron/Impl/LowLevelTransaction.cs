@@ -115,8 +115,6 @@ namespace Voron.Impl
 
         public long Id => _id;
 
-        public readonly int PageSize;
-
         public bool Committed { get; private set; }
 
         public bool RolledBack { get; private set; }
@@ -142,8 +140,6 @@ namespace Voron.Impl
 
             PersistentContext = transactionPersistentContext;
             Flags = flags;
-
-            PageSize = DataPager.PageSize;
 
             var scratchPagerStates = env.ScratchBufferPool.GetPagerStatesOfAllScratches();
             foreach (var scratchPagerState in scratchPagerStates.Values)
@@ -233,7 +229,7 @@ namespace Voron.Impl
 
             _transactionHeaderPage = allocation;
 
-            UnmanagedMemory.Set(page.Pointer, 0, Environment.Options.PageSize);
+            UnmanagedMemory.Set(page.Pointer, 0, Constants.Storage.PageSize);
             _txHeader = (TransactionHeader*)page.Pointer;
             _txHeader->HeaderMarker = Constants.TransactionHeaderMarker;
 
@@ -287,7 +283,7 @@ namespace Voron.Impl
             if (currentPage.IsOverflow)
             {
                 newPage = AllocateOverflowRawPage(currentPage.OverflowSize, num, currentPage, zeroPage: false);
-                pageSize = Environment.Options.PageSize *
+                pageSize = Constants.Storage.PageSize *
                            DataPager.GetNumberOfOverflowPages(currentPage.OverflowSize);
             }
             else
@@ -380,7 +376,7 @@ namespace Voron.Impl
 
             Debug.Assert(overflowSize >= 0);
 
-            long numberOfPages = (overflowSize / PageSize) + (overflowSize % PageSize == 0 ? 0 : 1);
+            long numberOfPages = (overflowSize / Constants.Storage.PageSize) + (overflowSize % Constants.Storage.PageSize == 0 ? 0 : 1);
 
             var overflowPage = AllocatePage((int)numberOfPages, pageNumber, previousPage, zeroPage);
             overflowPage.Flags = PageFlags.Overflow;
@@ -396,7 +392,7 @@ namespace Voron.Impl
 
             if (_env.Options.MaxStorageSize.HasValue) // check against quota
             {
-                var maxAvailablePageNumber = _env.Options.MaxStorageSize / Environment.Options.PageSize;
+                var maxAvailablePageNumber = _env.Options.MaxStorageSize / Constants.Storage.PageSize;
 
                 if (pageNumber > maxAvailablePageNumber)
                     ThrowQuotaExceededException(pageNumber, maxAvailablePageNumber);
@@ -437,7 +433,7 @@ namespace Voron.Impl
                 pageFromScratchBuffer.PositionInScratchBuffer);
 
             if (zeroPage)
-                UnmanagedMemory.Set(newPage.Pointer, 0, Environment.Options.PageSize * numberOfPages);
+                UnmanagedMemory.Set(newPage.Pointer, 0, Constants.Storage.PageSize * numberOfPages);
 
             newPage.PageNumber = pageNumber;
             newPage.Flags = PageFlags.Single;

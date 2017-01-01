@@ -38,6 +38,7 @@ namespace Raven.Server.Documents.Replication
         internal Dictionary<string, ScriptResolver> ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
         private readonly Logger _log;
         private ReplicationDocument _replicationDocument;
+        private int _numberOfSiblings;
 
         public IEnumerable<IncomingConnectionInfo> IncomingConnections => _incoming.Values.Select(x => x.ConnectionInfo);
         public IEnumerable<ReplicationDestination> OutgoingConnections => _outgoing.Select(x => x.Destination);
@@ -158,7 +159,7 @@ namespace Raven.Server.Documents.Replication
 
             // need to safeguard against two concurrent connection attempts
             var newConnection = _incoming.GetOrAdd(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming);
-            if(newConnection == newIncoming)
+            if (newConnection == newIncoming)
                 newIncoming.Start();
             else
                 newIncoming.Dispose();
@@ -181,7 +182,7 @@ namespace Raven.Server.Documents.Replication
                     {
                         if (_log.IsInfoEnabled)
                         {
-                            _log.Info($"Failed to start outgoing replciation to {failure.Destination}", e);
+                            _log.Info($"Failed to start outgoing replication to {failure.Destination}", e);
                         }
                     }
                 }
@@ -227,7 +228,7 @@ namespace Raven.Server.Documents.Replication
                 value.Dispose();
             }
 
-           
+
         }
 
         public void Initialize()
@@ -282,12 +283,20 @@ namespace Raven.Server.Documents.Replication
             if (_log.IsInfoEnabled)
                 _log.Info($"Initializing {_replicationDocument.Destinations.Count:#,#} outgoing replications..");
 
+            var countOfDestinations = 0;
             foreach (var destination in _replicationDocument.Destinations)
             {
+                if (destination.Disabled)
+                    continue;
+
+                countOfDestinations++;
+
                 AddAndStartOutgoingReplication(destination);
                 if (_log.IsInfoEnabled)
                     _log.Info($"Initialized outgoing replication for [{destination.Database}/{destination.Url}]");
             }
+
+            _numberOfSiblings = countOfDestinations;
 
             if (_log.IsInfoEnabled)
                 _log.Info("Finished initialization of outgoing replications..");
@@ -298,7 +307,7 @@ namespace Raven.Server.Documents.Replication
             var outgoingReplication = new OutgoingReplicationHandler(_database, destination);
             outgoingReplication.Failed += OnOutgoingSendingFailed;
             outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
-            _outgoing.TryAdd(outgoingReplication); // can't fail, this is a brand new instace
+            _outgoing.TryAdd(outgoingReplication); // can't fail, this is a brand new instance
             _outgoingFailureInfo.TryAdd(destination, new ConnectionFailureInfo
             {
                 Destination = destination
@@ -348,7 +357,7 @@ namespace Raven.Server.Documents.Replication
             {
                 ThreadPool.QueueUserWorkItem(task => ((TaskCompletionSource<object>)task).TrySetResult(null), result);
             }
-            
+
         }
 
         private void OnIncomingReceiveSucceeded(IncomingReplicationHandler instance)
@@ -370,12 +379,17 @@ namespace Raven.Server.Documents.Replication
             if (_log.IsInfoEnabled)
                 _log.Info("System document change detected. Starting and stopping outgoing replication threads.");
 
+            //prevent reconnecting to a destination that we shouldn't in case we have flaky network
+            _reconnectQueue.Clear();
 
             foreach (var instance in _outgoing)
+            {
+                instance.Failed -= OnOutgoingSendingFailed;
+                instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
                 instance.Dispose();
+            }
 
             _outgoing.Clear();
-
             _outgoingFailureInfo.Clear();
 
             InitializeOutgoingReplications();
@@ -456,15 +470,15 @@ namespace Raven.Server.Documents.Replication
 
         public int GetSizeOfMajority()
         {
-            return _outgoing.Count/2 + 1;
+            return _numberOfSiblings / 2 + 1;
         }
 
         public async Task<int> WaitForReplicationAsync(
-            int numberOfReplicasToWaitFor, 
-            TimeSpan waitForReplicasTimeout, 
+            int numberOfReplicasToWaitFor,
+            TimeSpan waitForReplicasTimeout,
             long lastEtag)
         {
-            if (_outgoing.Count == 0)
+            if (_numberOfSiblings == 0)
             {
                 if (_log.IsInfoEnabled)
                 {
@@ -472,20 +486,35 @@ namespace Raven.Server.Documents.Replication
                 }
                 return numberOfReplicasToWaitFor;
             }
+            if (_numberOfSiblings < numberOfReplicasToWaitFor)
+            {
+                if (_log.IsInfoEnabled)
+                {
+                    _log.Info($"Was asked to get write assurance on a database with {numberOfReplicasToWaitFor} servers but we have only {_numberOfSiblings} servers, reducing request to {_numberOfSiblings}");
+                }
+                numberOfReplicasToWaitFor = _numberOfSiblings;
+            }
             var sp = Stopwatch.StartNew();
             while (true)
             {
+                var waitForNextReplicationAsync = WaitForNextReplicationAsync();
                 var past = ReplicatedPast(lastEtag);
                 if (past >= numberOfReplicasToWaitFor)
                     return past;
 
                 var remaining = waitForReplicasTimeout - sp.Elapsed;
-                if(remaining < TimeSpan.Zero)
+                if (remaining < TimeSpan.Zero)
                     return ReplicatedPast(lastEtag);
 
                 var timeout = Task.Delay(remaining);
-
-                if (await Task.WhenAny(WaitForNextReplicationAsync(), timeout) == timeout)
+                try
+                {
+                    if (await Task.WhenAny(waitForNextReplicationAsync, timeout) == timeout)
+                    {
+                        return ReplicatedPast(lastEtag);
+                    }
+                }
+                catch (OperationCanceledException)
                 {
                     return ReplicatedPast(lastEtag);
                 }
