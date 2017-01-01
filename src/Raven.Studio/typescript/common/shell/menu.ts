@@ -165,8 +165,9 @@ class menu {
         }
 
         let item = this.routeToItemCache().get(matchingRoute);
-
-        this.activeItem(item);
+        if (item.nav) {
+            this.activeItem(item);
+        }
         this.setLevelToActiveItem();
     }
 
