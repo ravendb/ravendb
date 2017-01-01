@@ -337,11 +337,7 @@ class query extends viewModelBase {
     }
 
     selectInitialQuery(indexNameOrRecentQueryHash: string) {
-        if (!indexNameOrRecentQueryHash && this.indexes().length > 0) {
-            var firstIndexName = _.first(this.indexes()).name;
-            this.setSelectedIndex(firstIndexName);
-        }
-        else if (!indexNameOrRecentQueryHash) {
+        if (!indexNameOrRecentQueryHash) {
              // if no index exists ==> use the default dynamic/All Documents
              this.setSelectedIndex("dynamic");
         }
