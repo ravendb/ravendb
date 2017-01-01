@@ -203,7 +203,7 @@ namespace Voron.Impl.Journal
             {
                 var scratchPage = scratchBufferPool.ReadPage(tx, txPage.ScratchFileNumber, txPage.PositionInScratchBuffer);
                 var pageNumber = scratchPage.PageNumber;
-
+                Debug.Assert(pageNumber >= 0);
                 PagePosition value;
                 if (_pageTranslationTable.TryGetValue(tx, pageNumber, out value))
                 {

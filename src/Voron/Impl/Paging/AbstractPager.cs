@@ -298,7 +298,7 @@ namespace Voron.Impl.Paging
                 numberOfPages = this.GetNumberOfOverflowPages(pageHeader->OverflowSize);
             }
             const int adjustPageSize = (Constants.Storage.PageSize)/(4*Constants.Size.Kilobyte);
-            destwI4KbBatchWrites.Write(pageHeader->PageNumber * adjustPageSize, numberOfPages * adjustPageSize, src);
+            destwI4KbBatchWrites.Write(pageHeader->PageNumber * (long)adjustPageSize, numberOfPages * adjustPageSize, src);
 
             return numberOfPages;
         }

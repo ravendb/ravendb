@@ -1078,14 +1078,15 @@ namespace Voron.Impl.Journal
             var sizeOfPagesHeader = numberOfPages * sizeof(TransactionHeaderPageInfo);
             var diffOverhead = sizeOfPagesHeader + (long)numberOfPages * sizeof(long);
             var diffOverheadInPages = checked((int)(diffOverhead / Constants.Storage.PageSize + (diffOverhead % Constants.Storage.PageSize == 0 ? 0 : 1)));
-            long maxSizeRequiringCompression = (long)pageCountIncludingAllOverflowPages * Constants.Storage.PageSize + diffOverhead;
+            long maxSizeRequiringCompression = (long)pageCountIncludingAllOverflowPages * (long)Constants.Storage.PageSize + diffOverhead;
             var outputBufferSize = LZ4.MaximumOutputLength(maxSizeRequiringCompression);
 
             int outputBufferInPages = checked((int)((outputBufferSize + sizeof(TransactionHeader)) / Constants.Storage.PageSize +
                                       ((outputBufferSize + sizeof(TransactionHeader)) % Constants.Storage.PageSize == 0 ? 0 : 1)));
 
             // The pages required includes the intermediate pages and the required output pages. 
-            int pagesRequired = (pageCountIncludingAllOverflowPages + diffOverheadInPages + outputBufferInPages);
+            const int transactionHeaderPageOverhead = 1;
+            int pagesRequired = (transactionHeaderPageOverhead + pageCountIncludingAllOverflowPages + diffOverheadInPages + outputBufferInPages);
             var pagerState = compressionPager.EnsureContinuous(0, pagesRequired);
             tx.EnsurePagerStateReference(pagerState);
 
@@ -1133,8 +1134,8 @@ namespace Voron.Impl.Journal
             var totalSizeWritten = (write - outputBuffer) + sizeOfPagesHeader;
 
 
-            var fullTxBuffer = outputBuffer + (pageCountIncludingAllOverflowPages * Constants.Storage.PageSize) +
-                               diffOverheadInPages * Constants.Storage.PageSize;
+            var fullTxBuffer = outputBuffer + (pageCountIncludingAllOverflowPages * (long)Constants.Storage.PageSize) +
+                               diffOverheadInPages * (long)Constants.Storage.PageSize;
 
             var compressionBuffer = fullTxBuffer + sizeof(TransactionHeader);
 

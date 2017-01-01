@@ -102,7 +102,7 @@ namespace Sparrow.Compression
 
                 totalOutputSize += Encode64(input + readPosition, output + totalOutputSize, partInputLength, remaining, acceleration);
 
-                readPosition += MAX_INPUT_LENGTH_PER_SEGMENT;
+                readPosition += partInputLength;
             }
 
             return totalOutputSize;

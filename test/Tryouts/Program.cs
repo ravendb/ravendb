@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using FastTests.Voron;
+using StressTests;
 using Voron;
 using Voron.Global;
 using Voron.Impl.Scratch;
@@ -20,12 +21,11 @@ namespace Tryouts
             //        a.random_words_using_document_query_async().Wait();
             //    }
             //});
-           
 
-            //using (var a = new LazyTransactionsRespectPageBoundaries())
-            //{
-            //    a.CanSyncWhenLazyTransactionsHasBufferedMultipleTransactions();
-            //}
+            using (var a = new HugeTransactions())
+            {
+                a.CanWriteBigTransactions(2);
+            }
         }
     }
 

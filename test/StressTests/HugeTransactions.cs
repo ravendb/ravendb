@@ -11,6 +11,7 @@ using Xunit;
 using Voron;
 using Voron.Impl.Paging;
 using Sparrow.Compression;
+using Voron.Data.BTrees;
 using Voron.Global;
 
 namespace StressTests
@@ -21,7 +22,6 @@ namespace StressTests
         public const long HalfGb = 512L * 1024 * 1024;
         public const long Mb = 1024L * 1024;
 
-        const string chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890 ";
         public static Random Rand = new Random(123);
 
         [Theory]
@@ -39,10 +39,15 @@ namespace StressTests
                 // ignored
             }
 
-            using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(tmpFile)))
+            var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(tmpFile);
+            storageEnvironmentOptions.ManualFlushing = true;
+            using (var env = new StorageEnvironment(storageEnvironmentOptions))
             {
                 var value = new byte[HalfGb];
-                new Random().NextBytes(value);
+                var random = new Random();
+                //var seed = random.Next();
+                //Console.WriteLine(seed);
+                new Random(240130173).NextBytes(value);
                 value[0] = 11;
                 value[HalfGb - 1] = 22;
                 value[(HalfGb / 3) * 2] = 33;
@@ -59,7 +64,7 @@ namespace StressTests
                         ms1.Position = 0;
                         tree.Add("bigTreeKey" + i, ms1);
                     }
-
+                    ValidateTree(transactionSizeInGb, tree);
                     tx.Commit();
                 }
 
@@ -82,24 +87,28 @@ namespace StressTests
                 using (var snapshot = env.ReadTransaction())
                 {
                     var tree = snapshot.ReadTree("bigTree");
-                    fixed (byte* singleByte = new byte[1])
-                    {
-
-                        for (int i = 0; i < transactionSizeInGb * 2; i++)
-                        {
-                            var key = "bigTreeKey" + i;
-                            var reader = tree.Read(key).Reader;
-
-                            VerifyData(singleByte, reader, 0, 11);
-                            VerifyData(singleByte, reader, (int)HalfGb - 1, 22);
-                            VerifyData(singleByte, reader, ((int)HalfGb / 3) * 2, 33);
-                            VerifyData(singleByte, reader, (int)HalfGb / 2, 44);
-                            VerifyData(singleByte, reader, (int)HalfGb / 3, 55);
-                        }
-                    }
+                    ValidateTree(transactionSizeInGb, tree);
                 }
             }
             Directory.Delete(tmpFile, true);
+        }
+
+        private static unsafe void ValidateTree(long transactionSizeInGb, Tree tree)
+        {
+            fixed (byte* singleByte = new byte[1])
+            {
+                for (int i = 0; i < transactionSizeInGb*2; i++)
+                {
+                    var key = "bigTreeKey" + i;
+                    var reader = tree.Read(key).Reader;
+
+                    VerifyData(singleByte, reader, 0, 11);
+                    VerifyData(singleByte, reader, (int) HalfGb - 1, 22);
+                    VerifyData(singleByte, reader, ((int) HalfGb/3)*2, 33);
+                    VerifyData(singleByte, reader, (int) HalfGb/2, 44);
+                    VerifyData(singleByte, reader, (int) HalfGb/3, 55);
+                }
+            }
         }
 
         private static unsafe void VerifyData
@@ -184,7 +193,7 @@ namespace StressTests
             var filename = $"{Path.GetTempPath()}{Path.DirectorySeparatorChar}TestBigCompression-{scratchName}";
             long bufferSize = LZ4.MaximumOutputLength(inputSize);
             int bufferSizeInPages = checked((int)(bufferSize / Constants.Storage.PageSize));
-            var pager = env.Options.CreateScratchPager(filename, bufferSizeInPages * Constants.Storage.PageSize);
+            var pager = env.Options.CreateScratchPager(filename, (long)bufferSizeInPages * Constants.Storage.PageSize);
             pager.EnsureContinuous(0, bufferSizeInPages);
             buffer = pager.AcquirePagePointer(null, 0);
             return pager;
