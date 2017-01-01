@@ -39,7 +39,7 @@ namespace Raven.Server.Documents
         private static readonly Slice TombstonesSlice;
         private static readonly Slice KeyAndChangeVectorSlice;
 
-        private static readonly TableSchema DocsSchema = new TableSchema();
+        public static readonly TableSchema DocsSchema = new TableSchema();
         private static readonly Slice TombstonesPrefix;
         private static readonly Slice DeletedEtagsSlice;
         private static readonly TableSchema ConflictsSchema = new TableSchema();
@@ -1451,7 +1451,8 @@ namespace Raven.Server.Documents
 
             if (key[key.Length - 1] == '/')
             {
-                key = GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, table, context);
+                int tries;
+                key = GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, table, context, out tries);
             }
 
             byte* lowerKey;
@@ -1696,13 +1697,14 @@ namespace Raven.Server.Documents
             }
         }
 
-        private string GetNextIdentityValueWithoutOverwritingOnExistingDocuments(string key, Table table, DocumentsOperationContext context)
+        public string GetNextIdentityValueWithoutOverwritingOnExistingDocuments(string key, Table table, DocumentsOperationContext context,out int tries)
         {
             var identities = context.Transaction.InnerTransaction.ReadTree("Identities");
             var nextIdentityValue = identities.Increment(key, 1);
-
             var finalKey = key + nextIdentityValue;
             Slice finalKeySlice;
+            tries = 1;
+
             using (DocumentKeyWorker.GetSliceFromKey(context, finalKey, out finalKeySlice))
             {
                 if (table.ReadByKey(finalKeySlice) == null)
@@ -1721,6 +1723,7 @@ namespace Raven.Server.Documents
             var lastKnownFree = long.MaxValue;
             while (true)
             {
+                tries++;
                 finalKey = key + maybeFree;
                 using (DocumentKeyWorker.GetSliceFromKey(context, finalKey, out finalKeySlice))
                 {
@@ -1728,7 +1731,7 @@ namespace Raven.Server.Documents
                     {
                         if (lastKnownBusy + 1 == maybeFree)
                         {
-                            nextIdentityValue = identities.Increment(key, maybeFree);
+                            nextIdentityValue = identities.Increment(key, lastKnownBusy);
                             return key + nextIdentityValue;
                         }
                         lastKnownFree = maybeFree;

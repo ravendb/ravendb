@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Indexes;
 using Xunit;
@@ -70,7 +71,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async void CanExecuteIndexWithoutNRE()
+        public async Task CanExecuteIndexWithoutNRE()
         {
             using (var store = GetDocumentStore())
             {

@@ -1,20 +1,16 @@
-using Raven.Tests.Common;
+using FastTests;
+using Raven.Client.Data;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    using System.IO;
     using System.Linq;
-    using System.Net;
-    using System.Threading;
 
     using Raven.Abstractions.Data;
-    using Raven.Abstractions.Extensions;
-    using Raven.Abstractions.Indexing;
     using Raven.Client.Document;
 
     using Xunit;
 
-    public class RavenDB_554 : RavenTest
+    public class RavenDB_556 : RavenTestBase
     {
         public class Person
         {
@@ -28,16 +24,8 @@ namespace Raven.Tests.Issues
         [Fact]
         public void IndexEntryFieldShouldNotContainNullValues()
         {
-            const string IndexName = "Index1";
-
-            using (var server = GetNewServer())
-            {
-                server.SystemDatabase.Indexes.PutIndex(IndexName, new IndexDefinition
-                {
-                    Map = "from doc in docs select new { doc.FirstName, doc.LastName, Query = new[] { doc.FirstName, doc.LastName, doc.MiddleName } }"
-                });
-
-                using (var docStore = new DocumentStore { Url = "http://localhost:8079" }.Initialize())
+         
+                using (var docStore = GetDocumentStore())
                 {
                     using (var session = docStore.OpenSession())
                     {
@@ -49,19 +37,39 @@ namespace Raven.Tests.Issues
 
                     using (var session = docStore.OpenSession())
                     {
-                        session.Query<Person>(IndexName)
+                        var oldIndexes = session
+                            .Advanced
+                            .DocumentStore
+                            .DatabaseCommands
+                            .GetIndexNames(0, 100);
+                        session.Query<Person>()
                             .Customize(x => x.WaitForNonStaleResults())
+                            .Where(x => x.FirstName == "John" || x.FirstName == "Paul")
                             .ToList();
 
-                        var queryResult = session.Advanced.DocumentStore.DatabaseCommands.Query(IndexName, new IndexQuery(), null, false, true);
+                        var newIdnexes = session
+                            .Advanced
+                            .DocumentStore
+                            .DatabaseCommands
+                            .GetIndexNames(0, 100);
+
+
+                        var newIndex = newIdnexes.Except(oldIndexes).Single();
+
+                        var queryResult = session
+                            .Advanced
+                            .DocumentStore
+                            .DatabaseCommands
+                            .Query(newIndex, new IndexQuery(), false, true);
+
                         foreach (var result in queryResult.Results)
                         {
-                            var q = result["Query"].ToString();
+                            var q = result["FirstName"].ToString();
                             Assert.NotNull(q);
-                            Assert.False(q.Contains(Constants.NullValue));
+                            Assert.True(new[] { "john", "william", "paul" }.Contains(q));
                         }
                     }
-                }
+                
             }
         }
     }
