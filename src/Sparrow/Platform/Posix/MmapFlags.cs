@@ -1,5 +1,8 @@
-﻿namespace Voron.Platform.Posix
+﻿using System;
+
+namespace Voron.Platform.Posix
 {
+    [Flags]
     public enum MmapFlags : int
     {
         MAP_SHARED = 0x01,     // Share changes.

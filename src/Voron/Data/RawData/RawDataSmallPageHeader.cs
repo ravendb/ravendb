@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -11,6 +12,13 @@ namespace Voron.Data.RawData
     [StructLayout(LayoutKind.Explicit, Pack = 1, Size = PageHeader.SizeOf)]
     public unsafe struct RawDataSmallPageHeader
     {
+        public const int SizeOf = PageHeader.SizeOf;
+
+        static RawDataSmallPageHeader()
+        {
+            Debug.Assert(sizeof(RawDataSmallPageHeader) == SizeOf);
+        }
+
         [FieldOffset(0)]
         public long PageNumber;
 

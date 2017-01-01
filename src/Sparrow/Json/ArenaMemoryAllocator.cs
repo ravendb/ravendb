@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Sparrow.Binary;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Sparrow.Utils;
 
 namespace Sparrow.Json

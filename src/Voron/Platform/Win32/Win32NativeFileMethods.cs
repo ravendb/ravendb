@@ -8,6 +8,7 @@ using System;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Security;
 using System.Text;
 using System.Threading;
 using Microsoft.Win32.SafeHandles;
@@ -25,10 +26,8 @@ namespace Voron.Platform.Win32
         [StructLayout(LayoutKind.Explicit, Size = 8)]
         public struct FileSegmentElement
         {
-            [FieldOffset(0)]
-            public IntPtr Buffer;
-            [FieldOffset(0)]
-            public UInt64 Alignment;
+            [FieldOffset(0)] public IntPtr Buffer;
+            [FieldOffset(0)] public UInt64 Alignment;
         }
 
 
@@ -52,29 +51,30 @@ namespace Voron.Platform.Win32
         [return: MarshalAs(UnmanagedType.Bool)]
 
         public static extern bool SetFilePointerEx(SafeFileHandle hFile, long liDistanceToMove,
-           IntPtr lpNewFilePointer, Win32NativeFileMoveMethod dwMoveMethod);
+            IntPtr lpNewFilePointer, Win32NativeFileMoveMethod dwMoveMethod);
 
-        public delegate void WriteFileCompletionDelegate(UInt32 dwErrorCode, UInt32 dwNumberOfBytesTransfered, NativeOverlapped* lpOverlapped);
+        public delegate void WriteFileCompletionDelegate(
+            UInt32 dwErrorCode, UInt32 dwNumberOfBytesTransfered, NativeOverlapped* lpOverlapped);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
 
         public static extern bool WriteFileEx(SafeFileHandle hFile, byte* lpBuffer,
-           uint nNumberOfBytesToWrite, NativeOverlapped* lpOverlapped,
-           WriteFileCompletionDelegate lpCompletionRoutine);
+            uint nNumberOfBytesToWrite, NativeOverlapped* lpOverlapped,
+            WriteFileCompletionDelegate lpCompletionRoutine);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
 
         public static extern bool WriteFile(SafeFileHandle hFile, byte* lpBuffer, int nNumberOfBytesToWrite,
-                                            IntPtr lpNumberOfBytesWritten, NativeOverlapped* lpOverlapped);
+            IntPtr lpNumberOfBytesWritten, NativeOverlapped* lpOverlapped);
 
 
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
 
         public static extern bool WriteFile(SafeFileHandle hFile, byte* lpBuffer, int nNumberOfBytesToWrite,
-                                            out int lpNumberOfBytesWritten, NativeOverlapped* lpOverlapped);
+            out int lpNumberOfBytesWritten, NativeOverlapped* lpOverlapped);
 
 
 
@@ -88,15 +88,15 @@ namespace Voron.Platform.Win32
             int numBytesToRead,
             out int pNumberOfBytesRead,
             NativeOverlapped* lpOverlapped
-            );
+        );
 
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
 
         public static extern SafeFileHandle CreateFile(string lpFileName,
-                                                       Win32NativeFileAccess dwDesiredAccess, Win32NativeFileShare dwShareMode,
-                                                       IntPtr lpSecurityAttributes,
-                                                       Win32NativeFileCreationDisposition dwCreationDisposition,
-                                                       Win32NativeFileAttributes dwFlagsAndAttributes, IntPtr hTemplateFile);
+            Win32NativeFileAccess dwDesiredAccess, Win32NativeFileShare dwShareMode,
+            IntPtr lpSecurityAttributes,
+            Win32NativeFileCreationDisposition dwCreationDisposition,
+            Win32NativeFileAttributes dwFlagsAndAttributes, IntPtr hTemplateFile);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -113,9 +113,11 @@ namespace Voron.Platform.Win32
 
         public static extern bool FlushFileBuffers(SafeFileHandle hFile);
 
-        [DllImport("kernel32.dll", EntryPoint = "GetFinalPathNameByHandleW", CharSet = CharSet.Unicode, SetLastError = true)]
-        public static extern int GetFinalPathNameByHandle(SafeFileHandle handle, [In, Out] StringBuilder path, int bufLen, int flags);
-        
+        [DllImport("kernel32.dll", EntryPoint = "GetFinalPathNameByHandleW", CharSet = CharSet.Unicode,
+             SetLastError = true)]
+        public static extern int GetFinalPathNameByHandle(SafeFileHandle handle, [In, Out] StringBuilder path,
+            int bufLen, int flags);
+
         public static void SetFileLength(SafeFileHandle fileHandle, long length)
         {
             if (SetFilePointerEx(fileHandle, length, IntPtr.Zero, Win32NativeFileMoveMethod.Begin) == false)
@@ -131,8 +133,8 @@ namespace Voron.Platform.Win32
                 {
                     var filePath = new StringBuilder(256);
 
-                    while (GetFinalPathNameByHandle(fileHandle, filePath, filePath.Capacity, 0) > filePath.Capacity && 
-                        filePath.Capacity < 32767) // max unicode path length
+                    while (GetFinalPathNameByHandle(fileHandle, filePath, filePath.Capacity, 0) > filePath.Capacity &&
+                           filePath.Capacity < 32767) // max unicode path length
                     {
                         filePath.EnsureCapacity(filePath.Capacity*2);
                     }
@@ -148,7 +150,7 @@ namespace Voron.Platform.Win32
 
                 var exception = new Win32Exception(lastError);
 
-                if (lastError == (int) Win32NativeFileErrors.ERROR_NOT_READY || 
+                if (lastError == (int) Win32NativeFileErrors.ERROR_NOT_READY ||
                     lastError == (int) Win32NativeFileErrors.ERROR_FILE_NOT_FOUND)
                     throw new IOException("Could not set the file size because it is inaccessible", exception);
 
@@ -178,8 +180,8 @@ namespace Voron.Platform.Win32
         // Standard Section
         //
 
-        AccessSystemSecurity = 0x1000000,   // AccessSystemAcl access type
-        MaximumAllowed = 0x2000000,     // MaximumAllowed access type
+        AccessSystemSecurity = 0x1000000, // AccessSystemAcl access type
+        MaximumAllowed = 0x2000000, // MaximumAllowed access type
 
         Delete = 0x10000,
         ReadControl = 0x20000,
@@ -194,20 +196,20 @@ namespace Voron.Platform.Win32
         StandardRightsAll = 0x1F0000,
         SpecificRightsAll = 0xFFFF,
 
-        FILE_READ_DATA = 0x0001,        // file & pipe
-        FILE_LIST_DIRECTORY = 0x0001,       // directory
-        FILE_WRITE_DATA = 0x0002,       // file & pipe
-        FILE_ADD_FILE = 0x0002,         // directory
-        FILE_APPEND_DATA = 0x0004,      // file
-        FILE_ADD_SUBDIRECTORY = 0x0004,     // directory
+        FILE_READ_DATA = 0x0001, // file & pipe
+        FILE_LIST_DIRECTORY = 0x0001, // directory
+        FILE_WRITE_DATA = 0x0002, // file & pipe
+        FILE_ADD_FILE = 0x0002, // directory
+        FILE_APPEND_DATA = 0x0004, // file
+        FILE_ADD_SUBDIRECTORY = 0x0004, // directory
         FILE_CREATE_PIPE_INSTANCE = 0x0004, // named pipe
-        FILE_READ_EA = 0x0008,          // file & directory
-        FILE_WRITE_EA = 0x0010,         // file & directory
-        FILE_EXECUTE = 0x0020,          // file
-        FILE_TRAVERSE = 0x0020,         // directory
-        FILE_DELETE_CHILD = 0x0040,     // directory
-        FILE_READ_ATTRIBUTES = 0x0080,      // all
-        FILE_WRITE_ATTRIBUTES = 0x0100,     // all
+        FILE_READ_EA = 0x0008, // file & directory
+        FILE_WRITE_EA = 0x0010, // file & directory
+        FILE_EXECUTE = 0x0020, // file
+        FILE_TRAVERSE = 0x0020, // directory
+        FILE_DELETE_CHILD = 0x0040, // directory
+        FILE_READ_ATTRIBUTES = 0x0080, // all
+        FILE_WRITE_ATTRIBUTES = 0x0100, // all
 
         //
         // Generic Section
@@ -219,31 +221,32 @@ namespace Voron.Platform.Win32
         GenericAll = 0x10000000,
 
         SPECIFIC_RIGHTS_ALL = 0x00FFFF,
+
         FILE_ALL_ACCESS =
-        StandardRightsRequired |
-        Synchronize |
-        0x1FF,
+            StandardRightsRequired |
+            Synchronize |
+            0x1FF,
 
         FILE_GENERIC_READ =
-        StandardRightsRead |
-        FILE_READ_DATA |
-        FILE_READ_ATTRIBUTES |
-        FILE_READ_EA |
-        Synchronize,
+            StandardRightsRead |
+            FILE_READ_DATA |
+            FILE_READ_ATTRIBUTES |
+            FILE_READ_EA |
+            Synchronize,
 
         FILE_GENERIC_WRITE =
-        StandardRightsWrite |
-        FILE_WRITE_DATA |
-        FILE_WRITE_ATTRIBUTES |
-        FILE_WRITE_EA |
-        FILE_APPEND_DATA |
-        Synchronize,
+            StandardRightsWrite |
+            FILE_WRITE_DATA |
+            FILE_WRITE_ATTRIBUTES |
+            FILE_WRITE_EA |
+            FILE_APPEND_DATA |
+            Synchronize,
 
         FILE_GENERIC_EXECUTE =
-        StandardRightsExecute |
-          FILE_READ_ATTRIBUTES |
-          FILE_EXECUTE |
-          Synchronize
+            StandardRightsExecute |
+            FILE_READ_ATTRIBUTES |
+            FILE_EXECUTE |
+            Synchronize
     }
 
     [Flags]
@@ -253,18 +256,21 @@ namespace Voron.Platform.Win32
         ///
         /// </summary>
         None = 0x00000000,
+
         /// <summary>
         /// Enables subsequent open operations on an object to request read access.
         /// Otherwise, other processes cannot open the object if they request read access.
         /// If this flag is not specified, but the object has been opened for read access, the function fails.
         /// </summary>
         Read = 0x00000001,
+
         /// <summary>
         /// Enables subsequent open operations on an object to request write access.
         /// Otherwise, other processes cannot open the object if they request write access.
         /// If this flag is not specified, but the object has been opened for write access, the function fails.
         /// </summary>
         Write = 0x00000002,
+
         /// <summary>
         /// Enables subsequent open operations on an object to request delete access.
         /// Otherwise, other processes cannot open the object if they request delete access.
@@ -279,21 +285,25 @@ namespace Voron.Platform.Win32
         /// Creates a new file. The function fails if a specified file exists.
         /// </summary>
         New = 1,
+
         /// <summary>
         /// Creates a new file, always.
         /// If a file exists, the function overwrites the file, clears the existing attributes, combines the specified file attributes,
         /// and flags with FILE_ATTRIBUTE_ARCHIVE, but does not set the security descriptor that the SECURITY_ATTRIBUTES structure specifies.
         /// </summary>
         CreateAlways = 2,
+
         /// <summary>
         /// Opens a file. The function fails if the file does not exist.
         /// </summary>
         OpenExisting = 3,
+
         /// <summary>
         /// Opens a file, always.
         /// If a file does not exist, the function creates a file as if dwCreationDisposition is CREATE_NEW.
         /// </summary>
         OpenAlways = 4,
+
         /// <summary>
         /// Opens a file and truncates it so that its size is 0 (zero) bytes. The function fails if the file does not exist.
         /// The calling process must open the file with the GENERIC_WRITE access right.
@@ -382,6 +392,7 @@ namespace Voron.Platform.Win32
             AllAccess = 0x08,
             Execute = 0x20,
         }
+
         // ReSharper restore UnusedMember.Local
 
         [DllImport("kernel32.dll", SetLastError = true)]
@@ -389,11 +400,11 @@ namespace Voron.Platform.Win32
 
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern byte* MapViewOfFileEx(IntPtr hFileMappingObject,
-                                                    NativeFileMapAccessType dwDesiredAccess,
-                                                    uint dwFileOffsetHigh,
-                                                    uint dwFileOffsetLow,
-                                                    UIntPtr dwNumberOfBytesToMap,
-                                                    byte* lpBaseAddress);
+            NativeFileMapAccessType dwDesiredAccess,
+            uint dwFileOffsetHigh,
+            uint dwFileOffsetLow,
+            UIntPtr dwNumberOfBytesToMap,
+            byte* lpBaseAddress);
 
 
         [DllImport("kernel32.dll", SetLastError = true)]
@@ -405,6 +416,7 @@ namespace Voron.Platform.Win32
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool FlushViewOfFile(byte* lpBaseAddress, IntPtr dwNumberOfBytesToFlush);
     }
+
     public static unsafe class Win32NativeMethods
     {
         [StructLayout(LayoutKind.Sequential)]
@@ -424,18 +436,6 @@ namespace Voron.Platform.Win32
             public ushort processorRevision;
         }
 
-        [StructLayout(LayoutKind.Sequential)]
-        public struct MEMORY_BASIC_INFORMATION
-        {
-            public UIntPtr BaseAddress;
-            public UIntPtr AllocationBase;
-            public uint AllocationProtect;
-            public IntPtr RegionSize;
-            public uint State;
-            public uint Protect;
-            public uint Type;
-        }
-
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern IntPtr GetCurrentProcess();
 
@@ -444,29 +444,10 @@ namespace Voron.Platform.Win32
 
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern uint WaitForSingleObjectEx(IntPtr hHandle, int dwMilliseconds,
-           bool bAlertable);
-    
+            bool bAlertable);
+
         [DllImport("kernel32.dll")]
         public static extern void SetLastError(uint dwErrCode);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern byte* VirtualAlloc(byte* lpAddress, UIntPtr dwSize,
-            AllocationType flAllocationType, MemoryProtection flProtect);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern bool VirtualProtect(byte* lpAddress, UIntPtr dwSize,
-            MemoryProtection flNewProtect, out MemoryProtection lpflOldProtect);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern bool VirtualFree(byte* lpAddress, UIntPtr dwSize,
-            FreeType dwFreeType);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern int VirtualQuery(
-            byte* lpAddress,
-            MEMORY_BASIC_INFORMATION* lpBuffer,
-            UIntPtr dwLength
-        );
 
         [DllImport("Kernel32.dll", SetLastError = true)]
         public extern static bool DeviceIoControl(
@@ -544,54 +525,21 @@ namespace Voron.Platform.Win32
         }
 
         [Flags]
-        public enum IoControlCode : int // for more see : http://www.ioctls.net , http://www.pinvoke.net/default.aspx/kernel32/DeviceIoControl.html
+        public enum IoControlCode : int
+            // for more see : http://www.ioctls.net , http://www.pinvoke.net/default.aspx/kernel32/DeviceIoControl.html
         {
             IOCTL_STORAGE_GET_DEVICE_NUMBER = 0x2d1080
         }
 
         [Flags]
-        public enum CreationDisposition : uint // for more see : http://www.ioctls.net , http://www.pinvoke.net/default.aspx/kernel32/DeviceIoControl.html
+        public enum CreationDisposition : uint
+            // for more see : http://www.ioctls.net , http://www.pinvoke.net/default.aspx/kernel32/DeviceIoControl.html
         {
             CREATE_NEW = 1,
             CREATE_ALWAYS = 2,
             OPEN_EXISTING = 3,
             OPEN_ALWAYS = 4,
             TRUNCATE_EXISTING = 5
-        }
-
-        [Flags]
-        public enum FreeType : uint
-        {
-            MEM_DECOMMIT = 0x4000,
-            MEM_RELEASE = 0x8000
-        }
-
-        [Flags]
-        public enum AllocationType : uint
-        {
-            COMMIT = 0x1000,
-            RESERVE = 0x2000,
-            RESET = 0x80000,
-            LARGE_PAGES = 0x20000000,
-            PHYSICAL = 0x400000,
-            TOP_DOWN = 0x100000,
-            WRITE_WATCH = 0x200000
-        }
-
-        [Flags]
-        public enum MemoryProtection : uint
-        {
-            EXECUTE = 0x10,
-            EXECUTE_READ = 0x20,
-            EXECUTE_READWRITE = 0x40,
-            EXECUTE_WRITECOPY = 0x80,
-            NOACCESS = 0x01,
-            READONLY = 0x02,
-            READWRITE = 0x04,
-            WRITECOPY = 0x08,
-            GUARD_Modifierflag = 0x100,
-            NOCACHE_Modifierflag = 0x200,
-            WRITECOMBINE_Modifierflag = 0x400
         }
 
         // ReSharper restore InconsistentNaming
@@ -602,5 +550,10 @@ namespace Voron.Platform.Win32
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool CloseHandle(IntPtr hObject);
+
+        [DllImport("msvcrt.dll", EntryPoint = "memset", CallingConvention = CallingConvention.Cdecl,
+             SetLastError = false)]
+        [SecurityCritical]
+        private static extern IntPtr memset(byte* dest, int c, long count);
     }
 }
