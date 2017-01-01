@@ -40,7 +40,7 @@ namespace Raven.Database.Raft.Storage
 
         private long lastAppliedIndex;
 
-        internal RaftEngine RaftEngine { get; set; } 
+        internal RaftEngine RaftEngine { get; set; }
 
         public ClusterStateMachine(DocumentDatabase systemDatabase, DatabasesLandlord databasesLandlord)
         {
@@ -134,29 +134,40 @@ namespace Raven.Database.Raft.Storage
             using (var streamWriter = new StreamWriter(file))
             using (var jsonTextWriter = new JsonTextWriter(streamWriter))
             {
+
                 database.TransactionalStorage.Batch(accessor =>
                 {
                     allowFurtherModifications.Set();
 
                     jsonTextWriter.WriteStartObject();
 
-                    jsonTextWriter.WritePropertyName(Constants.Cluster.ClusterConfigurationDocumentKey);
+                    WriteClusterDocumentToSnapshot(jsonTextWriter, accessor, Constants.Cluster.ClusterConfigurationDocumentKey);
 
-                    var clusterConfig = accessor.Documents.DocumentByKey(Constants.Cluster.ClusterConfigurationDocumentKey);
-                    if (clusterConfig != null)
-                    {
-                        var json = clusterConfig.ToJson();
-                        json.WriteTo(jsonTextWriter);
-                    }
-                    else
-                    {
-                        jsonTextWriter.WriteNull();
-                    }
+                    WriteClusterDocumentToSnapshot(jsonTextWriter, accessor, Constants.Cluster.ClusterReplicationStateDocumentKey);
 
                     jsonTextWriter.WriteEndObject();
 
                 });
+
             }
+        }
+
+        private static void WriteClusterDocumentToSnapshot(JsonTextWriter jsonTextWriter, IStorageActionsAccessor accessor, string docName)
+        {
+
+            jsonTextWriter.WritePropertyName(docName);
+
+            var doc = accessor.Documents.DocumentByKey(docName);
+            if (doc != null)
+            {
+                var json = doc.ToJson();
+                json.WriteTo(jsonTextWriter);
+            }
+            else
+            {
+                jsonTextWriter.WriteNull();
+            }
+
         }
 
         public ISnapshotWriter GetSnapshotWriter()
@@ -203,7 +214,7 @@ namespace Raven.Database.Raft.Storage
         public void ApplySnapshot(long term, long index, Stream stream)
         {
             var reader = new BinaryReader(stream);
-            
+
             var len = reader.ReadInt64();
             var buffer = new byte[16 * 1024];
             var fileBuffer = new byte[len];
@@ -240,7 +251,7 @@ namespace Raven.Database.Raft.Storage
                             throw new InvalidDataException("StartObject was expected");
                         if (jsonReader.TokenType != JsonToken.StartObject)
                             throw new InvalidDataException("StartObject was expected");
-                        var json = (RavenJObject) RavenJToken.ReadFrom(jsonReader);
+                        var json = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
                         var metadata = json.Value<RavenJObject>(Constants.Metadata) ?? new RavenJObject();
                         json.Remove(Constants.Metadata);
                         accessor.Documents.InsertDocument(documentKey, json, metadata, true);
