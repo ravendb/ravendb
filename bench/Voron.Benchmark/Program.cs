@@ -1,4 +1,13 @@
-﻿using BenchmarkDotNet.Running;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using BenchmarkDotNet.Configs;
+using BenchmarkDotNet.Running;
+using Microsoft.VisualBasic;
+using Voron.Benchmark.BTree;
+using Voron.Benchmark.Table;
+using Constants = Voron.Global.Constants;
 
 namespace Voron.Benchmark
 {
@@ -15,10 +24,21 @@ namespace Voron.Benchmark
             //BenchmarkRunner.Run<Table.TableReadAndIterate>();
             //BenchmarkRunner.Run<Table.TableInsertRandom>();
 
-            var bench = new BTree.BTreeFillRandom { RandomSeed = 0 };
-            bench.Setup();
-            bench.FillRandomOneTransaction();
-            bench.Cleanup();
+            Console.WriteLine("Size " + Constants.Storage.PageSize);
+            var list = new List<long>();
+            for (int i = 0; i < 3; i++)
+            {
+                var a = new BTreeFillRandom();
+                {
+                    a.Setup();
+                    var sp = Stopwatch.StartNew();
+                    a.FillRandomMultipleTransactions();
+                    list.Add(sp.ElapsedMilliseconds);
+                    Console.WriteLine(". " + sp.ElapsedMilliseconds);
+                    a.Cleanup();
+                }
+            }
+            Console.WriteLine($"Min {list.Min()} Max {list.Max()} Avg {list.Average()}");
         }
     }
 }
