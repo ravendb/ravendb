@@ -27,7 +27,7 @@ class enableReplicationCommand extends commandBase {
                         activeBundles += ",Replication";
                     }
 
-                    dbSettings.__metadata.etag = dbSettings.__metadata["@etag"];
+                    dbSettings.__metadata.etag(dbSettings.__metadata["@etag"]);
 
                     // and save updated settings back to server
                     dbSettings.Settings["Raven/ActiveBundles"] = activeBundles;

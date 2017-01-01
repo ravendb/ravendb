@@ -17,7 +17,7 @@ class saveDatabaseSettingsCommand extends commandBase {
 
         var jQueryOptions: JQueryAjaxSettings = {
             headers: {
-                'ETag': this.document.__metadata.etag,
+                'ETag': this.document.__metadata.etag(),
                 'Raven-Temp-Allow-Bundles-Change': (<any>this.document.__metadata)['Raven-Temp-Allow-Bundles-Change']
             }
         };
