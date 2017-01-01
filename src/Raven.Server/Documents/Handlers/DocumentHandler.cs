@@ -532,8 +532,8 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/docs/generate-code-from-document", "GET")]
-        public Task GenerateCodeFromDocument()
+        [RavenAction("/databases/*/docs/generate-class-from-document", "GET")]
+        public Task GenerateClassFromDocument()
         {
             var id = GetStringQueryString("id");
             var lang = (GetStringQueryString("lang", required: false) ?? "csharp")
@@ -558,19 +558,14 @@ namespace Raven.Server.Documents.Handlers
                         throw new NotImplementedException($"Document code generator isn't implemeted for {lang}");
                 }
 
-                var codeGenerator = new JsonCodeGenerator(lang);
-                var code = codeGenerator.Execute(document);
-
-                HttpContext.Response.StatusCode = 200;
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                using (var writer = new StreamWriter(ResponseBodyStream()))
                 {
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        ["Document"] = id,
-                        ["Code"] = code
-                    });
-                    return Task.CompletedTask;
+                    var codeGenerator = new JsonClassGenerator(lang);
+                    var code = codeGenerator.Execute(document);
+                    writer.Write(code);
                 }
+                
+                return Task.CompletedTask;
             }
         }
     }

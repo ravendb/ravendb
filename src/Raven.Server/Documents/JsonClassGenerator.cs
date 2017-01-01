@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents
 {
-    public class JsonCodeGenerator
+    public class JsonClassGenerator
     {
         private string language;
 
@@ -193,7 +193,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public JsonCodeGenerator(string language)
+        public JsonClassGenerator(string language)
         {
             if (string.IsNullOrWhiteSpace(language))
                 throw new ArgumentNullException("language");
