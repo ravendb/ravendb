@@ -277,6 +277,9 @@ namespace Raven.Server.Documents.Replication
             {
                 if (_log.IsInfoEnabled)
                     _log.Info("Tried to initialize outgoing replications, but there is no replication document or destinations are empty. Nothing to do...");
+
+                _numberOfSiblings = 0;
+
                 return;
             }
 

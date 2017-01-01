@@ -358,19 +358,26 @@ namespace NewClientTests.NewClient.Server.Replication
         {
             var dbName1 = DbName + "-1";
             var dbName2 = DbName + "-2";
+            var dbName3 = DbName + "-3";
             using (var store1 = GetDocumentStore(dbSuffixIdentifier: dbName1))
             using (var store2 = GetDocumentStore(dbSuffixIdentifier: dbName2))
+            using (var store3 = GetDocumentStore(dbSuffixIdentifier: dbName3))
             {
-                SetupReplication(store1, store2);
+                SetupReplication(store1, store2, store3);
                 using (var session = store1.OpenSession())
                 {
-                    session.Advanced.WaitForReplicationAfterSaveChanges();
+                    session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
                     session.Store(new User
                     {
                         Name = "John Snow",
                         Age = 30
                     }, "users/1");
                     session.SaveChanges();
+                }
+
+                using (var session = store2.OpenSession())
+                {
+                    Assert.NotNull(session.Load<User>("users/1"));
                 }
 
                 using (var session = store2.OpenSession())
@@ -393,8 +400,12 @@ namespace NewClientTests.NewClient.Server.Replication
 
                 using (var session = store2.OpenSession())
                 {
-                    var s = session.Load<User>("users/2");
-                    Assert.Null(s);
+                    Assert.Null(session.Load<User>("users/2"));
+                }
+
+                using (var session = store3.OpenSession())
+                {
+                    Assert.NotNull(session.Load<User>("users/2"));
                 }
 
                 EnableOrDisableReplication(store1, store2);
