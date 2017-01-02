@@ -20,7 +20,10 @@ using Sparrow;
 using Sparrow.Json.Parsing;
 using System.Linq;
 using System.Threading.Tasks;
+using Lucene.Net.Util;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Exceptions;
+using Constants = Raven.Abstractions.Data.Constants;
 using ThreadState = System.Threading.ThreadState;
 
 namespace Raven.Server.Documents.Replication
@@ -669,17 +672,71 @@ namespace Raven.Server.Documents.Replication
                 $"Reading past the size of buffer! TotalSize {totalSize} but position is {doc.Position} & size is {doc.DocumentSize}!");
         }
 
-        public void ResovleConflictByScript(ReplicationDocumentsPositions docPosition,
+        private void EnsureRavenEntityName(BlittableJsonReaderObject obj,string collection)
+        {
+            DynamicJsonValue mutatedMetadata;
+            BlittableJsonReaderObject metadata;
+            if (obj.TryGet(Constants.Metadata.Key, out metadata))
+            {
+                if (metadata.Modifications == null)
+                    metadata.Modifications = new DynamicJsonValue(metadata);
+
+                mutatedMetadata = metadata.Modifications;
+            }
+            else
+            {
+                obj.Modifications = new DynamicJsonValue(obj)
+                {
+                    [Constants.Metadata.Key] = mutatedMetadata = new DynamicJsonValue()
+                };
+            }
+            if (mutatedMetadata[Constants.Headers.RavenEntityName] == null)
+            {
+                mutatedMetadata[Constants.Headers.RavenEntityName] = collection;
+            }
+        }
+        
+        public bool TryResovleConflictByScript(ReplicationDocumentsPositions docPosition,
             ChangeVectorEntry[] conflictingVector,
             BlittableJsonReaderObject doc)
         {
-            IReadOnlyList<DocumentConflict> conflictedDocs = _documentsContext.DocumentDatabase.DocumentsStorage.GetConflictsFor(_documentsContext, docPosition.Id);
+            List<DocumentConflict> conflictedDocs = new List<DocumentConflict>(_documentsContext.DocumentDatabase.DocumentsStorage.GetConflictsFor(_documentsContext, docPosition.Id));
+            bool isTomstone = false;
+            bool isLocalExists = false;
+            long storageId = -1;
 
             if (conflictedDocs.Count == 0)
             {
-                // all conflicts are already resolved
-                return;
+                var relevantLocalDoc = _documentsContext.DocumentDatabase.DocumentsStorage
+                            .GetDocumentOrTombstone(
+                                _documentsContext,
+                                docPosition.Id);
+                isLocalExists = true;
+                if (relevantLocalDoc.Item1 != null)
+                {
+                    conflictedDocs.Add(relevantLocalDoc.Item1);
+                    storageId = relevantLocalDoc.Item1.StorageId;
+                }
+                else if (relevantLocalDoc.Item2 != null)
+                {
+                    conflictedDocs.Add(relevantLocalDoc.Item2);
+                    storageId = relevantLocalDoc.Item2.StorageId;
+                    isTomstone = true;
+                }
             }
+
+            if (conflictedDocs.Count == 0)
+            {
+                throw new InvalidDataException($"Invalid number of conflicted documents {conflictedDocs.Count}");
+            }
+
+            conflictedDocs.Add(new DocumentConflict
+            {
+                LoweredKey = conflictedDocs[0].LoweredKey,
+                Key = conflictedDocs[0].Key,
+                ChangeVector = _tempReplicatedChangeVector,
+                Doc = doc
+            });
 
             var patch = new PatchConflict(_database, conflictedDocs);
             var collection = CollectionName.GetCollectionName(docPosition.Id, doc);
@@ -692,26 +749,35 @@ namespace Raven.Server.Documents.Replication
                 {
                     _log.Info($"Script not found to resolve the {collection} collection");
                 }
-                return;
+                return false;
             }
 
+            var patchRequest = new PatchRequest
+            {
+                Script = scriptResolver.Script
+            };
             BlittableJsonReaderObject resolved;
-            if (patch.TryResolveConflict(_documentsContext, new PatchRequest
-                {
-                    Script = scriptResolver.Script
-                }, out resolved) == false)
+            if (patch.TryResolveConflict(_documentsContext, patchRequest , out resolved) == false)
             {
                 if (_log.IsInfoEnabled)
                 {
                     _log.Info($"Conflict resolution script for {collection} collection declined to resolve the conflict for {docPosition.Id}");
                 }
-                return;
+                return false;
             }
             
             _documentsContext.DocumentDatabase.DocumentsStorage.DeleteConflictsFor(_documentsContext, docPosition.Id);
+
+            if (isLocalExists)
+            {
+                _documentsContext.DocumentDatabase.DocumentsStorage.DeleteWithoutCreatingTombstone(_documentsContext,
+              collection, storageId, isTomstone);
+            }
+
             var merged = ReplicationUtils.MergeVectors(conflictingVector, _tempReplicatedChangeVector);
             if (resolved != null)
             {
+                EnsureRavenEntityName(resolved, collection);
                 if (_log.IsInfoEnabled)
                 {
                     _log.Info($"Conflict resolution script for {collection} collection resolved the conflict for {docPosition.Id}.");
@@ -736,7 +802,7 @@ namespace Raven.Server.Documents.Replication
                     merged,
                     collection);
             }
-
+            return true;
         }
 
         private void HandleConflictForDocument(
@@ -750,6 +816,11 @@ namespace Raven.Server.Documents.Replication
                 HandleHiloConflict(context, docPosition, doc);
                 return;
             }
+            if (_database.DocumentsStorage.TryResolveIdenticalDocument(_documentsContext, docPosition.Id, doc, _tempReplicatedChangeVector) ||
+            TryResovleConflictByScript(docPosition, conflictingVector, doc))
+            {
+                return;
+            };
 
             switch (ReplicationDocument?.DocumentConflictResolution ?? StraightforwardConflictResolution.None)
             {
@@ -803,7 +874,6 @@ namespace Raven.Server.Documents.Replication
                     break;
                  default:
                     _database.DocumentsStorage.AddConflict(_documentsContext, docPosition.Id, doc, _tempReplicatedChangeVector);
-                    ResovleConflictByScript(docPosition, conflictingVector, doc);
                     break;
             }
         }
