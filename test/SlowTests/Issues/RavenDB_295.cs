@@ -3,22 +3,23 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
+using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Tests.Common;
-
+using Raven.Client.Indexing;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     using System.Collections.Generic;
 
-    public class RavenDB_295 : RavenTest
+    public class RavenDB_295 : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "Missing feature: Suggestions")]
         public void CanUpdateSuggestions()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -29,8 +30,14 @@ namespace Raven.Tests.Issues
                 store.DatabaseCommands.PutIndex("test",
                                                 new IndexDefinition
                                                 {
-                                                    Map = "from doc in docs select new { doc.Name}",
-                                                    SuggestionsOptions = new HashSet<string> {"Name"}
+                                                    Maps = new HashSet<string> { "from doc in docs select new { doc.Name}"},
+                                                    Fields = new Dictionary<string, IndexFieldOptions>
+                                                    {
+                                                        {
+                                                            "Name",
+                                                            new IndexFieldOptions { Suggestions = true }
+                                                        }
+                                                    }
                                                 });
 
                 WaitForIndexing(store);
@@ -58,11 +65,11 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Suggestions")]
         public void CanUpdateSuggestions_AfterRestart()
         {
             var dataDir = NewDataPath();
-            using (var store = NewDocumentStore(runInMemory: false, dataDir: dataDir))
+            using (var store = GetDocumentStore(path: dataDir))
             {
                 using (var session = store.OpenSession())
                 {
@@ -72,8 +79,14 @@ namespace Raven.Tests.Issues
                 }
                 store.DatabaseCommands.PutIndex("test", new IndexDefinition
                 {
-                    Map = "from doc in docs select new { doc.Name}",
-                    SuggestionsOptions = new HashSet<string> { "Name" }
+                    Maps = new HashSet<string> { "from doc in docs select new { doc.Name}"},
+                    Fields = new Dictionary<string, IndexFieldOptions>
+                    {
+                        {
+                            "Name",
+                            new IndexFieldOptions { Suggestions = true }
+                        }
+                    }
                 });
 
                 WaitForIndexing(store);
@@ -86,7 +99,7 @@ namespace Raven.Tests.Issues
                 Assert.NotEmpty(suggestionQueryResult.Suggestions);
             }
 
-            using (var store = NewDocumentStore(runInMemory: false, dataDir: dataDir))
+            using (var store = GetDocumentStore(path: dataDir))
             {
                 using (var session = store.OpenSession())
                 {
