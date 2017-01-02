@@ -1728,7 +1728,7 @@ namespace Raven.Server.Documents
                     {
                         if (lastKnownBusy + 1 == maybeFree)
                         {
-                            nextIdentityValue = identities.Increment(key, maybeFree);
+                            nextIdentityValue = identities.Increment(key, lastKnownBusy);
                             return key + nextIdentityValue;
                         }
                         lastKnownFree = maybeFree;
