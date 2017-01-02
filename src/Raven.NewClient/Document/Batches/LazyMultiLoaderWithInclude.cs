@@ -44,7 +44,7 @@ namespace Raven.NewClient.Client.Document.Batches
         /// Loads the specified ids.
         /// </summary>
         /// <param name="ids">The ids.</param>
-        public Lazy<T[]> Load(params string[] ids)
+        public Lazy<Dictionary<string, T>> Load(params string[] ids)
         {
             return session.LazyLoadInternal<T>(ids, includes.ToArray(), null);
         }
@@ -54,7 +54,7 @@ namespace Raven.NewClient.Client.Document.Batches
         /// </summary>
         /// <param name="ids">The ids.</param>
         /// <returns></returns>
-        public Lazy<T[]> Load(IEnumerable<string> ids)
+        public Lazy<Dictionary<string, T>> Load(IEnumerable<string> ids)
         {
             return session.LazyLoadInternal<T>(ids.ToArray(), includes.ToArray(), null);
         }
@@ -65,7 +65,7 @@ namespace Raven.NewClient.Client.Document.Batches
         public Lazy<T> Load(string id)
         {
             var results = session.LazyLoadInternal<T>(new[] { id }, includes.ToArray(), null);
-            return new Lazy<T>(() => results.Value.First());
+            return new Lazy<T>(() => results.Value.Values.First());
         }
 
         /// <summary>
@@ -98,7 +98,7 @@ namespace Raven.NewClient.Client.Document.Batches
         /// 
         /// Or whatever your conventions specify.
         /// </remarks>
-        public Lazy<T[]> Load(params ValueType[] ids)
+        public Lazy<Dictionary<string, T>> Load(params ValueType[] ids)
         {
             var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
             return Load(documentKeys);
@@ -116,7 +116,7 @@ namespace Raven.NewClient.Client.Document.Batches
         /// 
         /// Or whatever your conventions specify.
         /// </remarks>
-        public Lazy<T[]> Load(IEnumerable<ValueType> ids)
+        public Lazy<Dictionary<string, T>> Load(IEnumerable<ValueType> ids)
         {
             var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
             return Load(documentKeys);
@@ -127,7 +127,7 @@ namespace Raven.NewClient.Client.Document.Batches
         /// </summary>
         /// <typeparam name="TResult"></typeparam>
         /// <param name="ids">The ids.</param>
-        public Lazy<TResult[]> Load<TResult>(params string[] ids)
+        public Lazy<Dictionary<string, TResult>> Load<TResult>(params string[] ids)
         {
             return session.LazyLoadInternal<TResult>(ids, includes.ToArray(), null);
         }
@@ -137,7 +137,7 @@ namespace Raven.NewClient.Client.Document.Batches
         /// </summary>
         /// <param name="ids">The ids.</param>
         /// <returns></returns>
-        public Lazy<TResult[]> Load<TResult>(IEnumerable<string> ids)
+        public Lazy<Dictionary<string, TResult>> Load<TResult>(IEnumerable<string> ids)
         {
             return session.LazyLoadInternal<TResult>(ids.ToArray(), includes.ToArray(), null);
         }
@@ -150,7 +150,7 @@ namespace Raven.NewClient.Client.Document.Batches
         public Lazy<TResult> Load<TResult>(string id)
         {
             var lazy = Load<TResult>(new[] { id });
-            return new Lazy<TResult>(() => lazy.Value.FirstOrDefault());
+            return new Lazy<TResult>(() => lazy.Value.Values.FirstOrDefault());
         }
 
         /// <summary>
@@ -171,13 +171,13 @@ namespace Raven.NewClient.Client.Document.Batches
             return Load<TResult>(documentKey);
         }
 
-        public Lazy<TResult[]> Load<TResult>(params ValueType[] ids)
+        public Lazy<Dictionary<string, TResult>> Load<TResult>(params ValueType[] ids)
         {
             var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
             return Load<TResult>(documentKeys);
         }
 
-        public Lazy<TResult[]> Load<TResult>(IEnumerable<ValueType> ids)
+        public Lazy<Dictionary<string, TResult>> Load<TResult>(IEnumerable<ValueType> ids)
         {
             var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
             return Load<TResult>(documentKeys);
@@ -221,7 +221,7 @@ namespace Raven.NewClient.Client.Document.Batches
         /// Loads the specified ids.
         /// </summary>
         /// <param name="ids">The ids.</param>
-        public Lazy<Task<T[]>> LoadAsync(params string[] ids)
+        public Lazy<Task<Dictionary<string, T>>> LoadAsync(params string[] ids)
         {
             return session.LazyAsyncLoadInternal<T>(ids, includes.ToArray(), null);
         }
@@ -231,7 +231,7 @@ namespace Raven.NewClient.Client.Document.Batches
         /// </summary>
         /// <param name="ids">The ids.</param>
         /// <returns></returns>
-        public Lazy<Task<T[]>> LoadAsync(IEnumerable<string> ids)
+        public Lazy<Task<Dictionary<string, T>>> LoadAsync(IEnumerable<string> ids)
         {
             return session.LazyAsyncLoadInternal<T>(ids.ToArray(), includes.ToArray(), null);
         }
@@ -243,7 +243,7 @@ namespace Raven.NewClient.Client.Document.Batches
         {
             var results = session.LazyAsyncLoadInternal<T>(new[] { id }, includes.ToArray(), null);
 
-            return new Lazy<Task<T>>(() => results.Value.ContinueWith(x => x.Result[0]));
+            return new Lazy<Task<T>>(() => results.Value.ContinueWith(x => x.Result.Values.First()));
         }
 
         /// <summary>
@@ -276,7 +276,7 @@ namespace Raven.NewClient.Client.Document.Batches
         /// 
         /// Or whatever your conventions specify.
         /// </remarks>
-        public Lazy<Task<T[]>> LoadAsync(params ValueType[] ids)
+        public Lazy<Task<Dictionary<string, T>>> LoadAsync(params ValueType[] ids)
         {
             var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
             return LoadAsync(documentKeys);
@@ -294,7 +294,7 @@ namespace Raven.NewClient.Client.Document.Batches
         /// 
         /// Or whatever your conventions specify.
         /// </remarks>
-        public Lazy<Task<T[]>> LoadAsync(IEnumerable<ValueType> ids)
+        public Lazy<Task<Dictionary<string, T>>> LoadAsync(IEnumerable<ValueType> ids)
         {
             var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
             return LoadAsync(documentKeys);
@@ -306,7 +306,7 @@ namespace Raven.NewClient.Client.Document.Batches
         /// </summary>
         /// <typeparam name="TResult"></typeparam>
         /// <param name="ids">The ids.</param>
-        public Lazy<Task<TResult[]>> LoadAsync<TResult>(params string[] ids)
+        public Lazy<Task<Dictionary<string, TResult>>> LoadAsync<TResult>(params string[] ids)
         {
             return session.LazyAsyncLoadInternal<TResult>(ids, includes.ToArray(), null); 
         }
@@ -316,7 +316,7 @@ namespace Raven.NewClient.Client.Document.Batches
         /// </summary>
         /// <param name="ids">The ids.</param>
         /// <returns></returns>
-        public Lazy<Task<TResult[]>> LoadAsync<TResult>(IEnumerable<string> ids)
+        public Lazy<Task<Dictionary<string, TResult>>> LoadAsync<TResult>(IEnumerable<string> ids)
         {
             return session.LazyAsyncLoadInternal<TResult>(ids.ToArray(), includes.ToArray(), null);
         }
@@ -331,7 +331,7 @@ namespace Raven.NewClient.Client.Document.Batches
         public Lazy<Task<TResult>> LoadAsync<TResult>(string id)
         {
             var lazy = LoadAsync<TResult>(new[] { id });
-            return new Lazy<Task<TResult>>(() => lazy.Value.ContinueWith(x => x.Result[0]));
+            return new Lazy<Task<TResult>>(() => lazy.Value.ContinueWith(x => x.Result.Values.First()));
         }
 
         /// <summary>
@@ -352,13 +352,13 @@ namespace Raven.NewClient.Client.Document.Batches
             return LoadAsync<TResult>(documentKey);
         }
 
-        public Lazy<Task<TResult[]>> LoadAsync<TResult>(params ValueType[] ids)
+        public Lazy<Task<Dictionary<string, TResult>>> LoadAsync<TResult>(params ValueType[] ids)
         {
             var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
             return LoadAsync<TResult>(documentKeys);
         }
 
-        public Lazy<Task<TResult[]>> LoadAsync<TResult>(IEnumerable<ValueType> ids)
+        public Lazy<Task<Dictionary<string, TResult>>> LoadAsync<TResult>(IEnumerable<ValueType> ids)
         {
             var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
             return LoadAsync<TResult>(documentKeys);

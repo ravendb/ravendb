@@ -10,6 +10,7 @@ using System.Linq;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Linq;
+using Sparrow;
 
 namespace Raven.NewClient.Client.Document
 {
@@ -46,7 +47,7 @@ namespace Raven.NewClient.Client.Document
         /// Loads the specified entities with the specified ids.
         /// </summary>
         /// <param name="ids">The ids.</param>
-        public T[] Load<T>(IEnumerable<string> ids)
+        public Dictionary<string, T> Load<T>(IEnumerable<string> ids)
         {
             return LoadInternal<T>(ids.ToArray());
         }
@@ -81,7 +82,7 @@ namespace Raven.NewClient.Client.Document
         /// 
         /// Or whatever your conventions specify.
         /// </remarks>
-        public T[] Load<T>(params ValueType[] ids)
+        public Dictionary<string, T> Load<T>(params ValueType[] ids)
         {
             var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
             return Load<T>(documentKeys);
@@ -99,7 +100,7 @@ namespace Raven.NewClient.Client.Document
         /// 
         /// Or whatever your conventions specify.
         /// </remarks>
-        public T[] Load<T>(IEnumerable<ValueType> ids)
+        public Dictionary<string, T> Load<T>(IEnumerable<ValueType> ids)
         {
             var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
             return Load<T>(documentKeys);
@@ -159,7 +160,7 @@ namespace Raven.NewClient.Client.Document
             return LoadInternal<TResult>(ids.ToArray(), transformer, configuration.TransformerParameters);
         }
 
-        public T[] LoadInternal<T>(string[] ids)
+        public Dictionary<string, T> LoadInternal<T>(string[] ids)
         {
             var loadOeration = new LoadOperation(this);
             loadOeration.ByIds(ids);
@@ -174,7 +175,7 @@ namespace Raven.NewClient.Client.Document
             return loadOeration.GetDocuments<T>();
         }
 
-        public T[] LoadInternal<T>(string[] ids, string[] includes)
+        public Dictionary<string, T> LoadInternal<T>(string[] ids, string[] includes)
         {
             var loadOeration = new LoadOperation(this);
             loadOeration.ByIds(ids);

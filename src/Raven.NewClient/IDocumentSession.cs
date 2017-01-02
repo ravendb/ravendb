@@ -7,9 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Linq;
 
@@ -87,7 +84,7 @@ namespace Raven.NewClient.Client.Document
         ///     Loads the specified entities with the specified ids.
         /// </summary>
         /// <param name="ids">Enumerable of Ids that should be loaded</param>
-        T[] Load<T>(IEnumerable<string> ids);
+        Dictionary<string, T> Load<T>(IEnumerable<string> ids);
 
         /// <summary>
         ///     Loads the specified entity with the specified id after applying
@@ -109,7 +106,7 @@ namespace Raven.NewClient.Client.Document
         ///     <para>Load&lt;Post&gt;("posts/1", "posts/2", "posts/3");</para>
         ///     <para>Or whatever your conventions specify.</para>
         /// </summary>
-        T[] Load<T>(params ValueType[] ids);
+        Dictionary<string, T> Load<T>(params ValueType[] ids);
 
         /// <summary>
         ///     Loads the specified entities with the specified id after applying
@@ -122,7 +119,7 @@ namespace Raven.NewClient.Client.Document
         ///     <para>Load&lt;Post&gt;("posts/1", "posts/2", "posts/3");</para>
         ///     <para>Or whatever your conventions specify.</para>
         /// </remarks>
-        T[] Load<T>(IEnumerable<ValueType> ids);
+        Dictionary<string, T> Load<T>(IEnumerable<ValueType> ids);
 
         /// <summary>
         ///     Performs a load that will use the specified results transformer against the specified id

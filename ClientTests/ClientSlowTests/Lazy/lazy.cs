@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -28,12 +30,19 @@ namespace NewClientTests.NewClient
                     var order = lazyOrder.Value;
                     Assert.Equal(COMPANY1_ID, order.Id);
 
-                    Lazy<Company[]> lazyOrders = session.Advanced.Lazily.Load<Company>(new String[] { COMPANY1_ID, COMPANY2_ID });
+                    Lazy<Dictionary<string, Company>> lazyOrders = session.Advanced.Lazily.Load<Company>(new String[] { COMPANY1_ID, COMPANY2_ID });
                     Assert.False(lazyOrders.IsValueCreated);
-                    Company[] orders = lazyOrders.Value;
-                    Assert.Equal(2, orders.Length);
-                    Assert.Equal(COMPANY1_ID, orders[0].Id);
-                    Assert.Equal(COMPANY2_ID, orders[1].Id);
+                    var orders = lazyOrders.Value;
+                    Assert.Equal(2, orders.Count);
+                    Company company1;
+                    Company company2;
+                    orders.TryGetValue(COMPANY1_ID, out company1);
+                    orders.TryGetValue(COMPANY2_ID, out company2);
+
+                    Assert.NotNull(company1);
+                    Assert.NotNull(company2);
+                    Assert.Equal(COMPANY1_ID,company1.Id);
+                    Assert.Equal(COMPANY2_ID, company2.Id);
                 }
             }
         }

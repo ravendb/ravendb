@@ -126,7 +126,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
 
                     var users = await session.LoadAsync<User>(new[] { "users/1", "users/2", "users/3" });
 
-                    users.ForEach(Assert.Null);
+                    users.ForEach(v=>Assert.NotNull(v));
                 }
             }
         }
