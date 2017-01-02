@@ -62,23 +62,6 @@ namespace Raven.NewClient.Client.Document.Batches
             };*/
         }
 
-        public void HandleResponses(BlittableJsonReaderObject[] responses, ShardStrategy shardStrategy)
-        {
-            throw new NotImplementedException();
-
-            /*var result = new SuggestionQueryResult
-            {
-                Suggestions = (from item in responses
-                               let data = (RavenJObject)item.Result
-                               from suggestion in (RavenJArray)data["Suggestions"]
-                               select suggestion.Value<string>())
-                              .Distinct()
-                              .ToArray()
-            };
-
-            Result = result;*/
-        }
-
         public IDisposable EnterContext()
         {
             return null;
