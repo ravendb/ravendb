@@ -1,20 +1,20 @@
-using Raven.Abstractions.Indexing;
-using Raven.Tests.Common;
+using FastTests;
+using Raven.Client.Indexing;
 
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_505 : RavenTest
+    public class RavenDB_505 : RavenTestBase
     {
         [Fact]
         public void CreateDeleteCreateIndex()
         {
-            using (var store = NewDocumentStore(requestedStorage:"esent"))
+            using (var store = GetDocumentStore())
             {
                 var indexDefinition = new IndexDefinition
                 {
-                    Map = "from d in docs select new {}"
+                    Maps = { "from d in docs select new {d.Name}" }
                 };
                 for (int i = 0; i < 10; i++)
                 {
