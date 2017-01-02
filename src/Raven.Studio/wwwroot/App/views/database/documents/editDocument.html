@@ -102,7 +102,7 @@
                         <i class="icon-save"></i>
                         <span>Save</span>
                     </button>
-                    <button type="button" class="clone-btn btn btn-default" data-bind="click: saveAsNew">
+                    <button type="button" class="clone-btn btn btn-default" data-bind="click: createClone">
                         <i class="icon-clone"></i>
                         <span>Clone</span>
                     </button>
@@ -123,10 +123,7 @@
                         </button>
                         <ul class="dropdown-menu">
                             <li>
-                                <!-- Temp line, until issue #5847 is fixed  -->
-                                <a href="#" class="btn-prerelease" data-bind=""><i class="icon-umbrella"></i> Copy as C# class</a>
-                                <!-- Original line -->
-                                <!--<a href="#" data-bind="click: generateCode, enable: !isSaveEnabled()">Copy as C# class</a>-->
+                                <a href="#" data-bind="click: generateClass, enable: !isSaveEnabled()">Copy as C# class</a>
                             </li>
                         </ul>
                     </div>

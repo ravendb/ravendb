@@ -5,14 +5,13 @@
 // -----------------------------------------------------------------------
 using Raven.Client.Indexes;
 using System.Linq;
-
-using Raven.Tests.Common;
+using FastTests;
 
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_299 : RavenTest
+    public class RavenDB_299 : RavenTestBase
     {
         public class Item
         {
@@ -36,7 +35,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public void CanWorkWithSelectManyOverload()
         {
-            using(var store = NewDocumentStore())
+            using(var store = GetDocumentStore())
             {
                 using(var session = store.OpenSession())
                 {

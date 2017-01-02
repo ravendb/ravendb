@@ -18,9 +18,9 @@ class saveGlobalSettingsCommand extends commandBase {
         var jQueryOptions: JQueryAjaxSettings = {
         };
 
-        if (this.document.__metadata.etag) {
+        if (this.document.__metadata.etag()) {
             jQueryOptions.headers = {
-                'If-None-Match': this.document.__metadata.etag
+                'If-None-Match': this.document.__metadata.etag()
             }
         }
 

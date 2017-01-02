@@ -4,14 +4,14 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_421 : RavenTest
+    public class RavenDB_421 : RavenTestBase
     {
         public class Person
         {
@@ -71,9 +71,9 @@ namespace Raven.Tests.Issues
         }
 
         [Fact]
-        public void CanExecuteIndexWithoutNRE()
+        public async Task CanExecuteIndexWithoutNRE()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new Family().Execute(store);
 
@@ -100,8 +100,8 @@ namespace Raven.Tests.Issues
                         .ToList();
 
                     WaitForUserToContinueTheTest(store);
-                    Assert.Empty(store.SystemDatabase.Statistics.Errors);
-                    Assert.Equal(1, results[0].Children.Length);
+                    var stats = await store.AsyncDatabaseCommands.GetIndexErrorsAsync();
+                    Assert.Equal(0, stats[0].Errors.Length);
 
                 }
             }

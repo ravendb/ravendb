@@ -485,7 +485,7 @@ class editIndex extends viewModelBase {
             var indexDef = this.editedIndex().toDto();
             if (this.scriptedIndex() !== null) {
                 // reset etag as we save different document
-                delete this.scriptedIndex().__metadata.etag;
+                this.scriptedIndex().__metadata.etag(null);
             }
 
             this.saveIndex(indexDef)
@@ -506,7 +506,7 @@ class editIndex extends viewModelBase {
 
             if (this.scriptedIndex() !== null) {
                 // reset etag as we save different document
-                delete this.scriptedIndex().__metadata.etag;
+                this.scriptedIndex().__metadata.etag(null);
             }
             
             this.saveIndex(indexDef);
@@ -573,7 +573,7 @@ class editIndex extends viewModelBase {
 
             if (this.scriptedIndex() !== null) {
                 // reset etag as we save different document
-                delete this.scriptedIndex().__metadata.etag;
+                this.scriptedIndex().__metadata.etag(null);
             }
 
             this.saveIndex(indexDef)

@@ -115,7 +115,7 @@ class apiKey extends document {
         this.__metadata.id = "Raven/ApiKeys/" + this.name();
 
         if (this.savedName !== this.name()) {
-            this.__metadata.etag = null;
+            this.__metadata.etag(null);
             this.savedName = this.name();
         }
     }

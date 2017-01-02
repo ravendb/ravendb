@@ -5,20 +5,20 @@
 // -----------------------------------------------------------------------
 using System;
 
-using Raven.Tests.Common;
-using Raven.Tests.Common.Dto;
 
 using Xunit;
 using System.Linq;
+using FastTests;
+using SlowTests.Core.Utils.Entities;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_425 : RavenTest
+    public class RavenDB_425 : RavenTestBase
     {
         [Fact]
         public void WillGetErrorWhenQueryingById()
         {
-            using(var store = NewDocumentStore())
+            using(var store = GetDocumentStore())
             {
                 using(var session = store.OpenSession())
                 {
