@@ -26,8 +26,6 @@ namespace FastTests.Voron.Bugs
                 tree.Add("bars/1", new MemoryStream(bytes));
 
                 txw.Commit();
-
-                DebugStuff.RenderAndShow(tree);
             }
 
             using (var txw = Env.WriteTransaction())
@@ -78,7 +76,6 @@ namespace FastTests.Voron.Bugs
 
                 txw.Commit();
 
-                DebugStuff.RenderAndShow(tree);
             }
 
             using (var txw = Env.WriteTransaction())
@@ -90,7 +87,6 @@ namespace FastTests.Voron.Bugs
 
                 txw.Commit();
 
-                DebugStuff.RenderAndShow(tree);
             }
 
             using (var txw = Env.WriteTransaction())
