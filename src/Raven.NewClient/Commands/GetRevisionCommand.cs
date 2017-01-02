@@ -10,7 +10,7 @@ using Raven.NewClient.Client.Http;
 
 namespace Raven.NewClient.Client.Commands
 {
-    public class GetRevisionCommand : RavenCommand<GetRevisionResult>
+    public class GetRevisionCommand : RavenCommand<BlittableArrayResult>
     {
 
         public string Key;
@@ -34,7 +34,7 @@ namespace Raven.NewClient.Client.Commands
         {
             if (response == null)
                 throw new InvalidOperationException();
-            Result = JsonDeserializationClient.GetRevisionResult(response);
+            Result = JsonDeserializationClient.BlittableArrayResult(response);
         }
     }
 }

@@ -33,7 +33,7 @@ namespace Raven.NewClient.Client.Commands
             };
         }
 
-        public void SetResult(MultiGetResult result)
+        public void SetResult(BlittableArrayResult result)
         {
         }
     }

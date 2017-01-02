@@ -4,12 +4,17 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Sparrow.Json;
-
 namespace Raven.NewClient.Client.Commands
 {
-    public class GetIndexResult
+    /// <summary>
+    /// The result of a OperationIdResult operation
+    /// </summary>
+    public class OperationIdResult
     {
-        public BlittableJsonReaderArray Results { get; set; }
+        /// <summary>
+        /// Id of patch operation.
+        /// </summary>
+        public int OperationId { get; set; }
+
     }
 }

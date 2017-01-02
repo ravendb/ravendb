@@ -42,7 +42,7 @@ namespace Raven.NewClient.Client.Commands
             };
         }
 
-        public void SetResult(BatchResult result)
+        public void SetResult(BlittableArrayResult result)
         {
             for (var i = _deferredCommandsCount; i < result.Results.Length; i++)
             {
