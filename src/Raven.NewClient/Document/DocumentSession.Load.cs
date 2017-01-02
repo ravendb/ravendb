@@ -10,6 +10,7 @@ using System.Linq;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Linq;
+using Sparrow;
 
 namespace Raven.NewClient.Client.Document
 {
@@ -46,7 +47,7 @@ namespace Raven.NewClient.Client.Document
         /// Loads the specified entities with the specified ids.
         /// </summary>
         /// <param name="ids">The ids.</param>
-        public T[] Load<T>(IEnumerable<string> ids)
+        public IDictionary<string, T> Load<T>(IEnumerable<string> ids)
         {
             return LoadInternal<T>(ids.ToArray());
         }
@@ -81,7 +82,7 @@ namespace Raven.NewClient.Client.Document
         /// 
         /// Or whatever your conventions specify.
         /// </remarks>
-        public T[] Load<T>(params ValueType[] ids)
+        public IDictionary<string, T> Load<T>(params ValueType[] ids)
         {
             var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
             return Load<T>(documentKeys);
@@ -99,7 +100,7 @@ namespace Raven.NewClient.Client.Document
         /// 
         /// Or whatever your conventions specify.
         /// </remarks>
-        public T[] Load<T>(IEnumerable<ValueType> ids)
+        public IDictionary<string, T> Load<T>(IEnumerable<ValueType> ids)
         {
             var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
             return Load<T>(documentKeys);
@@ -111,10 +112,10 @@ namespace Raven.NewClient.Client.Document
             var configuration = new RavenLoadConfiguration();
             configure?.Invoke(configuration);
 
-            return LoadInternal<TResult>(new[] { id }, transformer, configuration.TransformerParameters).FirstOrDefault();
+            return LoadInternal<TResult>(new[] { id }, transformer, configuration.TransformerParameters).Values.FirstOrDefault();
         }
 
-        public TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
+        public IDictionary<string, TResult> Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
         {
             var transformer = new TTransformer().TransformerName;
             var configuration = new RavenLoadConfiguration();
@@ -128,10 +129,10 @@ namespace Raven.NewClient.Client.Document
             var configuration = new RavenLoadConfiguration();
             configure?.Invoke(configuration);
 
-            return LoadInternal<TResult>(new[] { id }, transformer, configuration.TransformerParameters).FirstOrDefault();
+            return LoadInternal<TResult>(new[] { id }, transformer, configuration.TransformerParameters).Values.FirstOrDefault();
         }
 
-        public TResult[] Load<TResult>(IEnumerable<string> ids, string transformer, Action<ILoadConfiguration> configure = null)
+        public IDictionary<string, TResult> Load<TResult>(IEnumerable<string> ids, string transformer, Action<ILoadConfiguration> configure = null)
         {
             var configuration = new RavenLoadConfiguration();
             configure?.Invoke(configuration);
@@ -146,10 +147,10 @@ namespace Raven.NewClient.Client.Document
 
             var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
 
-            return LoadInternal<TResult>(new[] { id }, transformer, configuration.TransformerParameters).FirstOrDefault();
+            return LoadInternal<TResult>(new[] { id }, transformer, configuration.TransformerParameters).Values.FirstOrDefault();
         }
 
-        public TResult[] Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null)
+        public IDictionary<string, TResult> Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null)
         {
             var configuration = new RavenLoadConfiguration();
             configure?.Invoke(configuration);
@@ -159,7 +160,7 @@ namespace Raven.NewClient.Client.Document
             return LoadInternal<TResult>(ids.ToArray(), transformer, configuration.TransformerParameters);
         }
 
-        public T[] LoadInternal<T>(string[] ids)
+        public IDictionary<string, T> LoadInternal<T>(string[] ids)
         {
             var loadOeration = new LoadOperation(this);
             loadOeration.ByIds(ids);
@@ -174,7 +175,7 @@ namespace Raven.NewClient.Client.Document
             return loadOeration.GetDocuments<T>();
         }
 
-        public T[] LoadInternal<T>(string[] ids, string[] includes)
+        public IDictionary<string, T> LoadInternal<T>(string[] ids, string[] includes)
         {
             var loadOeration = new LoadOperation(this);
             loadOeration.ByIds(ids);
@@ -190,12 +191,12 @@ namespace Raven.NewClient.Client.Document
             return loadOeration.GetDocuments<T>();
         }
 
-        public T[] LoadInternal<T>(string[] ids, string transformer, Dictionary<string, object> transformerParameters = null)
+        public IDictionary<string, T> LoadInternal<T>(string[] ids, string transformer, Dictionary<string, object> transformerParameters = null)
         {
             if (transformer == null)
                 throw new ArgumentNullException("transformer");
             if (ids.Length == 0)
-                return new T[0];
+                return new Dictionary<string, T>();
 
             var loadTransformerOeration = new LoadTransformerOperation(this);
             loadTransformerOeration.ByIds(ids);
@@ -208,15 +209,15 @@ namespace Raven.NewClient.Client.Document
                 loadTransformerOeration.SetResult(command.Result);
             }
 
-            return loadTransformerOeration.GetTransformedDocuments<T>(command?.Result);
+            return loadTransformerOeration.GetTransformedDocuments<T>(command?.Result, ids);
         }
 
-        public T[] LoadInternal<T>(string[] ids, string[] includes, string transformer, Dictionary<string, object> transformerParameters = null)
+        public IDictionary<string, T> LoadInternal<T>(string[] ids, string[] includes, string transformer, Dictionary<string, object> transformerParameters = null)
         {
             if (transformer == null)
                 throw new ArgumentNullException("transformer");
             if (ids.Length == 0)
-                return new T[0];
+                return new Dictionary<string, T>();
 
             var loadTransformerOeration = new LoadTransformerOperation(this);
             loadTransformerOeration.ByIds(ids);
@@ -230,7 +231,7 @@ namespace Raven.NewClient.Client.Document
                 loadTransformerOeration.SetResult(command.Result);
             }
 
-            return loadTransformerOeration.GetTransformedDocuments<T>(command?.Result);
+            return loadTransformerOeration.GetTransformedDocuments<T>(command?.Result, ids);
         }
 
         public T[] LoadStartingWith<T>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null,

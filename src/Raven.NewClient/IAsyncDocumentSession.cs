@@ -91,7 +91,7 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         /// <param name="ids">Enumerable of Ids that should be loaded</param>
         /// <param name="token">The cancellation token.</param>
-        Task<T[]> LoadAsync<T>(IEnumerable<string> ids, CancellationToken token = default (CancellationToken));
+        Task<IDictionary<string, T>> LoadAsync<T>(IEnumerable<string> ids, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Loads the specified entity with the specified id after applying
@@ -117,7 +117,7 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         /// <param name="token">The cancellation token.</param>
         /// <param name="ids">The ids of the documents to load.</param>
-        Task<T[]> LoadAsync<T>(CancellationToken token = default (CancellationToken),params ValueType[] ids);
+        Task<IDictionary<string, T>> LoadAsync<T>(CancellationToken token = default (CancellationToken),params ValueType[] ids);
 
         /// <summary>
         ///     Loads the specified entities with the specified id after applying
@@ -132,7 +132,7 @@ namespace Raven.NewClient.Client.Document
         /// </remarks>
         /// <param name="token">The cancellation token.</param>
         /// <param name="ids">The ids of the documents to load.</param>
-        Task<T[]> LoadAsync<T>(IEnumerable<ValueType> ids, CancellationToken token = default (CancellationToken));
+        Task<IDictionary<string, T>> LoadAsync<T>(IEnumerable<ValueType> ids, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Performs a load that will use the specified results transformer against the specified id
@@ -150,7 +150,7 @@ namespace Raven.NewClient.Client.Document
         /// <param name="ids">Enumerable of ids of documents to load</param>
         /// <param name="configure">additional configuration options for operation e.g. AddTransformerParameter</param>
         /// <param name="token">The cancellation token.</param>
-        Task<TResult[]> LoadAsync<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null, CancellationToken token = default (CancellationToken)) where TTransformer : AbstractTransformerCreationTask, new();
+        Task<IDictionary<string, TResult>> LoadAsync<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null, CancellationToken token = default (CancellationToken)) where TTransformer : AbstractTransformerCreationTask, new();
 
         /// <summary>
         ///     Performs a load that will use the specified results transformer against the specified id
@@ -170,7 +170,7 @@ namespace Raven.NewClient.Client.Document
         /// <param name="transformer">The transformer to use in this load operation</param>
         /// <param name="configure">additional configuration options for operation e.g. AddTransformerParameter</param>
         /// <param name="token">The cancellation token.</param>
-        Task<TResult[]> LoadAsync<TResult>(IEnumerable<string> ids, string transformer, Action<ILoadConfiguration> configure = null, CancellationToken token = default (CancellationToken));
+        Task<IDictionary<string, TResult>> LoadAsync<TResult>(IEnumerable<string> ids, string transformer, Action<ILoadConfiguration> configure = null, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Performs a load that will use the specified results transformer against the specified id
@@ -190,7 +190,7 @@ namespace Raven.NewClient.Client.Document
         /// <param name="transformerType">The transformer to use in this load operation</param>
         /// <param name="configure">additional configuration options for operation e.g. AddTransformerParameter</param>
         /// <param name="token">The cancellation token.</param>
-        Task<TResult[]> LoadAsync<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null, CancellationToken token = default (CancellationToken));
+        Task<IDictionary<string, TResult>> LoadAsync<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Queries the specified index using Linq.

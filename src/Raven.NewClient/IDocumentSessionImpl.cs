@@ -18,10 +18,10 @@ namespace Raven.NewClient.Client.Document
     {
         DocumentConvention Conventions { get; }
 
-        T[] LoadInternal<T>(string[] ids);
-        T[] LoadInternal<T>(string[] ids, string[] includes);
-        T[] LoadInternal<T>(string[] ids, string transformer, Dictionary<string, object> transformerParameters = null);
-        T[] LoadInternal<T>(string[] ids, string[] includes, string transformer, Dictionary<string, object> transformerParameters = null);
-        Lazy<T[]> LazyLoadInternal<T>(string[] ids, string[] includes, Action<T[]> onEval);
+        IDictionary<string, T> LoadInternal<T>(string[] ids);
+        IDictionary<string, T> LoadInternal<T>(string[] ids, string[] includes);
+        IDictionary<string, T> LoadInternal<T>(string[] ids, string transformer, Dictionary<string, object> transformerParameters = null);
+        IDictionary<string, T> LoadInternal<T>(string[] ids, string[] includes, string transformer, Dictionary<string, object> transformerParameters = null);
+        Lazy<IDictionary<string, T>> LazyLoadInternal<T>(string[] ids, string[] includes, Action<IDictionary<string, T>> onEval);
     }
 }

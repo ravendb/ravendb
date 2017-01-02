@@ -42,7 +42,7 @@ namespace Raven.NewClient.Client.Document.Async
         /// 
         /// Or whatever your conventions specify.
         /// </remarks>
-        public Task<T[]> LoadAsync<T>(CancellationToken token = default(CancellationToken), params ValueType[] ids)
+        public Task<IDictionary<string, T>> LoadAsync<T>(CancellationToken token = default(CancellationToken), params ValueType[] ids)
         {
             var documentKeys =
                 ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
@@ -61,7 +61,7 @@ namespace Raven.NewClient.Client.Document.Async
         /// 
         /// Or whatever your conventions specify.
         /// </remarks>
-        public Task<T[]> LoadAsync<T>(IEnumerable<ValueType> ids)
+        public Task<IDictionary<string, T>> LoadAsync<T>(IEnumerable<ValueType> ids)
         {
             return LoadAsync<T>(ids, new CancellationToken());
         }
@@ -78,7 +78,7 @@ namespace Raven.NewClient.Client.Document.Async
         /// 
         /// Or whatever your conventions specify.
         /// </remarks>
-        public Task<T[]> LoadAsync<T>(IEnumerable<ValueType> ids, CancellationToken token = default(CancellationToken))
+        public Task<IDictionary<string, T>> LoadAsync<T>(IEnumerable<ValueType> ids, CancellationToken token = default(CancellationToken))
         {
             var documentKeys =
                 ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
@@ -90,10 +90,10 @@ namespace Raven.NewClient.Client.Document.Async
             where TTransformer : AbstractTransformerCreationTask, new()
         {
             var result = await LoadAsync<TTransformer, TResult>(new[] { id }.AsEnumerable(), configure, token).ConfigureAwait(false);
-            return result.FirstOrDefault();
+            return result.Values.FirstOrDefault();
         }
 
-        public async Task<TResult[]> LoadAsync<TTransformer, TResult>(IEnumerable<string> ids,
+        public async Task<IDictionary<string, TResult>> LoadAsync<TTransformer, TResult>(IEnumerable<string> ids,
             Action<ILoadConfiguration> configure = null, CancellationToken token = new CancellationToken())
             where TTransformer : AbstractTransformerCreationTask, new()
         {
@@ -113,10 +113,10 @@ namespace Raven.NewClient.Client.Document.Async
             configure?.Invoke(configuration);
 
             var result = await LoadUsingTransformerInternalAsync<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters, token).ConfigureAwait(false);
-            return result.FirstOrDefault();
+            return result.Values.FirstOrDefault();
         }
 
-        public async Task<TResult[]> LoadAsync<TResult>(IEnumerable<string> ids, string transformer,
+        public async Task<IDictionary<string, TResult>> LoadAsync<TResult>(IEnumerable<string> ids, string transformer,
             Action<ILoadConfiguration> configure = null,
             CancellationToken token = new CancellationToken())
         {
@@ -136,10 +136,10 @@ namespace Raven.NewClient.Client.Document.Async
             var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
 
             var result = await LoadUsingTransformerInternalAsync<TResult>(new[] { id }, null, transformer, configuration.TransformerParameters, token).ConfigureAwait(false);
-            return result.FirstOrDefault();
+            return result.Values.FirstOrDefault();
         }
 
-        public async Task<TResult[]> LoadAsync<TResult>(IEnumerable<string> ids, Type transformerType,
+        public async Task<IDictionary<string, TResult>> LoadAsync<TResult>(IEnumerable<string> ids, Type transformerType,
             Action<ILoadConfiguration> configure = null,
             CancellationToken token = new CancellationToken())
         {
@@ -172,7 +172,7 @@ namespace Raven.NewClient.Client.Document.Async
             return loadOeration.GetDocument<T>();
         }
 
-        public async Task<T[]> LoadAsync<T>(IEnumerable<string> ids,
+        public async Task<IDictionary<string, T>> LoadAsync<T>(IEnumerable<string> ids,
             CancellationToken token = default(CancellationToken))
         {
             var loadOeration = new LoadOperation(this);
@@ -188,7 +188,7 @@ namespace Raven.NewClient.Client.Document.Async
             return loadOeration.GetDocuments<T>();
         }
 
-        public async Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes,
+        public async Task<IDictionary<string, T>> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes,
             CancellationToken token = new CancellationToken())
         {
             var loadOeration = new LoadOperation(this);
@@ -205,14 +205,14 @@ namespace Raven.NewClient.Client.Document.Async
             return loadOeration.GetDocuments<T>();
         }
 
-        public async Task<T[]> LoadUsingTransformerInternalAsync<T>(string[] ids, KeyValuePair<string, Type>[] includes,
+        public async Task<IDictionary<string, T>> LoadUsingTransformerInternalAsync<T>(string[] ids, KeyValuePair<string, Type>[] includes,
             string transformer, Dictionary<string, object> transformerParameters = null,
             CancellationToken token = default(CancellationToken))
         {
             if (transformer == null)
                 throw new ArgumentNullException("transformer");
             if (ids.Length == 0)
-                return new T[0];
+                return new Dictionary<string, T>();
 
             var loadTransformerOeration = new LoadTransformerOperation(this);
             loadTransformerOeration.ByIds(ids);
@@ -226,7 +226,7 @@ namespace Raven.NewClient.Client.Document.Async
                 loadTransformerOeration.SetResult(command.Result);
             }
 
-            return loadTransformerOeration.GetTransformedDocuments<T>(command?.Result);
+            return loadTransformerOeration.GetTransformedDocuments<T>(command?.Result, ids);
         }
 
         public async Task<IEnumerable<TResult>> LoadStartingWithAsync<TTransformer, TResult>(string keyPrefix,

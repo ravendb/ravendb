@@ -7,9 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Linq;
 
@@ -87,7 +84,7 @@ namespace Raven.NewClient.Client.Document
         ///     Loads the specified entities with the specified ids.
         /// </summary>
         /// <param name="ids">Enumerable of Ids that should be loaded</param>
-        T[] Load<T>(IEnumerable<string> ids);
+        IDictionary<string, T> Load<T>(IEnumerable<string> ids);
 
         /// <summary>
         ///     Loads the specified entity with the specified id after applying
@@ -109,7 +106,7 @@ namespace Raven.NewClient.Client.Document
         ///     <para>Load&lt;Post&gt;("posts/1", "posts/2", "posts/3");</para>
         ///     <para>Or whatever your conventions specify.</para>
         /// </summary>
-        T[] Load<T>(params ValueType[] ids);
+        IDictionary<string, T> Load<T>(params ValueType[] ids);
 
         /// <summary>
         ///     Loads the specified entities with the specified id after applying
@@ -122,7 +119,7 @@ namespace Raven.NewClient.Client.Document
         ///     <para>Load&lt;Post&gt;("posts/1", "posts/2", "posts/3");</para>
         ///     <para>Or whatever your conventions specify.</para>
         /// </remarks>
-        T[] Load<T>(IEnumerable<ValueType> ids);
+        IDictionary<string, T> Load<T>(IEnumerable<ValueType> ids);
 
         /// <summary>
         ///     Performs a load that will use the specified results transformer against the specified id
@@ -138,7 +135,7 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         /// <param name="ids">Enumerable of ids of documents to load</param>
         /// <param name="configure">additional configuration options for operation e.g. AddTransformerParameter</param>
-        TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new();
+        IDictionary<string, TResult> Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new();
 
         /// <summary>
         ///     Performs a load that will use the specified results transformer against the specified id
@@ -156,7 +153,7 @@ namespace Raven.NewClient.Client.Document
         /// <param name="ids">Enumerable of ids of documents to load</param>
         /// <param name="transformer">The transformer to use in this load operation</param>
         /// <param name="configure">additional configuration options for operation e.g. AddTransformerParameter</param>
-        TResult[] Load<TResult>(IEnumerable<string> ids, string transformer, Action<ILoadConfiguration> configure = null);
+        IDictionary<string, TResult> Load<TResult>(IEnumerable<string> ids, string transformer, Action<ILoadConfiguration> configure = null);
 
         /// <summary>
         ///     Performs a load that will use the specified results transformer against the specified id
@@ -174,7 +171,7 @@ namespace Raven.NewClient.Client.Document
         /// <param name="ids">Enumerable of ids of documents to load</param>
         /// <param name="transformerType">The transformer to use in this load operation</param>
         /// <param name="configure">additional configuration options for operation e.g. AddTransformerParameter</param>
-        TResult[] Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null);
+        IDictionary<string, TResult> Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null);
 
         /// <summary>
         ///     Queries the specified index using Linq.
