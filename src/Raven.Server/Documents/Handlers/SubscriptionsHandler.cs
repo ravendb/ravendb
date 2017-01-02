@@ -1,28 +1,27 @@
-﻿using System;
+﻿using System.Collections.Generic;
+using System.Net;
 using System.Threading.Tasks;
-using Raven.Abstractions.Logging;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Sparrow.Json;
-using System.Net.WebSockets;
-
 
 namespace Raven.Server.Documents.Handlers
 {
     public class SubscriptionsHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/subscriptions/create", "POST", "/databases/{databaseName:string}/subscriptions/create?startEtag={startEtag:long|optional}")]
+        [RavenAction("/databases/*/subscriptions", "PUT", "/databases/{databaseName:string}/subscriptions?startEtag={startEtag:long|optional}")]
         public async Task Create()
         {
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                var startEtag = GetLongQueryString("startEtag") ?? 0;
+                var startEtag = GetLongQueryString("startEtag", required: false) ?? 0;
 
-                var subscriptionCriteriaRaw = await context.ReadForDiskAsync(RequestBodyStream(), null).ConfigureAwait(false);
-                var subscriptionId = Database.SubscriptionStorage.CreateSubscription(subscriptionCriteriaRaw, startEtag);
-                HttpContext.Response.StatusCode = 201; // NoContent
+                var json = await context.ReadForDiskAsync(RequestBodyStream(), null);
+                var subscriptionId = Database.SubscriptionStorage.CreateSubscription(json, startEtag);
+                HttpContext.Response.StatusCode = 201; // Created
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -34,17 +33,10 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/subscriptions", "DELETE",
-            "/databases/{databaseName:string}/subscriptions?id={subscriptionId:long}")]
+        [RavenAction("/databases/*/subscriptions", "DELETE", "/databases/{databaseName:string}/subscriptions?id={subscriptionId:long}")]
         public Task Delete()
         {
-            var ids = HttpContext.Request.Query["id"];
-            if (ids.Count == 0)
-                throw new ArgumentException("The 'id' query string parameter is mandatory");
-
-            long id;
-            if (long.TryParse(ids[0], out id) == false)
-                throw new ArgumentException("The 'id' query string parameter must be a valid long");
+            var id = GetLongQueryString("id").Value;
 
             Database.SubscriptionStorage.DeleteSubscription(id);
 
@@ -53,131 +45,97 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/subscriptions/running", "GET",
-            "/databases/{databaseName:string}/subscriptions/running")]
-        public Task GetRunningSubscriptions()
+        [RavenAction("/databases/*/subscriptions", "GET", "/databases/{databaseName:string}/subscriptions/running")]
+        public Task GetAll()
         {
-
             var start = GetStart();
-            var take = GetPageSize(Database.Configuration.Core.MaxPageSize);
+            var pageSize = GetPageSize(Database.Configuration.Core.MaxPageSize);
+            var history = GetBoolValueQueryString("history", required: false) ?? false;
+            var running = GetBoolValueQueryString("running", required: false) ?? false;
+            var id = GetLongQueryString("id", required: false);
+
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
             {
-                context.OpenReadTransaction();
-                HttpContext.Response.StatusCode = 200;
+                IEnumerable<DynamicJsonValue> subscriptions;
+                if (id.HasValue == false)
+                {
+                    subscriptions = running
+                        ? Database.SubscriptionStorage.GetAllRunningSubscriptions(context, history, start, pageSize)
+                        : Database.SubscriptionStorage.GetAllSubscriptions(context, history, start, pageSize);
+                }
+                else
+                {
+                    var subscription = running
+                        ? Database
+                            .SubscriptionStorage
+                            .GetRunningSubscription(context, id.Value, history)
+                        : Database
+                            .SubscriptionStorage
+                            .GetSubscription(context, id.Value, history);
+
+                    if (subscription == null)
+                    {
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                        return Task.CompletedTask;
+                    }
+
+                    subscriptions = new[] { subscription };
+                }
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    Database.SubscriptionStorage.GetRunningSusbscriptions(writer, context, start, take);
+                    writer.WriteStartObject();
+
+                    writer.WriteResults(context, subscriptions, (w, c, subscription) =>
+                    {
+                        c.Write(w, subscription);
+                    });
+
+                    writer.WriteEndObject();
                 }
             }
 
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/subscriptions/running/history", "GET", "/databases/{databaseName:string}/subscriptions/running/history?id={subscriptionId:long}")]
-        public Task GetRunningSubscriptionHistory()
-        {
-            var ids = HttpContext.Request.Query["id"];
-            if (ids.Count == 0)
-                throw new ArgumentException("The 'id' query string parameter is mandatory");
-
-            long id;
-            if (long.TryParse(ids[0], out id) == false)
-                throw new ArgumentException("The 'id' query string parameter must be a valid long");
-
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
-            {
-                context.OpenReadTransaction();
-                HttpContext.Response.StatusCode = 200;
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    var data = Database.SubscriptionStorage.GetRunningSubscriptionConnectionHistory(context, id);
-                    context.Write(writer, data);
-                    writer.Flush();
-                }
-            }
-            return Task.CompletedTask;
-        }
-
-
-        [RavenAction("/databases/*/subscriptions/running/count", "GET", "/databases/{databaseName:string}/subscriptions/running/count")]
+        // TODO: do we need this?
+        [RavenAction("/databases/*/subscriptions/count", "GET", "/databases/{databaseName:string}/subscriptions/running/count")]
         public Task GetRunningSubscriptionsCount()
         {
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
             {
-                context.OpenReadTransaction();
-                HttpContext.Response.StatusCode = 200;
-
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    var runningSubscriptionsCount = Database.SubscriptionStorage.GetRunningCount();
+                    var runningCount = Database.SubscriptionStorage.GetRunningCount();
+                    var totalCount = Database.SubscriptionStorage.GetAllSubscriptionsCount();
+
                     context.Write(writer, new DynamicJsonValue()
                     {
-                        ["RunningSubscriptionCount"] = runningSubscriptionsCount
+                        ["Running"] = runningCount,
+                        ["Total"] = totalCount
                     });
-                    writer.Flush();
                 }
             }
+
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/subscriptions/count", "GET", "/databases/{databaseName:string}/subscriptions/count")]
-        public Task GetSubscriptionsCount()
-        {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
-            {
-                context.OpenReadTransaction();
-                HttpContext.Response.StatusCode = 200;
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    var runningSubscriptionsCount = Database.SubscriptionStorage.GetAllSubscriptionsCount();
-                    context.Write(writer, new DynamicJsonValue()
-                    {
-                        ["TotalSubscriptionsCount"] = runningSubscriptionsCount
-                    });
-                    writer.Flush();
-                }
-            }
-            return Task.CompletedTask;
-        }
-
-
-        [RavenAction("/databases/*/subscriptions/drop", "POST",
-            "/databases/{databaseName:string}/subscriptions/drop?id={subscriptionId:long}")]
+        [RavenAction("/databases/*/subscriptions/drop", "POST", "/databases/{databaseName:string}/subscriptions/drop?id={subscriptionId:long}")]
         public Task DropSubscriptionConnection()
         {
             var subscriptionId = GetLongQueryString("id").Value;
-            HttpContext.Response.StatusCode = 200;
-            Database.SubscriptionStorage.DropSubscriptionConnection(subscriptionId);
-            return Task.CompletedTask;
-        }
 
-        [RavenAction("/databases/*/subscriptions", "GET", "/databases/{databaseName:string}/subscriptions?start={start:int}&pageSize={pageSize:int}")]
-        public Task GetAllSubscriptions()
-        {
-            var start = GetStart();
-            var take = GetPageSize(Database.Configuration.Core.MaxPageSize);
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            if (Database.SubscriptionStorage.DropSubscriptionConnection(subscriptionId) == false)
             {
-                context.OpenReadTransaction();
-                HttpContext.Response.StatusCode = 200;
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    Database.SubscriptionStorage.GetAllSubscriptions(writer, context, start, take);
-                    writer.Flush();
-                }
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                return Task.CompletedTask;
             }
+
             return Task.CompletedTask;
         }
-
-       
     }
 }
