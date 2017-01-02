@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using Sparrow;
 using Voron;
 using Voron.Data.BTrees;
@@ -18,7 +17,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public Tree ReducePhaseTree;
         
         public FixedSizeTree ResultsStoreTypes;
-        public Dictionary<ulong, MapReduceResultsStore> StoreByReduceKeyHash = new Dictionary<ulong, MapReduceResultsStore>(); // TODO arek NumericEqualityComparer.Instance
+        public Dictionary<ulong, MapReduceResultsStore> StoreByReduceKeyHash = new Dictionary<ulong, MapReduceResultsStore>(NumericEqualityComparer.Instance);
         public Dictionary<string, long> ProcessedDocEtags = new Dictionary<string, long>();
         public Dictionary<string, long> ProcessedTombstoneEtags = new Dictionary<string, long>();
         
@@ -26,7 +25,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         static MapReduceIndexingContext()
         {
-             Slice.From(StorageEnvironment.LabelsContext, "#NextMapResultId", ByteStringType.Immutable, out LastMapResultIdKey);
+             Slice.From(StorageEnvironment.LabelsContext, "__raven/map-reduce/#next-map-result-id", ByteStringType.Immutable, out LastMapResultIdKey);
         }
 
         public void Dispose()

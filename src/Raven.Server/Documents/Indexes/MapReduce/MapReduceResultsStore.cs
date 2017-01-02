@@ -2,20 +2,17 @@
 using System.Collections.Generic;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
-using Sparrow.Binary;
 using Sparrow.Json;
 using Voron;
 using Voron.Data.BTrees;
-using Voron.Data.Compression;
 using Voron.Impl;
-using Voron.Util;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
 {
     public unsafe class MapReduceResultsStore : IDisposable
     {
-        public const string ReduceTreePrefix = "#reduceTree-";
-        public const string NestedValuesPrefix = "#nestedSection-";
+        public const string ReduceTreePrefix = "__raven/map-reduce/#reduce-tree-";
+        public const string NestedValuesPrefix = "__raven/map-reduce/#nested-section-";
 
         private readonly ulong _reduceKeyHash;
         private readonly TransactionOperationContext _indexContext;
@@ -57,8 +54,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         private void InitializeTree(bool create)
         {
-            //TODO: Need better way to handle tree names
-
             var treeName = ReduceTreePrefix + _reduceKeyHash;
             Tree = create ? _tx.CreateTree(treeName, flags: TreeFlags.LeafsCompressed, pageLocator: _pageLocator) : _tx.ReadTree(treeName, pageLocator: _pageLocator);
 

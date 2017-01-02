@@ -55,7 +55,7 @@ namespace Voron.Impl.Scratch
                 foreach (var freeAndAvailablePageNumber in free.Value)
                 {
                     byte* freeAndAvailablePagePointer = _scratchPager.AcquirePagePointer(tx, freeAndAvailablePageNumber, PagerState);
-                    ulong freeAndAvailablePageSize = (ulong)free.Key * (ulong)_scratchPager.PageSize;
+                    ulong freeAndAvailablePageSize = (ulong)free.Key * Constants.Storage.PageSize;
                     // This has to be forced, as the list of available pages should be protected by default, but this
                     // is a policy we implement inside the ScratchBufferFile only.
                     _scratchPager.UnprotectPageRange(freeAndAvailablePagePointer, freeAndAvailablePageSize, true);
@@ -70,7 +70,7 @@ namespace Voron.Impl.Scratch
                 foreach (var val in free.Value)
                 {
                     byte* freePageBySizePointer = _scratchPager.AcquirePagePointer(tx, val.Page, PagerState);
-                    ulong freePageBySizeSize = (ulong)free.Key * (ulong)_scratchPager.PageSize;
+                    ulong freePageBySizeSize = (ulong)free.Key * Constants.Storage.PageSize;
                     // This has to be forced, as the list of available pages should be protected by default, but this
                     // is a policy we implement inside the ScratchBufferFile only.
                     _scratchPager.UnprotectPageRange(freePageBySizePointer, freePageBySizeSize, true);
@@ -129,7 +129,7 @@ namespace Voron.Impl.Scratch
 
 #if VALIDATE
                 byte* freeAndAvailablePagePointer = _scratchPager.AcquirePagePointer(tx, freeAndAvailablePageNumber, PagerState);
-                ulong freeAndAvailablePageSize = (ulong)size * (ulong)_scratchPager.PageSize;
+                ulong freeAndAvailablePageSize = (ulong)size * Constants.Storage.PageSize;
                 // This has to be forced, as the list of available pages should be protected by default, but this
                 // is a policy we implement inside the ScratchBufferFile only.
                 _scratchPager.UnprotectPageRange(freeAndAvailablePagePointer, freeAndAvailablePageSize, true);
@@ -156,7 +156,7 @@ namespace Voron.Impl.Scratch
 
 #if VALIDATE
             byte* freePageBySizePointer = _scratchPager.AcquirePagePointer(tx, val.Page, PagerState);
-            ulong freePageBySizeSize = (ulong)size * (ulong)_scratchPager.PageSize;
+            ulong freePageBySizeSize = (ulong)size * Constants.Storage.PageSize;
             // This has to be forced, as the list of available pages should be protected by default, but this
             // is a policy we implement inside the ScratchBufferFile only.
             _scratchPager.UnprotectPageRange(freePageBySizePointer, freePageBySizeSize, true);
@@ -192,7 +192,7 @@ namespace Voron.Impl.Scratch
             if (_allocatedPages.TryGetValue(pageNumber, out temporary) != false)
             {
                 var page = new Page(pagePointer);
-                ulong pageSize = (ulong)_scratchPager.GetNumberOfPages(page) * (ulong)_scratchPager.PageSize;
+                ulong pageSize = (ulong)_scratchPager.GetNumberOfPages(page) * Constants.Storage.PageSize;
                 // This has to be forced, as the scratchPager does NOT protect on allocate,
                 // (on the contrary, we force protection/unprotection when freeing a page and allocating it
                 // from the reserve)
