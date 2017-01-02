@@ -155,17 +155,17 @@ namespace Raven.NewClient.Client.Document.Async
             throw new NotImplementedException();
         }
 
-        Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadAsync<TResult>(CancellationToken token, params ValueType[] ids)
+        Lazy<Task<Dictionary<string, TResult>>> IAsyncLazySessionOperations.LoadAsync<TResult>(CancellationToken token, params ValueType[] ids)
         {
             throw new NotImplementedException();
         }
 
-        Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadAsync<TResult>(IEnumerable<ValueType> ids, CancellationToken token)
+        Lazy<Task<Dictionary<string, TResult>>> IAsyncLazySessionOperations.LoadAsync<TResult>(IEnumerable<ValueType> ids, CancellationToken token)
         {
             throw new NotImplementedException();
         }
 
-        public Lazy<Task<TResult[]>> LoadAsync<TResult>(IEnumerable<ValueType> ids, Action<TResult[]> onEval, CancellationToken token = new CancellationToken())
+        public Lazy<Task<Dictionary<string, TResult>>> LoadAsync<TResult>(IEnumerable<ValueType> ids, Action<Dictionary<string, TResult>> onEval, CancellationToken token = new CancellationToken())
         {
             throw new NotImplementedException();
         }
@@ -176,12 +176,12 @@ namespace Raven.NewClient.Client.Document.Async
             throw new NotImplementedException();
         }
 
-        public Lazy<Task<TResult[]>> MoreLikeThisAsync<TResult>(MoreLikeThisQuery query, CancellationToken token = new CancellationToken())
+        public Lazy<Task<Dictionary<string, TResult>>> MoreLikeThisAsync<TResult>(MoreLikeThisQuery query, CancellationToken token = new CancellationToken())
         {
             throw new NotImplementedException();
         }
 
-        Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<TResult>(string keyPrefix, string matches, int start, int pageSize,
+        Lazy<Task<Dictionary<string, TResult>>> IAsyncLazySessionOperations.LoadStartingWithAsync<TResult>(string keyPrefix, string matches, int start, int pageSize,
             string exclude, RavenPagingInformation pagingInformation, string skipAfter,
             CancellationToken token)
         {
@@ -193,12 +193,12 @@ namespace Raven.NewClient.Client.Document.Async
             throw new NotImplementedException();
         }
 
-        Lazy<Task<TResult[]>> IAsyncLazySessionOperations.LoadAsync<TResult>(IEnumerable<string> ids, CancellationToken token)
+        Lazy<Task<Dictionary<string, TResult>>> IAsyncLazySessionOperations.LoadAsync<TResult>(IEnumerable<string> ids, CancellationToken token)
         {
             throw new NotImplementedException();
         }
 
-        public Lazy<Task<TResult[]>> LoadAsync<TResult>(IEnumerable<string> ids, Action<TResult[]> onEval, CancellationToken token = new CancellationToken())
+        public Lazy<Task<Dictionary<string, TResult>>> LoadAsync<TResult>(IEnumerable<string> ids, Action<Dictionary<string, TResult>> onEval, CancellationToken token = new CancellationToken())
         {
             throw new NotImplementedException();
         }
@@ -213,7 +213,7 @@ namespace Raven.NewClient.Client.Document.Async
             throw new NotImplementedException();
         }
 
-        public Lazy<Task<T[]>> LazyAsyncLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<T[]> onEval, CancellationToken token = default (CancellationToken))
+        public Lazy<Task<Dictionary<string, T>>> LazyAsyncLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<Dictionary<string, T>> onEval, CancellationToken token = default (CancellationToken))
         {
             throw new NotImplementedException();
         }
