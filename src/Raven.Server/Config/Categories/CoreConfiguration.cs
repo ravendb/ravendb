@@ -84,6 +84,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Raven/RunAsService")]
         public bool RunAsService { get; set; }
 
+        [Description("Force using the (32 bits) sparse memory mapped pager, even when running in 64 bits")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("Raven/RunWithSparseMmapPager")]
+        public bool RunWithSparseMmapPager { get; set; }
+
         private static string CalculateWorkingDirectory(string workingDirectory)
         {
             if (string.IsNullOrEmpty(workingDirectory))
