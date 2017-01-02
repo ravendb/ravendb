@@ -5,6 +5,7 @@ import EVENTS = require("common/constants/events");
 import router = require("plugins/router");
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
+import notificationCenter = require("common/notifications/notificationCenter");
 
 class menu {
 
@@ -14,7 +15,9 @@ class menu {
         ko.computed(() => {
             let item = this.deepestOpenItem();
             return item ? item.depth() + 1 : 0;
-        });
+    });
+
+    private notificationCenter = notificationCenter.instance;
 
     private $mainMenuLevels: JQuery;
 
@@ -64,6 +67,8 @@ class menu {
     }
 
     handleIntermediateItemClick($data: { item: intermediateMenuItem }, $event: JQueryEventObject) {
+        this.notificationCenter.notificationsState(false);
+
         let { item } = $data;
         if (item.isOpen()) {
             item.close();
@@ -121,6 +126,7 @@ class menu {
     }
 
     handleLevelClick($data: any, $event: JQueryEventObject) {
+        this.notificationCenter.notificationsState(false);
         $event.stopPropagation();
 
         let $targetLevel = $($event.currentTarget);
