@@ -22,9 +22,13 @@ namespace Raven.NewClient.Client.Document
     /// </summary>
     public partial class DocumentSession : InMemoryDocumentSessionOperations, IDocumentQueryGenerator, ISyncAdvancedSessionOperation, IDocumentSessionImpl
     {
-        ILazyLoaderWithInclude<TResult> ILazySessionOperations.Include<TResult>(Expression<Func<TResult, object>> path)
+        /// <summary>
+        /// Begin a load while including the specified path 
+        /// </summary>
+        /// <param name="path">The path.</param>
+        ILazyLoaderWithInclude<T> ILazySessionOperations.Include<T>(Expression<Func<T, object>> path)
         {
-            throw new NotImplementedException();
+            return new LazyMultiLoaderWithInclude<T>(this).Include(path);
         }
 
         /// <summary>
@@ -206,12 +210,19 @@ namespace Raven.NewClient.Client.Document
 
         public Lazy<TResult[]> MoreLikeThis<TResult>(MoreLikeThisQuery query)
         {
-            throw new NotImplementedException();
+            //TODO - DisableAllCaching
+            var loadOperation = new LoadOperation(this);
+            var lazyOp = new LazyMoreLikeThisOperation<TResult>(loadOperation, query);
+            return AddLazyOperation<TResult[]>(lazyOp, null);
         }
 
+        /// <summary>
+        /// Begin a load while including the specified path 
+        /// </summary>
+        /// <param name="path">The path.</param>
         ILazyLoaderWithInclude<object> ILazySessionOperations.Include(string path)
         {
-            throw new NotImplementedException();
+            return new LazyMultiLoaderWithInclude<object>(this).Include(path);
         }
 
         /// <summary>

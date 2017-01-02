@@ -12,7 +12,7 @@ using Raven.NewClient.Client.Http;
 
 namespace Raven.NewClient.Client.Commands
 {
-    public class MultiGetCommand : RavenCommand<MultiGetResult>
+    public class MultiGetCommand : RavenCommand<BlittableArrayResult>
     {
         public JsonOperationContext Context;
         public List<GetRequest> GetCommands;
@@ -59,7 +59,7 @@ namespace Raven.NewClient.Client.Commands
                 }
             });
 
-            var sb = new StringBuilder($"{node.Url}/databases/{node.Database}/multi_get?parallel=yes");
+            var sb = new StringBuilder($"{node.Url}/databases/{node.Database}/multi_get");
 
             IsReadRequest = false;
 
@@ -73,7 +73,7 @@ namespace Raven.NewClient.Client.Commands
         {
             if (response == null)
                 throw new InvalidOperationException();
-            Result = JsonDeserializationClient.MultiGetResult(response);
+            Result = JsonDeserializationClient.BlittableArrayResult(response);
         }
     }
 }

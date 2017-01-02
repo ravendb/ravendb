@@ -27,7 +27,6 @@ namespace Raven.NewClient.Client.Data
         /// <summary>
         /// Concatenated Url and Query.
         /// </summary>
-        [JsonIgnore]
         public string UrlAndQuery
         {
             get

@@ -55,13 +55,6 @@ namespace Raven.NewClient.Client.Commands.Lazy
 
         public bool RequiresRetry { get; set; }
 
-        public void HandleResponses(BlittableJsonReaderObject[] responses, ShardStrategy shardStrategy)
-        {
-            throw new NotImplementedException();
-           /* var response = responses.OrderBy(x => x.Status).First(); // this way, 200 response is higher than 404
-            HandleResponse(response);*/
-        }
-
         public void HandleResponse(BlittableJsonReaderObject response)
         {
             throw new NotImplementedException();
@@ -76,23 +69,5 @@ namespace Raven.NewClient.Client.Commands.Lazy
                 Results = response.Result.Value<RavenJArray>("Results").Select(x => x as RavenJObject).ToList()
             });*/
         }
-
-        public IDisposable EnterContext()
-        {
-            return null;
-        }
-        /*
-        private void HandleRespose(LoadResult loadResult)
-        {
-            throw new NotImplementedException();
-            T[] complete = loadTransformerOperation.Complete<T>(loadResult);
-            if (singleResult)
-            {
-                Result = complete.Length > 0 ? complete[0] : (object)null;
-                return;
-            }
-
-            Result = complete;
-        }*/
     }
 }

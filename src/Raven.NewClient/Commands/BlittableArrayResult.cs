@@ -2,7 +2,7 @@
 
 namespace Raven.NewClient.Client.Commands
 {
-    public class BatchResult
+    public class BlittableArrayResult
     {
         public BlittableJsonReaderArray Results { get; set; }
     }
