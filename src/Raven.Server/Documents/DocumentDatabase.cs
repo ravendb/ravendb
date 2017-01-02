@@ -35,6 +35,12 @@ namespace Raven.Server.Documents
         private Task _transformerStoreTask;
         private long _usages;
         private readonly ManualResetEventSlim _waitForUsagesOnDisposal = new ManualResetEventSlim(false);
+        private long _lastIdleTicks = DateTime.UtcNow.Ticks;
+
+        public void ResetIdleTime()
+        {
+            _lastIdleTicks = DateTime.MinValue.Ticks;
+        }
 
         public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore)
         {
@@ -61,6 +67,8 @@ namespace Raven.Server.Documents
             ConfigurationStorage = new ConfigurationStorage(this, serverStore);
             DatabaseInfoCache = serverStore?.DatabaseInfoCache;
         }
+
+        public DateTime LastIdleTime => new DateTime(_lastIdleTicks);
 
         public DatabaseInfoCache DatabaseInfoCache { get; set; }
 
@@ -342,6 +350,7 @@ namespace Raven.Server.Documents
 
             try
             {
+                _lastIdleTicks = DateTime.UtcNow.Ticks;
                 IndexStore?.RunIdleOperations();
                 Operations?.CleanupOperations();
             }
