@@ -492,6 +492,10 @@ namespace Sparrow.Json
         public void Dispose()
         {
             _unmanagedWriteBuffer.Dispose();
+            if (_compressionBuffer!= null)
+                _context.ReturnMemory(_compressionBuffer);
+            _compressionBuffer = null;
+
         }
     }
 }

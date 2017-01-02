@@ -30,12 +30,26 @@ namespace Tryouts
                     Console.Out.Flush();
                 }
                 System.Console.WriteLine("{0:#,#} kb", PosixElectricFencedMemory.usage/1024);
-                foreach(var a in PosixElectricFencedMemory.Allocs.Values.Distinct()){
-                    //if(a.Contains("GetLazyStringForFieldWithCaching("))
-                   // continue;
+                foreach(var a in ElectricFencedMemory.Allocs.Values.Distinct()){
+                    if(a.Contains("GetLazyStringForFieldWithCaching("))
+                    continue;
                     System.Console.WriteLine(a);
                     System.Console.WriteLine("---------");
                 }
+
+                Console.WriteLine("***********************");
+
+                foreach (var doubleMemoryReleasesForPointer in ElectricFencedMemory.DoubleMemoryReleases.Values)
+                {
+                    System.Console.WriteLine($"Count: {doubleMemoryReleasesForPointer.Count}");
+                    Console.WriteLine("Distinct Stacks");
+                    foreach (var stack in doubleMemoryReleasesForPointer.Distinct())
+                    {
+                        Console.WriteLine(stack);
+                    }
+                    System.Console.WriteLine("---------");
+                }
+                Console.WriteLine("Finished");
             }
         }
     }

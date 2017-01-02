@@ -10,8 +10,7 @@ namespace Sparrow.Platform
     public unsafe class PosixElectricFencedMemory
     {
         public static long usage =0;
-        public static System.Collections.Concurrent.ConcurrentDictionary<IntPtr, string> Allocs =
-            new System.Collections.Concurrent.ConcurrentDictionary<IntPtr, string>();
+        
         public static byte* Allocate(int size)
         {
             var remaining = size % 4096;
@@ -71,7 +70,7 @@ namespace Sparrow.Platform
 
             var firstWritablePage = virtualAlloc + 4096;
 
-            Allocs.TryAdd((IntPtr)virtualAlloc, Environment.StackTrace);
+            
 
             Memory.Set(firstWritablePage, 0xED, 4096 * sizeInPages); // don't assume zero'ed mem
             if (remaining == 0)
@@ -91,11 +90,7 @@ namespace Sparrow.Platform
             }
             var address = firstWritablePage - 4096;
 
-            string _;
-            if(Allocs.TryRemove((IntPtr)address, out _) == false)
-            {
-                System.Console.WriteLine("already freed " + Environment.StackTrace);
-            }
+            
 
             if (Syscall.mprotect((IntPtr)address, 4096, ProtFlag.PROT_READ) != 0)
             {

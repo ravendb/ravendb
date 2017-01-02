@@ -368,8 +368,7 @@ namespace Sparrow.Json
             using (GetManagedBuffer(out bytes))
             using (var parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag))
             {
-                var builder = new BlittableJsonDocumentBuilder(this, mode, debugTag, parser, _jsonParserState);
-                try
+                using (var builder = new BlittableJsonDocumentBuilder(this, mode, debugTag, parser, _jsonParserState))
                 {
                     CachedProperties.NewDocument();
                     builder.ReadObjectDocument();
@@ -387,11 +386,6 @@ namespace Sparrow.Json
                     var reader = builder.CreateReader();
                     RegisterLiveReader(reader);
                     return reader;
-                }
-                catch (Exception)
-                {
-                    builder.Dispose();
-                    throw;
                 }
             }
         }
@@ -438,7 +432,7 @@ namespace Sparrow.Json
         }
 
 
-        public async Task<BlittableJsonReaderArray> ParseArrayToMemoryAsync(Stream stream, string debugTag,
+        public async Task<Tuple<BlittableJsonReaderArray, IDisposable>> ParseArrayToMemoryAsync(Stream stream, string debugTag,
             BlittableJsonDocumentBuilder.UsageMode mode)
         {
             _jsonParserState.Reset();
@@ -465,7 +459,7 @@ namespace Sparrow.Json
                     // in short scoped context, so we don't care
                     var arrayReader = writer.CreateArrayReader();
                     this.RegisterLiveReader(arrayReader.Parent);
-                    return arrayReader;
+                    return Tuple.Create(arrayReader, (IDisposable)arrayReader.Parent);
                 }
                 catch (Exception)
                 {
@@ -686,7 +680,7 @@ namespace Sparrow.Json
 
         protected internal virtual unsafe void Reset()
         {
-            if (_tempBuffer != null)
+            if (_tempBuffer != null && _tempBuffer.Address != null)
             {
                 _arenaAllocator.Return(_tempBuffer);
                 _tempBuffer.Address = null;
