@@ -139,7 +139,8 @@ function onlyUnique(value, index, self) {
                 Name: names.filter(onlyUnique).join(' '),
                 Age: Math.max.apply(Math,docs.map(function(o){return o.Age;})),
                 Grades:{Bio:12,Math:123,Pys:5,Sports:44},
-                Versions:history
+                Versions:history,
+                '@metadata':docs[0]['@metadata']
             }
 output(out);
 return out;
