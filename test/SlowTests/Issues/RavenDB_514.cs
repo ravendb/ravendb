@@ -1,20 +1,21 @@
+using FastTests;
 using Raven.Abstractions.Indexing;
-using Raven.Tests.Common;
+using Raven.Client.Indexing;
 
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_514 : RavenTest
+    public class RavenDB_514 : RavenTestBase
     {
          [Fact]
          public void BoostWithLinq()
          {
-             using(var store = NewDocumentStore())
+             using(var store = GetDocumentStore())
              {
                  store.DatabaseCommands.PutIndex("test", new IndexDefinition
                  {
-                     Map = "from p in docs.Products select new { p.Price} .Boost(2)"
+                     Maps = { "from p in docs.Products select new { p.Price} .Boost(2)" }
                  });
              }
          }
@@ -22,11 +23,11 @@ namespace Raven.Tests.Issues
          [Fact]
          public void BoostWithMethod()
          {
-             using (var store = NewDocumentStore())
+             using (var store = GetDocumentStore())
              {
                  store.DatabaseCommands.PutIndex("test", new IndexDefinition
                  {
-                     Map = "docs.Products.Select(p =>new { p.Price } .Boost(2))"
+                     Maps = { "docs.Products.Select(p =>new { p.Price } .Boost(2))" }
                  });
              }
          }

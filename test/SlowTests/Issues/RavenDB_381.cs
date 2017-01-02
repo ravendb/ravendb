@@ -4,20 +4,20 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Abstractions.Util;
 using Raven.Client.Document;
-using Raven.Tests.Common;
 
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_381 : RavenTest
+    public class RavenDB_381 : RavenTestBase
     {
         [Fact]
         public void CanChangeConventionJustForOneType()
         {
-            using(var store = NewDocumentStore())
+            using(var store = GetDocumentStore())
             {
                 store.Conventions.RegisterIdConvention<User>((dbName, cmds, user) => "users/" + user.Name);
 
@@ -34,7 +34,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public async Task CanChangeConventionJustForOneType_Async()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Conventions.RegisterAsyncIdConvention<User>((dbName, cmds, user) => new CompletedTask<string>("users/" + user.Name));
 
