@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
             if (it.Seek(Slices.BeforeAllKeys) == false)
                 return false;
 
-            if (it.CurrentKey.ToString() == "#NextMapResultId")
+            if (it.CurrentKey.ToString() == "__raven/map-reduce/#next-map-result-id")
             {
                 if (it.MoveNext() == false)
                     return false;
