@@ -27,7 +27,6 @@ namespace Raven.NewClient.Client.Commands
         {
             return new MultiGetCommand()
             {
-                //TODO
                 GetCommands = requests,
                 Context = _session.Context,
                 IsReadRequest = false

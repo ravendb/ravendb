@@ -59,7 +59,7 @@ namespace Raven.NewClient.Client.Commands
                 }
             });
 
-            var sb = new StringBuilder($"{node.Url}/databases/{node.Database}/multi_get?parallel=yes");
+            var sb = new StringBuilder($"{node.Url}/databases/{node.Database}/multi_get");
 
             IsReadRequest = false;
 
