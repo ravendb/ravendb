@@ -453,15 +453,16 @@ namespace Raven.NewClient.Client.Document
         /// </remarks>
         public override IDisposable DisableAggressiveCaching()
         {
-            //throw new NotImplementedException();
-
+            //WIP
             AssertInitialized();
-
+            var re = GetRequestExecuter(DefaultDatabase);
+            if (re.AggressiveCaching.Value != null)
+            {
+                var old = re.AggressiveCaching.Value.Duration;
+                re.AggressiveCaching.Value.Duration = null;
+                return new DisposableAction(() => re.AggressiveCaching.Value.Duration = old);
+            }
             return null;
-            //TODO 
-            /*var old = jsonRequestFactory.AggressiveCacheDuration;
-            jsonRequestFactory.AggressiveCacheDuration = null;
-            return new DisposableAction(() => jsonRequestFactory.AggressiveCacheDuration = old);*/
         }
 
         /// <summary>

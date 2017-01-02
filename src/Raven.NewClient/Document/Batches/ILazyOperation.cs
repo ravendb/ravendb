@@ -3,6 +3,7 @@ using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Shard;
+using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Document.Batches
 {
@@ -12,8 +13,8 @@ namespace Raven.NewClient.Client.Document.Batches
         object Result { get; }
         QueryResult QueryResult { get; }
         bool RequiresRetry { get; }
-        void HandleResponse(GetResponse response);
-        void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy);
+        void HandleResponse(BlittableJsonReaderObject response);
+        void HandleResponses(BlittableJsonReaderObject[] responses, ShardStrategy shardStrategy);
 
         IDisposable EnterContext();
     }

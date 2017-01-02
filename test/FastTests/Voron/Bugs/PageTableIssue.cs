@@ -2,6 +2,7 @@
 using System.IO;
 using Xunit;
 using Voron;
+using Voron.Global;
 
 namespace FastTests.Voron.Bugs
 {
@@ -39,7 +40,7 @@ namespace FastTests.Voron.Bugs
 				txw.Commit();
 			}
 
-			var bytesToFillFirstJournalCompletely = new byte[8*Env.Options.PageSize];
+			var bytesToFillFirstJournalCompletely = new byte[8*Constants.Storage.PageSize];
 
 			new Random().NextBytes(bytesToFillFirstJournalCompletely);
 

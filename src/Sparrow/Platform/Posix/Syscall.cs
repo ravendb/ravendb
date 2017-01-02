@@ -30,8 +30,7 @@ namespace Sparrow.Platform.Posix
 
         public static int gettid()
         {
-            const int SYS_gettid = 178;
-            return (int) syscall0(SYS_gettid);
+            return (int) syscall0(PerPlatformValues.SyscallNumbers.SYS_gettid);
         }
 
         [DllImport(LIBC_6, SetLastError = true)]

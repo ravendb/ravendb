@@ -553,9 +553,18 @@ namespace Sparrow.Json
             return ToString().TrimStart(trimChars);
         }
 
-        public IEnumerable<char> Reverse()
+        public string Reverse()
         {
-            return ToString().Reverse();
+            var maxCharCount = _context.Encoding.GetMaxCharCount(Length);
+            if(LazyStringTempBuffer == null || LazyStringTempBuffer.Length < maxCharCount)
+                LazyStringTempBuffer = new char[Bits.NextPowerOf2(maxCharCount)];
+
+            fixed (char* pChars = LazyStringTempBuffer)
+            {
+                var chars = _context.Encoding.GetChars(_buffer, Length, pChars, LazyStringTempBuffer.Length);
+                Array.Reverse(LazyStringTempBuffer, 0, chars);
+                return new string(LazyStringTempBuffer, 0, chars);
+            }    
         }
     }
 }

@@ -1,19 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Text;
 using System.Threading.Tasks;
-using FastTests.Client.Subscriptions;
-using FastTests.Server.Basic;
-using FastTests.Server.Documents.Alerts;
-using FastTests.Server.Documents.Patching;
-using FastTests.Server.Documents.Replication;
-using FastTests.Server.Documents.SqlReplication;
-using Raven.Client.Document;
-using SlowTests.Core.Commands;
-using Sparrow.Json;
-using Sparrow.Logging;
+using FastTests.Voron;
+using Voron;
+using Voron.Global;
+using Voron.Impl.Scratch;
+using Xunit;
 
 namespace Tryouts
 {
@@ -21,18 +12,23 @@ namespace Tryouts
     {
         static void Main(string[] args)
         {
-            for (int i = 0; i < 100; i++)
-            {
-                Console.WriteLine(i); 
-                using (var a = new NewClientTests.NewClient.FastTests.Versioning.Versioning())
-                {
-                    a.WillDeleteRevisionsIfDeleted_OnlyIfPurgeOnDeleteIsTrue().Wait();
-                }
-                Console.WriteLine(i);
+            //Parallel.For(0, 100, i =>
+            //{
+            //    Console.WriteLine(i);
+            //    using (var a = new SlowTests.Tests.Sorting.AlphaNumericSorting())
+            //    {
+            //        a.random_words_using_document_query_async().Wait();
+            //    }
+            //});
+           
 
-            }
+            //using (var a = new LazyTransactionsRespectPageBoundaries())
+            //{
+            //    a.CanSyncWhenLazyTransactionsHasBufferedMultipleTransactions();
+            //}
         }
     }
+
 
 }
 

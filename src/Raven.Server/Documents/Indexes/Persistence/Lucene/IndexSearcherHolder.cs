@@ -200,13 +200,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 _values = values;
 #endif
                 if (values.Count == 0)
-                    throw new InvalidOperationException("Cannot apply distinct facet on empty fields, did you forget to store them in the index? ");
+                    ThrowEmptyFacets();
 
                 _hashCode = values.Count;
                 _hash = (uint)values.Count;
 
-                var size = values.Sum(x => x.Length);
-                var buffer = context.GetNativeTempBuffer(size);
+                int size = 0;
+                foreach (var value in values)
+                {
+                    size += value.Length;
+                }
+                var buffer = context.GetNativeTempBuffer(size * sizeof(char));
                 var destChars = (char*)buffer;
 
                 var position = 0;
@@ -222,6 +226,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
 
                 _hash = Hashing.XXHash32.Calculate(buffer, size);
+            }
+
+            private static void ThrowEmptyFacets()
+            {
+                throw new InvalidOperationException(
+                    "Cannot apply distinct facet on empty fields, did you forget to store them in the index? ");
             }
         }
     }

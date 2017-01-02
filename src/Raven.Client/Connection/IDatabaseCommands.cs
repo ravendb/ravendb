@@ -622,9 +622,9 @@ namespace Raven.Client.Connection
         void DeleteApiKey(string name);
 
         /// <summary>
-        /// Enumarate all existing api keys
+        /// Get all existing api keys
         /// </summary>
-        IEnumerable<NamedApiKeyDefinition> GetAllApiKeys();
+        NamedApiKeyDefinition[] GetApiKeys(int start, int pageSize);
     }
 
     public interface IAdminDatabaseCommands

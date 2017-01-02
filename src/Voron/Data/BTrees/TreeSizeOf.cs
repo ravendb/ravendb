@@ -18,7 +18,7 @@ namespace Voron.Impl
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int LeafEntry(int pageMaxSpace, Slice key, int len)
         {
-            var nodeSize = Constants.NodeHeaderSize;
+            var nodeSize = Constants.Tree.NodeHeaderSize;
 
             if (key.Options == SliceOptions.Key)
                 nodeSize += key.Size;
@@ -28,7 +28,7 @@ namespace Voron.Impl
                 nodeSize += len;
 
                 if (nodeSize > pageMaxSpace)
-                    nodeSize -= len - Constants.PageNumberSize;
+                    nodeSize -= len - Constants.Tree.PageNumberSize;
             }
             // else - page ref node, take no additional space
 
@@ -41,7 +41,7 @@ namespace Voron.Impl
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int BranchEntry(Slice key)
         {
-            var sz = Constants.NodeHeaderSize + key.Size;
+            var sz = Constants.Tree.NodeHeaderSize + key.Size;
             sz += sz & 1;
             return sz;
         }
@@ -58,7 +58,7 @@ namespace Voron.Impl
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int NodeEntry(TreeNodeHeader* other)
         {
-            var sz = other->KeySize + Constants.NodeHeaderSize;
+            var sz = other->KeySize + Constants.Tree.NodeHeaderSize;
             if (other->Flags == TreeNodeFlags.Data || other->Flags == TreeNodeFlags.MultiValuePageRef)
                 sz += other->DataSize;
 
@@ -71,7 +71,7 @@ namespace Voron.Impl
         public static int NodeEntryWithAnotherKey(TreeNodeHeader* other, Slice key)
         {
             var keySize = key.HasValue ? key.Size : other->KeySize;
-            var sz = keySize + Constants.NodeHeaderSize;
+            var sz = keySize + Constants.Tree.NodeHeaderSize;
             if (other->Flags == TreeNodeFlags.Data || other->Flags == TreeNodeFlags.MultiValuePageRef)
                 sz += other->DataSize;
 

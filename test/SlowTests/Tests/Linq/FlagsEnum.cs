@@ -71,7 +71,7 @@ namespace SlowTests.Tests.Linq
                     session.SaveChanges();
                 }
 
-                WaitForUserToContinueTheTest(store);
+                WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

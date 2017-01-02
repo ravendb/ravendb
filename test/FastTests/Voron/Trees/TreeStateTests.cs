@@ -8,6 +8,7 @@ using System;
 using System.Linq;
 using Xunit;
 using Voron;
+using Voron.Data.BTrees;
 using Voron.Global;
 
 namespace FastTests.Voron.Trees
@@ -16,7 +17,6 @@ namespace FastTests.Voron.Trees
     {
         protected override void Configure(StorageEnvironmentOptions options)
         {
-            options.PageSize = 4 * Constants.Size.Kilobyte;
         }
 
         [Theory]
@@ -52,29 +52,39 @@ namespace FastTests.Voron.Trees
         [Fact]
         public void HasReducedNumberOfPagesAfterRemovingHalfOfEntries()
         {
-            const int numberOfRegularItems = 256;
-            const int numberOfOverflowItems = 3;
+            int numberOfRegularItems = 0;
+            int numberOfOverflowItems = 0;
+            var testKey = "test" + new string('-', 128);
+            var smallValue = new byte[256];
+            var largeValue = new byte[Constants.Storage.PageSize * 2];
+            var overflowKey = "overflow" + new string('-', 128);
 
+            TreeMutableState old;
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                for (int i = 0; i < numberOfRegularItems; i++)
+                var size = 0;
+
+                while (size < 32 * Constants.Storage.PageSize)
                 {
-                    tree.Add("test" + new string('-', 128) + i, new byte[256]);
+                    var key = testKey + numberOfRegularItems++;
+                    tree.Add(key, smallValue);
+                    size += Tree.CalcSizeOfEmbeddedEntry(key.Length, smallValue.Length);
                 }
 
-                for (int i = 0; i < numberOfOverflowItems; i++)
+                size = 0;
+
+                while (size < 6 * Constants.Storage.PageSize)
                 {
-                    tree.Add("overflow" + new string('-', 128) + i, new byte[8192]);
+                    var key = overflowKey + numberOfOverflowItems++;
+                    tree.Add(key, largeValue);
+
+                    size += Tree.CalcSizeOfEmbeddedEntry(key.Length, largeValue.Length);
                 }
 
                 tx.Commit();
 
-                Assert.Equal(50, tree.State.PageCount);
-                Assert.Equal(38, tree.State.LeafPages);
-                Assert.Equal(3, tree.State.BranchPages);
-                Assert.Equal(9, tree.State.OverflowPages);
-                Assert.Equal(3, tree.State.Depth);				
+                old = tree.State.Clone();
             }
 
             using (var tx = Env.WriteTransaction())
@@ -90,12 +100,11 @@ namespace FastTests.Voron.Trees
                 tx.Commit();
 
 
-                Assert.Equal(31, tree.AllPages().Count);
-                Assert.Equal(31, tree.State.PageCount);
-                Assert.Equal(22, tree.State.LeafPages);
-                Assert.Equal(3, tree.State.BranchPages);
-                Assert.Equal(6, tree.State.OverflowPages);
-                Assert.Equal(3, tree.State.Depth);
+                Assert.True(old.PageCount > tree.State.PageCount);
+                Assert.True(old.LeafPages > tree.State.LeafPages);
+                Assert.True(old.BranchPages >= tree.State.BranchPages);
+                Assert.True(old.OverflowPages > tree.State.OverflowPages);
+                Assert.True(old.Depth >= tree.State.Depth);
 
             }
         }
@@ -103,18 +112,24 @@ namespace FastTests.Voron.Trees
         [Fact]
         public void HasReducedTreeDepthValueAfterRemovingEntries()
         {
-            const int numberOfItems = 1024;
-
+            int numberOfItems = 0;
+            TreeMutableState old;
+            var key = "test" + new string('-', 256);
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("test");
 
-                for (int i = 0; i < numberOfItems; i++)
-                {
-                    tree.Add("test" + new string('-', 256) + i, new byte[256]);
-                }
+                int size = 0;
+                var value = new byte[256];
 
-                Assert.Equal(4, tree.State.Depth);
+                while (size < 128*Constants.Storage.PageSize)
+                {
+                    numberOfItems++;
+                    var s = key + numberOfItems;
+                    tree.Add(s, value);
+                    size += Tree.CalcSizeOfEmbeddedEntry(s.Length, 256);
+                }
+                old = tree.State.Clone();
 
                 tx.Commit();
             }
@@ -125,10 +140,9 @@ namespace FastTests.Voron.Trees
 
                 for (int i = 0; i < numberOfItems * 0.75; i++)
                 {
-                    tree.Delete("test" + new string('-', 256) + i);
+                    tree.Delete(key + i);
                 }
-
-                Assert.Equal(3, tree.State.Depth);
+                Assert.True(old.Depth >= tree.State.Depth);
 
                 tx.Commit();
             }
@@ -139,7 +153,7 @@ namespace FastTests.Voron.Trees
 
                 for (int i = 0; i < numberOfItems; i++)
                 {
-                    tree.Delete("test" + new string('-', 256) + i);
+                    tree.Delete(key + i);
                 }
 
                 Assert.Equal(1, tree.State.Depth);

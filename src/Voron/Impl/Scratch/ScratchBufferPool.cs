@@ -4,6 +4,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Voron.Global;
 using Voron.Impl.Paging;
 
 namespace Voron.Impl.Scratch
@@ -155,7 +156,7 @@ namespace Voron.Impl.Scratch
             if (current.File.Size < _options.MaxScratchBufferSize)
                 return current.File.Allocate(tx, numberOfPages, size);
 
-            var minSize = numberOfPages * _options.PageSize;
+            var minSize = numberOfPages * Constants.Storage.PageSize;
             var requestedSize = Math.Max(minSize, Math.Min(_current.File.Size * 2, _options.MaxScratchBufferSize));
             // We need to ensure that _current stays constant through the codepath until return. 
             current = NextFile(minSize, requestedSize, tx);
@@ -255,12 +256,12 @@ namespace Voron.Impl.Scratch
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public virtual int CopyPage(IPagerBatchWrites destPagerBatchWrites, int scratchNumber, long p, PagerState pagerState)
+        public virtual int CopyPage(I4KbBatchWrites destI4KbBatchWrites, int scratchNumber, long p, PagerState pagerState)
         {
             var item = GetScratchBufferFile(scratchNumber);
 
             ScratchBufferFile bufferFile = item.File;
-            return bufferFile.CopyPage(destPagerBatchWrites, p, pagerState);
+            return bufferFile.CopyPage(destI4KbBatchWrites, p, pagerState);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

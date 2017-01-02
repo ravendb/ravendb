@@ -10,7 +10,7 @@ namespace Raven.NewClient.Client.Document.Batches
     public class LazyMultiLoaderWithInclude<T> : ILazyLoaderWithInclude<T>
     {
         private readonly IDocumentSessionImpl session;
-        private readonly List<KeyValuePair<string, Type>> includes = new List<KeyValuePair<string, Type>>();
+        private readonly List<string> includes = new List<string>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="LazyMultiLoaderWithInclude{T}"/> class.
@@ -27,7 +27,7 @@ namespace Raven.NewClient.Client.Document.Batches
         /// <param name="path">The path.</param>
         public ILazyLoaderWithInclude<T> Include(string path)
         {
-            includes.Add(new KeyValuePair<string, Type>(path, typeof(object)));
+            includes.Add(path);
             return this;
         }
 

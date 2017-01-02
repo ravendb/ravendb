@@ -14,11 +14,13 @@ namespace FastTests.Voron.LeafsCompression
     public class RavenDB_5384 : StorageTest
     {
         [Theory]
-        [InlineData(26, 256, true, 1)]
-        [InlineData(1024, 256, false, 1)]
+        [InlineData(26, 512, true, 1)]
+        [InlineData(1024, 512, false, 1)]
         [InlineData(26, 333, true, 1)]
         [InlineData(1024, 555, false, 1)]
         [InlineData(777, 2048, false, 1)]
+        [InlineData(777, 2048, false, 2019845912)]
+        [InlineData(254, 713, false, 1104905703)]
         [InlineDataWithRandomSeed(312, 345, true)]
         [InlineDataWithRandomSeed(254, 713, false)]
         public void Leafs_compressed_CRUD(int iterationCount, int size, bool sequentialKeys, int seed)
@@ -144,7 +146,7 @@ namespace FastTests.Voron.LeafsCompression
                 var tree = tx.ReadTree("tree");
 
                 Assert.True(tree.State.Flags.HasFlag(TreeFlags.LeafsCompressed));
-
+               
                 foreach (var id in ids)
                 {
                     tree.Delete(id);
@@ -188,6 +190,7 @@ namespace FastTests.Voron.LeafsCompression
         {
             var tree = tx.ReadTree("tree");
 
+            int i = 0;
             foreach (var id in deleted)
             {
                 Slice key;
@@ -195,6 +198,8 @@ namespace FastTests.Voron.LeafsCompression
                 {
                     using (var readResult = tree.ReadDecompressed(key))
                     {
+                        if(readResult != null)
+                            Console.WriteLine(i);
                         Assert.Null(readResult);
                     }
                 }

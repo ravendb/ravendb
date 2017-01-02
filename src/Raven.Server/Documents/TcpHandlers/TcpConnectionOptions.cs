@@ -75,6 +75,13 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
+        public void ResetAndRenew()
+        {
+            MultiDocumentParser.Parser.ResetStream();
+            Context.ResetAndRenew();
+            MultiDocumentParser.Parser.SetStream();
+        }
+
         public void RegisterBytesSent(long bytesAmount)
         {
             _bytesSentMetric.Mark(bytesAmount);

@@ -6,6 +6,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Client.Connection;
 using Raven.Client.Data;
 using Raven.Json.Linq;
+using Raven.Imports.Newtonsoft.Json.Linq;
 
 namespace Raven.Client.Document.SessionOperations
 {
@@ -29,7 +30,7 @@ namespace Raven.Client.Document.SessionOperations
                 documentSession.TrackIncludedDocument(include);
             }
 
-            if (typeof (T).IsArray)
+            if (typeof(T).IsArray)
             {
                 var arrayOfArrays = loadResult.Results
                                                    .Select(x =>
@@ -39,7 +40,7 @@ namespace Raven.Client.Document.SessionOperations
 
                                                        var values = x.Value<RavenJArray>("$values").Cast<RavenJObject>();
 
-                                                       var elementType = typeof (T).GetElementType();
+                                                       var elementType = typeof(T).GetElementType();
                                                        var array = values.Select(value =>
                                                        {
                                                            EnsureNotReadVetoed(value);
@@ -62,7 +63,7 @@ namespace Raven.Client.Document.SessionOperations
             {
                 throw new InvalidOperationException(String.Format("A load was attempted with transformer {0}, and more than one item was returned per entity - please use {1}[] as the projection type instead of {1}",
                     transformer,
-                    typeof (T).Name));
+                    typeof(T).Name));
             }
 
             return items;
@@ -83,9 +84,19 @@ namespace Raven.Client.Document.SessionOperations
                 var values = result.Value<RavenJArray>("$values").ToArray();
                 foreach (var value in values)
                 {
-                    var ravenJObject = JsonExtensions.ToJObject(value);
-                    var obj = (T) documentSession.ProjectionToInstance(ravenJObject, typeof (T));
-                    yield return obj;
+                    if (value == null)
+                    {
+                        yield return default(T);
+                        continue;
+                    }
+
+                    if (value.Type != JTokenType.Object)
+                    {
+                        yield return value.JsonDeserialization<T>();
+                        continue;
+                    }
+
+                    yield return (T)documentSession.ProjectionToInstance((RavenJObject)value, typeof(T));
                 }
             }
         }

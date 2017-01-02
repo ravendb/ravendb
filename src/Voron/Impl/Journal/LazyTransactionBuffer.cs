@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using Sparrow;
+using Voron.Global;
 using Voron.Impl.Paging;
 
 namespace Voron.Impl.Journal
@@ -12,7 +13,7 @@ namespace Voron.Impl.Journal
 
         private LowLevelTransaction _readTransaction;
         private long? _firstPositionInJournalFile;
-        private int _lastUsedPage;
+        private int _lastUsedKbs;
         private readonly AbstractPager _lazyTransactionPager;
         private readonly TransactionPersistentContext _transactionPersistentContext;
         public int NumberOfPages { get; set; }
@@ -37,13 +38,12 @@ namespace Voron.Impl.Journal
             }
             using (var writer = _lazyTransactionPager.BatchWriter())
             {
-                writer.Write(_lastUsedPage,
-                    pages.NumberOfPages,
+                writer.Write(_lastUsedKbs,
+                    pages.NumberOf4Kbs,
                     pages.Base);
-
             }
 
-            _lastUsedPage += pages.NumberOfPages;
+            _lastUsedKbs += pages.NumberOf4Kbs;
         }
 
         public void EnsureHasExistingReadTransaction(LowLevelTransaction tx)
@@ -62,9 +62,13 @@ namespace Voron.Impl.Journal
             {
                 using (var tempTx = new TempPagerTransaction())
                 {
-                    _lazyTransactionPager.EnsureMapped(tempTx, 0, _lastUsedPage);
+                    var numberOfPages = _lastUsedKbs / (Constants.Storage.PageSize/ (4 * Constants.Size.Kilobyte));
+                    if ((_lastUsedKbs%(Constants.Storage.PageSize/(4*Constants.Size.Kilobyte))) != 0)
+                        numberOfPages++;
+
+                    _lazyTransactionPager.EnsureMapped(tempTx, 0, numberOfPages);
                     var src = _lazyTransactionPager.AcquirePagePointer(tempTx, 0);
-                    journalFile.JournalWriter.WritePages(_firstPositionInJournalFile.Value, src, _lastUsedPage);
+                    journalFile.JournalWriter.Write(_firstPositionInJournalFile.Value, src, _lastUsedKbs);
                 }
             }
 
@@ -73,7 +77,7 @@ namespace Voron.Impl.Journal
 
             _readTransaction?.Dispose();
             _firstPositionInJournalFile = null;
-            _lastUsedPage = 0;
+            _lastUsedKbs = 0;
             _readTransaction = null;
             NumberOfPages = 0;
         }

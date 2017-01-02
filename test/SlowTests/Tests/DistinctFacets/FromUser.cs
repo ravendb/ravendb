@@ -41,7 +41,6 @@ namespace SlowTests.Tests.DistinctFacets
                                 Name = "TotalCount"
                             },
                         });
-                    WaitForUserToContinueTheTest(documentStore);
                     Assert.Equal(3, result.Results["Tag"].Values.Count);
 
                     Assert.Equal(5, result.Results["TotalCount"].Values[0].Hits);

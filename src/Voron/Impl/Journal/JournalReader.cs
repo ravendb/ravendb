@@ -18,16 +18,14 @@ namespace Voron.Impl.Journal
         private readonly AbstractPager _recoveryPager;
 
         private readonly long _lastSyncedTransactionId;
-        private long _readingPage;
+        private long _readAt4Kb;
         private readonly DiffApplier _diffApplier = new DiffApplier();
+        private readonly long _journalPagerNumberOfAllocated4Kb;
 
 
         public bool RequireHeaderUpdate { get; private set; }
 
-        public long NextWritePage
-        {
-            get { return _readingPage; }
-        }
+        public long Next4Kb => _readAt4Kb;
 
         public JournalReader(AbstractPager journalPager, AbstractPager dataPager, AbstractPager recoveryPager,
             long lastSyncedTransactionId, TransactionHeader* previous)
@@ -37,20 +35,17 @@ namespace Voron.Impl.Journal
             _dataPager = dataPager;
             _recoveryPager = recoveryPager;
             _lastSyncedTransactionId = lastSyncedTransactionId;
-            _readingPage = 0;
+            _readAt4Kb = 0;
             LastTransactionHeader = previous;
+            _journalPagerNumberOfAllocated4Kb = 
+                _journalPager.TotalAllocationSize /(4*Constants.Size.Kilobyte);
         }
 
         public TransactionHeader* LastTransactionHeader { get; private set; }
 
-        public long? MaxPageToRead { get; set; }
-
         public bool ReadOneTransactionToDataFile(StorageEnvironmentOptions options, bool checkCrc = true)
         {
-            if (_readingPage >= _journalPager.NumberOfAllocatedPages)
-                return false;
-
-            if (MaxPageToRead != null && _readingPage >= MaxPageToRead.Value)
+            if (_readAt4Kb >= _journalPagerNumberOfAllocated4Kb)
                 return false;
 
             TransactionHeader* current;
@@ -58,11 +53,14 @@ namespace Voron.Impl.Journal
                 return false;
 
 
-            var transactionSize = GetNumberOfPagesFromSize(options, current->CompressedSize + sizeof(TransactionHeader));
+            var transactionSizeIn4Kb =
+                (current->CompressedSize + sizeof(TransactionHeader))/ (4*Constants.Size.Kilobyte) +
+                (current->CompressedSize + sizeof(TransactionHeader)%(4*Constants.Size.Kilobyte) == 0 ? 0 : 1);
+
 
             if (current->TransactionId <= _lastSyncedTransactionId)
             {
-                _readingPage += transactionSize;
+                _readAt4Kb += transactionSizeIn4Kb;
                 LastTransactionHeader = current;
                 return true; // skipping
             }
@@ -70,12 +68,12 @@ namespace Voron.Impl.Journal
             if (checkCrc && !ValidatePagesHash(options, current))
                 return false;
 
-            _readingPage += transactionSize;
-            var numberOfPages = _recoveryPager.GetNumberOfOverflowPages(current->UncompressedSize);
+            _readAt4Kb += transactionSizeIn4Kb;
+            var numberOfPages = GetNumberOfPagesFor(current->UncompressedSize);
             _recoveryPager.EnsureContinuous(0, numberOfPages);
             _recoveryPager.EnsureMapped(this, 0, numberOfPages);
             var outputPage = _recoveryPager.AcquirePagePointer(this, 0);
-            UnmanagedMemory.Set(outputPage, 0, (long)numberOfPages * options.PageSize);
+            UnmanagedMemory.Set(outputPage, 0, (long)numberOfPages * Constants.Storage.PageSize);
 
             try
             {
@@ -101,7 +99,7 @@ namespace Voron.Impl.Journal
                 Debug.Assert(_journalPager.Disposed == false);
                 Debug.Assert(_recoveryPager.Disposed == false);
 
-                var numberOfPagesOnDestination = GetNumberOfPagesFromSize(options, pageInfoPtr[i].Size);
+                var numberOfPagesOnDestination = GetNumberOfPagesFor(pageInfoPtr[i].Size);
                 _dataPager.EnsureContinuous(pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
                 _dataPager.EnsureMapped(this, pageInfoPtr[i].PageNumber, numberOfPagesOnDestination);
                 var pagePtr = _dataPager.AcquirePagePointer(this, pageInfoPtr[i].PageNumber);
@@ -136,12 +134,6 @@ namespace Voron.Impl.Journal
             return true;
         }
 
-        internal static int GetNumberOfPagesFromSize(StorageEnvironmentOptions options, long size)
-        {
-            var lastPage = (size % options.PageSize == 0 ? 0 : 1);
-            return checked((int)(size / options.PageSize) + lastPage);
-        }
-
         public void RecoverAndValidate(StorageEnvironmentOptions options)
         {
             while (ReadOneTransactionToDataFile(options))
@@ -151,12 +143,23 @@ namespace Voron.Impl.Journal
 
         public void SetStartPage(long value)
         {
-            _readingPage = value;
+            _readAt4Kb = value;
         }
 
         private bool TryReadAndValidateHeader(StorageEnvironmentOptions options, out TransactionHeader* current)
         {
-            current = (TransactionHeader*)_journalPager.AcquirePagePointer(this, _readingPage);
+            if (_readAt4Kb > _journalPagerNumberOfAllocated4Kb)
+            {
+                current = null;
+                return false;
+            }
+
+            const int pageTo4KbRatio = Constants.Storage.PageSize / (4 * Constants.Size.Kilobyte);
+            var pageNumber = _readAt4Kb / pageTo4KbRatio;
+            var positionInsidePage = (_readAt4Kb % pageTo4KbRatio) * (4 * Constants.Size.Kilobyte);
+
+            current = (TransactionHeader*)
+                (_journalPager.AcquirePagePointer(this, pageNumber) + positionInsidePage);
 
             if (current->HeaderMarker != Constants.TransactionHeaderMarker)
             {
@@ -177,9 +180,7 @@ namespace Voron.Impl.Journal
 
             ValidateHeader(current, LastTransactionHeader);
 
-            _journalPager.EnsureMapped(this, _readingPage,
-                GetNumberOfPagesFromSize(options, sizeof(TransactionHeader) + current->CompressedSize));
-            current = (TransactionHeader*)_journalPager.AcquirePagePointer(this, _readingPage);
+            current = EnsureTransactionMapped(current, pageNumber, positionInsidePage);
 
             if ((current->TxMarker & TransactionMarker.Commit) != TransactionMarker.Commit)
             {
@@ -190,6 +191,21 @@ namespace Voron.Impl.Journal
             }
 
             return true;
+        }
+
+        private TransactionHeader* EnsureTransactionMapped(TransactionHeader* current, long pageNumber, long positionInsidePage)
+        {
+            // we need to translate the 4kb position to the position by page size
+
+
+            var numberOfPages = GetNumberOfPagesFor(sizeof(TransactionHeader) + current->CompressedSize);
+            _journalPager.EnsureMapped(this, pageNumber, numberOfPages);
+
+            var pageHeader = _journalPager.AcquirePagePointer(this, pageNumber)
+                             + positionInsidePage;
+
+            current = (TransactionHeader*) pageHeader;
+            return current;
         }
 
         private void ValidateHeader(TransactionHeader* current, TransactionHeader* previous)
@@ -216,8 +232,7 @@ namespace Voron.Impl.Journal
 
         private bool ValidatePagesHash(StorageEnvironmentOptions options, TransactionHeader* current)
         {
-            // The location of the data is the base pointer, plus the space reserved for the transaction header if uncompressed. 
-            byte* dataPtr = _journalPager.AcquirePagePointer(this, _readingPage) + sizeof(TransactionHeader);
+            byte* dataPtr = (byte*)current + sizeof(TransactionHeader);
 
             if (current->CompressedSize < 0)
             {
@@ -227,11 +242,11 @@ namespace Voron.Impl.Journal
                 return false;
             }
             if (current->CompressedSize >
-                (_journalPager.NumberOfAllocatedPages - _readingPage) * _journalPager.PageSize)
+                (_journalPagerNumberOfAllocated4Kb - _readAt4Kb) * 4 * Constants.Size.Kilobyte)
             {
                 // we can't read past the end of the journal
                 RequireHeaderUpdate = true;
-                options.InvokeRecoveryError(this, $"Compresses size {current->CompressedSize} is too big for the journal size {_journalPager.NumberOfAllocatedPages * _journalPager.PageSize}", null);
+                options.InvokeRecoveryError(this, $"Compresses size {current->CompressedSize} is too big for the journal size {_journalPagerNumberOfAllocated4Kb * 4 * Constants.Size.Kilobyte}", null);
                 return false;
             }
 
@@ -254,6 +269,11 @@ namespace Voron.Impl.Journal
         public void Dispose()
         {
             OnDispose?.Invoke(this);
+        }
+
+        private static int GetNumberOfPagesFor(long size)
+        {
+            return checked((int)(size / Constants.Storage.PageSize) + (size % Constants.Storage.PageSize == 0 ? 0 : 1));
         }
 
         Dictionary<AbstractPager, SparseMemoryMappedPager.TransactionState> IPagerLevelTransactionState.

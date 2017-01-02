@@ -30,12 +30,6 @@ namespace Voron
 
         private int _andMask;
 
-        public int PageSize
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _tx.PageSize; }
-        }
-
         public void Release()
         {
             if (_tx == null)

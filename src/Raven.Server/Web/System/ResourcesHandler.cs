@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client.Data;
 using Raven.Server.Documents;
@@ -15,31 +16,6 @@ namespace Raven.Server.Web.System
 {
     public class ResourcesHandler : RequestHandler
     {
-        [RavenAction("/databases", "GET")]
-        public Task Databases()
-        {
-            return ReturnResources("db/");
-        }
-
-        [RavenAction("/fs", "GET")]
-        public Task FileSystems()
-        {
-
-            return ReturnResources("fs/");
-        }
-
-        [RavenAction("/cs", "GET")]
-        public Task Counters()
-        {
-            return ReturnResources("cs/");
-        }
-
-        [RavenAction("/ts", "GET")]
-        public Task TimeSeries()
-        {
-            return ReturnResources("ts/");
-        }
-
         [RavenAction("/resources", "GET")]
         public Task Resources()
         {
@@ -91,24 +67,19 @@ namespace Raven.Server.Web.System
                 context.OpenReadTransaction();
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    switch (type)
+                    if (string.Equals(type, "db", StringComparison.OrdinalIgnoreCase))
                     {
-                        case "db":
-                            var dbId = Constants.Database.Prefix + resourceName;
-                            long etag;
-                            var dbDoc = ServerStore.Read(context, dbId, out etag);
-                            WriteDatabaseInfo(resourceName, dbDoc, context, writer);
-                            break;
+                        var dbId = Constants.Database.Prefix + resourceName;
+                        long etag;
+                        var dbDoc = ServerStore.Read(context, dbId, out etag);
+                        WriteDatabaseInfo(resourceName, dbDoc, context, writer);
 
-                        //TODO: write fs, cs, ts
-
-                        default:
-                            throw new ArgumentOutOfRangeException("type");
+                        return Task.CompletedTask;
                     }
+
+                    throw new ArgumentOutOfRangeException("type");
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         private void WriteDatabaseInfo(string databaseName, BlittableJsonReaderObject data,
@@ -186,13 +157,13 @@ namespace Raven.Server.Web.System
 
         private TimeSpan GetUptime(DocumentDatabase db)
         {
-            return DateTime.UtcNow - db.StartTime;
+            return SystemTime.UtcNow - db.StartTime;
         }
 
         private long GetTotalSize(DocumentDatabase db)
         {
             if (db == null)
-                return 0;    
+                return 0;
 
             return
                 db.GetAllStoragesEnvironment()
@@ -204,40 +175,6 @@ namespace Raven.Server.Web.System
             if (db != null)
                 return db.BundleLoader.GetActiveBundles();
             return new List<string>();
-        }
-
-        private Task ReturnResources(string prefix)
-        {
-            TransactionOperationContext context;
-            using (ServerStore.ContextPool.AllocateOperationContext(out context))
-            {
-                context.OpenReadTransaction();
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartArray();
-                    var first = true;
-                    foreach (var db in ServerStore.StartingWith(context, prefix, GetStart(), GetPageSize()))
-                    {
-                        if (first == false)
-                            writer.WriteComma();
-                        first = false;
-
-                        //TODO: Actually handle this properly - do we need all those files in here? right now we are using /resources in studio
-                        var doc = new DynamicJsonValue
-                        {
-                            ["Bundles"] = new DynamicJsonArray(),
-                            ["Name"] = db.Key.Substring(prefix.Length),
-                            ["RejectClientsEnabled"] = false,
-                            ["IndexingDisabled"] = false,
-                            ["Disabled"] = false,
-                            ["IsAdminCurrentTenant"] = true
-                        };
-                        context.Write(writer, doc);
-                    }
-                    writer.WriteEndArray();
-                }
-            }
-            return Task.CompletedTask;
         }
     }
 }

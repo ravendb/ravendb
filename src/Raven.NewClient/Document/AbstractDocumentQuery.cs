@@ -32,6 +32,7 @@ using Raven.NewClient.Client.Spatial;
 using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data.Queries;
+using Raven.NewClient.Client.Util;
 
 namespace Raven.NewClient.Client.Document
 {
@@ -1935,6 +1936,11 @@ If you really want to do in memory filtering on the data returned from the query
 
             var type = TypeSystem.GetNonNullableType(whereParams.Value.GetType());
 
+            if (conventions.SaveEnumsAsIntegers && type.GetTypeInfo().IsEnum)
+            {
+                return ((int)whereParams.Value).ToString();
+            }
+
             if (type == typeof(bool))
             {
                 return (bool)whereParams.Value ? "true" : "false";
@@ -1971,7 +1977,7 @@ If you really want to do in memory filtering on the data returned from the query
             if (strValue != null)
             {
                 strValue = RavenQuery.Escape(strValue,
-                        whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
+                        whereParams.AllowWildcards && whereParams.IsAnalyzed, whereParams.IsAnalyzed);
 
                 return whereParams.IsAnalyzed ? strValue : String.Concat("[[", strValue, "]]");
             }
@@ -1994,23 +2000,24 @@ If you really want to do in memory filtering on the data returned from the query
             }
 
             throw new NotImplementedException();
-            /*var jsonSerializer = conventions.CreateSerializer();
-            var ravenJTokenWriter = new RavenJTokenWriter();
-            jsonSerializer.Serialize(ravenJTokenWriter, whereParams.Value);
-            var term = ravenJTokenWriter.Token.ToString(Formatting.None);
-            if (term.Length > 1 && term[0] == '"' && term[term.Length - 1] == '"')
-            {
-                term = term.Substring(1, term.Length - 2);
-            }
-            switch (ravenJTokenWriter.Token.Type)
-            {
-                case JTokenType.Object:
-                case JTokenType.Array:
-                    return "[[" + RavenQuery.Escape(term, whereParams.AllowWildcards && whereParams.IsAnalyzed, false) + "]]";
 
-                default:
-                    return RavenQuery.Escape(term, whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
-            }*/
+            //var jsonSerializer = conventions.CreateSerializer();
+            //var ravenJTokenWriter = new RavenJTokenWriter();
+            //jsonSerializer.Serialize(ravenJTokenWriter, whereParams.Value);
+            //var term = ravenJTokenWriter.Token.ToString(Formatting.None);
+            //if (term.Length > 1 && term[0] == '"' && term[term.Length - 1] == '"')
+            //{
+            //    term = term.Substring(1, term.Length - 2);
+            //}
+            //switch (ravenJTokenWriter.Token.Type)
+            //{
+            //    case JTokenType.Object:
+            //    case JTokenType.Array:
+            //        return "[[" + RavenQuery.Escape(term, whereParams.AllowWildcards && whereParams.IsAnalyzed, false) + "]]";
+
+            //    default:
+            //        return RavenQuery.Escape(term, whereParams.AllowWildcards && whereParams.IsAnalyzed, true);
+            //}
         }
 
         private Func<object, string> GetImplicitStringConvertion(Type type)

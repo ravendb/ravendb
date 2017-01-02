@@ -7,6 +7,7 @@ using Sparrow;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Exceptions;
+using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
 
@@ -51,12 +52,12 @@ namespace Voron.Data.RawData
                     continue;
 
                 var pageHeader = PageHeaderFor(_sectionHeader->PageNumber + i + 1);
-                if (pageHeader->NextAllocation + size > _pageSize)
+                if (pageHeader->NextAllocation + size > Constants.Storage.PageSize)
                     continue;
 
                 // best case, we have enough space, and we don't need to defrag
                 pageHeader = ModifyPage(pageHeader);
-                id = (pageHeader->PageNumber) * _pageSize + pageHeader->NextAllocation;
+                id = (pageHeader->PageNumber) * Constants.Storage.PageSize + pageHeader->NextAllocation;
                 var sizes = (RawDataEntrySizes*)((byte*)pageHeader + pageHeader->NextAllocation);
                 sizes->AllocatedSize = allocatedSize;
                 sizes->UsedSize = 0;
@@ -81,7 +82,7 @@ namespace Voron.Data.RawData
                 var pageHeader = PageHeaderFor(_sectionHeader->PageNumber + i + 1);
                 pageHeader = DefragPage(pageHeader);
 
-                id = (pageHeader->PageNumber) * _pageSize + pageHeader->NextAllocation;
+                id = (pageHeader->PageNumber) * Constants.Storage.PageSize + pageHeader->NextAllocation;
                 ((short*)((byte*)pageHeader + pageHeader->NextAllocation))[0] = allocatedSize;
                 pageHeader->NextAllocation += (ushort)size;
                 pageHeader->NumberOfEntries++;
@@ -89,7 +90,7 @@ namespace Voron.Data.RawData
                 _sectionHeader->NumberOfEntries++;
                 _sectionHeader->LastUsedPage = i;
                 _sectionHeader->AllocatedSize += size;
-                AvailableSpace[i] = (ushort)(_pageSize - pageHeader->NextAllocation);
+                AvailableSpace[i] = (ushort)(Constants.Storage.PageSize - pageHeader->NextAllocation);
 
                 return true;
             }
@@ -135,7 +136,7 @@ namespace Voron.Data.RawData
             {
                 pageHeader->NextAllocation = (ushort)sizeof(RawDataSmallPageHeader);
                 Memory.Set((byte*)pageHeader + pageHeader->NextAllocation, 0,
-                    _pageSize - pageHeader->NextAllocation);
+                    Constants.Storage.PageSize - pageHeader->NextAllocation);
 
                 return pageHeader;
             }
@@ -145,11 +146,11 @@ namespace Voron.Data.RawData
             using (_tx.Environment.GetTemporaryPage(_tx, out tmp))
             {
                 var maxUsedPos = pageHeader->NextAllocation;
-                Memory.Copy(tmp.TempPagePointer, (byte*)pageHeader, _pageSize);
+                Memory.Copy(tmp.TempPagePointer, (byte*)pageHeader, Constants.Storage.PageSize);
 
                 pageHeader->NextAllocation = (ushort)sizeof(RawDataSmallPageHeader);
                 Memory.Set((byte*)pageHeader + pageHeader->NextAllocation, 0,
-                    _pageSize - pageHeader->NextAllocation);
+                    Constants.Storage.PageSize - pageHeader->NextAllocation);
 
                 pageHeader->NumberOfEntries = 0;
                 var pos = pageHeader->NextAllocation;
@@ -165,8 +166,8 @@ namespace Voron.Data.RawData
                         pos += (ushort)(oldSize->AllocatedSize + sizeof(RawDataEntrySizes));
                         continue; // this was freed
                     }
-                    var prevId = (pageHeader->PageNumber) * _pageSize + pos;
-                    var newId = (pageHeader->PageNumber) * _pageSize + pageHeader->NextAllocation;
+                    var prevId = (pageHeader->PageNumber) * Constants.Storage.PageSize + pos;
+                    var newId = (pageHeader->PageNumber) * Constants.Storage.PageSize + pageHeader->NextAllocation;
                     if (prevId != newId)
                     {
                         OnDataMoved(prevId, newId, tmp.TempPagePointer + pos + sizeof(RawDataEntrySizes), oldSize->UsedSize);
@@ -199,7 +200,7 @@ namespace Voron.Data.RawData
         {
             var dbPagesInSmallSection = GetNumberOfPagesInSmallSection(tx);
             var numberOfPagesInSmallSection = Math.Min(sizeInPages ?? dbPagesInSmallSection, dbPagesInSmallSection);
-            Debug.Assert((numberOfPagesInSmallSection * 2) + ReservedHeaderSpace <= tx.DataPager.PageSize);
+            Debug.Assert((numberOfPagesInSmallSection * 2) + ReservedHeaderSpace <= Constants.Storage.PageSize);
 
             var sectionStart = tx.AllocatePage(numberOfPagesInSmallSection);
             numberOfPagesInSmallSection--; // we take one page for the active section header
@@ -218,14 +219,14 @@ namespace Voron.Data.RawData
 
             for (ushort i = 0; i < numberOfPagesInSmallSection; i++)
             {
-                var pageHeader = (RawDataSmallPageHeader*)(sectionStart.Pointer + (i + 1) * tx.DataPager.PageSize);
+                var pageHeader = (RawDataSmallPageHeader*)(sectionStart.Pointer + (i + 1) * Constants.Storage.PageSize);
                 Debug.Assert(pageHeader->PageNumber == sectionStart.PageNumber + i + 1);
                 pageHeader->NumberOfEntries = 0;
                 pageHeader->PageNumberInSection = i;
                 pageHeader->RawDataFlags = RawDataPageFlags.Small;
                 pageHeader->Flags = PageFlags.RawData | PageFlags.Single;
                 pageHeader->NextAllocation = (ushort)sizeof(RawDataSmallPageHeader);
-                availablespace[i] = (ushort)(tx.DataPager.PageSize - sizeof(RawDataSmallPageHeader));
+                availablespace[i] = (ushort)(Constants.Storage.PageSize - sizeof(RawDataSmallPageHeader));
             }
 
             return new ActiveRawDataSmallSection(tx, sectionStart.PageNumber);
@@ -238,29 +239,30 @@ namespace Voron.Data.RawData
         /// </summary>
         private static ushort GetNumberOfPagesInSmallSection(LowLevelTransaction tx)
         {
-            if (tx.DataPager.NumberOfAllocatedPages > 1024*32) // 128 MB
+            // all sizes are with 8 Kb page size
+            if (tx.DataPager.NumberOfAllocatedPages > 1024*32) // 256 MB 
             {
-                // roughly 7.8 MB
-                return (ushort) ((tx.DataPager.PageSize - ReservedHeaderSpace)/2);
+                // roughly 16 MB
+                return (ushort) ((Constants.Storage.PageSize - ReservedHeaderSpace)/2);
             }
             if (tx.DataPager.NumberOfAllocatedPages > 1024*16) // 64 MB
             {
-                // 4 MB
+                // 8 MB
                 return 1024;
             }
             if (tx.DataPager.NumberOfAllocatedPages > 1024*8) // 32 MB
             {
-                // 2 MB
+                // 4 MB
                 return 512;
             }
             if (tx.DataPager.NumberOfAllocatedPages > 1024*4) // 16 MB
             {
-                // 1 MB
+                // 2 MB
                 return 128;
             }
             // we are less than 16 MB
             // 512 KB
-            return 64;
+            return 32;
         }
     }
 }

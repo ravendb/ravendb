@@ -159,7 +159,7 @@ namespace Voron.Data.BTrees
         public ValueReader CreateReaderForCurrent()
         {
             var node = Current;
-            return new ValueReader((byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize);
+            return new ValueReader((byte*)node + node->KeySize + Constants.Tree.NodeHeaderSize, node->DataSize);
         }
 
         public event Action<IIterator> OnDisposal;

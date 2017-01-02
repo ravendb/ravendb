@@ -204,11 +204,12 @@ namespace Raven.Server.Documents.Indexes.Debugging
                 var node = stack.Pop();
                 var page = node.Page;
 
-                if (page.NumberOfEntries == 0 && page != rootPage)
-                    throw new InvalidOperationException($"The page {page.PageNumber} is empty");
-
                 using (page.IsCompressed ? (DecompressedLeafPage)(page = tree.DecompressPage(page, DecompressionUsage.Read, true)) : null)
                 {
+                    if (page.NumberOfEntries == 0 && page != rootPage)
+                        throw new InvalidOperationException($"The page {page.PageNumber} is empty");
+
+
                     for (var i = 0; i < page.NumberOfEntries; i++)
                     {
                         if (page.IsBranch)

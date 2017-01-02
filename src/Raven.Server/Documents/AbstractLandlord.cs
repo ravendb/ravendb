@@ -21,6 +21,7 @@ namespace Raven.Server.Documents
         protected readonly ServerStore ServerStore;
         protected readonly SemaphoreSlim ResourceSemaphore;
         protected readonly TimeSpan ConcurrentResourceLoadTimeout;
+
         protected static string DisposingLock = Guid.NewGuid().ToString();
 
         public readonly ResourceCache<TResource> ResourcesStoresCache = new ResourceCache<TResource>();
@@ -31,13 +32,15 @@ namespace Raven.Server.Documents
         protected readonly ConcurrentSet<string> Locks = 
             new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        public AbstractLandlord(ServerStore serverStore)
+        protected AbstractLandlord(ServerStore serverStore)
         {
             ServerStore = serverStore;
             ResourceSemaphore = new SemaphoreSlim(ServerStore.Configuration.Databases.MaxConcurrentResourceLoads);
             ConcurrentResourceLoadTimeout = ServerStore.Configuration.Databases.ConcurrentResourceLoadTimeout.AsTimeSpan;
             Logger = LoggingSource.Instance.GetLogger<AbstractLandlord<TResource>>("Raven/Server");
         }
+
+        public TimeSpan DatabaseLoadTimeout => ServerStore.Configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad.AsTimeSpan;
 
         public abstract Task<TResource> TryGetOrCreateResourceStore(StringSegment resourceName);
 

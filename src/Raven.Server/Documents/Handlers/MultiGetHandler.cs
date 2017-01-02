@@ -32,6 +32,8 @@ namespace Raven.Server.Documents.Handlers
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("Results");
                     writer.WriteStartArray();
                     var resultProperty = context.GetLazyStringForFieldWithCaching("Result");
                     var statusProperty = context.GetLazyStringForFieldWithCaching("Status");
@@ -142,6 +144,7 @@ namespace Raven.Server.Documents.Handlers
                         writer.WriteEndObject();
                     }
                     writer.WriteEndArray();
+                    writer.WriteEndObject();
                 }
             }
         }

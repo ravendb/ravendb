@@ -93,7 +93,7 @@ namespace Voron.Data.BTrees
         public static Tree Create(LowLevelTransaction llt, Transaction tx, TreeFlags flags = TreeFlags.None, RootObjectType type = RootObjectType.VariableSizeTree, PageLocator pageLocator = null)
         {
             if (type != RootObjectType.VariableSizeTree && type != RootObjectType.Table)
-                throw new ArgumentException($"Only valid types are {nameof(RootObjectType.VariableSizeTree)} or {nameof(RootObjectType.Table)}.", nameof(type));
+                ThrowInvalidTreeCreateType();
 
             var newRootPage = AllocateNewPage(llt, TreePageFlags.Leaf, 1);
             var tree = new Tree(llt, tx, newRootPage.PageNumber, pageLocator)
@@ -111,6 +111,13 @@ namespace Voron.Data.BTrees
 
             tree.State.RecordNewPage(newRootPage, 1);
             return tree;
+        }
+
+        private static void ThrowInvalidTreeCreateType()
+        {
+            throw new ArgumentException(
+                $"Only valid types are {nameof(RootObjectType.VariableSizeTree)} or {nameof(RootObjectType.Table)}.",
+                "type");
         }
 
         /// <summary>
@@ -169,15 +176,28 @@ namespace Voron.Data.BTrees
 
         private static void ValidateValueLength(Stream value)
         {
-            if (value == null) throw new ArgumentNullException(nameof(value));
-
+            if (value == null)
+                ThrowNullReferenceException();
+            Debug.Assert(value != null);
             if (value.Length > int.MaxValue)
-                throw new ArgumentException("Cannot add a value that is over 2GB in size", nameof(value));
+                ThrowValueTooLarge();
+        }
+
+        private static void ThrowValueTooLarge()
+        {
+            throw new ArgumentException("Cannot add a value that is over 2GB in size");
+        }
+
+        private static void ThrowNullReferenceException()
+        {
+            throw new ArgumentNullException();
         }
 
         public void Add(Slice key, byte[] value)
         {
-            if (value == null) throw new ArgumentNullException(nameof(value));
+            if (value == null)
+                ThrowNullReferenceException();
+            Debug.Assert(value != null);
 
             State.IsModified = true;
             var pos = DirectAdd(key, value.Length);
@@ -191,7 +211,7 @@ namespace Voron.Data.BTrees
         public void Add(Slice key, Slice value)
         {
             if (!value.HasValue)
-                throw new ArgumentNullException(nameof(value));
+                ThrowNullReferenceException();
 
             State.IsModified = true;
             var pos = DirectAdd(key, value.Size);
@@ -222,6 +242,12 @@ namespace Voron.Data.BTrees
             }
         }
 
+        public static int CalcSizeOfEmbeddedEntry(int keySize, int entrySize)
+        {
+            var size = (Constants.Tree.NodeHeaderSize + keySize + entrySize);
+            return size + (size & 1);
+        }
+
         public byte* DirectAdd(Slice key, int len, TreeNodeFlags nodeType = TreeNodeFlags.Data)
         {
             Debug.Assert(nodeType == TreeNodeFlags.Data || nodeType == TreeNodeFlags.MultiValuePageRef);
@@ -232,11 +258,11 @@ namespace Voron.Data.BTrees
             }
             else
             {
-                throw new ArgumentException("Cannot add a value in a read only transaction");
+                ThreadCannotAddInReadTx();
             }
 
             if (AbstractPager.IsKeySizeValid(key.Size) == false)
-                throw new ArgumentException($"Key size is too big, must be at most {AbstractPager.MaxKeySize} bytes, but was {(key.Size + AbstractPager.RequiredSpaceForNewNode)}", nameof(key));
+                ThrowInvalidKeySize(key);
 
             Func<Slice, TreeCursor> cursorConstructor;
             TreeNodeHeader* node;
@@ -323,12 +349,31 @@ namespace Voron.Data.BTrees
                     dataPos = page.AddMultiValueNode(lastSearchPosition, key, len);
                     break;
                 default:
-                    throw new NotSupportedException("Unknown node type for direct add operation: " + nodeType);
+                    ThrowUnknownNodeTypeAddOperation(nodeType);
+                    dataPos = null; // never executed
+                    break;
             }
 
             page.DebugValidate(this, State.RootPageNumber);
 
             return overFlowPos == null ? dataPos : overFlowPos;
+        }
+
+        private static void ThrowUnknownNodeTypeAddOperation(TreeNodeFlags nodeType)
+        {
+            throw new NotSupportedException("Unknown node type for direct add operation: " + nodeType);
+        }
+
+        private static void ThrowInvalidKeySize(Slice key)
+        {
+            throw new ArgumentException(
+                $"Key size is too big, must be at most {AbstractPager.MaxKeySize} bytes, but was {(key.Size + AbstractPager.RequiredSpaceForNewNode)}",
+                nameof(key));
+        }
+
+        private static void ThreadCannotAddInReadTx()
+        {
+            throw new ArgumentException("Cannot add a value in a read only transaction");
         }
 
         public TreePage ModifyPage(TreePage page)
@@ -359,7 +404,7 @@ namespace Voron.Data.BTrees
 
         public bool ShouldGoToOverflowPage(int len)
         {
-            return len + Constants.NodeHeaderSize > _llt.DataPager.NodeMaxSize;
+            return len + Constants.Tree.NodeHeaderSize > _llt.DataPager.NodeMaxSize;
         }
 
         private long WriteToOverflowPages(int overflowSize, out byte* dataPos)
@@ -368,7 +413,7 @@ namespace Voron.Data.BTrees
             var overflowPageStart = AllocateNewPage(_llt, TreePageFlags.Value, numberOfPages);
             overflowPageStart.Flags = PageFlags.Overflow | PageFlags.VariableSizeTreePage;
             overflowPageStart.OverflowSize = overflowSize;
-            dataPos = overflowPageStart.Base + Constants.TreePageHeaderSize;
+            dataPos = overflowPageStart.Base + Constants.Tree.PageHeaderSize;
 
             State.RecordNewPage(overflowPageStart, numberOfPages);
 
@@ -377,7 +422,7 @@ namespace Voron.Data.BTrees
             return overflowPageStart.PageNumber;
         }
 
-        private void RemoveLeafNode(TreePage page)
+        internal void RemoveLeafNode(TreePage page)
         {
             var node = page.GetNode(page.LastSearchPosition);
             if (node->Flags == (TreeNodeFlags.PageRef)) // this is an overflow pointer
@@ -437,7 +482,7 @@ namespace Voron.Data.BTrees
         internal TreePage GetReadOnlyTreePage(long pageNumber)
         {
             var page = _pageLocator.GetReadOnlyPage(pageNumber);
-            return new TreePage(page.Pointer, _pageLocator.PageSize);
+            return new TreePage(page.Pointer, Constants.Storage.PageSize);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -450,7 +495,7 @@ namespace Voron.Data.BTrees
         internal TreePage GetWriteableTreePage(long pageNumber)
         {
             var page = _pageLocator.GetWritablePage(pageNumber);
-            return new TreePage(page.Pointer, _pageLocator.PageSize);
+            return new TreePage(page.Pointer, Constants.Storage.PageSize);
         }
 
         internal TreePage FindPageFor(Slice key, out TreeNodeHeader* node)
@@ -817,12 +862,12 @@ namespace Voron.Data.BTrees
         private static TreePage AllocateNewPage(LowLevelTransaction tx, TreePageFlags flags, int num, long? pageNumber = null)
         {
             var newPage = tx.AllocatePage(num, pageNumber);
-            var page = new TreePage(newPage.Pointer, tx.PageSize)
+            var page = new TreePage(newPage.Pointer, Constants.Storage.PageSize)
             {
                 Flags = PageFlags.VariableSizeTreePage | (num == 1 ? PageFlags.Single : PageFlags.Overflow),
-                Lower = (ushort)Constants.TreePageHeaderSize,
+                Lower = Constants.Tree.PageHeaderSize,
                 TreeFlags = flags,
-                Upper = (ushort)tx.PageSize,
+                Upper = Constants.Storage.PageSize,
                 Dirty = true
             };
             return page;
@@ -994,10 +1039,10 @@ namespace Voron.Data.BTrees
             if (node->Flags == TreeNodeFlags.PageRef)
             {
                 var overFlowPage = GetReadOnlyTreePage(node->PageNumber);
-                return overFlowPage.Base + Constants.TreePageHeaderSize;
+                return overFlowPage.Base + Constants.Tree.PageHeaderSize;
             }
 
-            return (byte*)node + node->KeySize + Constants.NodeHeaderSize;
+            return (byte*)node + node->KeySize + Constants.Tree.NodeHeaderSize;
         }
 
         public List<long> AllPages()
@@ -1108,7 +1153,7 @@ namespace Voron.Data.BTrees
 
                     writtableOverflowPage.Flags = PageFlags.Overflow | PageFlags.VariableSizeTreePage;
                     writtableOverflowPage.OverflowSize = len;
-                    pos = writtableOverflowPage.Base + Constants.TreePageHeaderSize;
+                    pos = writtableOverflowPage.Base + Constants.Tree.PageHeaderSize;
 
                     PageModified?.Invoke(writtableOverflowPage.PageNumber);
 
@@ -1189,10 +1234,10 @@ namespace Voron.Data.BTrees
             if (node->Flags == TreeNodeFlags.PageRef)
             {
                 var overFlowPage = GetReadOnlyTreePage(node->PageNumber);
-                return overFlowPage.Base + Constants.TreePageHeaderSize;
+                return overFlowPage.Base + Constants.Tree.PageHeaderSize;
             }
 
-            return (byte*)node + node->KeySize + Constants.NodeHeaderSize;
+            return (byte*)node + node->KeySize + Constants.Tree.NodeHeaderSize;
         }
 
         public Slice GetData(TreeNodeHeader* node)
@@ -1204,12 +1249,12 @@ namespace Voron.Data.BTrees
                 var overFlowPage = GetReadOnlyPage(node->PageNumber);
                 if (overFlowPage.OverflowSize > ushort.MaxValue)
                     throw new InvalidOperationException("Cannot convert big data to a slice, too big");
-                Slice.External(Llt.Allocator, overFlowPage.Pointer + Constants.TreePageHeaderSize,
+                Slice.External(Llt.Allocator, overFlowPage.Pointer + Constants.Tree.PageHeaderSize,
                     (ushort)overFlowPage.OverflowSize, out outputDataSlice);
             }
             else
             {
-                Slice.External(Llt.Allocator, (byte*)node + node->KeySize + Constants.NodeHeaderSize,
+                Slice.External(Llt.Allocator, (byte*)node + node->KeySize + Constants.Tree.NodeHeaderSize,
                     (ushort)node->DataSize, out outputDataSlice);
             }
 
@@ -1225,9 +1270,9 @@ namespace Voron.Data.BTrees
                 Debug.Assert(overFlowPage.IsOverflow, "Requested overflow page but got " + overFlowPage.Flags);
                 Debug.Assert(overFlowPage.OverflowSize > 0, "Overflow page cannot be size equal 0 bytes");
 
-                return new ValueReader(overFlowPage.Pointer + Constants.TreePageHeaderSize, overFlowPage.OverflowSize);
+                return new ValueReader(overFlowPage.Pointer + Constants.Tree.PageHeaderSize, overFlowPage.OverflowSize);
             }
-            return new ValueReader((byte*)node + node->KeySize + Constants.NodeHeaderSize, node->DataSize);
+            return new ValueReader((byte*)node + node->KeySize + Constants.Tree.NodeHeaderSize, node->DataSize);
         }
     }
 }

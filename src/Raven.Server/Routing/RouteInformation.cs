@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Server.Documents;
 using Raven.Server.Exceptions;
 using Raven.Server.Web;
+using Sparrow;
 
 namespace Raven.Server.Routing
 {
@@ -60,26 +61,68 @@ namespace Raven.Server.Routing
             _request = Expression.Lambda<HandleRequest>(block, currentRequestContext).Compile();
         }
 
-        public async Task CreateDatabase(RequestHandlerContext context)
+        public Task CreateDatabase(RequestHandlerContext context)
         {
             var databaseName = context.RouteMatch.GetCapture();
             var databasesLandlord = context.RavenServer.ServerStore.DatabasesLandlord;
             var database =  databasesLandlord.TryGetOrCreateResourceStore(databaseName);
+
             if (database == null)
             {
-                throw new DatabaseDoesNotExistsException($"Database '{databaseName}' was not found");
+                ThrowDatabaseDoesNotExists(databaseName);
+                return Task.CompletedTask;// never hit
             }
+
+            if (database.IsCompleted)
+            {
+                context.Database = database.Result;
+                return Task.CompletedTask;
+            }
+
+            return UnlikelyWaitForDatabaseToLoad(context, database, databasesLandlord, databaseName);
+        }
+
+        private static async Task UnlikelyWaitForDatabaseToLoad(RequestHandlerContext context, Task<DocumentDatabase> database,
+            DatabasesLandlord databasesLandlord, StringSegment databaseName)
+        {
+            var result = await Task.WhenAny(database, Task.Delay(databasesLandlord.DatabaseLoadTimeout));
+            if (result != database)
+                ThrowDatabaseLoadTimeout(databaseName, databasesLandlord.DatabaseLoadTimeout);
             context.Database = await database;
         }
 
-        public async Task<HandleRequest> CreateHandler(RequestHandlerContext context)
+        private static void ThrowDatabaseLoadTimeout(StringSegment databaseName, TimeSpan timeout)
         {
-            switch (_typeOfRoute)
+            throw new InvalidOperationException(
+                $"Timeout when loading database {databaseName} after {timeout}, try again later");
+        }
+
+        private static void ThrowDatabaseDoesNotExists(StringSegment databaseName)
+        {
+            throw new DatabaseDoesNotExistsException($"Database '{databaseName}' was not found");
+        }
+
+        public bool TryGetHandler(RequestHandlerContext context, out HandleRequest handler)
+        {
+            if (_typeOfRoute == RouteType.None)
             {
-                case RouteType.Databases:
-                    await CreateDatabase(context);
-                    break;
+                handler = _request;
+                return true;
             }
+            var database = CreateDatabase(context);
+            if (database.IsCompleted)
+            {
+                handler = _request;
+                return true;
+            }
+            handler = null;
+            return false;
+        }
+
+        public async Task<HandleRequest> CreateHandlerAsync(RequestHandlerContext context)
+        {
+            if (_typeOfRoute == RouteType.Databases)
+                await CreateDatabase(context);
 
             return _request;
         }

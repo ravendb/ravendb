@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using Voron;
+using Voron.Global;
 using Xunit;
 
 namespace SlowTests.Voron
@@ -36,7 +37,7 @@ namespace SlowTests.Voron
 			// also in the meanwhile the free space handling is doing its job so it needs some pages too
 			// and we allocate not the exact size but the nearest power of two e.g. we write 257 pages but in scratch we request 512 ones
 		    int i = 0;
-			while (size < 256 * Env.Options.PageSize) 
+			while (size < 256 * Constants.Storage.PageSize) 
 			{
 				using (Env.ReadTransaction())
 				{
@@ -74,7 +75,7 @@ namespace SlowTests.Voron
 			// also in the meanwhile the free space handling is doing its job so it needs some pages too
 			// and we allocate not the exact size but the nearest power of two e.g. we write 257 pages but in scratch we request 512 ones
 
-			while (size < 1024 * Env.Options.PageSize)
+			while (size < 1024 * Constants.Storage.PageSize)
 			{
 				using (var txr = Env.ReadTransaction())
 				{

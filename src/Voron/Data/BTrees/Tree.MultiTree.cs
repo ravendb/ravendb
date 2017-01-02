@@ -106,13 +106,13 @@ namespace Voron.Data.BTrees
                 var requiredSpace = nestedPage.PageSize + // existing page
                                     nestedPage.GetRequiredSpace(value, 0); // new node
 
-                if (requiredSpace + Constants.NodeHeaderSize <= maxNodeSize)
+                if (requiredSpace + Constants.Tree.NodeHeaderSize <= maxNodeSize)
                 {
                     // ... and it won't require to create an overflow, so we can just expand the current value, no need to create a nested tree yet
 
                     EnsureNestedPagePointer(page, item, ref nestedPage, ref nestedPagePtr);
 
-                    var newPageSize = (ushort)Math.Min(Bits.NextPowerOf2(requiredSpace), maxNodeSize - Constants.NodeHeaderSize);
+                    var newPageSize = (ushort)Math.Min(Bits.NextPowerOf2(requiredSpace), maxNodeSize - Constants.Tree.NodeHeaderSize);
 
                     ExpandMultiTreeNestedPageSize(key, value, nestedPagePtr, newPageSize, nestedPage.PageSize);
 
@@ -152,7 +152,7 @@ namespace Voron.Data.BTrees
 
                 var newNestedPage = new TreePage(ptr, newSize)
                 {
-                    Lower = (ushort)Constants.TreePageHeaderSize,
+                    Lower = (ushort)Constants.Tree.PageHeaderSize,
                     Upper = newSize,
                     TreeFlags = TreePageFlags.Leaf,
                     PageNumber = -1L, // mark as invalid page number
@@ -176,11 +176,11 @@ namespace Voron.Data.BTrees
 
         private void MultiAddOnNewValue(Slice key, Slice value, int maxNodeSize)
         {
-            var requiredPageSize = Constants.TreePageHeaderSize + // header of a nested page
-                                   Constants.NodeOffsetSize +   // one node in a nested page
+            var requiredPageSize = Constants.Tree.PageHeaderSize + // header of a nested page
+                                   Constants.Tree.NodeOffsetSize +   // one node in a nested page
                                    TreeSizeOf.LeafEntry(-1, value, 0); // node header and its value
 
-            if (requiredPageSize + Constants.NodeHeaderSize > maxNodeSize)
+            if (requiredPageSize + Constants.Tree.NodeHeaderSize > maxNodeSize)
             {
                 // no choice, very big value, we might as well just put it in its own tree from the get go...
                 // otherwise, we would have to put this in overflow page, and that won't save us any space anyway
@@ -193,14 +193,14 @@ namespace Voron.Data.BTrees
                 return;
             }
 
-            var actualPageSize = (ushort)Math.Min(Bits.NextPowerOf2(requiredPageSize), maxNodeSize - Constants.NodeHeaderSize);
+            var actualPageSize = (ushort)Math.Min(Bits.NextPowerOf2(requiredPageSize), maxNodeSize - Constants.Tree.NodeHeaderSize);
 
             var ptr = DirectAdd(key, actualPageSize);
 
             var nestedPage = new TreePage(ptr, actualPageSize)
             {
                 PageNumber = -1L,// hint that this is an inner page
-                Lower = (ushort)Constants.TreePageHeaderSize,
+                Lower = (ushort)Constants.Tree.PageHeaderSize,
                 Upper = actualPageSize,
                 TreeFlags = TreePageFlags.Leaf,
                 Flags = 0
@@ -242,6 +242,8 @@ namespace Voron.Data.BTrees
             else // we use a nested page here
             {
                 var nestedPage = new TreePage(DirectAccessFromHeader(item), (ushort)GetDataSize(item));
+
+                nestedPage.Search(_llt, value);// need to search the value in the nested page
 
                 if (nestedPage.LastMatch != 0) // value not found
                     return;
@@ -331,7 +333,7 @@ namespace Voron.Data.BTrees
                 return tree;
 
             var childTreeHeader =
-                (TreeRootHeader*)((byte*)item + item->KeySize + Constants.NodeHeaderSize);
+                (TreeRootHeader*)((byte*)item + item->KeySize + Constants.Tree.NodeHeaderSize);
 
             Debug.Assert(childTreeHeader->RootPageNumber < _llt.State.NextPageNumber);
             Debug.Assert(childTreeHeader->Flags == TreeFlags.MultiValue);
@@ -355,7 +357,7 @@ namespace Voron.Data.BTrees
                         {
                             updatedNode->Flags = requestedNodeType;
 
-                            pos = (byte*)updatedNode + Constants.NodeHeaderSize + updatedNode->KeySize;
+                            pos = (byte*)updatedNode + Constants.Tree.NodeHeaderSize + updatedNode->KeySize;
                             return true;
                         }
                         break;

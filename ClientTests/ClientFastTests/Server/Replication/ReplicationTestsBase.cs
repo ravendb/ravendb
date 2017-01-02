@@ -1,8 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
+using Raven.Client.Linq;
 using Raven.NewClient.Client.Document;
 
 namespace NewClientTests.NewClient.Server.Replication
@@ -110,6 +112,67 @@ namespace NewClientTests.NewClient.Server.Replication
             }
         }
 
+        /// <summary>
+        /// Enable or Disable one destination from the store (Enable by default)
+        /// </summary>
+        /// <param name="fromStore">The store to remove destination</param>
+        /// <param name="enabledOrDisabledStoreDestination">The store that going to remove from the fromStore</param>
+        /// <param name="disable">If disable is true then we disable the destination enable if true</param>
+        protected static void EnableOrDisableReplication(DocumentStore fromStore, DocumentStore enabledOrDisabledStoreDestination, bool disable = false)
+        {
+            ReplicationDocument replicationConfigDocument;
+
+            using (var session = fromStore.OpenSession())
+            {
+                replicationConfigDocument =
+                    session.Load<ReplicationDocument>(Constants.Replication.DocumentReplicationConfiguration);
+
+                if (replicationConfigDocument == null)
+                    return;
+
+                session.Delete(replicationConfigDocument);
+                session.SaveChanges();
+            }
+
+            using (var session = fromStore.OpenSession())
+            {
+                foreach (var destination in replicationConfigDocument.Destinations)
+                {
+                    if(destination.Database.Equals(enabledOrDisabledStoreDestination.DefaultDatabase))
+                        destination.Disabled = disable;
+                }
+
+                session.Store(replicationConfigDocument);
+                session.SaveChanges();
+            }
+        }
+
+        protected static void DeleteReplication(DocumentStore fromStore, DocumentStore deletedStoreDestination)
+        {
+            ReplicationDocument replicationConfigDocument;
+
+            using (var session = fromStore.OpenSession())
+            {
+                replicationConfigDocument =
+                    session.Load<ReplicationDocument>(Constants.Replication.DocumentReplicationConfiguration);
+
+                if (replicationConfigDocument == null)
+                    return;
+
+                session.Delete(replicationConfigDocument);
+                session.SaveChanges();
+            }
+
+            using (var session = fromStore.OpenSession())
+            {
+
+                replicationConfigDocument.Destinations.RemoveAll(
+                    x => x.Database == deletedStoreDestination.DefaultDatabase);
+
+                session.Store(replicationConfigDocument);
+                session.SaveChanges();
+            }
+        }
 
         protected static void SetupReplication(DocumentStore fromStore, params DocumentStore[] toStores)
         {

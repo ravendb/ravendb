@@ -11,6 +11,7 @@ using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Shard;
+using Sparrow.Json;
 
 
 namespace Raven.NewClient.Client.Document.Batches
@@ -45,7 +46,7 @@ namespace Raven.NewClient.Client.Document.Batches
         public QueryResult QueryResult { get; set; }
         public bool RequiresRetry { get; private set; }
 
-        public void HandleResponse(GetResponse response)
+        public void HandleResponse(BlittableJsonReaderObject response)
         {
             throw new NotImplementedException();
 
@@ -68,7 +69,7 @@ namespace Raven.NewClient.Client.Document.Batches
                  Result = _loadOperation.Complete<T>();#1#
         }*/
 
-        public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
+        public void HandleResponses(BlittableJsonReaderObject[] responses, ShardStrategy shardStrategy)
         {
             throw new NotImplementedException();
             /* var list = new List<LoadResult>(

@@ -19,6 +19,7 @@ using Voron.Data.Tables;
 using Voron.Impl;
 using Raven.Client.Data.Indexes;
 using Voron.Data.Compression;
+using Voron.Global;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
 {
@@ -214,7 +215,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             var parentPagesToAggregate = new HashSet<long>();
 
-            var page = new TreePage(null, lowLevelTransaction.PageSize);
+            var page = new TreePage(null, Constants.Storage.PageSize);
             
             foreach (var modifiedPage in modifiedStore.ModifiedPages)
             {

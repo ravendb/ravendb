@@ -23,7 +23,7 @@ class deleteLocalPeriodicExportSetupCommand extends commandBase {
             }
         }
 
-        var url = "/admin/databases/" + this.db.name;//TODO: use endpoints
+        var url = "/admin/databases?name=" + this.db.name;//TODO: use endpoints
         
         var putArgs = JSON.stringify(this.setupToPersist.removeDatabaseSettings());
         return this.put(url, putArgs, null, jQueryOptions);

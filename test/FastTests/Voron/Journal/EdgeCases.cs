@@ -18,8 +18,7 @@ namespace FastTests.Voron.Journal
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.ManualFlushing = true;
-            options.PageSize = 4 * Constants.Size.Kilobyte;
-            options.MaxLogFileSize = 5 * options.PageSize;
+            options.MaxLogFileSize = 5 * 4* Constants.Size.Kilobyte;
         }
 
         [Fact]
@@ -28,7 +27,7 @@ namespace FastTests.Voron.Journal
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                var bytes = new byte[4 * tx.LowLevelTransaction.DataPager.PageSize];
+                var bytes = new byte[4 * Constants.Size.Kilobyte * 4];
                 new Random().NextBytes(bytes);
                 tree.Add("items/0", new MemoryStream(bytes));
                 tx.Commit();
@@ -37,7 +36,7 @@ namespace FastTests.Voron.Journal
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                var bytes = new byte[4 * tx.LowLevelTransaction.DataPager.PageSize];
+                var bytes = new byte[4 * Constants.Size.Kilobyte * 4];
                 new Random().NextBytes(bytes);
                 tree.Add("items/1", new MemoryStream(bytes));
                 tx.Commit();
@@ -46,7 +45,7 @@ namespace FastTests.Voron.Journal
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                var bytes = new byte[4 * tx.LowLevelTransaction.DataPager.PageSize];
+                var bytes = new byte[4 * Constants.Size.Kilobyte * 4];
                 new Random().NextBytes(bytes);
                 tree.Add("items/1", new MemoryStream(bytes));
                 tx.Commit();
@@ -55,7 +54,7 @@ namespace FastTests.Voron.Journal
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                var bytes = new byte[4 * tx.LowLevelTransaction.DataPager.PageSize];
+                var bytes = new byte[4 * Constants.Size.Kilobyte * 4];
                 new Random().NextBytes(bytes);
                 tree.Add("items/1", new MemoryStream(bytes));
                 tx.Commit();

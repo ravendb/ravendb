@@ -54,7 +54,9 @@ namespace Raven.Server.Routing
                 RouteMatch = tryMatch.Match,
             };
 
-            var handler = await tryMatch.Value.CreateHandler(reqCtx);
+            HandleRequest handler;
+            if (tryMatch.Value.TryGetHandler(reqCtx, out handler) == false)
+                handler = await tryMatch.Value.CreateHandlerAsync(reqCtx);
             var metricsCountersManager = reqCtx.Database?.Metrics ?? reqCtx.RavenServer.Metrics;
             metricsCountersManager.RequestsMeter.Mark();
             metricsCountersManager.RequestsPerSecondCounter.Mark();

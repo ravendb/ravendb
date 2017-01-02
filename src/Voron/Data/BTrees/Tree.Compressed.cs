@@ -188,7 +188,7 @@ namespace Voron.Data.BTrees
                                 // put it at the last position
 
                                 index = decompressedPage.NumberOfEntries - 1;
-                                decompressedPage.Lower -= Constants.NodeOffsetSize;
+                                decompressedPage.Lower -= Constants.Tree.NodeOffsetSize;
                             }
                             else
                             {
@@ -336,15 +336,15 @@ namespace Voron.Data.BTrees
 
                 var compressionSectionSize = header->SectionSize;
 
-                KeysOffsetsSize = (ushort)(header->NumberOfCompressedEntries * Constants.NodeOffsetSize);
+                KeysOffsetsSize = (ushort)(header->NumberOfCompressedEntries * Constants.Tree.NodeOffsetSize);
                 KeysOffsets = (short*)((byte*)header - compressionSectionSize);
 
                 Data = (byte*)header - compressionSectionSize + KeysOffsetsSize;
 
                 var necessarySize = p.SizeUsed - compressionSectionSize - Constants.Compression.HeaderSize + DecompressedSize + KeysOffsetsSize;
 
-                if (necessarySize > Constants.Storage.MaxPageSize)
-                    DecompressedPageSize = Constants.Storage.MaxPageSize; // we are guranteed that after decompression a page won't exceed max size
+                if (necessarySize > Constants.Compression.MaxPageSize)
+                    DecompressedPageSize = Constants.Compression.MaxPageSize; // we are guranteed that after decompression a page won't exceed max size
                 else
                     DecompressedPageSize = Bits.NextPowerOf2(necessarySize);
             }

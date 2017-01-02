@@ -8,7 +8,7 @@ using Voron.Data.BTrees;
 
 namespace Voron.Data.RawData
 {
-    [StructLayout(LayoutKind.Explicit, Pack = 1)]
+    [StructLayout(LayoutKind.Explicit, Pack = 1, Size = PageHeader.SizeOf)]
     public struct RawDataSmallSectionPageHeader
     {
         [FieldOffset(0)]

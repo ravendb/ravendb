@@ -227,7 +227,7 @@ namespace FastTests
             store.DatabaseCommands.GlobalAdmin.CreateDatabase(doc);
             store.AfterDispose += (sender, args) =>
             {
-                if (CreatedStores.Contains(store) == false)
+                if (CreatedStores.TryRemove(store) == false)
                     return; // can happen if we are wrapping the store inside sharded one
 
                 if (Server.Disposed == false)
@@ -239,7 +239,6 @@ namespace FastTests
                     store.DatabaseCommands.GlobalAdmin.DeleteDatabase(name, hardDelete: hardDelete);
                 }
 
-                CreatedStores.TryRemove(store);
             };
             CreatedStores.Add(store);
             return store;
@@ -275,7 +274,10 @@ namespace FastTests
             while (sp.Elapsed < timeout.Value)
             {
                 var databaseStatistics = databaseCommands.GetStatistics();
-                if (databaseStatistics.Indexes.All(x => x.IsStale == false))
+                var indexes = databaseStatistics.Indexes
+                    .Where(x => x.State != IndexState.Disabled);
+
+                if (indexes.All(x => x.IsStale == false))
                     return;
 
                 if (databaseStatistics.Indexes.Any(x => x.State == IndexState.Error))

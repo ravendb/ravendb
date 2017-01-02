@@ -9,6 +9,7 @@ using Xunit;
 using Voron;
 using Voron.Data;
 using System.Linq;
+using Voron.Global;
 
 namespace FastTests.Voron.Journal
 {
@@ -17,7 +18,7 @@ namespace FastTests.Voron.Journal
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.ManualFlushing = true;
-            options.MaxLogFileSize = 3 * options.PageSize;
+            options.MaxLogFileSize = 3 * Constants.Storage.PageSize;
         }
 
         [Fact]

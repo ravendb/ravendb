@@ -91,7 +91,7 @@ namespace FastTests.Server.OAuth
                 store.DatabaseCommands.GlobalAdmin.PutApiKey("shlumper", apiKey);
                 store.DatabaseCommands.GlobalAdmin.DeleteApiKey("shlumper");
 
-                var apiKeys = store.DatabaseCommands.GlobalAdmin.GetAllApiKeys().ToList();
+                var apiKeys = store.DatabaseCommands.GlobalAdmin.GetApiKeys(0, 1024).ToList();
                 Assert.Equal(2, apiKeys.Count);
                 Assert.Equal("duper", apiKeys[0].UserName);
                 Assert.False(apiKeys[0].Enabled);

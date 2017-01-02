@@ -5,6 +5,7 @@ using System.Text;
 using Sparrow.Platform.Posix;
 using Xunit;
 using Voron;
+using Voron.Global;
 using Voron.Platform.Posix;
 using Voron.Platform.Win32;
 using Voron.Tests;
@@ -59,7 +60,7 @@ namespace FastTests.Voron.Storage
         [InlineData(250)]
         public void Should_be_able_to_allocate_new_pages(int growthMultiplier)
         {
-             Env.Options.DataPager.EnsureContinuous(0, growthMultiplier / Env.Options.PageSize);
+             Env.Options.DataPager.EnsureContinuous(0, growthMultiplier / Constants.Storage.PageSize);
         }
 
         private void CreatTestSchema()
@@ -74,7 +75,7 @@ namespace FastTests.Voron.Storage
         [Fact]
         public void Should_be_able_to_allocate_new_pages_multiple_times()
         {
-            var numberOfPages = PagerInitialSize / Env.Options.PageSize;
+            var numberOfPages = PagerInitialSize / Constants.Storage.PageSize;
             for (int allocateMorePagesCount = 0; allocateMorePagesCount < 5; allocateMorePagesCount++)
             {
                 numberOfPages *= 2;
@@ -133,7 +134,7 @@ namespace FastTests.Voron.Storage
                 adjacentBlockAddress = AllocateMemoryAtEndOfPager(totalAllocationSize);
 
                 pagerSize *= 2;
-                Env.Options.DataPager.EnsureContinuous(0, (int)(pagerSize / Env.Options.PageSize));
+                Env.Options.DataPager.EnsureContinuous(0, (int)(pagerSize / Constants.Storage.PageSize));
 
             }
             finally

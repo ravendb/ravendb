@@ -67,7 +67,7 @@ namespace Voron.Data.Fixed
         public int PageMaxSpace
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _pageSize - Constants.FixedSizeTreePageHeaderSize; }
+            get { return _pageSize - Constants.FixedSizeTree.PageHeaderSize; }
         }
 
 

@@ -32,7 +32,7 @@ namespace Raven.NewClient.Client.Http
 
         public class AggresiveCacheOptions
         {
-            public TimeSpan Duration;
+            public TimeSpan? Duration;
         }
 
         private readonly ApiKeyAuthenticator _authenticator = new ApiKeyAuthenticator();

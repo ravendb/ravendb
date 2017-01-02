@@ -65,7 +65,7 @@ namespace NewClientTests.NewClient.Server.Basic
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/databases/{node.Database}";
+                url = $"{node.Url}/admin/databases?name={node.Database}";
                 
                 var message = new HttpRequestMessage
                 {
@@ -89,7 +89,7 @@ namespace NewClientTests.NewClient.Server.Basic
         {        
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/databases/{node.Database}";
+                url = $"{node.Url}/admin/databases?name={node.Database}";
 
                 return new HttpRequestMessage
                 {

@@ -3,10 +3,11 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.Text;
 
-namespace Raven.Abstractions.Util
+namespace Raven.Client.Util
 {
     /// <summary>
     /// Helper class that provide a way to escape query terms
@@ -101,8 +102,7 @@ namespace Raven.Abstractions.Util
                         {
                             if (makePhrase)
                             {
-                                //If it is a phrase there is no need to double escape just escape the original term.
-                                return new StringBuilder(term).Insert(0,"\"").Append("\"").ToString();								
+                                return new StringBuilder(Escape(term, allowWildcards, false)).Insert(0, "\"").Append("\"").ToString();
                             }
                             break;
                         }

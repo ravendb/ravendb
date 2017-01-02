@@ -7,6 +7,7 @@
 using System;
 using Xunit;
 using Voron;
+using Voron.Global;
 using Voron.Impl.Backup;
 
 namespace FastTests.Voron.Backups
@@ -17,7 +18,7 @@ namespace FastTests.Voron.Backups
 
         protected StorageEnvironmentOptions ModifyOptions(StorageEnvironmentOptions options)
         {
-            options.MaxLogFileSize = 1000 * options.PageSize;
+            options.MaxLogFileSize = 1000 * Constants.Storage.PageSize;
             options.IncrementalBackupEnabled = true;
             options.ManualFlushing = true;
 

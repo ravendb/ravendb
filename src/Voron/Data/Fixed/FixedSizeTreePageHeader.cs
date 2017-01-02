@@ -9,9 +9,11 @@ using Voron.Data.BTrees;
 namespace Voron.Data.Fixed
 {
 
-    [StructLayout(LayoutKind.Explicit, Pack = 1)]
+    [StructLayout(LayoutKind.Explicit, Pack = 1, Size = PageHeader.SizeOf)]
     public struct FixedSizeTreePageHeader
     {
+        public const int SizeOf = PageHeader.SizeOf;
+
         [FieldOffset(0)]
         public long PageNumber;
 

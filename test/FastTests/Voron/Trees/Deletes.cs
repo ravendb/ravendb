@@ -12,18 +12,11 @@ namespace FastTests.Voron.Trees
 {
     public class Deletes : StorageTest
     {
-
-        protected override void Configure(StorageEnvironmentOptions options)
-        {
-            options.PageSize = 4 * Constants.Size.Kilobyte;
-            base.Configure(options);
-        }
-
         [Fact]
         public void CanAddVeryLargeValueAndThenDeleteIt()
         {
             var random = new Random();
-            var buffer = new byte[8192];
+            var buffer = new byte[Constants.Storage.PageSize*2];
             random.NextBytes(buffer);
 
             using (var tx = Env.WriteTransaction())

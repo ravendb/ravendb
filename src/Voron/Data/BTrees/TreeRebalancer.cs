@@ -159,7 +159,7 @@ namespace Voron.Data.BTrees
 
                         var node = right.GetNode(i);
 
-                        if (mergedPage.HasSpaceFor(_tx,TreeSizeOf.NodeEntryWithAnotherKey(node, key) + Constants.NodeOffsetSize) == false)
+                        if (mergedPage.HasSpaceFor(_tx, TreeSizeOf.NodeEntryWithAnotherKey(node, key) + Constants.Tree.NodeOffsetSize) == false)
                         {
                             right.LastSearchPosition = previousSearchPosition;
                                 //previous position --> prevent mutation of parameter
@@ -213,7 +213,7 @@ namespace Voron.Data.BTrees
             using (GetActualKey(from, from.LastSearchPositionOrLastEntry, out originalFromKeyStart))
             {
                 var fromNode = from.GetNode(from.LastSearchPosition);
-                byte* val = @from.Base + @from.KeysOffsets[@from.LastSearchPosition] + Constants.NodeHeaderSize +
+                byte* val = @from.Base + @from.KeysOffsets[@from.LastSearchPosition] + Constants.Tree.NodeHeaderSize +
                             originalFromKeyStart.Size;
 
                 byte* dataPos;

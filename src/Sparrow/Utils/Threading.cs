@@ -108,7 +108,7 @@ namespace Sparrow.Utils
                 case ThreadPriority.AboveNormal:
                     return -5;
                 case ThreadPriority.Highest:
-                    return -20;
+                    return -15;
                 case ThreadPriority.Normal:
                     return 0;
                 default:
@@ -118,15 +118,15 @@ namespace Sparrow.Utils
 
         private static ThreadPriority FixLinuxPriority(int priority)
         {
-            if (priority < -5)
+            if (priority > 5 && priority < 20)
                 return ThreadPriority.Lowest;
-            if (priority < 0 )
+            if (priority > 0 )
                 return ThreadPriority.BelowNormal;
             if (priority == 0)
                 return ThreadPriority.Normal;
-            if (priority == 20)
-                return ThreadPriority.Highest;
-            if (priority < 20)
+            if (priority > -15)
+                return ThreadPriority.AboveNormal;
+            if (priority > -20)
                 return ThreadPriority.Highest;
 
             throw new ArgumentOutOfRangeException(nameof(priority), "Uknown range for priority " + priority);

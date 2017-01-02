@@ -94,12 +94,11 @@ namespace Voron.Impl.FileHeaders
                 }
                 _revision = _theHeader->HeaderRevision;
 
-                if (_theHeader->PageSize != _env.Options.PageSize)
+                if (_theHeader->PageSize != Constants.Storage.PageSize)
                 {
                     var message = string.Format("PageSize mismatch, configured to be {0:#,#} but was {1:#,#}, using the actual value in the file {1:#,#}",
-                        _env.Options.PageSize, _theHeader->PageSize);
+                        Constants.Storage.PageSize, _theHeader->PageSize);
                     _env.Options.InvokeRecoveryError(this, message, null);
-                    _env.Options.PageSize = _theHeader->PageSize;
                 }
 
                 return false;
