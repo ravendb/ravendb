@@ -153,7 +153,7 @@ namespace NewClientTests
             configuration.Core.RunInMemory = true;
             string postfix = port == 8080 ? "" : "_" + port;
             configuration.Core.DataDirectory = Path.Combine(configuration.Core.DataDirectory, $"Tests{postfix}");
-            configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(10, TimeUnit.Seconds);
+            configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(60, TimeUnit.Seconds);
             configuration.Storage.AllowOn32Bits = true;
 
             IOExtensions.DeleteDirectory(configuration.Core.DataDirectory);
