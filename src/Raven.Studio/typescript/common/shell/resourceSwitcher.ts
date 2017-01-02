@@ -2,6 +2,8 @@
 import EVENTS = require("common/constants/events");
 import resource = require("models/resources/resource");
 import resourcesManager = require("common/shell/resourcesManager");
+import notificationCenter = require("common/notifications/notificationCenter");
+
 /*
     Events emitted through ko.postbox
         * ResourceSwitcher.Show - when searchbox is opened
@@ -16,6 +18,8 @@ class resourceSwitcher {
 
     private resources: KnockoutComputed<resource[]>;
     private resourcesManager = resourcesManager.default;
+
+    private notificationCenter = notificationCenter.instance;
 
     filter = ko.observable<string>();
     filteredResources: KnockoutComputed<resource[]>;
@@ -41,12 +45,18 @@ class resourceSwitcher {
         this.$selectDatabase = $('.form-control.btn-toggle.resource-switcher');
         this.$filter = $('.resource-switcher-container .database-filter');
 
+        let self = this;
+
         this.$selectDatabaseContainer.on('click', (e) => {
+            self.notificationCenter.notificationsState(false);
+
             e.stopPropagation();
             this.show();
         });
 
         this.$selectDatabase.on('click', (e) => {
+            self.notificationCenter.notificationsState(false);
+
             if (this.$selectDatabase.is('.active')) {
                 this.hide();
             } else {
@@ -58,7 +68,10 @@ class resourceSwitcher {
 
         const hide = () => this.hide();
 
+     
         $('.box-container a', this.$selectDatabaseContainer).on('click', function (e) {
+            self.notificationCenter.notificationsState(false);
+
             e.stopPropagation();
             hide();
             let a: HTMLAnchorElement = this as HTMLAnchorElement;

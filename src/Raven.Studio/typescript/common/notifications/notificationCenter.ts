@@ -61,6 +61,14 @@ class notificationCenter {
         this.recentErrors.dismissRecentError(alert);
     }
 
+    toggleNotifications() {
+         this.showNotifications.toggle();
+    }
+
+    notificationsState(state: boolean) {
+        this.showNotifications(state);
+        return true;
+    }
 }
 
 export = notificationCenter;
