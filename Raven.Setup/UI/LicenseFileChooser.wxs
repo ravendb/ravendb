@@ -24,7 +24,10 @@
           <Text>Specify the location for a license file</Text>
         </Control>
         <Control Type="Edit" Id="txtFilePath" Width="283" Height="15" X="30" Y="68" Property="RAVEN_LICENSE_FILE_PATH" Text="[RAVEN_LICENSE_FILE_PATH]" />
-        <Control Type="PushButton" Id="btnChange" Width="56" Height="17" X="30" Y="86" Text="&amp;Browse" />
+        <Control Type="PushButton" Id="btnChange" Width="56" Height="17" X="30" Y="86" Text="&amp;Browse">
+          <Condition Action="disable">NOT WINDOWS_EXPLORER_AVAILABLE</Condition>
+          <Condition Action="enable">WINDOWS_EXPLORER_AVAILABLE</Condition>
+        </Control>
         <Control Type="Text" Id="error" Width="280" Text="{\Red8}[RAVEN_LICENSE_ERROR]" Property="RAVEN_LICENSE_ERROR" Height="15" X="30" Y="52" />
         <Control Type="Text" Id="userName" Width="280" Text="[RAVEN_LICENSE_USER_NAME]" Property="RAVEN_LICENSE_USER_NAME" Height="10" X="30" Y="105" />
         <Control Type="Text" Id="type" Width="280" Text="[RAVEN_LICENSE_TYPE]" Property="RAVEN_LICENSE_TYPE" Height="10" X="30" Y="114" />
