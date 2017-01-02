@@ -644,7 +644,7 @@ more responsive application.
         /// </summary>
         public void Store(object entity, long? etag, string id)
         {
-            StoreInternal(entity, etag, id, forceConcurrencyCheck: true);
+            StoreInternal(entity, etag, id, forceConcurrencyCheck: etag != null);
         }
 
         private void StoreInternal(object entity, long? etag, string id, bool forceConcurrencyCheck)
