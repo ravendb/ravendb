@@ -1,34 +1,42 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using FastTests.Voron;
-using FastTests.Voron.Streams;
-using SlowTests.Voron;
-using StressTests;
 using Voron;
 using Voron.Global;
 using Voron.Impl.Scratch;
 using Xunit;
+using Sparrow.Platform;
+using System.Linq;
 
 namespace Tryouts
 {
     public class Program
     {
-        static void Main(string[] args)
+        unsafe static void Main(string[] args)
         {
-            for (int i = 0; i < 100; i++)
+            //for(var i = 0; i< 10000; i++)
             {
-                Console.WriteLine(i);
-                using (var a = new FastTests.Client.BulkInsert.BulkInserts())
+                Console.WriteLine("Start");
+                Console.Out.Flush();
+                try{
+                using(var a = new FastTests.Client.Queries.FullTextSearchOnTags())
                 {
-                    a.SimpleBulkInsertShouldWork().Wait();
+                    Console.WriteLine("Created");
+                    a.CanSearchUsingPhrase_MultipleSearches();
                 }
-
+                }
+                catch(Exception ex){
+                    Console.WriteLine(ex);
+                    Console.Out.Flush();
+                }
+                System.Console.WriteLine("{0:#,#} kb", PosixElectricFencedMemory.usage/1024);
+                foreach(var a in PosixElectricFencedMemory.Allocs.Values.Distinct()){
+                    //if(a.Contains("GetLazyStringForFieldWithCaching("))
+                   // continue;
+                    System.Console.WriteLine(a);
+                    System.Console.WriteLine("---------");
+                }
             }
-            //using (var a = new CanUseStream())
-            //{
-            //    a.CanCopyTo(16897);
-            //}
         }
     }
 

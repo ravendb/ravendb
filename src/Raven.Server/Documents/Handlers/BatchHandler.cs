@@ -59,6 +59,7 @@ namespace Raven.Server.Documents.Handlers
                     throw new InvalidDataException("Could not parse json", ioe);
                 }
 
+                using (commands){
                 CommandData[] parsedCommands = new CommandData[commands.Length];
 
                 for (int i = 0; i < commands.Length; i++)
@@ -144,7 +145,8 @@ namespace Raven.Server.Documents.Handlers
                     {
                         ["Results"] = mergedCmd.Reply
                     });
-                }
+                }                
+            }
             }
         }
 
