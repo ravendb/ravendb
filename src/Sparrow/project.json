@@ -5,7 +5,8 @@
     "warningsAsErrors": true,
     "compile": {
       "include": [ "**/*.cs", "../CommonAssemblyInfo.cs" ]
-    }
+    },
+    "define": [ "MEM_GUARD", "MEM_GUARD_STACK" ]
   },
 
   "configurations": {
