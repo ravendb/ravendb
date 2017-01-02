@@ -249,6 +249,10 @@ namespace Raven.Database.Raft.Storage
                         var documentKey = jsonReader.Value.ToString();
                         if (jsonReader.Read() == false)
                             throw new InvalidDataException("StartObject was expected");
+                        //The document was missing during the snapshot taking process, this is fine
+                        //for all cases but the missing cluster configurations
+                        if (jsonReader.TokenType == JsonToken.Null && documentKey != Constants.Cluster.ClusterConfigurationDocumentKey)
+                            continue;
                         if (jsonReader.TokenType != JsonToken.StartObject)
                             throw new InvalidDataException("StartObject was expected");
                         var json = (RavenJObject)RavenJToken.ReadFrom(jsonReader);
@@ -260,6 +264,7 @@ namespace Raven.Database.Raft.Storage
                 UpdateLastAppliedIndex(index, accessor);
                 LastAppliedIndex = index;
             });
+
         }
 
         private void UpdateLastAppliedIndex(long index, IStorageActionsAccessor accessor)
