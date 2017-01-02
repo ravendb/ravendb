@@ -148,6 +148,7 @@
 											Sequence="17" />
 			</Component>
 			<Component Id="Raven.Server.Shortcut" Guid="C7A448B6-5E3B-4705-B2D6-3766D83E8924">
+        <Condition>WINDOWS_EXPLORER_AVAILABLE</Condition>
 				<CreateFolder />
 				<util:InternetShortcut
 					Id="ServerLocalhostShortcut"

@@ -54,6 +54,8 @@
 				<Control Type="PushButton" Id="btnChange" Width="29" Height="17" X="300" Y="130" Text="&amp;Select" TabSkip="no">
 					<Condition Action="show"><![CDATA[WEBSITE_TYPE = "NEW"]]></Condition>
 					<Condition Action="hide"><![CDATA[WEBSITE_TYPE = "EXISTING"]]></Condition>
+          <Condition Action="disable">NOT WINDOWS_EXPLORER_AVAILABLE</Condition>
+          <Condition Action="enable">WINDOWS_EXPLORER_AVAILABLE</Condition>
 				</Control>
 				<Control Type="Text" Id="hostNameLabel" Width="50" Height="11" X="40" Y="156" Text="&amp;Host name:" TabSkip="no">
 					<Condition Action="show"><![CDATA[WEBSITE_TYPE = "NEW"]]></Condition>

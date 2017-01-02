@@ -32,16 +32,31 @@
 				<Control Id="IndexesPathlEdit" Type="Edit" X="98" Y="145" Width="180" Height="15" Property="RAVEN_INDEX_DIR" Text="[RAVEN_INDEX_DIR]" />
 				<Control Type="Text" Id="LogsLabel" Width="50" Height="17" X="20" Y="165" Text="&amp;Logs*:" />
 				<Control Type="Edit" Id="LogsPathEdit" Width="180" Height="15" X="98" Y="165" Property="RAVEN_STORAGE_LOGS_DIR" Text="[RAVEN_STORAGE_LOGS_DIR]" />
-				<Control Type="PushButton" Id="btnChangeWorkingDir" Width="56" Height="16" X="285" Y="90" Text="Change ..." TabSkip="no" />
-				<Control Type="PushButton" Id="btnChangeData" Width="56" Height="16" X="285" Y="125" Text="Change ..." TabSkip="no" />
-				<Control Type="PushButton" Id="btnChangeIndexes" Width="56" Height="16" X="285" Y="145" Text="Change ..." TabSkip="no" />
-				<Control Type="PushButton" Id="btnChangeLogs" Width="56" Height="16" X="285" Y="165" Text="Change ..." />
+				<Control Type="PushButton" Id="btnChangeWorkingDir" Width="56" Height="16" X="285" Y="90" Text="Change ..." TabSkip="no" >
+          <Condition Action="disable">NOT WINDOWS_EXPLORER_AVAILABLE</Condition>
+          <Condition Action="enable">WINDOWS_EXPLORER_AVAILABLE</Condition>
+        </Control>
+				<Control Type="PushButton" Id="btnChangeData" Width="56" Height="16" X="285" Y="125" Text="Change ..." TabSkip="no" >
+          <Condition Action="disable">NOT WINDOWS_EXPLORER_AVAILABLE</Condition>
+          <Condition Action="enable">WINDOWS_EXPLORER_AVAILABLE</Condition>
+        </Control>
+				<Control Type="PushButton" Id="btnChangeIndexes" Width="56" Height="16" X="285" Y="145" Text="Change ..." TabSkip="no" >
+          <Condition Action="disable">NOT WINDOWS_EXPLORER_AVAILABLE</Condition>
+          <Condition Action="enable">WINDOWS_EXPLORER_AVAILABLE</Condition>
+        </Control>
+				<Control Type="PushButton" Id="btnChangeLogs" Width="56" Height="16" X="285" Y="165" Text="Change ..." >
+          <Condition Action="disable">NOT WINDOWS_EXPLORER_AVAILABLE</Condition>
+          <Condition Action="enable">WINDOWS_EXPLORER_AVAILABLE</Condition>
+        </Control>
 				<Control Type="Text" Id="CustomPathsInfo2" Width="305" Height="10" X="20" Y="185">
 					<Text>RavenFS paths (relative to the working directory or absolute ones):</Text>
 				</Control>
 				<Control Id="FsDataDirLabel" Type="Text" X="20" Y="200" Width="50" Height="15" TabSkip="no" Text="Data:" />
 				<Control Id="FsDirPathEdit" Type="Edit" X="98" Y="200" Width="180" Height="15" Property="RAVENFS_DATA_DIR" Text="[RAVENFS_DATA_DIR]" />
-				<Control Type="PushButton" Id="btnChangeFsDataDir" Width="56" Height="16" X="285" Y="200" Text="Change ..." TabSkip="no" />
+				<Control Type="PushButton" Id="btnChangeFsDataDir" Width="56" Height="16" X="285" Y="200" Text="Change ..." TabSkip="no" >
+          <Condition Action="disable">NOT WINDOWS_EXPLORER_AVAILABLE</Condition>
+          <Condition Action="enable">WINDOWS_EXPLORER_AVAILABLE</Condition>
+        </Control>
 				<Control Type="Text" Id="pathsInfo" Width="302" Text="{\SmallInfo}*By default (an empty path) they will be located together with database's data" Height="10" X="20" Y="224" />
 			</Dialog>
 			<Publish Dialog="CustomInstallDirDlg" Control="btnChangeWorkingDir" Event="DoAction" Value="OpenWorkingDirChooser" Order="1">1</Publish>
