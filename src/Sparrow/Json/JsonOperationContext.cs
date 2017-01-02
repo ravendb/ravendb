@@ -663,7 +663,7 @@ namespace Sparrow.Json
             Renew();
         }
 
-        protected internal virtual void Renew()
+        protected internal virtual unsafe void Renew()
         {
             _arenaAllocator.RenewArena();
             if (_arenaAllocatorForLongLivedValues == null)
@@ -671,6 +671,9 @@ namespace Sparrow.Json
                 _arenaAllocatorForLongLivedValues = new ArenaMemoryAllocator(_longLivedSize);
                 CachedProperties = new CachedProperties(this);
             }
+
+            if (_tempBuffer != null)
+                GetNativeTempBuffer(_tempBuffer.SizeInBytes);
         }
 
         protected internal virtual unsafe void Reset()
@@ -692,8 +695,6 @@ namespace Sparrow.Json
 
             _documentBuilder.Reset();
 
-            if (_tempBuffer != null)
-                GetNativeTempBuffer(_tempBuffer.SizeInBytes);
 
             // We don't reset _arenaAllocatorForLongLivedValues. It's used as a cache buffer for long lived strings like field names.
             // When a context is re-used, the buffer containing those field names was not reset and the strings are still valid and alive.
