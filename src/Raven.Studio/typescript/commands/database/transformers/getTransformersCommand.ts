@@ -13,7 +13,8 @@ class getTransformersCommand extends commandBase {
             pageSize: this.take
         };
         const url = endpoints.databases.transformer.transformers + this.urlEncodeArgs(args);
-        return this.query(url, null, this.db);
+        const extractor = (response: resultsDto<Raven.Abstractions.Indexing.TransformerDefinition>) => response.Results;
+        return this.query(url, null, this.db, extractor);
     }
 }
 
