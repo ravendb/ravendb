@@ -79,12 +79,6 @@ namespace Raven.Server.Documents.Handlers
                     return;
                 }
 
-                if (string.Equals(operation, "explain", StringComparison.OrdinalIgnoreCase))
-                {
-                    Explain(context, indexName);
-                    return;
-                }
-
                 if (string.Equals(operation, "facets", StringComparison.OrdinalIgnoreCase))
                 {
                     await FacetedQuery(context, indexName, token).ConfigureAwait(false);
@@ -224,17 +218,10 @@ namespace Raven.Server.Documents.Handlers
 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                var isFirst = true;
-                writer.WriteStartArray();
-                foreach (var explanation in explanations)
+                writer.WriteArray(context, explanations, (w, c, explanation) =>
                 {
-                    if (isFirst == false)
-                        writer.WriteComma();
-
-                    isFirst = false;
-                    writer.WriteExplanation(context, explanation);
-                }
-                writer.WriteEndArray();
+                    w.WriteExplanation(context, explanation);
+                });
             }
         }
 
@@ -295,6 +282,13 @@ namespace Raven.Server.Documents.Handlers
                 IndexEntries(context, indexName, token, method);
                 return;
             }
+
+            if (string.Equals(debug, "explain", StringComparison.OrdinalIgnoreCase))
+            {
+                Explain(context, indexName);
+                return;
+            }
+
 
             throw new NotSupportedException($"Not supported query debug operation: '{debug}'");
         }

@@ -10,7 +10,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Http.Headers;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
@@ -25,9 +24,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Voron.Exceptions;
-using Voron.Util;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -37,7 +34,8 @@ namespace Raven.Server.Documents.Handlers
         public Task Head()
         {
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-            //TODO: If-None-Match handling
+            var etag = GetLongFromHeaders("If-None-Match");
+
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
@@ -46,7 +44,12 @@ namespace Raven.Server.Documents.Handlers
                 if (document == null)
                     HttpContext.Response.StatusCode = 404;
                 else
-                    HttpContext.Response.Headers[Constants.MetadataEtagField] = "\"" + document.Etag + "\"";
+                {
+                    if (etag == document.Etag)
+                        HttpContext.Response.StatusCode = 304;
+                    else
+                        HttpContext.Response.Headers[Constants.MetadataEtagField] = "\"" + document.Etag + "\"";
+                }
 
                 return Task.CompletedTask;
             }
@@ -55,7 +58,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/docs", "GET", "/databases/{databaseName:string}/docs?id={documentId:string|multiple}&include={fieldName:string|optional|multiple}&transformer={transformerName:string|optional}")]
         public Task Get()
         {
-            var ids = HttpContext.Request.Query["id"];
+            var ids = GetStringValuesQueryString("id", required: false);
             var metadataOnly = GetBoolValueQueryString("metadata-only", required: false) ?? false;
             var transformerName = GetStringQueryString("transformer", required: false);
 
@@ -118,15 +121,12 @@ namespace Raven.Server.Documents.Handlers
             var pageSize = GetPageSize(Database.Configuration.Core.MaxPageSize);
 
             IEnumerable<Document> documents;
-            bool isLoadStartingWith = false;
             if (etag != null)
             {
                 documents = Database.DocumentsStorage.GetDocumentsFrom(context, etag.Value, start, pageSize);
             }
             else if (HttpContext.Request.Query.ContainsKey("startsWith"))
             {
-                isLoadStartingWith = true;
-
                 documents = Database.DocumentsStorage.GetDocumentsStartingWith(context,
                     HttpContext.Request.Query["startsWith"],
                     HttpContext.Request.Query["matches"],
@@ -142,11 +142,8 @@ namespace Raven.Server.Documents.Handlers
 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                if (isLoadStartingWith)
-                {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName("Results");
-                }
+                writer.WriteStartObject();
+                writer.WritePropertyName("Results");
 
                 if (transformer != null)
                 {
@@ -162,15 +159,14 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.WriteDocuments(context, documents, metadataOnly);
                 }
-                
-                if (isLoadStartingWith)
-                    writer.WriteEndObject();
+
+                writer.WriteEndObject();
             }
         }
 
         private void GetDocumentsById(DocumentsOperationContext context, StringValues ids, Transformer transformer, bool metadataOnly)
         {
-            var includePaths = HttpContext.Request.Query["include"];
+            var includePaths = GetStringValuesQueryString("include", required: false);
             var documents = new List<Document>(ids.Count);
             List<long> etags = null;
             var includes = new List<Document>(includePaths.Count * ids.Count);
@@ -212,7 +208,9 @@ namespace Raven.Server.Documents.Handlers
 
             HttpContext.Response.Headers[Constants.MetadataEtagField] = "\"" + actualEtag + "\"";
 
-            if (HttpContext.Request.Query["blittable"] == "true")
+            var blittable = GetBoolValueQueryString("blittable", required: false) ?? false;
+
+            if (blittable)
             {
                 WriteDocumentsBlittable(context, documentsToWrite, includes);
             }
@@ -389,14 +387,14 @@ namespace Raven.Server.Documents.Handlers
 
                 cmd.ExceptionDispatchInfo?.Throw();
 
-                HttpContext.Response.StatusCode = 204; // NoContent
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             }
         }
 
         private class MergedPutCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             public string Key;
-            public long? ExepctedEtag;
+            public long? ExpectedEtag;
             public BlittableJsonReaderObject Document;
             public DocumentDatabase Database;
             public ConcurrencyException ConcurrencyException;
@@ -406,7 +404,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 try
                 {
-                    PutResult = Database.DocumentsStorage.Put(context, Key, ExepctedEtag, Document);
+                    PutResult = Database.DocumentsStorage.Put(context, Key, ExpectedEtag, Document);
                 }
                 catch (ConcurrencyException e)
                 {
@@ -430,7 +428,7 @@ namespace Raven.Server.Documents.Handlers
                 var cmd = new MergedPutCommand
                 {
                     Database = Database,
-                    ExepctedEtag = etag,
+                    ExpectedEtag = etag,
                     Key = id,
                     Document = doc
                 };
@@ -534,7 +532,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/docs/generate-class-from-document", "GET")]
+        [RavenAction("/databases/*/docs/class", "GET")]
         public Task GenerateClassFromDocument()
         {
             var id = GetStringQueryString("id");
@@ -566,7 +564,7 @@ namespace Raven.Server.Documents.Handlers
                     var code = codeGenerator.Execute(document);
                     writer.Write(code);
                 }
-                
+
                 return Task.CompletedTask;
             }
         }

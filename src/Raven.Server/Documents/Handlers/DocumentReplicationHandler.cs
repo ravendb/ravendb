@@ -11,22 +11,19 @@ namespace Raven.Server.Documents.Handlers
 {
     public class DocumentReplicationHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/replication/tombstones", "GET",
-            "/databases/{databaseName:string}/replication/tombstones?start={start:int}&take={take:int}")]
+        [RavenAction("/databases/*/replication/tombstones", "GET", "/databases/{databaseName:string}/replication/tombstones?start={start:int}&take={take:int}")]
         public Task GetAllTombstones()
         {
-            var start = GetIntValueQueryString("start", false) ?? 0;
-            var take = GetIntValueQueryString("take", false) ?? 1024;
+            var start = GetStart();
+            var pageSize = GetPageSize(Database.Configuration.Core.MaxPageSize);
 
-            HttpContext.Response.StatusCode = 200;
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {
-                var tombstones =
-                    context.DocumentDatabase.DocumentsStorage.GetTombstonesFrom(context, 0, start, take).ToList();
                 var array = new DynamicJsonArray();
+                var tombstones = context.DocumentDatabase.DocumentsStorage.GetTombstonesFrom(context, 0, start, pageSize);
                 foreach (var tombstone in tombstones)
                 {
                     array.Add(new DynamicJsonValue
@@ -39,15 +36,17 @@ namespace Raven.Server.Documents.Handlers
                     });
                 }
 
-                context.Write(writer, array);
+                context.Write(writer, new DynamicJsonValue
+                {
+                    ["Results"] = array
+                });
             }
 
             return Task.CompletedTask;
         }
 
         //get conflicts for specified document
-        [RavenAction("/databases/*/replication/conflicts", "GET", 
-            "/databases/{databaseName:string}/replication/conflicts?docId={documentId:string}")]
+        [RavenAction("/databases/*/replication/conflicts", "GET", "/databases/{databaseName:string}/replication/conflicts?docId={documentId:string}")]
         public Task GetReplicationConflictsById()
         {
             var docId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("docId");
@@ -56,8 +55,8 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {
-                var conflicts = context.DocumentDatabase.DocumentsStorage.GetConflictsFor(context, docId);
                 var array = new DynamicJsonArray();
+                var conflicts = context.DocumentDatabase.DocumentsStorage.GetConflictsFor(context, docId);
                 foreach (var conflict in conflicts)
                 {
                     array.Add(new DynamicJsonValue
@@ -65,15 +64,17 @@ namespace Raven.Server.Documents.Handlers
                         ["Key"] = conflict.Key,
                         ["ChangeVector"] = conflict.ChangeVector.ToJson(),
                         ["Doc"] = conflict.Doc
-                    });					
+                    });
                 }
 
-                context.Write(writer,array);
+                context.Write(writer, new DynamicJsonValue
+                {
+                    ["Results"] = array
+                });
 
-                HttpContext.Response.StatusCode = 200;
                 return Task.CompletedTask;
             }
-        }		
+        }
 
         [RavenAction("/databases/*/replication/topology", "GET")]
         public Task GetReplicationTopology()
@@ -207,14 +208,14 @@ namespace Raven.Server.Documents.Handlers
                             ["SourceUrl"] = statItem.Key.SourceUrl
                         },
                         ["Value"] = new DynamicJsonArray(statItem.Value.Select(x => new DynamicJsonValue
-                                                        {
-                                                            ["Reason"] = x.Reason,
-                                                            ["When"] = x.When
-                                                        }))
+                        {
+                            ["Reason"] = x.Reason,
+                            ["When"] = x.When
+                        }))
                     });
                 }
 
-                context.Write(writer,data);
+                context.Write(writer, data);
             }
 
             return Task.CompletedTask;
@@ -237,7 +238,7 @@ namespace Raven.Server.Documents.Handlers
                         ["Disabled"] = queueItem.Disabled,
                         ["IgnoredClient"] = queueItem.IgnoredClient,
                         ["SkipIndexReplication"] = queueItem.SkipIndexReplication,
-                        ["SpecifiedCollections"] = queueItem.SpecifiedCollections						
+                        ["SpecifiedCollections"] = queueItem.SpecifiedCollections
                     });
                 }
 

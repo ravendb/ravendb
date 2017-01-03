@@ -50,7 +50,10 @@ namespace Raven.Server.Documents.Handlers
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("Results");
                     writer.WriteDocuments(context, documents, metadataOnly: false);
+                    writer.WriteEndObject();
                 }
             }
 

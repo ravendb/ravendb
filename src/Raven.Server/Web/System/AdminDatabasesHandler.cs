@@ -194,13 +194,10 @@ namespace Raven.Server.Web.System
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    writer.WriteStartObject();
-                    writer.WriteResults(context, results, (w, c, result) =>
+                    writer.WriteArray(context, results, (w, c, result) =>
                     {
                         c.Write(w, result);
                     });
-
-                    writer.WriteEndObject();
                 }
             }
 

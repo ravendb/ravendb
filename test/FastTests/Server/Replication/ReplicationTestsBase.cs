@@ -19,16 +19,15 @@ namespace FastTests.Server.Documents.Replication
 {
     public class ReplicationTestsBase : RavenTestBase
     {
-        protected async Task<Dictionary<string, List<ChangeVectorEntry[]>>> GetConflicts(DocumentStore store,
-    string docId)
+        protected async Task<Dictionary<string, List<ChangeVectorEntry[]>>> GetConflicts(DocumentStore store, string docId)
         {
             var url = $"{store.Url}/databases/{store.DefaultDatabase}/replication/conflicts?docId={docId}";
             using (var request = store.JsonRequestFactory.CreateHttpJsonRequest(
                 new CreateHttpJsonRequestParams(null, url, HttpMethod.Get, new OperationCredentials(null, CredentialCache.DefaultCredentials), new DocumentConvention())))
             {
-                request.ExecuteRequest();
-                var conflictsJson = RavenJArray.Parse(await request.Response.Content.ReadAsStringAsync());				
-                var conflicts = conflictsJson.Select(x => new
+                var json = (RavenJObject)await request.ReadResponseJsonAsync();
+                var array = json.Value<RavenJArray>("Results");
+                var conflicts = array.Select(x => new
                 {
                     Key = x.Value<string>("Key"),
                     ChangeVector = x.Value<RavenJArray>("ChangeVector").Select(c => c.FromJson()).ToArray()
@@ -145,9 +144,9 @@ namespace FastTests.Server.Documents.Replication
             using (var request = store.JsonRequestFactory.CreateHttpJsonRequest(
                 new CreateHttpJsonRequestParams(null, url, HttpMethod.Get, new OperationCredentials(null, CredentialCache.DefaultCredentials), new DocumentConvention())))
             {
-                request.ExecuteRequest();
-                var tombstonesJson = RavenJArray.Parse(await request.Response.Content.ReadAsStringAsync());
-                var tombstones = tombstonesJson.Select(x => x.Value<string>("Key")).ToList();
+                var json = (RavenJObject)await request.ReadResponseJsonAsync();
+                var array = json.Value<RavenJArray>("Results");
+                var tombstones = array.Select(x => x.Value<string>("Key")).ToList();
                 return tombstones;
             }
         }
@@ -220,7 +219,7 @@ namespace FastTests.Server.Documents.Replication
                         {
                             Database = store.DefaultDatabase,
                             Url = store.Url,
-                            
+
                         });
                 session.Store(new ReplicationDocument
                 {
@@ -228,6 +227,6 @@ namespace FastTests.Server.Documents.Replication
                 }, Constants.Replication.DocumentReplicationConfiguration);
                 session.SaveChanges();
             }
-        }		
+        }
     }
 }

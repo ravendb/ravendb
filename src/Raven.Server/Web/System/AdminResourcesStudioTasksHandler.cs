@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Server.Routing;
@@ -41,10 +42,12 @@ namespace Raven.Server.Web.System
             var names = GetStringValuesQueryString("name");
             var disableRequested = GetBoolValueQueryString("disable").Value;
 
+            var databasesToUnload = new List<string>();
+
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            using (context.OpenReadTransaction())
+            using (var tx = context.OpenWriteTransaction())
             {
                 writer.WriteStartArray();
                 var first = true;
@@ -56,7 +59,7 @@ namespace Raven.Server.Web.System
 
                     var dbId = resourcePrefix + name;
                     var dbDoc = ServerStore.Read(context, dbId);
-                    
+
                     if (dbDoc == null)
                     {
                         context.Write(writer, new DynamicJsonValue
@@ -95,15 +98,8 @@ namespace Raven.Server.Web.System
 
                     var newDoc2 = context.ReadObject(dbDoc, dbId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
-                    /* Right now only database resource is supported */
-                    ServerStore.DatabasesLandlord.UnloadAndLock(name, () =>
-                    {
-                        using (var tx = context.OpenWriteTransaction())
-                        {
-                            ServerStore.Write(context, dbId, newDoc2);
-                            tx.Commit();
-                        }
-                    });
+                    ServerStore.Write(context, dbId, newDoc2);
+                    databasesToUnload.Add(name);
 
                     context.Write(writer, new DynamicJsonValue
                     {
@@ -112,8 +108,20 @@ namespace Raven.Server.Web.System
                         ["Disabled"] = disableRequested,
                     });
                 }
+
+                tx.Commit();
+
                 writer.WriteEndArray();
             }
+
+            foreach (var name in databasesToUnload)
+            {
+                /* Right now only database resource is supported */
+                ServerStore.DatabasesLandlord.UnloadAndLock(name, () =>
+                {
+                });
+            }
+
             return Task.CompletedTask;
         }
     }
