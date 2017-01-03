@@ -3,14 +3,10 @@
 };
 
 const ResourceSwitcher = {
-    Show: 'ResourceSwitcher.Show',
-    Hide: 'ResourceSwitcher.Hide',
     ItemSelected: 'ResourceSwitcher.ItemSelected'
 };
 
 const SearchBox = {
-    Show: 'SearchBox.Show',
-    Hide: 'SearchBox.Hide',
     Input: 'SearchBox.ItemSelected'
 };
 

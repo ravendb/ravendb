@@ -17,6 +17,12 @@ class resourceSwitcher {
     private resources: KnockoutComputed<resource[]>;
     private resourcesManager = resourcesManager.default;
 
+    private readonly hideHandler = (e: Event) => {
+        if (this.shouldConsumeHideEvent(e)) {
+            this.hide()
+        }
+    };
+
     filter = ko.observable<string>();
     filteredResources: KnockoutComputed<resource[]>;
 
@@ -47,7 +53,7 @@ class resourceSwitcher {
         });
 
         this.$selectDatabase.on('click', (e) => {
-            if (this.$selectDatabase.is('.active')) {
+            if (this.$selectDatabaseContainer.is('.active')) {
                 this.hide();
             } else {
                 this.show();
@@ -56,20 +62,13 @@ class resourceSwitcher {
             e.stopPropagation();
         });
 
-        const hide = () => this.hide();
-
-        $('.box-container a', this.$selectDatabaseContainer).on('click', function (e) {
+        const self = this;
+        $('.box-container a', this.$selectDatabaseContainer).on('click', function (e: Event) {
             e.stopPropagation();
-            hide();
+            self.hide();
             let a: HTMLAnchorElement = this as HTMLAnchorElement;
             ko.postbox.publish(EVENTS.ResourceSwitcher.ItemSelected, a.href);
         });
-
-        $(window).on('click', hide);
-
-        ko.postbox.subscribe(EVENTS.ResourceSwitcher.Show, () => this.$filter.focus());
-        ko.postbox.subscribe(EVENTS.Menu.LevelChanged, hide);
-        ko.postbox.subscribe(EVENTS.SearchBox.Show, hide);
     }
 
     selectResource(rs: resource) {
@@ -78,14 +77,23 @@ class resourceSwitcher {
     }
 
     private show() {
+        window.addEventListener("click", this.hideHandler, true);
+
         this.$selectDatabaseContainer.addClass('active');
-        ko.postbox.publish(EVENTS.ResourceSwitcher.Show);
+        this.$filter.focus()
     }
 
     private hide() {
+        window.removeEventListener("click", this.hideHandler, true);
+
         this.$selectDatabaseContainer.removeClass('active');
-        ko.postbox.publish(EVENTS.ResourceSwitcher.Hide);
     }
+
+    private shouldConsumeHideEvent(e: Event) {
+        return $(e.target).parents(".resource-switcher-container").length === 0
+            && !$(e.target).hasClass(".resource-switcher");
+    }
+
 }
 
 export = resourceSwitcher;

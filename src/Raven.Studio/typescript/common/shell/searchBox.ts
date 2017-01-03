@@ -11,6 +11,11 @@ class searchBox {
 
     private $searchContainer: JQuery;
     private $searchInput: JQuery;
+    private readonly hideHandler = (e: Event) => {
+        if (this.shouldConsumeHideEvent(e)) {
+            this.hide()
+        }
+    };
 
     initialize() {
         this.$searchInput = $('.search-container input[type=search]');
@@ -32,21 +37,22 @@ class searchBox {
             e.stopPropagation();
             this.hide();
         });
-
-        var hide = () => this.hide();
-        $(window).on('click', hide);
-        ko.postbox.subscribe(EVENTS.Menu.LevelChanged, hide);
-        ko.postbox.subscribe(EVENTS.ResourceSwitcher.Show, hide);
     }
 
     private show() {
+        window.addEventListener("click", this.hideHandler, true);
+
         this.$searchContainer.addClass('active');
-        ko.postbox.publish(EVENTS.SearchBox.Show);
     }
 
     private hide() {
+        window.removeEventListener("click", this.hideHandler, true);
+
         this.$searchContainer.removeClass('active');
-        ko.postbox.publish(EVENTS.SearchBox.Hide);
+    }
+
+    private shouldConsumeHideEvent(e: Event) {
+        return $(e.target).parents(".search-container").length === 0;
     }
 }
 
