@@ -452,7 +452,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/errors", "GET")]
         public Task GetErrors()
         {
-            var names = GetStringValuesQueryString("name");
+            var names = GetStringValuesQueryString("name", required: false);
 
             List<Index> indexes;
             if (names.Count == 0)

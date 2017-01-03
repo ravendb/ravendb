@@ -346,25 +346,7 @@ namespace Raven.Server.Documents.Handlers
             return (long)Hashing.XXHash64.Calculate((byte*)buffer, sizeof(long) * 2);
         }
 
-        private class MergedDeleteCommand : TransactionOperationsMerger.MergedTransactionCommand
-        {
-            public string Key;
-            public long? ExepctedEtag;
-            public DocumentDatabase Database;
-            public ExceptionDispatchInfo ExceptionDispatchInfo;
 
-            public override void Execute(DocumentsOperationContext context, RavenTransaction tx)
-            {
-                try
-                {
-                    Database.DocumentsStorage.Delete(context, Key, ExepctedEtag);
-                }
-                catch (ConcurrencyException e)
-                {
-                    ExceptionDispatchInfo = ExceptionDispatchInfo.Capture(e);
-                }
-            }
-        }
 
         [RavenAction("/databases/*/docs", "DELETE", "/databases/{databaseName:string}/docs?id={documentId:string}")]
         public async Task Delete()
@@ -391,28 +373,6 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private class MergedPutCommand : TransactionOperationsMerger.MergedTransactionCommand
-        {
-            public string Key;
-            public long? ExpectedEtag;
-            public BlittableJsonReaderObject Document;
-            public DocumentDatabase Database;
-            public ConcurrencyException ConcurrencyException;
-            public DocumentsStorage.PutOperationResults PutResult;
-
-            public override void Execute(DocumentsOperationContext context, RavenTransaction tx)
-            {
-                try
-                {
-                    PutResult = Database.DocumentsStorage.Put(context, Key, ExpectedEtag, Document);
-                }
-                catch (ConcurrencyException e)
-                {
-                    ConcurrencyException = e;
-                }
-            }
-        }
-
         [RavenAction("/databases/*/docs", "PUT", "/databases/{databaseName:string}/docs?id={documentId:string}")]
         public async Task Put()
         {
@@ -435,33 +395,19 @@ namespace Raven.Server.Documents.Handlers
 
                 await Database.TxMerger.Enqueue(cmd);
 
-                if (cmd.ConcurrencyException != null)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        writer.WriteStartObject();
-                        writer.WritePropertyName("Key");
-                        writer.WriteString(cmd.Key);
-                        writer.WriteComma();
-                        writer.WritePropertyName("Error");
-                        writer.WriteString(cmd.ConcurrencyException.Message);
-                        writer.WriteEndObject();
-                    }
-                    return;
-                }
+                cmd.ExceptionDispatchInfo?.Throw();
 
-                HttpContext.Response.StatusCode = 201;
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName(("Key"));
+                    writer.WritePropertyName("Key");
                     writer.WriteString(cmd.PutResult.Key);
                     writer.WriteComma();
 
-                    writer.WritePropertyName(("Etag"));
+                    writer.WritePropertyName("Etag");
                     writer.WriteInteger(cmd.PutResult.Etag);
 
                     writer.WriteEndObject();
@@ -566,6 +512,48 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 return Task.CompletedTask;
+            }
+        }
+
+        private class MergedPutCommand : TransactionOperationsMerger.MergedTransactionCommand
+        {
+            public string Key;
+            public long? ExpectedEtag;
+            public BlittableJsonReaderObject Document;
+            public DocumentDatabase Database;
+            public ExceptionDispatchInfo ExceptionDispatchInfo;
+            public DocumentsStorage.PutOperationResults PutResult;
+
+            public override void Execute(DocumentsOperationContext context, RavenTransaction tx)
+            {
+                try
+                {
+                    PutResult = Database.DocumentsStorage.Put(context, Key, ExpectedEtag, Document);
+                }
+                catch (ConcurrencyException e)
+                {
+                    ExceptionDispatchInfo = ExceptionDispatchInfo.Capture(e);
+                }
+            }
+        }
+
+        private class MergedDeleteCommand : TransactionOperationsMerger.MergedTransactionCommand
+        {
+            public string Key;
+            public long? ExepctedEtag;
+            public DocumentDatabase Database;
+            public ExceptionDispatchInfo ExceptionDispatchInfo;
+
+            public override void Execute(DocumentsOperationContext context, RavenTransaction tx)
+            {
+                try
+                {
+                    Database.DocumentsStorage.Delete(context, Key, ExepctedEtag);
+                }
+                catch (ConcurrencyException e)
+                {
+                    ExceptionDispatchInfo = ExceptionDispatchInfo.Capture(e);
+                }
             }
         }
     }

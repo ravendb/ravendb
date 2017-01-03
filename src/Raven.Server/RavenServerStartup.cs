@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using AsyncFriendlyStackTrace;
@@ -92,15 +93,7 @@ namespace Raven.Server
                 //TODO: Proper json output, not like this
                 var response = context.Response;
 
-                var documentConflictException = e as DocumentConflictException;
-                if (response.HasStarted == false)
-                {
-                    if (documentConflictException != null)
-                        response.StatusCode = 409;
-                    else if (response.StatusCode < 400)
-                        response.StatusCode = 500;
-                }
-                
+                MaybeSetExceptionStatusCode(response, e);
 
                 JsonOperationContext ctx;
                 using (_server.ServerStore.ContextPool.AllocateOperationContext(out ctx))
@@ -125,21 +118,7 @@ namespace Raven.Server
 
                     djv["Error"] = errorString;
 
-                    var indexCompilationException = e as IndexCompilationException;
-                    if (indexCompilationException != null)
-                    {
-                        djv[nameof(IndexCompilationException.IndexDefinitionProperty)] =
-                            indexCompilationException.IndexDefinitionProperty;
-                        djv[nameof(IndexCompilationException.ProblematicText)] =
-                            indexCompilationException.ProblematicText;
-                    }
-
-                    if (documentConflictException != null)
-                    {
-                        djv["ConflictInfo"] = ReplicationUtils.GetJsonForConflicts(
-                            documentConflictException.DocId,
-                            documentConflictException.Conflicts);
-                    }
+                    MaybeAddAdditionalExceptionData(djv, e);
 
                     using (var writer = new BlittableJsonTextWriter(ctx, response.Body))
                     {
@@ -148,6 +127,44 @@ namespace Raven.Server
                     }
                 }
             }
+        }
+
+        private void MaybeAddAdditionalExceptionData(DynamicJsonValue djv, Exception exception)
+        {
+            var indexCompilationException = exception as IndexCompilationException;
+            if (indexCompilationException != null)
+            {
+                djv[nameof(IndexCompilationException.IndexDefinitionProperty)] = indexCompilationException.IndexDefinitionProperty;
+                djv[nameof(IndexCompilationException.ProblematicText)] = indexCompilationException.ProblematicText;
+                return;
+            }
+
+            var documentConflictException = exception as DocumentConflictException;
+            if (documentConflictException != null)
+            {
+                djv["ConflictInfo"] = ReplicationUtils.GetJsonForConflicts(documentConflictException.DocId, documentConflictException.Conflicts);
+                return;
+            }
+        }
+
+        private static void MaybeSetExceptionStatusCode(HttpResponse response, Exception exception)
+        {
+            if (response.HasStarted)
+                return;
+
+            if (exception is DocumentConflictException)
+            {
+                response.StatusCode = (int)HttpStatusCode.Conflict;
+                return;
+            }
+
+            if (exception is ConflictException)
+            {
+                response.StatusCode = (int)HttpStatusCode.Conflict;
+                return;
+            }
+
+            response.StatusCode = (int)HttpStatusCode.InternalServerError;
         }
     }
 }
