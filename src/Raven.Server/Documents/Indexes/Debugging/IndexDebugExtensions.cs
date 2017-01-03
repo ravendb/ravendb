@@ -293,7 +293,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
                             Slice s;
                             using (page.GetNodeKey(tx, i, out s))
                             {
-                                var mapEntryId = *(long*)s.Content.Ptr;
+                                var mapEntryId = Bits.SwapBytes(*(long*)s.Content.Ptr);
 
                                 foreach (var mapEntry in mapEntries)
                                 {
@@ -383,9 +383,11 @@ namespace Raven.Server.Documents.Indexes.Debugging
                     Data = item.Value
                 };
 
+                var id = Bits.SwapBytes(item.Key);
+
                 foreach (var mapEntry in mapEntries)
                 {
-                    if (item.Key == mapEntry.Id)
+                    if (id == mapEntry.Id)
                     {
                         entry.Source = sourceDocId;
                         break;
