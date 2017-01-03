@@ -7,10 +7,10 @@ describe(viewUnderTest, () => {
 
     it('should bind', (done) => {
 
-        utils.injector.require(["common/changesContext", "models/resources/info/resourcesInfo"],
-            (changesContext: any, resourcesInfoCtr: new (dto: Raven.Client.Data.ResourcesInfo) => any) => {
+        utils.injector.require(["common/changesContext"],
+            (changesContext: any) => {
 
-                utils.mockCommand('commands/resources/getResourcesCommand', () => new resourcesInfoCtr(getResourcesData()));
+                utils.mockCommand('commands/resources/getResourcesCommand', () => getResourcesData());
 
                 changesContext.default.connectGlobalChangesApi();
 
@@ -65,6 +65,6 @@ function getResourcesData(): Raven.Client.Data.ResourcesInfo {
                 "IndexingStatus": "Running"
             }
         ],
-        Filesystems: []
+        FileSystems: []
     };
 }

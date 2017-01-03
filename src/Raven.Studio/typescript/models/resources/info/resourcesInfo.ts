@@ -25,28 +25,33 @@ class resourcesInfo {
         this.initObservables();
     }
 
-    addResource(newResourceInfo: Raven.Client.Data.ResourceInfo, resourceType: string) {
-        let resourceToAdd: resourceInfo;
+    getByQualifiedName(qualifiedName: string) {
+        return this.sortedResources().find(x => x.qualifiedName.toLowerCase() === qualifiedName.toLowerCase());
+    }
 
-        switch (resourceType) {
-            case "db":
+    updateResource(newResourceInfo: Raven.Client.Data.ResourceInfo, resourceType: string) {
+        let resourceToUpdate = this.getByQualifiedName(resourceType + "/" + newResourceInfo.Name);
 
-                let dto = newResourceInfo as Raven.Client.Data.DatabaseInfo;
-                resourceToAdd = new databaseInfo(dto);
-                break;
+        if (resourceToUpdate) {
+            resourceToUpdate.update(newResourceInfo);
+        } else { // new resource - create instance of it
+            let resourceToAdd: resourceInfo;
+            switch (resourceType) {
+                case "db":
 
-            //TODO: implemet fs, cs, ts		
-            //case "fs":		
-            //    break;		
-            //case "cs":		
-            //    break;		
-            //case "ts":		
-            //    break;	
-                	
+                    let dto = newResourceInfo as Raven.Client.Data.DatabaseInfo;
+                    resourceToAdd = new databaseInfo(dto);
+                    break;
+
+                default:
+                    throw new Error("Unsupported resource type = " + resourceType);
+
+                //TODO: implement fs, cs, ts		
+            }
+
+            let locationToInsert = _.sortedIndexBy(this.sortedResources(), resourceToAdd, function (item) { return item.name.toLowerCase() });
+            this.sortedResources.splice(locationToInsert, 0, resourceToAdd);
         }
-
-        let locationToInsert = _.sortedIndexBy(this.sortedResources(), resourceToAdd, function (item) { return item.name.toLowerCase() });
-        this.sortedResources.splice(locationToInsert, 0, resourceToAdd);
     }
 
     private initObservables() {

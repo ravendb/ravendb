@@ -9,6 +9,7 @@ import eventsCollector = require("common/eventsCollector");
 import copyToClipboard = require("common/copyToClipboard");
 import getNextOperationId = require("commands/database/studio/getNextOperationId");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
+import EVENTS = require("common/constants/events");
 
 class importDatabase extends viewModelBase {
 
@@ -84,7 +85,7 @@ class importDatabase extends viewModelBase {
 
                 this.uploadStatus(percentComplete);
             }),
-            ko.postbox.subscribe("ChangesApiReconnected", (db: database) => {
+            ko.postbox.subscribe(EVENTS.ChangesApi.Reconnected, (db: database) => {
                 this.isUploading(false);
             })
         ];

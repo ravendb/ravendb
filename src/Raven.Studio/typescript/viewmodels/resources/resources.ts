@@ -10,8 +10,7 @@ import disableResourceToggleCommand = require("commands/resources/disableResourc
 import toggleIndexingCommand = require("commands/database/index/toggleIndexingCommand");
 import deleteResourceCommand = require("commands/resources/deleteResourceCommand");
 import loadResourceCommand = require("commands/resources/loadResourceCommand");
-
-import globalAlertNotification = Raven.Server.Alerts.GlobalAlertNotification;
+import resourcesManager = require("common/shell/resourcesManager");
 
 import resourcesInfo = require("models/resources/info/resourcesInfo");
 import getResourcesCommand = require("commands/resources/getResourcesCommand");
@@ -84,12 +83,13 @@ class resources extends viewModelBase {
         return true;
     }
 
-    activate(args: any): JQueryPromise<resourcesInfo> {
+    activate(args: any): JQueryPromise<Raven.Client.Data.ResourcesInfo> {
         super.activate(args);
 
         // we can't use createNotifications here, as it is called after *resource changes API* is connected, but user
         // can enter this view and never select resource
-        this.addNotification(this.changesContext.globalChangesApi().watchItemsStartingWith("db/", (e: globalAlertNotification) => this.fetchResource(e)));
+        this.addNotification(this.changesContext.globalChangesApi().watchItemsStartingWith("db/", (e: Raven.Server.Alerts.GlobalAlertNotification) => this.fetchResource(e)));
+        this.addNotification(this.changesContext.globalChangesApi().watchReconnect(() => this.fetchResources()));
 
         // TODO: add notification for fs, cs, ts
 
@@ -102,68 +102,37 @@ class resources extends viewModelBase {
         ko.postbox.publish("SetRawJSONUrl", appUrl.forDatabasesRawData());
     }
 
-    // Fetch all resources info
-    private fetchResources(): JQueryPromise<resourcesInfo> {
+    private fetchResources(): JQueryPromise<Raven.Client.Data.ResourcesInfo> {
         return new getResourcesCommand()
             .execute()
-            .done(info => this.resources(info));
-
+            .done(info => this.resources(new resourcesInfo(info)));
     }
 
-    // fetch single resource info
-    private fetchResource(e: globalAlertNotification) {
+    private fetchResource(e: Raven.Server.Alerts.GlobalAlertNotification) {
+        const qualiferAndName = resourceInfo.extractQualifierAndNameFromNotification(e.Id);
 
-        // first find if resource already exists in the page
-        let resource = this.resources().sortedResources().find(rs => rs.qualifiedName === e.Id);
-       
         switch (e.Operation) {
-
-            case "Write": 
-                if (resource) {
-                    // relevant for disable/enable...
-                    this.getResourceInfo(resource.qualifier, resource.name, (result) => resource.update(result));
-                } else {
-                    // need to add a new resource for a newly created database
-                    this.addNewResource(e.Id);
-                }
-                break;
-
             case "Loaded":
-                if (!resource) {
-                    // an existing database turned ONLINE, get its stats
-                    this.addNewResource(e.Id);
-                    break;
-                }
-
-                // if never got the "Write" notification
-                this.getResourceInfo(resource.qualifier, resource.name, (result) => resource.update(result));
+            case "Write":
+                this.updateResourceInfo(qualiferAndName.qualifier, qualiferAndName.name);
                 break;
 
             case "Delete":
-                // delete database from page resources if exists (because maybe another client did the delete..)
+                let resource = this.resources().sortedResources().find(rs => rs.qualifiedName === e.Id);
                 if (resource) {
                     this.removeResource(resource);
-
-                    let resourceFromHeader = this.resourcesManager.resources().find(x => x.qualifiedName === resource.qualifiedName);
-                    if (!resourceFromHeader)
-                        return;
-
-                    ko.postbox.publish(EVENTS.Resource.Disconnect, { resource: resourceFromHeader });
                 }
                 break;
         }
     }
 
-    addNewResource(resourceId: string) {
-        let notificationData = resourceInfo.extractQualifierAndNameFromNotification(resourceId);
-        this.getResourceInfo(notificationData.qualifier, notificationData.name,
-            (result: Raven.Client.Data.ResourceInfo) => this.resources().addResource(result, notificationData.qualifier));
-    }
-
-    getResourceInfo(resourceType: string, resourceName: string, afterGet: (dto: Raven.Client.Data.ResourceInfo) => void) {
-        new getResourceCommand(resourceType, resourceName)
+    private updateResourceInfo(qualifer: string, resourceName: string) {
+        new getResourceCommand(qualifer, resourceName)
             .execute()
-            .done((result: Raven.Client.Data.ResourceInfo) => afterGet(result))
+            .done((result: Raven.Client.Data.ResourceInfo) => {
+                this.resources().updateResource(result, qualifer);
+                this.filterResources();
+            });
     }
 
     private filterResources(): void {
@@ -256,7 +225,9 @@ class resources extends viewModelBase {
     }
 
     private onResourceDeleted(deletedResource: resource) {
-        const matchedResource = this.resources().sortedResources().find(x => x.qualifiedName === deletedResource.qualifiedName);
+        const matchedResource = this.resources()
+            .sortedResources()
+            .find(x => x.qualifiedName.toLowerCase() === deletedResource.qualifiedName.toLowerCase());
 
         if (matchedResource) {
             this.removeResource(matchedResource);
@@ -266,12 +237,6 @@ class resources extends viewModelBase {
     private removeResource(rsInfo: resourceInfo) {
         this.resources().sortedResources.remove(rsInfo);
         this.selectedResources.remove(rsInfo.qualifiedName);
-
-        let resource = this.resourcesManager.resources().find(x => x.qualifiedName === rsInfo.qualifiedName);
-        if (!resource)
-            return;
-
-        ko.postbox.publish(EVENTS.Resource.Disconnect, { resource: resource });
     }
 
     toggleSelectedResources() {
@@ -283,12 +248,6 @@ class resources extends viewModelBase {
 
             disableDatabaseToggleViewModel.result.done(result => {
                 if (result.can) {
-                    if (disableAll) {
-                        selectedResources.forEach(rs => {
-                            this.changesContext.disconnectIfCurrent(rs);        
-                        });
-                    }
-
                     this.spinners.globalToggleDisable(true);
 
                     new disableResourceToggleCommand(selectedResources, disableAll)
@@ -312,10 +271,6 @@ class resources extends viewModelBase {
 
         disableDatabaseToggleViewModel.result.done(result => {
             if (result.can) {
-                if (disable) {
-                    this.changesContext.disconnectIfCurrent(rs);
-                }
-
                 this.spinners.itemTakedowns.push(rs.qualifiedName);
 
                 new disableResourceToggleCommand([rs], disable)
@@ -380,17 +335,13 @@ class resources extends viewModelBase {
     }
 
     activateResource(rsInfo: resourceInfo) {
-        let resource = this.resourcesManager.resources().find(x => x.qualifiedName === rsInfo.qualifiedName);
-        if (!resource)
+        let resource = this.resourcesManager.getResourceByQualifiedName(rsInfo.qualifiedName);
+        if (!resource || resource.disabled())
             return;
 
         resource.activate();
 
-        let resourceOnPage = this.resources().sortedResources().find(rs => rs.qualifiedName === rsInfo.qualifiedName);
-        if (!resourceOnPage)
-            return;
-        
-        this.getResourceInfo(resource.qualifier, resource.name, (result) => resourceOnPage.update(result));
+        this.updateResourceInfo(resource.qualifier, resource.name);
     }
 
     /* TODO: cluster related work

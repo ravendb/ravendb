@@ -9,7 +9,7 @@ class timeSeries extends resource {
     static readonly qualifier = "ts";
 
     constructor(name: string, isAdminCurrentTenant: boolean, disabled: boolean, bundles: string[] = []) {
-        super(name, isAdminCurrentTenant, disabled, bundles);
+        super(null); //TODO: use resource info 
         if (!name) {
             debugger;
         }

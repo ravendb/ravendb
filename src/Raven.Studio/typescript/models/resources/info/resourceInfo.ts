@@ -41,20 +41,6 @@ abstract class resourceInfo {
     }
 
     protected constructor(dto: Raven.Client.Data.ResourceInfo) {
-        this.name = dto.Name;
-        this.disabled(dto.Disabled);
-        this.isAdmin(dto.IsAdmin);
-        this.totalSize(dto.TotalSize ? dto.TotalSize.HumaneSize : null);
-        this.errors(dto.Errors);
-        this.alerts(dto.Alerts);
-        this.bundles(dto.Bundles);
-        this.uptime(generalUtils.timeSpanAsAgo(dto.UpTime, false));
-        this.backupEnabled(!!dto.BackupInfo);
-        if (this.backupEnabled()) {
-            const lastBackup = resourceInfo.findLastBackupDate(dto.BackupInfo);
-            this.lastFullOrIncrementalBackup(moment(new Date(lastBackup)).fromNow());
-            this.backupStatus(this.computeBackupStatus(dto.BackupInfo));
-        }
         this.initializeObservables();
     }
 

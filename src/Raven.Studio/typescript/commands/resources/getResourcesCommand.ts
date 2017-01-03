@@ -1,14 +1,12 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
-import resourcesInfo = require("models/resources/info/resourcesInfo");
 
 class getResourcesCommand extends commandBase {
     
-    execute(): JQueryPromise<resourcesInfo> {
+    execute(): JQueryPromise<Raven.Client.Data.ResourcesInfo> {
         const url = endpoints.global.resources.resources;
 
-        const resultSelector = (info: Raven.Client.Data.ResourcesInfo) => new resourcesInfo(info);
-        return this.query(url, null, null, resultSelector);
+        return this.query(url, null);
     }
 }
 

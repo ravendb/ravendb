@@ -2,6 +2,8 @@
 import database = require("models/resources/database");
 import alert = require("models/database/debug/alert");
 
+import EVENTS = require("common/constants/events");
+
 import watchedOperation = require("common/notifications/watchedOperation");
 import notificationCenterPersistanceStorage = require("common/notifications/notificationCenterPersistanceStorage");
 import messagePublisher = require("common/messagePublisher");
@@ -35,7 +37,7 @@ class notificationCenterAlerts {
             globalAlertsSubscription.dispose();
         });
 
-        ko.postbox.subscribe("ChangesApiReconnected",
+        ko.postbox.subscribe(EVENTS.ChangesApi.Reconnected,
             () => this.onReconnectWatchAndShowActiveResourceAlerts());
         $(window).bind("storage", (event) => this.onStorageEvent(event));
     }
