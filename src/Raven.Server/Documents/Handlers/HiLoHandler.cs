@@ -160,15 +160,15 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/hilo/return", "GET", "/databases/{databaseName:string}/hilo/return?tag={collectionName:string}&end={lastGivenHigh:string}&last={lastIdUsed:string}")]
+        [RavenAction("/databases/*/hilo/return", "PUT", "/databases/{databaseName:string}/hilo/return?tag={collectionName:string}&end={lastGivenHigh:string}&last={lastIdUsed:string}")]
         public async Task HiLoReturn()
         {
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
                 var tag = GetQueryStringValueAndAssertIfSingleAndNotEmpty("tag");
-                var end = GetLongQueryString("end", required: true) ?? -1;
-                var last = GetLongQueryString("last", required: true) ?? -1;
+                var end = GetLongQueryString("end").Value;
+                var last = GetLongQueryString("last").Value;
 
                 var cmd = new MergedHiLoReturnCommand
                 {
@@ -180,6 +180,8 @@ namespace Raven.Server.Documents.Handlers
 
                 await Database.TxMerger.Enqueue(cmd);
             }
+
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
         }
 
         private class MergedHiLoReturnCommand : TransactionOperationsMerger.MergedTransactionCommand

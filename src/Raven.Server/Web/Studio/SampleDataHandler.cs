@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO.Compression;
+using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
 using Raven.Server.Documents;
@@ -38,6 +39,8 @@ namespace Raven.Server.Web.Studio
                         await importer.Import(context, stream);
                     }
                 }
+
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             }
         }
 

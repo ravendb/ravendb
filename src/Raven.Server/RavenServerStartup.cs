@@ -18,6 +18,7 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
 
 namespace Raven.Server
 {
@@ -159,6 +160,12 @@ namespace Raven.Server
             }
 
             if (exception is ConflictException)
+            {
+                response.StatusCode = (int)HttpStatusCode.Conflict;
+                return;
+            }
+
+            if (exception is ConcurrencyException)
             {
                 response.StatusCode = (int)HttpStatusCode.Conflict;
                 return;

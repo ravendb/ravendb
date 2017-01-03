@@ -72,6 +72,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 {
                     throw new InvalidOperationException("Incorrect transform script", e);
                 }
+
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             }
         }
 

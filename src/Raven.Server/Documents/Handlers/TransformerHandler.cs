@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -27,15 +28,17 @@ namespace Raven.Server.Documents.Handlers
 
                 var transformerId = Database.TransformerStore.CreateTransformer(transformerDefinition);
 
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName(("Transformer"));
+                    writer.WritePropertyName("Transformer");
                     writer.WriteString(name);
                     writer.WriteComma();
 
-                    writer.WritePropertyName(("TransformerId"));
+                    writer.WritePropertyName("TransformerId");
                     writer.WriteInteger(transformerId);
 
                     writer.WriteEndObject();
@@ -91,7 +94,6 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/transformers/set-lock", "POST")]
         public Task SetLockMode()
         {
-            
             var names = GetStringValuesQueryString("name");
             var modeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("mode");
 
@@ -103,11 +105,12 @@ namespace Raven.Server.Documents.Handlers
             {
                 var transformer = Database.TransformerStore.GetTransformer(name);
                 if (transformer == null)
-                    throw new InvalidOperationException("There is not transformer with name: " + name);
+                    TransformerDoesNotExistsException.ThrowFor(name);
 
                 transformer.SetLock(mode);
             }
 
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             return Task.CompletedTask;
         }
 

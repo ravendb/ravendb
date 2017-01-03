@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Imports.Newtonsoft.Json;
@@ -36,6 +37,8 @@ namespace Raven.Server.Web.Studio
             }
 
             await LicenseManager.RegisterForFreeLicense(userInfo).ConfigureAwait(false);
+
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
         }
 
         [RavenAction("/license/activate", "POST")]
@@ -51,6 +54,7 @@ namespace Raven.Server.Web.Studio
 
             LicenseManager.Activate(license);
 
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             return Task.CompletedTask;
         }
     }

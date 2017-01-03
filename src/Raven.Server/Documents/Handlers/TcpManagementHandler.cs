@@ -67,6 +67,8 @@ namespace Raven.Server.Documents.Handlers
             // force a disconnection
             connection.Stream.Dispose();
             connection.TcpClient.Dispose();
+
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             return Task.CompletedTask;
         }
     }

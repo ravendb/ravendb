@@ -45,6 +45,8 @@ namespace Raven.Server.Documents.Handlers
 
                 var indexId = Database.IndexStore.CreateIndex(indexDefinition);
 
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
@@ -295,7 +297,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var index = Database.IndexStore.GetIndex(name);
                 if (index == null)
-                    throw new InvalidOperationException("There is not index with name: " + name);
+                    IndexDoesNotExistsException.ThrowFor(name);
 
                 var progress = index.GetProgress(context);
                 writer.WriteIndexProgress(context, progress);
@@ -310,6 +312,8 @@ namespace Raven.Server.Documents.Handlers
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
             var newIndexId = Database.IndexStore.ResetIndex(name);
+
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -419,11 +423,12 @@ namespace Raven.Server.Documents.Handlers
             {
                 var index = Database.IndexStore.GetIndex(name);
                 if (index == null)
-                    throw new InvalidOperationException("There is not index with name: " + name);
+                    IndexDoesNotExistsException.ThrowFor(name);
 
                 index.SetLock(mode);
             }
 
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             return Task.CompletedTask;
         }
 
@@ -441,11 +446,12 @@ namespace Raven.Server.Documents.Handlers
             {
                 var index = Database.IndexStore.GetIndex(name);
                 if (index == null)
-                    throw new InvalidOperationException("There is not index with name: " + name);
+                    IndexDoesNotExistsException.ThrowFor(name);
 
                 index.SetPriority(priority);
             }
 
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             return Task.CompletedTask;
         }
 

@@ -43,6 +43,7 @@ namespace Raven.Server.Web.Authentication
                     Server.AccessTokensById.TryRemove(value.Token, out value);
                 }
 
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
                 return Task.CompletedTask;
             }
         }
@@ -68,6 +69,7 @@ namespace Raven.Server.Web.Authentication
                     Server.AccessTokensById.TryRemove(value.Token, out value);
                 }
 
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
                 return Task.CompletedTask;
             }
         }
