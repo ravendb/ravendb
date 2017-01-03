@@ -136,7 +136,7 @@ namespace Raven.Server.Web.Authentication
         {
             if (name.Contains("/"))
             {
-                HttpContext.Response.StatusCode = 400;
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 return HttpContext.Response.WriteAsync("'name' query string should not contain '/' separator");
             }
 
@@ -144,38 +144,38 @@ namespace Raven.Server.Web.Authentication
 
             if (apiKey.TryGet("Enabled", out testStructureOfApiKey.Enabled) == false)
             {
-                HttpContext.Response.StatusCode = 400;
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 return HttpContext.Response.WriteAsync("'ApiKey' must include 'Enabled' property");
             }
 
             if (apiKey.TryGet("Secret", out testStructureOfApiKey.Secret) == false)
             {
-                HttpContext.Response.StatusCode = 400;
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 return HttpContext.Response.WriteAsync("'ApiKey' must include 'Secret' property");
             }
 
             if (string.IsNullOrEmpty(testStructureOfApiKey.Secret))
             {
-                HttpContext.Response.StatusCode = 400;
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 return HttpContext.Response.WriteAsync("'ApiKey' must include non-empty 'Secret' property");
             }
 
             if (testStructureOfApiKey.Secret.Contains("/"))
             {
-                HttpContext.Response.StatusCode = 400;
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 return HttpContext.Response.WriteAsync("'Secret' string should not contain '/' separator");
             }
 
             if (apiKey.TryGet("ServerAdmin", out testStructureOfApiKey.ServerAdmin) == false)
             {
-                HttpContext.Response.StatusCode = 400;
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 return HttpContext.Response.WriteAsync("'ApiKey' must include 'ServerAdmin' property");
             }
 
             BlittableJsonReaderObject accessMode;
             if (apiKey.TryGet("ResourcesAccessMode", out accessMode) == false)
             {
-                HttpContext.Response.StatusCode = 400;
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 return HttpContext.Response.WriteAsync("'ApiKey' must include 'ResourcesAccessMode' property");
             }
 
@@ -188,20 +188,20 @@ namespace Raven.Server.Web.Authentication
                 string accessValue;
                 if (accessMode.TryGet(prop.Name, out accessValue) == false)
                 {
-                    HttpContext.Response.StatusCode = 400;
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                     return HttpContext.Response.WriteAsync($"Missing value of dbName -'{prop.Name}' property");
                 }
 
                 if (string.IsNullOrEmpty(accessValue))
                 {
-                    HttpContext.Response.StatusCode = 400;
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                     return HttpContext.Response.WriteAsync("'ApiKey' must include non-empty 'AccessMode' DB Name' property");
                 }
 
                 AccessModes mode;
                 if (Enum.TryParse(accessValue, out mode) == false)
                 {
-                    HttpContext.Response.StatusCode = 400;
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                     return
                         HttpContext.Response.WriteAsync(
                             $"Invalid value of dbName -'{prop.Name}' property, cannot understand: {accessValue}");

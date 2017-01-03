@@ -42,11 +42,11 @@ namespace Raven.Server.Documents.Handlers
             {
                 var document = Database.DocumentsStorage.Get(context, id);
                 if (document == null)
-                    HttpContext.Response.StatusCode = 404;
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                 else
                 {
                     if (etag == document.Etag)
-                        HttpContext.Response.StatusCode = 304;
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                     else
                         HttpContext.Response.Headers[Constants.MetadataEtagField] = "\"" + document.Etag + "\"";
                 }
@@ -111,7 +111,7 @@ namespace Raven.Server.Documents.Handlers
 
             if (GetLongFromHeaders("If-None-Match") == actualEtag)
             {
-                HttpContext.Response.StatusCode = 304;
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                 return;
             }
             HttpContext.Response.Headers["ETag"] = "\"" + actualEtag + "\"";
@@ -202,7 +202,7 @@ namespace Raven.Server.Documents.Handlers
             var etag = GetLongFromHeaders("If-None-Match");
             if (etag == actualEtag)
             {
-                HttpContext.Response.StatusCode = 304;
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                 return;
             }
 
@@ -492,7 +492,7 @@ namespace Raven.Server.Documents.Handlers
                 var document = Database.DocumentsStorage.Get(context, id);
                 if (document == null)
                 {
-                    HttpContext.Response.StatusCode = 404;
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                     return Task.CompletedTask;
                 }
 

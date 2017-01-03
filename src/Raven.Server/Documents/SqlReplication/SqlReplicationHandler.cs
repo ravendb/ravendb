@@ -6,6 +6,7 @@
 
 using System;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Server.Json;
@@ -26,7 +27,7 @@ namespace Raven.Server.Documents.SqlReplication
 
             if (replication == null)
             {
-                HttpContext.Response.StatusCode = 404;
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                 return Task.CompletedTask;
             }
 
@@ -87,11 +88,11 @@ namespace Raven.Server.Documents.SqlReplication
                 var factoryName = GetStringQueryString("factoryName");
                 var connectionString = GetStringQueryString("connectionString");
                 RelationalDatabaseWriter.TestConnection(factoryName, connectionString);
-                HttpContext.Response.StatusCode = 204; // No Content
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent; // No Content
             }
             catch (Exception ex)
             {
-                HttpContext.Response.StatusCode = 400; // Bad Request
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest; // Bad Request
 
                 JsonOperationContext context;
                 using (ContextPool.AllocateOperationContext(out context))
@@ -139,7 +140,7 @@ namespace Raven.Server.Documents.SqlReplication
 
             if (replication == null)
             {
-                HttpContext.Response.StatusCode = 404;
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                 return Task.CompletedTask;
             }
 
@@ -151,7 +152,7 @@ namespace Raven.Server.Documents.SqlReplication
                 tx.Commit();
             }
 
-            HttpContext.Response.StatusCode = 204;  // NoContent
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;  // NoContent
             return Task.CompletedTask;
         }
     }

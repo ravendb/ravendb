@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -16,7 +17,7 @@ namespace Raven.Server.Web.Studio
         public Task Config()
         {
             //TODO: implement
-            HttpContext.Response.StatusCode = 404;
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
             return Task.CompletedTask;
         }
 
@@ -37,7 +38,6 @@ namespace Raven.Server.Web.Studio
             randomNumberGenerator.GetBytes(byteStruct);
             var result = Convert.ToBase64String(byteStruct);
 
-            HttpContext.Response.StatusCode = 200;
             HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
             await HttpContext.Response.WriteAsync($"\"{result}\"", Encoding.UTF8);
         }
@@ -56,10 +56,10 @@ namespace Raven.Server.Web.Studio
             }
             catch (Exception)
             {
-                HttpContext.Response.StatusCode = 400; // Bad Request
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest; // Bad Request
                 return HttpContext.Response.WriteAsync("\"The key must be in Base64 encoding format!\"");
             }
-            HttpContext.Response.StatusCode = 200;
+
             HttpContext.Response.WriteAsync("\"The key is ok!\"");
             return Task.CompletedTask;
         }

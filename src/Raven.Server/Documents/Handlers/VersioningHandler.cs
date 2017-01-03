@@ -6,6 +6,7 @@
 
 using System;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -36,7 +37,7 @@ namespace Raven.Server.Documents.Handlers
                 long actualEtag = revisions.Count == 0 ? int.MinValue : revisions[revisions.Count - 1].Etag;
                 if (GetLongFromHeaders("If-None-Match") == actualEtag)
                 {
-                    HttpContext.Response.StatusCode = 304;
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                     return Task.CompletedTask;
                 }
 

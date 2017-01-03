@@ -1,7 +1,6 @@
-﻿using System.Threading;
+﻿using System.Net;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
-using Microsoft.AspNetCore.Http;
 
 namespace Raven.Server.Web.TEMP_REMOVE_ME
 {
@@ -10,7 +9,7 @@ namespace Raven.Server.Web.TEMP_REMOVE_ME
         [RavenAction("/databases/*/configuration/document$", "GET")]
         public Task FakeResponseForConfigurationDocument()
         {
-            HttpContext.Response.StatusCode = 404;
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
             return Task.CompletedTask;
         }
     }

@@ -7,6 +7,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Net;
 using System.Threading.Tasks;
 using Raven.Server.Exceptions;
 using Raven.Server.Routing;
@@ -70,7 +71,7 @@ namespace Raven.Server.Documents.Handlers
 
                 await Database.TxMerger.Enqueue(cmd);
 
-                HttpContext.Response.StatusCode = 201;
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -178,8 +179,6 @@ namespace Raven.Server.Documents.Handlers
                 };
 
                 await Database.TxMerger.Enqueue(cmd);
-
-                HttpContext.Response.StatusCode = 200;
             }
         }
 

@@ -15,8 +15,6 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/license/status", "GET")]
         public Task Status()
         {
-            HttpContext.Response.StatusCode = 200;
-
             using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
@@ -29,8 +27,6 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/license/registration", "POST")]
         public async Task Register()
         {
-            HttpContext.Response.StatusCode = 200;
-
             UserRegistrationInfo userInfo;
 
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -45,8 +41,6 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/license/activate", "POST")]
         public Task Activate()
         {
-            HttpContext.Response.StatusCode = 200;
-
             License license;
 
             using (var context = JsonOperationContext.ShortTermSingleUse())

@@ -11,6 +11,7 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -305,7 +306,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             {
                 if (HttpContext.Request.HasFormContentType == false)
                 {
-                    HttpContext.Response.StatusCode = 400; // Bad request
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest; // Bad request
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         context.Write(writer, new DynamicJsonValue

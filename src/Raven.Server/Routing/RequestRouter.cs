@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 
@@ -42,7 +43,7 @@ namespace Raven.Server.Routing
             var tryMatch = _trie.TryMatch(method, path);
             if (tryMatch.Value == null)
             {
-                context.Response.StatusCode = 400;
+                context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 await context.Response.WriteAsync($"There is no handler for path: {method} {path}{context.Request.QueryString}");
                 return null;
             }
@@ -63,7 +64,7 @@ namespace Raven.Server.Routing
             Interlocked.Increment(ref metricsCountersManager.ConcurrentRequestsCount);
             if (handler == null)
             {
-                context.Response.StatusCode = 400;
+                context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 await context.Response.WriteAsync("There is no handler for {context.Request.Method} {context.Request.Path}");
                 return null;
             }
@@ -106,7 +107,7 @@ namespace Raven.Server.Routing
 
             if (token == null)
             {
-                context.Response.StatusCode = 412;
+                context.Response.StatusCode = (int)HttpStatusCode.PreconditionFailed;
                 await context.Response.WriteAsync("The access token is required");
                 return false;
             }
@@ -114,14 +115,14 @@ namespace Raven.Server.Routing
             AccessToken accessToken;
             if (_ravenServer.AccessTokensById.TryGetValue(token, out accessToken) == false)
             {
-                context.Response.StatusCode = 412;
+                context.Response.StatusCode = (int)HttpStatusCode.PreconditionFailed;
                 await context.Response.WriteAsync("The access token is invalid");
                 return false;
             }
 
             if (accessToken.IsExpired)
             {
-                context.Response.StatusCode = 412;
+                context.Response.StatusCode = (int)HttpStatusCode.PreconditionFailed;
                 await context.Response.WriteAsync("The access token is expired");
                 return false;
             }
@@ -132,7 +133,7 @@ namespace Raven.Server.Routing
                 return true;
 
             AccessModes mode;
-            var hasValue = 
+            var hasValue =
                 accessToken.AuthorizedDatabases.TryGetValue(resourceName, out mode) ||
                 accessToken.AuthorizedDatabases.TryGetValue("*", out mode);
 
@@ -142,13 +143,13 @@ namespace Raven.Server.Routing
             switch (mode)
             {
                 case AccessModes.None:
-                    context.Response.StatusCode = 403;
+                    context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                     await context.Response.WriteAsync($"Api Key {accessToken.Name} does not have access to {resourceName}");
                     return false;
                 case AccessModes.ReadOnly:
                     if (context.Request.Method != "GET")
                     {
-                        context.Response.StatusCode = 403;
+                        context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                         await context.Response.WriteAsync($"Api Key {accessToken.Name} does not have write access to {resourceName} but made a {context.Request.Method} request");
                         return false;
                     }

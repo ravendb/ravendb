@@ -5,6 +5,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using System.Linq;
+using System.Net;
 using Raven.Server.Extensions;
 
 namespace Raven.Server.Documents.Handlers
@@ -80,7 +81,7 @@ namespace Raven.Server.Documents.Handlers
         public Task GetReplicationTopology()
         {
             // TODO: Remove this, use "/databases/*/topology" isntead
-            HttpContext.Response.StatusCode = 404;
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
             return Task.CompletedTask;
         }
 

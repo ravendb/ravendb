@@ -48,7 +48,7 @@ namespace Raven.Server
         {
             try
             {
-                context.Response.StatusCode = 200;
+                context.Response.StatusCode = (int)HttpStatusCode.OK;
                 var sp = Stopwatch.StartNew();
                 var tenant = await _router.HandlePath(context, context.Request.Method, context.Request.Path.Value);
                 sp.Stop();

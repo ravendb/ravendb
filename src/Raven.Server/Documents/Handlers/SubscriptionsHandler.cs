@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var json = await context.ReadForDiskAsync(RequestBodyStream(), null);
                 var subscriptionId = Database.SubscriptionStorage.CreateSubscription(json, startEtag);
-                HttpContext.Response.StatusCode = 201; // Created
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created; // Created
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Handlers
 
             Database.SubscriptionStorage.DeleteSubscription(id);
 
-            HttpContext.Response.StatusCode = 204; // NoContent
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent; // NoContent
 
             return Task.CompletedTask;
         }

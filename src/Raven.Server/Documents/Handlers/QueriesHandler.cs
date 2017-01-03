@@ -124,7 +124,7 @@ namespace Raven.Server.Documents.Handlers
 
             if (result.NotModified)
             {
-                HttpContext.Response.StatusCode = 304;
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                 return;
             }
 
@@ -159,7 +159,7 @@ namespace Raven.Server.Documents.Handlers
 
             if (result.NotModified)
             {
-                HttpContext.Response.StatusCode = 304;
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                 return;
             }
 
@@ -197,7 +197,7 @@ namespace Raven.Server.Documents.Handlers
 
             if (result.NotModified)
             {
-                HttpContext.Response.StatusCode = 304;
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                 return;
             }
 
@@ -304,7 +304,7 @@ namespace Raven.Server.Documents.Handlers
 
             if (result.NotModified)
             {
-                HttpContext.Response.StatusCode = 304;
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                 return;
             }
 
