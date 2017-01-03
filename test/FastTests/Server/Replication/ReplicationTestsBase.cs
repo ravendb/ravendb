@@ -1,11 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
@@ -23,7 +21,7 @@ namespace FastTests.Server.Documents.Replication
         {
             var url = $"{store.Url}/databases/{store.DefaultDatabase}/replication/conflicts?docId={docId}";
             using (var request = store.JsonRequestFactory.CreateHttpJsonRequest(
-                new CreateHttpJsonRequestParams(null, url, HttpMethod.Get, new OperationCredentials(null, CredentialCache.DefaultCredentials), new DocumentConvention())))
+                new CreateHttpJsonRequestParams(null, url, HttpMethod.Get, store.DatabaseCommands.PrimaryCredentials, store.Conventions)))
             {
                 var json = (RavenJObject)await request.ReadResponseJsonAsync();
                 var array = json.Value<RavenJArray>("Results");
@@ -142,7 +140,7 @@ namespace FastTests.Server.Documents.Replication
         {
             var url = $"{store.Url}/databases/{store.DefaultDatabase}/replication/tombstones";
             using (var request = store.JsonRequestFactory.CreateHttpJsonRequest(
-                new CreateHttpJsonRequestParams(null, url, HttpMethod.Get, new OperationCredentials(null, CredentialCache.DefaultCredentials), new DocumentConvention())))
+                new CreateHttpJsonRequestParams(null, url, HttpMethod.Get, store.DatabaseCommands.PrimaryCredentials, store.Conventions)))
             {
                 var json = (RavenJObject)await request.ReadResponseJsonAsync();
                 var array = json.Value<RavenJArray>("Results");
