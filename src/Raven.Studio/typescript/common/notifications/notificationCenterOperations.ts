@@ -9,7 +9,7 @@ import changesContext = require("common/changesContext");
 
 import getOperationCommand = require("commands/operations/getOperationCommand");
 import dismissOperationCommand = require("commands/operations/dismissOperationCommand");
-import getRunningTasksCommand = require("commands/operations/getRunningTasksCommand");
+import getOperationsCommand = require("commands/operations/getOperationsCommand");
 import killOperationCommand = require("commands/operations/killOperationCommand");
 
 class notificationCenterOperations {
@@ -61,7 +61,7 @@ class notificationCenterOperations {
 
         const operationIds = this.storage.loadOperations(changes.getResource());
 
-        new getRunningTasksCommand(rs as database)
+        new getOperationsCommand(rs as database)
             .execute()
             .done((operations: Raven.Server.Documents.PendingOperation[]) => {
                 operationIds.forEach(operationId => {

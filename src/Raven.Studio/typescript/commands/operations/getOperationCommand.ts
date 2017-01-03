@@ -19,7 +19,9 @@ class getOperationCommand extends commandBase {
             id: this.operationId
         }
 
-        return this.query(url, args, this.rs);
+        const extractor = (response: resultsDto<Raven.Server.Documents.PendingOperation>) => response.Results[0];
+
+        return this.query(url, args, this.rs, extractor);
     }
 }
 
