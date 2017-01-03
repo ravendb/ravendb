@@ -43,6 +43,11 @@ namespace Raven.Server.Documents.Replication
         public event Action<IncomingReplicationHandler> DocumentsReceived;
         public event Action<IncomingReplicationHandler> IndexesAndTransformersReceived;
 
+        public long LastDocumentEtag;
+        public long LastIndexOrTransformerEtag;
+
+        public long LastHeartbeatTicks;
+
         public IncomingReplicationHandler(
             JsonOperationContext.MultiDocumentParser multiDocumentParser,
             DocumentDatabase database,
@@ -329,7 +334,7 @@ namespace Raven.Server.Documents.Replication
                                     HandleConflictForIndexOrTransformer(item, definition, conflictingVector, txw, _configurationContext);
 
                                     UpdateIndexesChangeVector(txw, lastEtag, maxReceivedChangeVectorByDatabase);
-
+                                    LastIndexOrTransformerEtag = lastEtag;
                                     txw.Commit();
                                     return; // skip the UpdateIndexesChangeVector below to avoid duplicate calls
                                 }
@@ -576,8 +581,7 @@ namespace Raven.Server.Documents.Replication
 
                     foreach (var doc in _replicatedDocs)
                     {
-                        ReadChangeVector(doc, buffer, maxReceivedChangeVectorByDatabase);
-
+                        ReadChangeVector(doc, buffer, maxReceivedChangeVectorByDatabase);                        
                         BlittableJsonReaderObject json = null;
                         if (doc.DocumentSize >= 0) //no need to load document data for tombstones
                                                    // document size == -1 --> doc is a tombstone
@@ -641,8 +645,9 @@ namespace Raven.Server.Documents.Replication
                         maxReceivedChangeVectorByDatabase);
                     _database.DocumentsStorage.SetLastReplicateEtagFrom(_documentsContext, ConnectionInfo.SourceDatabaseId,
                         lastEtag);
-
+                    LastDocumentEtag = lastEtag;
                     _documentsContext.Transaction.Commit();
+
                 }
                 sw.Stop();
 
@@ -921,7 +926,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
         private void SendHeartbeatStatusToSource(BlittableJsonTextWriter writer, long lastDocumentEtag, long lastIndexOrTransformerEtag, string handledMessageType)
-        {
+        {            
             var documentChangeVectorAsDynamicJson = new DynamicJsonArray();
             ChangeVectorEntry[] databaseChangeVector;
 
@@ -967,10 +972,12 @@ namespace Raven.Server.Documents.Replication
                 [nameof(ReplicationMessageReply.LastIndexTransformerEtagAccepted)] = lastIndexOrTransformerEtag,
                 [nameof(ReplicationMessageReply.Exception)] = null,
                 [nameof(ReplicationMessageReply.DocumentsChangeVector)] = documentChangeVectorAsDynamicJson,
-                [nameof(ReplicationMessageReply.IndexTransformerChangeVector)] = indexesChangeVectorAsDynamicJson
+                [nameof(ReplicationMessageReply.IndexTransformerChangeVector)] = indexesChangeVectorAsDynamicJson,
+                [nameof(ReplicationMessageReply.DbId)] = _database.DbId
             });
 
             writer.Flush();
+            LastHeartbeatTicks = DateTime.UtcNow.Ticks;
         }
 
         public string FromToString => $"from {ConnectionInfo.SourceDatabaseName} at {ConnectionInfo.SourceUrl} (into database {_database.Name})";

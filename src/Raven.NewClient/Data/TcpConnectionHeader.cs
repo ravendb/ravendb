@@ -10,6 +10,7 @@ namespace Raven.NewClient.Abstractions.Data
             BulkInsert,
             Subscription,
             Replication,
+            TopologyDiscovery
         }
 
         public string DatabaseName { get; set; }

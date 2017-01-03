@@ -56,6 +56,10 @@ namespace Raven.Server.Documents.Replication
 
         internal CancellationToken CancellationToken => _cts.Token;
 
+        internal string DestinationDbId;
+
+        public long LastHeartbeatTicks;
+
         public event Action<OutgoingReplicationHandler, Exception> Failed;
 
         public event Action<OutgoingReplicationHandler> SuccessfulTwoWaysCommunication;
@@ -398,6 +402,7 @@ namespace Raven.Server.Documents.Replication
         private readonly AsyncManualResetEvent _neverSetEvent = new AsyncManualResetEvent();
         internal Tuple<ReplicationMessageReply.ReplyType,string> HandleServerResponse()
         {
+            LastHeartbeatTicks = DateTime.UtcNow.Ticks;
             while (true)
             {
                 using (var replicationBatchReplyMessage = _parser.InterruptibleParseToMemory("replication acknowledge message", _neverSetEvent))
@@ -420,6 +425,8 @@ namespace Raven.Server.Documents.Replication
             var replicationBatchReply = JsonDeserializationServer.ReplicationMessageReply(replicationBatchReplyMessage);
             if (allowNotify == false && replicationBatchReply.MessageType == "Notify")
                 return null;
+
+            DestinationDbId = replicationBatchReply.DbId;
 
             switch (replicationBatchReply.Type)
             {
