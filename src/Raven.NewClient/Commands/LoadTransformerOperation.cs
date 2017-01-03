@@ -75,26 +75,39 @@ namespace Raven.NewClient.Client.Commands
             _transformerParameters = transformerParameters;
         }
         
-        public T[] GetTransformedDocuments<T>(GetDocumentResult result)
+        public IDictionary<string, T> GetTransformedDocuments<T>(GetDocumentResult result, string[] ids)
         {
-            if (result == null)
+            if (result == null || ids == null)
                 return null;
+
+            var parsedResutlsDictionary = new Dictionary<string, T>();
+            T[] parsedResults;
 
             if (typeof(T).IsArray)
             {
-                return TransformerHelpers.ParseResultsArray<T>(_session, result);
+                parsedResults = TransformerHelpers.ParseResultsArray<T>(_session, result);
             }
-
-            var items = TransformerHelpers.ParseResults<T>(_session, result).ToArray();
-
-            if (items.Length > _ids.Length)
+            else
             {
-                throw new InvalidOperationException(String.Format("A load was attempted with transformer {0}, and more than one item was returned per entity - please use {1}[] as the projection type instead of {1}",
-                    _transformer,
-                    typeof(T).Name));
+                parsedResults = TransformerHelpers.ParseResults<T>(_session, result).ToArray();
+
+                if (parsedResults.Length > _ids.Length)
+                {
+                    throw new InvalidOperationException(
+                        $"A load was attempted with transformer {_transformer}, and more than one item was returned per entity - please use {typeof(T).Name}[] as the projection type instead of {typeof(T).Name}");
+                }
             }
 
-            return items;
+            var i = 0;
+            foreach (var id in ids)
+            {
+                if (id == null)
+                    continue;
+
+                parsedResutlsDictionary.Add(id, parsedResults[i]);
+                i++;
+            }
+            return parsedResutlsDictionary;
         }
 
         public void SetResult(GetDocumentResult result)

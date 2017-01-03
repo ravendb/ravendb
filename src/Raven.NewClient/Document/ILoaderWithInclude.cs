@@ -42,14 +42,14 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         /// <param name="ids">The ids.</param>
         /// <returns></returns>
-        T[] Load(params string[] ids);
+        IDictionary<string, T> Load(params string[] ids);
 
         /// <summary>
         /// Loads the specified ids.
         /// </summary>
         /// <param name="ids">The ids.</param>
         /// <returns></returns>
-        T[] Load(IEnumerable<string> ids);
+        IDictionary<string, T> Load(IEnumerable<string> ids);
 
         /// <summary>
         /// Loads the specified id.
@@ -84,7 +84,7 @@ namespace Raven.NewClient.Client.Document
         /// 
         /// Or whatever your conventions specify.
         /// </remarks>
-        T[] Load(params ValueType[] ids);
+        IDictionary<string, T> Load(params ValueType[] ids);
 
         /// <summary>
         /// Loads the specified entities with the specified id after applying
@@ -98,21 +98,21 @@ namespace Raven.NewClient.Client.Document
         /// 
         /// Or whatever your conventions specify.
         /// </remarks>
-        T[] Load(IEnumerable<ValueType> ids);
+        IDictionary<string, T> Load(IEnumerable<ValueType> ids);
 
         /// <summary>
         /// Loads the specified ids.
         /// </summary>
         /// <param name="ids">The ids.</param>
         /// <returns></returns>
-        TResult[] Load<TResult>(params string[] ids);
+        IDictionary<string, TResult> Load<TResult>(params string[] ids);
 
         /// <summary>
         /// Loads the specified ids.
         /// </summary>
         /// <param name="ids">The ids.</param>
         /// <returns></returns>
-        TResult[] Load<TResult>(IEnumerable<string> ids);
+        IDictionary<string, TResult> Load<TResult>(IEnumerable<string> ids);
 
         /// <summary>
         /// Loads the specified id.
@@ -148,7 +148,7 @@ namespace Raven.NewClient.Client.Document
         /// 
         /// Or whatever your conventions specify.
         /// </remarks>
-        TResult[] Load<TResult>(params ValueType[] ids);
+        IDictionary<string, TResult> Load<TResult>(params ValueType[] ids);
 
         /// <summary>
         /// Loads the specified entities with the specified id after applying
@@ -162,7 +162,7 @@ namespace Raven.NewClient.Client.Document
         /// 
         /// Or whatever your conventions specify.
         /// </remarks>
-        TResult[] Load<TResult>(IEnumerable<ValueType> ids);
+        IDictionary<string, TResult> Load<TResult>(IEnumerable<ValueType> ids);
 
         /// <summary>
         /// Loads the specified id with a specific transformer.
@@ -182,6 +182,6 @@ namespace Raven.NewClient.Client.Document
         /// <param name="ids">The id.</param>
         /// <param name="configure">additional configuration options for operation e.g. AddTransformerParameter</param>
         /// <returns></returns>
-        TResult[] Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new();
+        IDictionary<string, TResult> Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new();
     }
 }

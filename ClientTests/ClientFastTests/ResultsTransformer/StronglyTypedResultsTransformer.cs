@@ -133,6 +133,15 @@ namespace NewClientTests.NewClient.ResultsTransformer
         }
 
         [Fact]
+        public void CanUseResultsTransformerOnLoadWithMultipleIds()
+        {
+            using (var store = GetDocumentStore())
+            {
+                PerformLoadingTestArrayWithMultipleIds(store);
+            }
+        }
+
+        [Fact]
         public void CanUseResultsTransformerOnLoadWithMultipleReturnsWithSingleException()
         {
             using (var store = GetDocumentStore())
@@ -151,6 +160,53 @@ namespace NewClientTests.NewClient.ResultsTransformer
             {
                 PerformBasicTestWithDynamicQuery(store);
             }
+        }
+
+        private void PerformLoadingTestArrayWithMultipleIds(DocumentStore store)
+        {
+            new OrderWithFullProductMultipleReturns().Execute(store);
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new ProductWithoutId() { Name = "Milk" }, "products/milk");
+                session.Store(new ProductWithoutId() { Name = "Bear" }, "products/bear");
+
+                session.Store(new ProductWithoutId() { Name = "Milka" }, "products/milka");
+                session.Store(new ProductWithoutId() { Name = "Beara" }, "products/beara");
+
+                session.Store(new Order
+                {
+                    Id = "orders/1",
+                    CustomerId = "customers/ayende",
+                    ProductIds = new[] { "products/milk", "products/bear" }
+                });
+
+                session.Store(new Order
+                {
+                    Id = "orders/2",
+                    CustomerId = "customers/Idan",
+                    ProductIds = new[] { "products/milka", "products/beara" }
+                });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var products = session.Load<OrderWithFullProductMultipleReturns, OrderWithFullProductMultipleReturns.Result[]>(new []{"orders/1", "orders/2" });
+                OrderWithFullProductMultipleReturns.Result[] order1;
+                OrderWithFullProductMultipleReturns.Result[] order2;
+                products.TryGetValue("orders/1", out order1);
+                products.TryGetValue("orders/2", out order2);
+
+                Assert.NotNull(order1);
+                Assert.NotNull(order2);
+                Assert.Equal(order1[0].FullProduct.Id, "products/milk");
+                Assert.Equal(order1[1].FullProduct.Id, "products/bear");
+
+                Assert.Equal(order2[0].FullProduct.Id, "products/milka");
+                Assert.Equal(order2[1].FullProduct.Id, "products/beara");
+            }
+
         }
 
         private void PerformLoadingTestArrayWithSingleException(IDocumentStore store)

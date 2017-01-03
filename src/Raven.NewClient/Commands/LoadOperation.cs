@@ -95,13 +95,15 @@ namespace Raven.NewClient.Client.Commands
             return default(T);
         }
 
-        public T[] GetDocuments<T>()
+        public IDictionary<string, T> GetDocuments<T>()
         {
-            var finalResults = new T[_ids.Length];
+            var finalResults = new Dictionary<string, T>();
             for (int i = 0; i < _ids.Length; i++)
             {
                 var id = _ids[i];
-                finalResults[i] = GetDocument<T>(id);
+                if(id == null)
+                    continue;
+                finalResults[id] = GetDocument<T>(id);
             }
             return finalResults;
         }

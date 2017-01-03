@@ -72,7 +72,7 @@ namespace Raven.NewClient.Json.Utilities
             {
                 if (x == null)
                     return null;
-
+                
                 BlittableJsonReaderArray values;
                 if (((BlittableJsonReaderObject)x).TryGet("$values", out values) == false)
                     throw new InvalidOperationException("Transformed document must have a $values property");
