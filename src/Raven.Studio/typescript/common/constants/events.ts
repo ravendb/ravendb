@@ -3,21 +3,20 @@
 };
 
 const ResourceSwitcher = {
-    Show: 'ResourceSwitcher.Show',
-    Hide: 'ResourceSwitcher.Hide',
     ItemSelected: 'ResourceSwitcher.ItemSelected'
 };
 
 const SearchBox = {
-    Show: 'SearchBox.Show',
-    Hide: 'SearchBox.Hide',
     Input: 'SearchBox.ItemSelected'
 };
 
+const ChangesApi = {
+    Reconnected: 'ChangesApi.Reconnected'
+}
+
 const Resource = {
     Activate: 'Resource.Activate',
-    Disconnect: 'Resource.Disconnect',
-    Created: 'Resource.Created'
+    Disconnect: 'Resource.Disconnect'
 };
 
 const NotificationCenter = {
@@ -29,5 +28,6 @@ export = {
     ResourceSwitcher,
     SearchBox,
     Resource,
+    ChangesApi,
     NotificationCenter
 };

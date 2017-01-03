@@ -13,8 +13,6 @@ namespace Raven.NewClient.Client.Json
     {
         public static readonly Func<BlittableJsonReaderObject, GetDocumentResult> GetDocumentResult = GenerateJsonDeserializationRoutine<GetDocumentResult>();
 
-        public static readonly Func<BlittableJsonReaderObject, BatchResult> BatchResult = GenerateJsonDeserializationRoutine<BatchResult>();
-
         public static readonly Func<BlittableJsonReaderObject, PutResult> PutResult = GenerateJsonDeserializationRoutine<PutResult>();
 
         public static readonly Func<BlittableJsonReaderObject, QueryResult> QueryResult = GenerateJsonDeserializationRoutine<QueryResult>();
@@ -31,15 +29,13 @@ namespace Raven.NewClient.Client.Json
 
         public static readonly Func<BlittableJsonReaderObject, PutIndexResult> PutIndexResult = GenerateJsonDeserializationRoutine<PutIndexResult>();
 
-        public static readonly Func<BlittableJsonReaderObject, GetIndexResult> GetIndexResult = GenerateJsonDeserializationRoutine<GetIndexResult>();
+        public static readonly Func<BlittableJsonReaderObject, BlittableArrayResult> BlittableArrayResult = GenerateJsonDeserializationRoutine<BlittableArrayResult>();
 
         public static readonly Func<BlittableJsonReaderObject, PutTransformerResult> PutTransformerResult = GenerateJsonDeserializationRoutine<PutTransformerResult>();
 
         public static readonly Func<BlittableJsonReaderObject, DatabaseStatistics> GetStatisticsResult = GenerateJsonDeserializationRoutine<DatabaseStatistics>();
 
-        public static readonly Func<BlittableJsonReaderObject, PatchResult> PatchResult = GenerateJsonDeserializationRoutine<PatchResult>();
-
-        public static readonly Func<BlittableJsonReaderObject, DeleteResult> DeleteResult = GenerateJsonDeserializationRoutine<DeleteResult>();
+        public static readonly Func<BlittableJsonReaderObject, OperationIdResult> OperationIdResult = GenerateJsonDeserializationRoutine<OperationIdResult>();
 
         public static readonly Func<BlittableJsonReaderObject, HiLoResult> HiLoResult = GenerateJsonDeserializationRoutine<HiLoResult>();
 
@@ -50,9 +46,5 @@ namespace Raven.NewClient.Client.Json
         public static readonly Func<BlittableJsonReaderObject, CreateSubscriptionResult> CreateSubscriptionResult = GenerateJsonDeserializationRoutine<CreateSubscriptionResult>();
 
         public static readonly Func<BlittableJsonReaderObject, GetSubscriptionsResult> GetSubscriptionsResult = GenerateJsonDeserializationRoutine<GetSubscriptionsResult>();
-
-        public static readonly Func<BlittableJsonReaderObject, GetRevisionResult> GetRevisionResult = GenerateJsonDeserializationRoutine<GetRevisionResult>();
-
-        public static readonly Func<BlittableJsonReaderObject, MultiGetResult> MultiGetResult = GenerateJsonDeserializationRoutine<MultiGetResult>();
-    }
+   }
 }

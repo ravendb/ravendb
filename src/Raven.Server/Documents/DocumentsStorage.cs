@@ -39,7 +39,7 @@ namespace Raven.Server.Documents
         private static readonly Slice TombstonesSlice;
         private static readonly Slice KeyAndChangeVectorSlice;
 
-        private static readonly TableSchema DocsSchema = new TableSchema();
+        public static readonly TableSchema DocsSchema = new TableSchema();
         private static readonly Slice TombstonesPrefix;
         private static readonly Slice DeletedEtagsSlice;
         private static readonly TableSchema ConflictsSchema = new TableSchema();
@@ -1294,6 +1294,35 @@ namespace Raven.Server.Documents
         {
             Constants.Metadata.Key,
         };
+
+        public bool TryResolveIdenticalDocument(DocumentsOperationContext context, string key, BlittableJsonReaderObject incomingDoc, ChangeVectorEntry[] incomingChangeVector)
+        {
+            var existing = GetDocumentOrTombstone(context, key, throwOnConflict: false);
+            var existingDoc = existing.Item1;
+            var existingTombstone = existing.Item2;
+
+            if (existingDoc != null && existingDoc.IsMetadataEqualTo(incomingDoc, IgnoredMetadataProperties) &&
+                    existingDoc.IsEqualTo(incomingDoc, IgnoredDocumentroperties))
+            {
+                // no real conflict here, both documents have identical content
+                existingDoc.ChangeVector = ReplicationUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector);
+                Put(context, existingDoc.Key, null, existingDoc.Data, existingDoc.ChangeVector);
+                return true;
+            }
+
+            if (existingTombstone != null && incomingDoc == null)
+            {
+                // Conflict between two tombstones resolves to the local tombstone
+                existingTombstone.ChangeVector = ReplicationUtils.MergeVectors(incomingChangeVector, existingTombstone.ChangeVector);
+                AddTombstoneOnReplicationIfRelevant(context, existingTombstone.Key,
+                    existingTombstone.ChangeVector,
+                    existingTombstone.Collection);
+                return true;
+            }
+
+            return false;
+        }
+
         public void AddConflict(DocumentsOperationContext context, string key, BlittableJsonReaderObject incomingDoc,
             ChangeVectorEntry[] incomingChangeVector)
         {
@@ -1313,15 +1342,6 @@ namespace Raven.Server.Documents
             if (existing.Item1 != null)
             {
                 var existingDoc = existing.Item1;
-
-                if (existingDoc.IsMetadataEqualTo(incomingDoc, IgnoredMetadataProperties) && 
-                    existingDoc.IsEqualTo(incomingDoc, IgnoredDocumentroperties))
-                {
-                    // no real conflict here, both documents have identical content
-                    existingDoc.ChangeVector = ReplicationUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector);
-                    Put(context, existingDoc.Key, null, existingDoc.Data, existingDoc.ChangeVector);
-                    return;
-                }
 
                 fixed (ChangeVectorEntry* pChangeVector = existingDoc.ChangeVector)
                 {
@@ -1347,15 +1367,7 @@ namespace Raven.Server.Documents
             else if (existing.Item2 != null)
             {
                 var existingTombstone = existing.Item2;
-                if (incomingDoc == null)
-                {
-                    // Conflict between two tombstones resolves to the local tombstone
-                    existingTombstone.ChangeVector = ReplicationUtils.MergeVectors(incomingChangeVector, existingTombstone.ChangeVector);
-                    AddTombstoneOnReplicationIfRelevant(context, existingTombstone.Key,
-                        existingTombstone.ChangeVector,
-                        existingTombstone.Collection);
-                    return;
-                }
+
                 fixed (ChangeVectorEntry* pChangeVector = existingTombstone.ChangeVector)
                 {
                     conflictsTable.Set(new TableValueBuilder
@@ -1433,6 +1445,25 @@ namespace Raven.Server.Documents
             public CollectionName Collection;
         }
 
+        public void DeleteWithoutCreatingTombstone(DocumentsOperationContext context, string collection, long storageId, bool isTombstone)
+        {
+            // we delete the data directly, without generating a tombstone, because we have a 
+            // conflict instead
+            var tx = context.Transaction.InnerTransaction;
+
+            var collectionObject = new CollectionName(collection);
+            var collectionName = isTombstone ? 
+                collectionObject.GetTableName(CollectionTableType.Tombstones):
+                collectionObject.GetTableName(CollectionTableType.Documents);
+
+            //make sure that the relevant collection tree exists
+            Table table = isTombstone ?
+                tx.OpenTable(TombstonesSchema, collectionName) :
+                tx.OpenTable(DocsSchema, collectionName);
+
+            table.Delete(storageId);
+        }
+
         public PutOperationResults Put(DocumentsOperationContext context, string key, long? expectedEtag,
             BlittableJsonReaderObject document,
             ChangeVectorEntry[] changeVector = null)
@@ -1451,7 +1482,8 @@ namespace Raven.Server.Documents
 
             if (key[key.Length - 1] == '/')
             {
-                key = GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, table, context);
+                int tries;
+                key = GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, table, context, out tries);
             }
 
             byte* lowerKey;
@@ -1696,13 +1728,14 @@ namespace Raven.Server.Documents
             }
         }
 
-        private string GetNextIdentityValueWithoutOverwritingOnExistingDocuments(string key, Table table, DocumentsOperationContext context)
+        public string GetNextIdentityValueWithoutOverwritingOnExistingDocuments(string key, Table table, DocumentsOperationContext context,out int tries)
         {
             var identities = context.Transaction.InnerTransaction.ReadTree("Identities");
             var nextIdentityValue = identities.Increment(key, 1);
-
             var finalKey = key + nextIdentityValue;
             Slice finalKeySlice;
+            tries = 1;
+
             using (DocumentKeyWorker.GetSliceFromKey(context, finalKey, out finalKeySlice))
             {
                 if (table.ReadByKey(finalKeySlice) == null)
@@ -1721,6 +1754,7 @@ namespace Raven.Server.Documents
             var lastKnownFree = long.MaxValue;
             while (true)
             {
+                tries++;
                 finalKey = key + maybeFree;
                 using (DocumentKeyWorker.GetSliceFromKey(context, finalKey, out finalKeySlice))
                 {
@@ -1728,7 +1762,7 @@ namespace Raven.Server.Documents
                     {
                         if (lastKnownBusy + 1 == maybeFree)
                         {
-                            nextIdentityValue = identities.Increment(key, maybeFree);
+                            nextIdentityValue = identities.Increment(key, lastKnownBusy);
                             return key + nextIdentityValue;
                         }
                         lastKnownFree = maybeFree;

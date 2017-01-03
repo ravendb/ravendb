@@ -96,8 +96,10 @@ select new
             }
         }
 
-        [Fact]
-        public void Getting_trees()
+        [Theory]
+        [InlineData(1000, 2, 3)]
+        [InlineData(10, 1, 1)] // nested section
+        public void Getting_trees(int numberOfDocs, int expectedTreeDepth, int expectedPageCount)
         {
             using (var database = CreateDocumentDatabase())
             {
@@ -117,8 +119,6 @@ select new
 }",
                 }, database))
                 {
-                    var numberOfDocs = 1000;
-
                     using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                     {
                         for (int i = 0; i < numberOfDocs; i++)
@@ -142,27 +142,41 @@ select new
                             {
                                 var tree = result[0];
 
-                                Assert.Equal(2, tree.Depth);
-                                Assert.Equal(1000, tree.NumberOfEntries);
-                                Assert.Equal(3, tree.PageCount);
-
-                                Assert.True(tree.Root.Children.Any());
-                                Assert.Null(tree.Root.Entries);
-
-                                Assert.Null(tree.Root.Entries);
-
-                                Assert.NotNull(tree.Root.AggregationResult);
-                                
-                                var left = tree.Root.Children[0];
-                                var right = tree.Root.Children[1];
+                                Assert.Equal(expectedTreeDepth, tree.Depth);
+                                Assert.Equal(numberOfDocs, tree.NumberOfEntries);
+                                Assert.Equal(expectedPageCount, tree.PageCount);
 
                                 var hasSource = false;
 
-                                foreach (var leafPage in new []{left, right})
-                                {
-                                    Assert.Null(tree.Root.Entries);
-                                    Assert.Null(leafPage.Children);
+                                List<ReduceTreePage> pages;
 
+                                if (tree.Depth > 1)
+                                {
+                                    // real tree
+
+                                    Assert.True(tree.Root.Children.Any());
+                                    Assert.Null(tree.Root.Entries);
+
+                                    pages = tree.Root.Children;
+                                }
+                                else
+                                {
+                                    // nested section
+
+                                    Assert.Null(tree.Root.Children);
+                                    Assert.NotNull(tree.Root.Entries);
+
+                                    pages = new List<ReduceTreePage>
+                                    {
+                                        tree.Root
+                                    };
+                                }
+                                
+                                Assert.NotNull(tree.Root.AggregationResult);
+                                
+                                foreach (var leafPage in pages)
+                                {
+                                    Assert.Null(leafPage.Children);
                                     Assert.NotNull(leafPage.AggregationResult);
 
                                     foreach (var entry in leafPage.Entries)
@@ -176,7 +190,7 @@ select new
 
                                 Assert.True(hasSource);
 
-                                Assert.Equal(1000, right.Entries.Count + left.Entries.Count);
+                                Assert.Equal(numberOfDocs, pages.Sum(x => x.Entries.Count));
                             }
                         }
                     }

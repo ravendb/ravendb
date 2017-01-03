@@ -21,7 +21,7 @@ describe(viewUnderTest, () => {
         utils.mockCommand('commands/database/documents/getCollectionsStatsCommand', () => new collectionsStats(collectionStatsDto, fakeDb));
         utils.mockCommand('commands/alerts/getGlobalAlertsCommand', () => []);
 
-        return utils.mockActiveDatabase(dbCtr => new dbCtr("default"))
+        return utils.mockActiveDatabase()
             .then(() => utils.runViewmodelTest(viewUnderTest, {}));
     });
 });

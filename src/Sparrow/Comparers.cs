@@ -1,13 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Sparrow
 {
-    public class NumericEqualityComparer : IEqualityComparer<long>, IEqualityComparer<int>
+    public class NumericEqualityComparer : IEqualityComparer<long>, IEqualityComparer<int>, IEqualityComparer<ulong>
     {
         public static readonly NumericEqualityComparer Instance = new NumericEqualityComparer();
 
@@ -33,6 +30,16 @@ namespace Sparrow
         public int GetHashCode(int obj)
         {
             return obj;
+        }
+
+        public bool Equals(ulong x, ulong y)
+        {
+            return x == y;
+        }
+
+        public int GetHashCode(ulong obj)
+        {
+            return unchecked((int)obj ^ (int)(obj >> 32));
         }
     }
 

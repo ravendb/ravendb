@@ -1,5 +1,6 @@
 import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
+import copyToClipboard = require("common/copyToClipboard");
 
 class showDataDialog extends dialogViewModelBase {
 
@@ -30,6 +31,11 @@ class showDataDialog extends dialogViewModelBase {
 
     close() { //TODO: move to base class?
         dialog.close(this);
+    }
+
+    copyToClipboard() {
+        copyToClipboard.copy($("#inputData").val(), this.title + " was copied to clipboard");
+        this.close();
     }
 }
 

@@ -20,7 +20,7 @@ namespace Raven.Server.Config.Categories
         [LegacyConfigurationEntry("Raven/MaxConcurrentRequestsForDatabaseDuringLoad")]
         public int MaxConcurrentRequestsForDatabaseDuringLoad { get; set; }
 
-        [DefaultValue(5)]
+        [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Raven/Server/MaxTimeForTaskToWaitForDatabaseToLoadInSec")]
         [LegacyConfigurationEntry("Raven/MaxSecondsForTaskToWaitForDatabaseToLoad")]

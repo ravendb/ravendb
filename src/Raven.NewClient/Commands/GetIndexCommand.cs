@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Commands
 {
-    public class GetIndexCommand : RavenCommand<GetIndexResult>
+    public class GetIndexCommand : RavenCommand<BlittableArrayResult>
     {
         public JsonOperationContext Context;
 
@@ -34,7 +34,7 @@ namespace Raven.NewClient.Client.Commands
                 return;
             }
 
-            Result = JsonDeserializationClient.GetIndexResult(response);
+            Result = JsonDeserializationClient.BlittableArrayResult(response);
         }
     }
 }

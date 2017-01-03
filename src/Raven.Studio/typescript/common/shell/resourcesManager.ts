@@ -9,11 +9,12 @@ import resourceActivatedEventArgs = require("viewmodels/resources/resourceActiva
 import changesContext = require("common/changesContext");
 import changesApi = require("common/changesApi");
 import changeSubscription = require("common/changeSubscription");
-import resourcesInfo = require("models/resources/info/resourcesInfo");
 import getResourcesCommand = require("commands/resources/getResourcesCommand");
+import getResourceCommand = require("commands/resources/getResourceCommand");
 import appUrl = require("common/appUrl");
 import messagePublisher = require("common/messagePublisher");
 import activeResourceTracker = require("common/shell/activeResourceTracker");
+import resourceInfo = require("models/resources/info/resourceInfo");
 
 class resourcesManager {
 
@@ -24,15 +25,22 @@ class resourcesManager {
     activeResourceTracker = activeResourceTracker.default;
     changesContext = changesContext.default;
 
+    private resourceToActivate = ko.observable<string>();
+
     resources = ko.observableArray<resource>([]);
 
-    databases = ko.pureComputed<database[]>(() => this.resources().filter(x => x instanceof database) as database[]);
-    fileSystems = ko.pureComputed<filesystem[]>(() => this.resources().filter(x => x instanceof filesystem) as filesystem[]);
-    counterStorages = ko.pureComputed<counterStorage[]>(() => this.resources().filter(x => x instanceof counterStorage) as counterStorage[]);
-    timeSeries = ko.pureComputed<timeSeries[]>(() => this.resources().filter(x => x instanceof timeSeries) as timeSeries[]);
+    databases = ko.computed<database[]>(() => this.resources().filter(x => x instanceof database) as database[]);
+    fileSystems = ko.computed<filesystem[]>(() => this.resources().filter(x => x instanceof filesystem) as filesystem[]);
+    counterStorages = ko.computed<counterStorage[]>(() => this.resources().filter(x => x instanceof counterStorage) as counterStorage[]);
+    timeSeries = ko.computed<timeSeries[]>(() => this.resources().filter(x => x instanceof timeSeries) as timeSeries[]);
 
-    constructor() {
-        ko.postbox.subscribe("ChangesApiReconnected", (rs: resource) => this.reloadDataAfterReconnection(rs));
+    constructor() { 
+        this.changesContext.connectGlobalChangesApi()
+            .done(() => {
+                this.changesContext.globalChangesApi().watchReconnect(() => this.refreshResources());
+            });
+
+        ko.postbox.subscribe(EVENTS.ChangesApi.Reconnected, (rs: resource) => this.reloadDataAfterReconnection(rs));
 
         ko.postbox.subscribe(EVENTS.Resource.Activate, ({ resource }: resourceActivatedEventArgs) => {
             if (resource instanceof database) {
@@ -47,18 +55,6 @@ class resourcesManager {
 
             throw new Error(`Invalid resource type ${resource.type}`);
         });
-
-        ko.postbox.subscribe(EVENTS.Resource.Created,
-            (value: resourceCreatedEventArgs) => {
-                //TODO: we are assuming it is database for now. 
-                this.refreshResources()
-                    .done(() => {
-                        const newlyCreatedDatabase = this.getDatabaseByName(value.name);
-                        if (newlyCreatedDatabase) {
-                            newlyCreatedDatabase.activate();
-                        }
-                    });
-            });
     }
 
     getDatabaseByName(name: string): database {
@@ -66,8 +62,8 @@ class resourcesManager {
             return null;
         }
         return this
-            .resources()
-            .find(x => x instanceof database && name.toLowerCase() === x.name.toLowerCase()) as database;
+            .databases()
+            .find(x => name.toLowerCase() === x.name.toLowerCase());
     }
 
     getFileSystemByName(name: string): filesystem {
@@ -75,8 +71,8 @@ class resourcesManager {
             return null;
         }
         return this
-            .resources()
-            .find(x => x instanceof filesystem && name.toLowerCase() === x.name.toLowerCase()) as filesystem;
+            .fileSystems()
+            .find(x => name.toLowerCase() === x.name.toLowerCase());
     }
 
     getCounterStorageByName(name: string): counterStorage {
@@ -84,8 +80,8 @@ class resourcesManager {
             return null;
         }
         return this
-            .resources()
-            .find(x => x instanceof counterStorage && name.toLowerCase() === x.name.toLowerCase()) as counterStorage;
+            .counterStorages()
+            .find(x => name.toLowerCase() === x.name.toLowerCase());
     }
 
     getTimeSeriesByName(name: string): timeSeries {
@@ -93,24 +89,38 @@ class resourcesManager {
             return null;
         }
         return this
-            .resources()
-            .find(x => x instanceof timeSeries && name.toLowerCase() === x.name.toLowerCase()) as timeSeries;
+            .timeSeries()
+            .find(x => name.toLowerCase() === x.name.toLowerCase());
     }
 
-    forceResourcesReload() {
-        this.refreshResources();
+    getResourceByQualifiedName(qualifiedName: string): resource {
+        const dbPrefix = database.qualifier + "/";
+        const fsPrefix = filesystem.qualifier + "/";
+        //TODO: support for cs, ts
+
+        if (qualifiedName.startsWith(dbPrefix)) {
+            return this.getDatabaseByName(qualifiedName.substring(dbPrefix.length));
+        } else if (qualifiedName.startsWith(fsPrefix)) {
+            return this.getFileSystemByName(qualifiedName.substring(fsPrefix.length));
+        } else {
+            throw new Error("Unable to find resource: " + qualifiedName);
+        }
     }
 
-    init(): JQueryPromise<resourcesInfo> {
+    init(): JQueryPromise<Raven.Client.Data.ResourcesInfo> {
         return this.refreshResources()
             .done(() => {
                 this.activateBasedOnCurrentUrl();
-                router.activate(); //TODO: is it correct place for this?
+                router.activate();
                 this.initialized.resolve();
             });
     }
 
-    private refreshResources(): JQueryPromise<resourcesInfo> {
+    activateAfterCreation(rsQualifier: string, resourceName: string) {
+        this.resourceToActivate(rsQualifier + "/" + resourceName);
+    }
+
+    private refreshResources(): JQueryPromise<Raven.Client.Data.ResourcesInfo> {
         return new getResourcesCommand()
             .execute()
             .done(result => {
@@ -159,7 +169,7 @@ class resourcesManager {
         });
     }
 
-    private fecthStudioConfigForDatabase(db: database) {
+    private fetchStudioConfigForDatabase(db: database) {
         //TODO: fetch hot spare and studio config 
     }
 
@@ -167,8 +177,8 @@ class resourcesManager {
         //TODO: this.fecthStudioConfigForDatabase(db);
 
         this.changesContext.updateChangesApi(db, (changes: changesApi) => {
-            changes.watchAllDocs(() => this.refreshResources()); //TODO: use cooldown
             /* TODO
+            changes.watchAllDocs(() => this.refreshResources()); //TODO: use cooldown - and move to footer?
             changes.watchAllIndexes(() => this.fetchDbStats(db)),
             changes.watchBulks(() => this.fetchDbStats(db))*/
 
@@ -185,7 +195,6 @@ class resourcesManager {
         });
     }
 
-
     private reloadDataAfterReconnection(rs: resource) {
         /* TODO:
         shell.fetchStudioConfig();
@@ -197,7 +206,6 @@ class resourcesManager {
         this.fetchClusterTopology();
         */
 
-        this.refreshResources();
                  /* TODO: redirect to resources page if current resource if no longer available on list
 
                 var activeResource = this.activeResource();
@@ -216,104 +224,112 @@ class resourcesManager {
             }*/
     }
 
-    private updateResources(incomingData: resourcesInfo) {
-        const existingResources = this.resources;
-        const incomingResources = incomingData.sortedResources().map(x => x.asResource());
+    private updateResources(incomingData: Raven.Client.Data.ResourcesInfo) {
+        this.deleteRemovedResources(incomingData);
 
-        const deletedResources = _.differenceBy(existingResources(), incomingResources, x => x.qualifiedName);
-        existingResources.removeAll(deletedResources);
-
-        incomingResources.forEach(incomingResource => {
-            const matchedExistingRs = existingResources().find(rs => rs.qualifiedName === incomingResource.qualifiedName);
-
-            if (matchedExistingRs) {
-                matchedExistingRs.updateUsing(incomingResource);
-            } else {
-                let locationToInsert = _.sortedIndexBy(existingResources(), incomingResource, (item: resource) => item.qualifiedName );
-                existingResources.splice(locationToInsert, 0, incomingResource);
-            }
+        incomingData.Databases.forEach(dbInfo => {
+            this.updateResource(dbInfo, name => this.getDatabaseByName(name), database.qualifier);
         });
+
+        /* TODO:
+        incomingData.FileSystems.forEach(fsInfo => {
+            this.updateResource(fsInfo, name => this.getFileSystemByName(name), filesystem.qualifier);
+        });*/
     }
 
+    private deleteRemovedResources(incomingData: Raven.Client.Data.ResourcesInfo) {
+        const existingResources = this.resources;
+
+        const toDelete = [] as resource[];
+
+        this.databases().forEach(db => {
+            const matchedDb = incomingData.Databases.find(x => x.Name.toLowerCase() === db.name.toLowerCase());
+            if (!matchedDb) {
+                toDelete.push(db);
+            }
+        });
+
+        /* TODO
+        this.fileSystems().forEach(fs => {
+            const matchedFs = incomingData.FileSystems.find(x => x.Name.toLowerCase() === fs.name.toLowerCase());
+            if (!matchedFs) {
+                toDelete.push(fs);
+            }
+        });*/
+
+        existingResources.removeAll(toDelete);
+    }
+
+    private updateResource(incomingResource: Raven.Client.Data.ResourceInfo, existingResourceFinder: (name: string) => resource, resourceQualifer: string): resource {
+        const matchedExistingRs = existingResourceFinder(incomingResource.Name);
+
+        if (matchedExistingRs) {
+            matchedExistingRs.updateUsing(incomingResource);
+            return matchedExistingRs;
+        } else {
+            const newResource = this.createResource(resourceQualifer, incomingResource);
+            let locationToInsert = _.sortedIndexBy(this.resources(), newResource, (item: resource) => item.qualifiedName);
+            this.resources.splice(locationToInsert, 0, newResource);
+            return newResource;
+        }
+    }
+
+    private createResource(qualifer: string, resourceInfo: Raven.Client.Data.ResourceInfo): resource {
+        if (database.qualifier === qualifer) {
+            return new database(resourceInfo as Raven.Client.Data.DatabaseInfo);
+        } else if (filesystem.qualifier === qualifer) {
+            return new filesystem(resourceInfo as Raven.Client.Data.FileSystemInfo);
+        }
+
+        //TODO: ts, cs
+        throw new Error("Unhandled resource type: " + qualifer);
+    }
 
     createGlobalNotifications(): Array<changeSubscription> {
         const globalChanges = changesContext.default.globalChangesApi();
 
         return [
-            globalChanges.watchItemsStartingWith("db/", e => this.onResourceUpdateReceivedViaChangesApi()),
+            globalChanges.watchItemsStartingWith("db/", e => this.onResourceUpdateReceivedViaChangesApi(e)),
+
+            //TODO: fs, cs, ts
              //TODO: DO: this.globalChangesApi.watchDocsStartingWith(shell.studioConfigDocumentId, () => shell.fetchStudioConfig()),*/
         ];
     }
 
-    private onResourceUpdateReceivedViaChangesApi() {
-        //TODO: do we have to filter received notifications?
-        this.refreshResources();
+    private onResourceUpdateReceivedViaChangesApi(event: Raven.Server.Alerts.GlobalAlertNotification) {
+        let resource = this.getResourceByQualifiedName(event.Id);
+        if (event.Operation === "Delete" && resource) {
+            changesContext.default.disconnectIfCurrent(resource, "ResourceDeleted");
+            this.resources.remove(resource);
 
-        //TODO: if deleted this.changesContext.disconnectIfCurrent(matchedResource.asResource());
-    }
+        } else if (event.Operation === "Write") {
+            const [prefix, name] = event.Id.split("/", 2);
+            new getResourceCommand(prefix, name)
+                .execute()
+                .done((rsInfo: Raven.Client.Data.ResourceInfo) => {
 
-    /* TODO: 
-    private changesApiFiredForResource(e: Raven.Abstractions.Data.DocumentChangeNotification,
-        resourceObservableArray: KnockoutObservableArray<any>, activeResourceObservable: any, resourceType: TenantType) {
-
-        if (!!e.Key && (e.Type === "Delete" || e.Type === "Put")) {
-            var receivedResourceName = e.Key.slice(e.Key.lastIndexOf('/') + 1);
-
-            if (e.Type === "Delete") {
-                var resourceToDelete = resourceObservableArray.first((rs: resource) => rs.name == receivedResourceName);
-                if (!!resourceToDelete) {
-                    resourceObservableArray.remove(resourceToDelete);
-
-                    //this.selectNewActiveResourceIfNeeded(resourceObservableArray, activeResourceObservable);
-                    if (resourceType == TenantType.Database)
-                        recentQueriesStorage.removeRecentQueries(resourceToDelete);
-                }
-            } else { // e.Type === "Put"
-                var getSystemDocumentTask = new getSystemDocumentCommand(e.Key).execute();
-                getSystemDocumentTask.done((dto: databaseDocumentDto) => {
-                    var existingResource = resourceObservableArray.first((rs: resource) => rs.name == receivedResourceName);
-
-                    if (existingResource == null) { // new resource
-                        existingResource = this.createNewResource(resourceType, receivedResourceName, dto);
-                        resourceObservableArray.unshift(existingResource);
-                    } else {
-                        if (existingResource.disabled() != dto.Disabled) { //disable status change
-                            existingResource.disabled(dto.Disabled);
-                            if (dto.Disabled === false && this.currentConnectedResource.name === receivedResourceName) {
-                                existingResource.activate();
-                            }
-                        }
+                    if (rsInfo.Disabled) {
+                        changesContext.default.disconnectIfCurrent(resource, "ResourceDisabled");
                     }
 
-                    if (resourceType === TenantType.Database) { //for databases, bundle change or indexing change
-                        var dtoSettings: any = dto.Settings;
-                        var bundles = !!dtoSettings["Raven/ActiveBundles"] ? dtoSettings["Raven/ActiveBundles"].split(";") : [];
-                        existingResource.activeBundles(bundles);
+                    //TODO: it supports db only for now!
+                    if (prefix !== database.qualifier) {
+                        throw new Error("we support db only for now!"); //TODO: delete me once we support more types
+                    }
 
+                    const updatedResource = this.updateResource(rsInfo, name => this.getDatabaseByName(name), database.qualifier);
 
-                        var indexingDisabled = this.getIndexingDisbaledValue(dtoSettings["Raven/IndexingDisabled"]);
-                        existingResource.indexingDisabled(indexingDisabled);
+                    const toActivate = this.resourceToActivate();
 
-                        var isRejectclientsEnabled = this.getIndexingDisbaledValue(dtoSettings["Raven/RejectClientsModeEnabled"]);
-                        existingResource.rejectClientsMode(isRejectclientsEnabled);
+                    if (toActivate && toActivate === event.Id) {
+                        updatedResource.activate();
+                        this.resourceToActivate(null);
                     }
                 });
-            }
-        }
-    }*/
-
-
-    /*TODO
-   
-    private fetchFsStats(fs: fileSystem) {
-        if (!!fs && !fs.disabled() && fs.isLicensed()) {
-            new getFileSystemStatsCommand(fs, true)
-                .execute()
-                //TODO: .done((result: filesystemStatisticsDto) => fs.saveStatistics(result))
-                .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to get file system stats", response.responseText, response.statusText));
         }
     }
-
+    
+    /*TODO
     private activateCounterStorage(cs: counterStorage) {
         var changesSubscriptionArray = () => [
             changesContext.currentResourceChangesApi().watchAllCounters(() => this.fetchCsStats(cs)),
@@ -321,14 +337,6 @@ class resourcesManager {
         ];
         var isNotACounterStorage = this.isPreviousDifferentKind(TenantType.CounterStorage);
         this.updateChangesApi(cs, isNotACounterStorage, () => this.fetchCsStats(cs), changesSubscriptionArray);
-    }
-
-    private fetchCsStats(cs: counterStorage) {
-        if (!!cs && !cs.disabled() && cs.isLicensed()) {
-            new getCounterStorageStatsCommand(cs, true)
-                .execute()
-                .done((result: counterStorageStatisticsDto) => cs.saveStatistics(result));
-        }
     }
 
     private activateTimeSeries(ts: timeSeries) {

@@ -10,7 +10,7 @@ describe(viewUnderTest, () => {
         utils.mockCommand('commands/database/index/getIndexEntriesFieldsCommand', () => ["Name"]);
         utils.mockCommand("commands/database/index/getIndexTermsCommand", () => getIndexTermsCommand());
 
-        return utils.mockActiveDatabase(dbCtr => new dbCtr("default"))
+        return utils.mockActiveDatabase()
             .then(() => utils.runViewmodelTest(viewUnderTest, {}));
     });
 

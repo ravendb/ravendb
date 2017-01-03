@@ -20,6 +20,8 @@ abstract class dialogViewModelBase {
         if (options) {
             this.elementToFocusOnDismissal = options.elementToFocusOnDismissal;
             this.dialogSelector = options.dialogSelectorName || dialogViewModelBase.dialogSelector;
+        } else {
+            this.dialogSelector = dialogViewModelBase.dialogSelector;
         }
     }
 

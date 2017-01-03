@@ -15,6 +15,7 @@ using Raven.Server.Documents.Queries.Results;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -64,35 +65,95 @@ namespace Raven.Server.Documents.Indexes.Debugging
             if (it.Seek(Slices.BeforeAllKeys) == false)
                 yield break;
 
-            if (string.IsNullOrEmpty(prefix) == false)
+            ByteStringContext<ByteStringMemoryCache>.InternalScope? scope = null;
+            try
             {
-                Slice prefixSlice;
-                Slice.From(context.Transaction.InnerTransaction.Allocator, prefix, out prefixSlice);
+                if (string.IsNullOrEmpty(prefix) == false)
+                {
+                    if (SetupPrefix(it, prefix, context, out scope) == false)
+                        yield break;
+                }
+                else if (it.Seek(MapReduceIndexingContext.LastMapResultIdKey))
+                {
+                    if (it.MoveNext() == false)
+                        yield break;
+                }
 
-                it.RequiredPrefix = prefixSlice;
-                
-                if (it.Seek(prefixSlice) == false)
-                    yield break;
+                do
+                {
+                    if (start > 0)
+                    {
+                        start--;
+                        continue;
+                    }
+
+                    if (--take < 0)
+                        yield break;
+
+                    yield return it.CurrentKey.ToString();
+                } while (it.MoveNext());
             }
-            else if (it.Seek(MapReduceIndexingContext.LastMapResultIdKey))
+            finally
+            {
+                if(scope != null)
+                    scope.Value.Dispose();
+            }
+        }
+
+        private static bool SetupPrefix(IIterator it, string prefix, TransactionOperationContext context,
+            out ByteStringContext<ByteStringMemoryCache>.InternalScope? scope)
+        {
+            Slice prefixSlice;
+            scope = Slice.From(context.Transaction.InnerTransaction.Allocator, prefix, out prefixSlice);
+
+            it.RequiredPrefix = prefixSlice;
+
+            if (it.Seek(prefixSlice))
+                return true;
+
+            scope.Value.Dispose();
+            scope = null;
+
+            it.RequiredPrefix = default(Slice);
+
+            if (it.Seek(Slices.BeforeAllKeys) == false)
+                return false;
+
+            if (SliceComparer.Compare(it.CurrentKey, MapReduceIndexingContext.LastMapResultIdKey) == 0)
             {
                 if (it.MoveNext() == false)
-                    yield break;
+                    return false;
             }
+            var firstKey = it.CurrentKey.ToString();
+            if (it.Seek(Slices.AfterAllKeys) == false)
+                return false;
+            var lastKey = it.CurrentKey.ToString();
 
-            do
+            int index = -1;
+            for (int i = 0; i < Math.Min(firstKey.Length, lastKey.Length); i++)
             {
-                if (start > 0)
+                if (firstKey[i] != lastKey[i])
                 {
-                    start--;
-                    continue;
+                    break;
                 }
- 
-                if (--take < 0)
-                    yield break;
+                index = i;
+            }
+            if (index == -1)
+                return false;
+            
+            prefix = firstKey.Substring(0, index+1) + prefix;
 
-                yield return it.CurrentKey.ToString();
-            } while (it.MoveNext());
+            scope = Slice.From(context.Transaction.InnerTransaction.Allocator, prefix, out prefixSlice);
+
+            it.RequiredPrefix = prefixSlice;
+
+            if (it.Seek(prefixSlice) == false)
+            {
+                scope.Value.Dispose();
+                scope = null;
+                return false;
+            }
+            return true;
         }
 
         public static IDisposable GetReduceTree(this Index self, string docId, out IEnumerable<ReduceTree> trees)
@@ -232,7 +293,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
                             Slice s;
                             using (page.GetNodeKey(tx, i, out s))
                             {
-                                var mapEntryId = *(long*)s.Content.Ptr;
+                                var mapEntryId = Bits.SwapBytes(*(long*)s.Content.Ptr);
 
                                 foreach (var mapEntry in mapEntries)
                                 {
@@ -322,9 +383,11 @@ namespace Raven.Server.Documents.Indexes.Debugging
                     Data = item.Value
                 };
 
+                var id = Bits.SwapBytes(item.Key);
+
                 foreach (var mapEntry in mapEntries)
                 {
-                    if (item.Key == mapEntry.Id)
+                    if (id == mapEntry.Id)
                     {
                         entry.Source = sourceDocId;
                         break;

@@ -6,16 +6,14 @@ using Sparrow.Binary;
 using Sparrow.Json;
 using Voron;
 using Voron.Data.BTrees;
-using Voron.Data.Compression;
 using Voron.Impl;
-using Voron.Util;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
 {
     public unsafe class MapReduceResultsStore : IDisposable
     {
-        public const string ReduceTreePrefix = "#reduceTree-";
-        public const string NestedValuesPrefix = "#nestedSection-";
+        public const string ReduceTreePrefix = "__raven/map-reduce/#reduce-tree-";
+        public const string NestedValuesPrefix = "__raven/map-reduce/#nested-section-";
 
         private readonly ulong _reduceKeyHash;
         private readonly TransactionOperationContext _indexContext;
@@ -57,8 +55,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         private void InitializeTree(bool create)
         {
-            //TODO: Need better way to handle tree names
-
             var treeName = ReduceTreePrefix + _reduceKeyHash;
             Tree = create ? _tx.CreateTree(treeName, flags: TreeFlags.LeafsCompressed, pageLocator: _pageLocator) : _tx.ReadTree(treeName, pageLocator: _pageLocator);
 
@@ -80,6 +76,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public void Delete(long id)
         {
+            id = Bits.SwapBytes(id);
+
             switch (Type)
             {
                 case MapResultsStorageType.Tree:
@@ -100,6 +98,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public void Add(long id, BlittableJsonReaderObject result)
         {
+            id = Bits.SwapBytes(id);
+
             switch (Type)
             {
                 case MapResultsStorageType.Tree:
@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     {
                         // would result in an overflow, that would be a space waste anyway, let's move to tree mode
                         MoveExistingResultsToTree(section);
-                        Add(id, result); // now re-add the value
+                        Add(Bits.SwapBytes(id), result); // now re-add the value, revert id to its original value
                     }
                     else
                     {
@@ -133,6 +133,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public ReadMapEntryScope Get(long id)
         {
+            id = Bits.SwapBytes(id);
+
             switch (Type)
             {
                 case MapResultsStorageType.Tree:

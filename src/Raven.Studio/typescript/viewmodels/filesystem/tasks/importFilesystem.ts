@@ -46,7 +46,7 @@ class importDatabase extends viewModelBase {
 
                 fs.importStatus("Uploading " + percentComplete.toFixed(2).replace(/\.0*$/, '') + "%");
             }),
-            ko.postbox.subscribe("ChangesApiReconnected", (fs: filesystem) => {
+            ko.postbox.subscribe(EVENTS.ChangesApi.Reconnected, (fs: filesystem) => {
                 fs.importStatus("");
                 fs.isImporting(false);
                 this.isUploading(false);

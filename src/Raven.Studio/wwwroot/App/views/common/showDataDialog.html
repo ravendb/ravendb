@@ -7,14 +7,13 @@
             <h4 class="modal-title" data-bind="text: title"></h4>
         </div>
         <div class="modal-body">
-            <h4><strong>CTRL+C, </strong>to copy</h4>
             <div>
                 <textarea data-bind="text: inputData, event: { focus: function () { $(this).select(); } }" id="inputData" rows="13" style="width: 100%; resize: none" class="form-control" autofocus="autofocus"></textarea>
             </div>
         </div>
         <div class="modal-footer">
+            <button type="button" class="btn" data-bind="click: copyToClipboard">Copy</button>
             <button type="button" class="btn btn-primary" data-bind="click: close">Close</button>
         </div>
-
     </div>
 </div>

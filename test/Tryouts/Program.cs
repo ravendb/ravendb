@@ -22,9 +22,9 @@ namespace Tryouts
             //    }
             //});
 
-            using (var a = new HugeTransactions())
+            using (var a = new NewClientTests.NewClient.Delete())
             {
-                a.CanWriteBigTransactions(2);
+                a.Delete_Documents_By_id();
             }
         }
     }
