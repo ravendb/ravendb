@@ -17,7 +17,7 @@ namespace FastTests.Blittable
         {
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
-                var newStream = ctx.GetStream();
+                using (var newStream = ctx.GetStream()){
                 var buffer = new byte[1337];
                 new Random(1337).NextBytes(buffer);
                 fixed (byte* p = buffer)
@@ -39,6 +39,7 @@ namespace FastTests.Blittable
                     Assert.Equal(size, newStream.SizeInBytes);
                     Assert.Equal(0, Memory.Compare(p, ptr, size));
                 }
+                }
             }
         }
 
@@ -49,31 +50,33 @@ namespace FastTests.Blittable
             using(var ctx = JsonOperationContext.ShortTermSingleUse())
             {
                 var allocatedMemory = new List<AllocatedMemoryData>();
-                var newStream = ctx.GetStream();
-                var totalSize = 0;
-                var rand = new Random();
-                for (var i = 1; i < 5000; i+=500)
+                using (var newStream = ctx.GetStream())
                 {
-                    var pointer = ctx.GetMemory(rand.Next(1, i * 7));
-                    totalSize += pointer.SizeInBytes;
-                    FillData((byte*)pointer.Address, pointer.SizeInBytes);
-                    allocatedMemory.Add(pointer);
-                    newStream.Write((byte*)pointer.Address, pointer.SizeInBytes);
-                }
-                var buffer = ctx.GetMemory(newStream.SizeInBytes);
-
-                var copiedSize = newStream.CopyTo((byte*)buffer.Address);
-                Assert.Equal(copiedSize, newStream.SizeInBytes);
-
-                var curIndex = 0;
-                var curTuple = 0;
-                foreach (var tuple in allocatedMemory)
-                {
-                    curTuple++;
-                    for (var i = 0; i < tuple.SizeInBytes; i++)
+                    var totalSize = 0;
+                    var rand = new Random();
+                    for (var i = 1; i < 5000; i+=500)
                     {
-                        Assert.Equal(*((byte*)buffer.Address + curIndex), *((byte*)((byte*)tuple.Address + i)));
-                        curIndex++;
+                        var pointer = ctx.GetMemory(rand.Next(1, i * 7));
+                        totalSize += pointer.SizeInBytes;
+                        FillData((byte*)pointer.Address, pointer.SizeInBytes);
+                        allocatedMemory.Add(pointer);
+                        newStream.Write((byte*)pointer.Address, pointer.SizeInBytes);
+                    }
+                    var buffer = ctx.GetMemory(newStream.SizeInBytes);
+
+                    var copiedSize = newStream.CopyTo((byte*)buffer.Address);
+                    Assert.Equal(copiedSize, newStream.SizeInBytes);
+
+                    var curIndex = 0;
+                    var curTuple = 0;
+                    foreach (var tuple in allocatedMemory)
+                    {
+                        curTuple++;
+                        for (var i = 0; i < tuple.SizeInBytes; i++)
+                        {
+                            Assert.Equal(*((byte*)buffer.Address + curIndex), *((byte*)((byte*)tuple.Address + i)));
+                            curIndex++;
+                        }
                     }
                 }
             }
@@ -97,28 +100,30 @@ namespace FastTests.Blittable
             using(var ctx = JsonOperationContext.ShortTermSingleUse())
             {
                 var allocatedMemory = new List<AllocatedMemoryData>();
-                var newStream = ctx.GetStream();
-                var rand = new Random();
-                for (var i = 5000; i > 1; i-=500)
+                using (var newStream = ctx.GetStream())
                 {
-                    var pointer = ctx.GetMemory(rand.Next(1, i * 7));
-                    FillData((byte*)pointer.Address, pointer.SizeInBytes);
-                    allocatedMemory.Add(pointer);
-                    newStream.Write((byte*)pointer.Address, pointer.SizeInBytes);
-                }
-
-                var buffer = ctx.GetMemory(newStream.SizeInBytes);
-
-                var copiedSize = newStream.CopyTo((byte*)buffer.Address);
-                Assert.Equal(copiedSize, newStream.SizeInBytes);
-
-                var curIndex = 0;
-                foreach (var tuple in allocatedMemory)
-                {
-                    for (var i = 0; i < tuple.SizeInBytes; i++)
+                    var rand = new Random();
+                    for (var i = 5000; i > 1; i-=500)
                     {
-                        Assert.Equal(*((byte*)buffer.Address + curIndex), *((byte*)((byte*)tuple.Address+ i)));
-                        curIndex++;
+                        var pointer = ctx.GetMemory(rand.Next(1, i * 7));
+                        FillData((byte*)pointer.Address, pointer.SizeInBytes);
+                        allocatedMemory.Add(pointer);
+                        newStream.Write((byte*)pointer.Address, pointer.SizeInBytes);
+                    }
+
+                    var buffer = ctx.GetMemory(newStream.SizeInBytes);
+
+                    var copiedSize = newStream.CopyTo((byte*)buffer.Address);
+                    Assert.Equal(copiedSize, newStream.SizeInBytes);
+
+                    var curIndex = 0;
+                    foreach (var tuple in allocatedMemory)
+                    {
+                        for (var i = 0; i < tuple.SizeInBytes; i++)
+                        {
+                            Assert.Equal(*((byte*)buffer.Address + curIndex), *((byte*)((byte*)tuple.Address+ i)));
+                            curIndex++;
+                        }
                     }
                 }
             }
@@ -141,6 +146,7 @@ namespace FastTests.Blittable
                     {
                         newStream.WriteByte(*((byte*)pointer.Address + j));
                     }
+                    ctx.ReturnMemory(pointer);
                 }
 
                 var buffer = ctx.GetMemory(newStream.SizeInBytes);
@@ -171,6 +177,7 @@ namespace FastTests.Blittable
                             Console.WriteLine(e);
                         }
                     }
+                    ctx.ReturnMemory(tuple);
                 }
             }
         }

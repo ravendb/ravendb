@@ -229,6 +229,7 @@ namespace Sparrow.Json
 #if MEM_GUARD_STACK
             allocation.FreedBy = Environment.StackTrace;
 #endif
+            GC.SuppressFinalize(allocation);
             ElectricFencedMemory.Free(allocation.Address);
 #else
             if (allocation.Address != _ptrCurrent - allocation.SizeInBytes ||
@@ -276,6 +277,18 @@ namespace Sparrow.Json
         public byte* Address;
         public int SizeInBytes;
         public NativeMemory.ThreadStats AllocatingThread;
+#if MEM_GUARD
+        ~AllocatedMemoryData(){
+            System.Console.WriteLine("Memory was not freed and was leaked " + 
+#if MEM_GUARD_STACK
+            AllocatedBy
+#else
+    ""
+#endif
+            );
+        }
+#endif
+
 #if MEM_GUARD_STACK
         public string AllocatedBy = Environment.StackTrace;
         public string FreedBy ;

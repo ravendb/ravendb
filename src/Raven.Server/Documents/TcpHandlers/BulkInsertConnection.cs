@@ -343,6 +343,11 @@ namespace Raven.Server.Documents.TcpHandlers
                     {
                         _messagesToClient.Add(ProcessingMessage);
                     }
+
+                    if (buffer!= null)
+                    {
+                        TcpConnection.Context.ReturnMemory(buffer.Memory);
+                    }
                 }
             }
         }
