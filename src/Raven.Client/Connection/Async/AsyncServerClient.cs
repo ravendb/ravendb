@@ -670,8 +670,9 @@ namespace Raven.Client.Connection.Async
                 {
                     using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url.Transformer(name), HttpMethod.Get, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url))).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
                     {
-                        var json = (RavenJArray)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-                        return json.Deserialize<TransformerDefinition[]>(convention)[0];
+                        var json = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                        var array = json.Value<RavenJArray>("Results");
+                        return array.Deserialize<TransformerDefinition[]>(convention)[0];
                     }
                 }
                 catch (ErrorResponseException we)
