@@ -6,6 +6,7 @@ using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document.Batches;
+using Raven.NewClient.Client.Json;
 using Raven.NewClient.Client.Shard;
 using Sparrow.Json;
 
@@ -73,18 +74,7 @@ namespace Raven.NewClient.Client.Commands.Lazy
 
             BlittableJsonReaderObject result;
             response.TryGet("Result", out result);
-
-            BlittableJsonReaderArray include;
-            BlittableJsonReaderArray res;
-
-            result.TryGet("Results", out res);
-            result.TryGet("Includes", out include);
-
-            var multiLoadResult = new GetDocumentResult()
-            {
-                Includes = include,
-                Results = res
-            };
+            var multiLoadResult = JsonDeserializationClient.GetDocumentResult(result);
             HandleResponse(multiLoadResult);
         }
 

@@ -1,14 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document.Batches;
-using Raven.NewClient.Client.Shard;
 using Sparrow.Json;
-
+using Raven.NewClient.Client.Json;
 
 namespace Raven.NewClient.Client.Commands.Lazy
 {
@@ -19,7 +16,7 @@ namespace Raven.NewClient.Client.Commands.Lazy
 
         private readonly Dictionary<string, object> transformerParameters;
 
-        private readonly LoadTransformerOperation loadTransformerOperation;
+        private readonly LoadTransformerOperation _loadTransformerOperation;
         private readonly bool singleResult;
 
         public LazyTransformerLoadOperation(string[] ids, string transformer, Dictionary<string, object> transformerParameters, LoadTransformerOperation loadTransformerOperation, bool singleResult)
@@ -27,7 +24,9 @@ namespace Raven.NewClient.Client.Commands.Lazy
             this.ids = ids;
             this.transformer = transformer;
             this.transformerParameters = transformerParameters;
-            this.loadTransformerOperation = loadTransformerOperation;
+            this._loadTransformerOperation = loadTransformerOperation;
+            _loadTransformerOperation.ByIds(ids);
+            _loadTransformerOperation.WithTransformer(transformer, transformerParameters);
             this.singleResult = singleResult;
         }
 
@@ -50,24 +49,32 @@ namespace Raven.NewClient.Client.Commands.Lazy
         }
 
         public object Result { get; set; }
-
         public QueryResult QueryResult { get; set; }
-
         public bool RequiresRetry { get; set; }
 
         public void HandleResponse(BlittableJsonReaderObject response)
         {
-            throw new NotImplementedException();
-            /*if (response.RequestHasErrors())
+            bool forceRetry;
+            response.TryGet("ForceRetry", out forceRetry);
+
+            if (forceRetry)
             {
-                throw new InvalidOperationException("Got bad status code: " + response.Status);
+                Result = null;
+                RequiresRetry = true;
+                return;
             }
 
-            HandleRespose(new LoadResult
-            {
-                Includes = response.Result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
-                Results = response.Result.Value<RavenJArray>("Results").Select(x => x as RavenJObject).ToList()
-            });*/
+            BlittableJsonReaderObject result;
+            response.TryGet("Result", out result);
+            var loadTransformerOperation = JsonDeserializationClient.GetDocumentResult(result);
+            HandleResponse(loadTransformerOperation);
+        }
+
+        private void HandleResponse(GetDocumentResult loadResult)
+        {
+            _loadTransformerOperation.SetResult(loadResult);
+            if (RequiresRetry == false)
+                Result = _loadTransformerOperation.GetTransformedDocuments<T>(loadResult);
         }
     }
 }
