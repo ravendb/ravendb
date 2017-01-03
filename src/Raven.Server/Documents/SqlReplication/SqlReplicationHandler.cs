@@ -21,10 +21,7 @@ namespace Raven.Server.Documents.SqlReplication
         [RavenAction("/databases/*/sql-replication/stats", "GET", "/databases/{databaseName:string}/sql-replication/stats?name={sqlReplicationName:string}")]
         public Task GetStats()
         {
-            var names = HttpContext.Request.Query["name"];
-            if (names.Count == 0)
-                throw new ArgumentException("Query string \'name\' is mandatory, but wasn\'t specified");
-            var name = names[0];
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var replication = Database.SqlReplicationLoader.Replications.FirstOrDefault(r => r.ReplicationUniqueName == name) as SqlReplication;
 
             if (replication == null)
@@ -87,8 +84,8 @@ namespace Raven.Server.Documents.SqlReplication
         {
             try
             {
-                var factoryName = GetStringQueryString("factoryName", true);
-                var connectionString = GetStringQueryString("connectionString", true);
+                var factoryName = GetStringQueryString("factoryName");
+                var connectionString = GetStringQueryString("connectionString");
                 RelationalDatabaseWriter.TestConnection(factoryName, connectionString);
                 HttpContext.Response.StatusCode = 204; // No Content
             }
@@ -137,10 +134,7 @@ namespace Raven.Server.Documents.SqlReplication
         [RavenAction("/databases/*/sql-replication/reset", "POST", "/databases/{databaseName:string}/sql-replication/reset?name={sqlReplicationName:string}")]
         public Task PostResetSqlReplication()
         {
-            var names = HttpContext.Request.Query["name"];
-            if (names.Count == 0)
-                throw new ArgumentException("Query string \'name\' is mandatory, but wasn\'t specified");
-            var name = names[0];
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var replication = Database.SqlReplicationLoader.Replications.FirstOrDefault(r => r.ReplicationUniqueName == name);
 
             if (replication == null)

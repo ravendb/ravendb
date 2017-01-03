@@ -6,6 +6,7 @@ using System.Net;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
@@ -451,7 +452,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/errors", "GET")]
         public Task GetErrors()
         {
-            var names = HttpContext.Request.Query["name"];
+            var names = GetStringValuesQueryString("name");
 
             List<Index> indexes;
             if (names.Count == 0)
@@ -463,7 +464,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     var index = Database.IndexStore.GetIndex(name);
                     if (index == null)
-                        throw new InvalidOperationException("There is not index with name: " + name);
+                        IndexDoesNotExistsException.ThrowFor(name);
 
                     indexes.Add(index);
                 }
