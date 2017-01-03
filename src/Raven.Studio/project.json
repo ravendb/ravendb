@@ -24,7 +24,7 @@
   },
 
   "frameworks": {
-    "netcoreapp1.1": {
+    "netcoreapp1.6": {
       "imports": [
         "dotnet5.6",
         "portable-net45+win8"
