@@ -209,6 +209,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             using (var it = documentMapEntries.Iterate())
             {
+                if (it.Seek(long.MinValue) == false)
+                    ThrowCouldNotSeekToFirstElement(documentMapEntries.Name);
+
                 do
                 {
                     var currentKey = it.CurrentKey;
@@ -225,6 +228,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
 
             return entries;
+        }
+
+        private static void ThrowCouldNotSeekToFirstElement(Slice treeName)
+        {
+            throw new InvalidOperationException($"Could not seek to the first element of {treeName} tree");
         }
 
         public MapReduceResultsStore GetResultsStore(ulong reduceKeyHash, TransactionOperationContext indexContext, bool create, PageLocator pageLocator = null)
