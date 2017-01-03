@@ -6,11 +6,14 @@ import changeSubscription = require("common/changeSubscription");
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
 import adminWatchClient = require("common/adminWatchClient");
+import EVENTS = require("common/constants/events");
+
+import resourceDisconnectedEventArgs = require("viewmodels/resources/resourceDisconnectedEventArgs");
 
 class changesContext {
     static default = new changesContext();
 
-    currentResourceChangesApi = ko.observable<changesApi>(); //TODO: make private and use callback with changes as parameter
+    currentResourceChangesApi = ko.observable<changesApi>();
     globalChangesApi = ko.observable<adminWatchClient>();
 
     afterConnection = $.Deferred<changesApi>();
@@ -20,8 +23,8 @@ class changesContext {
 
     constructor() {
         window.addEventListener("beforeunload", () => {
-            this.disconnectFromResourceChangesApi();
-            //TODO: disconnect global changes
+            this.disconnectFromResourceChangesApi("ChangingResource");
+            this.globalChangesApi().dispose();
         });
 
         this.currentResourceChangesApi.subscribe(newValue => {
@@ -38,6 +41,11 @@ class changesContext {
     }
 
     connectGlobalChangesApi(): JQueryPromise<void> {
+        const alreadyHasGlobalChangesApi = this.globalChangesApi();
+        if (alreadyHasGlobalChangesApi) {
+            return alreadyHasGlobalChangesApi.connectToWebSocketTask;
+        }
+
         const globalChanges = new adminWatchClient();
         this.globalChangesApi(globalChanges);
 
@@ -52,7 +60,7 @@ class changesContext {
         }
 
         if (currentChanges) {
-            this.disconnectFromResourceChangesApi();
+            this.disconnectFromResourceChangesApi("ChangingResource");
         }
 
         if (rs.disabled()) { //TODO: or not licensed
@@ -81,21 +89,23 @@ class changesContext {
         }
     }
 
-    disconnectFromResourceChangesApi() {
+    private disconnectFromResourceChangesApi(cause: resourceDisconnectionCause) {
         const currentChanges = this.currentResourceChangesApi();
         if (currentChanges) {
             this.sentSubscriptions.forEach(x => x.off());
             this.sentSubscriptions = [];
             currentChanges.dispose();
             this.currentResourceChangesApi(null);
+
+            ko.postbox.publish(EVENTS.Resource.Disconnect, { resource: currentChanges.getResource(), cause: cause } as resourceDisconnectedEventArgs);
         }
     }
 
-    disconnectIfCurrent(rs: resource) {
+    disconnectIfCurrent(rs: resource, cause: resourceDisconnectionCause) {
         const currentChanges = this.currentResourceChangesApi();
 
         if (currentChanges && currentChanges.getResource().qualifiedName === rs.qualifiedName) {
-            this.disconnectFromResourceChangesApi();
+            this.disconnectFromResourceChangesApi(cause);
         }
     }
 

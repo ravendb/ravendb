@@ -2,6 +2,7 @@
 
 import resourceInfo = require("models/resources/info/resourceInfo");
 import database = require("models/resources/database");
+import resourcesManager = require("common/shell/resourcesManager");
 
 class databaseInfo extends resourceInfo {
 
@@ -13,11 +14,8 @@ class databaseInfo extends resourceInfo {
 
     constructor(dto: Raven.Client.Data.DatabaseInfo) {
         super(dto);
-        this.rejectClients(dto.RejectClients);
-        this.indexingStatus(dto.IndexingStatus);
-        this.indexingEnabled(dto.IndexingStatus === "Running");
-        this.documentsCount(dto.DocumentsCount);
-        this.indexesCount(dto.IndexesCount);
+
+        this.update(dto);
     }
 
     get qualifier() {
@@ -33,7 +31,7 @@ class databaseInfo extends resourceInfo {
     }
 
     asResource(): database {
-        return new database(this.name, this.isAdmin(), this.disabled(), this.bundles());
+        return resourcesManager.default.getDatabaseByName(this.name);
     }
 
     update(databaseInfo: Raven.Client.Data.DatabaseInfo): void {

@@ -16,10 +16,7 @@ abstract class abstractWebSocketClient {
     private readonly resourcePath: string;
     private webSocket: WebSocket;
     
-    private isDisposing = false;
     private disposed: boolean = false;
-    private isCleanClose: boolean = false;
-    private successfullyConnectedOnce: boolean = false;
     private sentMessages: chagesApiConfigureRequestDto[] = [];
    
     protected constructor(protected rs: resource) {
@@ -59,7 +56,7 @@ abstract class abstractWebSocketClient {
                 action.call(this, tokenObject);
             })
             .fail((e) => {
-                if (this.isDisposing) {
+                if (this.disposed) {
                     this.connectToWebSocketTask.reject();
                     return;
                 }
@@ -80,8 +77,8 @@ abstract class abstractWebSocketClient {
             });
     }
 
-    protected onClose() {
-        // empty by design
+    protected onClose(e: CloseEvent) {
+        // empty
     }
 
     private connectWebSocket(token: singleAuthToken) {
@@ -98,9 +95,10 @@ abstract class abstractWebSocketClient {
                 this.onError(e);
             }
         };
-        this.webSocket.onclose = () => {
-            this.onClose();
-            if (this.isCleanClose === false) {
+        this.webSocket.onclose = (e: CloseEvent) => {
+            this.onClose(e);
+            if (!e.wasClean) {
+                this.onError(e);
                 // Connection has closed uncleanly, so try to reconnect.
                 this.connect(this.connectWebSocket);
             }
@@ -114,30 +112,26 @@ abstract class abstractWebSocketClient {
     protected onOpen() {
         console.log("Connected to WebSocket changes API (" + this.connectionDescription + ")");
         this.reconnect();
-        this.successfullyConnectedOnce = true;
     }
 
     private reconnect() {
-        if (this.successfullyConnectedOnce) {
-            //TODO: don't send watch operations when server is restarted
-            //send changes connection args after reconnecting
-            this.sentMessages.forEach(args => this.send(args.Command, args.Param, false));
+        //TODO: don't send watch operations when server is restarted
+        //send changes connection args after reconnecting
+        this.sentMessages.forEach(args => this.send(args.Command, args.Param, false));
             
-            if (abstractWebSocketClient.messageWasShownOnce) {
-                messagePublisher.reportSuccess("Successfully reconnected to changes stream!");
-                abstractWebSocketClient.messageWasShownOnce = false;
-            }
+        if (abstractWebSocketClient.messageWasShownOnce) {
+            messagePublisher.reportSuccess("Successfully reconnected to changes stream!");
+            abstractWebSocketClient.messageWasShownOnce = false;
         }
     }
 
     protected onError(e: Event) {
-        if (abstractWebSocketClient.messageWasShownOnce === false) {
+        if (abstractWebSocketClient.messageWasShownOnce === false && !this.disposed) {
             messagePublisher.reportError("Changes stream was disconnected!", "Retrying connection shortly.");
             abstractWebSocketClient.messageWasShownOnce = true;
         }
     }
 
-    //TODO: wait for confirmations! - using CommandId property - this method will be async!
     protected send(command: string, value?: string, needToSaveSentMessages: boolean = true) {
         this.connectToWebSocketTask.done(() => {
             var args: chagesApiConfigureRequestDto = {
@@ -169,7 +163,7 @@ abstract class abstractWebSocketClient {
     private saveSentMessages(needToSaveSentMessages: boolean, command: string, args: chagesApiConfigureRequestDto) {
         if (needToSaveSentMessages) {
             if (this.isUnwatchCommand(command)) {
-                var commandName = command.slice(2, command.length);
+                const commandName = command.slice(2, command.length);
                 this.sentMessages = this.sentMessages.filter(msg => msg.Command !== commandName);
             } else {
                 this.sentMessages.push(args);
@@ -186,7 +180,6 @@ abstract class abstractWebSocketClient {
     }
 
     dispose() {
-        this.isDisposing = true;
         this.disposed = true;
         this.connectToWebSocketTask.done(() => {
             if (this.webSocket && this.webSocket.readyState === abstractWebSocketClient.readyStateOpen) {

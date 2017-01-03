@@ -174,7 +174,7 @@ class timeSeriesPoints extends viewModelBase {
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
         return [
         //    ko.postbox.subscribe("ChangePointValue", () => this.changePoint()),
-//            ko.postbox.subscribe("ChangesApiReconnected", (ts: timeSeries) => this.reloadData(ts)),
+//            ko.postbox.subscribe(EVENTS.ChangesApi.Reconnected, (ts: timeSeries) => this.reloadData(ts)),
         ];
     }
 

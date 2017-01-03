@@ -8,11 +8,7 @@ abstract class resource {
     name: string;
     disabled = ko.observable<boolean>(false);
 
-    protected constructor(name: string, isAdminCurrentTenant: boolean, disabled: boolean, activeBundles: string[]) {
-        this.name = name;
-        this.isAdminCurrentTenant(isAdminCurrentTenant);
-        this.activeBundles(activeBundles);
-        this.disabled(disabled);
+    protected constructor(rsInfo: Raven.Client.Data.ResourceInfo) {
     }
 
     activate() {
@@ -30,11 +26,11 @@ abstract class resource {
 
     abstract get type(): string;
 
-    updateUsing(incomingCopy: this) {
-        this.isAdminCurrentTenant = incomingCopy.isAdminCurrentTenant;
-        this.activeBundles = incomingCopy.activeBundles;
-        this.name = incomingCopy.name;
-        this.disabled(incomingCopy.disabled());
+    updateUsing(incomingCopy: Raven.Client.Data.ResourceInfo) {
+        this.isAdminCurrentTenant(incomingCopy.IsAdmin);
+        this.activeBundles(incomingCopy.Bundles);
+        this.name = incomingCopy.Name;
+        this.disabled(incomingCopy.Disabled);
     }
 
     get qualifiedName() {
