@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Handlers
             using (context.OpenReadTransaction())
             {
                 int start = GetStart();
-                int take = GetPageSize();
+                int take = GetPageSize(Database.Configuration.Core.MaxPageSize);
                 var revisions = versioningStorage.GetRevisions(context, key, start, take).ToList();
 
                 long actualEtag = revisions.Count == 0 ? int.MinValue : revisions[revisions.Count - 1].Etag;

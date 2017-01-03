@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Handlers
             var name = GetStringQueryString("name", required: false);
 
             var start = GetStart();
-            var pageSize = GetPageSize();
+            var pageSize = GetPageSize(Database.Configuration.Core.MaxPageSize);
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))

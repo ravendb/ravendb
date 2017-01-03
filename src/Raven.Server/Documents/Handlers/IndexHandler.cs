@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.Handlers
                 if (string.Equals(operation, "source-doc-ids", StringComparison.OrdinalIgnoreCase))
                 {
                     IEnumerable<string> ids;
-                    using (index.GetIdentifiersOfMappedDocuments(GetStringQueryString("startsWith", required: false), GetStart(), GetPageSize(), out ids))
+                    using (index.GetIdentifiersOfMappedDocuments(GetStringQueryString("startsWith", required: false), GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize), out ids))
                     {
                         writer.WriteArrayOfResultsAndCount(ids);
                     }
@@ -191,7 +191,7 @@ namespace Raven.Server.Documents.Handlers
             var name = GetStringQueryString("name", required: false);
 
             var start = GetStart();
-            var pageSize = GetPageSize();
+            var pageSize = GetPageSize(Database.Configuration.Core.MaxPageSize);
             var namesOnly = GetBoolValueQueryString("namesOnly", required: false) ?? false;
 
             DocumentsOperationContext context;

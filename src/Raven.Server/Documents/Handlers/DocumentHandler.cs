@@ -114,11 +114,14 @@ namespace Raven.Server.Documents.Handlers
             HttpContext.Response.Headers["ETag"] = "\"" + actualEtag + "\"";
 
             var etag = GetLongQueryString("etag", false);
+            var start = GetStart();
+            var pageSize = GetPageSize(Database.Configuration.Core.MaxPageSize);
+
             IEnumerable<Document> documents;
             bool isLoadStartingWith = false;
             if (etag != null)
             {
-                documents = Database.DocumentsStorage.GetDocumentsFrom(context, etag.Value, GetStart(), GetPageSize());
+                documents = Database.DocumentsStorage.GetDocumentsFrom(context, etag.Value, start, pageSize);
             }
             else if (HttpContext.Request.Query.ContainsKey("startsWith"))
             {
@@ -128,15 +131,14 @@ namespace Raven.Server.Documents.Handlers
                     HttpContext.Request.Query["startsWith"],
                     HttpContext.Request.Query["matches"],
                     HttpContext.Request.Query["excludes"],
-                    GetStart(),
-                    GetPageSize()
+                    start,
+                    pageSize
                 );
             }
             else // recent docs
             {
-                documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStart(), GetPageSize());
+                documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, start, pageSize);
             }
-
 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {

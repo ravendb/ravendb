@@ -30,6 +30,8 @@ namespace Raven.Server.Documents.Handlers
         public Task StreamDocsGet()
         {
             var transformerName = GetStringQueryString("transformer", required: false);
+            var start = GetStart();
+            var pageSize = GetPageSize(Database.Configuration.Core.MaxPageSize);
 
             Transformer transformer = null;
             if (string.IsNullOrEmpty(transformerName) == false)
@@ -47,7 +49,7 @@ namespace Raven.Server.Documents.Handlers
                 IEnumerable<Document> documents;
                 if (etag != null)
                 {
-                    documents = Database.DocumentsStorage.GetDocumentsFrom(context, etag.Value, GetStart(), GetPageSize());
+                    documents = Database.DocumentsStorage.GetDocumentsFrom(context, etag.Value, start, pageSize);
                 }
                 else if (HttpContext.Request.Query.ContainsKey("startsWith"))
                 {
@@ -55,13 +57,13 @@ namespace Raven.Server.Documents.Handlers
                         HttpContext.Request.Query["startsWith"],
                         HttpContext.Request.Query["matches"],
                         HttpContext.Request.Query["excludes"],
-                        GetStart(),
-                        GetPageSize()
+                        start,
+                        pageSize
                     );
                 }
                 else // recent docs
                 {
-                    documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStart(), GetPageSize());
+                    documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, start, pageSize);
                 }
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -76,7 +78,7 @@ namespace Raven.Server.Documents.Handlers
                         using (var scope = transformer.OpenTransformationScope(transformerParameters, null, Database.DocumentsStorage,
                                 Database.TransformerStore, context))
                         {
-                            writer.WriteDocuments(context, scope.Transform(documents).ToList(), metadataOnly: false);
+                            writer.WriteDocuments(context, scope.Transform(documents), metadataOnly: false);
                         }
                     }
                     else
