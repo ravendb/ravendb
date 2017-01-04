@@ -140,7 +140,7 @@ namespace FastTests
             }
         }
 
-        private static RavenServer CreateServer(int port, int tcpPort)
+        public static RavenServer CreateServer(int port, int tcpPort)
         {
             var configuration = new RavenConfiguration();
             configuration.Initialize();

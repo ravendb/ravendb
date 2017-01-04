@@ -1,11 +1,97 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
 {
+    public class MethodsInGroupByValidator : CSharpSyntaxWalker
+    {
+        private int _depth = 0;
+        private int _groupDepth = -1;
+        private readonly HashSet<string> _searchTerms;
+        private string _firstFoundToken;
+        private readonly Func<SyntaxToken, bool> _findTokens;
+
+
+        public MethodsInGroupByValidator(string[] searchTerms)
+        {
+            _searchTerms = searchTerms.Where(s => !String.IsNullOrEmpty(s)).Distinct().ToHashSet();
+
+            if (_searchTerms.Count == 0)
+            {
+                throw new ArgumentNullException(nameof(_searchTerms),"Cannot be empty");
+            }
+
+            _findTokens = d =>
+            {
+                var rtn = _searchTerms.Contains(d.ToFullString());
+                if (rtn)
+                {
+                    _firstFoundToken = d.ToFullString();
+                }
+                return rtn;
+            };
+        }
+       
+        public void Start(ExpressionSyntax node)
+        {
+            _depth = 0;
+            _groupDepth = -1;
+
+            Visit(node.SyntaxTree.GetRoot());
+        }
+
+        public override void Visit(SyntaxNode node)
+        {
+            _depth++;
+            base.Visit(node);
+            _depth--;
+            if (_groupDepth > _depth)
+            {
+                _groupDepth = -1;
+            }
+        }
+
+        public override void VisitGroupClause(GroupClauseSyntax node)
+        {
+            if (_groupDepth == -1)
+            {
+                _groupDepth = _depth - 1;
+            }
+            base.VisitGroupClause(node);
+        }
+
+        
+
+        public override void VisitInvocationExpression(InvocationExpressionSyntax node)
+        {
+            if (_groupDepth != -1 && _groupDepth < _depth)
+            {
+                var nodes = node.ChildNodes()
+                    .Where(t => t is MemberAccessExpressionSyntax)
+                    .Where(t => t.DescendantTokens()
+                                .Any(_findTokens)).ToList();
+                if (nodes.Count > 0)
+                {
+                    throw new Exception($"Expression cannot contain {_firstFoundToken}() methods in grouping.");
+                };
+            }
+            base.VisitInvocationExpression(node);
+        }
+
+        public override void VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
+        {
+            base.VisitMemberAccessExpression(node);
+        }
+    }
+
+
+
+
     public abstract class GroupByFieldsRetriever : CSharpSyntaxRewriter
     {
         public string[] GroupByFields { get; protected set; }
