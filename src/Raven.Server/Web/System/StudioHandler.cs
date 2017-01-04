@@ -229,7 +229,6 @@ namespace Raven.Server.Web.System
             var message = "The following embedded file was not available: " + docPath +
                           ". Please make sure that the Raven.Studio.zip file exist in the main directory (near the Raven.Server.exe).";
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-            HttpContext.Response.ContentType = "application/json";
             HttpContext.Response.Body.Write(message);
         }
     }

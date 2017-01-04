@@ -223,7 +223,6 @@ namespace Raven.Server.Documents.Handlers
         private void WriteDocumentsJson(DocumentsOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite,
             IncludeDocumentsCommand includeDocs, List<Document> includes)
         {
-            HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
@@ -251,7 +250,6 @@ namespace Raven.Server.Documents.Handlers
         private void WriteDocumentsBlittable(DocumentsOperationContext context, IEnumerable<Document> documentsToWrite, List<Document> includes)
         {
             HttpContext.Response.Headers["Content-Type"] = "binary/blittable-json";
-
 
             using (var streamBuffer = new UnmanagedStreamBuffer(context, ResponseBodyStream()))
             using (var writer = new ManualBlittalbeJsonDocumentBuilder<UnmanagedStreamBuffer>(context,

@@ -38,7 +38,6 @@ namespace Raven.Server.Web.Studio
             randomNumberGenerator.GetBytes(byteStruct);
             var result = Convert.ToBase64String(byteStruct);
 
-            HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
             await HttpContext.Response.WriteAsync($"\"{result}\"", Encoding.UTF8);
         }
 
@@ -49,7 +48,6 @@ namespace Raven.Server.Web.Studio
             StreamReader reader = new StreamReader(HttpContext.Request.Body);
             string keyU = reader.ReadToEnd();
             string key = Uri.UnescapeDataString(keyU);
-            HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
             try
             {
                 Convert.FromBase64String(key.Substring(4));

@@ -50,6 +50,8 @@ namespace Raven.Server
             try
             {
                 context.Response.StatusCode = (int)HttpStatusCode.OK;
+                context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
+
                 var sp = Stopwatch.StartNew();
                 var tenant = await _router.HandlePath(context, context.Request.Method, context.Request.Path.Value);
                 sp.Stop();
