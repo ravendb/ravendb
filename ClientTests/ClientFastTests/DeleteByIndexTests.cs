@@ -54,7 +54,7 @@ namespace NewClientTests.NewClient.Client.Indexing
         }
 
         [Fact]
-        public async void Delete_By_Index_Async()
+        public async Task Delete_By_Index_Async()
         {
             using (var store = GetDocumentStore())
             {

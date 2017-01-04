@@ -108,7 +108,7 @@ namespace Raven.NewClient.Client.Http
                 var command = new GetTopologyCommand();
                 try
                 {
-                    await ExecuteAsync(new ChoosenNode {Node = node}, context, command);
+                    await ExecuteAsync(new ChoosenNode { Node = node }, context, command);
                     if (_topology.Etag != command.Result.Etag)
                     {
                         _topology = command.Result;
@@ -225,7 +225,7 @@ namespace Raven.NewClient.Client.Http
         private static HttpRequestMessage CreateRequest<TResult>(ServerNode node, RavenCommand<TResult> command, out string url)
         {
             var request = command.CreateRequest(node, out url);
-            
+
             request.RequestUri = new Uri(url);
 
             if (node.CurrentToken != null)
@@ -274,7 +274,7 @@ namespace Raven.NewClient.Client.Http
                 case HttpStatusCode.Conflict:
                     // TODO: Conflict resolution
                     // current implementation is temporary 
-                   object message;
+                    object message;
                     using (var stream = await response.Content.ReadAsStreamAsync())
                     {
                         var blittableJsonReaderObject = await context.ReadForMemoryAsync(stream, "PutResult");
@@ -391,17 +391,17 @@ namespace Raven.NewClient.Client.Http
                 if (topology.ReadBehavior == ReadBehavior.LeaderOnly)
                 {
                     if (command.IsFailedWithNode(leaderNode) == false)
-                        return new ChoosenNode {Node = leaderNode};
+                        return new ChoosenNode { Node = leaderNode };
                     throw new HttpRequestException("Leader not was failed to make this request. The current ReadBehavior is set to Leader to we won't failover to a differnt node.", exception);
                 }
 
                 if (topology.ReadBehavior == ReadBehavior.RoundRobin)
                 {
                     if (leaderNode.IsFailed == false && command.IsFailedWithNode(leaderNode) == false)
-                        return new ChoosenNode {Node = leaderNode};
+                        return new ChoosenNode { Node = leaderNode };
 
                     // TODO: Should we choose nodes here by rate value as for SLA?
-                    var choosenNode = new ChoosenNode {SkippedNodes = new List<ServerNode>()};
+                    var choosenNode = new ChoosenNode { SkippedNodes = new List<ServerNode>() };
                     foreach (var node in topology.Nodes)
                     {
                         if (node.IsFailed == false && command.IsFailedWithNode(node) == false)
@@ -419,7 +419,7 @@ namespace Raven.NewClient.Client.Http
                 if (topology.ReadBehavior == ReadBehavior.LeaderWithFailoverWhenRequestTimeSlaThresholdIsReached)
                 {
                     if (leaderNode.IsFailed == false && command.IsFailedWithNode(leaderNode) == false && leaderNode.IsRateSurpassed(topology.SLA.RequestTimeThresholdInMilliseconds))
-                        return new ChoosenNode {Node = leaderNode};
+                        return new ChoosenNode { Node = leaderNode };
 
                     var nodesWithLeader = topology.Nodes
                         .Union(new[] { leaderNode })
@@ -446,14 +446,14 @@ namespace Raven.NewClient.Client.Http
             if (topology.WriteBehavior == WriteBehavior.LeaderOnly)
             {
                 if (command.IsFailedWithNode(leaderNode) == false)
-                    return new ChoosenNode {Node = leaderNode};
+                    return new ChoosenNode { Node = leaderNode };
                 throw new HttpRequestException("Leader not was failed to make this request. The current WriteBehavior is set to Leader to we won't failover to a differnt node.", exception);
             }
 
             if (topology.WriteBehavior == WriteBehavior.LeaderWithFailover)
             {
                 if (leaderNode.IsFailed == false && command.IsFailedWithNode(leaderNode) == false)
-                    return new ChoosenNode {Node = leaderNode};
+                    return new ChoosenNode { Node = leaderNode };
 
                 // TODO: Should we choose nodes here by rate value as for SLA?
                 foreach (var node in topology.Nodes)

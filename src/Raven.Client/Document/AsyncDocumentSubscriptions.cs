@@ -12,6 +12,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions.Subscriptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
+using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
 using Raven.Client.Util;
 using Raven.Imports.Newtonsoft.Json;
@@ -37,7 +38,7 @@ namespace Raven.Client.Document
 
             var nonGenericCriteria = new SubscriptionCriteria
             {
-                Collection = documentStore.Conventions.GetTypeTagName(typeof (T)),
+                Collection = documentStore.Conventions.GetTypeTagName(typeof(T)),
                 FilterJavaScript = criteria.FilterJavaScript
             };
 
@@ -45,7 +46,7 @@ namespace Raven.Client.Document
             return CreateAsync(nonGenericCriteria, startEtag, database);
         }
 
-        public async Task<long> CreateAsync(SubscriptionCriteria criteria, long startEtag=0, string database = null)
+        public async Task<long> CreateAsync(SubscriptionCriteria criteria, long startEtag = 0, string database = null)
         {
             if (criteria == null)
                 throw new InvalidOperationException("Cannot create a subscription if criteria is null");
@@ -54,7 +55,7 @@ namespace Raven.Client.Document
                 ? documentStore.AsyncDatabaseCommands
                 : documentStore.AsyncDatabaseCommands.ForDatabase(database);
 
-            using (var request = commands.CreateRequest("/subscriptions/create?startEtag="+startEtag, HttpMethods.Post))
+            using (var request = commands.CreateRequest("/subscriptions?startEtag=" + startEtag, HttpMethods.Put))
             {
                 await request.WriteAsync(RavenJObject.FromObject(criteria)).ConfigureAwait(false);
 
@@ -71,10 +72,10 @@ namespace Raven.Client.Document
         {
             if (options == null)
                 throw new InvalidOperationException("Cannot open a subscription if options are null");
-            
+
             // todo: treat the sharded connection case..
             AsyncServerClient commands =
-                 (AsyncServerClient ) (database == null
+                 (AsyncServerClient)(database == null
                 ? documentStore.AsyncDatabaseCommands
                 : documentStore.AsyncDatabaseCommands.ForDatabase(database));
 
@@ -92,18 +93,14 @@ namespace Raven.Client.Document
                 ? documentStore.AsyncDatabaseCommands
                 : documentStore.AsyncDatabaseCommands.ForDatabase(database);
 
-            List<SubscriptionConfig> configs;
-
             using (var request = commands.CreateRequest("/subscriptions", HttpMethods.Get))
             {
-                var response = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+                var json = await request.ReadResponseJsonAsync().ConfigureAwait(false);
 
-                var resultsArray = response.Value<RavenJArray>("Subscriptions");
+                var array = json.Value<RavenJArray>("Results");
 
-                configs = documentStore.Conventions.CreateSerializer().Deserialize<SubscriptionConfig[]>(new RavenJTokenReader(resultsArray)).ToList();
+                return array.Deserialize<List<SubscriptionConfig>>(documentStore.Conventions);
             }
-
-            return configs;
         }
 
         public async Task DeleteAsync(long id, string database = null)

@@ -16,19 +16,19 @@ namespace Raven.NewClient.Client.Commands
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/subscriptions/create?startEtag={StartEtag}";
+            url = $"{node.Url}/databases/{node.Database}/subscriptions?startEtag={StartEtag}";
             var request = new HttpRequestMessage
             {
-                Method = HttpMethod.Post,
+                Method = HttpMethod.Put,
                 Content = new BlittableJsonContent(stream =>
                 {
                     using (var writer = new BlittableJsonTextWriter(Context, stream))
                     {
                         writer.WriteStartObject();
-                        writer.WritePropertyName("Collection");
+                        writer.WritePropertyName(nameof(SubscriptionCriteria.Collection));
                         writer.WriteString(Criteria.Collection);
                         writer.WriteComma();
-                        writer.WritePropertyName("FilterJavaScript");
+                        writer.WritePropertyName(nameof(SubscriptionCriteria.FilterJavaScript));
                         writer.WriteString(Criteria.FilterJavaScript);
                         writer.WriteEndObject();
                     }

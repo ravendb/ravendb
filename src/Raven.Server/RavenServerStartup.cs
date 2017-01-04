@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using AsyncFriendlyStackTrace;
@@ -17,6 +18,7 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
 
 namespace Raven.Server
 {
@@ -47,7 +49,9 @@ namespace Raven.Server
         {
             try
             {
-                context.Response.StatusCode = 200;
+                context.Response.StatusCode = (int)HttpStatusCode.OK;
+                context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
+
                 var sp = Stopwatch.StartNew();
                 var tenant = await _router.HandlePath(context, context.Request.Method, context.Request.Path.Value);
                 sp.Stop();
@@ -105,8 +109,8 @@ namespace Raven.Server
                     else if (response.StatusCode < 400)
                         response.StatusCode = 500;
                 }
+                MaybeSetExceptionStatusCode(response, e);
                 
-
                 JsonOperationContext ctx;
                 using (_server.ServerStore.ContextPool.AllocateOperationContext(out ctx))
                 {
@@ -130,21 +134,7 @@ namespace Raven.Server
 
                     djv["Error"] = errorString;
 
-                    var indexCompilationException = e as IndexCompilationException;
-                    if (indexCompilationException != null)
-                    {
-                        djv[nameof(IndexCompilationException.IndexDefinitionProperty)] =
-                            indexCompilationException.IndexDefinitionProperty;
-                        djv[nameof(IndexCompilationException.ProblematicText)] =
-                            indexCompilationException.ProblematicText;
-                    }
-
-                    if (documentConflictException != null)
-                    {
-                        djv["ConflictInfo"] = ReplicationUtils.GetJsonForConflicts(
-                            documentConflictException.DocId,
-                            documentConflictException.Conflicts);
-                    }
+                    MaybeAddAdditionalExceptionData(djv, e);
 
                     using (var writer = new BlittableJsonTextWriter(ctx, response.Body))
                     {
@@ -153,6 +143,50 @@ namespace Raven.Server
                     }
                 }
             }
+        }
+
+        private void MaybeAddAdditionalExceptionData(DynamicJsonValue djv, Exception exception)
+        {
+            var indexCompilationException = exception as IndexCompilationException;
+                    if (indexCompilationException != null)
+                    {
+                djv[nameof(IndexCompilationException.IndexDefinitionProperty)] = indexCompilationException.IndexDefinitionProperty;
+                djv[nameof(IndexCompilationException.ProblematicText)] = indexCompilationException.ProblematicText;
+                return;
+                    }
+
+            var documentConflictException = exception as DocumentConflictException;
+                    if (documentConflictException != null)
+                    {
+                djv["ConflictInfo"] = ReplicationUtils.GetJsonForConflicts(documentConflictException.DocId, documentConflictException.Conflicts);
+                return;
+                    }
+        }
+
+        private static void MaybeSetExceptionStatusCode(HttpResponse response, Exception exception)
+                    {
+            if (response.HasStarted)
+                return;
+
+            if (exception is DocumentConflictException)
+            {
+                response.StatusCode = (int)HttpStatusCode.Conflict;
+                return;
+                    }
+
+            if (exception is ConflictException)
+            {
+                response.StatusCode = (int)HttpStatusCode.Conflict;
+                return;
+                }
+
+            if (exception is ConcurrencyException)
+            {
+                response.StatusCode = (int)HttpStatusCode.Conflict;
+                return;
+            }
+
+            response.StatusCode = (int)HttpStatusCode.InternalServerError;
         }
     }
 }

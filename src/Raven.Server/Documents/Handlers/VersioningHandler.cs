@@ -6,6 +6,7 @@
 
 using System;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -23,24 +24,23 @@ namespace Raven.Server.Documents.Handlers
             if (versioningStorage == null)
                 throw new InvalidOperationException("Versioning is disabled");
 
-            var key = GetQueryStringValueAndAssertIfSingleAndNotEmpty("key");
+            var key = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                int start = GetIntValueQueryString("start", false) ?? 0;
-                int take = GetIntValueQueryString("pageSize", false) ?? 25;
+                int start = GetStart();
+                int take = GetPageSize(Database.Configuration.Core.MaxPageSize);
                 var revisions = versioningStorage.GetRevisions(context, key, start, take).ToList();
 
                 long actualEtag = revisions.Count == 0 ? int.MinValue : revisions[revisions.Count - 1].Etag;
                 if (GetLongFromHeaders("If-None-Match") == actualEtag)
                 {
-                    HttpContext.Response.StatusCode = 304;
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                     return Task.CompletedTask;
                 }
 
-                HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
                 HttpContext.Response.Headers["ETag"] = actualEtag.ToString();
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

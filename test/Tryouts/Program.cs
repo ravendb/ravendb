@@ -22,9 +22,13 @@ namespace Tryouts
             //    }
             //});
 
-            using (var a = new NewClientTests.NewClient.Delete())
+            for (int i = 0; i < 199; i++)
             {
-                a.Delete_Documents_By_id();
+                Console.WriteLine(i);
+                using (var a = new FastTests.Server.Documents.Replication.ManualConflictResolution())
+                {
+                    a.ScriptResolveToTombstone().Wait();
+                }
             }
         }
     }

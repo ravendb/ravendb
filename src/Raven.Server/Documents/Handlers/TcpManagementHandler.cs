@@ -1,134 +1,74 @@
 ﻿using System;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Handlers.Admin
+namespace Raven.Server.Documents.Handlers
 {
     public class TcpManagementHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/tcp/all", "GET",
-            "/databases/{databaseName:string}/tcp/all?start={start:int}&pageSize={pageSize:int}")]
-        public Task GetAllConnections()
+        [RavenAction("/databases/*/tcp", "GET", "/databases/{databaseName:string}/tcp/all?start={start:int}&pageSize={pageSize:int}")]
+        public Task GetAll()
         {
             var start = GetStart();
-            var take = GetPageSize(Database.Configuration.Core.MaxPageSize);
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
-            {
-                var connections = Database.RunningTcpConnections;
-                HttpContext.Response.StatusCode = 200;
+            var pageSize = GetPageSize(Database.Configuration.Core.MaxPageSize);
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    var isFirst = true;
-
-                    writer.WriteStartArray();
-
-                    foreach (var connection in connections)
-                    {
-                        if (start > 0)
-                        {
-                            start--;
-                            continue;
-                        }
-                        if (--take <= 0)
-                            break;
-
-                        if (isFirst == false)
-                            writer.WriteComma();
-
-                        isFirst = false;
-
-                        context.Write(writer, connection.GetConnectionStats(context));
-                    }
-                    writer.WriteEndArray();
-                }
-            }
-            return Task.CompletedTask;
-        }
-
-
-        //Search for connections (duration, ip, type)
-        [RavenAction("/databases/*/tcp/filter", "GET",
-            "/databases/{databaseName:string}/tcp?minSecDuration={minSecDuration:long|optional}&maxSecDuration={maxSecDuration:long|optional}&ip={ip:string|optional}&operation={operation:long|optional}&pageSize={pageSize:int}&query={query:string}&start={start:int}&pageSize={pageSize:int}"
-            )]
-        public Task FindConnection()
-        {
-            var start = GetStart();
-            var take = GetPageSize(Database.Configuration.Core.MaxPageSize);
             var minDuration = GetLongQueryString("minSecDuration", false);
             var maxDuration = GetLongQueryString("maxSecDuration", false);
             var ip = GetStringQueryString("ip", false);
             var operationString = GetStringQueryString("operation", false);
-            TcpConnectionHeaderMessage.OperationTypes? operation = null;
 
+            TcpConnectionHeaderMessage.OperationTypes? operation = null;
             if (string.IsNullOrEmpty(operationString) == false)
-                operation =
-                    (TcpConnectionHeaderMessage.OperationTypes)
-                        Enum.Parse(typeof (TcpConnectionHeaderMessage.OperationTypes), operationString);
+                operation = (TcpConnectionHeaderMessage.OperationTypes)Enum.Parse(typeof(TcpConnectionHeaderMessage.OperationTypes), operationString, ignoreCase: true);
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                var connections = Database.RunningTcpConnections;
-                HttpContext.Response.StatusCode = 200;
+                var connections = Database.RunningTcpConnections
+                    .Where(connection => connection.CheckMatch(minDuration, maxDuration, ip, operation))
+                    .Skip(start)
+                    .Take(pageSize);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    writer.WriteStartArray();
-                    var isFirst = true;
-                    foreach (var connection in connections)
+                    writer.WriteStartObject();
+
+                    writer.WriteResults(context, connections, (w, c, connection) =>
                     {
-                        if (connection.CheckMatch(minDuration, maxDuration, ip, operation) == false)
-                            continue;
+                        c.Write(w, connection.GetConnectionStats(context));
+                    });
 
-                        if (start > 0)
-                        {
-                            start--;
-                            continue;
-                        }
-
-                        if (--take <= 0)
-                            break;
-
-                        if (isFirst == false)
-                            writer.WriteComma();
-
-                        context.Write(writer, connection.GetConnectionStats(context));
-
-                        isFirst = false;
-                    }
-
-                    writer.WriteEndArray();
+                    writer.WriteEndObject();
                 }
             }
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/tcp/drop", "GET",
-            "/databases/{databaseName:string}/tcp/drop?id={id:long}")]
-        public Task DropConnection()
+        [RavenAction("/databases/*/tcp", "DELETE", "/databases/{databaseName:string}/tcp/drop?id={id:long}")]
+        public Task Delete()
         {
             var id = GetLongQueryString("id");
 
-            var connections = Database.RunningTcpConnections;
+            var connection = Database.RunningTcpConnections
+                .FirstOrDefault(x => x.Id == id);
 
-            foreach (var tcpConnectionOptions in connections)
+            if (connection == null)
             {
-                if (tcpConnectionOptions.Id == id)
-                {
-                    // force a disconnection
-                    tcpConnectionOptions.Stream.Dispose();
-                    tcpConnectionOptions.TcpClient.Dispose();
-                    return Task.CompletedTask;
-
-                }
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                return Task.CompletedTask;
             }
-            HttpContext.Response.StatusCode = (int) HttpStatusCode.NotFound;
+
+            // force a disconnection
+            connection.Stream.Dispose();
+            connection.TcpClient.Dispose();
+
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             return Task.CompletedTask;
         }
     }

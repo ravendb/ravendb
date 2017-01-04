@@ -98,7 +98,6 @@ namespace Orders
         public string Extension { get; set; }
         public string ReportsTo { get; set; }
         public List<string> Notes { get; set; }
-
         public List<string> Territories { get; set; }
     }
 

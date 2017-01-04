@@ -24,7 +24,7 @@ namespace Raven.NewClient.Client.Commands
                 Method = HttpMethod.Get,
             };
 
-            url = $"{node.Url}/databases/{node.Database}/revisions?key={Uri.EscapeDataString(Key)}&start={Start.ToInvariantString()}&pageSize={PageSize.ToInvariantString()}";
+            url = $"{node.Url}/databases/{node.Database}/revisions?id={Uri.EscapeDataString(Key)}&start={Start.ToInvariantString()}&pageSize={PageSize.ToInvariantString()}";
             IsReadRequest = false;
             return request;
         }

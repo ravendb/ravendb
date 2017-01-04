@@ -36,5 +36,15 @@ namespace Raven.Abstractions.Exceptions
         public TransformerDoesNotExistsException(string message, Exception inner) : base(message, inner)
         {
         }
+
+        public static TransformerDoesNotExistsException ThrowFor(string transformerName)
+        {
+            throw new TransformerDoesNotExistsException($"There is no transformer with '{transformerName}' name.");
+        }
+
+        public static TransformerDoesNotExistsException ThrowFor(int transformerId)
+        {
+            throw new TransformerDoesNotExistsException($"There is no transformer with '{transformerId}' id.");
+        }
     }
 }

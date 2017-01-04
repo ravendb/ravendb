@@ -1,14 +1,14 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Handlers
+namespace Raven.Server.Documents.Handlers.Debugging
 {
-    public class HugeDocumentsHandler : DatabaseRequestHandler
+    public class DocumentDebugHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/debug/huge-documents", "GET")]
+        [RavenAction("/databases/*/debug/documents/huge", "GET")]
         public Task HugeDocuments()
         {
             DocumentsOperationContext context;
@@ -29,21 +29,20 @@ namespace Raven.Server.Documents.Handlers
 
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName(("Id"));
-                    writer.WriteString((pair.Key.Item1));
+                    writer.WritePropertyName("Id");
+                    writer.WriteString(pair.Key.Item1);
 
                     writer.WriteComma();
 
-                    writer.WritePropertyName(("Size"));
+                    writer.WritePropertyName("Size");
                     writer.WriteInteger(pair.Value);
 
                     writer.WriteComma();
 
-                    writer.WritePropertyName(("Last Access"));
+                    writer.WritePropertyName("LastAccess");
                     writer.WriteString(pair.Key.Item2.ToString("o", CultureInfo.InvariantCulture));
 
                     writer.WriteEndObject();
-
                 }
 
                 writer.WriteEndArray();

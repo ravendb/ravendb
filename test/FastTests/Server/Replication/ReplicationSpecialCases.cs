@@ -10,7 +10,7 @@ namespace FastTests.Server.Replication
     {
 
         [Fact]
-        public async void TomstoneToTombstoneConflict()
+        public void TomstoneToTombstoneConflict()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
@@ -48,7 +48,7 @@ namespace FastTests.Server.Replication
                 bool failed = false;
                 try
                 {
-                    await WaitUntilHasConflict(slave, "users/1", 1, 1000);
+                    WaitUntilHasConflict(slave, "users/1", 1);
                     failed = true;
                 }
                 catch
@@ -60,7 +60,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public async void NonIdenticalContentConflict()
+        public void NonIdenticalContentConflict()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
@@ -88,13 +88,13 @@ namespace FastTests.Server.Replication
                     session.SaveChanges();
                 }
 
-                var conflicts = await WaitUntilHasConflict(slave, "users/1", 1, 1000);
+                var conflicts = WaitUntilHasConflict(slave, "users/1", 1);
                 Assert.Equal(2, conflicts["users/1"].Count);
             }
         }
 
         [Fact]
-        public async void NonIdenticalMetadataConflict()
+        public void NonIdenticalMetadataConflict()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
@@ -130,13 +130,13 @@ namespace FastTests.Server.Replication
                     session.SaveChanges();
                 }
 
-                var conflicts = await WaitUntilHasConflict(slave, "users/1", 1, 1000);
+                var conflicts =  WaitUntilHasConflict(slave, "users/1", 1);
                 Assert.Equal(2, conflicts["users/1"].Count);
             }
         }
 
         [Fact]
-        public async void IdenticalContentConflictResolution()
+        public void IdenticalContentConflictResolution()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
@@ -169,7 +169,7 @@ namespace FastTests.Server.Replication
                 bool failed = false;
                 try
                 {
-                    await WaitUntilHasConflict(slave, "users/1", 1, 1000);
+                     WaitUntilHasConflict(slave, "users/1", 1);
                     failed = true;
                 }
                 catch
@@ -181,7 +181,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public async void UpdateConflictOnParentDocumentArrival()
+        public void UpdateConflictOnParentDocumentArrival()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
@@ -207,7 +207,7 @@ namespace FastTests.Server.Replication
                     }, "users/1");
                     session.SaveChanges();
                 }
-                var conflicts = await WaitUntilHasConflict(slave, "users/1", 1, 1000);
+                var conflicts =  WaitUntilHasConflict(slave, "users/1", 1);
                 Assert.Equal(1, conflicts.Count);
 
                 using (var session = master.OpenSession())
@@ -219,7 +219,7 @@ namespace FastTests.Server.Replication
                     session.SaveChanges();
                 }
 
-                conflicts = await WaitUntilHasConflict(slave, "users/1", 1, 1000);
+                conflicts =  WaitUntilHasConflict(slave, "users/1", 1);
                 Assert.Equal(2, conflicts["users/1"].Count);
             }
         }

@@ -18,7 +18,7 @@ namespace Raven.NewClient.Commands
 
             var request = new HttpRequestMessage
             {
-                Method = HttpMethod.Get,
+                Method = HttpMethod.Put
             };
 
             url = $"{node.Url}/databases/{node.Database}/" + path;

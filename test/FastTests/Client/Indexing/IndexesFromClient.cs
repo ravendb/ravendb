@@ -623,7 +623,7 @@ namespace FastTests.Client.Indexing
                         .ToList();
                 }
 
-                var request = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, store.Url.ForDatabase(store.DefaultDatabase) + "/queries/dynamic/Users?op=explain", HttpMethod.Get, store.DatabaseCommands.PrimaryCredentials, store.Conventions));
+                var request = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, store.Url.ForDatabase(store.DefaultDatabase) + "/queries/dynamic/Users?debug=explain", HttpMethod.Get, store.DatabaseCommands.PrimaryCredentials, store.Conventions));
                 var array = (RavenJArray)await request.ReadResponseJsonAsync();
                 var explanations = array.JsonDeserialization<DynamicQueryToIndexMatcher.Explanation>();
 

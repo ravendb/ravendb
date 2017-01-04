@@ -50,10 +50,11 @@ class indexTerms extends viewModelBase {
             .forEach(field => this.loadTerms(this.indexName, field));
     }
 
-    private loadTerms(indexName: string, termsForField: termsForField): JQueryPromise<string[]> {  // fetch one more to find out if we have more
+    private loadTerms(indexName: string, termsForField: termsForField): JQueryPromise<Raven.Server.Documents.Queries.TermsQueryResult> {  // fetch one more to find out if we have more
         return new getIndexTermsCommand(indexName, termsForField.name, this.activeDatabase(), indexTerms.termsPageLimit + 1, termsForField.fromValue)  
             .execute()
-            .done((loadedTerms: string[]) => {
+            .done((loadedTermsResponse: Raven.Server.Documents.Queries.TermsQueryResult) => {
+                let loadedTerms = loadedTermsResponse.Terms;
                 if (loadedTerms.length > indexTerms.termsPageLimit) {
                     termsForField.hasMoreTerms(true);
                     loadedTerms = loadedTerms.slice(0, indexTerms.termsPageLimit);

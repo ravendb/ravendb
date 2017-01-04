@@ -12,7 +12,7 @@ import changesContext = require("common/changesContext");
 
 import getOperationCommand = require("commands/operations/getOperationCommand");
 import dismissOperationCommand = require("commands/operations/dismissOperationCommand");
-import getRunningTasksCommand = require("commands/operations/getRunningTasksCommand");
+import getOperationsCommand = require("commands/operations/getOperationsCommand");
 import killOperationCommand = require("commands/operations/killOperationCommand");
 
 import getDatabaseAlertsCommand = require("commands/alerts/getDatabaseAlertsCommand");

@@ -12,6 +12,6 @@ namespace Raven.NewClient.Client.Commands
 {
     public class GetSubscriptionsResult
     {
-        public BlittableJsonReaderArray Subscriptions;
+        public BlittableJsonReaderArray Results;
     }
 }

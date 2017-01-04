@@ -1,20 +1,19 @@
 ﻿using System;
 using System.IO.Compression;
+using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Raven.Client.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 
-namespace Raven.Server.Studio.Handlers
+namespace Raven.Server.Web.Studio
 {
     public class SampleDataHandler : DatabaseRequestHandler
     {
 
-        [RavenAction("/databases/*/studio/sampleData", "POST")]
+        [RavenAction("/databases/*/studio/sample-data", "POST")]
         public async Task PostCreateSampleData()
         {
             DocumentsOperationContext context;
@@ -40,10 +39,12 @@ namespace Raven.Server.Studio.Handlers
                         await importer.Import(context, stream);
                     }
                 }
+
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             }
         }
 
-        [RavenAction("/databases/*/studio/sampleDataClasses", "GET")]
+        [RavenAction("/databases/*/studio/sample-data/classes", "GET")]
         public async Task GetSampleDataClasses()
         {
             using (var sampleData = typeof(SampleDataHandler).GetTypeInfo().Assembly.GetManifestResourceStream("Raven.Server.Web.Studio.EmbeddedData.NorthwindModel.cs"))
