@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
@@ -38,9 +39,10 @@ namespace FastTests.Server.Documents.Replication
         protected async Task<Dictionary<string, List<ChangeVectorEntry[]>>> WaitUntilHasConflict(
                 DocumentStore store,
                 string docId,
-                int count = 1,
-                int timeout = 10000)
+                int count = 1)
         {
+            int timeout = 60000;
+
             if (Debugger.IsAttached)
                 timeout *= 100;
             Dictionary<string, List<ChangeVectorEntry[]>> conflicts;
@@ -60,6 +62,8 @@ namespace FastTests.Server.Documents.Replication
                     Assert.False(true,
                         "Timed out while waiting for conflicts on " + docId + " we have " + list.Count + " conflicts");
                 }
+
+                await Task.Delay(50);
 
             } while (true);
             return conflicts;
@@ -111,9 +115,10 @@ namespace FastTests.Server.Documents.Replication
 
         protected async Task<List<string>> WaitUntilHasTombstones(
                 DocumentStore store,
-                int count = 1,
-                int timeout = 4000)
+                int count = 1)
         {
+
+            int timeout = 60000;
             if (Debugger.IsAttached)
                 timeout *= 100;
             List<string> tombstones;
@@ -130,6 +135,8 @@ namespace FastTests.Server.Documents.Replication
                 {
                     Assert.False(true, store.Identifier + " -> Timed out while waiting for tombstones, we have " + tombstones.Count + " tombstones, but should have " + count);
                 }
+
+                await Task.Delay(50);
 
             } while (true);
             return tombstones ?? new List<string>();
