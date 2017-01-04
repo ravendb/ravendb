@@ -10,6 +10,7 @@
 //## Gray and brand colors for use across Bootstrap.
 
 @gray-base:              #25272b;
+@gray-base-light:        #292e33;
 @gray-darker:            #2c343a;
 @gray-dark:              #39434f;
 @gray:                   #546175;
@@ -229,7 +230,7 @@
 @input-border-focus:             @brand-primary;
 
 //** Placeholder text color
-@input-color-placeholder:        @gray-light;
+@input-color-placeholder:        @gray;
 
 //** Default `.form-control` height
 @input-height-base:              (@line-height-computed + (@padding-base-vertical * 2) - 4);
@@ -453,21 +454,22 @@
 
 //=== Shared nav styles
 @nav-link-padding:                          10px 15px;
-@nav-link-hover-bg:                         @gray-lighter;
+@nav-link-hover-bg:                         @gray-dark;
 
 @nav-disabled-link-color:                   @gray-light;
 @nav-disabled-link-hover-color:             @gray-light;
 
 //== Tabs
-@nav-tabs-border-color:                     #ddd;
+@nav-tabs-border-color:                     @gray-base-light;
+@nav-tabs-color:                            @gray-lighter;
 
-@nav-tabs-link-hover-border-color:          @gray-lighter;
+@nav-tabs-link-hover-border-color:          @gray-base-light;
 
-@nav-tabs-active-link-hover-bg:             @body-bg;
-@nav-tabs-active-link-hover-color:          @gray;
-@nav-tabs-active-link-hover-border-color:   #ddd;
+@nav-tabs-active-link-hover-bg:             @gray-base-light;
+@nav-tabs-active-link-hover-color:          @gray-light;
+@nav-tabs-active-link-hover-border-color:   @gray-base-light;
 
-@nav-tabs-justified-link-border-color:            #ddd;
+@nav-tabs-justified-link-border-color:            @gray-dark;
 @nav-tabs-justified-active-link-border-color:     @body-bg;
 
 //== Pills
