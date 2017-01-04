@@ -9,27 +9,36 @@ namespace Raven.Server.Documents.Indexes.Static
     public class StaticIndexDocsEnumerator : IIndexedDocumentsEnumerator
     {
         private readonly IndexingStatsScope _documentReadStats;
-        private readonly EnumerationType _enumerationType;
-        private readonly IEnumerable _resultsOfCurrentDocument;
         private readonly IEnumerator<Document> _docsEnumerator;
+        protected EnumerationType _enumerationType;
+        protected IEnumerable _resultsOfCurrentDocument;
 
-        public StaticIndexDocsEnumerator(IEnumerable<Document> docs, IndexingFunc func, string collection, IndexingStatsScope stats, EnumerationType enumerationType)
+        protected StaticIndexDocsEnumerator(IEnumerable<Document> docs)
+        {
+            _docsEnumerator = docs.GetEnumerator();
+        }
+
+        public StaticIndexDocsEnumerator(IEnumerable<Document> docs, List<IndexingFunc> funcs, string collection, IndexingStatsScope stats)
+            : this(docs)
         {
             _documentReadStats = stats?.For(IndexingOperation.Map.DocumentRead, start: false);
-            _enumerationType = enumerationType;
-            _docsEnumerator = docs.GetEnumerator();
+            _enumerationType = EnumerationType.Index;
 
-            switch (enumerationType)
+            var linqStats = stats?.For(IndexingOperation.Map.Linq, start: false);
+
+            if (funcs.Count == 1)
             {
-                case EnumerationType.Index:
-                    var linqStats = stats?.For(IndexingOperation.Map.Linq, start: false);
-                    _resultsOfCurrentDocument = new TimeCountingEnumerable(func(new DynamicIteratonOfCurrentDocumentWrapper(this)), linqStats);
-                    CurrentIndexingScope.Current.SetSourceCollection(collection, linqStats);
-                    break;
-                case EnumerationType.Transformer:
-                    _resultsOfCurrentDocument = func(new DynamicIteratonOfCurrentDocumentWrapper(this));
-                    break;
+                _resultsOfCurrentDocument =
+                    new TimeCountingEnumerable(funcs[0](new DynamicIteratonOfCurrentDocumentWrapper(this)), linqStats);
             }
+            else
+            {
+                _resultsOfCurrentDocument =
+                    new TimeCountingEnumerable(
+                        new MultipleIndexingFunctionsEnumerator(funcs, new DynamicIteratonOfCurrentDocumentWrapper(this)), linqStats);
+            }
+
+            CurrentIndexingScope.Current.SetSourceCollection(collection, linqStats);
         }
 
         public bool MoveNext(out IEnumerable resultsOfCurrentDocument)
@@ -67,7 +76,7 @@ namespace Raven.Server.Documents.Indexes.Static
             Transformer
         }
 
-        private class DynamicIteratonOfCurrentDocumentWrapper : IEnumerable<DynamicBlittableJson>
+        protected class DynamicIteratonOfCurrentDocumentWrapper : IEnumerable<DynamicBlittableJson>
         {
             private readonly StaticIndexDocsEnumerator _indexingEnumerator;
             private Enumerator _enumerator;
@@ -137,6 +146,78 @@ namespace Raven.Server.Documents.Indexes.Static
                 public void Dispose()
                 {
                 }
+            }
+        }
+
+        private class MultipleIndexingFunctionsEnumerator : IEnumerable
+        {
+            private readonly Enumerator _enumerator;
+
+            public MultipleIndexingFunctionsEnumerator(List<IndexingFunc> funcs, DynamicIteratonOfCurrentDocumentWrapper iterationOfCurrentDocument)
+            {
+                _enumerator = new Enumerator(funcs, iterationOfCurrentDocument.GetEnumerator());
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return _enumerator;
+            }
+
+            private class Enumerator : IEnumerator
+            {
+                private readonly List<IndexingFunc> _funcs;
+                private readonly IEnumerator<DynamicBlittableJson> _docEnumerator;
+                private readonly DynamicBlittableJson[] _currentDoc = new DynamicBlittableJson[1];
+                private int _index;
+                private bool _moveNextDoc = true;
+                private IEnumerator _currentFuncEnumerator;
+
+                public Enumerator(List<IndexingFunc> funcs, IEnumerator<DynamicBlittableJson> docEnumerator)
+                {
+                    _funcs = funcs;
+                    _docEnumerator = docEnumerator;
+                }
+
+                public bool MoveNext()
+                {
+                    if (_moveNextDoc &&_docEnumerator.MoveNext() == false)
+                        return false;
+
+                    _moveNextDoc = false;
+
+                    while (true)
+                    {
+                        if (_currentFuncEnumerator == null)
+                        {
+                            _currentDoc[0] = _docEnumerator.Current;
+                            _currentFuncEnumerator = _funcs[_index](_currentDoc).GetEnumerator();
+                        }
+
+                        if (_currentFuncEnumerator.MoveNext() == false)
+                        {
+                            _currentFuncEnumerator = null;
+                            _index++;
+
+                            if (_index < _funcs.Count)
+                                continue;
+
+                            _index = 0;
+                            _moveNextDoc = true;
+
+                            return false;
+                        }
+
+                        Current = _currentFuncEnumerator.Current;
+                        return true;
+                    }
+                }
+
+                public void Reset()
+                {
+                    throw new NotImplementedException();
+                }
+
+                public object Current { get; private set;  }
             }
         }
     }

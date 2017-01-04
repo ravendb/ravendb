@@ -140,7 +140,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection, stats, StaticIndexDocsEnumerator.EnumerationType.Index);
+            return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection, stats);
         }
 
         public override Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
