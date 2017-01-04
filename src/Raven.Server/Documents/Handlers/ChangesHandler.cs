@@ -7,6 +7,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Net;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
@@ -170,9 +171,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/changes", "DELETE", "/databases/{databaseName:string}/changes?id={connectionId:long|multiple}")]
         public Task DeleteConnections()
         {
-            var ids = HttpContext.Request.Query["id"];
-            if (ids.Count == 0)
-                throw new ArgumentException($"Query string 'id' is mandatory, but wasn't specified");
+            var ids = GetStringValuesQueryString("id");
 
             foreach (var idStr in ids)
             {
@@ -183,6 +182,7 @@ namespace Raven.Server.Documents.Handlers
                 Database.Notifications.Disconnect(id);
             }
 
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             return Task.CompletedTask;
         }
     }

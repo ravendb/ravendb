@@ -7,6 +7,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Net;
 using System.Threading.Tasks;
 using Raven.Server.Exceptions;
 using Raven.Server.Routing;
@@ -26,7 +27,7 @@ namespace Raven.Server.Documents.Handlers
         {
             DateTime lastRangeAt;
             if (DateTime.TryParseExact(lastRangeAtStr, "o", CultureInfo.InvariantCulture,
-                DateTimeStyles.RoundtripKind,out lastRangeAt) == false)
+                DateTimeStyles.RoundtripKind, out lastRangeAt) == false)
                 return Math.Max(32, lastSize);
 
             var span = DateTime.UtcNow - lastRangeAt;
@@ -44,10 +45,7 @@ namespace Raven.Server.Documents.Handlers
             return Math.Max(32, lastSize);
         }
 
-        [RavenAction("/databases/*/hilo/next", "GET",
-             "/databases/{databaseName:string}/hilo/next?tag={collectionName:string}&lastBatchSize={size:long|optional}&lastRangeAt={date:System.DateTime|optional}&identityPartsSeparator={separator:string|optional}&lastMax={max:long|optional} "
-         )]
-
+        [RavenAction("/databases/*/hilo/next", "GET", "/databases/{databaseName:string}/hilo/next?tag={collectionName:string}&lastBatchSize={size:long|optional}&lastRangeAt={date:System.DateTime|optional}&identityPartsSeparator={separator:string|optional}&lastMax={max:long|optional} ")]
         public async Task GetNextHiLo()
         {
             DocumentsOperationContext context;
@@ -73,7 +71,7 @@ namespace Raven.Server.Documents.Handlers
 
                 await Database.TxMerger.Enqueue(cmd);
 
-                HttpContext.Response.StatusCode = 201;
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -119,7 +117,7 @@ namespace Raven.Server.Documents.Handlers
                         throw new InvalidDataException(@"Failed to fetch HiLo document due to a conflict 
                                                             on the document. This shouldn't happen, since
                                                             it this conflict should've been resolved during replication.
-                                                             This exception should not happen and is likely a bug.",e);
+                                                             This exception should not happen and is likely a bug.", e);
                     }
 
                     string serverPrefix;
@@ -158,20 +156,19 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 OldMax = oldMax;
-                Prefix = prefix;                
+                Prefix = prefix;
             }
         }
 
-        [RavenAction("/databases/*/hilo/return", "GET",
-            "/databases/{databaseName:string}/hilo/return?tag={collectionName:string}&end={lastGivenHigh:string}&last={lastIdUsed:string}")]
+        [RavenAction("/databases/*/hilo/return", "PUT", "/databases/{databaseName:string}/hilo/return?tag={collectionName:string}&end={lastGivenHigh:string}&last={lastIdUsed:string}")]
         public async Task HiLoReturn()
         {
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
                 var tag = GetQueryStringValueAndAssertIfSingleAndNotEmpty("tag");
-                var end = GetLongQueryString("end", required: true) ?? -1;
-                var last = GetLongQueryString("last", required: true) ?? -1;
+                var end = GetLongQueryString("end").Value;
+                var last = GetLongQueryString("last").Value;
 
                 var cmd = new MergedHiLoReturnCommand
                 {
@@ -182,9 +179,9 @@ namespace Raven.Server.Documents.Handlers
                 };
 
                 await Database.TxMerger.Enqueue(cmd);
-
-                HttpContext.Response.StatusCode = 200;
             }
+
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
         }
 
         private class MergedHiLoReturnCommand : TransactionOperationsMerger.MergedTransactionCommand

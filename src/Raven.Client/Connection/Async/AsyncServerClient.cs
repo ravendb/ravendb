@@ -141,8 +141,9 @@ namespace Raven.Client.Connection.Async
             {
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url.IndexNames(start, pageSize), HttpMethod.Get, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url))).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
                 {
-                    var json = (RavenJArray)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-                    return json.Select(x => x.Value<string>()).ToArray();
+                    var json = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                    var array = json.Value<RavenJArray>("Results");
+                    return array.Select(x => x.Value<string>()).ToArray();
                 }
             }, token);
         }
@@ -156,8 +157,9 @@ namespace Raven.Client.Connection.Async
                 {
                     request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
 
-                    var json = (RavenJArray)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-                    return json.Deserialize<IndexDefinition[]>(convention);
+                    var json = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                    var array = json.Value<RavenJArray>("Results");
+                    return array.Deserialize<IndexDefinition[]>(convention);
                 }
             }, token);
         }
@@ -171,9 +173,10 @@ namespace Raven.Client.Connection.Async
                 {
                     request.AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url);
 
-                    var json = (RavenJArray)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                    var json = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                    var array = json.Value<RavenJArray>("Results");
 
-                    return json.Deserialize<TransformerDefinition[]>(convention);
+                    return array.Deserialize<TransformerDefinition[]>(convention);
                 }
             }, token);
         }
@@ -667,8 +670,9 @@ namespace Raven.Client.Connection.Async
                 {
                     using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url.Transformer(name), HttpMethod.Get, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url))).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
                     {
-                        var json = (RavenJArray)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-                        return json.Deserialize<TransformerDefinition[]>(convention)[0];
+                        var json = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                        var array = json.Value<RavenJArray>("Results");
+                        return array.Deserialize<TransformerDefinition[]>(convention)[0];
                     }
                 }
                 catch (ErrorResponseException we)
@@ -690,8 +694,9 @@ namespace Raven.Client.Connection.Async
                 {
                     using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url.IndexDefinition(name), HttpMethod.Get, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url))).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
                     {
-                        var json = (RavenJArray)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-                        return json.Deserialize<IndexDefinition[]>(convention)[0];
+                        var json = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                        var array = json.Value<RavenJArray>("Results");
+                        return array.Deserialize<IndexDefinition[]>(convention)[0];
                     }
                 }
                 catch (ErrorResponseException we)
@@ -864,7 +869,8 @@ namespace Raven.Client.Connection.Async
 
             using (var request = jsonRequestFactory.CreateHttpJsonRequest(@params))
             {
-                return (RavenJArray)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                var json = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                return json.Value<RavenJArray>("Results");
             }
         }
 
@@ -1157,7 +1163,7 @@ namespace Raven.Client.Connection.Async
             {
                 var actualStart = start;
 
-                var actualUrl = $"{operationMetadata.Url}/revisions?key={Uri.EscapeDataString(key)}&start={actualStart.ToInvariantString()}&pageSize={pageSize.ToInvariantString()}";
+                var actualUrl = $"{operationMetadata.Url}/revisions?id={Uri.EscapeDataString(key)}&start={actualStart.ToInvariantString()}&pageSize={pageSize.ToInvariantString()}";
 
                 var @params = new CreateHttpJsonRequestParams(this, actualUrl, HttpMethod.Get, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url));
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(@params.AddOperationHeaders(OperationsHeaders)))
@@ -1479,8 +1485,9 @@ namespace Raven.Client.Connection.Async
         {
             using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Url.IndexStatistics(name), HttpMethod.Get, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention, GetRequestTimeMetric(Url))))
             {
-                var json = (RavenJArray)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-                return json.Deserialize<IndexStats[]>(convention)[0];
+                var json = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                var array = json.Value<RavenJArray>("Results");
+                return array.Deserialize<IndexStats[]>(convention)[0];
             }
         }
 
@@ -1523,9 +1530,9 @@ namespace Raven.Client.Connection.Async
             {
                 using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, operationMetadata.Url.Terms(index, field, fromValue, pageSize), HttpMethod.Get, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url))).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
                 {
-                    var result = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-                    var json = ((RavenJArray)result);
-                    return json.Select(x => x.Value<string>()).ToArray();
+                    var json = (RavenJObject)await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                    var array = json.Value<RavenJArray>("Terms");
+                    return array.Select(x => x.Value<string>()).ToArray();
                 }
             }, token);
         }

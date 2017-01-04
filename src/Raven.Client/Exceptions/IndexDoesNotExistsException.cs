@@ -36,5 +36,15 @@ namespace Raven.Abstractions.Exceptions
         public IndexDoesNotExistsException(string message, Exception inner) : base(message, inner)
         {
         }
+
+        public static IndexDoesNotExistsException ThrowFor(string indexName)
+        {
+            throw new IndexDoesNotExistsException($"There is no index with '{indexName}' name.");
+        }
+
+        public static IndexDoesNotExistsException ThrowFor(int indexId)
+        {
+            throw new IndexDoesNotExistsException($"There is no index with '{indexId}' id.");
+        }
     }
 }

@@ -3,10 +3,10 @@ import resource = require("models/resources/resource");
 import endpoints = require("endpoints");
 
 type rawDisableResourceResult = {
-    name: string;
-    success: boolean;
-    reason: string;
-    disabled: boolean;
+    Name: string;
+    Success: boolean;
+    Reason: string;
+    Disabled: boolean;
 }
 
 class disableResourceToggleCommand extends commandBase {
@@ -78,10 +78,10 @@ class disableResourceToggleCommand extends commandBase {
 
     private extractAndMapResult(qualifer: string, result: Array<rawDisableResourceResult>): Array<disableResourceResult> {
         return result.map(x => ({
-            qualifiedName: qualifer + "/" + x.name,
-            success: x.success,
-            reason: x.reason,
-            disabled: x.disabled
+            QualifiedName: qualifer + "/" + x.Name,
+            Success: x.Success,
+            Reason: x.Reason,
+            Disabled: x.Disabled
         }));
     }
 

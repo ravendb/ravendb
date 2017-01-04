@@ -171,7 +171,7 @@ namespace Raven.Server.Documents.Transformers
             {
                 var t = _transformerStore.GetTransformer(transformer);
                 if (t == null)
-                    throw new TransformerDoesNotExistsException("No transformer with the name: " + transformer);
+                    TransformerDoesNotExistsException.ThrowFor(transformer);
 
                 using (var scope = t.OpenTransformationScope(_parameters, _include, _documentsStorage, _transformerStore, _documentsContext, nested: true))
                 {

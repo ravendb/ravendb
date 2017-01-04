@@ -6,6 +6,7 @@ using System.Net;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
@@ -44,15 +45,17 @@ namespace Raven.Server.Documents.Handlers
 
                 var indexId = Database.IndexStore.CreateIndex(indexDefinition);
 
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName(("Index"));
-                    writer.WriteString((name));
+                    writer.WritePropertyName("Index");
+                    writer.WriteString(name);
                     writer.WriteComma();
 
-                    writer.WritePropertyName(("IndexId"));
+                    writer.WritePropertyName("IndexId");
                     writer.WriteInteger(indexId);
 
                     writer.WriteEndObject();
@@ -151,7 +154,7 @@ namespace Raven.Server.Documents.Handlers
                 if (string.Equals(operation, "source-doc-ids", StringComparison.OrdinalIgnoreCase))
                 {
                     IEnumerable<string> ids;
-                    using (index.GetIdentifiersOfMappedDocuments(GetStringQueryString("startsWith", required: false), GetStart(), GetPageSize(), out ids))
+                    using (index.GetIdentifiersOfMappedDocuments(GetStringQueryString("startsWith", required: false), GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize), out ids))
                     {
                         writer.WriteArrayOfResultsAndCount(ids);
                     }
@@ -191,7 +194,7 @@ namespace Raven.Server.Documents.Handlers
             var name = GetStringQueryString("name", required: false);
 
             var start = GetStart();
-            var pageSize = GetPageSize();
+            var pageSize = GetPageSize(Database.Configuration.Core.MaxPageSize);
             var namesOnly = GetBoolValueQueryString("namesOnly", required: false) ?? false;
 
             DocumentsOperationContext context;
@@ -219,26 +222,20 @@ namespace Raven.Server.Documents.Handlers
                     indexDefinitions = new[] { index.GetIndexDefinition() };
                 }
 
-                writer.WriteStartArray();
+                writer.WriteStartObject();
 
-                var isFirst = true;
-                foreach (var indexDefinition in indexDefinitions)
+                writer.WriteResults(context, indexDefinitions, (w, c, indexDefinition) =>
                 {
-                    if (isFirst == false)
-                        writer.WriteComma();
-
-                    isFirst = false;
-
                     if (namesOnly)
                     {
-                        writer.WriteString((indexDefinition.Name));
-                        continue;
+                        w.WriteString(indexDefinition.Name);
+                        return;
                     }
 
-                    writer.WriteIndexDefinition(context, indexDefinition);
-                }
+                    w.WriteIndexDefinition(c, indexDefinition);
+                });
 
-                writer.WriteEndArray();
+                writer.WriteEndObject();
             }
 
             return Task.CompletedTask;
@@ -266,25 +263,23 @@ namespace Raven.Server.Documents.Handlers
                     {
                         var index = Database.IndexStore.GetIndex(name);
                         if (index == null)
-                            throw new InvalidOperationException("There is not index with name: " + name);
+                        {
+                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                            return Task.CompletedTask;
+                        }
 
                         indexStats = new[] { index.GetStats(calculateLag: true, calculateStaleness: true, documentsContext: context) };
                     }
                 }
 
-                writer.WriteStartArray();
-                var first = true;
-                foreach (var stats in indexStats)
+                writer.WriteStartObject();
+
+                writer.WriteResults(context, indexStats, (w, c, stats) =>
                 {
-                    if (first == false)
-                        writer.WriteComma();
+                    w.WriteIndexStats(context, stats);
+                });
 
-                    first = false;
-                    writer.WriteIndexStats(context, stats);
-                }
-
-                writer.WriteEndArray();
-
+                writer.WriteEndObject();
             }
 
             return Task.CompletedTask;
@@ -302,7 +297,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var index = Database.IndexStore.GetIndex(name);
                 if (index == null)
-                    throw new InvalidOperationException("There is not index with name: " + name);
+                    IndexDoesNotExistsException.ThrowFor(name);
 
                 var progress = index.GetProgress(context);
                 writer.WriteIndexProgress(context, progress);
@@ -318,12 +313,14 @@ namespace Raven.Server.Documents.Handlers
 
             var newIndexId = Database.IndexStore.ResetIndex(name);
 
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
+
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
-                writer.WritePropertyName(("IndexId"));
+                writer.WritePropertyName("IndexId");
                 writer.WriteInteger(newIndexId);
                 writer.WriteEndObject();
             }
@@ -426,11 +423,12 @@ namespace Raven.Server.Documents.Handlers
             {
                 var index = Database.IndexStore.GetIndex(name);
                 if (index == null)
-                    throw new InvalidOperationException("There is not index with name: " + name);
+                    IndexDoesNotExistsException.ThrowFor(name);
 
                 index.SetLock(mode);
             }
 
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             return Task.CompletedTask;
         }
 
@@ -448,18 +446,19 @@ namespace Raven.Server.Documents.Handlers
             {
                 var index = Database.IndexStore.GetIndex(name);
                 if (index == null)
-                    throw new InvalidOperationException("There is not index with name: " + name);
+                    IndexDoesNotExistsException.ThrowFor(name);
 
                 index.SetPriority(priority);
             }
 
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/indexes/errors", "GET")]
         public Task GetErrors()
         {
-            var names = HttpContext.Request.Query["name"];
+            var names = GetStringValuesQueryString("name", required: false);
 
             List<Index> indexes;
             if (names.Count == 0)
@@ -471,7 +470,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     var index = Database.IndexStore.GetIndex(name);
                     if (index == null)
-                        throw new InvalidOperationException("There is not index with name: " + name);
+                        IndexDoesNotExistsException.ThrowFor(name);
 
                     indexes.Add(index);
                 }
@@ -481,71 +480,48 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteStartArray();
-
-                var first = true;
-                foreach (var index in indexes)
+                writer.WriteArray(context, indexes, (w, c, index) =>
                 {
-                    if (first == false)
+                    w.WriteStartObject();
+
+                    w.WritePropertyName("Name");
+                    w.WriteString(index.Name);
+                    w.WriteComma();
+
+                    w.WritePropertyName("Errors");
+                    w.WriteArray(c, index.GetErrors(), (ew, ec, error) =>
                     {
-                        writer.WriteComma();
-                    }
+                        ew.WriteStartObject();
 
-                    first = false;
+                        ew.WritePropertyName(nameof(error.Timestamp));
+                        ew.WriteString(error.Timestamp.GetDefaultRavenFormat());
+                        ew.WriteComma();
 
-                    writer.WriteStartObject();
-
-                    writer.WritePropertyName(("Name"));
-                    writer.WriteString((index.Name));
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(("Errors"));
-                    writer.WriteStartArray();
-                    var firstError = true;
-                    foreach (var error in index.GetErrors())
-                    {
-                        if (firstError == false)
-                        {
-                            writer.WriteComma();
-                        }
-
-                        firstError = false;
-
-                        writer.WriteStartObject();
-
-                        writer.WritePropertyName((nameof(error.Timestamp)));
-                        writer.WriteString((error.Timestamp.GetDefaultRavenFormat()));
-                        writer.WriteComma();
-
-                        writer.WritePropertyName((nameof(error.Document)));
+                        ew.WritePropertyName(nameof(error.Document));
                         if (string.IsNullOrWhiteSpace(error.Document) == false)
-                            writer.WriteString((error.Document));
+                            ew.WriteString(error.Document);
                         else
-                            writer.WriteNull();
-                        writer.WriteComma();
+                            ew.WriteNull();
+                        ew.WriteComma();
 
-                        writer.WritePropertyName((nameof(error.Action)));
+                        ew.WritePropertyName(nameof(error.Action));
                         if (string.IsNullOrWhiteSpace(error.Action) == false)
-                            writer.WriteString((error.Action));
+                            ew.WriteString(error.Action);
                         else
-                            writer.WriteNull();
-                        writer.WriteComma();
+                            ew.WriteNull();
+                        ew.WriteComma();
 
-                        writer.WritePropertyName((nameof(error.Error)));
+                        ew.WritePropertyName(nameof(error.Error));
                         if (string.IsNullOrWhiteSpace(error.Error) == false)
-                            writer.WriteString((error.Error));
+                            ew.WriteString(error.Error);
                         else
-                            writer.WriteNull();
+                            ew.WriteNull();
 
-                        writer.WriteEndObject();
-                    }
+                        ew.WriteEndObject();
+                    });
 
-                    writer.WriteEndArray();
-
-                    writer.WriteEndObject();
-                }
-
-                writer.WriteEndArray();
+                    w.WriteEndObject();
+                });
             }
 
             return Task.CompletedTask;
@@ -579,19 +555,7 @@ namespace Raven.Server.Documents.Handlers
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    writer.WriteStartArray();
-                    var isFirst = true;
-                    foreach (var term in result.Terms)
-                    {
-                        if (isFirst == false)
-                            writer.WriteComma();
-
-                        isFirst = false;
-
-                        writer.WriteString((term));
-                    }
-
-                    writer.WriteEndArray();
+                    writer.WriteTermsQueryResult(context, result);
                 }
 
                 return Task.CompletedTask;
@@ -649,12 +613,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/performance", "GET")]
         public Task Performance()
         {
-            var from = 0;
-            var froms = HttpContext.Request.Query["from"];
-            if (froms.Count > 1)
-                throw new ArgumentException($"Query string value 'from' must appear exactly once");
-            if (froms.Count > 0 && int.TryParse(froms[0], out from) == false)
-                throw new ArgumentException($"Query string value 'from' must be a number");
+            var from = GetIntValueQueryString("from", required: false) ?? 0;
 
             var stats = GetIndexesToReportOn()
                 .Select(x => new IndexPerformanceStats
@@ -669,44 +628,27 @@ namespace Raven.Server.Documents.Handlers
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteStartArray();
-
-                var isFirst = true;
-                foreach (var stat in stats)
+                writer.WriteArray(context, stats, (w, c, stat) =>
                 {
-                    if (isFirst == false)
-                        writer.WriteComma();
+                    w.WriteStartObject();
 
-                    isFirst = false;
+                    w.WritePropertyName(nameof(stat.IndexName));
+                    w.WriteString(stat.IndexName);
+                    w.WriteComma();
 
-                    writer.WriteStartObject();
+                    w.WritePropertyName(nameof(stat.IndexId));
+                    w.WriteInteger(stat.IndexId);
+                    w.WriteComma();
 
-                    writer.WritePropertyName(nameof(stat.IndexName));
-                    writer.WriteString((stat.IndexName));
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(nameof(stat.IndexId));
-                    writer.WriteInteger(stat.IndexId);
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(nameof(stat.Performance));
-                    writer.WriteStartArray();
-                    var isFirstInternal = true;
-                    foreach (var performance in stat.Performance)
+                    w.WritePropertyName(nameof(stat.Performance));
+                    w.WriteArray(c, stat.Performance, (wp, cp, performance) =>
                     {
-                        if (isFirstInternal == false)
-                            writer.WriteComma();
+                        wp.WriteIndexingPerformanceStats(context, performance);
+                    });
 
-                        isFirstInternal = false;
+                    w.WriteEndObject();
 
-                        writer.WriteIndexingPerformanceStats(context, performance);
-                    }
-                    writer.WriteEndArray();
-
-                    writer.WriteEndObject();
-                }
-
-                writer.WriteEndArray();
+                });
             }
 
             return Task.CompletedTask;

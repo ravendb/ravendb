@@ -95,7 +95,7 @@ namespace Raven.NewClient.Client.Document
             var command = new GetSubscriptionsCommand(start, take);
             await requestExecuter.ExecuteAsync(command, jsonOperationContext);
 
-            foreach (BlittableJsonReaderObject document in command.Result.Subscriptions)
+            foreach (BlittableJsonReaderObject document in command.Result.Results)
             {
                 configs.Add((SubscriptionConfig)documentStore.Conventions.DeserializeEntityFromBlittable(typeof(SubscriptionConfig), document));
             }

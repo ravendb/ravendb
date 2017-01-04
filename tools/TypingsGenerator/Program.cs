@@ -16,6 +16,7 @@ using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.Documents.SqlReplication;
 using Raven.Server.Documents.PeriodicExport;
+using Raven.Server.Documents.Queries;
 using Sparrow.Json;
 using TypeScripter;
 using TypeScripter.TypeScript;
@@ -94,6 +95,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexingStatus));
             scripter.AddType(typeof(IndexPerformanceStats));
             scripter.AddType(typeof(IndexDefinition));
+            scripter.AddType(typeof(TermsQueryResult));
 
 
             // transformers

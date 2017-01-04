@@ -13,7 +13,8 @@ class getIndexesDefinitionsCommand extends commandBase {
           pageSize: this.take
         };
         const url = endpoints.databases.index.indexes;
-        return this.query(url, args, this.db);
+        const extractor = (response: resultsDto<Raven.Client.Indexing.IndexDefinition>) => response.Results;
+        return this.query(url, args, this.db, extractor);
     }
 }
 

@@ -280,7 +280,7 @@ class patch extends viewModelBase {
             return;
 
         /* TODO:
-        new getRunningTasksCommand(this.activeDatabase())
+        new getOperationsCommand(this.activeDatabase())
             .execute()
             .done((tasks: runningTaskDto[]) => {
                 var count = tasks.filter(x => x.TaskType === "IndexBulkOperation" && !x.Completed).length;

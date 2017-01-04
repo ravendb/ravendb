@@ -287,10 +287,10 @@ class resources extends viewModelBase {
 
     private onResourceDisabled(result: disableResourceResult) {
         const resources = this.resources().sortedResources();
-        const matchedResource = resources.find(rs => rs.qualifiedName === result.qualifiedName);
+        const matchedResource = resources.find(rs => rs.qualifiedName === result.QualifiedName);
 
         if (matchedResource) {
-            matchedResource.disabled(result.disabled);
+            matchedResource.disabled(result.Disabled);
 
             // If Enabling a resource (that is selected from the top) than we want it to be Online(Loaded)
             if (matchedResource.isCurrentlyActiveResource() && !matchedResource.disabled()) {

@@ -5,6 +5,10 @@ interface queryResultDto<T> {
     Includes: any[];
 }
 
+interface resultsDto<T> {
+    Results: T[];
+}
+
 interface connectedDocument {
     id: string;
     href: string;
@@ -20,10 +24,10 @@ interface confirmDialogResult {
 }
 
 interface disableResourceResult {
-    qualifiedName: string;
-    success: boolean;
-    reason: string;
-    disabled: boolean;
+    QualifiedName: string;
+    Success: boolean;
+    Reason: string;
+    Disabled: boolean;
 }
 
 interface deleteResourceResult {
