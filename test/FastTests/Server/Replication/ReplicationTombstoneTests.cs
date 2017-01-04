@@ -7,7 +7,7 @@ namespace FastTests.Server.Documents.Replication
     public class ReplicationTombstoneTests : ReplicationTestsBase
     {
         [Fact]
-        public async Task Tombstones_replication_should_delete_document_at_destination()
+        public void Tombstones_replication_should_delete_document_at_destination()
         {
             var dbName1 = "FooBar-1";
             var dbName2 = "FooBar-2";
@@ -30,7 +30,7 @@ namespace FastTests.Server.Documents.Replication
                     s1.SaveChanges();
                 }
 
-                var tombstoneIDs = await WaitUntilHasTombstones(store2);
+                var tombstoneIDs =  WaitUntilHasTombstones(store2);
                 Assert.Equal(1, tombstoneIDs.Count);
                 Assert.Contains("foo/bar", tombstoneIDs);
 
@@ -39,7 +39,7 @@ namespace FastTests.Server.Documents.Replication
         }
 
         [Fact]
-        public async Task Tombstones_replication_should_delete_document_at_multiple_destinations_fan()
+        public void Tombstones_replication_should_delete_document_at_multiple_destinations_fan()
         {
             var dbName1 = "FooBar-1";
             var dbName2 = "FooBar-2";
@@ -65,13 +65,13 @@ namespace FastTests.Server.Documents.Replication
                     s1.SaveChanges();
                 }
 
-                var tombstoneIDs = await WaitUntilHasTombstones(store2);
+                var tombstoneIDs =  WaitUntilHasTombstones(store2);
                 Assert.Equal(1, tombstoneIDs.Count);
                 Assert.Contains("foo/bar", tombstoneIDs);
 
                 Assert.True(WaitForDocumentDeletion(store2, "foo/bar", 1000));
 
-                tombstoneIDs = await WaitUntilHasTombstones(store3);
+                tombstoneIDs =  WaitUntilHasTombstones(store3);
                 Assert.Equal(1, tombstoneIDs.Count);
                 Assert.Contains("foo/bar", tombstoneIDs);
 
@@ -80,7 +80,7 @@ namespace FastTests.Server.Documents.Replication
         }
 
         [Fact]
-        public async Task Tombstones_replication_should_delete_document_at_multiple_destinations_chain()
+        public void Tombstones_replication_should_delete_document_at_multiple_destinations_chain()
         {
             var dbName1 = "FooBar-1";
             var dbName2 = "FooBar-2";
@@ -107,13 +107,13 @@ namespace FastTests.Server.Documents.Replication
                     s1.SaveChanges();
                 }
 
-                var tombstoneIDs = await WaitUntilHasTombstones(store2);
+                var tombstoneIDs =  WaitUntilHasTombstones(store2);
                 Assert.Equal(1, tombstoneIDs.Count);
                 Assert.Contains("foo/bar", tombstoneIDs);
 
                 Assert.True(WaitForDocumentDeletion(store2, "foo/bar", 1000));
                 
-                tombstoneIDs = await WaitUntilHasTombstones(store3);
+                tombstoneIDs =  WaitUntilHasTombstones(store3);
                 Assert.Equal(1, tombstoneIDs.Count);
                 Assert.Contains("foo/bar", tombstoneIDs);
 
@@ -122,7 +122,7 @@ namespace FastTests.Server.Documents.Replication
         }
 
         [Fact]
-        public async Task Tombstone_should_replicate_in_master_master()
+        public void Tombstone_should_replicate_in_master_master()
         {
             var dbName1 = "FooBar-1";
             var dbName2 = "FooBar-2";
@@ -146,7 +146,7 @@ namespace FastTests.Server.Documents.Replication
                     s2.SaveChanges();
                 }
 
-                var tombstoneIDs = await WaitUntilHasTombstones(store1);
+                var tombstoneIDs =  WaitUntilHasTombstones(store1);
                 Assert.Equal(1, tombstoneIDs.Count);
                 Assert.Contains("foo/bar", tombstoneIDs);
 
@@ -156,7 +156,7 @@ namespace FastTests.Server.Documents.Replication
         }
 
         [Fact]
-        public async Task Two_tombstones_should_replicate_in_master_master()
+        public void Two_tombstones_should_replicate_in_master_master()
         {
             var dbName1 = "FooBar-1";
             var dbName2 = "FooBar-2";
@@ -188,7 +188,7 @@ namespace FastTests.Server.Documents.Replication
                     s2.SaveChanges();
                 }
 
-                var tombstoneIDs = await WaitUntilHasTombstones(store1);
+                var tombstoneIDs =  WaitUntilHasTombstones(store1);
                 Assert.Equal(2, tombstoneIDs.Count);
                 Assert.Contains("foo/bar", tombstoneIDs);
 
@@ -197,7 +197,7 @@ namespace FastTests.Server.Documents.Replication
         }
 
         [Fact]
-        public async Task Tombstone_should_replicate_in_master_master_cycle()
+        public void Tombstone_should_replicate_in_master_master_cycle()
         {
             var dbName1 = "FooBar-1";
             var dbName2 = "FooBar-2";
@@ -242,17 +242,17 @@ namespace FastTests.Server.Documents.Replication
                     s3.SaveChanges();
                 }
 
-                var tombstoneIDs = await WaitUntilHasTombstones(store1, 2);
+                var tombstoneIDs =  WaitUntilHasTombstones(store1, 2);
                 Assert.Equal(2, tombstoneIDs.Count);
                 Assert.Contains("foo/bar", tombstoneIDs);
                 Assert.Contains("foo/bar2", tombstoneIDs);
 
-                tombstoneIDs = await WaitUntilHasTombstones(store2, 2);
+                tombstoneIDs =  WaitUntilHasTombstones(store2, 2);
                 Assert.Equal(2, tombstoneIDs.Count);
                 Assert.Contains("foo/bar", tombstoneIDs);
                 Assert.Contains("foo/bar2", tombstoneIDs);
 
-                tombstoneIDs = await WaitUntilHasTombstones(store3, 2);
+                tombstoneIDs =  WaitUntilHasTombstones(store3, 2);
                 Assert.Equal(2, tombstoneIDs.Count);
                 Assert.Contains("foo/bar", tombstoneIDs);
                 Assert.Contains("foo/bar2", tombstoneIDs);
@@ -260,7 +260,7 @@ namespace FastTests.Server.Documents.Replication
         }
 
         [Fact]
-        public async Task Replication_of_document_should_delete_existing_tombstone_at_destination()
+        public void Replication_of_document_should_delete_existing_tombstone_at_destination()
         {
             var dbName1 = "FooBar-1";
             var dbName2 = "FooBar-2";
@@ -283,7 +283,7 @@ namespace FastTests.Server.Documents.Replication
                     s1.SaveChanges();
                 }
 
-                var tombstoneIDs = await WaitUntilHasTombstones(store2);
+                var tombstoneIDs =  WaitUntilHasTombstones(store2);
                 Assert.Equal(1, tombstoneIDs.Count);
                 Assert.Contains("foo/bar", tombstoneIDs);
 
@@ -298,7 +298,7 @@ namespace FastTests.Server.Documents.Replication
                 Assert.True(WaitForDocument(store2, "foo/bar"));
 
                 //then verify that tombstone is deleted
-                var tombstonesAtStore2 = await GetTombstones(store2);
+                var tombstonesAtStore2 =  GetTombstones(store2);
                 Assert.Empty(tombstonesAtStore2);
             }
         }

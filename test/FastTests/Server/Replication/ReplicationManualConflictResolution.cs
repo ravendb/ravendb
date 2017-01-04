@@ -84,7 +84,7 @@ namespace FastTests.Server.Documents.Replication
 
 
         [Fact]
-        public async Task ScriptResolveToTombstone()
+        public void ScriptResolveToTombstone()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
@@ -111,7 +111,7 @@ namespace FastTests.Server.Documents.Replication
                     session.SaveChanges();
                 }
 
-                var tombstoneIDs = await WaitUntilHasTombstones(slave);
+                var tombstoneIDs = WaitUntilHasTombstones(slave);
                 Assert.Equal(1, tombstoneIDs.Count);
             }
         }
@@ -190,7 +190,7 @@ return out;
         }
 
         [Fact]
-        public async void ScriptUnableToResolve()
+        public void ScriptUnableToResolve()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
@@ -220,7 +220,7 @@ return out;
                     session.SaveChanges();
                 }
 
-                var conflicts = await WaitUntilHasConflict(slave, "users/1");
+                var conflicts =  WaitUntilHasConflict(slave, "users/1");
                 Assert.Equal(2, conflicts["users/1"].Count);
             }
         }

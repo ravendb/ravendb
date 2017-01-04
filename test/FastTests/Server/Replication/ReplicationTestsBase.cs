@@ -18,13 +18,13 @@ namespace FastTests.Server.Documents.Replication
 {
     public class ReplicationTestsBase : RavenTestBase
     {
-        protected async Task<Dictionary<string, List<ChangeVectorEntry[]>>> GetConflicts(DocumentStore store, string docId)
+        protected Dictionary<string, List<ChangeVectorEntry[]>> GetConflicts(DocumentStore store, string docId)
         {
             var url = $"{store.Url}/databases/{store.DefaultDatabase}/replication/conflicts?docId={docId}";
             using (var request = store.JsonRequestFactory.CreateHttpJsonRequest(
                 new CreateHttpJsonRequestParams(null, url, HttpMethod.Get, store.DatabaseCommands.PrimaryCredentials, store.Conventions)))
             {
-                var json = (RavenJObject)await request.ReadResponseJsonAsync();
+                var json = (RavenJObject)request.ReadResponseJson();
                 var array = json.Value<RavenJArray>("Results");
                 var conflicts = array.Select(x => new
                 {
@@ -36,12 +36,12 @@ namespace FastTests.Server.Documents.Replication
             }
         }
 
-        protected async Task<Dictionary<string, List<ChangeVectorEntry[]>>> WaitUntilHasConflict(
+        protected Dictionary<string, List<ChangeVectorEntry[]>> WaitUntilHasConflict(
                 DocumentStore store,
                 string docId,
                 int count = 1)
         {
-            int timeout = 60000;
+            int timeout = 5000;
 
             if (Debugger.IsAttached)
                 timeout *= 100;
@@ -49,7 +49,7 @@ namespace FastTests.Server.Documents.Replication
             var sw = Stopwatch.StartNew();
             do
             {
-                conflicts = await GetConflicts(store, docId);
+                conflicts = GetConflicts(store, docId);
 
                 List<ChangeVectorEntry[]> list;
                 if (conflicts.TryGetValue(docId, out list) == false)
@@ -62,9 +62,6 @@ namespace FastTests.Server.Documents.Replication
                     Assert.False(true,
                         "Timed out while waiting for conflicts on " + docId + " we have " + list.Count + " conflicts");
                 }
-
-                await Task.Delay(50);
-
             } while (true);
             return conflicts;
         }
@@ -113,19 +110,19 @@ namespace FastTests.Server.Documents.Replication
             return false;
         }
 
-        protected async Task<List<string>> WaitUntilHasTombstones(
+        protected List<string> WaitUntilHasTombstones(
                 DocumentStore store,
                 int count = 1)
         {
 
-            int timeout = 60000;
+            int timeout = 5000;
             if (Debugger.IsAttached)
                 timeout *= 100;
             List<string> tombstones;
             var sw = Stopwatch.StartNew();
             do
             {
-                tombstones = await GetTombstones(store);
+                tombstones = GetTombstones(store);
 
                 if (tombstones == null ||
                     tombstones.Count >= count)
@@ -136,20 +133,18 @@ namespace FastTests.Server.Documents.Replication
                     Assert.False(true, store.Identifier + " -> Timed out while waiting for tombstones, we have " + tombstones.Count + " tombstones, but should have " + count);
                 }
 
-                await Task.Delay(50);
-
             } while (true);
             return tombstones ?? new List<string>();
         }
 
 
-        protected async Task<List<string>> GetTombstones(DocumentStore store)
+        protected List<string> GetTombstones(DocumentStore store)
         {
             var url = $"{store.Url}/databases/{store.DefaultDatabase}/replication/tombstones";
             using (var request = store.JsonRequestFactory.CreateHttpJsonRequest(
                 new CreateHttpJsonRequestParams(null, url, HttpMethod.Get, store.DatabaseCommands.PrimaryCredentials, store.Conventions)))
             {
-                var json = (RavenJObject)await request.ReadResponseJsonAsync();
+                var json = (RavenJObject)request.ReadResponseJson();
                 var array = json.Value<RavenJArray>("Results");
                 var tombstones = array.Select(x => x.Value<string>("Key")).ToList();
                 return tombstones;
