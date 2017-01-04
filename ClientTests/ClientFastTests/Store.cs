@@ -32,7 +32,7 @@ namespace NewClientTests.NewClient
                     newSession.Store(new User { Name = "Hibernating Rhinos" }, "users/2");
                     newSession.SaveChanges();
                     var user = newSession.Load<User>(new[] { "users/1", "users/2" });
-                    Assert.Equal(user.Length, 2);
+                    Assert.Equal(user.Count, 2);
                 }
             }
         }

@@ -1,40 +1,49 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Threading.Tasks;
+using FastTests;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
-using Raven.Tests.Common.Attributes;
-using Raven.Tests.Helpers;
-using System.Collections.Generic;
+using Tests.Infrastructure;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_3460 : RavenTestBase
     {
-        [Fact]
-        public void SingleEncodingInHttpQueryShouldWork()
+        private class User
         {
-            using (var store = NewRemoteDocumentStore())
+            public int Id { get; set; }
+
+            public string FirstName { get; set; }
+        }
+
+        [Fact]
+        public async Task SingleEncodingInHttpQueryShouldWork()
+        {
+            using (var store = GetDocumentStore())
             {
                 var customers = SetupAndGetCustomers(store);
                 Assert.NotEmpty(customers);
 
-                var url = string.Format("{0}/databases/{1}/indexes/CustomersIndex?query=Number%3A1", store.Url, store.DefaultDatabase);
+                var url = string.Format("{0}/databases/{1}/queries/CustomersIndex?query=Number%3A1", store.Url, store.DefaultDatabase);
+                var json = await GetResults(url);
 
-                Assert.NotEmpty(GetResults(url).Values());
+                Assert.NotEmpty(json.Values());
             }
         }
 
-        [TimeBombedFact(2018,9,1,"Edge-case for special character combination in a query. (This is not a regression, this case was not handled before)")]
+        [TimeBombedFact(2018, 9, 1, "Edge-case for special character combination in a query. (This is not a regression, this case was not handled before)")]
         public void Can_query_for_special_percentage_character()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new RavenDB_1333.User
+                    session.Store(new User
                     {
                         FirstName = "%2F"
                     });
@@ -46,7 +55,7 @@ namespace Raven.Tests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var queryResult = session.Query<RavenDB_1333.User>()
+                    var queryResult = session.Query<User>()
                                              .Where(x => x.FirstName == "%2F")
                                              .ToList();
 
@@ -56,26 +65,27 @@ namespace Raven.Tests.Issues
         }
 
         [Fact]
-        public void DoubleEncodingInHttpQueryShouldWork()
+        public async Task DoubleEncodingInHttpQueryShouldWork()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var customers = SetupAndGetCustomers(store);
                 Assert.NotEmpty(customers);
 
-                var url = string.Format("{0}/databases/{1}/indexes/CustomersIndex?query=Number%253A1", store.Url, store.DefaultDatabase);
+                var url = string.Format("{0}/databases/{1}/queries/CustomersIndex?query=Number%253A1", store.Url, store.DefaultDatabase);
+                var json = await GetResults(url);
 
-                Assert.NotEmpty(GetResults(url).Values());
+                Assert.NotEmpty(json.Values());
             }
         }
 
-        private IEnumerable<Customer> SetupAndGetCustomers(IDocumentStore store)
+        private static IEnumerable<Customer> SetupAndGetCustomers(IDocumentStore store)
         {
             new CustomersIndex().Execute(store);
 
             using (var session = store.OpenSession())
             {
-                session.Store(new Customer() { Number = 1 });
+                session.Store(new Customer { Number = 1 });
 
                 session.SaveChanges();
             }
@@ -90,11 +100,11 @@ namespace Raven.Tests.Issues
             }
         }
 
-        private RavenJToken GetResults(string url)
+        private static async Task<RavenJToken> GetResults(string url)
         {
             var request = WebRequest.Create(url);
 
-            using (var response = request.GetResponse())
+            using (var response = await request.GetResponseAsync())
             {
                 using (var stream = response.GetResponseStream())
                 {
@@ -117,22 +127,22 @@ namespace Raven.Tests.Issues
 
             return null;
         }
-    }
 
-    public class Customer
-    {
-        public int Number { get; set; }
-    }
-
-    public class CustomersIndex : AbstractIndexCreationTask<Customer>
-    {
-        public CustomersIndex()
+        private class Customer
         {
-            Map = docs => from doc in docs
-                          select new
-                          {
-                              doc.Number
-                          };
+            public int Number { get; set; }
+        }
+
+        private class CustomersIndex : AbstractIndexCreationTask<Customer>
+        {
+            public CustomersIndex()
+            {
+                Map = docs => from doc in docs
+                              select new
+                              {
+                                  doc.Number
+                              };
+            }
         }
     }
 }

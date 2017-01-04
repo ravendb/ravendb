@@ -48,7 +48,7 @@ namespace SlowTests.Issues
             }
         }
 
-        public class User
+        private class User
         {
             public string Name { get; set; }
         }

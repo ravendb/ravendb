@@ -1,4 +1,5 @@
-﻿using Raven.Tests.Core.Utils.Entities;
+﻿using System.Linq;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace NewClientTests.NewClient.Lazy
@@ -29,8 +30,8 @@ namespace NewClientTests.NewClient.Lazy
                     var u1 = session.Advanced.Lazily.Load<User>(new[] { "users/1" });
                     var u2 = session.Advanced.Lazily.Load<User>(new[] { "users/2" });
 
-                    Assert.Null(u1.Value[0]);
-                    Assert.Null(u2.Value[0]);
+                    Assert.Null(u1.Value.Values.FirstOrDefault());
+                    Assert.Null(u2.Value.Values.FirstOrDefault());
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }

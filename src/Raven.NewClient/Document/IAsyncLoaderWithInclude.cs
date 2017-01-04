@@ -38,14 +38,14 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         /// <param name="ids">The ids.</param>
         /// <returns></returns>
-        Task<T[]> LoadAsync(params string[] ids);
+        Task<Dictionary<string, T>> LoadAsync(params string[] ids);
 
         /// <summary>
         /// Begins the async multi-load operation
         /// </summary>
         /// <param name="ids">The ids.</param>
         /// <returns></returns>
-        Task<T[]> LoadAsync(IEnumerable<string> ids);
+        Task<Dictionary<string, T>> LoadAsync(IEnumerable<string> ids);
 
         /// <summary>
         /// Begins the async load operation
@@ -80,7 +80,7 @@ namespace Raven.NewClient.Client.Document
         /// 
         /// Or whatever your conventions specify.
         /// </remarks>
-        Task<T[]> LoadAsync(params ValueType[] ids);
+        Task<Dictionary<string, T>> LoadAsync(params ValueType[] ids);
 
         /// <summary>
         /// Begins the async multi-load operation, with the specified ids after applying
@@ -94,21 +94,21 @@ namespace Raven.NewClient.Client.Document
         /// 
         /// Or whatever your conventions specify.
         /// </remarks>
-        Task<T[]> LoadAsync(IEnumerable<ValueType> ids);
+        Task<Dictionary<string, T>> LoadAsync(IEnumerable<ValueType> ids);
 
         /// <summary>
         /// Begins the async multi-load operation
         /// </summary>
         /// <param name="ids">The ids.</param>
         /// <returns></returns>
-        Task<TResult[]> LoadAsync<TResult>(params string[] ids);
+        Task<Dictionary<string, TResult>> LoadAsync<TResult>(params string[] ids);
 
         /// <summary>
         /// Begins the async multi-load operation
         /// </summary>
         /// <param name="ids">The ids.</param>
         /// <returns></returns>
-        Task<TResult[]> LoadAsync<TResult>(IEnumerable<string> ids);
+        Task<Dictionary<string, TResult>> LoadAsync<TResult>(IEnumerable<string> ids);
 
         /// <summary>
         /// Begins the async load operation
@@ -144,7 +144,7 @@ namespace Raven.NewClient.Client.Document
         /// 
         /// Or whatever your conventions specify.
         /// </remarks>
-        Task<TResult[]> LoadAsync<TResult>(params ValueType[] ids);
+        Task<Dictionary<string, TResult>> LoadAsync<TResult>(params ValueType[] ids);
 
         /// <summary>
         /// Begins the async multi-load operation, with the specified ids after applying
@@ -158,6 +158,6 @@ namespace Raven.NewClient.Client.Document
         /// 
         /// Or whatever your conventions specify.
         /// </remarks>
-        Task<TResult[]> LoadAsync<TResult>(IEnumerable<ValueType> ids);
+        Task<Dictionary<string, TResult>> LoadAsync<TResult>(IEnumerable<ValueType> ids);
     }
 }

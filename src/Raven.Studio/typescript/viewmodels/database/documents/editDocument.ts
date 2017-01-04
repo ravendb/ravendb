@@ -552,9 +552,7 @@ class editDocument extends viewModelBase {
         const doc: document = this.document();
         const generate = new generateClassCommand(this.activeDatabase(), doc.getId(), "csharp");
         const deffered = generate.execute();
-        deffered.done((code: string) => {
-            app.showBootstrapDialog(new showDataDialog("Generated Class", code));
-        });
+        deffered.done((code: string) => app.showBootstrapDialog(new showDataDialog("Generated Class", code, null, true)));
     }
 }
 

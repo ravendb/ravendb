@@ -91,7 +91,7 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         /// <param name="ids">Enumerable of Ids that should be loaded</param>
         /// <param name="token">The cancellation token.</param>
-        Task<T[]> LoadAsync<T>(IEnumerable<string> ids, CancellationToken token = default (CancellationToken));
+        Task<Dictionary<string, T>> LoadAsync<T>(IEnumerable<string> ids, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Loads the specified entity with the specified id after applying
@@ -117,7 +117,7 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         /// <param name="token">The cancellation token.</param>
         /// <param name="ids">The ids of the documents to load.</param>
-        Task<T[]> LoadAsync<T>(CancellationToken token = default (CancellationToken),params ValueType[] ids);
+        Task<Dictionary<string, T>> LoadAsync<T>(CancellationToken token = default (CancellationToken),params ValueType[] ids);
 
         /// <summary>
         ///     Loads the specified entities with the specified id after applying
@@ -132,7 +132,7 @@ namespace Raven.NewClient.Client.Document
         /// </remarks>
         /// <param name="token">The cancellation token.</param>
         /// <param name="ids">The ids of the documents to load.</param>
-        Task<T[]> LoadAsync<T>(IEnumerable<ValueType> ids, CancellationToken token = default (CancellationToken));
+        Task<Dictionary<string, T>> LoadAsync<T>(IEnumerable<ValueType> ids, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Performs a load that will use the specified results transformer against the specified id

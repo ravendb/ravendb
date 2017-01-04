@@ -19,14 +19,14 @@ namespace FastTests.Server.Replication
 {
     public class ReplicationIndexesAndTransformers : ReplicationTestsBase
     {
-        public class User
+        private class User
         {
             public string Name { get; set; }
             public int Age { get; set; }
             public DateTime Birthday { get; set; }
         }
 
-        public class UserByNameAndBirthday : AbstractIndexCreationTask<User>
+        private class UserByNameAndBirthday : AbstractIndexCreationTask<User>
         {
             public UserByNameAndBirthday()
             {
@@ -40,7 +40,7 @@ namespace FastTests.Server.Replication
         }
 
 
-        public class UserByNameIndex : AbstractIndexCreationTask<User>
+        private class UserByNameIndex : AbstractIndexCreationTask<User>
         {
             private readonly string _indexName;
 
@@ -59,7 +59,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        public class UserByAgeIndex : AbstractIndexCreationTask<User>
+        private class UserByAgeIndex : AbstractIndexCreationTask<User>
         {
             private readonly string _indexName;
 
@@ -77,7 +77,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        public class UsernameToUpperTransformer : AbstractTransformerCreationTask<User>
+        private class UsernameToUpperTransformer : AbstractTransformerCreationTask<User>
         {
             private readonly string _transformerName;
 
@@ -97,7 +97,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        public class UsernameToLowerTransformer : AbstractTransformerCreationTask<User>
+        private class UsernameToLowerTransformer : AbstractTransformerCreationTask<User>
         {
             private readonly string _transformerName;
 
@@ -124,7 +124,7 @@ namespace FastTests.Server.Replication
             {
                 var userByAge = new UserByAgeIndex();
                 userByAge.Execute(store);
-                
+
                 var databaseStoreTask =
                     Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
                 databaseStoreTask.Wait();
@@ -167,10 +167,10 @@ namespace FastTests.Server.Replication
                 using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
                 using (var tx = context.OpenWriteTransaction())
                 {
-                    var changeVectors = databaseStore.IndexMetadataPersistence.DeleteConflictsFor(tx.InnerTransaction,context, userByAge.IndexName);
+                    var changeVectors = databaseStore.IndexMetadataPersistence.DeleteConflictsFor(tx.InnerTransaction, context, userByAge.IndexName);
                     tx.Commit();
 
-                    Assert.Equal(2,changeVectors.Count);
+                    Assert.Equal(2, changeVectors.Count);
                 }
 
                 using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
