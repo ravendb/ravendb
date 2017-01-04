@@ -35,7 +35,7 @@ namespace Voron.Impl.Scratch
         private readonly ConcurrentDictionary<int, ScratchBufferItem> _scratchBuffers =
             new ConcurrentDictionary<int, ScratchBufferItem>(NumericEqualityComparer.Instance);
 
-        private readonly LinkedList<Tuple<DateTime, ScratchBufferItem>> _recycleArea = new LinkedList<Tuple<DateTime, ScratchBufferItem>>();
+        private readonly LinkedList<ScratchBufferItem> _recycleArea = new LinkedList<ScratchBufferItem>();
 
         public ScratchBufferPool(StorageEnvironment env)
         {
@@ -87,19 +87,27 @@ namespace Voron.Impl.Scratch
 
         private ScratchBufferItem NextFile(long minSize, long? requestedSize, LowLevelTransaction tx)
         {
-            if (_recycleArea.Count > 0)
+            var current = _recycleArea.Last;
+            while (current != null)
             {
-                var recycled = _recycleArea.Last.Value.Item2;
-                _recycleArea.RemoveLast();
+                var recycled = current.Value;
 
-                if (recycled.File.Size <= Math.Max(minSize, requestedSize ?? 0))
+                if (recycled.File.Size <= Math.Max(minSize, requestedSize ?? 0) &&
+                    // even though this is in the recyle bin, there might still be some transactions looking at it
+                    // so we have to make sure that this is really unused before actually reusing it
+                    recycled.File.HasActivelyUsedBytes(_env.PossibleOldestReadTransaction) == false)
                 {
                     recycled.File.Reset(tx);
-                    _scratchBuffers.TryAdd(recycled.Number, recycled);
+                    recycled.RecycledAt = default(DateTime);
+                    _recycleArea.Remove(current);
+                    AddScratchBufferFile(recycled);
+
                     return recycled;
                 }
-            }
 
+                current = current.Previous;
+            }
+            
             _currentScratchNumber++;
             AbstractPager scratchPager;
             if (requestedSize != null)
@@ -113,7 +121,7 @@ namespace Voron.Impl.Scratch
                 catch (Exception)
                 {
                     // this can fail because of disk space issue, let us just ignore it
-                    // we'll allocate the minimum amount in a bit anway
+                    // we'll allocate the minimum amount in a bit anyway
                     return NextFile(minSize, null, tx);
                 }
             }
@@ -126,7 +134,7 @@ namespace Voron.Impl.Scratch
             var scratchFile = new ScratchBufferFile(scratchPager, _currentScratchNumber);
             var item = new ScratchBufferItem(scratchFile.Number, scratchFile);
 
-            _scratchBuffers.TryAdd(item.Number, item);
+            AddScratchBufferFile(item);
 
             return item;
         }
@@ -179,17 +187,17 @@ namespace Voron.Impl.Scratch
         {
             var scratch = _scratchBuffers[scratchNumber];
             scratch.File.Free(page, tx);
-            if (scratch.File.AllocatedPagesCount != 0 || scratch.File.HasActivelyUsedBytes(_env.PossibleOldestReadTransaction))
+            if (scratch.File.AllocatedPagesCount != 0)
                 return;
 
             while (_recycleArea.First != null)
             {
-                if (DateTime.UtcNow - _recycleArea.First.Value.Item1 <= TimeSpan.FromMinutes(1))
+                if (DateTime.UtcNow - _recycleArea.First.Value.RecycledAt <= TimeSpan.FromMinutes(1))
                 {
                     break;
                 }
 
-                _recycleArea.First.Value.Item2.File.Dispose();
+                _recycleArea.First.Value.File.Dispose();
                 _recycleArea.RemoveFirst();
             }
 
@@ -197,7 +205,11 @@ namespace Voron.Impl.Scratch
             {
                 if (scratch.File.Size <= _options.MaxScratchBufferSize)
                 {
-                    scratch.File.Reset(tx);
+                    // we'll take the chance that no one is using us to reset the memory allocations
+                    // and avoid fragmentation, we can only do that if no transaction is looking at us
+                    if (scratch.File.HasActivelyUsedBytes(_env.PossibleOldestReadTransaction) == false)
+                        scratch.File.Reset(tx);
+
                     return;
                 }
 
@@ -207,24 +219,18 @@ namespace Voron.Impl.Scratch
                 _current = newCurrent;
             }
 
-            RecyleScratchFile(scratch);
+            TryRecyleScratchFile(scratch);
         }
 
-        private void RecyleScratchFile(ScratchBufferItem scratch)
+        private bool TryRecyleScratchFile(ScratchBufferItem scratch)
         {
-            ScratchBufferItem _;
-            if (_scratchBuffers.TryRemove(scratch.Number, out _) == false)
-            {
-                scratch.File.Dispose();
-                return;
-            }
+            if (scratch.File.Size != _current.File.Size)
+                return false;
 
-            if (scratch.File.Size == _current.File.Size)
-            {
-                _recycleArea.AddLast(Tuple.Create(DateTime.UtcNow, scratch));
-                return;
-            }
-            scratch.File.Dispose();
+            scratch.RecycledAt = DateTime.UtcNow;
+            _recycleArea.AddLast(scratch);
+
+            return true;
         }
 
         public void Dispose()
@@ -253,6 +259,8 @@ namespace Voron.Impl.Scratch
                 Number = number;
                 File = file;
             }
+
+            public DateTime RecycledAt;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -291,6 +299,36 @@ namespace Voron.Impl.Scratch
             // if we can avoid the dictionary lookup for the common case of 
             // looking at the latest scratch, that is great
             return _scratchBuffers[scratchNumber];
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void AddScratchBufferFile(ScratchBufferItem scratch)
+        {
+            RemoveInactiveScratches(scratch);
+
+            _scratchBuffers.AddOrUpdate(scratch.Number, scratch, (_, __) => scratch);
+        }
+
+        private void RemoveInactiveScratches(ScratchBufferItem except)
+        {
+            foreach (var item in _scratchBuffers)
+            {
+                var scratchBufferItem = item.Value;
+
+                if (scratchBufferItem.File.HasActivelyUsedBytes(_env.PossibleOldestReadTransaction) ||
+                    scratchBufferItem == except)
+                    continue;
+
+                ScratchBufferItem _;
+                if (_scratchBuffers.TryRemove(scratchBufferItem.Number, out _) == false)
+                {
+                    if (scratchBufferItem.File != except.File)
+                        scratchBufferItem.File.Dispose();
+                }
+
+                if (_recycleArea.Contains(scratchBufferItem) == false)
+                    scratchBufferItem.File.Dispose();
+            }
         }
 
         public void BreakLargeAllocationToSeparatePages(PageFromScratchBuffer value)
@@ -341,30 +379,18 @@ namespace Voron.Impl.Scratch
                 }
             }
 
-            // we need to ensure that no access to _recycleArea will take place in the same time
+            // we need to ensure that no access to _recycleArea and _scratchBuffers will take place in the same time
             // and only methods that access this are used within write transaction
             using (_env.WriteTransaction())
             {
-                //check if we can put more files into recycle area
-
-                foreach (var scratchBufferItem in _scratchBuffers)
-                {
-                    var scratchItem = scratchBufferItem.Value;
-                    if (scratchItem == _current)
-                        continue;
-
-                    if (scratchItem.File.HasActivelyUsedBytes(_env.PossibleOldestReadTransaction))
-                        continue;
-
-                    RecyleScratchFile(scratchItem);
-                }
+                RemoveInactiveScratches(_current);
 
                 if (_recycleArea.Count == 0)
                     return;
 
                 while (_recycleArea.First != null)
                 {
-                    _recycleArea.First.Value.Item2.File.Dispose();
+                    _recycleArea.First.Value.File.Dispose();
                     _recycleArea.RemoveFirst();
                 }
             }
