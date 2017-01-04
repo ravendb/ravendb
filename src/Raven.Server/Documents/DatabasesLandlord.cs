@@ -10,6 +10,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Client.Json;
 using Raven.Server.Config;
+using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -217,10 +218,10 @@ namespace Raven.Server.Documents
                 var dataDirectoryKey = RavenConfiguration.GetKey(x => x.Core.DataDirectory);
                 string dataDirectory;
                 if (document.Settings.TryGetValue(dataDirectoryKey,out dataDirectory) == false || dataDirectory == null)
-                    throw new InvalidOperationException($"Could not find {dataDirectoryKey}");
+                    throw new DatabaseNotFoundException($"Could not find {dataDirectoryKey}");
 
                 if (document.Disabled && !ignoreDisabledDatabase)
-                    throw new InvalidOperationException("The database has been disabled.");
+                    throw new DatabaseDisabledException("The database has been disabled.");
 
                 return document;
             }

@@ -87,8 +87,8 @@ namespace Raven.Server
             {
                 if (context.RequestAborted.IsCancellationRequested)
                     return;
+
                 //TODO: special handling for argument exception (400 bad request)
-                //TODO: database not found (503)
                 //TODO: operaton cancelled (timeout)
                 //TODO: Invalid data exception 422
 
@@ -96,8 +96,21 @@ namespace Raven.Server
                 //TODO: Proper json output, not like this
                 var response = context.Response;
 
-                MaybeSetExceptionStatusCode(response, e);
+                var databaseMissingException = e is DatabaseNotFoundException ||
+                                               e is DatabaseDisabledException;
+                var documentConflictException = e as DocumentConflictException;
 
+                if (response.HasStarted == false)
+                {
+                    if (databaseMissingException)
+                        response.StatusCode = 503;
+                    if (documentConflictException != null)
+                        response.StatusCode = 409;
+                    else if (response.StatusCode < 400)
+                        response.StatusCode = 500;
+                }
+                MaybeSetExceptionStatusCode(response, e);
+                
                 JsonOperationContext ctx;
                 using (_server.ServerStore.ContextPool.AllocateOperationContext(out ctx))
                 {
@@ -135,23 +148,23 @@ namespace Raven.Server
         private void MaybeAddAdditionalExceptionData(DynamicJsonValue djv, Exception exception)
         {
             var indexCompilationException = exception as IndexCompilationException;
-            if (indexCompilationException != null)
-            {
+                    if (indexCompilationException != null)
+                    {
                 djv[nameof(IndexCompilationException.IndexDefinitionProperty)] = indexCompilationException.IndexDefinitionProperty;
                 djv[nameof(IndexCompilationException.ProblematicText)] = indexCompilationException.ProblematicText;
                 return;
-            }
+                    }
 
             var documentConflictException = exception as DocumentConflictException;
-            if (documentConflictException != null)
-            {
+                    if (documentConflictException != null)
+                    {
                 djv["ConflictInfo"] = ReplicationUtils.GetJsonForConflicts(documentConflictException.DocId, documentConflictException.Conflicts);
                 return;
-            }
+                    }
         }
 
         private static void MaybeSetExceptionStatusCode(HttpResponse response, Exception exception)
-        {
+                    {
             if (response.HasStarted)
                 return;
 
@@ -159,13 +172,13 @@ namespace Raven.Server
             {
                 response.StatusCode = (int)HttpStatusCode.Conflict;
                 return;
-            }
+                    }
 
             if (exception is ConflictException)
             {
                 response.StatusCode = (int)HttpStatusCode.Conflict;
                 return;
-            }
+                }
 
             if (exception is ConcurrencyException)
             {

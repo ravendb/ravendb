@@ -762,7 +762,8 @@ namespace Raven.Client.Connection.Async
                 uniqueIds.ApplyIfNotNull(id => pathBuilder.AppendFormat("&id={0}", Uri.EscapeDataString(id)));
             }
 
-            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, pathBuilder.ToString(), method, operationMetadata.Credentials, convention)
+            var url = pathBuilder.ToString().Replace("//docs", "/docs");
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, url, method, operationMetadata.Credentials, convention)
                 .AddOperationHeaders(OperationsHeaders))
                 .AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
             {
@@ -2255,13 +2256,25 @@ namespace Raven.Client.Connection.Async
 
         internal async Task<ReplicationDocumentWithClusterInformation> DirectGetReplicationDestinationsAsync(OperationMetadata operationMetadata, TimeSpan? timeout = null)
         {
-            var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/replication/topology", HttpMethod.Get, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url), timeout);
+            var createHttpJsonRequestParams = new CreateHttpJsonRequestParams(this, operationMetadata.Url + "/topology", HttpMethod.Get, operationMetadata.Credentials, convention, GetRequestTimeMetric(operationMetadata.Url), timeout);
             using (var request = jsonRequestFactory.CreateHttpJsonRequest(createHttpJsonRequestParams.AddOperationHeaders(OperationsHeaders)).AddRequestExecuterAndReplicationHeaders(this, operationMetadata.Url))
             {
                 try
                 {
                     var requestJson = await request.ReadResponseJsonAsync().ConfigureAwait(false);
-                    return requestJson.JsonDeserialization<ReplicationDocumentWithClusterInformation>();
+                    var newResult = requestJson.JsonDeserialization<NewTopology>();
+
+                    var result = new ReplicationDocumentWithClusterInformation();
+                    newResult.Nodes.ForEach(x =>
+                    {
+                        result.Destinations.Add(new ReplicationDestination.ReplicationDestinationWithClusterInformation
+                        {
+                            Url = x.Url,
+                            ApiKey = x.ApiKey,
+                            Database = x.Database
+                        });
+                    });
+                    return result;
                 }
                 catch (ErrorResponseException e)
                 {
