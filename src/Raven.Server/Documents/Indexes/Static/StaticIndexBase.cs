@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private readonly Dictionary<string, CollectionName> _collectionsCache = new Dictionary<string, CollectionName>(StringComparer.OrdinalIgnoreCase);
 
-        public readonly Dictionary<string, IndexingFunc> Maps = new Dictionary<string, IndexingFunc>(StringComparer.OrdinalIgnoreCase);
+        public readonly Dictionary<string, List<IndexingFunc>> Maps = new Dictionary<string, List<IndexingFunc>>(StringComparer.OrdinalIgnoreCase);
 
         public readonly Dictionary<string, HashSet<CollectionName>> ReferencedCollections = new Dictionary<string, HashSet<CollectionName>>(StringComparer.OrdinalIgnoreCase);
 
@@ -30,7 +30,11 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public void AddMap(string collection, IndexingFunc map)
         {
-            Maps[collection] = map;
+            List<IndexingFunc> funcs;
+            if (Maps.TryGetValue(collection, out funcs) == false)
+                Maps[collection] = funcs = new List<IndexingFunc>();
+
+            funcs.Add(map);
         }
 
         public void AddReferencedCollection(string collection, string referencedCollection)
