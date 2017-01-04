@@ -248,12 +248,13 @@ namespace Raven.Server.Documents
             return code;
         }
 
-        private static string GenerateClassCodeFromSpec(IEnumerable<ClassType> classes)
+        private static string GenerateClassCodeFromSpec(IReadOnlyList<ClassType> classes)
         {
             var codeBuilder = new StringBuilder();
 
-            foreach (var @class in classes)
+            for (var i = 0; i < classes.Count; i++)
             {
+                var @class = classes[i];
                 codeBuilder.Append("\tpublic class " + @class.Name + Environment.NewLine);
                 codeBuilder.Append("\t{" + Environment.NewLine);
 
@@ -266,13 +267,16 @@ namespace Raven.Server.Documents
                     codeBuilder.Append(Environment.NewLine);
                 }
 
-                codeBuilder.Append("\t}" + Environment.NewLine);
+                codeBuilder.Append("\t}");
+
+                if (i < classes.Count - 1)
+                    codeBuilder.Append(Environment.NewLine + Environment.NewLine);
             }
 
             return codeBuilder.ToString();
         }
 
-        internal IEnumerable<ClassType> GenerateClassesTypesFromObject(string name, Document document)
+        internal List<ClassType> GenerateClassesTypesFromObject(string name, Document document)
         {
             // we need to clear the generated types;
             _generatedTypes.Clear();
@@ -468,8 +472,8 @@ namespace Raven.Server.Documents
             }
         }
 
-        private const string CodeLayout = @"
-using System;
+        private const string CodeLayout = 
+@"using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -478,7 +482,6 @@ using System.Threading.Tasks;
 namespace ##namespace
 {
 ##code
-}
-";
+}";
     }
 }
