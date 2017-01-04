@@ -380,7 +380,7 @@ namespace NewClientTests.NewClient.Server.Replication
                     Assert.NotNull(session.Load<User>("users/1"));
                 }
 
-                using (var session = store2.OpenSession())
+                using (var session = store3.OpenSession())
                 {
                     Assert.NotNull(session.Load<User>("users/1"));
                 }
@@ -409,20 +409,21 @@ namespace NewClientTests.NewClient.Server.Replication
                 }
 
                 EnableOrDisableReplication(store1, store2);
+
                 using (var session = store1.OpenSession())
                 {
                     session.Advanced.WaitForReplicationAfterSaveChanges();
                     session.Store(new User
                     {
-                        Name = "John Snow",
+                        Name = "Idan Haim",
                         Age = 30
-                    }, "users/1");
+                    }, "users/3");
                     session.SaveChanges();
                 }
 
                 using (var session = store2.OpenSession())
                 {
-                    Assert.NotNull(session.Load<User>("users/1"));
+                    Assert.NotNull(session.Load<User>("users/3"));
                 }
             }
         }
