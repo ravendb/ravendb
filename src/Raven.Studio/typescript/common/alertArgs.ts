@@ -1,23 +1,10 @@
 /// <reference path="../../typings/tsd.d.ts" />
 
-import alertType = require("common/alertType");
-import genUtils = require("common/generalUtils");
-
 class alertArgs {
-    id: string;
     private detailsObject: any;
     private parsedErrorInfo: any;
 
-    buttonName: string = null;
-    onClickAction: () => any = null;
-
-    constructor(public type: alertType, public title: string, public details: string = "", public httpStatusText: string = "", public displayInRecentErrors: boolean = true) {
-        this.id = "alert_" + genUtils.hashCode(title + details);
-    }
-
-    setupButtton(buttonName: string, onClickAction: () => any) {
-        this.buttonName = buttonName;
-        this.onClickAction = onClickAction;
+    constructor(public type: alertType, public title: string, public details: string = "", public httpStatusText: string = "") {
     }
 
     get errorMessage(): string {
@@ -34,7 +21,7 @@ class alertArgs {
             return this.parsedErrorInfo;
         }
 
-        if (this.type !== alertType.danger && this.type !== alertType.warning) {
+        if (this.type !== "Error" && this.type !== "Warning") {
             return null;
         }
 

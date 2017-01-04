@@ -209,9 +209,6 @@ class commandBase {
         messagePublisher.reportWarning(title, details, httpStatusText);
     }
 
-    reportWarningWithButton(title: string, details: string, buttonName: string, action: () => any) {
-        messagePublisher.reportWarningWithButton(title, details, buttonName, action);
-    }
 }
 
 
