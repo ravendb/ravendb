@@ -22,9 +22,9 @@ namespace Tryouts
             //    }
             //});
 
-            using (var a = new NewClientTests.NewClient.Delete())
+            using (var a = new FastTests.Server.Documents.Replication.ReplicationConflictsTests())
             {
-                a.Delete_Documents_By_id();
+                a.Conflict_then_patching_query_will_return_409_and_conflict_data().Wait();
             }
         }
     }
