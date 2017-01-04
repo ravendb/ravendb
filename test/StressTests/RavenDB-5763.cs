@@ -17,7 +17,7 @@ namespace SlowTests.Issues
             {
                 using (var store = new FastTests.Server.Documents.Replication.ReplicationTombstoneTests())
                 {
-                    store.Two_tombstones_should_replicate_in_master_master().Wait();
+                    store.Two_tombstones_should_replicate_in_master_master();
                 }
             });
         }
