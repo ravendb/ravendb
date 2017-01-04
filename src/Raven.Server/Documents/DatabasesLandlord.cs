@@ -108,7 +108,7 @@ namespace Raven.Server.Documents
                 var sp = Stopwatch.StartNew();
                 var documentDatabase = new DocumentDatabase(config.DatabaseName, config, ServerStore);
                 documentDatabase.Initialize();
-                DeleteDatabaseCachedInfo(documentDatabase,ServerStore);
+                DeleteDatabaseCachedInfo(documentDatabase, ServerStore);
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Started database {config.DatabaseName} in {sp.ElapsedMilliseconds:#,#;;0}ms");
 
@@ -118,7 +118,7 @@ namespace Raven.Server.Documents
                 LastRecentlyUsed.AddOrUpdate(databaseName, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
                 return documentDatabase;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Failed to start database {config.DatabaseName}", e);
@@ -217,7 +217,7 @@ namespace Raven.Server.Documents
 
                 var dataDirectoryKey = RavenConfiguration.GetKey(x => x.Core.DataDirectory);
                 string dataDirectory;
-                if (document.Settings.TryGetValue(dataDirectoryKey,out dataDirectory) == false || dataDirectory == null)
+                if (document.Settings.TryGetValue(dataDirectoryKey, out dataDirectory) == false || dataDirectory == null)
                     throw new DatabaseNotFoundException($"Could not find {dataDirectoryKey}");
 
                 if (document.Disabled && !ignoreDisabledDatabase)
@@ -254,7 +254,7 @@ namespace Raven.Server.Documents
                     maxLastWork = env.Environment.LastWorkTime;
             }
 
-            return maxLastWork + TimeSpan.FromMilliseconds(dbSize / 1024L ); 
+            return maxLastWork + TimeSpan.FromMilliseconds(dbSize / 1024L);
         }
     }
 }

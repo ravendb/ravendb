@@ -27,7 +27,7 @@ namespace Tryouts
                 Console.WriteLine(i);
                 using (var a = new FastTests.Server.Documents.Replication.ManualConflictResolution())
                 {
-                    a.ScriptResolveToTombstone().Wait();
+                    a.ScriptResolveToTombstone();
                 }
             }
         }

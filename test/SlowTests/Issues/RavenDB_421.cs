@@ -13,14 +13,14 @@ namespace SlowTests.Issues
 {
     public class RavenDB_421 : RavenTestBase
     {
-        public class Person
+        private class Person
         {
             public string Id { get; set; }
             public string Name { get; set; }
             public string[] Parents { get; set; }
         }
 
-        public class Family : AbstractMultiMapIndexCreationTask<Family.Result>
+        private class Family : AbstractMultiMapIndexCreationTask<Family.Result>
         {
             public class Result
             {
@@ -60,12 +60,12 @@ namespace SlowTests.Issues
                          from result in results
                          group result by result.PersonId
                              into g
-                             select new
-                             {
-                                 PersonId = g.Key,
-                                 g.FirstOrDefault(x => x.Name != null).Name,
-                                 Children = g.SelectMany(x => x.Children)
-                             };
+                         select new
+                         {
+                             PersonId = g.Key,
+                             g.FirstOrDefault(x => x.Name != null).Name,
+                             Children = g.SelectMany(x => x.Children)
+                         };
             }
 
         }
@@ -99,13 +99,10 @@ namespace SlowTests.Issues
                         .Where(x => x.PersonId == "people/1")
                         .ToList();
 
-                    WaitForUserToContinueTheTest(store);
                     var stats = await store.AsyncDatabaseCommands.GetIndexErrorsAsync();
                     Assert.Equal(0, stats[0].Errors.Length);
-
                 }
             }
         }
-
     }
 }
