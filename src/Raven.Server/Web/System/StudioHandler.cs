@@ -36,6 +36,7 @@ namespace Raven.Server.Web.System
              "wwwroot",
             "../Raven.Studio/wwwroot",
             "../src/Raven.Studio/wwwroot",
+            "../../../../../Raven.Studio/wwwroot"
         };
 
         public static Dictionary<string, string> FileExtensionToContentTypeMapping = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)

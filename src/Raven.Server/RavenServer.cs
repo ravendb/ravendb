@@ -11,11 +11,13 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.DependencyInjection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
 using Raven.Client.Data;
 using Raven.Client.Json;
 using Raven.Server.Alerts;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Exceptions;
 using Raven.Server.Routing;
@@ -383,6 +385,10 @@ namespace Raven.Server
                             case TcpConnectionHeaderMessage.OperationTypes.Replication:
                                 var documentReplicationLoader = tcp.DocumentDatabase.DocumentReplicationLoader;
                                 documentReplicationLoader.AcceptIncomingConnection(tcp);
+                                break;
+                            case TcpConnectionHeaderMessage.OperationTypes.TopologyDiscovery:
+                                var responder = new ReplicationTopologyDestinationExplorerResponder();
+                                responder.AcceptIncomingConnectionAndRespond(tcp);
                                 break;
                             default:
                                 throw new InvalidOperationException("Unknown operation for tcp " + header.Operation);
