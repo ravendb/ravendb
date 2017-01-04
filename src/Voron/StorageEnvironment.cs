@@ -79,6 +79,9 @@ namespace Voron
         internal int SizeOfUnflushedTransactionsInJournalFile;
         internal DateTime LastFlushTime;
 
+        private long _lastWorkTimeTicks;
+        public DateTime LastWorkTime => new DateTime(_lastWorkTimeTicks);
+
         private readonly Queue<TemporaryPage> _tempPagesPool = new Queue<TemporaryPage>();
         public bool Disposed;
         private readonly Logger _log;
@@ -209,10 +212,11 @@ namespace Voron
                 {
                     if (await _writeTransactionRunning.WaitAsync(TimeSpan.FromMilliseconds(Options.IdleFlushTimeout)) == false)
                     {
-                        if (Volatile.Read(ref SizeOfUnflushedTransactionsInJournalFile) != 0)
+                        if (Volatile.Read(ref SizeOfUnflushedTransactionsInJournalFile) != 0)                                                   
                             GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
-                        else if (Journal.Applicator.TotalWrittenButUnsyncedBytes != 0)
-                            QueueForSyncDataFile();
+
+                        else if (Journal.Applicator.TotalWrittenButUnsyncedBytes != 0)                        
+                            QueueForSyncDataFile();                            
                     }
                     else
                     {
@@ -462,6 +466,8 @@ namespace Voron
                     }
                     _currentTransactionHolder = NativeMemory.ThreadAllocations.Value;
                     _writeTransactionRunning.SetByAsyncCompletion();
+
+                    _lastWorkTimeTicks = DateTime.UtcNow.Ticks;
 
                     if (_endOfDiskSpace != null)
                     {
@@ -909,6 +915,11 @@ namespace Voron
         public void LogsApplied()
         {
             OnLogsApplied?.Invoke();
+        }
+
+        public void ResetLastWorkTime()
+        {
+            _lastWorkTimeTicks = DateTime.MinValue.Ticks;
         }
     }
 }

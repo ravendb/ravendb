@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Commands
 {
-    public class DeleteByCollectionCommand : RavenCommand<DeleteResult>
+    public class DeleteByCollectionCommand : RavenCommand<OperationIdResult>
     {
         public string CollectionName;
 
@@ -31,7 +31,7 @@ namespace Raven.NewClient.Client.Commands
         {
             if (response == null)
                 throw new InvalidOperationException("Got null response from the server after doing a delete by index, something is very wrong. ");
-            Result = JsonDeserializationClient.DeleteResult(response);
+            Result = JsonDeserializationClient.OperationIdResult(response);
         }
     }
 }

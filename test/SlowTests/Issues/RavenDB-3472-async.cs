@@ -3,31 +3,33 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client;
-using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.Client.Shard;
-using Raven.Tests.Helpers;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class ShardingTransformerTests_Async : RavenTestBase
     {
         [Fact]
         public async Task TransformerOverShardedLoad_IdIsNotNull()
         {
-            using (var server = GetNewServer())
+            using (var shard1 = GetDocumentStore())
+            using (var shard2 = GetDocumentStore())
+            using (var shard3 = GetDocumentStore())
             {
                 var shards = new Dictionary<string, IDocumentStore>
                 {
-                    {"Asia", new DocumentStore {Url = server.Configuration.ServerUrl, DefaultDatabase = "Asia3"}},
-                    {"Middle-East", new DocumentStore {Url = server.Configuration.ServerUrl, DefaultDatabase = "MiddleEast3"}},
-                    {"America", new DocumentStore {Url = server.Configuration.ServerUrl, DefaultDatabase = "America3"}},
+                    {"Asia", shard1},
+                    {"Middle-East", shard2},
+                    {"America", shard3}
                 };
 
                 ShardStrategy shardStrategy = new ShardStrategy(shards)
@@ -72,16 +74,18 @@ namespace Raven.Tests.Issues
         [Fact]
         public async Task TransformerOverShardedLoad_IdIsNotNull_WithCustomerStrategy()
         {
-            using (var server = GetNewServer())
+            using (var shard1 = GetDocumentStore())
+            using (var shard2 = GetDocumentStore())
+            using (var shard3 = GetDocumentStore())
             {
                 var shards = new Dictionary<string, IDocumentStore>
                 {
-                    {"Shard0", new DocumentStore {Url = server.Configuration.ServerUrl, DefaultDatabase = "2Shard0"}},
-                    {"Shard1", new DocumentStore {Url = server.Configuration.ServerUrl, DefaultDatabase = "2Shard1"}},
-                    {"Shard2", new DocumentStore {Url = server.Configuration.ServerUrl, DefaultDatabase = "2Shard2"}},
-           };
+                    {"Shard0", shard1},
+                    {"Shard1", shard2},
+                    {"Shard2", shard3}
+                };
 
-                var shardStrategy = new ShardStrategy(shards) {ShardResolutionStrategy = new ShardResolutionStrategy()};
+                var shardStrategy = new ShardStrategy(shards) { ShardResolutionStrategy = new ShardResolutionStrategy() };
 
                 using (IDocumentStore store = new ShardedDocumentStore(shardStrategy))
                 {
@@ -102,7 +106,7 @@ namespace Raven.Tests.Issues
                         await session.StoreAsync(american);
 
                         await session.SaveChangesAsync();
- 
+
 
                         americanCompanyId = american.Id;
                     }
@@ -120,11 +124,8 @@ namespace Raven.Tests.Issues
         [Fact]
         public async Task TransformerOverLoad_IdIsNotNull()
         {
-            using (IDocumentStore store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
-
-                store.Initialize();
-
                 new Transformer().Execute(store);
 
                 string americanCompanyId;
@@ -148,7 +149,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class ShardResolutionStrategy : IShardResolutionStrategy
+        private class ShardResolutionStrategy : IShardResolutionStrategy
         {
             public string GenerateShardIdFor(object entity, object sessionMetadata)
             {
@@ -171,7 +172,8 @@ namespace Raven.Tests.Issues
                 return new[] { "Shard0", "Shard1", "Shard2" };
             }
         }
-        public class Transformer : AbstractTransformerCreationTask<Company>
+
+        private class Transformer : AbstractTransformerCreationTask<Company>
         {
             public class Result
             {
@@ -190,14 +192,14 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class Company
+        private class Company
         {
             public string Id { get; set; }
             public string Name { get; set; }
             public string Region { get; set; }
         }
 
-        public class Invoice
+        private class Invoice
         {
             public string Id { get; set; }
             public string CompanyId { get; set; }
@@ -205,5 +207,4 @@ namespace Raven.Tests.Issues
             public DateTime IssuedAt { get; set; }
         }
     }
-
 }

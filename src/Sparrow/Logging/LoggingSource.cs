@@ -11,7 +11,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
 using Sparrow.Binary;
-using Sparrow.Collections;
 
 namespace Sparrow.Logging
 {

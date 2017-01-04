@@ -11,7 +11,7 @@ namespace Raven.Tests.Issues
         [Fact]
         public async Task CheapGetNextIdentityValueWithoutOverwritingOnExistingDocuments()
         {
-            using(var store = GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -39,6 +39,6 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class User{}
+        private class User { }
     }
 }

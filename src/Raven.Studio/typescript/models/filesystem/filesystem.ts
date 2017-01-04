@@ -8,8 +8,10 @@ class filesystem extends resource {
     static readonly type = "filesystem";
     static readonly qualifier = "fs";
 
-    constructor(name: string, isAdminCurrentTenant: boolean, disabled: boolean, bundles: string[] = []) {
-        super(name, isAdminCurrentTenant, disabled, bundles);
+    constructor(fsInfo: Raven.Client.Data.FileSystemInfo) {
+        super(fsInfo);
+
+        this.updateUsing(fsInfo);
         /* TODO: move somewhere else 
         this.isLicensed = ko.computed(() => {
             if (!!license.licenseStatus() && license.licenseStatus().IsCommercial) {

@@ -14,6 +14,7 @@ import resetCounterCommand = require("commands/counter/resetCounterCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import editCounterDialog = require("viewmodels/counter/editCounterDialog");
 import deleteGroup = require("viewmodels/counter/deleteGroup");
+import EVENTS = require("common/constants/events");
 
 class counters extends viewModelBase {
 
@@ -136,7 +137,7 @@ class counters extends viewModelBase {
         return [
             ko.postbox.subscribe("ChangeCounterValue", () => this.change()),
             ko.postbox.subscribe("ResetCounter", () => this.reset()),
-            ko.postbox.subscribe("ChangesApiReconnected", (cs: counterStorage) => this.reloadCountersData(cs)),
+            ko.postbox.subscribe(EVENTS.ChangesApi.Reconnected, (cs: counterStorage) => this.reloadCountersData(cs)),
             ko.postbox.subscribe("SortGroups", () => this.sortGroups()),
             ko.postbox.subscribe("SelectGroup", (groupName: string) => {
                 var groupToSelect = this.groups().find(g => g.name === groupName);

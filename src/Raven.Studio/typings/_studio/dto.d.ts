@@ -179,3 +179,7 @@ interface workTimeUnit {
     startTime: number;
     endTime: number;
 }
+
+type resourceDisconnectionCause = "Error" | "ResourceDeleted" | "ResourceDisabled" | "ChangingResource";
+
+type alertType = "Info" | "Success" | "Error" | "Warning";

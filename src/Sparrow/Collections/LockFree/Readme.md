@@ -1,0 +1,1 @@
+﻿Implementation of a non-blocking dictionary by VSadov (https://github.com/VSadov/NonBlocking) with optimizations for our purposes and usage patterns. 

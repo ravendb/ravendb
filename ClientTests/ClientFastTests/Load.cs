@@ -42,7 +42,7 @@ namespace NewClientTests.NewClient
                 using (var newSession = store.OpenSession())
                 {
                     var user = newSession.Load<User>(new[] { "users/1", "users/2" });
-                    Assert.Equal(user.Length, 2);
+                    Assert.Equal(user.Count, 2);
                 }
             }
         }
@@ -83,7 +83,7 @@ namespace NewClientTests.NewClient
                 using (var newSession = store.OpenSession())
                 {
                     var users = newSession.Load<User>(1, 2);
-                    Assert.Equal(users.Length, 2);
+                    Assert.Equal(users.Count, 2);
                 }
             }
         }
@@ -103,7 +103,7 @@ namespace NewClientTests.NewClient
                 using (var newSession = store.OpenSession())
                 {
                     var users = newSession.Load<User>(new List<System.ValueType> { 1, 2 });
-                    Assert.Equal(users.Length, 2);
+                    Assert.Equal(users.Count, 2);
 
                 }
             }
@@ -125,18 +125,37 @@ namespace NewClientTests.NewClient
                 {
                     var user1 = newSession.Load<User>((string) null);
                     Assert.Null(user1);
+                }
+            }
+        }
 
-                    var orderedArrayOfIdsWithNull = new[] {"users/1", null, "users/2", null};
+        [Fact]
+        public void Load_Multi_Ids_With_Null_Should_Return_Dictionary_Without_nulls()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Tony Montana" }, "users/1");
+                    session.Store(new User { Name = "Tony Soprano" }, "users/2");
+                    session.SaveChanges();
+                }
+
+                using (var newSession = store.OpenSession())
+                {
+                    var orderedArrayOfIdsWithNull = new[] { "users/1", null, "users/2", null };
                     var users1 = newSession.Load<User>(orderedArrayOfIdsWithNull);
-                    Assert.Equal(users1[0].Id, "users/1");
-                    Assert.Null(users1[1]);
-                    Assert.Equal(users1[2].Id, "users/2");
-                    Assert.Null(users1[3]);
-                    
+                    User user1;
+                    User user2;
+                    users1.TryGetValue("users/1", out user1);
+                    users1.TryGetValue("users/2", out user2);
+
+                    Assert.NotNull(user1);
+                    Assert.NotNull(user2);
+
                     var unorderedSetOfIdsWithNull = new HashSet<string>() { "users/1", null, "users/2", null };
                     var users2 = newSession.Load<User>(unorderedSetOfIdsWithNull);
-                    Assert.Equal(users2.Length, 3);
-                    Assert.True(users2[0]==null || users2[1] == null || users2[2] == null);
+                    Assert.Equal(users2.Count, 2);
                 }
             }
         }
@@ -192,7 +211,10 @@ namespace NewClientTests.NewClient
                 using (var session = store.OpenSession())
                 {
                     var users = session.Load<User>(ids);
-                    Assert.Equal(users[77].Id, "users/77");
+                    User user77;
+                    users.TryGetValue("users/77", out user77);
+                    Assert.NotNull(user77);
+                    Assert.Equal(user77.Id, "users/77");
                 }
             }
         }

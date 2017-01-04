@@ -22,15 +22,19 @@ namespace Raven.NewClient.Client.Document
     /// </summary>
     public partial class DocumentSession : InMemoryDocumentSessionOperations, IDocumentQueryGenerator, ISyncAdvancedSessionOperation, IDocumentSessionImpl
     {
-        ILazyLoaderWithInclude<TResult> ILazySessionOperations.Include<TResult>(Expression<Func<TResult, object>> path)
+        /// <summary>
+        /// Begin a load while including the specified path 
+        /// </summary>
+        /// <param name="path">The path.</param>
+        ILazyLoaderWithInclude<T> ILazySessionOperations.Include<T>(Expression<Func<T, object>> path)
         {
-            throw new NotImplementedException();
+            return new LazyMultiLoaderWithInclude<T>(this).Include(path);
         }
 
         /// <summary>
         /// Loads the specified ids.
         /// </summary>
-        Lazy<T[]> ILazySessionOperations.Load<T>(IEnumerable<string> ids)
+        Lazy<Dictionary<string, T>> ILazySessionOperations.Load<T>(IEnumerable<string> ids)
         {
             return Lazily.Load<T>(ids, null);
         }
@@ -38,7 +42,7 @@ namespace Raven.NewClient.Client.Document
         /// <summary>
         /// Loads the specified ids and a function to call when it is evaluated
         /// </summary>
-        Lazy<T[]> ILazySessionOperations.Load<T>(IEnumerable<string> ids, Action<T[]> onEval)
+        Lazy<Dictionary<string, T>> ILazySessionOperations.Load<T>(IEnumerable<string> ids, Action<Dictionary<string, T>> onEval)
         {
             return LazyLoadInternal(ids.ToArray(), new string[0], onEval);
         }
@@ -116,19 +120,19 @@ namespace Raven.NewClient.Client.Document
             return Lazily.Load(documentKey, onEval);
         }
 
-        Lazy<T[]> ILazySessionOperations.Load<T>(params ValueType[] ids)
+        Lazy<Dictionary<string, T>> ILazySessionOperations.Load<T>(params ValueType[] ids)
         {
             var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
             return Lazily.Load<T>(documentKeys);
         }
 
-        Lazy<T[]> ILazySessionOperations.Load<T>(IEnumerable<ValueType> ids)
+        Lazy<Dictionary<string, T>> ILazySessionOperations.Load<T>(IEnumerable<ValueType> ids)
         {
             var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
             return Lazily.Load<T>(documentKeys);
         }
 
-        Lazy<T[]> ILazySessionOperations.Load<T>(IEnumerable<ValueType> ids, Action<T[]> onEval)
+        Lazy<Dictionary<string, T>> ILazySessionOperations.Load<T>(IEnumerable<ValueType> ids, Action<IDictionary<string, T>> onEval)
         {
             var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
             return LazyLoadInternal(documentKeys.ToArray(), new string[0], onEval);
@@ -140,8 +144,7 @@ namespace Raven.NewClient.Client.Document
             var transformer = new TTransformer().TransformerName;
             var ids = new[] {id};
             var configuration = new RavenLoadConfiguration();
-            if (configure != null)
-                configure(configuration);
+            configure?.Invoke(configuration);
 
             var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(
                 ids,
@@ -196,32 +199,39 @@ namespace Raven.NewClient.Client.Document
             return AddLazyOperation<TResult[]>(lazyLoadOperation, null);
         }
 
-        Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter)
+        Lazy<IDictionary<string, T>> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter)
         {
             var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, pagingInformation, skipAfter);
 
-            return AddLazyOperation<T[]>(operation, null);
+            return AddLazyOperation<IDictionary<string, T>>(operation, null);
         }
 
 
-        public Lazy<TResult[]> MoreLikeThis<TResult>(MoreLikeThisQuery query)
+        public Lazy<Dictionary<string, TResult>> MoreLikeThis<TResult>(MoreLikeThisQuery query)
         {
-            throw new NotImplementedException();
+            //TODO - DisableAllCaching
+            var loadOperation = new LoadOperation(this);
+            var lazyOp = new LazyMoreLikeThisOperation<TResult>(loadOperation, query);
+            return AddLazyOperation<Dictionary<string, TResult>>(lazyOp, null);
         }
 
+        /// <summary>
+        /// Begin a load while including the specified path 
+        /// </summary>
+        /// <param name="path">The path.</param>
         ILazyLoaderWithInclude<object> ILazySessionOperations.Include(string path)
         {
-            throw new NotImplementedException();
+            return new LazyMultiLoaderWithInclude<object>(this).Include(path);
         }
 
         /// <summary>
         /// Register to lazily load documents and include
         /// </summary>
-        public Lazy<T[]> LazyLoadInternal<T>(string[] ids, string[] includes, Action<T[]> onEval)
+        public Lazy<Dictionary<string, T>> LazyLoadInternal<T>(string[] ids, string[] includes, Action<Dictionary<string, T>> onEval)
         {
             if (CheckIfIdAlreadyIncluded(ids, includes))
             {
-                return new Lazy<T[]>(() => ids.Select(Load<T>).ToArray());
+                return new Lazy<Dictionary<string, T>>(() => ids.ToDictionary(x => x, Load<T>));
             }
             var loadOperation = new LoadOperation(this, ids, includes);
             var lazyOp = new LazyLoadOperation<T>(loadOperation, ids, includes);

@@ -10,6 +10,7 @@ using Raven.Abstractions.Replication;
 using Raven.Client.Data;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Server.Documents.Replication
@@ -28,7 +29,7 @@ namespace FastTests.Server.Documents.Replication
 
                 using (var session = master.OpenSession())
                 {
-                    session.Store(new ReplicationConflictsTests.User()
+                    session.Store(new User()
                     {
                         Name = "Karmel"
                     }, "users/1");
@@ -45,7 +46,7 @@ namespace FastTests.Server.Documents.Replication
                 }
                 using (var session = master.OpenSession())
                 {
-                    session.Store(new ReplicationConflictsTests.User()
+                    session.Store(new User()
                     {
                         Name = "Karmeli"
                     }, "users/1");
@@ -59,7 +60,7 @@ namespace FastTests.Server.Documents.Replication
                 {
                     try
                     {
-                        var item = session.Load<ReplicationConflictsTests.User>("users/1");
+                        var item = session.Load<User>("users/1");
                         Assert.Equal(item.Name, "Karmeli123");
                     }
                     catch (ErrorResponseException e)
@@ -94,7 +95,7 @@ namespace FastTests.Server.Documents.Replication
 
                 using (var session = slave.OpenSession())
                 {
-                    session.Store(new ReplicationConflictsTests.User()
+                    session.Store(new User()
                     {
                         Name = "Karmel"
                     }, "users/1");
@@ -103,13 +104,13 @@ namespace FastTests.Server.Documents.Replication
 
                 using (var session = master.OpenSession())
                 {
-                    session.Store(new ReplicationConflictsTests.User()
+                    session.Store(new User()
                     {
                         Name = "Karmeli"
                     }, "users/1");
                     session.SaveChanges();
                 }
-                
+
                 var tombstoneIDs = await WaitUntilHasTombstones(slave);
                 Assert.Equal(1, tombstoneIDs.Count);
             }
@@ -139,7 +140,8 @@ function onlyUnique(value, index, self) {
                 Name: names.filter(onlyUnique).join(' '),
                 Age: Math.max.apply(Math,docs.map(function(o){return o.Age;})),
                 Grades:{Bio:12,Math:123,Pys:5,Sports:44},
-                Versions:history
+                Versions:history,
+                '@metadata':docs[0]['@metadata']
             }
 output(out);
 return out;
@@ -148,18 +150,18 @@ return out;
                 long? etag;
                 using (var session = slave.OpenSession())
                 {
-                    session.Store(new ReplicationConflictsTests.User()
+                    session.Store(new User()
                     {
                         Name = "Karmel",
                         Age = 12
                     }, "users/1");
                     session.SaveChanges();
-                    etag = session.Advanced.GetEtagFor(session.Load<ReplicationConflictsTests.User>("users/1"));
+                    etag = session.Advanced.GetEtagFor(session.Load<User>("users/1"));
                 }
 
                 using (var session = master.OpenSession())
                 {
-                    session.Store(new ReplicationConflictsTests.User()
+                    session.Store(new User()
                     {
                         Name = "Karmel",
                         Age = 123
@@ -175,7 +177,7 @@ return out;
                 {
                     try
                     {
-                        var item = session.Load<ReplicationConflictsTests.User>("users/1");
+                        var item = session.Load<User>("users/1");
                         Assert.Equal("Karmel", item.Name);
                         Assert.Equal(123, item.Age);
                     }
@@ -199,18 +201,18 @@ return out;
                 long? etag;
                 using (var session = slave.OpenSession())
                 {
-                    session.Store(new ReplicationConflictsTests.User()
+                    session.Store(new User()
                     {
                         Name = "Karmel1",
                         Age = 1
                     }, "users/1");
                     session.SaveChanges();
-                    etag = session.Advanced.GetEtagFor(session.Load<ReplicationConflictsTests.User>("users/1"));
+                    etag = session.Advanced.GetEtagFor(session.Load<User>("users/1"));
                 }
 
                 using (var session = master.OpenSession())
                 {
-                    session.Store(new ReplicationConflictsTests.User()
+                    session.Store(new User()
                     {
                         Name = "Karmel2",
                         Age = 2
@@ -219,18 +221,18 @@ return out;
                 }
 
                 var conflicts = await WaitUntilHasConflict(slave, "users/1");
-                Assert.Equal(2,conflicts["users/1"].Count);
+                Assert.Equal(2, conflicts["users/1"].Count);
             }
         }
 
-        public bool WaitForBiggerEtag(DocumentStore store,long? etag)
+        public bool WaitForBiggerEtag(DocumentStore store, long? etag)
         {
             var sw = Stopwatch.StartNew();
             while (sw.ElapsedMilliseconds < 10000)
             {
                 using (var session = store.OpenSession())
                 {
-                    var doc = session.Load<ReplicationConflictsTests.User>("users/1");
+                    var doc = session.Load<User>("users/1");
                     if (session.Advanced.GetEtagFor(doc) > etag)
                         return true;
                 }
@@ -248,7 +250,7 @@ return out;
                 {
                     try
                     {
-                        session.Load<ReplicationConflictsTests.User>("users/1");
+                        session.Load<User>("users/1");
                         return true;
                     }
                     catch
@@ -276,7 +278,7 @@ return out;
                             }
                         }
                 }, Constants.Replication.DocumentReplicationConfiguration);
-                
+
                 session.SaveChanges();
             }
         }

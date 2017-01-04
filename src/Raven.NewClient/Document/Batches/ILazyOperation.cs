@@ -14,8 +14,5 @@ namespace Raven.NewClient.Client.Document.Batches
         QueryResult QueryResult { get; }
         bool RequiresRetry { get; }
         void HandleResponse(BlittableJsonReaderObject response);
-        void HandleResponses(BlittableJsonReaderObject[] responses, ShardStrategy shardStrategy);
-
-        IDisposable EnterContext();
     }
 }

@@ -65,7 +65,8 @@ namespace Voron.Benchmark
                         LaunchCount = 1,
                         WarmupCount = 1,
                         TargetCount = 1,
-                        InvocationCount = 1
+                        InvocationCount = 1,
+                        UnrollFactor = 1
                     },
                     // TODO: Next line is just for testing. Fine tune parameters.
                 });

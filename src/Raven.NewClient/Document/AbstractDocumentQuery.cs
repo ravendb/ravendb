@@ -6,7 +6,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -17,10 +16,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using Raven.NewClient.Abstractions.Spatial;
-using Raven.NewClient.Abstractions.Util;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Linq;
@@ -33,6 +29,8 @@ using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Util;
+using Raven.NewClient.Client.Document.Async;
+using Raven.NewClient.Client.Document.Batches;
 
 namespace Raven.NewClient.Client.Document
 {
@@ -264,7 +262,6 @@ namespace Raven.NewClient.Client.Document
             
             this.projectionFields = projectionFields;
             this.fieldsToFetch = fieldsToFetch;
-            //this.queryListeners = queryListeners;
             this.isMapReduce = isMapReduce;
             this.indexName = indexName;
             this.theSession = theSession;
@@ -668,33 +665,19 @@ namespace Raven.NewClient.Client.Document
             return Lazily(null);
         }
 
-        //the assumption here that there is only one of them is not null
-        //and even if not, they should have the same operation headers 
-        private NameValueCollection GetOperationHeaders()
-        {
-            throw new NotImplementedException();
-            /*if (DatabaseCommands != null)
-                return DatabaseCommands.OperationsHeaders;
-
-            return AsyncDatabaseCommands != null ?
-                AsyncDatabaseCommands.OperationsHeaders : new NameValueCollection(0);*/
-        }
-
         /// <summary>
         /// Register the query as a lazy query in the session and return a lazy
         /// instance that will evaluate the query only when needed
         /// </summary>
         public virtual Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval)
         {
-            throw new NotImplementedException();
-            /*if (queryOperation == null)
+            if (queryOperation == null)
             {
-                ExecuteBeforeQueryListeners();
                 queryOperation = InitializeQueryOperation();
             }
 
-            var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, GetOperationHeaders());
-            return ((DocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);*/
+            var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback);
+            return ((DocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
         }
 
         /// <summary>
@@ -703,16 +686,13 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         public virtual Lazy<Task<IEnumerable<T>>> LazilyAsync(Action<IEnumerable<T>> onEval)
         {
-            throw new NotImplementedException();
-
-            /*if (queryOperation == null)
+            if (queryOperation == null)
             {
-                ExecuteBeforeQueryListeners();
                 queryOperation = InitializeQueryOperation();
             }
 
-            var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, GetOperationHeaders());
-            return ((AsyncDocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);*/
+            var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback);
+            return ((AsyncDocumentSession)theSession).AddLazyOperation(lazyQueryOperation, onEval);
         }
 
 
@@ -724,9 +704,8 @@ namespace Raven.NewClient.Client.Document
         {
             throw new NotImplementedException();
 
-            /*if (queryOperation == null)
+           /* if (queryOperation == null)
             {
-                ExecuteBeforeQueryListeners();
                 Take(0);
                 queryOperation = InitializeQueryOperation();
             }

@@ -72,7 +72,7 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         /// <param name="ids">The ids.</param>
         /// <returns></returns>
-        public Task<T[]> LoadAsync(params string[] ids)
+        public Task<Dictionary<string, T>> LoadAsync(params string[] ids)
         {
             return session.LoadAsyncInternal<T>(ids, includes.ToArray());
         }
@@ -82,7 +82,7 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         /// <param name="ids">The ids.</param>
         /// <returns></returns>
-        public Task<T[]> LoadAsync(IEnumerable<string> ids)
+        public Task<Dictionary<string, T>> LoadAsync(IEnumerable<string> ids)
         {
             return session.LoadAsyncInternal<T>(ids.ToArray(), includes.ToArray());
         }
@@ -94,7 +94,7 @@ namespace Raven.NewClient.Client.Document
         /// <returns></returns>
         public Task<T> LoadAsync(string id)
         {
-            return session.LoadAsyncInternal<T>(new[] { id }, includes.ToArray()).ContinueWith(x => x.Result.FirstOrDefault());
+            return session.LoadAsyncInternal<T>(new[] { id }, includes.ToArray()).ContinueWith(x => x.Result.Values.FirstOrDefault());
         }
 
         /// <summary>
@@ -127,7 +127,7 @@ namespace Raven.NewClient.Client.Document
         /// 
         /// Or whatever your conventions specify.
         /// </remarks>
-        public Task<T[]> LoadAsync(params ValueType[] ids)
+        public Task<Dictionary<string, T>> LoadAsync(params ValueType[] ids)
         {
             var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
             return LoadAsync(documentKeys);
@@ -145,7 +145,7 @@ namespace Raven.NewClient.Client.Document
         /// 
         /// Or whatever your conventions specify.
         /// </remarks>
-        public Task<T[]> LoadAsync(IEnumerable<ValueType> ids)
+        public Task<Dictionary<string, T>> LoadAsync(IEnumerable<ValueType> ids)
         {
             var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
             return LoadAsync(documentKeys);
@@ -165,7 +165,7 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         /// <param name="ids">The ids.</param>
         /// <returns></returns>
-        public Task<TResult[]> LoadAsync<TResult>(params string[] ids)
+        public Task<Dictionary<string, TResult>> LoadAsync<TResult>(params string[] ids)
         {
             return session.LoadAsyncInternal<TResult>(ids, includes.ToArray());
         }
@@ -175,7 +175,7 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         /// <param name="ids">The ids.</param>
         /// <returns></returns>
-        public Task<TResult[]> LoadAsync<TResult>(IEnumerable<string> ids)
+        public Task<Dictionary<string, TResult>> LoadAsync<TResult>(IEnumerable<string> ids)
         {
             return session.LoadAsyncInternal<TResult>(ids.ToArray(), includes.ToArray());
         }
@@ -187,7 +187,7 @@ namespace Raven.NewClient.Client.Document
         /// <param name="id">The id.</param>
         public Task<TResult> LoadAsync<TResult>(string id)
         {
-            return LoadAsync<TResult>(new[] { id }).ContinueWith(x => x.Result.FirstOrDefault());
+            return LoadAsync<TResult>(new[] { id }).ContinueWith(x => x.Result.Values.FirstOrDefault());
         }
 
         /// <summary>
@@ -220,7 +220,7 @@ namespace Raven.NewClient.Client.Document
         /// 
         /// Or whatever your conventions specify.
         /// </remarks>
-        public Task<TResult[]> LoadAsync<TResult>(params ValueType[] ids)
+        public Task<Dictionary<string, TResult>> LoadAsync<TResult>(params ValueType[] ids)
         {
             var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
             return LoadAsync<TResult>(documentKeys);
@@ -238,7 +238,7 @@ namespace Raven.NewClient.Client.Document
         /// 
         /// Or whatever your conventions specify.
         /// </remarks>
-        public Task<TResult[]> LoadAsync<TResult>(IEnumerable<ValueType> ids)
+        public Task<Dictionary<string, TResult>> LoadAsync<TResult>(IEnumerable<ValueType> ids)
         {
             var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
             return LoadAsync<TResult>(documentKeys);

@@ -5,11 +5,11 @@
             <p>Import data from a .ravendbdump file into the current database.</p>
 
             <p class="bg-warning padding padding-xs small"><i class="icon-warning"></i> Note: Importing will overwrite any existing documents and indexes.</p>
-
+            
             <div class="row">
                 <div class="col-sm-6">
-                    <div class="input-group file-input">
-                        <input required="" type="file" id="importDatabaseFilePicker" data-bind="event: { change: _.partial(fileSelected, $element.value) }, disable: isImporting" tabindex="-1">
+                    <div class="input-group file-input" data-bind="validationElement: importedFileName">
+                        <input type="file" id="importDatabaseFilePicker" data-bind="event: { change: _.partial(fileSelected, $element.value) }, disable: isImporting" tabindex="-1">
                         <span class="static-name form-control" data-bind="text: importedFileName() || 'Select file...'"></span>
                         <span class="input-group-btn">
                             <label for="importDatabaseFilePicker" class="btn btn-default">
@@ -17,6 +17,7 @@
                                 <span>Browse</span>
                             </label>
                         </span>
+                        <p class="help-block" data-bind="validationMessage: importedFileName"></p>
                     </div>
                 </div>
             </div>
@@ -105,7 +106,7 @@
                                 <span>Copy to clipboard</span>
                             </button>
                         </span>
-                        <input onClick="this.select();" class="form-control" readonly value='Raven.Smuggler out http://live-test.ravendb.net raven.dump --operate-on-types=Documents,Indexes,Transformers --database="Media" --batch-size=1024 --excludeexpired'>
+                        <input onClick="this.select();" class="form-control" readonly data-bind="value: $root.importCommand">
                     </div>
                 </div>
             </div>

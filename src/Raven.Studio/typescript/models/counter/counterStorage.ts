@@ -6,7 +6,7 @@ class counterStorage extends resource {
     static readonly qualifier = "cs";
 
     constructor(name: string, isAdminCurrentTenant: boolean, isDisabled: boolean, bundles: string[] = []) {
-        super(name, isAdminCurrentTenant, isDisabled, bundles);
+        super(null); //TODO: use resource info!
         /* TODO:
         this.isLicensed = ko.computed(() => {
             if (!!license.licenseStatus() && license.licenseStatus().IsCommercial) {

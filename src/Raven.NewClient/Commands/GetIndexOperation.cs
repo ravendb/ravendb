@@ -30,7 +30,7 @@ namespace Raven.NewClient.Client.Commands
             };
         }
 
-        public void SetResult(GetIndexResult result)
+        public void SetResult(BlittableArrayResult result)
         {
             if (result == null)
             {

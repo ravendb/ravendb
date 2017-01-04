@@ -5,6 +5,8 @@ import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeightBindingHandler");
 
+import EVENTS = require("common/constants/events");
+
 import changesContext = require("common/changesContext");
 import viewModelBase = require("viewmodels/viewModelBase");
 import deleteCollection = require("viewmodels/database/documents/deleteCollection");
@@ -224,7 +226,7 @@ class documents extends viewModelBase {
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
         return [
             ko.postbox.subscribe("EditItem", () => this.editSelectedDoc()),
-            ko.postbox.subscribe("ChangesApiReconnected", (db: database) => this.reloadDocumentsData(db)),
+            ko.postbox.subscribe(EVENTS.ChangesApi.Reconnected, (db: database) => this.reloadDocumentsData(db)),
             ko.postbox.subscribe("SortCollections", () => this.sortCollections())
         ];
     }

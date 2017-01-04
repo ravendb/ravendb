@@ -11,7 +11,7 @@ describe(viewUnderTest, () => {
         utils.mockCommand("commands/database/index/getIndexesStatusCommand", () => []);
         utils.mockCommand('commands/database/index/getPendingIndexReplacementsCommand', () => []);
 
-        return utils.mockActiveDatabase(dbCtr => new dbCtr("default"))
+        return utils.mockActiveDatabase()
             .then(() => utils.runViewmodelTest(viewUnderTest, {}));
     });
 
@@ -21,7 +21,7 @@ describe(viewUnderTest, () => {
         utils.mockCommand("commands/database/index/getIndexesStatusCommand", () => getSampleIndexStatus());
         utils.mockCommand('commands/database/index/getPendingIndexReplacementsCommand', () => []);
 
-        return utils.mockActiveDatabase(dbCtr => new dbCtr("default"))
+        return utils.mockActiveDatabase()
             .then(() => utils.runViewmodelTest(viewUnderTest, {}));
     });
 
@@ -32,7 +32,7 @@ describe(viewUnderTest, () => {
         utils.mockCommand("commands/database/index/getIndexesStatusCommand", () => getFaultyIndexStatus());
         utils.mockCommand('commands/database/index/getPendingIndexReplacementsCommand', () => []);
 
-        return utils.mockActiveDatabase(dbCtr => new dbCtr("default"))
+        return utils.mockActiveDatabase()
             .then(() => utils.runViewmodelTest(viewUnderTest, {}));
     });
 });

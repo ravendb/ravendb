@@ -8,18 +8,13 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Logging;
-using Raven.Client.Connection;
-using Raven.Client.Document;
 using Raven.Client.Json;
 using Raven.Server.Config;
 using Raven.Server.Exceptions;
-using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
-using Sparrow.Logging;
 
 namespace Raven.Server.Documents
 {
@@ -235,6 +230,31 @@ namespace Raven.Server.Documents
         public DatabasesLandlord(ServerStore serverStore) : base(serverStore)
         {
 
+        }
+
+        public override DateTime LastWork(DocumentDatabase resource)
+        {
+            // this allow us to increase the time large databases will be held in memory
+            // because they are more expensive to unload & reload. Using this method, we'll
+            // add 0.5 ms per each KB, or roughly half a second of idle time per MB.
+            // A DB with 1GB will remain live another 16 minutes after being idle. Given the default idle time
+            // that means that we'll keep it alive for about 30 minutes without shutting down.
+            // A database with 50GB will take roughly 8 hours of idle time to shut down.
+
+            var envs = resource.GetAllStoragesEnvironment();
+
+            long dbSize = 0;
+            var maxLastWork = DateTime.MinValue;
+
+            foreach (var env in envs)
+            {
+                dbSize += env.Environment.Stats().AllocatedDataFileSizeInBytes;
+
+                if (env.Environment.LastWorkTime > maxLastWork)
+                    maxLastWork = env.Environment.LastWorkTime;
+            }
+
+            return maxLastWork + TimeSpan.FromMilliseconds(dbSize / 1024L ); 
         }
     }
 }
