@@ -80,8 +80,8 @@ class notificationCenter {
     }
 
     private shouldConsumeHideEvent(e: Event) {
-        return $(e.target).parents(".notification-center-container").length === 0
-            && $(e.target).parents("#notification-toggle").length === 0;
+        return $(e.target).closest(".notification-center-container").length === 0
+            && $(e.target).closest("#notification-toggle").length === 0;
     }
 }
 
