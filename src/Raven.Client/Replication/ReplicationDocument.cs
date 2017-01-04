@@ -80,4 +80,94 @@ namespace Raven.Abstractions.Replication
         public long Term { get; set; }
         public long ClusterCommitIndex { get; set; }
     }
+
+    public class NewTopology
+    {
+        public List<NewServerNode> Nodes;
+        public NewServerNode LeaderNode;
+    }
+
+    public class NewServerNode
+    {
+        public string Url;
+        public string Database;
+        public string ApiKey;
+        public string CurrentToken;
+        public bool IsFailed;
+
+        private const double SwitchBackRatio = 0.75;
+        private bool _isRateSurpassed;
+
+        public NewServerNode()
+        {
+            for (var i = 0; i < 60; i++)
+                UpdateRequestTime(0);
+        }
+
+        public void UpdateRequestTime(long requestTimeInMilliseconds)
+        {
+            
+        }
+
+        public bool IsRateSurpassed(double requestTimeSlaThresholdInMilliseconds)
+        {
+            var rate = Rate();
+
+            if (_isRateSurpassed)
+                return _isRateSurpassed = rate >= SwitchBackRatio * requestTimeSlaThresholdInMilliseconds;
+
+            return _isRateSurpassed = rate >= requestTimeSlaThresholdInMilliseconds;
+        }
+
+        public double Rate()
+        {
+            return 0;
+        }
+
+        private bool Equals(NewServerNode other)
+        {
+            return string.Equals(Url, other.Url) &&
+                string.Equals(Database, other.Database) &&
+                string.Equals(ApiKey, other.ApiKey);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != GetType()) return false;
+            return Equals((NewServerNode)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = Url?.GetHashCode() ?? 0;
+                hashCode = (hashCode * 397) ^ (Database?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (ApiKey?.GetHashCode() ?? 0);
+                return hashCode;
+            }
+        }
+
+        private const double MaxDecreasingRatio = 0.75;
+        private const double MinDecreasingRatio = 0.25;
+
+        public void DecreaseRate(long requestTimeInMilliseconds)
+        {
+            var rate = Rate();
+            var maxRate = MaxDecreasingRatio * rate;
+            var minRate = MinDecreasingRatio * rate;
+
+            var decreasingRate = rate - requestTimeInMilliseconds;
+
+            if (decreasingRate > maxRate)
+                decreasingRate = maxRate;
+
+            if (decreasingRate < minRate)
+                decreasingRate = minRate;
+
+            UpdateRequestTime((long)decreasingRate);
+        }
+    }
 }

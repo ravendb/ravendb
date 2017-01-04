@@ -83,8 +83,8 @@ namespace Raven.Server
             {
                 if (context.RequestAborted.IsCancellationRequested)
                     return;
+
                 //TODO: special handling for argument exception (400 bad request)
-                //TODO: database not found (503)
                 //TODO: operaton cancelled (timeout)
                 //TODO: Invalid data exception 422
 
@@ -92,9 +92,14 @@ namespace Raven.Server
                 //TODO: Proper json output, not like this
                 var response = context.Response;
 
+                var databaseMissingException = e is DatabaseNotFoundException ||
+                                               e is DatabaseDisabledException;
                 var documentConflictException = e as DocumentConflictException;
+
                 if (response.HasStarted == false)
                 {
+                    if (databaseMissingException)
+                        response.StatusCode = 503;
                     if (documentConflictException != null)
                         response.StatusCode = 409;
                     else if (response.StatusCode < 400)
