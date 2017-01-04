@@ -24,27 +24,7 @@ using Voron.Data.Tables;
 namespace Raven.Server.Utils
 {
     public static class ReplicationUtils
-    {
-        public static NodeTopologyInfo Merge(IReadOnlyList<NodeTopologyInfo> topologies)
-        {
-            if(topologies == null || topologies.Count == 0)
-                return new NodeTopologyInfo();
-
-            for (int i = 1; i < topologies.Count; i++)
-            {
-                foreach (var ni in topologies[i].IncomingByIncomingDbId)
-                    topologies[0].IncomingByIncomingDbId[ni.Key] = ni.Value;
-
-                foreach (var ni in topologies[i].OfflineByUrlAndDatabase)
-                    topologies[0].OfflineByUrlAndDatabase[ni.Key] = ni.Value;
-
-                foreach (var ni in topologies[i].OutgoingByDbId)
-                    topologies[0].OutgoingByDbId[ni.Key] = ni.Value;
-            }
-
-            return topologies[0];
-        }
-
+    {        
         private static Dictionary<string, long> ConvertChangeVectorToDictionary(ChangeVectorEntry[] changeVector)
         {
             var globalChangeVector = new Dictionary<string, long>();
@@ -59,17 +39,19 @@ namespace Raven.Server.Utils
             DocumentsOperationContext context,
             out List<ReplicationDestination> activeDestinations)
         {
+            if (context.Transaction == null)
+                throw new InvalidOperationException("Fetching local transaction requires an open tx");
+
             activeDestinations = new List<ReplicationDestination>();
-            var topologyInfo = new NodeTopologyInfo();
+            var topologyInfo = new NodeTopologyInfo { OriginDbId = database.DbId.ToString() };
             var replicationLoader = database.DocumentReplicationLoader;
 
             foreach (var incomingHandler in replicationLoader.IncomingHandlers)
             {
-                topologyInfo.IncomingByIncomingDbId.Add(
-                    incomingHandler.ConnectionInfo.SourceDatabaseId,
+                topologyInfo.Incoming.Add(
                     new ActiveNodeStatus
                     {
-                        DbId = database.DbId.ToString(),
+                        DbId = incomingHandler.ConnectionInfo.SourceDatabaseId,
                         IsOnline = true,
                         NodeStatus = ActiveNodeStatus.Status.Online,
                         LastDocumentEtag = incomingHandler.LastDocumentEtag,
@@ -90,8 +72,7 @@ namespace Raven.Server.Utils
                 {
                     var changeVector = outgoingHandler._database.DocumentsStorage.GetDatabaseChangeVector(context);
                     var globalChangeVector = ConvertChangeVectorToDictionary(changeVector);
-                    topologyInfo.OutgoingByDbId.Add(
-                        database.DbId.ToString(),
+                    topologyInfo.Outgoing.Add(
                         new ActiveNodeStatus
                         {
                             DbId = outgoingHandler.DestinationDbId,
@@ -107,8 +88,7 @@ namespace Raven.Server.Utils
                 }
                 else if (replicationLoader.OutgoingFailureInfo.TryGetValue(destination, out connectionFailureInfo))
                 {
-                    topologyInfo.OutgoingByDbId.Add(
-                        database.DbId.ToString(),
+                    topologyInfo.Outgoing.Add(
                         new ActiveNodeStatus
                         {
                             DbId = connectionFailureInfo.DestinationDbId,
@@ -139,8 +119,7 @@ namespace Raven.Server.Utils
                         isAliveCheckException = e;
                     }
 
-                    topologyInfo.OfflineByUrlAndDatabase.Add(
-                        $"{destination.Url.ToLowerInvariant()}|{destination.Database.ToLowerInvariant()}",
+                    topologyInfo.Offline.Add(
                         new InactiveNodeStatus
                         {
                             Database = destination.Database,

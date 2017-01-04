@@ -1047,7 +1047,7 @@ namespace Raven.Server.Documents.Replication
             });
 
             writer.Flush();
-            LastHeartbeatTicks = DateTime.UtcNow.Ticks;
+            LastHeartbeatTicks = _database.Time.GetUtcNow().Ticks;
         }
 
         public string FromToString => $"from {ConnectionInfo.SourceDatabaseName} at {ConnectionInfo.SourceUrl} (into database {_database.Name})";

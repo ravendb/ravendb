@@ -5,45 +5,69 @@ namespace Raven.Client.Replication.Messages
 {
     public class FullTopologyInfo
     {
+        public string LeaderDbId;
+
         public Dictionary<string, NodeTopologyInfo> NodesByDbId;
-    }
 
-    /// <summary>
-    /// contains all adjacent (both incoming and outgoing) connections of a specific node
-    /// </summary>
-    public class NodeTopologyInfo
-    {
-        public Dictionary<string, ActiveNodeStatus> OutgoingByDbId;
-        public Dictionary<string, ActiveNodeStatus> IncomingByIncomingDbId;
-
-        public Dictionary<string, InactiveNodeStatus> OfflineByUrlAndDatabase;
-
-        public NodeTopologyInfo()
+        internal FullTopologyInfo()
         {
-            OutgoingByDbId = new Dictionary<string, ActiveNodeStatus>();
-            IncomingByIncomingDbId = new Dictionary<string, ActiveNodeStatus>();
-            OfflineByUrlAndDatabase = new Dictionary<string, InactiveNodeStatus>();
+        }
+
+        public FullTopologyInfo(string leaderDbId)
+        {
+            LeaderDbId = leaderDbId;
+            NodesByDbId = new Dictionary<string, NodeTopologyInfo>();
         }
 
         public DynamicJsonValue ToJson()
         {
-            var outgoingByDbIdJson = new DynamicJsonValue();
-            foreach (var kvp in OutgoingByDbId)
-                outgoingByDbIdJson[kvp.Key] = kvp.Value.ToJson();
-
-            var incomingByDbIdJson = new DynamicJsonValue();
-            foreach (var kvp in IncomingByIncomingDbId)
-                incomingByDbIdJson[kvp.Key] = kvp.Value.ToJson();
-
-            var offlineByUrlAndDatabaseJson = new DynamicJsonValue();
-            foreach (var kvp in OfflineByUrlAndDatabase)
-                offlineByUrlAndDatabaseJson[kvp.Key] = kvp.Value.ToJson();
+            var nodesByDbIdJson = new DynamicJsonValue();
+            foreach (var kvp in NodesByDbId)
+                nodesByDbIdJson[kvp.Key] = kvp.Value.ToJson();
 
             return new DynamicJsonValue
             {
-                [nameof(OutgoingByDbId)] = outgoingByDbIdJson,
-                [nameof(IncomingByIncomingDbId)] = incomingByDbIdJson,
-                [nameof(OfflineByUrlAndDatabase)] = offlineByUrlAndDatabaseJson
+                [nameof(LeaderDbId)] = LeaderDbId,
+                [nameof(NodesByDbId)] = nodesByDbIdJson
+            };
+        }
+    }
+
+    public class NodeTopologyInfo
+    {
+        public string OriginDbId;
+
+        public List<ActiveNodeStatus> Outgoing;
+        public List<ActiveNodeStatus> Incoming;
+
+        public List<InactiveNodeStatus> Offline;
+
+        public NodeTopologyInfo()
+        {
+            Outgoing = new List<ActiveNodeStatus>();
+            Incoming = new List<ActiveNodeStatus>();
+            Offline = new List<InactiveNodeStatus>();
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            var outgoingJson = new DynamicJsonArray();
+            foreach (var outgoing in Outgoing)
+                outgoingJson.Add(outgoing.ToJson());
+
+            var incomingJson = new DynamicJsonArray();
+            foreach (var incoming in Incoming)
+                incomingJson.Add(incoming.ToJson());
+
+            var offlineJson = new DynamicJsonArray();
+            foreach (var offline in Offline)
+                offlineJson.Add(offline.ToJson());
+
+            return new DynamicJsonValue
+            {
+                [nameof(Outgoing)] = outgoingJson,
+                [nameof(Incoming)] = incomingJson,
+                [nameof(Offline)] = offlineJson
             };
         }
     }
@@ -106,6 +130,7 @@ namespace Raven.Client.Replication.Messages
             return new DynamicJsonValue
             {
                 [nameof(IsOnline)] = IsOnline,
+                [nameof(DbId)] = DbId,
                 [nameof(LastException)] = LastException,
                 [nameof(LastHeartbeatTicks)] = LastHeartbeatTicks,
                 [nameof(LastDocumentEtag)] = LastDocumentEtag,

@@ -33,21 +33,21 @@ namespace Raven.Server.Documents.Replication
             ReplicationDestination destination, 
             OperationCredentials operationCredentials, 
             string dbId,
-            long timeout)
+            TimeSpan timeout)
         {
             _context = context;
             _alreadyVisited = alreadyVisited;
             _destination = destination;
             _operationCredentials = operationCredentials;
             _dbId = dbId;
-            _timeout = Math.Max(5000, timeout - 10000);// reduce the timeout by 10 sec each hop, to a min of 5
+            _timeout = (long)Math.Max(5000, timeout.TotalMilliseconds - 10000);// reduce the timeout by 10 sec each hop, to a min of 5
             _log = LoggingSource.Instance.GetLogger<ReplicationTopologyDestinationExplorer>(destination.Database);
             _tcpClient = new TcpClient();
         }
 
         public ReplicationDestination Destination => _destination;
 
-        public async Task<NodeTopologyInfo> DiscoverTopologyAsync()
+        public async Task<FullTopologyInfo> DiscoverTopologyAsync()
         {
             _tcpUrl = await ReplicationUtils.GetTcpInfoAsync(
                 _context,
@@ -68,7 +68,12 @@ namespace Raven.Server.Documents.Replication
 
                 var alreadyVisitedJson = new DynamicJsonValue();
                 foreach (var kvp in _alreadyVisited)
-                    alreadyVisitedJson[kvp.Key] = new DynamicJsonArray(kvp.Value);
+                {
+                    var dbIdsCollectionJson = new DynamicJsonArray();
+                    foreach(var item in kvp.Value)
+                        dbIdsCollectionJson.Add(item);
+                    alreadyVisitedJson[kvp.Key] = dbIdsCollectionJson;
+                }
 
                 _context.Write(writer, new DynamicJsonValue
                 {
@@ -85,16 +90,21 @@ namespace Raven.Server.Documents.Replication
                 { 
                     topologyResponseJson.BlittableValidation();
                     var topologyResponse = JsonDeserializationServer.TopologyDiscoveryResponse(topologyResponseJson);
-                    if (topologyResponse.DiscoveryStatus == TopologyDiscoveryResponse.Status.Ok ||
-                        topologyResponse.DiscoveryStatus == TopologyDiscoveryResponse.Status.Leaf)
+                    if (topologyResponse.DiscoveryStatus != TopologyDiscoveryResponse.Status.AlreadyKnown)
                     {
+                        if (topologyResponse.DiscoveryStatus == TopologyDiscoveryResponse.Status.Error)
+                        {
+                            if(_log.IsInfoEnabled)
+                                _log.Info("Discover topology request failed. Reason:" + topologyResponse.Exception);
+                        }
+
                         using (var topologyInfoJson = await parser.ParseToMemoryAsync("ReplicationDiscovere/Read-topology-info"))
                         {
                             topologyInfoJson.BlittableValidation();
-                            return JsonDeserializationServer.NodeTopologyInfo(topologyInfoJson);
+                            var topology = JsonDeserializationServer.FullTopologyInfo(topologyInfoJson);
+                            return topology;
                         }
-                    }
-
+                    }                    
                 }
 
                 return null;

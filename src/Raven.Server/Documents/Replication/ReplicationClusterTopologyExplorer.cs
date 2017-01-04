@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Replication
     public class ReplicationClusterTopologyExplorer : IDisposable
     {
         private readonly DocumentDatabase _database;
-        private readonly long _timeout;
+        private readonly TimeSpan _timeout;
         private readonly List<ReplicationTopologyDestinationExplorer> _discoverers;
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
         public int DiscovererCount => _discoverers.Count;
@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Replication
         public ReplicationClusterTopologyExplorer(
             DocumentDatabase database,
             Dictionary<string, List<string>> alreadyKnownDestinations,
-            long timeout, 
+            TimeSpan timeout, 
             List<ReplicationDestination> replicationDestinations)
         {
             _database = database;
@@ -50,20 +50,20 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public async Task<List<NodeTopologyInfo>> DiscoverTopologyAsync()
+        public async Task<FullTopologyInfo> DiscoverTopologyAsync()
         {
             if (_discoverers.Count == 0) //either no destinations or we already visited all destinations
-                return new List<NodeTopologyInfo>();
-            var discoveryTasks = new Dictionary<ReplicationTopologyDestinationExplorer, Task<NodeTopologyInfo>>(_discoverers.Count);
+                return new FullTopologyInfo(_database.DbId.ToString());
+
+            var discoveryTasks = new Dictionary<ReplicationTopologyDestinationExplorer, Task<FullTopologyInfo>>(_discoverers.Count);
             foreach (var d in _discoverers)
                 //TODO: this might throw immediately
                 discoveryTasks.Add(d, d.DiscoverTopologyAsync());
 
             var timedOut = false;
-
             try
             {
-                var timeout = Task.Delay(TimeSpan.FromMilliseconds(_timeout));
+                var timeout = Task.Delay(_timeout);
                 timedOut = await Task.WhenAny(timeout, Task.WhenAll(discoveryTasks.Values)) == timeout;
             }
             catch (Exception)
@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Replication
                 // handled externally
             }
 
-            var nodes = new List<NodeTopologyInfo>();
+            var topology = new FullTopologyInfo(_database.DbId.ToString());
             foreach (var kvp in discoveryTasks)
             {                
                 var discoveryTask = kvp.Value;
@@ -82,17 +82,20 @@ namespace Raven.Server.Documents.Replication
                 {
                     ObserveTaskException(discoveryTask);
                     var topologyInfo = CreateTopologyInfoFromFaultedDiscoveryTask(kvp.Key, discoveryTask,ActiveNodeStatus.Status.Timeout);
-                    nodes.Add(topologyInfo);
+                    topology.NodesByDbId.Add(topologyInfo.OriginDbId,topologyInfo);
                 }
                 else if (discoveryTask.IsFaulted || discoveryTask.IsCanceled)
                 {
                     var topologyInfo = CreateTopologyInfoFromFaultedDiscoveryTask(kvp.Key, discoveryTask,ActiveNodeStatus.Status.Error);
-                    nodes.Add(topologyInfo);
+                    topology.NodesByDbId.Add(topologyInfo.OriginDbId, topologyInfo);
                 }
                 //if kvp.Value.Result == null --> already visited
                 //if IsEmpty() == true --> leaf node
-                else if (kvp.Value.Result != null && !IsEmpty(kvp.Value.Result)) 
-                    nodes.Add(kvp.Value.Result);
+                else if (kvp.Value.Result != null)
+                {
+                    foreach (var nodeValue in kvp.Value.Result.NodesByDbId)
+                        topology.NodesByDbId[nodeValue.Key] = nodeValue.Value;
+                }
             }
 
             var replicationDocument = _database.DocumentReplicationLoader.GetReplicationDocument();
@@ -103,22 +106,22 @@ namespace Raven.Server.Documents.Replication
             {
                 List<ReplicationDestination> activeDestinations;
                 var localTopology = ReplicationUtils.GetLocalTopology(_database, replicationDocument, context, out activeDestinations);
-                nodes.Add(localTopology);
+                topology.NodesByDbId[localTopology.OriginDbId] = localTopology;
             }
-            return nodes;
+            return topology;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool IsEmpty(NodeTopologyInfo topology)
         {
-            return topology.IncomingByIncomingDbId.Count == 0 &&
-                   topology.OutgoingByDbId.Count == 0 &&
-                   topology.OfflineByUrlAndDatabase.Count == 0;
+            return topology.Incoming.Count == 0 &&
+                   topology.Outgoing.Count == 0 &&
+                   topology.Offline.Count == 0;
         }
 
         private NodeTopologyInfo CreateTopologyInfoFromFaultedDiscoveryTask(
             ReplicationTopologyDestinationExplorer topologyExplorer, 
-            Task<NodeTopologyInfo> discoveryTask,
+            Task<FullTopologyInfo> discoveryTask,
             ActiveNodeStatus.Status status)
         {
             OutgoingReplicationHandler outgoingHandler;
@@ -129,8 +132,7 @@ namespace Raven.Server.Documents.Replication
                 _database.DocumentReplicationLoader.OutgoingHandlers,
                 out outgoingHandler))
             {
-                topologyInfo.OutgoingByDbId.Add(
-                    _database.DbId.ToString(),
+                topologyInfo.Outgoing.Add(
                     new ActiveNodeStatus
                     {
                         DbId = outgoingHandler.DestinationDbId,
@@ -144,8 +146,7 @@ namespace Raven.Server.Documents.Replication
             }
             else
             {
-                topologyInfo.OfflineByUrlAndDatabase.Add(
-                    $"{topologyExplorer.Destination.Url.ToLowerInvariant()}|{topologyExplorer.Destination.Database.ToLowerInvariant()}",
+                topologyInfo.Offline.Add(
                     new InactiveNodeStatus
                     {
                         Exception = discoveryTask.Exception?.ExtractSingleInnerException().ToString(),
@@ -156,7 +157,7 @@ namespace Raven.Server.Documents.Replication
             return topologyInfo;
         }
 
-        private static void ObserveTaskException(Task<NodeTopologyInfo> t)
+        private static void ObserveTaskException(Task<FullTopologyInfo> t)
         {
             t.ContinueWith(done => GC.KeepAlive(done.Exception));
         }

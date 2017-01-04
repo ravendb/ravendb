@@ -279,15 +279,15 @@ namespace Sparrow.Json
 
             foreach (var propertyName in obj.GetPropertyNames())
             {
-                BlittableJsonReaderArray val;
-                if (obj.TryGet(propertyName, out val))
+                BlittableJsonReaderArray array;
+                if (obj.TryGet(propertyName, out array))
                 {
-                    var array = new List<string>(val.Length);
-                    for (int i = 0; i < val.Length; i++)
+                    var list = new List<string>(array.Length);
+                    foreach (object item in array)
                     {
-                        array[i] = val[i]?.ToString();
+                        list.Add(item?.ToString());
                     }
-                    dic[propertyName] = array;
+                    dic[propertyName] = list;
                 }
             }
             return dic;

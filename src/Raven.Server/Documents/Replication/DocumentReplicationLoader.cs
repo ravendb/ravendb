@@ -136,6 +136,7 @@ namespace Raven.Server.Documents.Replication
                 documentsOperationContext.Write(writer, new DynamicJsonValue
                 {
                     [nameof(ReplicationMessageReply.Type)] = "Ok",
+                    [nameof(ReplicationMessageReply.DbId)] = tcpConnectionOptions.DocumentDatabase.DbId.ToString(),
                     [nameof(ReplicationMessageReply.MessageType)] = ReplicationMessageType.Heartbeat,
                     [nameof(ReplicationMessageReply.LastEtagAccepted)] = lastEtagFromSrc,
                     [nameof(ReplicationMessageReply.LastIndexTransformerEtagAccepted)] = _database.IndexMetadataPersistence.GetLastReplicateEtagFrom(configTx.InnerTransaction, getLatestEtagMessage.SourceDatabaseId),

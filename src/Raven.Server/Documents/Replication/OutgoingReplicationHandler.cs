@@ -402,7 +402,7 @@ namespace Raven.Server.Documents.Replication
         private readonly AsyncManualResetEvent _neverSetEvent = new AsyncManualResetEvent();
         internal Tuple<ReplicationMessageReply.ReplyType,string> HandleServerResponse()
         {
-            LastHeartbeatTicks = DateTime.UtcNow.Ticks;
+            LastHeartbeatTicks = _database.Time.GetUtcNow().Ticks;
             while (true)
             {
                 using (var replicationBatchReplyMessage = _parser.InterruptibleParseToMemory("replication acknowledge message", _neverSetEvent))
