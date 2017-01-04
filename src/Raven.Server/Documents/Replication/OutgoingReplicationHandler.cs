@@ -37,6 +37,7 @@ namespace Raven.Server.Documents.Replication
         private Thread _sendingThread;
 
         internal long _lastSentDocumentEtag;
+        public long LastAcceptedDocumentEtag;
         internal long _lastSentIndexOrTransformerEtag;
 
         internal DateTime _lastDocumentSentTime;
@@ -320,6 +321,7 @@ namespace Raven.Server.Documents.Replication
         {
             _lastSentDocumentEtag = Math.Max(_lastSentDocumentEtag, replicationBatchReply.LastEtagAccepted);
             _lastSentIndexOrTransformerEtag = Math.Max(_lastSentIndexOrTransformerEtag, replicationBatchReply.LastIndexTransformerEtagAccepted);
+            LastAcceptedDocumentEtag = replicationBatchReply.LastEtagAccepted;
 
             _destinationLastKnownDocumentChangeVectorAsString = replicationBatchReply.DocumentsChangeVector.Format();
             _destinationLastKnownIndexOrTransformerChangeVectorAsString =
