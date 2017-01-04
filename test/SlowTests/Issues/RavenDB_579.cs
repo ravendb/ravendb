@@ -1,20 +1,20 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-
+using FastTests;
 using Raven.Abstractions.Replication;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Shard;
 using Raven.Server;
-using Raven.Tests.Common;
 
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    public class RavenDB_579 : RavenTest
+   
+    public class RavenDB_579 : RavenTestBase
     {
-        private new readonly RavenDbServer[] servers;
+        private  readonly RavenServer[] servers;
         private readonly ShardedDocumentStore documentStore;
 
         private readonly IList<string> shardNames = new List<string>
@@ -36,9 +36,9 @@ namespace Raven.Tests.Issues
         {
             servers = new[]
             {
-                GetNewServer(8079),
-                GetNewServer(8078),
-                GetNewServer(8077),
+                CreateServer(8079,8009),
+                CreateServer(8078,8008),
+                CreateServer(8077,8007),
             };
 
             documentStore = new ShardedDocumentStore(new ShardStrategy(new Dictionary<string, IDocumentStore>
@@ -63,7 +63,7 @@ namespace Raven.Tests.Issues
             };
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Sharding")]
         public void OneShardPerSessionStrategy()
         {
             using (var session = documentStore.OpenSession())
@@ -107,7 +107,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Missing feature: Sharding")]
         public async Task OneShardPerSessionStrategyAsync()
         {
             using (var session = documentStore.OpenAsyncSession())
@@ -160,10 +160,10 @@ namespace Raven.Tests.Issues
             }
             base.Dispose();
         }
-
-        private ITransactionalDocumentSession ExtractSessionMetadataFromSession(object session)
+        // TODO: Refactor this function when the feature is available
+        private object ExtractSessionMetadataFromSession(object session)
         {
-            return (ITransactionalDocumentSession) session;
+            return session;
         }
     }
 }
