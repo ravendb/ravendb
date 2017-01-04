@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
+using Raven.Abstractions.Util;
 using Raven.Client.Data;
 using Raven.Client.Indexing;
 using Raven.Server.Web;
@@ -35,7 +36,7 @@ namespace Raven.Server.Documents.Queries
                     switch (item.Key)
                     {
                         case "query":
-                            result.Query = item.Value[0];
+                            result.Query = EscapingHelper.UnescapeLongDataString(item.Value[0]);
                             break;
                         case RequestHandler.StartParameter:
                         case RequestHandler.PageSizeParameter:

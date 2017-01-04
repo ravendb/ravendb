@@ -5,11 +5,9 @@ using System.Net;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Lucene.Net.Analysis;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
-using Raven.Client.Connection.Implementation;
 using Raven.Client.Data;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
@@ -18,8 +16,6 @@ using Raven.Client.Replication.Messages;
 using Raven.Json.Linq;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Extensions;
-using Sparrow.Json;
 using Xunit;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
@@ -27,7 +23,7 @@ namespace FastTests.Server.Documents.Replication
 {
     public class ReplicationConflictsTests : ReplicationTestsBase
     {
-        public class User
+        private class User
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -515,9 +511,9 @@ namespace FastTests.Server.Documents.Replication
             }
         }
 
-        
 
-        public class UserIndex : AbstractIndexCreationTask<User>
+
+        private class UserIndex : AbstractIndexCreationTask<User>
         {
             public UserIndex()
             {

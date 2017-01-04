@@ -6,30 +6,30 @@ using Xunit;
 
 namespace FastTests.Issues
 {
-    public class User
+    public class RavenDB_5297 : RavenTestBase
     {
-        public string Name { get; set; }
-    }
-
-    public class UsersByName : AbstractIndexCreationTask<User>
-    {
-        public override string IndexName
+        private class User
         {
-            get { return "Users/ByName"; }
+            public string Name { get; set; }
         }
 
-        public UsersByName()
+        private class UsersByName : AbstractIndexCreationTask<User>
         {
-            Map = users => from user in users
-                           select new
-                           {
-                               user.Name
-                           };
-        }
-    }
+            public override string IndexName
+            {
+                get { return "Users/ByName"; }
+            }
 
-    public class RavenDB_5297: RavenTestBase
-    {
+            public UsersByName()
+            {
+                Map = users => from user in users
+                               select new
+                               {
+                                   user.Name
+                               };
+            }
+        }
+
         [Fact]
         public void QueryLuceneMinusOperator()
         {

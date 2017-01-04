@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Server.Documents.Replication
@@ -15,7 +16,7 @@ namespace FastTests.Server.Documents.Replication
             {
                 using (var s1 = store1.OpenSession())
                 {
-                    s1.Store(new ReplicationConflictsTests.User(), "foo/bar");
+                    s1.Store(new User(), "foo/bar");
                     s1.SaveChanges();
                 }
 
@@ -49,7 +50,7 @@ namespace FastTests.Server.Documents.Replication
             {
                 using (var s1 = store1.OpenSession())
                 {
-                    s1.Store(new ReplicationConflictsTests.User(), "foo/bar");
+                    s1.Store(new User(), "foo/bar");
                     s1.SaveChanges();
                 }
 
@@ -90,7 +91,7 @@ namespace FastTests.Server.Documents.Replication
             {
                 using (var s1 = store1.OpenSession())
                 {
-                    s1.Store(new ReplicationConflictsTests.User(), "foo/bar");
+                    s1.Store(new User(), "foo/bar");
                     s1.SaveChanges();
                 }
 
@@ -130,7 +131,7 @@ namespace FastTests.Server.Documents.Replication
             {
                 using (var s1 = store1.OpenSession())
                 {
-                    s1.Store(new ReplicationConflictsTests.User(), "foo/bar");
+                    s1.Store(new User(), "foo/bar");
                     s1.SaveChanges();
                 }
 
@@ -164,12 +165,12 @@ namespace FastTests.Server.Documents.Replication
             {
                 using (var s1 = store1.OpenSession())
                 {
-                    s1.Store(new ReplicationConflictsTests.User(), "foo/bar");
+                    s1.Store(new User(), "foo/bar");
                     s1.SaveChanges();
                 }
                 using (var s1 = store1.OpenSession())
                 {
-                    s1.Store(new ReplicationConflictsTests.User(), "foo/bar2");
+                    s1.Store(new User(), "foo/bar2");
                     s1.SaveChanges();
                 }
 
@@ -207,13 +208,13 @@ namespace FastTests.Server.Documents.Replication
             {
                 using (var s1 = store1.OpenSession())
                 {
-                    s1.Store(new ReplicationConflictsTests.User(), "foo/bar");
+                    s1.Store(new User(), "foo/bar");
                     s1.SaveChanges();
                 }
 
                 using (var s2 = store1.OpenSession())
                 {
-                    s2.Store(new ReplicationConflictsTests.User(), "foo/bar2");
+                    s2.Store(new User(), "foo/bar2");
                     s2.SaveChanges();
                 }
 
@@ -268,7 +269,7 @@ namespace FastTests.Server.Documents.Replication
             {
                 using (var s1 = store1.OpenSession())
                 {
-                    s1.Store(new ReplicationConflictsTests.User(), "foo/bar");
+                    s1.Store(new User(), "foo/bar");
                     s1.SaveChanges();
                 }
 
@@ -288,7 +289,7 @@ namespace FastTests.Server.Documents.Replication
 
                 using (var s1 = store1.OpenSession())
                 {
-                    s1.Store(new ReplicationConflictsTests.User(), "foo/bar");
+                    s1.Store(new User(), "foo/bar");
                     s1.SaveChanges();
                 }
 
