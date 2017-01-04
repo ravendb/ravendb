@@ -119,6 +119,7 @@ namespace Raven.Server.Web.System
                 /* Right now only database resource is supported */
                 ServerStore.DatabasesLandlord.UnloadAndLock(name, () =>
                 {
+                    // empty by design
                 });
             }
 
