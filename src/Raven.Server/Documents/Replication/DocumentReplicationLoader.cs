@@ -540,7 +540,7 @@ namespace Raven.Server.Documents.Replication
             int count = 0;
             foreach (var destination in _outgoing)
             {
-                if (destination._lastSentDocumentEtag >= etag)
+                if (destination._lastNoSystemDocumentEtag >= etag)
                     count++;
             }
             return count;
