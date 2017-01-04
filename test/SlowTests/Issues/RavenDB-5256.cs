@@ -325,7 +325,7 @@ namespace SlowTests.Issues
             });
         }
 
-        public void TestWithShardedStore(Action<ShardedDocumentStore, string> action, string mainShard)
+        private void TestWithShardedStore(Action<ShardedDocumentStore, string> action, string mainShard)
         {
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
@@ -350,7 +350,7 @@ namespace SlowTests.Issues
             }
         }
 
-        public class IdObject
+        private class IdObject
         {
             public IdObject()
             {
@@ -360,14 +360,14 @@ namespace SlowTests.Issues
             public Guid Id { get; set; }
         }
 
-        public class User : IdObject
+        private class User : IdObject
         {
             public string Name { get; set; }
             public List<Guid> UserRoles { get; set; }
             public string Shard { get; set; }
         }
 
-        public class UserRole : IdObject
+        private class UserRole : IdObject
         {
             public string Name { get; set; }
             public string Shard { get; set; }
