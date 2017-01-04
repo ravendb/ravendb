@@ -20,7 +20,7 @@ const Resource = {
 };
 
 const NotificationCenter = {
-    Alert: 'NotificationCenter.Alert'
+    RecentError: 'NotificationCenter.RecentError'
 }
 
 export = {
