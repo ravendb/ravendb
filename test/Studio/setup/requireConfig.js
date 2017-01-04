@@ -11,6 +11,7 @@ var require = {
         "d3": studioWwwrootPrefix + "lib/d3/d3",
         "rbush": studioWwwrootPrefix + "Content/rbush/rbush",
         "quickselect": studioWwwrootPrefix + "Content/rbush/quickselect",
+        "toastr": studioWwwrootPrefix + "lib/toastr/toastr",
 
         'endpoints': studioWwwrootPrefix + 'App/endpoints',
         'configuration': studioWwwrootPrefix + 'App/configuration',

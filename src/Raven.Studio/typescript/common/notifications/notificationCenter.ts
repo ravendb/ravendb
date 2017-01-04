@@ -75,6 +75,10 @@ class notificationCenter {
         this.recentErrors.dismissRecentError(alert);
     }
 
+    showRecentErrorDialog(alert: alertArgs) {
+        this.recentErrors.showRecentErrorDialog(alert);
+    }
+
     private shouldConsumeHideEvent(e: Event) {
         return $(e.target).parents(".notification-center-container").length === 0
             && $(e.target).parents("#notification-toggle").length === 0;
