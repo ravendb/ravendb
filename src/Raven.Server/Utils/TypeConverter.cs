@@ -209,6 +209,7 @@ namespace Raven.Server.Utils
                 if (LazyStringParser.TryParseTimeSpan(lazyString.Buffer, lazyString.Size, out ts))
                     return ts;
 
+                return lazyString; // ensure that the decompressed lazy string value is returned
             }
 
             return value;

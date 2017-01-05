@@ -23,8 +23,8 @@ namespace Voron.Data.BTrees
         private Dictionary<Slice, FixedSizeTree> _fixedSizeTrees;
         private PageLocator _pageLocator;
 
-        public event Action<long> PageModified;
-        public event Action<long> PageFreed;
+        public event Action<long, PageFlags> PageModified;
+        public event Action<long, PageFlags> PageFreed;
 
         public Slice Name { get; set; }
 
@@ -397,7 +397,7 @@ namespace Voron.Data.BTrees
             if (IsLeafCompressionSupported && newPage.IsCompressed)
                 DecompressionsCache.Invalidate(pageNumber, DecompressionUsage.Read);
 
-            PageModified?.Invoke(pageNumber);
+            PageModified?.Invoke(pageNumber, newPage.Flags);
 
             return newPage;
         }
@@ -417,7 +417,7 @@ namespace Voron.Data.BTrees
 
             State.RecordNewPage(overflowPageStart, numberOfPages);
 
-            PageModified?.Invoke(overflowPageStart.PageNumber);
+            PageModified?.Invoke(overflowPageStart.PageNumber, overflowPageStart.Flags);
 
             return overflowPageStart.PageNumber;
         }
@@ -854,7 +854,7 @@ namespace Voron.Data.BTrees
             var page = AllocateNewPage(_llt, flags, num);
             State.RecordNewPage(page, num);
 
-            PageModified?.Invoke(page.PageNumber);
+            PageModified?.Invoke(page.PageNumber, page.Flags);
 
             return page;
         }
@@ -875,7 +875,7 @@ namespace Voron.Data.BTrees
 
         internal void FreePage(TreePage p)
         {
-            PageFreed?.Invoke(p.PageNumber);
+            PageFreed?.Invoke(p.PageNumber, p.Flags);
 
             if (p.IsOverflow)
             {
@@ -1155,7 +1155,7 @@ namespace Voron.Data.BTrees
                     writtableOverflowPage.OverflowSize = len;
                     pos = writtableOverflowPage.Base + Constants.Tree.PageHeaderSize;
 
-                    PageModified?.Invoke(writtableOverflowPage.PageNumber);
+                    PageModified?.Invoke(writtableOverflowPage.PageNumber, writtableOverflowPage.Flags);
 
                     return true;
                 }
