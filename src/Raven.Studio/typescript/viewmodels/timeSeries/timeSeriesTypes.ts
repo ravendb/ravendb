@@ -13,6 +13,7 @@ import getTypesCommand = require("commands/timeSeries/getTypesCommand");
 import putPointCommand = require("commands/timeSeries/putPointCommand");
 import putTypeCommand = require("commands/timeSeries/putTypeCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
+import EVENTS = require("common/constants/events");
 
 class timeSeriesTypes extends viewModelBase {
 
@@ -124,7 +125,7 @@ class timeSeriesTypes extends viewModelBase {
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
         return [
         //    ko.postbox.subscribe("ChangePointValue", () => this.changePoint()),
-            ko.postbox.subscribe("ChangesApiReconnected", (ts: timeSeries) => this.reloadTimeSeriesData(ts)),
+            ko.postbox.subscribe(EVENTS.ChangesApi.Reconnected, (ts: timeSeries) => this.reloadTimeSeriesData(ts)),
             ko.postbox.subscribe("SortTypes", () => this.sortTypes())
         ];
     }

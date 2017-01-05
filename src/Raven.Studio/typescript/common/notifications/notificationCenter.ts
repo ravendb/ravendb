@@ -18,6 +18,12 @@ class notificationCenter {
     alertCountAnimation = ko.observable<boolean>();
     noNewNotifications: KnockoutComputed<boolean>;
 
+    private hideHandler = (e: Event) => {
+        if (this.shouldConsumeHideEvent(e)) {
+            this.showNotifications(false);
+        }
+    }
+
     constructor() {
         this.initializeObservables();
     }
@@ -40,6 +46,14 @@ class notificationCenter {
         this.noNewNotifications = ko.pureComputed(() => {
             return this.totalItemsCount() === 0;
         });
+
+        this.showNotifications.subscribe((show: boolean) => {
+            if (show) {
+                window.addEventListener("click", this.hideHandler, true);
+            } else {
+                window.removeEventListener("click", this.hideHandler, true);
+            }
+        });
     }
 
     monitorOperation<TProgress extends Raven.Client.Data.IOperationProgress,
@@ -61,6 +75,14 @@ class notificationCenter {
         this.recentErrors.dismissRecentError(alert);
     }
 
+    showRecentErrorDialog(alert: alertArgs) {
+        this.recentErrors.showRecentErrorDialog(alert);
+    }
+
+    private shouldConsumeHideEvent(e: Event) {
+        return $(e.target).closest(".notification-center-container").length === 0
+            && $(e.target).closest("#notification-toggle").length === 0;
+    }
 }
 
 export = notificationCenter;

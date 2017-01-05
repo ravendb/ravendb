@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Indexes;
@@ -40,7 +41,7 @@ namespace SlowTests.SlowTests.Issues
         }
 
         [Fact]
-        public async void ShouldProperlyPageResults()
+        public async Task ShouldProperlyPageResults()
         {
             var store = GetDocumentStore();
 

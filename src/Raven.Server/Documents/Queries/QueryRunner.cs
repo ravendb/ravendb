@@ -304,7 +304,7 @@ namespace Raven.Server.Documents.Queries
         {
             var index = _database.IndexStore.GetIndex(indexName);
             if (index == null)
-                throw new IndexDoesNotExistsException("There is not index with name: " + indexName);
+                IndexDoesNotExistsException.ThrowFor(indexName);
 
             return index;
         }

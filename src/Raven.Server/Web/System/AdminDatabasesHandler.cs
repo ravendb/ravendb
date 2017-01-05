@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
@@ -39,7 +40,7 @@ namespace Raven.Server.Web.System
 
                 if (dbDoc == null)
                 {
-                    HttpContext.Response.StatusCode = 404;
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                     return HttpContext.Response.WriteAsync("Database " + name + " wasn't found");
                 }
 
@@ -78,7 +79,7 @@ namespace Raven.Server.Web.System
                 ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory,
                     out errorMessage) == false)
             {
-                HttpContext.Response.StatusCode = 400;
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                 return HttpContext.Response.WriteAsync(errorMessage);
             }
 
@@ -98,7 +99,7 @@ namespace Raven.Server.Web.System
                         DatabaseHelper.CheckExistingDatabaseName(existingDatabase, name, dbId, etagAsString,
                             out errorMessage) == false)
                     {
-                        HttpContext.Response.StatusCode = 400;
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                         return HttpContext.Response.WriteAsync(errorMessage);
                     }
                 }
@@ -136,7 +137,7 @@ namespace Raven.Server.Web.System
                     }
                 });
 
-                HttpContext.Response.StatusCode = 201;
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -194,13 +195,10 @@ namespace Raven.Server.Web.System
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    writer.WriteStartObject();
-                    writer.WriteResults(context, results, (w, c, result) =>
+                    writer.WriteArray(context, results, (w, c, result) =>
                     {
                         c.Write(w, result);
                     });
-
-                    writer.WriteEndObject();
                 }
             }
 

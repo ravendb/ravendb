@@ -10,82 +10,52 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
 {
     public class MethodsInGroupByValidator : CSharpSyntaxWalker
     {
-        private int _depth = 0;
-        private int _groupDepth = -1;
-        private readonly HashSet<string> _searchTerms;
-        private string _firstFoundToken;
-        private readonly Func<SyntaxToken, bool> _findTokens;
-
+        private readonly string[] _searchTerms;
 
         public MethodsInGroupByValidator(string[] searchTerms)
         {
-            _searchTerms = searchTerms.Where(s => !String.IsNullOrEmpty(s)).Distinct().ToHashSet();
+            _searchTerms = searchTerms.Where(s => !String.IsNullOrEmpty(s)).Distinct().ToArray();
 
-            if (_searchTerms.Count == 0)
+            if (_searchTerms.Length == 0)
             {
                 throw new ArgumentNullException(nameof(_searchTerms),"Cannot be empty");
-            }
-
-            _findTokens = d =>
-            {
-                var rtn = _searchTerms.Contains(d.ToFullString());
-                if (rtn)
-                {
-                    _firstFoundToken = d.ToFullString();
-                }
-                return rtn;
-            };
+            }      
         }
        
         public void Start(ExpressionSyntax node)
         {
-            _depth = 0;
-            _groupDepth = -1;
-
             Visit(node.SyntaxTree.GetRoot());
         }
 
-        public override void Visit(SyntaxNode node)
+        private SyntaxToken _root;
+        public override void VisitQueryContinuation(QueryContinuationSyntax node)
         {
-            _depth++;
-            base.Visit(node);
-            _depth--;
-            if (_groupDepth > _depth)
+            if (_root == default(SyntaxToken) && node.IntoKeyword.ToString().Contains("into"))
             {
-                _groupDepth = -1;
+                _root = node.Identifier; // get the into object
             }
+            base.VisitQueryContinuation(node);
         }
 
-        public override void VisitGroupClause(GroupClauseSyntax node)
+        public override void VisitFromClause(FromClauseSyntax node)
         {
-            if (_groupDepth == -1)
-            {
-                _groupDepth = _depth - 1;
-            }
-            base.VisitGroupClause(node);
+            
         }
-
-        
 
         public override void VisitInvocationExpression(InvocationExpressionSyntax node)
         {
-            if (_groupDepth != -1 && _groupDepth < _depth)
+            if (_root != default(SyntaxToken))
             {
-                var nodes = node.ChildNodes()
-                    .Where(t => t is MemberAccessExpressionSyntax)
-                    .Where(t => t.DescendantTokens()
-                                .Any(_findTokens)).ToList();
-                if (nodes.Count > 0)
+                foreach (var searchTerm in _searchTerms)
                 {
-                    throw new Exception($"Expression cannot contain {_firstFoundToken}() methods in grouping.");
-                };
+                    var search = $"{_root}.{searchTerm}()";
+                    if (node.ToString().Contains(search))
+                    {
+                        throw new Exception($"Expression cannot contain {searchTerm}() methods in grouping.");
+                    }
+                }
             }
             base.VisitInvocationExpression(node);
-        }
-
-        public override void VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
-        {
-            base.VisitMemberAccessExpression(node);
         }
     }
 

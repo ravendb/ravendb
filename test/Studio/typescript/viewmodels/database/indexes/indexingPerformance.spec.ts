@@ -9,7 +9,7 @@ describe(viewUnderTest, () => {
 
         utils.mockCommand('commands/database/debug/getIndexesPerformance', () => getIndexPerformance());
 
-        return utils.mockActiveDatabase(dbCtr => new dbCtr("default"))
+        return utils.mockActiveDatabase()
             .then(() => utils.runViewmodelTest(viewUnderTest, {
                 activateArgs: () => ({
                     database: "db1"

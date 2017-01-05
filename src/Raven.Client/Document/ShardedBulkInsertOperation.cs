@@ -55,7 +55,10 @@ namespace Raven.Client.Document
                 Bulks.Add(shardId, bulkInsertOperation);
             }
 
-            DatabaseCommands = shard.AsyncDatabaseCommands;
+            DatabaseCommands = string.IsNullOrWhiteSpace(database)
+                ? shard.AsyncDatabaseCommands
+                : shard.AsyncDatabaseCommands.ForDatabase(database);
+
             string id;
             if (generateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id) == false)
             {
@@ -63,6 +66,11 @@ namespace Raven.Client.Document
             }
             var modifyDocumentId = shardStrategy.ModifyDocumentId(shardedDocumentStore.Conventions, shardId, id);
             await bulkInsertOperation.StoreAsync(entity, modifyDocumentId).ConfigureAwait(false);
+        }
+
+        public void Store(object entity)
+        {
+            AsyncHelpers.RunSync(() => StoreAsync(entity));
         }
 
         void IDisposable.Dispose()

@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
@@ -317,7 +318,7 @@ namespace Raven.Server.Documents.Indexes
         {
             var index = GetIndex(name);
             if (index == null)
-                throw new InvalidOperationException("There is no index with name: " + name);
+                IndexDoesNotExistsException.ThrowFor(name);
 
             return ResetIndexInternal(index);
         }
@@ -326,7 +327,7 @@ namespace Raven.Server.Documents.Indexes
         {
             var index = GetIndex(id);
             if (index == null)
-                throw new InvalidOperationException("There is no index with id: " + id);
+                IndexDoesNotExistsException.ThrowFor(id);
 
             return ResetIndexInternal(index);
         }
@@ -352,7 +353,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 Index index;
                 if (_indexes.TryRemoveById(id, out index) == false)
-                    throw new InvalidOperationException("There is no index with id: " + id);
+                    IndexDoesNotExistsException.ThrowFor(id);
 
                 try
                 {
@@ -424,7 +425,7 @@ namespace Raven.Server.Documents.Indexes
         {
             var index = GetIndex(name);
             if (index == null)
-                throw new InvalidOperationException("There is no index with name: " + name);
+                IndexDoesNotExistsException.ThrowFor(name);
 
             index.Start();
         }
@@ -433,7 +434,7 @@ namespace Raven.Server.Documents.Indexes
         {
             var index = GetIndex(name);
             if (index == null)
-                throw new InvalidOperationException("There is no index with name: " + name);
+                IndexDoesNotExistsException.ThrowFor(name);
 
             index.Stop();
         }

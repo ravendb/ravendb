@@ -12,7 +12,6 @@ using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Impl;
 using Sparrow;
-using Sparrow.Binary;
 using Voron.Debugging;
 using Voron.Util;
 
@@ -165,7 +164,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         {
                             if (id == -1)
                             {
-                                id = Bits.SwapBytes(MapReduceWorkContext.NextMapResultId++);
+                                id = MapReduceWorkContext.NextMapResultId++;
 
                                 Slice val;
                                 using (Slice.External(indexContext.Allocator, (byte*)&reduceKeyHash, sizeof(ulong), out val))
@@ -210,6 +209,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             using (var it = documentMapEntries.Iterate())
             {
+                if (it.Seek(long.MinValue) == false)
+                    ThrowCouldNotSeekToFirstElement(documentMapEntries.Name);
+
                 do
                 {
                     var currentKey = it.CurrentKey;
@@ -226,6 +228,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
 
             return entries;
+        }
+
+        private static void ThrowCouldNotSeekToFirstElement(Slice treeName)
+        {
+            throw new InvalidOperationException($"Could not seek to the first element of {treeName} tree");
         }
 
         public MapReduceResultsStore GetResultsStore(ulong reduceKeyHash, TransactionOperationContext indexContext, bool create, PageLocator pageLocator = null)

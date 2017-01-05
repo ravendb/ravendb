@@ -1,11 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
@@ -19,16 +18,15 @@ namespace FastTests.Server.Documents.Replication
 {
     public class ReplicationTestsBase : RavenTestBase
     {
-        protected async Task<Dictionary<string, List<ChangeVectorEntry[]>>> GetConflicts(DocumentStore store,
-    string docId)
+        protected Dictionary<string, List<ChangeVectorEntry[]>> GetConflicts(DocumentStore store, string docId)
         {
             var url = $"{store.Url}/databases/{store.DefaultDatabase}/replication/conflicts?docId={docId}";
             using (var request = store.JsonRequestFactory.CreateHttpJsonRequest(
-                new CreateHttpJsonRequestParams(null, url, HttpMethod.Get, new OperationCredentials(null, CredentialCache.DefaultCredentials), new DocumentConvention())))
+                new CreateHttpJsonRequestParams(null, url, HttpMethod.Get, store.DatabaseCommands.PrimaryCredentials, store.Conventions)))
             {
-                request.ExecuteRequest();
-                var conflictsJson = RavenJArray.Parse(await request.Response.Content.ReadAsStringAsync());				
-                var conflicts = conflictsJson.Select(x => new
+                var json = (RavenJObject)request.ReadResponseJson();
+                var array = json.Value<RavenJArray>("Results");
+                var conflicts = array.Select(x => new
                 {
                     Key = x.Value<string>("Key"),
                     ChangeVector = x.Value<RavenJArray>("ChangeVector").Select(c => c.FromJson()).ToArray()
@@ -38,19 +36,20 @@ namespace FastTests.Server.Documents.Replication
             }
         }
 
-        protected async Task<Dictionary<string, List<ChangeVectorEntry[]>>> WaitUntilHasConflict(
+        protected Dictionary<string, List<ChangeVectorEntry[]>> WaitUntilHasConflict(
                 DocumentStore store,
                 string docId,
-                int count = 1,
-                int timeout = 10000)
+                int count = 1)
         {
+            int timeout = 5000;
+
             if (Debugger.IsAttached)
                 timeout *= 100;
             Dictionary<string, List<ChangeVectorEntry[]>> conflicts;
             var sw = Stopwatch.StartNew();
             do
             {
-                conflicts = await GetConflicts(store, docId);
+                conflicts = GetConflicts(store, docId);
 
                 List<ChangeVectorEntry[]> list;
                 if (conflicts.TryGetValue(docId, out list) == false)
@@ -63,7 +62,6 @@ namespace FastTests.Server.Documents.Replication
                     Assert.False(true,
                         "Timed out while waiting for conflicts on " + docId + " we have " + list.Count + " conflicts");
                 }
-
             } while (true);
             return conflicts;
         }
@@ -112,18 +110,19 @@ namespace FastTests.Server.Documents.Replication
             return false;
         }
 
-        protected async Task<List<string>> WaitUntilHasTombstones(
+        protected List<string> WaitUntilHasTombstones(
                 DocumentStore store,
-                int count = 1,
-                int timeout = 4000)
+                int count = 1)
         {
+
+            int timeout = 5000;
             if (Debugger.IsAttached)
                 timeout *= 100;
             List<string> tombstones;
             var sw = Stopwatch.StartNew();
             do
             {
-                tombstones = await GetTombstones(store);
+                tombstones = GetTombstones(store);
 
                 if (tombstones == null ||
                     tombstones.Count >= count)
@@ -139,15 +138,15 @@ namespace FastTests.Server.Documents.Replication
         }
 
 
-        protected async Task<List<string>> GetTombstones(DocumentStore store)
+        protected List<string> GetTombstones(DocumentStore store)
         {
             var url = $"{store.Url}/databases/{store.DefaultDatabase}/replication/tombstones";
             using (var request = store.JsonRequestFactory.CreateHttpJsonRequest(
-                new CreateHttpJsonRequestParams(null, url, HttpMethod.Get, new OperationCredentials(null, CredentialCache.DefaultCredentials), new DocumentConvention())))
+                new CreateHttpJsonRequestParams(null, url, HttpMethod.Get, store.DatabaseCommands.PrimaryCredentials, store.Conventions)))
             {
-                request.ExecuteRequest();
-                var tombstonesJson = RavenJArray.Parse(await request.Response.Content.ReadAsStringAsync());
-                var tombstones = tombstonesJson.Select(x => x.Value<string>("Key")).ToList();
+                var json = (RavenJObject)request.ReadResponseJson();
+                var array = json.Value<RavenJArray>("Results");
+                var tombstones = array.Select(x => x.Value<string>("Key")).ToList();
                 return tombstones;
             }
         }
@@ -220,7 +219,7 @@ namespace FastTests.Server.Documents.Replication
                         {
                             Database = store.DefaultDatabase,
                             Url = store.Url,
-                            
+
                         });
                 session.Store(new ReplicationDocument
                 {
@@ -228,6 +227,6 @@ namespace FastTests.Server.Documents.Replication
                 }, Constants.Replication.DocumentReplicationConfiguration);
                 session.SaveChanges();
             }
-        }		
+        }
     }
 }

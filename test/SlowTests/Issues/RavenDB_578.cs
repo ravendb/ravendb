@@ -21,7 +21,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task DeletingConflictedDocumentOnServer1ShouldCauseConflictOnServer2AndResolvingItOnServer2ShouldRecreateDocumentOnServer1()
+        public void DeletingConflictedDocumentOnServer1ShouldCauseConflictOnServer2AndResolvingItOnServer2ShouldRecreateDocumentOnServer1()
         {
             var store1 = GetDocumentStore();
             var store2 = GetDocumentStore();
@@ -40,12 +40,12 @@ namespace SlowTests.Issues
             }
             SetupReplication(store1, store2);
 
-            var conflicts = await WaitUntilHasConflict(store2, "people/1");
+            var conflicts = WaitUntilHasConflict(store2, "people/1");
             Assert.Equal(2,conflicts["people/1"].Count);
 
             SetupReplication(store2, store1);
             
-            conflicts = await WaitUntilHasConflict(store1, "people/1");
+            conflicts = WaitUntilHasConflict(store1, "people/1");
             Assert.Equal(2, conflicts["people/1"].Count);
 
             store2.DatabaseCommands.Delete("people/1", null);

@@ -36,6 +36,7 @@ namespace Raven.Server.Web.System
              "wwwroot",
             "../Raven.Studio/wwwroot",
             "../src/Raven.Studio/wwwroot",
+            "../../../../../Raven.Studio/wwwroot"
         };
 
         public static Dictionary<string, string> FileExtensionToContentTypeMapping = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -106,7 +107,7 @@ namespace Raven.Server.Web.System
             var fileEtag = '"' + file.LastWriteTimeUtc.ToString("G") + '"';
             if (etagValue == fileEtag)
             {
-                HttpContext.Response.StatusCode = 304; // Not Modified
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified; // Not Modified
                 return;
             }
 
@@ -153,7 +154,7 @@ namespace Raven.Server.Web.System
         public Task RavenRoot()
         {
             HttpContext.Response.Headers["Location"] = "/studio/index.html";
-            HttpContext.Response.StatusCode = 301;
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.MovedPermanently;
             return Task.CompletedTask;
         }
 
@@ -229,7 +230,6 @@ namespace Raven.Server.Web.System
             var message = "The following embedded file was not available: " + docPath +
                           ". Please make sure that the Raven.Studio.zip file exist in the main directory (near the Raven.Server.exe).";
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-            HttpContext.Response.ContentType = "application/json";
             HttpContext.Response.Body.Write(message);
         }
     }

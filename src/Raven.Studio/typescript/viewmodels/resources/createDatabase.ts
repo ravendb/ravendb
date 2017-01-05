@@ -106,18 +106,11 @@ class createDatabase extends createResourceBase {
 
     private createResourceInternal() {
         const databaseDocument = this.resourceModel.toDto();
+
+        resourcesManager.default.activateAfterCreation(database.qualifier, databaseDocument.Id);
+
         new createDatabaseCommand(databaseDocument)
             .execute()
-            .done(() => {
-                ko.postbox.publish(EVENTS.Resource
-                    .Created,
-                    //TODO: it might be temporary event as we use changes api for notifications about newly created resources. 
-                    {
-                        qualifier: database.qualifier,
-                        name: this.resourceModel.name()
-                    } as resourceCreatedEventArgs);
-
-            })
             .always(() => {
                 dialog.close(this);
             });

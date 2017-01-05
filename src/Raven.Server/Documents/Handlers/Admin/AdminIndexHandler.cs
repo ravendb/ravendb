@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Abstractions.Exceptions;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -142,7 +143,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             var name = GetStringQueryString("name");
             var index = Database.IndexStore.GetIndex(name);
             if (index == null)
-                throw new InvalidOperationException("There is not index with name: " + name);
+                IndexDoesNotExistsException.ThrowFor(name);
 
             index.Enable();
 
@@ -156,7 +157,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             var name = GetStringQueryString("name");
             var index = Database.IndexStore.GetIndex(name);
             if (index == null)
-                throw new InvalidOperationException("There is not index with name: " + name);
+                IndexDoesNotExistsException.ThrowFor(name);
 
             index.Disable();
 

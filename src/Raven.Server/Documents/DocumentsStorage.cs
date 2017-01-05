@@ -1294,6 +1294,35 @@ namespace Raven.Server.Documents
         {
             Constants.Metadata.Key,
         };
+
+        public bool TryResolveIdenticalDocument(DocumentsOperationContext context, string key, BlittableJsonReaderObject incomingDoc, ChangeVectorEntry[] incomingChangeVector)
+        {
+            var existing = GetDocumentOrTombstone(context, key, throwOnConflict: false);
+            var existingDoc = existing.Item1;
+            var existingTombstone = existing.Item2;
+
+            if (existingDoc != null && existingDoc.IsMetadataEqualTo(incomingDoc, IgnoredMetadataProperties) &&
+                    existingDoc.IsEqualTo(incomingDoc, IgnoredDocumentroperties))
+            {
+                // no real conflict here, both documents have identical content
+                existingDoc.ChangeVector = ReplicationUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector);
+                Put(context, existingDoc.Key, null, existingDoc.Data, existingDoc.ChangeVector);
+                return true;
+            }
+
+            if (existingTombstone != null && incomingDoc == null)
+            {
+                // Conflict between two tombstones resolves to the local tombstone
+                existingTombstone.ChangeVector = ReplicationUtils.MergeVectors(incomingChangeVector, existingTombstone.ChangeVector);
+                AddTombstoneOnReplicationIfRelevant(context, existingTombstone.Key,
+                    existingTombstone.ChangeVector,
+                    existingTombstone.Collection);
+                return true;
+            }
+
+            return false;
+        }
+
         public void AddConflict(DocumentsOperationContext context, string key, BlittableJsonReaderObject incomingDoc,
             ChangeVectorEntry[] incomingChangeVector)
         {
@@ -1313,15 +1342,6 @@ namespace Raven.Server.Documents
             if (existing.Item1 != null)
             {
                 var existingDoc = existing.Item1;
-
-                if (existingDoc.IsMetadataEqualTo(incomingDoc, IgnoredMetadataProperties) && 
-                    existingDoc.IsEqualTo(incomingDoc, IgnoredDocumentroperties))
-                {
-                    // no real conflict here, both documents have identical content
-                    existingDoc.ChangeVector = ReplicationUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector);
-                    Put(context, existingDoc.Key, null, existingDoc.Data, existingDoc.ChangeVector);
-                    return;
-                }
 
                 fixed (ChangeVectorEntry* pChangeVector = existingDoc.ChangeVector)
                 {
@@ -1347,15 +1367,7 @@ namespace Raven.Server.Documents
             else if (existing.Item2 != null)
             {
                 var existingTombstone = existing.Item2;
-                if (incomingDoc == null)
-                {
-                    // Conflict between two tombstones resolves to the local tombstone
-                    existingTombstone.ChangeVector = ReplicationUtils.MergeVectors(incomingChangeVector, existingTombstone.ChangeVector);
-                    AddTombstoneOnReplicationIfRelevant(context, existingTombstone.Key,
-                        existingTombstone.ChangeVector,
-                        existingTombstone.Collection);
-                    return;
-                }
+
                 fixed (ChangeVectorEntry* pChangeVector = existingTombstone.ChangeVector)
                 {
                     conflictsTable.Set(new TableValueBuilder
@@ -1431,6 +1443,25 @@ namespace Raven.Server.Documents
             public string Key;
             public long Etag;
             public CollectionName Collection;
+        }
+
+        public void DeleteWithoutCreatingTombstone(DocumentsOperationContext context, string collection, long storageId, bool isTombstone)
+        {
+            // we delete the data directly, without generating a tombstone, because we have a 
+            // conflict instead
+            var tx = context.Transaction.InnerTransaction;
+
+            var collectionObject = new CollectionName(collection);
+            var collectionName = isTombstone ? 
+                collectionObject.GetTableName(CollectionTableType.Tombstones):
+                collectionObject.GetTableName(CollectionTableType.Documents);
+
+            //make sure that the relevant collection tree exists
+            Table table = isTombstone ?
+                tx.OpenTable(TombstonesSchema, collectionName) :
+                tx.OpenTable(DocsSchema, collectionName);
+
+            table.Delete(storageId);
         }
 
         public PutOperationResults Put(DocumentsOperationContext context, string key, long? expectedEtag,

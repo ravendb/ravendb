@@ -21,7 +21,7 @@ describe(viewUnderTest, () => {
 
         utils.mockCommand('commands/database/studio/createSampleDataClassCommand', () => "c# code");
 
-        return utils.mockActiveDatabase(dbCtr => new dbCtr("default"))
+        return utils.mockActiveDatabase()
             .then(() => utils.runViewmodelTest(viewUnderTest, {}));
     });
 });

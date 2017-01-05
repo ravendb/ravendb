@@ -11,7 +11,7 @@ import ace = require("ace/ace");
 
 system.debug(true);
 
-type dbCreator = (db: new (name: string, isAdminCurrentTenant?: boolean, isDisabled?: boolean, bundles?: string[], isIndexingDisabled?: boolean, isRejectClientsMode?: boolean, isLoaded?: boolean, clusterWide?: boolean) => any) => any;
+type dbCreator = (db: new (dto: Raven.Client.Data.DatabaseInfo) => any) => any;
 
 type viewmodelTestOpts<T> = {
     initViewmodel?: (vm: T) => void;
@@ -36,7 +36,9 @@ class Utils {
         Utils.initInjector();
     }
 
-    static mockActiveDatabase(factory: dbCreator): Promise<void> {
+    static mockActiveDatabase(factory?: dbCreator): Promise<void> {
+        factory = factory || (x => new x(Utils.databaseNamed("default")));
+
         return new Promise<void>((resolve, reject) => {
             Utils.injector.require(["models/resources/database", "common/shell/activeResourceTracker"], (dbCtr: new () => any, resourceTracker: any) => {
                 var dbInstance = factory(dbCtr);
@@ -44,6 +46,13 @@ class Utils {
                 resolve();
             }, reject);
         });
+    }
+
+    static databaseNamed(dbName: string) {
+        return {
+            Name: dbName,
+            Disabled: false
+        } as Raven.Client.Data.DatabaseInfo;
     }
 
     static initInjector() {
@@ -57,6 +66,7 @@ class Utils {
                 .mock('jquery', jQuery);
 
             Utils.mockCommand('commands/auth/getSingleAuthTokenCommand', () => ({ Token: "Fake Token" }));
+            Utils.mockCommand('commands/resources/getResourcesCommand', () => ({ "Databases": [] } as Raven.Client.Data.ResourcesInfo));
 
             return this.aceEditorFacade(Utils.injector)
                 .then(() => Utils.applyConfiguration());
@@ -71,6 +81,7 @@ class Utils {
     private static applyConfiguration() {
         return Promise.all([
             Utils.configureOAuthContext(),
+            Utils.configureMockWebSocket(),
             Utils.configureCommandBase(),
             Utils.configureViewModelBase(),
             Utils.configureAceEditorHandler(),
@@ -89,6 +100,14 @@ class Utils {
                 const errorMsg = "Command execution is not supported during tests at: " + (<any>this).__moduleId__;
                 Utils.errorHolder.push(errorMsg);
                 throw new Error(errorMsg);
+            }
+        });
+    }
+
+    private static configureMockWebSocket() {
+        return Utils.requireAndConfigure("common/abstractWebSocketClient", webSocket => {
+            webSocket.prototype.connectWebSocket = function () {
+                setTimeout(() => this.onOpen(), 0);
             }
         });
     }

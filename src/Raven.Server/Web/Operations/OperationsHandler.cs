@@ -1,6 +1,8 @@
-﻿using System.Net;
+﻿using System.Collections.Generic;
+using System.Net;
 using System.Threading.Tasks;
 using Raven.Server.Documents;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -27,17 +29,18 @@ namespace Raven.Server.Web.Operations
         }
 
         [RavenAction("/databases/*/operation/kill", "POST")]
-        public Task OperationKill()
+        public Task Kill()
         {
             var id = GetLongQueryString("id");
             // ReSharper disable once PossibleInvalidOperationException
             Database.Operations.KillOperation(id.Value);
 
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/operation/dismiss", "GET")]
-        public Task OperationDismiss()
+        public Task Dismiss()
         {
             var id = GetLongQueryString("id");
             // ReSharper disable once PossibleInvalidOperationException
@@ -47,52 +50,37 @@ namespace Raven.Server.Web.Operations
         }
 
         [RavenAction("/databases/*/operations", "GET")]
-        public Task OperationsGet()
+        public Task GetAll()
         {
+            var id = GetLongQueryString("id", required: false);
+
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                ICollection<DatabaseOperations.PendingOperation> operations;
+                if (id.HasValue == false)
+                    operations = Database.Operations.GetAll();
+                else
                 {
-                    writer.WriteStartArray();
-
-                    var first = true;
-
-                    foreach (var operation in Database.Operations.GetAll())
+                    var operation = Database.Operations.GetOperation(id.Value);
+                    if (operation == null)
                     {
-                        if (first == false)
-                            writer.WriteComma();
-                        first = false;
-
-                        writer.WriteObject(context.ReadObject(operation.ToJson(), "operation"));
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                        return Task.CompletedTask;
                     }
 
-                    writer.WriteEndArray();
+                    operations = new List<DatabaseOperations.PendingOperation> { operation };
                 }
-            }
 
-            return Task.CompletedTask;
-        }
-
-        [RavenAction("/databases/*/operation", "GET")]
-        public Task Operation()
-        {
-            var id = GetLongQueryString("id");
-            // ReSharper disable once PossibleInvalidOperationException
-            var operation = Database.Operations.GetOperation(id.Value);
-
-            if (operation == null)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                return Task.CompletedTask;
-            }
-
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
-            {
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    writer.WriteObject(context.ReadObject(operation.ToJson(), "operation"));
+                    writer.WriteStartObject();
+                    writer.WriteResults(context, operations, (w, c, operation) =>
+                    {
+                        c.Write(w, operation.ToJson());
+                    });
+
+                    writer.WriteEndObject();
                 }
             }
 
@@ -100,7 +88,7 @@ namespace Raven.Server.Web.Operations
         }
 
         [RavenAction("/databases/*/operations/status", "GET")]
-        public Task Operations()
+        public Task Status()
         {
             var id = GetLongQueryString("id");
             // ReSharper disable once PossibleInvalidOperationException
@@ -117,10 +105,10 @@ namespace Raven.Server.Web.Operations
             {
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    writer.WriteObject(context.ReadObject(state.ToJson(), "operation"));
+                    context.Write(writer, state.ToJson());
                 }
             }
-            
+
             return Task.CompletedTask;
         }
 

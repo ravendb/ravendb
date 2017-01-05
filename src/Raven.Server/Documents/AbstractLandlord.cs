@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Logging;
+using Raven.Abstractions;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow;
@@ -21,7 +20,6 @@ namespace Raven.Server.Documents
         protected readonly ServerStore ServerStore;
         protected readonly SemaphoreSlim ResourceSemaphore;
         protected readonly TimeSpan ConcurrentResourceLoadTimeout;
-
         protected static string DisposingLock = Guid.NewGuid().ToString();
 
         public readonly ResourceCache<TResource> ResourcesStoresCache = new ResourceCache<TResource>();
@@ -98,7 +96,7 @@ namespace Raven.Server.Documents
             exceptionAggregator.ThrowIfNeeded();
         }
 
-        private void UnloadResource(string resourceName)
+        public void UnloadResource(string resourceName, TimeSpan? skipIfActiveInDuration, Func<TResource, bool> shouldSkip = null)
         {
             DateTime time;
             Task<TResource> resourceTask;
@@ -121,6 +119,16 @@ namespace Raven.Server.Documents
 
             // will never wait, we checked that we already run to completion here
             var database = resourceTask.Result;
+
+            if ((skipIfActiveInDuration != null && (SystemTime.UtcNow - LastWork(database)) < skipIfActiveInDuration) ||
+                (shouldSkip != null && shouldSkip(database)))
+            {
+                // this document might not be actively working with user, but it is actively doing indexes, we will 
+                // wait with unloading this database until it hasn't done indexing for a while.
+                // This prevent us from shutting down big databases that have been left alone to do indexing work.
+                return;
+            }
+
             try
             {
                 database.Dispose();
@@ -142,7 +150,7 @@ namespace Raven.Server.Documents
             Interlocked.Increment(ref HasLocks);
             try
             {
-                UnloadResource(resourceName);
+                UnloadResource(resourceName, null);
                 actionToTake();
             }
             finally
@@ -151,5 +159,8 @@ namespace Raven.Server.Documents
                 Interlocked.Decrement(ref HasLocks);
             }
         }
+
+        public abstract DateTime LastWork(TResource resource);
+
     }
 }

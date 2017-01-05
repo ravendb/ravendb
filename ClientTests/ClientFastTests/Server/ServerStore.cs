@@ -1,14 +1,11 @@
-﻿using System;
-using System.IO;
-using System.Net.Http;
-using NewClientTests;
+﻿using System.Net.Http;
 using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Commands;
+using Raven.NewClient.Client.Exceptions;
 using Raven.NewClient.Client.Http;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Voron.Exceptions;
 using Xunit;
 
 namespace NewClientTests.NewClient.Server.Basic
@@ -34,8 +31,7 @@ namespace NewClientTests.NewClient.Server.Basic
                         requestExecuter.Execute(getCommand, context);
                         var putCommand = new PutDatabaseDocumentTestCommand(getCommand.Result);
 
-                        var exception = Assert.Throws<InternalServerErrorException>(() => requestExecuter.Execute(putCommand, context));
-                        Assert.Contains("ConcurrencyException", exception.Message);
+                        Assert.Throws<ConcurrencyException>(() => requestExecuter.Execute(putCommand, context));
                     }
                 }
             }
@@ -66,14 +62,14 @@ namespace NewClientTests.NewClient.Server.Basic
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/databases?name={node.Database}";
-                
+
                 var message = new HttpRequestMessage
                 {
                     Method = HttpMethod.Put
                 };
 
                 message.Headers.Add("ETag", "0");
-                message.Content = new BlittableJsonContent(stream =>  databaseDocument.WriteJsonTo(stream));
+                message.Content = new BlittableJsonContent(stream => databaseDocument.WriteJsonTo(stream));
 
                 return message;
             }
@@ -86,7 +82,7 @@ namespace NewClientTests.NewClient.Server.Basic
         }
 
         public class GetDatabaseDocumentTestCommand : RavenCommand<BlittableJsonReaderObject>
-        {        
+        {
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/databases?name={node.Database}";
@@ -104,10 +100,10 @@ namespace NewClientTests.NewClient.Server.Basic
 
         }
 
-        private bool HasEtagInDatabaseDocumentResponse(string url,string databaseName, JsonOperationContext context)
+        private bool HasEtagInDatabaseDocumentResponse(string url, string databaseName, JsonOperationContext context)
         {
             var command = new GetDatabaseDocumentTestCommand();
-            using (var requestExecuter = new RequestExecuter(url,databaseName,null))
+            using (var requestExecuter = new RequestExecuter(url, databaseName, null))
             {
                 requestExecuter.Execute(command, context);
             }
@@ -117,7 +113,7 @@ namespace NewClientTests.NewClient.Server.Basic
             var hasMetadataProperty = result.TryGet("@metadata", out metadata);
             long etag;
             var hasEtagProperty = metadata.TryGet("@etag", out etag);
-            return hasMetadataProperty && hasEtagProperty && etag > 0; 
+            return hasMetadataProperty && hasEtagProperty && etag > 0;
         }
 
         [Fact]
@@ -144,7 +140,7 @@ namespace NewClientTests.NewClient.Server.Basic
 
                     var fetched = Server.ServerStore.Read(context, "foo/bar");
                     string val;
-                    Assert.True(fetched.TryGet("Foo",out val));
+                    Assert.True(fetched.TryGet("Foo", out val));
                     Assert.Equal("Bar", val);
                 }
 
@@ -206,11 +202,11 @@ namespace NewClientTests.NewClient.Server.Basic
                         Server.ServerStore.Write(context, "foo/bar", blittableObj, lastEtag);
 
                         //this should throw because existing etag doesn't match with existing etag
-                        Assert.Throws<ConcurrencyException>(
+                        Assert.Throws<Voron.Exceptions.ConcurrencyException>(
                             () => Server.ServerStore.Write(context, "foo/bar", blittableObj, 1));
 
                         //this should throw because it has expected etag, but there is no existing value
-                        Assert.Throws<ConcurrencyException>(
+                        Assert.Throws<Voron.Exceptions.ConcurrencyException>(
                             () => Server.ServerStore.Write(context, "foo/bar2", blittableObj, 1));
                     }
                 }

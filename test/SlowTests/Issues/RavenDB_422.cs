@@ -12,10 +12,10 @@ namespace SlowTests.Issues
         [Fact]
         public void UsingStoreAllFields()
         {
-            using(var store = GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new UserIndex().Execute(store);
-                using(var session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new User
                     {
@@ -38,19 +38,19 @@ namespace SlowTests.Issues
             }
         }
 
-        public class User
+        private class User
         {
             public string Name { get; set; }
             public string Email { get; set; }
         }
 
-        public class UserIndex : AbstractIndexCreationTask<User>
+        private class UserIndex : AbstractIndexCreationTask<User>
         {
             public UserIndex()
             {
                 Map = users =>
                       from user in users
-                      select new {UN = user.Name, UE = user.Email};
+                      select new { UN = user.Name, UE = user.Email };
 
                 StoreAllFields(FieldStorage.Yes);
             }

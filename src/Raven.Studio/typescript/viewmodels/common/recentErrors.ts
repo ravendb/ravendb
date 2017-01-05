@@ -1,7 +1,6 @@
 import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import alertArgs = require("common/alertArgs");
-import alertType = require("common/alertType");
 
 //TODO: integrate to notification center
 class recentErrors extends dialogViewModelBase {
@@ -17,11 +16,6 @@ class recentErrors extends dialogViewModelBase {
         }
     }
 
-    clear() {
-        this.errors.removeAll();
-        dialog.close(this);
-    }
-
     close() {
         dialog.close(this);
     }
@@ -35,12 +29,12 @@ class recentErrors extends dialogViewModelBase {
         return alert.details;
     }
 
-    getDangerAlertType() {
-        return alertType.danger;
+    getErrorAlertType() {
+        return "Error" as alertType;
     }
 
     getWarningAlertType() {
-        return alertType.warning;
+        return "Warning" as alertType;
     }
 }
 

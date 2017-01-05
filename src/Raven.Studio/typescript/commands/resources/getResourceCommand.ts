@@ -8,9 +8,13 @@ class getResourceCommand extends commandBase {
     }
 
     execute(): JQueryPromise<Raven.Client.Data.ResourceInfo> {
-
         const url = endpoints.global.resources.resource;
-        return this.query<Raven.Client.Data.ResourceInfo>(url, { type: this.resourceType, name: this.resourceName }, null);
+        const args = {
+            type: this.resourceType,
+            name: this.resourceName
+        };
+
+        return this.query<Raven.Client.Data.ResourceInfo>(url, args);
     }
 }
 

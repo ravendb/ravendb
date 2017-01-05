@@ -12,7 +12,7 @@ class generateClassCommand extends commandBase {
 
     execute(): JQueryPromise<string> {
 
-        const url = endpoints.databases.document.docsGenerateClassFromDocument;
+        const url = endpoints.databases.document.docsClass;
         const args = {
             id: this.docId,
             lang: this.lang

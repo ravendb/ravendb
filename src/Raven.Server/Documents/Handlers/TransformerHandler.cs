@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -27,15 +28,17 @@ namespace Raven.Server.Documents.Handlers
 
                 var transformerId = Database.TransformerStore.CreateTransformer(transformerDefinition);
 
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName(("Transformer"));
+                    writer.WritePropertyName("Transformer");
                     writer.WriteString(name);
                     writer.WriteComma();
 
-                    writer.WritePropertyName(("TransformerId"));
+                    writer.WritePropertyName("TransformerId");
                     writer.WriteInteger(transformerId);
 
                     writer.WriteEndObject();
@@ -49,7 +52,7 @@ namespace Raven.Server.Documents.Handlers
             var name = GetStringQueryString("name", required: false);
 
             var start = GetStart();
-            var pageSize = GetPageSize();
+            var pageSize = GetPageSize(Database.Configuration.Core.MaxPageSize);
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -76,20 +79,13 @@ namespace Raven.Server.Documents.Handlers
                     transformerDefinitions = new[] { transformer.Definition };
                 }
 
-                writer.WriteStartArray();
-
-                var isFirst = true;
-                foreach (var transformerDefinition in transformerDefinitions)
+                writer.WriteStartObject();
+                writer.WriteResults(context, transformerDefinitions, (w, c, definition) =>
                 {
-                    if (isFirst == false)
-                        writer.WriteComma();
+                    w.WriteTransformerDefinition(c, definition);
+                });
 
-                    isFirst = false;
-
-                    writer.WriteTransformerDefinition(context, transformerDefinition);
-                }
-
-                writer.WriteEndArray();
+                writer.WriteEndObject();
             }
 
             return Task.CompletedTask;
@@ -98,7 +94,6 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/transformers/set-lock", "POST")]
         public Task SetLockMode()
         {
-            
             var names = GetStringValuesQueryString("name");
             var modeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("mode");
 
@@ -110,11 +105,12 @@ namespace Raven.Server.Documents.Handlers
             {
                 var transformer = Database.TransformerStore.GetTransformer(name);
                 if (transformer == null)
-                    throw new InvalidOperationException("There is not transformer with name: " + name);
+                    TransformerDoesNotExistsException.ThrowFor(name);
 
                 transformer.SetLock(mode);
             }
 
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             return Task.CompletedTask;
         }
 

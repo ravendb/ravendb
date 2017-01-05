@@ -5,11 +5,9 @@ using System.Net;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Lucene.Net.Analysis;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Connection;
-using Raven.Client.Connection.Implementation;
 using Raven.Client.Data;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
@@ -18,8 +16,6 @@ using Raven.Client.Replication.Messages;
 using Raven.Json.Linq;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Extensions;
-using Sparrow.Json;
 using Xunit;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
@@ -27,7 +23,7 @@ namespace FastTests.Server.Documents.Replication
 {
     public class ReplicationConflictsTests : ReplicationTestsBase
     {
-        public class User
+        private class User
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -210,7 +206,7 @@ namespace FastTests.Server.Documents.Replication
 
 
         [Fact]
-        public async Task Conflict_same_time_with_master_slave()
+        public void Conflict_same_time_with_master_slave()
         {
             using (var store1 = GetDocumentStore(dbSuffixIdentifier: "foo1"))
             using (var store2 = GetDocumentStore(dbSuffixIdentifier: "foo2"))
@@ -228,13 +224,13 @@ namespace FastTests.Server.Documents.Replication
 
                 SetupReplication(store1, store2);
 
-                var conflicts = await WaitUntilHasConflict(store2, "foo/bar");
+                var conflicts = WaitUntilHasConflict(store2, "foo/bar");
                 Assert.Equal(2, conflicts["foo/bar"].Count);
             }
         }
 
         [Fact]
-        public async Task Conflict_then_data_query_will_return_409_and_conflict_data()
+        public void Conflict_then_data_query_will_return_409_and_conflict_data()
         {
             using (var store1 = GetDocumentStore(dbSuffixIdentifier: "foo1"))
             using (var store2 = GetDocumentStore(dbSuffixIdentifier: "foo2"))
@@ -256,7 +252,7 @@ namespace FastTests.Server.Documents.Replication
                 WaitForIndexing(store2);
                 SetupReplication(store1, store2);
 
-                await WaitUntilHasConflict(store2, "foo/bar");
+                WaitUntilHasConflict(store2, "foo/bar");
                 // /indexes/Raven/DocumentsByEntityName
                 //TODO: this needs to be replaced by ClientAPI LoadDocument() when the ClientAPI is finished
                 var url = $"{store2.Url}/databases/{store2.DefaultDatabase}/queries/{userIndex.IndexName}";
@@ -270,7 +266,7 @@ namespace FastTests.Server.Documents.Replication
         }
 
         [Fact]
-        public async Task Conflict_then_delete_query_will_return_409_and_conflict_data()
+        public void Conflict_then_delete_query_will_return_409_and_conflict_data()
         {
             using (var store1 = GetDocumentStore(dbSuffixIdentifier: "foo1"))
             using (var store2 = GetDocumentStore(dbSuffixIdentifier: "foo2"))
@@ -292,7 +288,7 @@ namespace FastTests.Server.Documents.Replication
                 WaitForIndexing(store2);
                 SetupReplication(store1, store2);
 
-                await WaitUntilHasConflict(store2, "foo/bar");
+                WaitUntilHasConflict(store2, "foo/bar");
 
 
                 var op = store2.DatabaseCommands.DeleteByIndex(userIndex.IndexName, new IndexQuery
@@ -327,7 +323,7 @@ namespace FastTests.Server.Documents.Replication
         }
 
         [Fact]
-        public async Task Conflict_then_patching_query_will_return_409_and_conflict_data()
+        public void Conflict_then_patching_query_will_return_409_and_conflict_data()
         {
             using (var store1 = GetDocumentStore(dbSuffixIdentifier: "foo1"))
             using (var store2 = GetDocumentStore(dbSuffixIdentifier: "foo2"))
@@ -349,7 +345,7 @@ namespace FastTests.Server.Documents.Replication
                 WaitForIndexing(store2);
                 SetupReplication(store1, store2);
 
-                await WaitUntilHasConflict(store2, "foo/bar");
+                WaitUntilHasConflict(store2, "foo/bar");
 
 
                 // /indexes/Raven/DocumentsByEntityName
@@ -366,7 +362,7 @@ namespace FastTests.Server.Documents.Replication
         }
 
         [Fact]
-        public async Task Conflict_then_load_by_id_will_return_409_and_conflict_data()
+        public void Conflict_then_load_by_id_will_return_409_and_conflict_data()
         {
             using (var store1 = GetDocumentStore(dbSuffixIdentifier: "foo1"))
             using (var store2 = GetDocumentStore(dbSuffixIdentifier: "foo2"))
@@ -385,7 +381,7 @@ namespace FastTests.Server.Documents.Replication
 
                 SetupReplication(store1, store2);
 
-                await WaitUntilHasConflict(store2, "foo/bar");
+                WaitUntilHasConflict(store2, "foo/bar");
 
                 //TODO: this needs to be replaced by ClientAPI LoadDocument() when the ClientAPI is finished
                 var url = $"{store2.Url}/databases/{store2.DefaultDatabase}/docs?id=foo/bar";
@@ -399,7 +395,7 @@ namespace FastTests.Server.Documents.Replication
         }
 
         [Fact]
-        public async Task Conflict_then_patch_request_will_return_409_and_conflict_data()
+        public void Conflict_then_patch_request_will_return_409_and_conflict_data()
         {
             using (var store1 = GetDocumentStore(dbSuffixIdentifier: "foo1"))
             using (var store2 = GetDocumentStore(dbSuffixIdentifier: "foo2"))
@@ -418,7 +414,7 @@ namespace FastTests.Server.Documents.Replication
 
                 SetupReplication(store1, store2);
 
-                await WaitUntilHasConflict(store2, "foo/bar");
+                WaitUntilHasConflict(store2, "foo/bar");
 
                 //TODO: this needs to be replaced by ClientAPI Delete() when the ClientAPI is finished
                 var url = $"{store2.Url}/databases/{store2.DefaultDatabase}/docs?id=foo/bar";
@@ -438,7 +434,7 @@ namespace FastTests.Server.Documents.Replication
         }
 
         [Fact]
-        public async Task Conflict_then_delete_request_will_return_409_and_conflict_data()
+        public void Conflict_then_delete_request_will_return_409_and_conflict_data()
         {
             using (var store1 = GetDocumentStore(dbSuffixIdentifier: "foo1"))
             using (var store2 = GetDocumentStore(dbSuffixIdentifier: "foo2"))
@@ -457,7 +453,7 @@ namespace FastTests.Server.Documents.Replication
 
                 SetupReplication(store1, store2);
 
-                await WaitUntilHasConflict(store2, "foo/bar");
+                WaitUntilHasConflict(store2, "foo/bar");
 
                 //TODO: this needs to be replaced by ClientAPI Delete() when the ClientAPI is finished
                 var url = $"{store2.Url}/databases/{store2.DefaultDatabase}/docs?id=foo/bar";
@@ -481,7 +477,7 @@ namespace FastTests.Server.Documents.Replication
 
 
         [Fact]
-        public async Task Conflict_should_work_on_master_slave_slave()
+        public void Conflict_should_work_on_master_slave_slave()
         {
             var dbName1 = "FooBar-1";
             var dbName2 = "FooBar-2";
@@ -509,15 +505,15 @@ namespace FastTests.Server.Documents.Replication
                 SetupReplication(store1, store3);
                 SetupReplication(store2, store3);
 
-                var conflicts = await WaitUntilHasConflict(store3, "foo/bar", 3);
+                var conflicts = WaitUntilHasConflict(store3, "foo/bar", 3);
 
                 Assert.Equal(3, conflicts["foo/bar"].Count);
             }
         }
 
-        
 
-        public class UserIndex : AbstractIndexCreationTask<User>
+
+        private class UserIndex : AbstractIndexCreationTask<User>
         {
             public UserIndex()
             {

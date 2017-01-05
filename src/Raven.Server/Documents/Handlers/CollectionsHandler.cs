@@ -46,11 +46,14 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                var documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStringQueryString("name"), GetStart(), GetPageSize());
+                var documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, GetStringQueryString("name"), GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize));
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("Results");
                     writer.WriteDocuments(context, documents, metadataOnly: false);
+                    writer.WriteEndObject();
                 }
             }
 

@@ -2,6 +2,7 @@
 
 import resourceInfo = require("models/resources/info/resourceInfo");
 import filesystem = require("models/filesystem/filesystem");
+import resourcesManager = require("common/shell/resourcesManager");
 
 class filesystemInfo extends resourceInfo {
 
@@ -9,7 +10,7 @@ class filesystemInfo extends resourceInfo {
 
     constructor(dto: Raven.Client.Data.FileSystemInfo) {
         super(dto);
-        this.filesCount(dto.FilesCount);
+        this.update(dto);
     }
 
     get qualifier() {
@@ -21,13 +22,12 @@ class filesystemInfo extends resourceInfo {
     }
 
     asResource(): filesystem {
-        return new filesystem(this.name, this.isAdmin(), this.disabled(), this.bundles());
+        return resourcesManager.default.getFileSystemByName(this.name);
     }
-
     update(fileSystemInfo: Raven.Client.Data.FileSystemInfo): void {
         super.update(fileSystemInfo);
 
-        //TODO: implement
+        this.filesCount(fileSystemInfo.FilesCount);
     }
 }
 

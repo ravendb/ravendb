@@ -11,17 +11,21 @@ namespace FastTests.Client
 {
     public class CanParseToObjectFromBlittable : NoDisposalNeeded
     {
-        public class User
+        private class User
         {
+#pragma warning disable 649
             public string Id;
             public string Name;
             public int Age;
             public string[] Dogs;
             public List<Child> Children;
+#pragma warning restore 649
         }
-        public class Child
+        private class Child
         {
+#pragma warning disable 649
             public string Name;
+#pragma warning restore 649
         }
 
         [Fact]

@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using FastTests.Server.Documents.Replication;
+﻿using FastTests.Server.Documents.Replication;
 using Raven.Abstractions.Replication;
 using Raven.Json.Linq;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Server.Replication
@@ -14,7 +10,7 @@ namespace FastTests.Server.Replication
     {
 
         [Fact]
-        public async void TomstoneToTombstoneConflict()
+        public void TomstoneToTombstoneConflict()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
@@ -25,7 +21,7 @@ namespace FastTests.Server.Replication
 
                 using (var session = master.OpenSession())
                 {
-                    session.Store(new ReplicationConflictsTests.User()
+                    session.Store(new User()
                     {
                         Name = "Karmeli"
                     }, "users/1");
@@ -52,7 +48,7 @@ namespace FastTests.Server.Replication
                 bool failed = false;
                 try
                 {
-                    await WaitUntilHasConflict(slave, "users/1", 1, 1000);
+                    WaitUntilHasConflict(slave, "users/1", 1);
                     failed = true;
                 }
                 catch
@@ -64,7 +60,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public async void NonIdenticalContentConflict()
+        public void NonIdenticalContentConflict()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
@@ -75,7 +71,7 @@ namespace FastTests.Server.Replication
 
                 using (var session = slave.OpenSession())
                 {
-                    session.Store(new ReplicationConflictsTests.User()
+                    session.Store(new User()
                     {
                         Name = "Karmel"
                     }, "users/1");
@@ -85,20 +81,20 @@ namespace FastTests.Server.Replication
 
                 using (var session = master.OpenSession())
                 {
-                    session.Store(new ReplicationConflictsTests.User()
+                    session.Store(new User()
                     {
                         Name = "Karmeli"
                     }, "users/1");
                     session.SaveChanges();
                 }
 
-                var conflicts = await WaitUntilHasConflict(slave, "users/1", 1, 1000);
-                Assert.Equal(2,conflicts["users/1"].Count);
+                var conflicts = WaitUntilHasConflict(slave, "users/1", 1);
+                Assert.Equal(2, conflicts["users/1"].Count);
             }
         }
 
         [Fact]
-        public async void NonIdenticalMetadataConflict()
+        public void NonIdenticalMetadataConflict()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
@@ -109,11 +105,11 @@ namespace FastTests.Server.Replication
 
                 using (var session = slave.OpenSession())
                 {
-                    session.Store(new ReplicationConflictsTests.User()
+                    session.Store(new User()
                     {
                         Name = "Karmel"
                     }, "users/1");
-                    var user = session.Load<ReplicationConflictsTests.User>("users/1");
+                    var user = session.Load<User>("users/1");
                     var meta = session.Advanced.GetMetadataFor(user);
                     meta.Add(("bla"), new RavenJValue("asd"));
                     session.Store(user);
@@ -123,24 +119,24 @@ namespace FastTests.Server.Replication
 
                 using (var session = master.OpenSession())
                 {
-                    session.Store(new ReplicationConflictsTests.User()
+                    session.Store(new User()
                     {
                         Name = "Karmel"
                     }, "users/1");
-                    var user = session.Load<ReplicationConflictsTests.User>("users/1");
+                    var user = session.Load<User>("users/1");
                     var meta = session.Advanced.GetMetadataFor(user);
                     meta.Add(("bla"), new RavenJValue("asd"));
                     meta.Add(("bla2"), new RavenJValue("asd"));
                     session.SaveChanges();
                 }
 
-                var conflicts = await WaitUntilHasConflict(slave, "users/1", 1, 1000);
+                var conflicts =  WaitUntilHasConflict(slave, "users/1", 1);
                 Assert.Equal(2, conflicts["users/1"].Count);
             }
         }
 
         [Fact]
-        public async void IdenticalContentConflictResolution()
+        public void IdenticalContentConflictResolution()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
@@ -151,7 +147,7 @@ namespace FastTests.Server.Replication
 
                 using (var session = slave.OpenSession())
                 {
-                    session.Store(new ReplicationConflictsTests.User()
+                    session.Store(new User()
                     {
                         Name = "Karmel",
                         Age = 12
@@ -159,10 +155,10 @@ namespace FastTests.Server.Replication
                     session.SaveChanges();
                 }
 
-                
+
                 using (var session = master.OpenSession())
                 {
-                    session.Store(new ReplicationConflictsTests.User()
+                    session.Store(new User()
                     {
                         Age = 12,
                         Name = "Karmel"
@@ -173,7 +169,7 @@ namespace FastTests.Server.Replication
                 bool failed = false;
                 try
                 {
-                    await WaitUntilHasConflict(slave, "users/1", 1, 1000);
+                     WaitUntilHasConflict(slave, "users/1", 1);
                     failed = true;
                 }
                 catch
@@ -185,7 +181,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public async void UpdateConflictOnParentDocumentArrival()
+        public void UpdateConflictOnParentDocumentArrival()
         {
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
@@ -196,7 +192,7 @@ namespace FastTests.Server.Replication
 
                 using (var session = slave.OpenSession())
                 {
-                    session.Store(new ReplicationConflictsTests.User()
+                    session.Store(new User()
                     {
                         Name = "Karmel"
                     }, "users/1");
@@ -205,25 +201,25 @@ namespace FastTests.Server.Replication
 
                 using (var session = master.OpenSession())
                 {
-                    session.Store(new ReplicationConflictsTests.User()
+                    session.Store(new User()
                     {
                         Name = "Karmeli"
                     }, "users/1");
                     session.SaveChanges();
                 }
-                var conflicts = await WaitUntilHasConflict(slave, "users/1", 1, 1000);
+                var conflicts =  WaitUntilHasConflict(slave, "users/1", 1);
                 Assert.Equal(1, conflicts.Count);
 
                 using (var session = master.OpenSession())
                 {
-                    session.Store(new ReplicationConflictsTests.User()
+                    session.Store(new User()
                     {
                         Name = "Karmel123"
                     }, "users/1");
                     session.SaveChanges();
                 }
 
-                conflicts = await WaitUntilHasConflict(slave, "users/1", 1, 1000);
+                conflicts =  WaitUntilHasConflict(slave, "users/1", 1);
                 Assert.Equal(2, conflicts["users/1"].Count);
             }
         }

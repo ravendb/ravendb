@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -10,8 +9,6 @@ using System.Runtime.InteropServices;
 using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Data.Indexes;
@@ -26,10 +23,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 
 using Sparrow.Collections;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using Xunit;
 using JsonTextWriter = Raven.Imports.Newtonsoft.Json.JsonTextWriter;
 
 namespace FastTests
@@ -40,23 +34,19 @@ namespace FastTests
 
         protected readonly ConcurrentSet<DocumentStore> CreatedStores = new ConcurrentSet<DocumentStore>();
 
-        protected static readonly ConcurrentSet<string> PathsToDelete =
-            new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
+        protected static readonly ConcurrentSet<string> PathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        private static RavenServer _globalServer;
+        private static ServerLease _globalServer;
         private static readonly object ServerLocker = new object();
         private static readonly object AvailableServerPortsLocker = new object();
-        private RavenServer _localServer;
+        private ServerLease _localServer;
 
         public void DoNotReuseServer() => _doNotReuseServer = true;
         private bool _doNotReuseServer;
-        private int NonReusedServerPort { get; set; }
-        private int NonReusedTcpServerPort { get; set; }
         private const int MaxParallelServer = 78; // port 8000 might be reserved on some cases for IPv6 translation
         private static readonly List<int> _usedServerPorts = new List<int>();
 
-        private static readonly List<int> _availableServerPorts =
-            Enumerable.Range(8079 - MaxParallelServer, MaxParallelServer).ToList();
+        private static readonly List<int> _availableServerPorts = Enumerable.Range(8079 - MaxParallelServer, MaxParallelServer).ToList();
 
         public async Task<DocumentDatabase> GetDatabase(string databaseName)
         {
@@ -69,27 +59,25 @@ namespace FastTests
             get
             {
                 if (_localServer != null)
-                    return _localServer;
+                    return _localServer.Server;
 
                 if (_doNotReuseServer)
                 {
-                    NonReusedServerPort = GetAvailablePort();
-                    NonReusedTcpServerPort = GetAvailablePort();
-                    _localServer = CreateServer(NonReusedServerPort, NonReusedTcpServerPort);
-                    return _localServer;
+                    _localServer = GetNewServer();
+                    return _localServer.Server;
                 }
 
                 if (_globalServer != null)
                 {
                     _localServer = _globalServer;
-                    return _localServer;
+                    return _localServer.Server;
                 }
                 lock (ServerLocker)
                 {
                     if (_globalServer == null)
                     {
                         Console.WriteLine("\tTo attach debugger to test process, use process id: {0}", Process.GetCurrentProcess().Id);
-                        var globalServer = CreateServer(GetAvailablePort(), GetAvailablePort());
+                        var globalServer = GetNewServer();
                         AssemblyLoadContext.Default.Unloading += context =>
                         {
                             globalServer.Dispose();
@@ -107,7 +95,7 @@ namespace FastTests
                     }
                     _localServer = _globalServer;
                 }
-                return _globalServer;
+                return _globalServer.Server;
             }
         }
 
@@ -138,6 +126,15 @@ namespace FastTests
                 _availableServerPorts.Add(port);
                 _usedServerPorts.Remove(port);
             }
+        }
+
+        protected ServerLease GetNewServer()
+        {
+            var port = GetAvailablePort();
+            var tcpPort = GetAvailablePort();
+            var server = CreateServer(port, tcpPort);
+
+            return new ServerLease(server, port, tcpPort, RemoveUsedPort);
         }
 
         public static RavenServer CreateServer(int port, int tcpPort)
@@ -360,7 +357,11 @@ namespace FastTests
         {
             if (suffix != null)
                 prefix += suffix;
-            var path = RavenTestHelper.NewDataPath(prefix, NonReusedServerPort, forceCreateDir);
+
+            var server = _localServer ?? _globalServer;
+            var port = server?.Port ?? 0;
+
+            var path = RavenTestHelper.NewDataPath(prefix, port, forceCreateDir);
 
             PathsToDelete.Add(path);
             return path;
@@ -384,12 +385,42 @@ namespace FastTests
                     {
                         _localServer.Dispose();
                         _localServer = null;
-                        RemoveUsedPort(NonReusedServerPort);
-                        RemoveUsedPort(NonReusedTcpServerPort);
                     });
                 }
 
                 exceptionAggregator.ThrowIfNeeded();
+            }
+        }
+
+        public class ServerLease : IDisposable
+        {
+            private readonly Action<int> _releasePort;
+
+            public ServerLease(RavenServer server, int port, int tcpPort, Action<int> releasePort)
+            {
+                if (server == null)
+                    throw new ArgumentNullException(nameof(server));
+
+                if (releasePort == null)
+                    throw new ArgumentNullException(nameof(releasePort));
+
+                Server = server;
+                Port = port;
+                TcpPort = tcpPort;
+
+                _releasePort = releasePort;
+            }
+
+            public RavenServer Server { get; private set; }
+            public int Port { get; private set; }
+            public int TcpPort { get; private set; }
+
+            public void Dispose()
+            {
+                Server.Dispose();
+
+                _releasePort(Port);
+                _releasePort(TcpPort);
             }
         }
     }

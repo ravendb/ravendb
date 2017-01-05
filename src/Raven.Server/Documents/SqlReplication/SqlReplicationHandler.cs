@@ -6,6 +6,7 @@
 
 using System;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Server.Json;
@@ -21,15 +22,12 @@ namespace Raven.Server.Documents.SqlReplication
         [RavenAction("/databases/*/sql-replication/stats", "GET", "/databases/{databaseName:string}/sql-replication/stats?name={sqlReplicationName:string}")]
         public Task GetStats()
         {
-            var names = HttpContext.Request.Query["name"];
-            if (names.Count == 0)
-                throw new ArgumentException("Query string \'name\' is mandatory, but wasn\'t specified");
-            var name = names[0];
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var replication = Database.SqlReplicationLoader.Replications.FirstOrDefault(r => r.ReplicationUniqueName == name) as SqlReplication;
 
             if (replication == null)
             {
-                HttpContext.Response.StatusCode = 404;
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                 return Task.CompletedTask;
             }
 
@@ -87,14 +85,14 @@ namespace Raven.Server.Documents.SqlReplication
         {
             try
             {
-                var factoryName = GetStringQueryString("factoryName", true);
-                var connectionString = GetStringQueryString("connectionString", true);
+                var factoryName = GetStringQueryString("factoryName");
+                var connectionString = GetStringQueryString("connectionString");
                 RelationalDatabaseWriter.TestConnection(factoryName, connectionString);
-                HttpContext.Response.StatusCode = 204; // No Content
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent; // No Content
             }
             catch (Exception ex)
             {
-                HttpContext.Response.StatusCode = 400; // Bad Request
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest; // Bad Request
 
                 JsonOperationContext context;
                 using (ContextPool.AllocateOperationContext(out context))
@@ -137,15 +135,12 @@ namespace Raven.Server.Documents.SqlReplication
         [RavenAction("/databases/*/sql-replication/reset", "POST", "/databases/{databaseName:string}/sql-replication/reset?name={sqlReplicationName:string}")]
         public Task PostResetSqlReplication()
         {
-            var names = HttpContext.Request.Query["name"];
-            if (names.Count == 0)
-                throw new ArgumentException("Query string \'name\' is mandatory, but wasn\'t specified");
-            var name = names[0];
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var replication = Database.SqlReplicationLoader.Replications.FirstOrDefault(r => r.ReplicationUniqueName == name);
 
             if (replication == null)
             {
-                HttpContext.Response.StatusCode = 404;
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                 return Task.CompletedTask;
             }
 
@@ -157,7 +152,7 @@ namespace Raven.Server.Documents.SqlReplication
                 tx.Commit();
             }
 
-            HttpContext.Response.StatusCode = 204;  // NoContent
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;  // NoContent
             return Task.CompletedTask;
         }
     }

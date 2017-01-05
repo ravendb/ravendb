@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -18,15 +18,11 @@ namespace Raven.Server.Documents.Handlers.Debugging
         public Task KillQuery()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("indexName");
-            var idStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-
-            long id;
-            if (long.TryParse(idStr, out id) == false)
-                throw new ArgumentException($"Query string value 'id' must be a number");
+            var id = GetLongQueryString("id");
 
             var index = Database.IndexStore.GetIndex(name);
             if (index == null)
-                throw new InvalidOperationException("There is not index with name: " + name);
+                IndexDoesNotExistsException.ThrowFor(name);
 
             var query = index.CurrentlyRunningQueries
                 .FirstOrDefault(q => q.QueryId == id);
