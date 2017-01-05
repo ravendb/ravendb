@@ -1,7 +1,6 @@
-﻿using FastTests.Server.Documents.Replication;
+﻿using FastTests.Server.Basic.Entities;
 using Raven.Abstractions.Replication;
 using Raven.Json.Linq;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Server.Replication

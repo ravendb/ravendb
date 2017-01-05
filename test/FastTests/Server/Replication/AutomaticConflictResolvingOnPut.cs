@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Net;
 using System.Threading;
+using FastTests.Server.Basic.Entities;
 using Raven.Abstractions.Connection;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace FastTests.Server.Documents.Replication
+namespace FastTests.Server.Replication
 {
     public class AutomaticConflictResolvingOnPut : ReplicationTestsBase
     {

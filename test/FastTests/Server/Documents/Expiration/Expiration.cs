@@ -6,12 +6,12 @@
 
 using System;
 using System.Threading.Tasks;
+using FastTests.Server.Basic.Entities;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Server.Documents.Expiration;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Server.Documents.Expiration

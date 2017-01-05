@@ -1,11 +1,9 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
-
+using FastTests.Server.Basic.Entities;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
-using Raven.Tests.Core.Utils.Entities;
-
 using Xunit;
 
 namespace FastTests.Client.Documents

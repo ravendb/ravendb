@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-
+using FastTests.Server.Basic.Entities;
 using Lucene.Net.Analysis;
 
 using Raven.Abstractions;
@@ -19,7 +19,6 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Exceptions;
-using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Xunit;
 

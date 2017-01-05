@@ -1,8 +1,7 @@
-﻿using System.Threading.Tasks;
-using Raven.Tests.Core.Utils.Entities;
+﻿using FastTests.Server.Basic.Entities;
 using Xunit;
 
-namespace FastTests.Server.Documents.Replication
+namespace FastTests.Server.Replication
 {
     public class ReplicationTombstoneTests : ReplicationTestsBase
     {

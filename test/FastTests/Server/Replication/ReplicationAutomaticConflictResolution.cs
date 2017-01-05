@@ -5,12 +5,11 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Threading;
+using FastTests.Server.Basic.Entities;
 using Raven.Abstractions.Replication;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace FastTests.Server.Documents.Replication
+namespace FastTests.Server.Replication
 {
     public class AutomaticConflictResolution : ReplicationTestsBase
     {

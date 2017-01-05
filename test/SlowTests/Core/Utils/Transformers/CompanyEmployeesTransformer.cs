@@ -8,8 +8,6 @@ using System.Collections.Generic;
 using System.Linq;
 
 using Raven.Client.Indexes;
-using Raven.Tests.Core.Utils.Entities;
-
 using Company = SlowTests.Core.Utils.Entities.Company;
 using Employee = SlowTests.Core.Utils.Entities.Employee;
 

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Raven.Abstractions.Extensions;
 
-namespace Raven.Tests.Notifications
+namespace FastTests.Server.Documents.Notifications
 {
     public static class ObservableExtensions
     {
