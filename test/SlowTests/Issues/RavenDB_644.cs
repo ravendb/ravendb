@@ -131,6 +131,8 @@ namespace SlowTests.Issues
             }
         }
 
+
+
         [Fact]
         public void IndexDefinitionBuilderShouldThrow()
         {
@@ -149,35 +151,39 @@ namespace SlowTests.Issues
         [Fact]
         public void ServerShouldThrow()
         {
-            var exception = Assert.Throws<AggregateException>(
+            var exception = Assert.Throws<IndexCompilationException>(
                 () =>
                 {
                     using (var store = GetDocumentStore())
                     {
-//                        var container = new CompositionContainer(new TypeCatalog(typeof(Index), typeof(Record)));
-//                        IndexCreation.CreateIndexes(container, store);
                         new Index().Execute(store);
                     }
                 });
 
-            var e = (IndexCompilationException)exception.InnerException.InnerException;
-            Assert.Equal("Reduce cannot contain Count() methods in grouping.", e.InnerException.Message);
+            Assert.Equal("Reduce cannot contain Count() methods in grouping.", exception.InnerException.Message);
 
-            exception = Assert.Throws<AggregateException>(
+            exception = Assert.Throws<IndexCompilationException>(
                 () =>
                 {
                     using (var store = GetDocumentStore())
                     {
-                     /*   var container = new CompositionContainer(new TypeCatalog(typeof(FancyIndex), typeof(Record)));
-                        IndexCreation.CreateIndexes(container, store);
-*/
                         new FancyIndex().Execute(store);
-                      //  new Record().Execute(store);
                     }
                 });
 
-            e = (IndexCompilationException)exception.InnerException;
-            Assert.Equal("Reduce cannot contain Count() methods in grouping.", e.InnerException.Message);
+            Assert.Equal("Expression cannot contain Enumerable.Count methods in grouping.", exception.Message);
+
+            var indexdef = new FancyIndex().CreateIndexDefinition();
+            exception = Assert.Throws<IndexCompilationException>(
+                () =>
+                {
+                    using (var store = GetDocumentStore())
+                    {
+                        store.DatabaseCommands.PutIndex("test",indexdef);
+                    }
+                });
+
+            Assert.Equal("Expression cannot contain Enumerable.Count methods in grouping.", exception.Message);
         }
 
         [Fact]
@@ -226,6 +232,11 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 new ValidFancyIndex().Execute(store);
+            }
+            var index = new ValidFancyIndex().CreateIndexDefinition();
+            using (var store = GetDocumentStore())
+            {
+                store.DatabaseCommands.PutIndex("test", index);
             }
         }
     }
