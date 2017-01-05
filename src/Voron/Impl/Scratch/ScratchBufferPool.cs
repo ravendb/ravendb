@@ -192,13 +192,24 @@ namespace Voron.Impl.Scratch
 
             while (_recycleArea.First != null)
             {
-                if (DateTime.UtcNow - _recycleArea.First.Value.RecycledAt <= TimeSpan.FromMinutes(1))
-                {
+                var recycledScratch = _recycleArea.First.Value;
+
+                if (DateTime.UtcNow - recycledScratch.RecycledAt <= TimeSpan.FromMinutes(1))
                     break;
+
+                _recycleArea.RemoveFirst();
+
+                if (recycledScratch.File.HasActivelyUsedBytes(_env.PossibleOldestReadTransaction))
+                {
+                    // even though this was in the recycle area, there might still be some transactions looking at it
+                    // so we cannot dispose it right now, the disposal will happen in RemoveInactiveScratches 
+                    // when we are sure it's really no longer in use
+                    continue;
                 }
 
-                _recycleArea.First.Value.File.Dispose();
-                _recycleArea.RemoveFirst();
+                ScratchBufferItem _;
+                _scratchBuffers.TryRemove(recycledScratch.Number, out _);
+                recycledScratch.File.Dispose();
             }
 
             if (scratch == _current)
@@ -222,15 +233,13 @@ namespace Voron.Impl.Scratch
             TryRecyleScratchFile(scratch);
         }
 
-        private bool TryRecyleScratchFile(ScratchBufferItem scratch)
+        private void TryRecyleScratchFile(ScratchBufferItem scratch)
         {
             if (scratch.File.Size != _current.File.Size)
-                return false;
+                return;
 
             scratch.RecycledAt = DateTime.UtcNow;
             _recycleArea.AddLast(scratch);
-
-            return true;
         }
 
         public void Dispose()
@@ -321,14 +330,17 @@ namespace Voron.Impl.Scratch
 
                 ScratchBufferItem _;
                 if (_scratchBuffers.TryRemove(scratchBufferItem.Number, out _) == false)
-                {
-                    if (scratchBufferItem.File != except.File)
-                        scratchBufferItem.File.Dispose();
-                }
+                    ThrowUnableToRemoveScratch(scratchBufferItem);
 
                 if (_recycleArea.Contains(scratchBufferItem) == false)
                     scratchBufferItem.File.Dispose();
             }
+        }
+
+        private static void ThrowUnableToRemoveScratch(ScratchBufferItem scratchBufferItem)
+        {
+            throw new InvalidOperationException(
+                $"Could not remove a scratch file from the scratch buffers collection. Number: {scratchBufferItem.Number}");
         }
 
         public void BreakLargeAllocationToSeparatePages(PageFromScratchBuffer value)
