@@ -1,17 +1,15 @@
 using System.Threading.Tasks;
-
-using Raven.Tests.Common;
-
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.Bugs.Async
+namespace SlowTests.Bugs.Async
 {
-    public class Querying : RavenTest
+    public class Querying : RavenTestBase
     {
         [Fact]
         public async Task Can_query_using_async_session()
         {
-            using(var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenAsyncSession())
                 {

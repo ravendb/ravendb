@@ -1,23 +1,44 @@
+using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition.Hosting;
 using System.Linq;
+using FastTests;
 using Raven.Client.Indexes;
-using Raven.Client.Linq;
-using Raven.Tests.Common;
-
 using Xunit;
 
-namespace Raven.Tests.Bugs.Chripede
+namespace SlowTests.Bugs.Chripede
 {
-    public class IndexOnList : RavenTest
+    public class Document
     {
+        public string Id { get; set; }
+
+        public IList<string> List { get; set; }
+    }
+
+    public class Document_Index : AbstractIndexCreationTask<Document>
+    {
+        public Document_Index()
+        {
+            Map = docs => from doc in docs
+                          select new
+                          {
+                              doc.List,
+                          };
+        }
+    }
+
+    public class IndexOnList : RavenTestBase
+    {
+
         [Fact]
         public void CanIndexAndQueryOnList()
         {
-            using (var store = NewDocumentStore())
+
+            using (var store = GetDocumentStore())
             {
-                var container = new CompositionContainer(new TypeCatalog(typeof(Document_Index)));
-                IndexCreation.CreateIndexes(container, store);
+
+                var task = (AbstractIndexCreationTask)Activator.CreateInstance(typeof(Document_Index));
+
+                task.Execute(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -49,26 +70,9 @@ namespace Raven.Tests.Bugs.Chripede
 
                 //    Assert.Equal(1, result.Count);
                 //}
+
             }
-        }
+}
     }
 
-    public class Document
-    {
-        public string Id { get; set; }
-
-        public IList<string> List { get; set; }
-    }
-
-    public class Document_Index : AbstractIndexCreationTask<Document>
-    {
-        public Document_Index()
-        {
-            Map = docs => from doc in docs
-                          select new
-                                     {
-                                         doc.List,
-                                     };
-        }
-    }
 }
