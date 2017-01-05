@@ -1,12 +1,8 @@
 ﻿using System.Threading.Tasks;
-
-using FastTests;
-
-using Raven.Client;
-using Raven.Tests.Core.Utils.Entities;
+using FastTests.Server.Basic.Entities;
 using Xunit;
 
-namespace Raven.Tests.Core
+namespace FastTests.Server.Basic
 {
     public class CollectionTests : RavenTestBase
     {

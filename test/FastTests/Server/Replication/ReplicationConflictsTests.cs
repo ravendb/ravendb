@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Net;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
@@ -19,7 +19,7 @@ using Raven.Server.Documents.Replication;
 using Xunit;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
-namespace FastTests.Server.Documents.Replication
+namespace FastTests.Server.Replication
 {
     public class ReplicationConflictsTests : ReplicationTestsBase
     {

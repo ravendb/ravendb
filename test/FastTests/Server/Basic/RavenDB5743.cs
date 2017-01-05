@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
+using FastTests.Server.Basic.Entities;
 using FastTests.Server.Documents.Versioning;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Server.Basic

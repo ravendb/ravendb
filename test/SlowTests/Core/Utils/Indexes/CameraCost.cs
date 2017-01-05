@@ -1,8 +1,6 @@
 using System.Linq;
 
 using Raven.Client.Indexes;
-using Raven.Tests.Core.Utils.Entities;
-
 using Camera = SlowTests.Core.Utils.Entities.Camera;
 
 namespace SlowTests.Core.Utils.Indexes

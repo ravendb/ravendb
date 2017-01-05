@@ -2,7 +2,6 @@
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using FastTests.Server.Documents.Replication;
 using Raven.Abstractions.Connection;
 using Raven.Client.Document;
 using Raven.Client.Replication.Messages;

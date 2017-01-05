@@ -1,5 +1,4 @@
 ﻿using System;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using System.Linq;
 using Raven.NewClient.Client;

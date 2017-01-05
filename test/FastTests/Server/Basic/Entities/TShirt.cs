@@ -3,9 +3,10 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // ----------------------------------------------------------------------
+
 using System.Collections.Generic;
 
-namespace Raven.Tests.Core.Utils.Entities
+namespace FastTests.Server.Basic.Entities
 {
     public class TShirt
     {

@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Indexes;
-using Raven.Tests.Core;
 using Xunit;
 
 namespace FastTests.Client.BulkInsert

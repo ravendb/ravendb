@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
-using Raven.Tests.Core.Utils.Entities;
+using FastTests.Server.Basic.Entities;
 using Xunit;
 
 namespace FastTests.Server.Documents.Patching
