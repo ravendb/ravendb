@@ -9,7 +9,6 @@ using Microsoft.Extensions.Configuration;
 using Raven.Abstractions.Extensions;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
-using Raven.Server.Documents.Indexes.Configuration;
 
 namespace Raven.Server.Config.Categories
 {

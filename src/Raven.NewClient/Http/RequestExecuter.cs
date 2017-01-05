@@ -536,7 +536,7 @@ namespace Raven.NewClient.Client.Http
                 }
 
                 var serverNodes = topology.Nodes;
-                if (serverNodes != null)
+                if (serverNodes != null && serverNodes.Count > 1)
                 {
                     for (var i = 1; i <= serverNodes.Count; i++)
                     {

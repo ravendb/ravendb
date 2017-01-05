@@ -4,9 +4,12 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Http;
+using Raven.Client.Replication.Messages;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -14,6 +17,22 @@ namespace Raven.Server.Documents.Handlers
 {
     public class TopologyHandler : DatabaseRequestHandler
     {
+        [RavenAction("/databases/*/topology/dbid", "GET")]
+        public Task GetDbId()
+        {
+            DocumentsOperationContext context;
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                context.Write(writer, new DynamicJsonValue
+                {
+                    ["DbId"] = Database.DbId.ToString()
+                });
+                writer.Flush();
+            }
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/databases/*/topology", "GET")]
         public Task GetTopology()
         {
@@ -34,12 +53,62 @@ namespace Raven.Server.Documents.Handlers
                 }
                 //here we need to construct the topology from the replication document 
                 var replicationDocument = JsonDeserializationServer.ReplicationDocument(configurationDocument.Data);
-            
                 var nodes = GenerateNodesFromReplicationDocument(replicationDocument);
-                
                 GenerateTopology(context, writer, nodes, configurationDocument.Etag);
             }
             return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/topology/full", "GET")]
+        public async Task GetFullTopology()
+        {
+            DocumentsOperationContext context;
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            {
+                ReplicationDocument replicationDocument;
+                using (context.OpenReadTransaction())
+                {
+                    var configurationDocument = Database.DocumentsStorage.Get(context, Constants.Replication.DocumentReplicationConfiguration);
+                    if (configurationDocument == null)
+                    {
+                        WriteEmptyTopology(context);
+                        return;
+                    }
+
+                    replicationDocument = JsonDeserializationServer.ReplicationDocument(configurationDocument.Data);
+                    if (replicationDocument.Destinations?.Count == 0)
+                    {
+                        WriteEmptyTopology(context);
+                        return;
+                    }
+                }
+
+                using (var clusterTopologyExplorer = new ReplicationClusterTopologyExplorer(
+                    Database,
+                    new Dictionary<string, List<string>>(),
+                    Database.Configuration
+                                  .Replication
+                                  .ReplicationTopologyDiscoveryTimeout
+                                  .AsTimeSpan,
+                    replicationDocument.Destinations))
+                {
+                    var topology = await clusterTopologyExplorer.DiscoverTopologyAsync();
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        context.Write(writer, topology.ToJson());
+                        writer.Flush();
+                    }
+                }
+            }
+        }
+
+        private void WriteEmptyTopology(JsonOperationContext context)
+        {
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                context.Write(writer, new FullTopologyInfo(Database.DbId.ToString()).ToJson());
+                writer.Flush();
+            }
         }
 
         private void GenerateTopology(DocumentsOperationContext context, BlittableJsonTextWriter writer, IEnumerable<DynamicJsonValue> nodes = null, long etag = -1)

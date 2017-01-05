@@ -122,10 +122,21 @@ namespace Sparrow.Json
                         var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfStringArray), BindingFlags.NonPublic | BindingFlags.Static);
                         return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
                     }
+                    if (valueType == typeof(List<string>))
+                    {
+                        var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfStringList), BindingFlags.NonPublic | BindingFlags.Static);
+                        return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
+                    }
                     if (valueType.GetTypeInfo().IsEnum)
                     {
                         var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfEnum), BindingFlags.NonPublic | BindingFlags.Static);
                         methodToCall = methodToCall.MakeGenericMethod(valueType);
+                        return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
+                    }
+                    if (valueType == typeof(long) ||
+                        valueType == typeof(double))
+                    {
+                        var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfPrimitive), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(valueType);
                         return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
                     }
                     else
@@ -204,7 +215,8 @@ namespace Sparrow.Json
             return value;
         }
 
-        private static Dictionary<string, T> ToDictionary<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter)
+        private static Dictionary<string, T> ToDictionaryOfPrimitive<T>(BlittableJsonReaderObject json, string name)
+            where T : struct 
         {
             var dic = new Dictionary<string, T>(StringComparer.OrdinalIgnoreCase);
 
@@ -217,6 +229,25 @@ namespace Sparrow.Json
                 object val;
                 if (obj.TryGetMember(propertyName, out val))
                 {
+                    dic[propertyName] = (T)val;
+                }
+            }
+            return dic;
+        }
+
+        private static Dictionary<string, T> ToDictionary<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter)
+        {
+            var dic = new Dictionary<string, T>(StringComparer.OrdinalIgnoreCase);
+
+            BlittableJsonReaderObject obj;
+            if (json.TryGet(name, out obj) == false || obj == null)
+                return dic;
+
+            foreach (var propertyName in obj.GetPropertyNames())
+            {
+                object val;
+                if (obj.TryGetMember(propertyName, out val))
+                {                   
                     dic[propertyName] = converter((BlittableJsonReaderObject)val);
                 }
             }
@@ -258,6 +289,31 @@ namespace Sparrow.Json
                 if (obj.TryGet(propertyName, out val))
                 {
                     dic[propertyName] = val;
+                }
+            }
+            return dic;
+        }
+
+        private static Dictionary<string, List<string>> ToDictionaryOfStringList(BlittableJsonReaderObject json, string name)
+        {
+            var dic = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+            BlittableJsonReaderObject obj;
+            //should a "null" exist in json? -> not sure that "null" can exist there
+            if (json.TryGet(name, out obj) == false || obj == null)
+                return dic;
+
+            foreach (var propertyName in obj.GetPropertyNames())
+            {
+                BlittableJsonReaderArray array;
+                if (obj.TryGet(propertyName, out array))
+                {
+                    var list = new List<string>(array.Length);
+                    foreach (object item in array)
+                    {
+                        list.Add(item?.ToString());
+                    }
+                    dic[propertyName] = list;
                 }
             }
             return dic;
