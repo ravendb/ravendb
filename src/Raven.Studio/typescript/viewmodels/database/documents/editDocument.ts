@@ -96,7 +96,7 @@ class editDocument extends viewModelBase {
         }
     }
 
-    activate(navigationArgs: { list: string, database: string, item: string, id: string, new: string }) {
+    activate(navigationArgs: { list: string, database: string, item: string, id: string, new: string, index: string }) {
         super.activate(navigationArgs);
         this.updateHelpLink('M72H1R');
 
@@ -105,7 +105,9 @@ class editDocument extends viewModelBase {
         this.isSaveEnabled = ko.pureComputed(() => this.dirtyFlag().isDirty());
 
         if (navigationArgs && navigationArgs.id) {
-            ko.postbox.publish("SetRawJSONUrl", appUrl.forDocumentRawData(this.activeDatabase(), navigationArgs.id)); 
+            ko.postbox.publish("SetRawJSONUrl", appUrl.forDocumentRawData(this.activeDatabase(), navigationArgs.id));
+        } else if (navigationArgs && navigationArgs.index) {
+            //TODO: set raw url?
         } else {
             return this.editNewDocument(navigationArgs ? navigationArgs.new : null);
         }
@@ -154,7 +156,7 @@ class editDocument extends viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        if (!this.document())
+        if (!this.document() || !this.isInDocMode())
             return [];
         //TODO: support for query results
 
