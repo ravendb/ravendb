@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     break;
                 case IndexType.MapReduce:
                 case IndexType.Map:
-                    _converter = new AnonymousLuceneDocumentConverter(fields, reduceOutput: _index.Type.IsMapReduce());
+                    _converter = new AnonymousLuceneDocumentConverter(fields, _index.IsMultiMap, reduceOutput: _index.Type.IsMapReduce());
                     break;
                 case IndexType.Faulty:
                     _converter = null;
