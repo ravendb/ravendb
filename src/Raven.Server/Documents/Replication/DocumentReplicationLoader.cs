@@ -95,62 +95,85 @@ namespace Raven.Server.Documents.Replication
 
                 var incomingConnectionRejectionInfos = _incomingRejectionStats.GetOrAdd(connectionInfo,
                     _ => new ConcurrentQueue<IncomingConnectionRejectionInfo>());
-                incomingConnectionRejectionInfos.Enqueue(new IncomingConnectionRejectionInfo { Reason = e.ToString() });
+                incomingConnectionRejectionInfos.Enqueue(new IncomingConnectionRejectionInfo {Reason = e.ToString()});
+
+                try
+                {
+                    tcpConnectionOptions?.Dispose();
+                }
+                catch
+                {
+                    // do nothing
+                }
 
                 throw;
             }
 
-            DocumentsOperationContext documentsOperationContext;
-            TransactionOperationContext configurationContext;
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsOperationContext))
-            using (_database.ConfigurationStorage.ContextPool.AllocateOperationContext(out configurationContext))
-            using (var writer = new BlittableJsonTextWriter(documentsOperationContext, tcpConnectionOptions.Stream))
-            using (var docTx = documentsOperationContext.OpenReadTransaction())
-            using (var configTx = configurationContext.OpenReadTransaction())
+
+            try
             {
-                var documentsChangeVector = new DynamicJsonArray();
-                foreach (var changeVectorEntry in _database.DocumentsStorage.GetDatabaseChangeVector(documentsOperationContext))
+                DocumentsOperationContext documentsOperationContext;
+                TransactionOperationContext configurationContext;
+                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsOperationContext))
+                using (_database.ConfigurationStorage.ContextPool.AllocateOperationContext(out configurationContext))
+                using (var writer = new BlittableJsonTextWriter(documentsOperationContext, tcpConnectionOptions.Stream))
+                using (var docTx = documentsOperationContext.OpenReadTransaction())
+                using (var configTx = configurationContext.OpenReadTransaction())
                 {
-                    documentsChangeVector.Add(new DynamicJsonValue
+                    var documentsChangeVector = new DynamicJsonArray();
+                    foreach (var changeVectorEntry in _database.DocumentsStorage.GetDatabaseChangeVector(documentsOperationContext))
                     {
-                        [nameof(ChangeVectorEntry.DbId)] = changeVectorEntry.DbId.ToString(),
-                        [nameof(ChangeVectorEntry.Etag)] = changeVectorEntry.Etag
+                        documentsChangeVector.Add(new DynamicJsonValue
+                        {
+                            [nameof(ChangeVectorEntry.DbId)] = changeVectorEntry.DbId.ToString(),
+                            [nameof(ChangeVectorEntry.Etag)] = changeVectorEntry.Etag
+                        });
+                    }
+
+                    var indexesChangeVector = new DynamicJsonArray();
+                    var changeVectorAsArray = _database.IndexMetadataPersistence.GetIndexesAndTransformersChangeVector(configTx.InnerTransaction);
+                    foreach (var changeVectorEntry in changeVectorAsArray)
+                    {
+                        indexesChangeVector.Add(new DynamicJsonValue
+                        {
+                            [nameof(ChangeVectorEntry.DbId)] = changeVectorEntry.DbId.ToString(),
+                            [nameof(ChangeVectorEntry.Etag)] = changeVectorEntry.Etag
+                        });
+                    }
+
+                    var lastEtagFromSrc = _database.DocumentsStorage.GetLastReplicateEtagFrom(documentsOperationContext, getLatestEtagMessage.SourceDatabaseId);
+                    if (_log.IsInfoEnabled)
+                    {
+                        _log.Info($"GetLastEtag response, last etag: {lastEtagFromSrc}");
+                    }
+                    documentsOperationContext.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(ReplicationMessageReply.Type)] = "Ok",
+                        [nameof(ReplicationMessageReply.MessageType)] = ReplicationMessageType.Heartbeat,
+                        [nameof(ReplicationMessageReply.LastEtagAccepted)] = lastEtagFromSrc,
+                        [nameof(ReplicationMessageReply.LastIndexTransformerEtagAccepted)] = _database.IndexMetadataPersistence.GetLastReplicateEtagFrom(configTx.InnerTransaction, getLatestEtagMessage.SourceDatabaseId),
+                        [nameof(ReplicationMessageReply.DocumentsChangeVector)] = documentsChangeVector,
+                        [nameof(ReplicationMessageReply.IndexTransformerChangeVector)] = indexesChangeVector
                     });
+                    writer.Flush();
+                }
+            }
+            catch (Exception)
+            {
+                try
+                {
+                    tcpConnectionOptions.Dispose();
                 }
 
-                var indexesChangeVector = new DynamicJsonArray();
-                var changeVectorAsArray = _database.IndexMetadataPersistence.GetIndexesAndTransformersChangeVector(configTx.InnerTransaction);
-                foreach (var changeVectorEntry in changeVectorAsArray)
+                catch (Exception)
                 {
-                    indexesChangeVector.Add(new DynamicJsonValue
-                    {
-                        [nameof(ChangeVectorEntry.DbId)] = changeVectorEntry.DbId.ToString(),
-                        [nameof(ChangeVectorEntry.Etag)] = changeVectorEntry.Etag
-                    });
+                    // do nothing   
                 }
-
-                var lastEtagFromSrc = _database.DocumentsStorage.GetLastReplicateEtagFrom(documentsOperationContext, getLatestEtagMessage.SourceDatabaseId);
-                if (_log.IsInfoEnabled)
-                    _log.Info($"GetLastEtag response, last etag: {lastEtagFromSrc}");
-
-                documentsOperationContext.Write(writer, new DynamicJsonValue
-                {
-                    [nameof(ReplicationMessageReply.Type)] = "Ok",
-                    [nameof(ReplicationMessageReply.DatabaseId)] = tcpConnectionOptions.DocumentDatabase.DbId.ToString(),
-                    [nameof(ReplicationMessageReply.MessageType)] = ReplicationMessageType.Heartbeat,
-                    [nameof(ReplicationMessageReply.LastEtagAccepted)] = lastEtagFromSrc,
-                    [nameof(ReplicationMessageReply.LastIndexTransformerEtagAccepted)] = _database.IndexMetadataPersistence.GetLastReplicateEtagFrom(configTx.InnerTransaction, getLatestEtagMessage.SourceDatabaseId),
-                    [nameof(ReplicationMessageReply.DocumentsChangeVector)] = documentsChangeVector,
-                    [nameof(ReplicationMessageReply.IndexTransformerChangeVector)] = indexesChangeVector
-                });
-                writer.Flush();
+                throw;
             }
 
             var newIncoming = new IncomingReplicationHandler(
-                   tcpConnectionOptions.MultiDocumentParser,
-                   _database,
-                   tcpConnectionOptions.TcpClient,
-                   tcpConnectionOptions.Stream,
+                   tcpConnectionOptions,
                    getLatestEtagMessage,
                    this);
 

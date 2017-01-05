@@ -49,18 +49,18 @@ namespace FastTests.Blittable
             //using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty))
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
-                var allocatedMemory = new List<AllocatedMemoryData>();
+                var allocatedMemoryList = new List<AllocatedMemoryData>();
                 using (var newStream = ctx.GetStream())
                 {
                     var totalSize = 0;
                     var rand = new Random();
                     for (var i = 1; i < 5000; i += 500)
                     {
-                        var pointer = ctx.GetMemory(rand.Next(1, i*7));
-                        totalSize += pointer.SizeInBytes;
-                        FillData((byte*) pointer.Address, pointer.SizeInBytes);
-                        allocatedMemory.Add(pointer);
-                        newStream.Write((byte*) pointer.Address, pointer.SizeInBytes);
+                        var allocatedMemoryData = ctx.GetMemory(rand.Next(1, i*7));
+                        totalSize += allocatedMemoryData.SizeInBytes;
+                        FillData((byte*) allocatedMemoryData.Address, allocatedMemoryData.SizeInBytes);
+                        allocatedMemoryList.Add(allocatedMemoryData);
+                        newStream.Write((byte*) allocatedMemoryData.Address, allocatedMemoryData.SizeInBytes);
                     }
                     var buffer = ctx.GetMemory(newStream.SizeInBytes);
 
@@ -69,14 +69,15 @@ namespace FastTests.Blittable
 
                     var curIndex = 0;
                     var curTuple = 0;
-                    foreach (var tuple in allocatedMemory)
+                    foreach (var allocatedMemoryData in allocatedMemoryList)
                     {
                         curTuple++;
-                        for (var i = 0; i < tuple.SizeInBytes; i++)
+                        for (var i = 0; i < allocatedMemoryData.SizeInBytes; i++)
                         {
-                            Assert.Equal(*((byte*) buffer.Address + curIndex), *((byte*) ((byte*) tuple.Address + i)));
+                            Assert.Equal(*((byte*) buffer.Address + curIndex), *((byte*) ((byte*) allocatedMemoryData.Address + i)));
                             curIndex++;
                         }
+                        ctx.ReturnMemory(allocatedMemoryData);
                     }
                 }
             }
@@ -91,6 +92,7 @@ namespace FastTests.Blittable
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
                 var data = ctx.GetMemory(size);
+                ctx.ReturnMemory(data);
             }
         }
 
@@ -109,6 +111,7 @@ namespace FastTests.Blittable
                         FillData((byte*) pointer.Address, pointer.SizeInBytes);
                         allocatedMemory.Add(pointer);
                         newStream.Write((byte*) pointer.Address, pointer.SizeInBytes);
+                        ctx.ReturnMemory(pointer);
                     }
 
                     var buffer = ctx.GetMemory(newStream.SizeInBytes);
@@ -134,20 +137,19 @@ namespace FastTests.Blittable
         {
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
-                var allocatedMemory = new List<AllocatedMemoryData>();
+                var allocatedMemoryList = new List<AllocatedMemoryData>();
                 using (var newStream = ctx.GetStream())
                 {
                     var rand = new Random();
                     for (var i = 1; i < 5000; i += 500)
                     {
-                        var pointer = ctx.GetMemory(rand.Next(1, i*7));
-                        FillData((byte*) pointer.Address, pointer.SizeInBytes);
-                        allocatedMemory.Add(pointer);
-                        for (var j = 0; j < pointer.SizeInBytes; j++)
+                        var allocatedMemory = ctx.GetMemory(rand.Next(1, i*7));
+                        FillData((byte*) allocatedMemory.Address, allocatedMemory.SizeInBytes);
+                        allocatedMemoryList.Add(allocatedMemory);
+                        for (var j = 0; j < allocatedMemory.SizeInBytes; j++)
                         {
-                            newStream.WriteByte(*((byte*) pointer.Address + j));
+                            newStream.WriteByte(*((byte*) allocatedMemory.Address + j));
                         }
-                        ctx.ReturnMemory(pointer);
                     }
 
                     var buffer = ctx.GetMemory(newStream.SizeInBytes);
@@ -163,15 +165,17 @@ namespace FastTests.Blittable
                     }
                     var curIndex = 0;
                     var curTuple = 0;
-                    foreach (var tuple in allocatedMemory)
+                    foreach (var allocatedMemory in allocatedMemoryList)
                     {
                         curTuple++;
-                        for (var i = 0; i < tuple.SizeInBytes; i++)
+                        for (var i = 0; i < allocatedMemory.SizeInBytes; i++)
                         {
                             try
                             {
-                                Assert.Equal(*((byte*) buffer.Address + curIndex),
-                                    *((byte*) ((byte*) tuple.Address + i)));
+                                var bufferValue = *((byte*) buffer.Address + curIndex);
+                                var allocatedMemoryValue = *((byte*) ((byte*) allocatedMemory.Address + i));
+                                Assert.Equal(bufferValue,
+                                    allocatedMemoryValue);
                                 curIndex++;
                             }
                             catch (Exception e)
@@ -179,8 +183,10 @@ namespace FastTests.Blittable
                                 Console.WriteLine(e);
                             }
                         }
-                        ctx.ReturnMemory(tuple);
+                        ctx.ReturnMemory(allocatedMemory);
                     }
+
+                    ctx.ReturnMemory(buffer);
                 }
             }
         }

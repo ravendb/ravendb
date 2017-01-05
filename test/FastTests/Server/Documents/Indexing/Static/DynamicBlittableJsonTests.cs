@@ -29,7 +29,8 @@ namespace FastTests.Server.Documents.Indexing.Static
 
             using (var lazyStringValue = _ctx.GetLazyString("22.0"))
             {
-
+                
+                var stringValue = _ctx.GetLazyString("Arek");
                 var doc = create_doc(new DynamicJsonValue
                 {
                     ["Name"] = "Arek",
@@ -39,7 +40,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     },
                     ["NullField"] = null,
                     ["Age"] = new LazyDoubleValue(lazyStringValue),
-                    ["LazyName"] = _ctx.GetLazyString("Arek"),
+                    ["LazyName"] = stringValue,
                     ["Friends"] = new DynamicJsonArray
                 {
                     new DynamicJsonValue
@@ -69,9 +70,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 Assert.Equal(2, user.Friends.Length);
                 Assert.Equal("Users", user[Constants.Metadata.Key][Constants.Headers.RavenEntityName]);
                 Assert.Equal(now, user[Constants.Metadata.Key].Value<DateTime>(Constants.Headers.RavenLastModified));
-
-                doc.Data.Dispose();
-                
+                _ctx.ReturnMemory(stringValue.AllocatedMemoryData);
             }
         }
 

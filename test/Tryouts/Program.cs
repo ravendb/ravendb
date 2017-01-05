@@ -7,6 +7,7 @@ using Voron.Impl.Scratch;
 using Xunit;
 using Sparrow.Platform;
 using System.Linq;
+using FastTests.Voron.RawData;
 
 namespace Tryouts
 {
@@ -20,7 +21,25 @@ namespace Tryouts
                 System.Console.WriteLine(i);
             }
         }
-        unsafe static void Main(string[] args)
+
+
+        public static void Main(string[] args)
+        {
+            try
+            {
+
+                //FastTests.Voron.RawData.SmallDataSection.CanAllocateMultipleValues(seed: 1900793623)
+                var test = new SmallDataSection();
+
+                test.CanAllocateMultipleValues(seed: 1900793623);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+                throw;
+            }
+        }
+        unsafe static void Main3(string[] args)
         {
             for(var i = 0; i< 20; i++)
             {
@@ -72,7 +91,7 @@ namespace Tryouts
               //  System.Console.WriteLine(allocation);
             }
 
-            System.Console.WriteLine(Raven.Server.ServerWide.ServerStore.Instances);
+           
         }
     }
 
