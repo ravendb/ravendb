@@ -3,6 +3,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using Sparrow;
+using Voron.Data.Fixed;
+using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
 using Voron.Util;
@@ -21,83 +23,139 @@ namespace Voron.Data.BTrees
             [FieldOffset(8)]
             public int ChunkSize;
         }
-        
+
         [ThreadStatic]
         private static byte[] _localBuffer;
-        
-        public void AddStream(Slice key, Stream stream, int chunkSize = 4 * 1024 * 1024)
-        {
-            var tree = FixedTreeFor(key, valSize: (byte)sizeof(ChunkDetails));
 
-            int version = 0;
-            Slice value;
-            if (tree.NumberOfEntries != 0)
+        private struct StreamToPageWriter
+        {
+            private int _chunkNumber;
+
+            private byte* _writePos;
+            private byte* _writePosEnd;
+            private int _numberOfPagesPerChunk;
+            private long _totalSize;
+            private Page _currentPage;
+
+            private Tree _parent;
+
+            private FixedSizeTree _tree;
+            private int _version;
+
+
+            public void Init(Tree parent, Slice key, int? initialNumberOfPagesPerChunk)
             {
-                using (tree.Read(StreamSizeValue, out value))
-                {
-                    if (value.HasValue)
-                    {
-                        var chunkDetails = ((ChunkDetails*)value.Content.Ptr);
-                        version = chunkDetails->ChunkSize;
-                    }
-                }
-                DeleteStream(key);
+                _parent = parent;
+                _numberOfPagesPerChunk = 1;
+                _tree = _parent.FixedTreeFor(key, valSize: (byte)sizeof(ChunkDetails));
+                _version = _parent.DeleteStream(key);
+                _numberOfPagesPerChunk = initialNumberOfPagesPerChunk ?? 1;
             }
 
-            if (_localBuffer == null)
-                _localBuffer = new byte[16*1024];
-
-            fixed (byte* pBuffer = _localBuffer)
+            public void Write(Stream stream)
             {
-                var chunkDetails = new ChunkDetails();
-                using (Slice.External(_tx.Allocator, (byte*)&chunkDetails, sizeof(ChunkDetails), out value))
+                if (_localBuffer == null)
+                    _localBuffer = new byte[4 * Constants.Storage.PageSize];
+
+                AllocateMorePages();
+
+                fixed (byte* pBuffer = _localBuffer)
                 {
-                    var remainingSize = stream.Length;
-                    chunkDetails.PageNumber = remainingSize;
-                    chunkDetails.ChunkSize = version + 1;
-                    tree.Add(StreamSizeValue, value); // marker for the file size
-
-                    long chunkNum = 0;
-                    int read = 0;
-                    int bufferPos = 0;
-
-                    while (remainingSize > 0)
+                    while (true)
                     {
-                        var currentChunkSize = Math.Min(remainingSize, chunkSize - sizeof(PageHeader));
-                        var page = _tx.LowLevelTransaction.AllocateOverflowRawPage(currentChunkSize, zeroPage: false);
+                        var read = stream.Read(_localBuffer, 0, _localBuffer.Length);
+                        if (read == 0)
+                            break;
 
-                        State.OverflowPages +=
-                            _tx.LowLevelTransaction.DataPager.GetNumberOfOverflowPages(currentChunkSize);
-
-                        chunkDetails.PageNumber = page.PageNumber;
-                        chunkDetails.ChunkSize = (int)currentChunkSize;
-                        tree.Add(chunkNum++, value);
-
-                        remainingSize -= currentChunkSize;
-
-                        var writtenBytes = 0;
-                        do
+                        var toWrite = 0L;
+                        while (true)
                         {
-                            var toWrite = Math.Min(read, chunkSize - sizeof(PageHeader) - writtenBytes);
-                            Memory.Copy(page.DataPointer + writtenBytes, pBuffer + bufferPos, toWrite);
-                            writtenBytes += read;
-                            currentChunkSize -= read;
-                            if (currentChunkSize <= 0)
-                            {
-                                read -= toWrite;
-                                bufferPos = toWrite;
+                            toWrite += WriteBufferToPage(pBuffer + toWrite, read - toWrite);
+                            if (toWrite == read)
                                 break;
-                            }
-                            
-                            read = stream.Read(_localBuffer, 0, _localBuffer.Length);
-                            bufferPos = 0;
-                        } while (true);
+                            // run out of room, need to allocate more
+                            FlushPage(_currentPage.PageNumber,  (int)(_writePos - _currentPage.DataPointer));
+                            AllocateMorePages();
+                        }
                     }
+                    var chunkSize = (int)(_writePos - _currentPage.DataPointer);
+                    FlushPage(_currentPage.PageNumber, chunkSize);
+                    _parent._tx.LowLevelTransaction.ShrinkOverflowPage(_currentPage.PageNumber, chunkSize);
+                    RecordVersionAndSize();
                 }
+
+            }
+
+            private long WriteBufferToPage(byte* pBuffer, long size)
+            {
+                var remaining = _writePosEnd - _writePos;
+                var toWrite = Math.Min(size, remaining);
+                Memory.Copy(_writePos, pBuffer, toWrite);
+                _writePos += toWrite;
+                _totalSize += toWrite;
+                return toWrite;
+            }
+
+            private void FlushPage(long pageNumber, int chunkSize)
+            {
+                var chunkDetails = new ChunkDetails
+                {
+                    PageNumber = pageNumber,
+                    ChunkSize = chunkSize
+                };
+                Slice value;
+                using (Slice.External(_parent._tx.Allocator, (byte*)&chunkDetails, sizeof(ChunkDetails), out value))
+                {
+                    _tree.Add(_chunkNumber++, value);
+                }
+            }
+
+            private void RecordVersionAndSize()
+            {
+                var chunkDetails = new ChunkDetails
+                {
+                    PageNumber = _totalSize,
+                    ChunkSize = _version + 1
+                };
+                Slice value;
+                using (Slice.External(_parent._tx.Allocator, (byte*)&chunkDetails, sizeof(ChunkDetails), out value))
+                {
+                    _tree.Add(StreamSizeValue, value);
+                }
+            }
+
+            private void AllocateMorePages()
+            {
+                var overflowSize = (_numberOfPagesPerChunk * Constants.Storage.PageSize) - PageHeader.SizeOf;
+                _currentPage = _parent._tx.LowLevelTransaction.AllocateOverflowRawPage(overflowSize, zeroPage: false);
+                _parent.State.OverflowPages += _numberOfPagesPerChunk;
+                _writePos = _currentPage.DataPointer;
+                _writePosEnd = _currentPage.Pointer + (_numberOfPagesPerChunk * Constants.Storage.PageSize);
+                _numberOfPagesPerChunk = Math.Min(_numberOfPagesPerChunk * 2, 4096);
             }
         }
 
-        public ChunkedSparseMmapStream ReadStream(Slice key)
+        public void AddStream(string key, Stream stream, int? initialNumberOfPagesPerChunk = null)
+        {
+            Slice str;
+            using (Slice.From(_tx.Allocator, key, out str))
+                AddStream(str, stream, initialNumberOfPagesPerChunk);
+        }
+        public void AddStream(Slice key, Stream stream, int? initialNumberOfPagesPerChunk = null)
+        {
+            var writer = new StreamToPageWriter();
+            writer.Init(this, key, initialNumberOfPagesPerChunk);
+            writer.Write(stream);
+        }
+
+        public VoronStream ReadStream(string key)
+        {
+            Slice str;
+            using (Slice.From(_tx.Allocator, key, out str))
+                return ReadStream(str);
+        }
+
+        public VoronStream ReadStream(Slice key)
         {
             var tree = FixedTreeFor(key, valSize: (byte)sizeof(ChunkDetails));
             var numberOfChunks = tree.NumberOfEntries - 1; //-1 for the StreamSize entry
@@ -123,7 +181,7 @@ namespace Voron.Data.BTrees
                 } while (it.MoveNext());
 
             }
-            return new ChunkedSparseMmapStream(tree.Name, chunksDetails, _llt);
+            return new VoronStream(tree.Name, chunksDetails, _llt);
         }
 
         public int TouchStream(Slice key)
@@ -172,15 +230,25 @@ namespace Voron.Data.BTrees
                     return;
                 }
 
-                var chunkDetails = ((ChunkDetails*) slice.Content.Ptr);
+                var chunkDetails = ((ChunkDetails*)slice.Content.Ptr);
                 length = chunkDetails->PageNumber;
                 version = chunkDetails->ChunkSize;
             }
         }
 
-        public void DeleteStream(Slice key)
+        public int DeleteStream(Slice key)
         {
             var tree = FixedTreeFor(key, valSize: (byte)sizeof(ChunkDetails));
+            int version = 0;
+            Slice value;
+            using (tree.Read(StreamSizeValue, out value))
+            {
+                if (value.HasValue)
+                {
+                    var chunkDetails = (ChunkDetails*)value.Content.Ptr;
+                    version = chunkDetails->ChunkSize;
+                }
+            }
             tree.Delete(StreamSizeValue);
 
             while (true)
@@ -192,7 +260,7 @@ namespace Voron.Data.BTrees
                     if (!it.SeekToLast())
                         break;
 
-                    var chunkDetails = ((ChunkDetails*) it.CreateReaderForCurrent().Base);
+                    var chunkDetails = ((ChunkDetails*)it.CreateReaderForCurrent().Base);
                     var pageNumber = chunkDetails->PageNumber;
                     var numberOfPages = llt.DataPager.GetNumberOfOverflowPages(chunkDetails->ChunkSize);
                     for (int i = 0; i < numberOfPages; i++)
@@ -204,6 +272,7 @@ namespace Voron.Data.BTrees
                     tree.Delete(it.CurrentKey);
                 }
             }
+            return version;
         }
     }
 }

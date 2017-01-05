@@ -10,7 +10,7 @@ using Voron.Util;
 
 namespace Voron.Data
 {
-    public unsafe class ChunkedSparseMmapStream : Stream
+    public unsafe class VoronStream : Stream
     {
         public Slice Name { get; }
 
@@ -29,7 +29,7 @@ namespace Voron.Data
             return Name.ToString();
         }
 
-        public ChunkedSparseMmapStream(Slice name, Tree.ChunkDetails[] chunksDetails, LowLevelTransaction llt)
+        public VoronStream(Slice name, Tree.ChunkDetails[] chunksDetails, LowLevelTransaction llt)
         {
             Name = name;
 
@@ -159,17 +159,17 @@ namespace Voron.Data
 
         public override void Flush()
         {
-            throw new NotSupportedException("The method or operation is not supported by ChunkedSparseMmapStream.");
+            throw new NotSupportedException("The method or operation is not supported by VoronStream.");
         }
 
         public override void SetLength(long value)
         {
-            throw new NotSupportedException("The method or operation is not supported by ChunkedSparseMmapStream.");
+            throw new NotSupportedException("The method or operation is not supported by VoronStream.");
         }
 
         public override void Write(byte[] buffer, int offset, int count)
         {
-            throw new NotSupportedException("The method or operation is not supported by ChunkedSparseMmapStream.");
+            throw new NotSupportedException("The method or operation is not supported by VoronStream.");
         }
     }
 }

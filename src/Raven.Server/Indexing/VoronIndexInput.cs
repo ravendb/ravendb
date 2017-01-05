@@ -22,7 +22,7 @@ namespace Raven.Server.Indexing
         private readonly AsyncLocal<Transaction> _currentTransaction;
 
         private readonly string _name;
-        private ChunkedSparseMmapStream _stream;
+        private VoronStream _stream;
 
         private bool _isOriginal = true;
 

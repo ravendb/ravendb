@@ -501,6 +501,33 @@ namespace Voron.Impl
             }
         }
 
+        internal void ShrinkOverflowPage(long pageNumber, int newSize)
+        {
+            if (_disposed)
+                throw new ObjectDisposedException("Transaction");
+
+            PageFromScratchBuffer value;
+            if (_scratchPagesTable.TryGetValue(pageNumber, out value) == false)
+                throw new InvalidOperationException("The page " + pageNumber + " was not previous allocated in this transaction");
+
+            var page = _env.ScratchBufferPool.ReadPage(this, value.ScratchFileNumber, value.PositionInScratchBuffer);
+            if (page.IsOverflow == false || page.OverflowSize < newSize)
+                throw new InvalidOperationException("The page " + pageNumber +
+                                                    " was is not an overflow page greater than " + newSize);
+
+            var prevNumberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
+            page.OverflowSize = newSize;
+            var lowerNumberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(newSize);
+
+            if (prevNumberOfPages == lowerNumberOfPages)
+                return;
+
+            _transactionPages.Remove(value);
+            _transactionPages.Add(new PageFromScratchBuffer(value.ScratchFileNumber, value.PositionInScratchBuffer,
+                value.Size, lowerNumberOfPages));
+            _env.ScratchBufferPool.ReduceAllocation(value, lowerNumberOfPages);
+            _overflowPagesInTransaction -= value.NumberOfPages - lowerNumberOfPages;
+        }
 
         [Conditional("DEBUG")]
         public void VerifyNoDuplicateScratchPages()
