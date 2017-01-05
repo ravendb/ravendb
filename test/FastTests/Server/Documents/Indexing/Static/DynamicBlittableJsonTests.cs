@@ -12,7 +12,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Indexing.Static
 {
-    public class DynamicBlittableJsonTests
+    public class DynamicBlittableJsonTests:IDisposable
     {
         private readonly JsonOperationContext _ctx;
         private readonly List<BlittableJsonReaderObject> _docs = new List<BlittableJsonReaderObject>();
@@ -69,6 +69,9 @@ namespace FastTests.Server.Documents.Indexing.Static
                 Assert.Equal(2, user.Friends.Length);
                 Assert.Equal("Users", user[Constants.Metadata.Key][Constants.Headers.RavenEntityName]);
                 Assert.Equal(now, user[Constants.Metadata.Key].Value<DateTime>(Constants.Headers.RavenLastModified));
+
+                doc.Data.Dispose();
+                
             }
         }
 

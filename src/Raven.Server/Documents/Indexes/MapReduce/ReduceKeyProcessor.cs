@@ -279,5 +279,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             SingleValue,
             MultipleValues
         }
+
+        public void ReleaseBuffer()
+        {
+            if (_buffer != null)
+            {
+                _buffersPool.Return(_buffer);
+            }
+        }
     }
 }

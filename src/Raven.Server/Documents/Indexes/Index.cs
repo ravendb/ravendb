@@ -454,7 +454,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             var needToLock = _currentlyRunningQueriesLock.IsWriteLockHeld == false;
             if (needToLock)

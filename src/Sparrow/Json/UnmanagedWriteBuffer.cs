@@ -123,6 +123,7 @@ namespace Sparrow.Json
         private class Segment
         {
             public Segment Previous;
+            public Segment PreviousAllocated;
             public bool PreviousHoldsNoData;
             public AllocatedMemoryData Allocation;
             public byte* Address;
@@ -221,7 +222,8 @@ namespace Sparrow.Json
                 Address = (byte*)allocatedMemoryData.Address,
                 Allocation = allocatedMemoryData,
                 Used = 0,
-                Previous = _current
+                Previous = _current,
+                PreviousAllocated = _current
             };
         }
 
@@ -270,10 +272,11 @@ namespace Sparrow.Json
 
         public void Dispose()
         {
-            while (_current != null)
+            var curAllocated = _current;
+            while (curAllocated != null)
             {
-                _context.ReturnMemory(_current.Allocation);
-                _current = _current.Previous;
+                _context.ReturnMemory(curAllocated.Allocation);
+                curAllocated = curAllocated.PreviousAllocated;
             }
         }
 

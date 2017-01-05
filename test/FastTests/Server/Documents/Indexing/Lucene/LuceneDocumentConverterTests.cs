@@ -4,6 +4,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
+using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
@@ -16,7 +17,8 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         private LuceneDocumentConverter _sut;
 
         private readonly JsonOperationContext _ctx;
-        private readonly List<BlittableJsonReaderObject> _docs = new List<BlittableJsonReaderObject>();
+        private readonly ConcurrentSet<BlittableJsonReaderObject> _docs = new ConcurrentSet<BlittableJsonReaderObject>();
+        private readonly ConcurrentSet<LazyStringValue> _lazyStrings = new ConcurrentSet<LazyStringValue>();
 
         public LuceneDocumentConverterTests()
         {
@@ -452,19 +454,32 @@ namespace FastTests.Server.Documents.Indexing.Lucene
 
             _docs.Add(data);
 
+            //_lazyStrings.
+            var lazyStringValueRegular = _ctx.GetLazyString(id);
+            var lazyStringValueLowerCase = _ctx.GetLazyString(id.ToLowerInvariant());
+
+            _lazyStrings.Add(lazyStringValueRegular);
+            _lazyStrings.Add(lazyStringValueLowerCase);
             return new Document
             {
                 Data = data,
-                Key = _ctx.GetLazyString(id),
-                LoweredKey = _ctx.GetLazyString(id.ToLowerInvariant())
+                Key = lazyStringValueRegular,
+                LoweredKey = lazyStringValueLowerCase
             };
         }
+
+
 
         public override void Dispose()
         {
             foreach (var docReader in _docs)
             {
                 docReader.Dispose();
+            }
+
+            foreach (var lazyStringValue in _lazyStrings)
+            {
+                _ctx.ReturnMemory(lazyStringValue.AllocatedMemoryData);
             }
 
             _ctx.Dispose();

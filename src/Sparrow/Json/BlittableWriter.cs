@@ -484,6 +484,8 @@ namespace Sparrow.Json
             if (_compressionBuffer == null ||
                 minSize > _compressionBuffer.SizeInBytes)
             {
+                if (_compressionBuffer!= null)
+                    _context.ReturnMemory(_compressionBuffer);
                 _compressionBuffer = _context.GetMemory(minSize);
             }
             return _compressionBuffer.Address;
