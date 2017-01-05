@@ -317,7 +317,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 var expression = SyntaxFactory.ParseExpression(reduce).NormalizeWhitespace();
                 fieldNamesValidator?.Validate(reduce, expression);
                 methodsDetector.Visit(expression);
-
+                MethodsInGroupByValidator.SearchTerms = new [] {"Count","Average"};
                 var queryExpression = expression as QueryExpressionSyntax;
                 if (queryExpression != null)
                 {
@@ -327,6 +327,7 @@ namespace Raven.Server.Documents.Indexes.Static
                                 ResultsVariableNameRewriter.QuerySyntax,
                                 GroupByFieldsRetriever.QuerySyntax,
                                 SelectManyRewriter.QuerySyntax),
+                            MethodsInGroupByValidator.QuerySyntaxValidator, 
                             queryExpression, out groupByFields);
                 }
 
@@ -339,6 +340,7 @@ namespace Raven.Server.Documents.Indexes.Static
                                 ResultsVariableNameRewriter.MethodSyntax,
                                 GroupByFieldsRetriever.MethodSyntax,
                                 SelectManyRewriter.MethodSyntax),
+                            MethodsInGroupByValidator.MethodSyntaxValidator,
                             invocationExpression, out groupByFields);
                 }
 
@@ -390,19 +392,18 @@ namespace Raven.Server.Documents.Indexes.Static
             return results;
         }
         
-        private static StatementSyntax HandleSyntaxInReduce(ReduceFunctionProcessor reduceFunctionProcessor, ExpressionSyntax expression, out string[] groupByFields)
+        private static StatementSyntax HandleSyntaxInReduce(ReduceFunctionProcessor reduceFunctionProcessor, MethodsInGroupByValidator methodsInGroupByValidator,
+            ExpressionSyntax expression, out string[] groupByFields)
         {
-            MethodsInGroupByValidator methodsValidator =
-            new MethodsInGroupByValidator(new string[] { "Count", "Average" });
-
-        var rewrittenExpression = (CSharpSyntaxNode)reduceFunctionProcessor.Visit(expression);
+        
+            var rewrittenExpression = (CSharpSyntaxNode)reduceFunctionProcessor.Visit(expression);
 
             var reducingFunction =
                 SyntaxFactory.SimpleLambdaExpression(
                     SyntaxFactory.Parameter(SyntaxFactory.Identifier(ResultsVariableNameRewriter.ResultsVariable)),
                     rewrittenExpression);
 
-            methodsValidator.Start(expression);
+            methodsInGroupByValidator.Start(expression);
             
             groupByFields = reduceFunctionProcessor.GroupByFields;
 

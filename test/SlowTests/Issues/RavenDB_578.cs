@@ -20,7 +20,7 @@ namespace SlowTests.Issues
             public string MiddleName { get; set; }
         }
 
-        [Fact]
+        [Fact(Skip = "Waiting for RavenDB-6018")]
         public void DeletingConflictedDocumentOnServer1ShouldCauseConflictOnServer2AndResolvingItOnServer2ShouldRecreateDocumentOnServer1()
         {
             var store1 = GetDocumentStore();
