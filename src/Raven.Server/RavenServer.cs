@@ -387,7 +387,7 @@ namespace Raven.Server
                                 documentReplicationLoader.AcceptIncomingConnection(tcp);
                                 break;
                             case TcpConnectionHeaderMessage.OperationTypes.TopologyDiscovery:
-                                var responder = new ReplicationTopologyDestinationExplorerResponder();
+                                var responder = new TopologyRequestHandler();
                                 responder.AcceptIncomingConnectionAndRespond(tcp);
                                 break;
                             default:
@@ -409,7 +409,8 @@ namespace Raven.Server
                                 tcp.Context.Write(errorWriter, new DynamicJsonValue
                                 {
                                     ["Type"] = "Error",
-                                    ["Exception"] = e.ToString()
+                                    ["Exception"] = e.ToString(),
+                                    ["Message"] = e.Message
                                 });
                             }
                         }

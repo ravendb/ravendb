@@ -22,8 +22,8 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, TopologyDiscoveryRequest> TopologyDiscoveryRequest =
             GenerateJsonDeserializationRoutine<TopologyDiscoveryRequest>();
 
-        public static readonly Func<BlittableJsonReaderObject, TopologyDiscoveryResponse> TopologyDiscoveryResponse =
-            GenerateJsonDeserializationRoutine<TopologyDiscoveryResponse>();
+        public static readonly Func<BlittableJsonReaderObject, TopologyDiscoveryResponseHeader> TopologyDiscoveryResponse =
+            GenerateJsonDeserializationRoutine<TopologyDiscoveryResponseHeader>();
 
         public static readonly Func<BlittableJsonReaderObject, NodeTopologyInfo> NodeTopologyInfo =
             GenerateJsonDeserializationRoutine<NodeTopologyInfo>();

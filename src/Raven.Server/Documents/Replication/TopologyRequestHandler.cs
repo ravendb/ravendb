@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
@@ -12,7 +13,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Replication
 {
-    public class ReplicationTopologyDestinationExplorerResponder
+    public class TopologyRequestHandler
     {
         public void AcceptIncomingConnectionAndRespond(TcpConnectionOptions tcp)
         {
@@ -29,70 +30,57 @@ namespace Raven.Server.Documents.Replication
                     header = JsonDeserializationServer.TopologyDiscoveryRequest(headerJson);
                 }
 
-                List<string> alreadyVisitedByOrigin;
-                
-                if (header.AlreadyVisited.TryGetValue(header.OriginDbId, out alreadyVisitedByOrigin) &&
-                    alreadyVisitedByOrigin.Contains(localDbId))
+                if (header.AlreadyVisited.Contains(localDbId))
                 {
-                    WriteDiscoveryResponse(tcp, context, new FullTopologyInfo(localDbId), null , TopologyDiscoveryResponse.Status.AlreadyKnown);
+                    WriteDiscoveryResponse(tcp, context, new FullTopologyInfo
+                    {
+                        DatabaseId = localDbId
+                    }, null, TopologyDiscoveryResponseHeader.Status.AlreadyKnown);
                     return;
                 }
 
-                //prevent loops 
-                UpdateAlreadyVisitedWithLocalDestinations(header.OriginDbId, tcp, header.AlreadyVisited);
+                header.AlreadyVisited.Add(localDbId);
 
-                ReplicationDocument replicationDocument;
+                ReplicationDocument replicationDocument = null;
                 using (context.OpenReadTransaction())
                 {
                     var configurationDocument = tcp.DocumentDatabase.DocumentsStorage.Get(context, Constants.Replication.DocumentReplicationConfiguration);
+                    if(configurationDocument != null)
+                        replicationDocument = JsonDeserializationServer.ReplicationDocument(configurationDocument.Data);
+
                     //This is the case where we don't have real replication topology.
-                    if (configurationDocument == null)
+                    if (replicationDocument?.Destinations == null || replicationDocument.Destinations.Count == 0)
                     {
                         //return record of node without any incoming or outgoing connections
-                        WriteDiscoveryResponse(tcp, context, new FullTopologyInfo(localDbId)
+                        WriteDiscoveryResponse(tcp, context, new FullTopologyInfo
                         {
-                            NodesByDbId =
+                            DatabaseId = localDbId,
+                            NodesById =
                             {
-                                { tcp.DocumentDatabase.DbId.ToString(), new NodeTopologyInfo() }
+                                {tcp.DocumentDatabase.DbId.ToString(), new NodeTopologyInfo()}
                             }
-                        }, null , TopologyDiscoveryResponse.Status.Leaf);
+                        }, null, TopologyDiscoveryResponseHeader.Status.Ok);
                         return;
                     }
-
-                    replicationDocument = JsonDeserializationServer.ReplicationDocument(configurationDocument.Data);
                 }
 
-                NodeTopologyInfo localTopology;
+                var localTopology = ReplicationUtils.GetLocalTopology(tcp.DocumentDatabase, replicationDocument);
 
-                using(context.OpenReadTransaction())
-                    localTopology = ReplicationUtils.GetLocalTopology(
-                        tcp.DocumentDatabase, replicationDocument, context);
-
-                using (var topologyDiscoverer = new ReplicationClusterTopologyExplorer(
+                using (var topologyDiscoverer = new ClusterTopologyExplorer(
                     tcp.DocumentDatabase,
                     header.AlreadyVisited,
                     TimeSpan.FromMilliseconds(header.Timeout),
                     replicationDocument.Destinations))
                 {
-                    //if true, all adjacent nodes are already visited, so no need to continue
-                    //(filtering is done in a ctor of ReplicationTopologyDiscoverer, using header.AlreadyVisited)
-                    if (topologyDiscoverer.DiscovererCount == 0)
-                    {
-                        var topology = GetFullTopologyWithLocalNodes(localDbId, localTopology);
-                        WriteDiscoveryResponse(tcp, context, topology, null , TopologyDiscoveryResponse.Status.Ok);
-                        return;
-                    }
-
                     try
                     {
                         var discoveryTask = topologyDiscoverer.DiscoverTopologyAsync();
                         discoveryTask.Wait(tcp.DocumentDatabase.DatabaseShutdown);
-
                         var topology = GetFullTopologyWithLocalNodes(localDbId, localTopology);
-                        foreach (var nodeInfo in discoveryTask.Result.NodesByDbId)
-                            topology.NodesByDbId[nodeInfo.Key] = nodeInfo.Value;
+                        foreach (var nodeInfo in discoveryTask.Result.NodesById)
+                            topology.NodesById[nodeInfo.Key] = nodeInfo.Value;
 
-                        WriteDiscoveryResponse(tcp, context, topology, null , TopologyDiscoveryResponse.Status.Ok);
+                        WriteDiscoveryResponse(tcp, context, topology, null , TopologyDiscoveryResponseHeader.Status.Ok);
                     }
                     catch (Exception e)
                     {
@@ -102,7 +90,7 @@ namespace Raven.Server.Documents.Replication
                             context,
                             topology,
                             e.ToString(),
-                            TopologyDiscoveryResponse.Status.Error);
+                            TopologyDiscoveryResponseHeader.Status.Error);
                     }
                 }
             }
@@ -110,41 +98,28 @@ namespace Raven.Server.Documents.Replication
 
         private static FullTopologyInfo GetFullTopologyWithLocalNodes(string localDbId, NodeTopologyInfo localTopology)
         {
-            var topology = new FullTopologyInfo(localDbId);
-            topology.NodesByDbId.Add(localDbId, localTopology);
+            var topology = new FullTopologyInfo
+            {
+                DatabaseId = localDbId
+            };
+            topology.NodesById.Add(localDbId, localTopology);
             return topology;
         }
 
-        private void UpdateAlreadyVisitedWithLocalDestinations(
-            string originDbId,
-            TcpConnectionOptions tcp,
-            Dictionary<string, List<string>> alreadyVisited)
-        {
-            List<string> visitedDbIds;
-            if (!alreadyVisited.TryGetValue(originDbId, out visitedDbIds))
-            {
-                visitedDbIds = new List<string>();
-                alreadyVisited.Add(originDbId,visitedDbIds);
-            }
-
-            var localDbId = tcp.DocumentDatabase.DbId.ToString();
-            if (!visitedDbIds.Contains(localDbId))
-                visitedDbIds.Add(localDbId);
-        }
-
+        
         private static void WriteDiscoveryResponse(
             TcpConnectionOptions tcp, 
             JsonOperationContext context, 
             FullTopologyInfo fullTopology, 
             string exception, 
-            TopologyDiscoveryResponse.Status responseStatus)
+            TopologyDiscoveryResponseHeader.Status responseStatus)
         {
             using (var writer = new BlittableJsonTextWriter(context, tcp.Stream))
             {
                 context.Write(writer,new DynamicJsonValue
                 {
-                    [nameof(TopologyDiscoveryResponse.DiscoveryStatus)] = (int)responseStatus,
-                    [nameof(TopologyDiscoveryResponse.Exception)] = exception
+                    [nameof(TopologyDiscoveryResponseHeader.Type)] = responseStatus.ToString(),
+                    [nameof(TopologyDiscoveryResponseHeader.Exception)] = exception
                 });
 
                 context.Write(writer, fullTopology.ToJson());

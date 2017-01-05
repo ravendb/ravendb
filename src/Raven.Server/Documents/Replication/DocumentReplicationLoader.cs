@@ -136,7 +136,7 @@ namespace Raven.Server.Documents.Replication
                 documentsOperationContext.Write(writer, new DynamicJsonValue
                 {
                     [nameof(ReplicationMessageReply.Type)] = "Ok",
-                    [nameof(ReplicationMessageReply.DbId)] = tcpConnectionOptions.DocumentDatabase.DbId.ToString(),
+                    [nameof(ReplicationMessageReply.DatabaseId)] = tcpConnectionOptions.DocumentDatabase.DbId.ToString(),
                     [nameof(ReplicationMessageReply.MessageType)] = ReplicationMessageType.Heartbeat,
                     [nameof(ReplicationMessageReply.LastEtagAccepted)] = lastEtagFromSrc,
                     [nameof(ReplicationMessageReply.LastIndexTransformerEtagAccepted)] = _database.IndexMetadataPersistence.GetLastReplicateEtagFrom(configTx.InnerTransaction, getLatestEtagMessage.SourceDatabaseId),
@@ -344,13 +344,12 @@ namespace Raven.Server.Documents.Replication
                 ConnectionFailureInfo failureInfo;
                 if (_outgoingFailureInfo.TryGetValue(instance.Destination, out failureInfo) == false)
                     return;
-                
+
+                failureInfo.OnError(e);
                 failureInfo.DestinationDbId = instance.DestinationDbId;
                 failureInfo.LastHeartbeatTicks = instance.LastHeartbeatTicks;
-                failureInfo.LastSentDocumentEtag = instance._lastSentDocumentEtag;
+                failureInfo.LastAcceptedDocumentEtag = instance.LastAcceptedDocumentEtag;
                 failureInfo.LastSentIndexOrTransformerEtag = instance._lastSentIndexOrTransformerEtag;
-                using (instance._documentsContext.OpenReadTransaction())
-                    failureInfo.GlobalChangeVector = instance._database.DocumentsStorage.GetDatabaseChangeVector(instance._documentsContext);
 
                 _reconnectQueue.Add(failureInfo);
 
@@ -459,12 +458,10 @@ namespace Raven.Server.Documents.Replication
         {
             public string DestinationDbId;
 
-            public long LastSentDocumentEtag;
+            public long LastAcceptedDocumentEtag;
             public long LastSentIndexOrTransformerEtag;
 
             public long LastHeartbeatTicks;
-
-            public ChangeVectorEntry[] GlobalChangeVector;
 
             public const int MaxConnectionTimout = 60000;
 
@@ -482,12 +479,15 @@ namespace Raven.Server.Documents.Replication
                 ErrorCount = 0;
             }
 
-            public void OnError()
+            public void OnError(Exception e)
             {
                 ErrorCount++;
                 NextTimout = TimeSpan.FromMilliseconds(Math.Min(NextTimout.TotalMilliseconds * 4, MaxConnectionTimout));
                 RetryOn = DateTime.UtcNow + NextTimout;
+                LastException = e;
             }
+
+            public Exception LastException { get; set; }
         }
 
         public int GetSizeOfMajority()

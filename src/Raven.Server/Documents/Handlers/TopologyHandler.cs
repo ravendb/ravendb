@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
@@ -17,22 +19,6 @@ namespace Raven.Server.Documents.Handlers
 {
     public class TopologyHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/topology/dbid", "GET")]
-        public Task GetDbId()
-        {
-            DocumentsOperationContext context;
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                context.Write(writer, new DynamicJsonValue
-                {
-                    ["DbId"] = Database.DbId.ToString()
-                });
-                writer.Flush();
-            }
-            return Task.CompletedTask;
-        }
-
         [RavenAction("/databases/*/topology", "GET")]
         public Task GetTopology()
         {
@@ -62,6 +48,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/topology/full", "GET")]
         public async Task GetFullTopology()
         {
+            var sp = Stopwatch.StartNew();
             DocumentsOperationContext context;
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
@@ -82,20 +69,25 @@ namespace Raven.Server.Documents.Handlers
                         return;
                     }
                 }
-
-                using (var clusterTopologyExplorer = new ReplicationClusterTopologyExplorer(
+                var replicationDiscovertTimeout = Database.Configuration
+                    .Replication
+                    .ReplicationTopologyDiscoveryTimeout
+                    .AsTimeSpan;
+                using (var clusterTopologyExplorer = new ClusterTopologyExplorer(
                     Database,
-                    new Dictionary<string, List<string>>(),
-                    Database.Configuration
-                                  .Replication
-                                  .ReplicationTopologyDiscoveryTimeout
-                                  .AsTimeSpan,
+                    new List<string>
+                    {
+                        Database.DbId.ToString()
+                    },
+                    replicationDiscovertTimeout,
                     replicationDocument.Destinations))
                 {
                     var topology = await clusterTopologyExplorer.DiscoverTopologyAsync();
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
-                        context.Write(writer, topology.ToJson());
+                        var json = topology.ToJson();
+                        json["Duration"] = sp.Elapsed.ToString();
+                        context.Write(writer, json);
                         writer.Flush();
                     }
                 }
@@ -106,7 +98,10 @@ namespace Raven.Server.Documents.Handlers
         {
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                context.Write(writer, new FullTopologyInfo(Database.DbId.ToString()).ToJson());
+                context.Write(writer, new FullTopologyInfo
+                {
+                    DatabaseId = Database.DbId.ToString()
+                }.ToJson());
                 writer.Flush();
             }
         }

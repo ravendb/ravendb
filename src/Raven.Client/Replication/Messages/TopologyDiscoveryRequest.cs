@@ -4,10 +4,11 @@ namespace Raven.Client.Replication.Messages
 {
     public class TopologyDiscoveryRequest
     {
-        //already visited in the format of [src DbId -> list of dest DbIds]
-        public Dictionary<string, List<string>> AlreadyVisited;
+        //already visited db ids
+        public List<string> AlreadyVisited;
 
-        public string OriginDbId;
+        // this is the requesting db, not the first db that this was requested from
+        public string OriginDbId; 
 
         public long Timeout;
     }

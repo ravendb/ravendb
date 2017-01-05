@@ -1,17 +1,18 @@
 ﻿namespace Raven.Client.Replication.Messages
 {
-    public class TopologyDiscoveryResponse
+    public class TopologyDiscoveryResponseHeader
     {
-        public Status DiscoveryStatus;
+        public Status Type;
 
         public string Exception;
+
+        public string Message;
 
         public enum Status
         {
             AlreadyKnown = 1,
-            Leaf = 2,
-            Ok = 3,
-            Error
+            Ok = 2,
+            Error = 3
         }
     }
 }

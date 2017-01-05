@@ -19,6 +19,7 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json.Parsing;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Lucene.Net.Util;
 using Raven.Server.Documents.Patch;
@@ -61,6 +62,7 @@ namespace Raven.Server.Documents.Replication
         {
 
             ConnectionInfo = IncomingConnectionInfo.FromGetLatestEtag(replicatedLastEtag);
+            ConnectionInfo.RemoteIp = ((IPEndPoint)tcpClient.Client.RemoteEndPoint).Address.ToString();
             _multiDocumentParser = multiDocumentParser;
             _database = database;
             _tcpClient = tcpClient;
@@ -1043,7 +1045,7 @@ namespace Raven.Server.Documents.Replication
                 [nameof(ReplicationMessageReply.Exception)] = null,
                 [nameof(ReplicationMessageReply.DocumentsChangeVector)] = documentChangeVectorAsDynamicJson,
                 [nameof(ReplicationMessageReply.IndexTransformerChangeVector)] = indexesChangeVectorAsDynamicJson,
-                [nameof(ReplicationMessageReply.DbId)] = _database.DbId
+                [nameof(ReplicationMessageReply.DatabaseId)] = _database.DbId.ToString()
             });
 
             writer.Flush();

@@ -1,45 +1,43 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using Raven.Abstractions.Extensions;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Replication.Messages
 {
     public class FullTopologyInfo
     {
-        public string LeaderDbId;
+        public string DatabaseId;
 
-        public Dictionary<string, NodeTopologyInfo> NodesByDbId;
+        public Dictionary<string, NodeTopologyInfo> NodesById = new Dictionary<string, NodeTopologyInfo>();
 
-        internal FullTopologyInfo()
-        {
-        }
-
-        public FullTopologyInfo(string leaderDbId)
-        {
-            LeaderDbId = leaderDbId;
-            NodesByDbId = new Dictionary<string, NodeTopologyInfo>();
-        }
+        public List<InactiveNodeStatus> FailedToReach = new List<InactiveNodeStatus>();
 
         public DynamicJsonValue ToJson()
         {
             var nodesByDbIdJson = new DynamicJsonValue();
-            foreach (var kvp in NodesByDbId)
+            foreach (var kvp in NodesById)
                 nodesByDbIdJson[kvp.Key] = kvp.Value.ToJson();
+
+            var failedToReachJson = new DynamicJsonArray();
+            foreach (var kvp in FailedToReach)
+                failedToReachJson.Add(kvp.ToJson());
 
             return new DynamicJsonValue
             {
-                [nameof(LeaderDbId)] = LeaderDbId,
-                [nameof(NodesByDbId)] = nodesByDbIdJson
+                [nameof(DatabaseId)] = DatabaseId,
+                [nameof(NodesById)] = nodesByDbIdJson,
+                [nameof(FailedToReach)] = failedToReachJson
             };
         }
     }
 
     public class NodeTopologyInfo
     {
-        public string OriginDbId;
+        public string DatabaseId;
 
         public List<ActiveNodeStatus> Outgoing;
         public List<ActiveNodeStatus> Incoming;
-
         public List<InactiveNodeStatus> Offline;
 
         public NodeTopologyInfo()
@@ -53,15 +51,21 @@ namespace Raven.Client.Replication.Messages
         {
             var outgoingJson = new DynamicJsonArray();
             foreach (var outgoing in Outgoing)
+            {
                 outgoingJson.Add(outgoing.ToJson());
+            }
 
             var incomingJson = new DynamicJsonArray();
             foreach (var incoming in Incoming)
+            {
                 incomingJson.Add(incoming.ToJson());
+            }
 
             var offlineJson = new DynamicJsonArray();
             foreach (var offline in Offline)
+            {
                 offlineJson.Add(offline.ToJson());
+            }
 
             return new DynamicJsonValue
             {
@@ -78,6 +82,8 @@ namespace Raven.Client.Replication.Messages
 
         public string Url;
 
+        public string Message;
+
         public string Database;
 
         public DynamicJsonValue ToJson()
@@ -85,6 +91,7 @@ namespace Raven.Client.Replication.Messages
             return new DynamicJsonValue
             {
                 [nameof(Exception)] = Exception,
+                [nameof(Message)] = Message,
                 [nameof(Url)] = Url,
                 [nameof(Database)] = Database
             };
@@ -95,7 +102,7 @@ namespace Raven.Client.Replication.Messages
     {
         public string DbId;
 
-        public bool IsOnline; //is being replicated to actively
+        public bool IsCurrentlyConnected;
 
         public long LastDocumentEtag;
 
@@ -103,9 +110,11 @@ namespace Raven.Client.Replication.Messages
 
         public long LastHeartbeatTicks;
 
-        public Dictionary<string, long> GlobalChangeVector;
-
         public string LastException;
+
+        public string Url;
+
+        public string Database;
 
         public Status NodeStatus;
 
@@ -116,27 +125,21 @@ namespace Raven.Client.Replication.Messages
             Error
         }
 
-        public ActiveNodeStatus()
-        {
-            GlobalChangeVector = new Dictionary<string, long>();
-        }
 
         public DynamicJsonValue ToJson()
         {
-            var globalChangeVector = new DynamicJsonValue();
-            foreach (var kvp in GlobalChangeVector)
-                globalChangeVector[kvp.Key] = kvp.Value;
-
             return new DynamicJsonValue
             {
-                [nameof(IsOnline)] = IsOnline,
+                [nameof(IsCurrentlyConnected)] = IsCurrentlyConnected,
                 [nameof(DbId)] = DbId,
+                [nameof(Database)] = Database,
+                [nameof(Url)] = Url,
                 [nameof(LastException)] = LastException,
                 [nameof(LastHeartbeatTicks)] = LastHeartbeatTicks,
                 [nameof(LastDocumentEtag)] = LastDocumentEtag,
                 [nameof(LastIndexTransformerEtag)] = LastIndexTransformerEtag,
-                [nameof(NodeStatus)] = (int)NodeStatus,
-                [nameof(GlobalChangeVector)] = globalChangeVector
+                [nameof(NodeStatus)] = NodeStatus.ToString(),
+                ["LastHeartbeat"] = new DateTime(LastHeartbeatTicks).GetDefaultRavenFormat(),
             };
         }
     }

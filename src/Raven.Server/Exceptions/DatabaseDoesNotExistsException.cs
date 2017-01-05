@@ -14,8 +14,13 @@ namespace Raven.Server.Exceptions
         {
         }
 
-        public DatabaseDoesNotExistsException(string message)
-            : base(message)
+        public DatabaseDoesNotExistsException(string msg) : base(msg)
+        {
+
+        }
+
+        public DatabaseDoesNotExistsException(string message, Exception e)
+            : base(message, e)
         {
         }
     }

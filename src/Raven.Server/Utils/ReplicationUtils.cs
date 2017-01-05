@@ -20,28 +20,17 @@ using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
+using Voron.Debugging;
 
 namespace Raven.Server.Utils
 {
     public static class ReplicationUtils
-    {        
-        private static Dictionary<string, long> ConvertChangeVectorToDictionary(ChangeVectorEntry[] changeVector)
-        {
-            var globalChangeVector = new Dictionary<string, long>();
-            foreach (var entry in changeVector)
-                globalChangeVector[entry.DbId.ToString()] = entry.Etag;
-            return globalChangeVector;
-        }
-
+    {
         public static NodeTopologyInfo GetLocalTopology(
             DocumentDatabase database,
-            ReplicationDocument replicationDocument,
-            DocumentsOperationContext context)
+            ReplicationDocument replicationDocument)
         {
-            if (context.Transaction == null)
-                throw new InvalidOperationException("Fetching local transaction requires an open tx");
-
-            var topologyInfo = new NodeTopologyInfo { OriginDbId = database.DbId.ToString() };
+            var topologyInfo = new NodeTopologyInfo { DatabaseId = database.DbId.ToString() };
             var replicationLoader = database.DocumentReplicationLoader;
 
             foreach (var incomingHandler in replicationLoader.IncomingHandlers)
@@ -50,7 +39,12 @@ namespace Raven.Server.Utils
                     new ActiveNodeStatus
                     {
                         DbId = incomingHandler.ConnectionInfo.SourceDatabaseId,
-                        IsOnline = true,
+                        Database = incomingHandler.ConnectionInfo.SourceDatabaseName,
+                        Url = new UriBuilder(incomingHandler.ConnectionInfo.SourceUrl)
+                        {
+                            Host = incomingHandler.ConnectionInfo.RemoteIp
+                        }.Uri.ToString(),
+                        IsCurrentlyConnected = true,
                         NodeStatus = ActiveNodeStatus.Status.Online,
                         LastDocumentEtag = incomingHandler.LastDocumentEtag,
                         LastIndexTransformerEtag = incomingHandler.LastIndexOrTransformerEtag,
@@ -63,65 +57,41 @@ namespace Raven.Server.Utils
                 OutgoingReplicationHandler outgoingHandler;
                 DocumentReplicationLoader.ConnectionFailureInfo connectionFailureInfo;
 
-                if (TryGetActiveDestination(
-                    destination,
-                    replicationLoader.OutgoingHandlers,
-                    out outgoingHandler))
+                if (TryGetActiveDestination(destination, replicationLoader.OutgoingHandlers, out outgoingHandler))
                 {
-                    var changeVector = outgoingHandler._database.DocumentsStorage.GetDatabaseChangeVector(context);
-                    var globalChangeVector = ConvertChangeVectorToDictionary(changeVector);
                     topologyInfo.Outgoing.Add(
                         new ActiveNodeStatus
                         {
                             DbId = outgoingHandler.DestinationDbId,
-                            IsOnline = true,
+                            IsCurrentlyConnected = true,
+                            Database = destination.Database,
+                            Url = destination.Url,
                             LastDocumentEtag = outgoingHandler._lastSentDocumentEtag,
                             LastIndexTransformerEtag = outgoingHandler._lastSentIndexOrTransformerEtag,
                             LastHeartbeatTicks = outgoingHandler.LastHeartbeatTicks,
-                            GlobalChangeVector = globalChangeVector,
                             NodeStatus = ActiveNodeStatus.Status.Online
                         });
 
                 }
                 else if (replicationLoader.OutgoingFailureInfo.TryGetValue(destination, out connectionFailureInfo))
                 {
-                    topologyInfo.Outgoing.Add(
-                        new ActiveNodeStatus
-                        {
-                            DbId = connectionFailureInfo.DestinationDbId,
-                            IsOnline = false,
-                            LastDocumentEtag = connectionFailureInfo.LastSentDocumentEtag,
-                            LastIndexTransformerEtag = connectionFailureInfo.LastSentIndexOrTransformerEtag,
-                            LastHeartbeatTicks = connectionFailureInfo.LastHeartbeatTicks,
-                            GlobalChangeVector =
-                                ConvertChangeVectorToDictionary(connectionFailureInfo.GlobalChangeVector),
-                            NodeStatus = ActiveNodeStatus.Status.Online
-                        });
-                }
-                else
-                {
-                    Exception isAliveCheckException = null;
-                    try
-                    {
-                        var isAliveTask = GetTcpInfoAsync(
-                            context, destination.Url,
-                            destination.Database, destination.ApiKey);
-
-                        isAliveTask.Wait(database.DatabaseShutdown);
-                        if (isAliveTask.IsFaulted || isAliveTask.IsCanceled)
-                            isAliveCheckException = isAliveTask.Exception.ExtractSingleInnerException();
-                    }
-                    catch (Exception e)
-                    {
-                        isAliveCheckException = e;
-                    }
-
                     topologyInfo.Offline.Add(
                         new InactiveNodeStatus
                         {
                             Database = destination.Database,
                             Url = destination.Url,
-                            Exception = (isAliveCheckException != null) ? isAliveCheckException.ToString() : string.Empty
+                            Exception = connectionFailureInfo.LastException?.ToString(),
+                            Message = connectionFailureInfo.LastException?.Message
+                        });
+                }
+                else
+                {
+                    topologyInfo.Offline.Add(
+                        new InactiveNodeStatus
+                        {
+                            Database = destination.Database,
+                            Url = destination.Url,
+                            Exception = destination.Disabled ? "Replication destination has been disabled" : null
                         });
                 }
             }
@@ -149,8 +119,8 @@ namespace Raven.Server.Utils
         }
 
         public static string GetTcpInfo(JsonOperationContext context,
-            string url, 
-            string databaseName, 
+            string url,
+            string databaseName,
             string apiKey)
         {
             using (var requestExecuter = new RequestExecuter(url, databaseName, apiKey))
@@ -158,7 +128,7 @@ namespace Raven.Server.Utils
                 var getTcpInfoCommand = new GetTcpInfoCommand();
                 requestExecuter.Execute(getTcpInfoCommand, context);
                 return getTcpInfoCommand.Result.Url;
-            }           
+            }
         }
 
         public static async Task<string> GetTcpInfoAsync(JsonOperationContext context,
@@ -250,7 +220,7 @@ namespace Raven.Server.Utils
             return changeVector;
         }
 
-        public static unsafe  ChangeVectorEntry[] ReadChangeVectorFrom(Tree tree)
+        public static unsafe ChangeVectorEntry[] ReadChangeVectorFrom(Tree tree)
         {
             var changeVector = new ChangeVectorEntry[tree.State.NumberOfEntries];
             using (var iter = tree.Iterate(false))
