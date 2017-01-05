@@ -22,14 +22,14 @@ namespace Tryouts
             //    }
             //});
 
-            for (int i = 0; i < 199; i++)
-            {
-                Console.WriteLine(i);
-                using (var a = new FastTests.Server.Documents.Replication.ManualConflictResolution())
-                {
-                    a.ScriptResolveToTombstone().Wait();
-                }
-            }
+            //for (int i = 0; i < 199; i++)
+            //{
+            //    Console.WriteLine(i);
+            //    using (var a = new FastTests.Server.Documents.Replication.ManualConflictResolution())
+            //    {
+            //        a.ScriptResolveToTombstone().Wait();
+            //    }
+            //}
         }
     }
 

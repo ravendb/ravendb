@@ -17,6 +17,22 @@ namespace Raven.Server.Documents.Handlers
 {
     public class TopologyHandler : DatabaseRequestHandler
     {
+        [RavenAction("/databases/*/topology/dbid", "GET")]
+        public Task GetDbId()
+        {
+            DocumentsOperationContext context;
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                context.Write(writer, new DynamicJsonValue
+                {
+                    ["DbId"] = Database.DbId.ToString()
+                });
+                writer.Flush();
+            }
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/databases/*/topology", "GET")]
         public Task GetTopology()
         {

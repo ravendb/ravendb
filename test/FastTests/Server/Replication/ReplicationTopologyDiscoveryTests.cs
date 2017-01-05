@@ -83,8 +83,23 @@ namespace FastTests.Server.Replication
             using (var nodeA = GetDocumentStore())
             using (var nodeB = GetDocumentStore())
             {
+                //add some documents so incoming replication handlers will be initialized
+                using (var session = nodeA.OpenSession())
+                {
+                    session.Store(new { Foo = "Bar"},"users/1");
+                    session.SaveChanges();
+                }
+                using (var session = nodeB.OpenSession())
+                {
+                    session.Store(new { Foo = "Bar2" }, "users/2");
+                    session.SaveChanges();
+                }
+
                 SetupReplication(nodeA,nodeB);
                 SetupReplication(nodeB,nodeA);
+
+                WaitForDocument(nodeA, "users/2");
+                WaitForDocument(nodeB, "users/1");
 
                 var nodeADocumentDatabase = await GetDocumentDatabaseInstanceFor(nodeA);
                 var nodeBDocumentDatabase = await GetDocumentDatabaseInstanceFor(nodeB);
@@ -95,10 +110,16 @@ namespace FastTests.Server.Replication
                 var nodeAOutgoing = topologyInfo.NodesByDbId[nodeADocumentDatabase.DbId.ToString()].Outgoing;
                 Assert.Equal(1,nodeAOutgoing.Count);
                 Assert.Equal(nodeBDocumentDatabase.DbId.ToString(), nodeAOutgoing.First().DbId);
+                var nodeAIncoming = topologyInfo.NodesByDbId[nodeADocumentDatabase.DbId.ToString()].Incoming;
+                Assert.Equal(1, nodeAIncoming.Count);
+                Assert.Equal(nodeBDocumentDatabase.DbId.ToString(), nodeAIncoming.First().DbId);
 
                 var nodeBOutgoing = topologyInfo.NodesByDbId[nodeBDocumentDatabase.DbId.ToString()].Outgoing;
                 Assert.Equal(1, nodeBOutgoing.Count);
                 Assert.Equal(nodeADocumentDatabase.DbId.ToString(), nodeBOutgoing.First().DbId);
+                var nodeBIncoming = topologyInfo.NodesByDbId[nodeBDocumentDatabase.DbId.ToString()].Incoming;
+                Assert.Equal(1, nodeBIncoming.Count);
+                Assert.Equal(nodeADocumentDatabase.DbId.ToString(), nodeBIncoming.First().DbId);
 
             }
         }
@@ -132,6 +153,44 @@ namespace FastTests.Server.Replication
                 var nodeCOutgoing = topologyInfo.NodesByDbId[nodeCDocumentDatabase.DbId.ToString()].Outgoing;
                 Assert.Equal(1, nodeCOutgoing.Count);
                 Assert.Equal(nodeADocumentDatabase.DbId.ToString(), nodeCOutgoing.First().DbId);
+            }
+        }
+
+        [Fact]
+        public async Task Cluster_with_master_master_master_and_some_leaves_full_topology_should_be_correctly_detected()
+        {
+            using (var nodeA = GetDocumentStore())
+            using (var nodeB = GetDocumentStore())
+            using (var nodeC = GetDocumentStore())
+            using (var nodeALeaf = GetDocumentStore())
+            using (var nodeCLeaf = GetDocumentStore())
+            {
+                SetupReplication(nodeA, nodeB, nodeALeaf);
+                SetupReplication(nodeB, nodeC);
+                SetupReplication(nodeC, nodeA, nodeCLeaf);
+
+                var nodeADocumentDatabase = await GetDocumentDatabaseInstanceFor(nodeA);
+                var nodeALeafDocumentDatabase = await GetDocumentDatabaseInstanceFor(nodeALeaf);
+                var nodeBDocumentDatabase = await GetDocumentDatabaseInstanceFor(nodeB);
+                var nodeCDocumentDatabase = await GetDocumentDatabaseInstanceFor(nodeC);
+                var nodeCLeafDocumentDatabase = await GetDocumentDatabaseInstanceFor(nodeCLeaf);
+
+                var topologyInfo = await GetFullTopology(nodeA);
+                Assert.Equal(5, topologyInfo.NodesByDbId.Count);
+
+                var nodeAOutgoing = topologyInfo.NodesByDbId[nodeADocumentDatabase.DbId.ToString()].Outgoing;
+                Assert.Equal(2, nodeAOutgoing.Count);
+                Assert.True(nodeAOutgoing.Select(x => x.DbId).Any(x => x == nodeBDocumentDatabase.DbId.ToString()));
+                Assert.True(nodeAOutgoing.Select(x => x.DbId).Any(x => x == nodeALeafDocumentDatabase.DbId.ToString()));
+
+                var nodeBOutgoing = topologyInfo.NodesByDbId[nodeBDocumentDatabase.DbId.ToString()].Outgoing;
+                Assert.Equal(1, nodeBOutgoing.Count);
+                Assert.Equal(nodeCDocumentDatabase.DbId.ToString(), nodeBOutgoing.First().DbId);
+
+                var nodeCOutgoing = topologyInfo.NodesByDbId[nodeCDocumentDatabase.DbId.ToString()].Outgoing;
+                Assert.Equal(2, nodeCOutgoing.Count);
+                Assert.True(nodeCOutgoing.Select(x => x.DbId).Any(x => x == nodeADocumentDatabase.DbId.ToString()));
+                Assert.True(nodeCOutgoing.Select(x => x.DbId).Any(x => x == nodeCLeafDocumentDatabase.DbId.ToString()));
             }
         }
 

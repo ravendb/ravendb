@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
-using System.Runtime.CompilerServices;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Replication;
+using Raven.Client.Connection;
+using Raven.Client.Document;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
@@ -16,6 +19,7 @@ namespace Raven.Server.Documents.Replication
     public class ReplicationClusterTopologyExplorer : IDisposable
     {
         private readonly DocumentDatabase _database;
+        private readonly Dictionary<string, List<string>> _alreadyKnownDestinations;
         private readonly TimeSpan _timeout;
         private readonly List<ReplicationTopologyDestinationExplorer> _discoverers;
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
@@ -28,9 +32,26 @@ namespace Raven.Server.Documents.Replication
             List<ReplicationDestination> replicationDestinations)
         {
             _database = database;
+            _alreadyKnownDestinations = alreadyKnownDestinations;
             _timeout = timeout;
             _discoverers = new List<ReplicationTopologyDestinationExplorer>();
             var dbId = _database.DbId.ToString();
+
+            List<string> destinationIds;
+            if (!alreadyKnownDestinations.TryGetValue(dbId, out destinationIds))
+            {
+                destinationIds = new List<string>();
+                alreadyKnownDestinations.Add(dbId, destinationIds);
+            }
+
+            var destinationDbIds = new Dictionary<ReplicationDestination,string>();
+            foreach (var destination in replicationDestinations)
+            {
+                var nodeDbId = GetDbIdFrom(destination);
+                destinationDbIds.Add(destination,nodeDbId);
+                alreadyKnownDestinations[dbId].Add(nodeDbId);
+            }
+
             foreach (var destination in replicationDestinations)
             {                                
                 var credentials = new OperationCredentials(destination.ApiKey,CredentialCache.DefaultCredentials);
@@ -38,9 +59,11 @@ namespace Raven.Server.Documents.Replication
                 JsonOperationContext context;
                 _disposables.Add(database.DocumentsStorage.ContextPool.AllocateOperationContext(out context));
 
+                var alreadyKnownExceptCurrent = alreadyKnownDestinations.ToDictionary(x => x.Key, x => x.Value);
+                alreadyKnownExceptCurrent[dbId].Remove(destinationDbIds[destination]);
                 var singleDestinationDiscoverer = new ReplicationTopologyDestinationExplorer(
                     context,
-                    alreadyKnownDestinations,
+                    alreadyKnownExceptCurrent,
                     destination,
                     credentials,
                     dbId,
@@ -55,10 +78,22 @@ namespace Raven.Server.Documents.Replication
             if (_discoverers.Count == 0) //either no destinations or we already visited all destinations
                 return new FullTopologyInfo(_database.DbId.ToString());
 
+            var topology = new FullTopologyInfo(_database.DbId.ToString());
             var discoveryTasks = new Dictionary<ReplicationTopologyDestinationExplorer, Task<FullTopologyInfo>>(_discoverers.Count);
             foreach (var d in _discoverers)
-                //TODO: this might throw immediately
-                discoveryTasks.Add(d, d.DiscoverTopologyAsync());
+            {
+                Task<FullTopologyInfo> discoveryTask = null;
+                try
+                {
+                    discoveryTask = d.DiscoverTopologyAsync();
+                    discoveryTasks.Add(d, discoveryTask);
+                }
+                catch (Exception)
+                {
+                    //var val = CreateTopologyInfoFromFaultedDiscoveryTask(d, discoveryTask, ActiveNodeStatus.Status.Error);
+                    //topology.NodesByDbId[d.Destination.Database] = val;
+                }
+            }
 
             var timedOut = false;
             try
@@ -71,7 +106,6 @@ namespace Raven.Server.Documents.Replication
                 // handled externally
             }
 
-            var topology = new FullTopologyInfo(_database.DbId.ToString());
             foreach (var kvp in discoveryTasks)
             {                
                 var discoveryTask = kvp.Value;
@@ -82,15 +116,15 @@ namespace Raven.Server.Documents.Replication
                 {
                     ObserveTaskException(discoveryTask);
                     var topologyInfo = CreateTopologyInfoFromFaultedDiscoveryTask(kvp.Key, discoveryTask,ActiveNodeStatus.Status.Timeout);
-                    topology.NodesByDbId.Add(topologyInfo.OriginDbId,topologyInfo);
+                    topology.NodesByDbId[topologyInfo.OriginDbId] = topologyInfo;
                 }
                 else if (discoveryTask.IsFaulted || discoveryTask.IsCanceled)
                 {
                     var topologyInfo = CreateTopologyInfoFromFaultedDiscoveryTask(kvp.Key, discoveryTask,ActiveNodeStatus.Status.Error);
-                    topology.NodesByDbId.Add(topologyInfo.OriginDbId, topologyInfo);
+                    topology.NodesByDbId[topologyInfo.OriginDbId] = topologyInfo;
                 }
                 //if kvp.Value.Result == null --> already visited
-                //if IsEmpty() == true --> leaf node
+                //if the NodeTopologyInfo is empty it is a valid result
                 else if (kvp.Value.Result != null)
                 {
                     foreach (var nodeValue in kvp.Value.Result.NodesByDbId)
@@ -104,19 +138,10 @@ namespace Raven.Server.Documents.Replication
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                List<ReplicationDestination> activeDestinations;
-                var localTopology = ReplicationUtils.GetLocalTopology(_database, replicationDocument, context, out activeDestinations);
+                var localTopology = ReplicationUtils.GetLocalTopology(_database, replicationDocument, context);
                 topology.NodesByDbId[localTopology.OriginDbId] = localTopology;
             }
             return topology;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool IsEmpty(NodeTopologyInfo topology)
-        {
-            return topology.Incoming.Count == 0 &&
-                   topology.Outgoing.Count == 0 &&
-                   topology.Offline.Count == 0;
         }
 
         private NodeTopologyInfo CreateTopologyInfoFromFaultedDiscoveryTask(
@@ -160,6 +185,22 @@ namespace Raven.Server.Documents.Replication
         private static void ObserveTaskException(Task<FullTopologyInfo> t)
         {
             t.ContinueWith(done => GC.KeepAlive(done.Exception));
+        }
+
+        private readonly HttpJsonRequestFactory jsonRequestFactory = new HttpJsonRequestFactory(1);
+
+        private string GetDbIdFrom(ReplicationDestination destination)
+        {
+            var url = $"{destination.Url}/databases/{destination.Database}/topology/dbid";
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(
+                new CreateHttpJsonRequestParams(null, url,
+                    HttpMethod.Get,
+                    new OperationCredentials(destination.ApiKey, CredentialCache.DefaultCredentials),
+                    new DocumentConvention())))
+            {
+                var dbIdJson = request.ReadResponseJson();
+                return dbIdJson.Value<string>("DbId");
+            }
         }
 
         public void Dispose()

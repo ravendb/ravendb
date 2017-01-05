@@ -59,21 +59,14 @@ namespace Raven.Server.Documents.Replication
                         return;
                     }
 
-                    //here we need to construct the topology from the replication document 
                     replicationDocument = JsonDeserializationServer.ReplicationDocument(configurationDocument.Data);
                 }
-                // outgoing, last heartbeat time, etag, global change vector
-                // destinations, may be inactive, need to test them as well, if not already in outgoing
-                // incoming, last heartbeat time, etag 
 
-                // if error, what is the error in connection
-                // if timeout, what is the timeout value                
-                List<ReplicationDestination> activeDestinations;
                 NodeTopologyInfo localTopology;
 
                 using(context.OpenReadTransaction())
                     localTopology = ReplicationUtils.GetLocalTopology(
-                        tcp.DocumentDatabase, replicationDocument, context, out activeDestinations);
+                        tcp.DocumentDatabase, replicationDocument, context);
 
                 using (var topologyDiscoverer = new ReplicationClusterTopologyExplorer(
                     tcp.DocumentDatabase,
@@ -137,10 +130,6 @@ namespace Raven.Server.Documents.Replication
             var localDbId = tcp.DocumentDatabase.DbId.ToString();
             if (!visitedDbIds.Contains(localDbId))
                 visitedDbIds.Add(localDbId);
-
-            foreach (var outgoing in tcp.DocumentDatabase.DocumentReplicationLoader.OutgoingHandlers)
-                if(!visitedDbIds.Contains(outgoing.DestinationDbId))
-                    visitedDbIds.Add(outgoing.DestinationDbId);
         }
 
         private static void WriteDiscoveryResponse(

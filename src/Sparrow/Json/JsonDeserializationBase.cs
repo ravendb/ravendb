@@ -133,6 +133,12 @@ namespace Sparrow.Json
                         methodToCall = methodToCall.MakeGenericMethod(valueType);
                         return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
                     }
+                    if (valueType == typeof(long) ||
+                        valueType == typeof(double))
+                    {
+                        var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfPrimitive), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(valueType);
+                        return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
+                    }
                     else
                     {
                         var converterExpression = Expression.Constant(GetConverterFromCache(valueType));
@@ -209,7 +215,8 @@ namespace Sparrow.Json
             return value;
         }
 
-        private static Dictionary<string, T> ToDictionary<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter)
+        private static Dictionary<string, T> ToDictionaryOfPrimitive<T>(BlittableJsonReaderObject json, string name)
+            where T : struct 
         {
             var dic = new Dictionary<string, T>(StringComparer.OrdinalIgnoreCase);
 
@@ -222,6 +229,25 @@ namespace Sparrow.Json
                 object val;
                 if (obj.TryGetMember(propertyName, out val))
                 {
+                    dic[propertyName] = (T)val;
+                }
+            }
+            return dic;
+        }
+
+        private static Dictionary<string, T> ToDictionary<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter)
+        {
+            var dic = new Dictionary<string, T>(StringComparer.OrdinalIgnoreCase);
+
+            BlittableJsonReaderObject obj;
+            if (json.TryGet(name, out obj) == false || obj == null)
+                return dic;
+
+            foreach (var propertyName in obj.GetPropertyNames())
+            {
+                object val;
+                if (obj.TryGetMember(propertyName, out val))
+                {                   
                     dic[propertyName] = converter((BlittableJsonReaderObject)val);
                 }
             }

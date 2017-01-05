@@ -36,13 +36,11 @@ namespace Raven.Server.Utils
         public static NodeTopologyInfo GetLocalTopology(
             DocumentDatabase database,
             ReplicationDocument replicationDocument,
-            DocumentsOperationContext context,
-            out List<ReplicationDestination> activeDestinations)
+            DocumentsOperationContext context)
         {
             if (context.Transaction == null)
                 throw new InvalidOperationException("Fetching local transaction requires an open tx");
 
-            activeDestinations = new List<ReplicationDestination>();
             var topologyInfo = new NodeTopologyInfo { OriginDbId = database.DbId.ToString() };
             var replicationLoader = database.DocumentReplicationLoader;
 
@@ -84,7 +82,6 @@ namespace Raven.Server.Utils
                             NodeStatus = ActiveNodeStatus.Status.Online
                         });
 
-                    activeDestinations.Add(destination);
                 }
                 else if (replicationLoader.OutgoingFailureInfo.TryGetValue(destination, out connectionFailureInfo))
                 {
