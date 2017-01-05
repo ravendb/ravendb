@@ -382,6 +382,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                             {
                                 result.Message = $"Error occured during export. Exception: {e.Message}";
                                 result.Exception = e.ToString();
+                                throw;
                             }
 
                             return (IOperationResult)result;

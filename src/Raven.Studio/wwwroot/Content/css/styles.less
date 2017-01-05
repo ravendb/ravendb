@@ -88,7 +88,7 @@ h1,
 h2,
 h3 {
     font-weight: 300;
-    margin-top: 0;
+    margin-top: 3px;
 
     [class*=" icon-"],
     [class^="icon-"] {
@@ -105,8 +105,24 @@ h6 {
     text-transform: uppercase;
 }
 
+.hr-title {
+    padding: 2px;
+    h1, h2, h3, h4, h5  {
+        margin: 6px;
+        float: left;
+        color:@brand-info;
+    }
+    hr {
+        border-color:@brand-info;
+    }
+}
+
 .nobr {
     white-space: nowrap;
+}
+
+.visible-block {
+    display: block;
 }
 
 .btn {
@@ -500,6 +516,13 @@ input[type=file] + .form-control {
 .margin-none {
     margin: 0;
 }
+.margin-bottom {
+    margin-bottom: @line-height-computed / 2;
+}
+
+.margin-top {
+    margin-top: @line-height-computed / 2;
+}
 
 .processing-spinner {
     position: absolute;
@@ -698,6 +721,7 @@ input[type=file] + .form-control {
 
     .flex-window-scroll {
         overflow-y: auto;
+        overflow-x: hidden;
         position: relative;
         height: 100%;
     }
@@ -834,11 +858,67 @@ pre {
         align-content: center;
     }
 
+    .toggle {
+        display: block;
+        width: 100%;
+
+        .properties-label {
+            padding-left: 55px !important;
+        }
+
+        label {
+            display: block;
+            &:before {
+                left:45px;
+                top:13px;
+            }
+
+            &:after {
+                top:7px;
+                left: 7px;
+            }
+        }
+
+        input[type=checkbox] {
+            position: absolute;
+
+            &:checked+label:after {
+                left: 24px;
+                //right: -2px;
+            }
+        }
+
+        &.toggle-right {
+            label {
+                padding-left: 10px !important;
+                display: block;
+                &:before {
+                    left:150px;
+                    top:13px;
+                }
+
+                &:after {
+                    top:7px;
+                    left: 112px;
+                }
+            }
+
+            input[type=checkbox] {
+                position: absolute;
+
+                &:checked+label:after {
+                    left: 130px;
+                }
+            }
+        }
+    }
+
     .properties-item {
         margin-right: 1%;
         margin-top: 2px;
         margin-bottom: 2px;
         display: flex;
+        position:relative;
         height: 36px;
         flex-wrap: nowrap;
         width: 100%;
@@ -847,19 +927,29 @@ pre {
             max-width: 300px;
             min-width: 100px;
             width: 49%;
+
+            &.grow-2 {
+                flex-grow:2;
+                width: 100%;
+                max-width: 600px;
+                min-width: 200px;
+            }
         }
 
         @media (min-width: @screen-lg) {
             width: 32%;
+            &.grow-2 {
+                width: 64%;
+            }
         }
 
         .dropdown-menu {
-            width: 100%;
+            //width: 100%;
         }
 
         .properties-label {
             .btn-sm;
-            flex: 0 0 100px;
+            flex: 0 0 110px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -884,6 +974,15 @@ pre {
             [class^="icon-"] {
                 & + span {
                     margin-left: 9px;
+                }
+            }
+
+            .form-control {
+                font-size: 13px;
+                color:@text-color;
+
+                &:hover {
+                    color: #FFF;
                 }
             }
 
@@ -975,7 +1074,7 @@ pre {
         &.state-danger {
             box-shadow: 0 0 0 2px @brand-danger-dark;
         }
-        
+
         &.state-offline {
             box-shadow: 0 0 0 2px @gray;
         }
@@ -1057,6 +1156,21 @@ pre {
     font-weight: normal;
 }
 
+.input-group-addon {
+    .checkbox {
+        height: 12px;
+        top: -9px;
+        label {
+            vertical-align: top;
+            height: @line-height-computed;
+            min-height: 0;
+            line-height: @line-height-computed;
+            &::before {
+            }
+        }
+    }
+}
+
 @import "pages/tasks-sampleData";
 @import "pages/tasks-csvImport";
 @import "pages/tasks-subscriptions";
@@ -1068,3 +1182,4 @@ pre {
 @import "pages/storage-report.less";
 @import "pages/sample-data.less";
 @import "pages/about.less";
+@import "pages/edit-index.less";
