@@ -30,20 +30,36 @@
     }
   },
 
-  "frameworks": {
-    "netstandard1.6": {}
+  "dependencies": {
+    "Sparrow": "4.0.0-*"
   },
 
-  "dependencies": {
-    "Microsoft.CSharp": "4.3.0",
-    "NETStandard.Library": "1.6.1",
-    "Sparrow": "4.0.0-*",
-    "System.Diagnostics.Process": "4.3.0",
-    "System.IO.FileSystem.DriveInfo": "4.3.0",
-    "System.IO.MemoryMappedFiles": "4.3.0",
-    "System.Threading.Overlapped": "4.3.0",
-    "System.Threading.ThreadPool": "4.3.0",
-    "System.Xml.XmlDocument": "4.3.0",
-    "System.ComponentModel.Primitives":  "4.3.0" 
+  "frameworks": {
+    "netstandard2.0": {
+        "dependencies": {
+          "Microsoft.CSharp": "4.4.0-beta-*",
+          "NETStandard.Library": "1.6.2-beta-*",
+          "System.Diagnostics.Process":"4.4.0-beta-*",
+          "System.IO.FileSystem.DriveInfo": "4.4.0-beta-*",
+          "System.IO.MemoryMappedFiles": "4.4.0-beta-*",
+          "System.Threading.Overlapped": "4.4.0-beta-*",
+          "System.Threading.ThreadPool": "4.4.0-beta-*",
+          "System.Xml.XmlDocument": "4.4.0-beta-*",
+          "System.ComponentModel.Primitives": "4.4.0-beta-*"
+        }
+    },
+    "netstandard1.6": {
+      "dependencies": {
+        "Microsoft.CSharp": "4.3.0",
+        "NETStandard.Library": "1.6.1",
+        "System.Diagnostics.Process":  "4.3.0",
+        "System.IO.FileSystem.DriveInfo": "4.3.0",
+        "System.IO.MemoryMappedFiles": "4.3.0",
+        "System.Threading.Overlapped":  "4.3.0",
+        "System.Threading.ThreadPool":  "4.3.0",
+        "System.Xml.XmlDocument":  "4.3.0",
+        "System.ComponentModel.Primitives":  "4.3.0"
+      }
+    }
   }
 }
