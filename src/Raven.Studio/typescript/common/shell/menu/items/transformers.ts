@@ -19,7 +19,8 @@ function getTransformersMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/transformers/editTransformer',
             title: 'Edit Transformer',
             css: 'icon-edit',
-            nav: false
+            nav: false,
+            itemRouteToHighlight: 'databases/transformers'
         })
     ];
 

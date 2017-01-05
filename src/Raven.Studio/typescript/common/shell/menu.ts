@@ -165,11 +165,22 @@ class menu {
         }
 
         let item = this.routeToItemCache().get(matchingRoute);
+
         if (item.nav) {
+            // Highlight/Activate current item
             this.activeItem(item);
+        } else if (item.itemRouteToHighlight) {
+                // Highlight/Activate a different menu item
+                const matchingRoute = this.registeredRoutes()
+                                          .find(routeRegex => routeRegex.test(item.itemRouteToHighlight));
+                let itemToActivate = this.routeToItemCache().get(matchingRoute);
+                if (itemToActivate.nav) {
+                    this.activeItem(itemToActivate);
+                }
         }
+
         this.setLevelToActiveItem();
-    }
+    }    
 
     private setLevelToActiveItem() {
         let active = this.activeItem();
