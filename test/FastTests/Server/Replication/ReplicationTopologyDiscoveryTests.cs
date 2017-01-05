@@ -235,12 +235,12 @@ namespace FastTests.Server.Replication
                     new Raven.Abstractions.Replication.ReplicationDestination
                     {
                         Database = "FooBar",
-                        Url = "http://foo.bar:1234"
+                        Url = "http://foo.bar/:1234"
                     },
                     new Raven.Abstractions.Replication.ReplicationDestination
                     {
                         Database = "FooBar2",
-                        Url = "http://foo.bar:4567"
+                        Url = "http://foo.bar/:4567"
                     }
                 };
 
@@ -254,8 +254,8 @@ namespace FastTests.Server.Replication
                 Assert.Equal(2,topologyInfo.NodesById.First().Value.Offline.Count);
 
                 var offlineNodes = topologyInfo.NodesById.First().Value.Offline;
-                Assert.True(offlineNodes.Any(x => x.Url == "http://foo.bar:1234" && x.Database == "FooBar"));
-                Assert.True(offlineNodes.Any(x => x.Url == "http://foo.bar:4567" && x.Database == "FooBar2"));
+                Assert.True(offlineNodes.Any(x => x.Url == "http://foo.bar/:1234" && x.Database == "FooBar"));
+                Assert.True(offlineNodes.Any(x => x.Url == "http://foo.bar/:4567" && x.Database == "FooBar2"));
             }
         }
 
