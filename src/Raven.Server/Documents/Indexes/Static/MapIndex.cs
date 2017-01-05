@@ -42,6 +42,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public override bool HasBoostedFields => _compiled.HasBoostedFields;
 
+        public override bool IsMultiMap => _compiled.Maps.Count > 1 || _compiled.Maps.Any(x => x.Value.Count > 1);
+
         protected override void InitializeInternal()
         {
             base.InitializeInternal();
