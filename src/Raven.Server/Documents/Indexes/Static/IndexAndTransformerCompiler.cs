@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private const string IndexExtension = ".index";
 
         private const string TransformerExtension = ".transformer";
-        
+
         private static readonly UsingDirectiveSyntax[] Usings =
         {
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System")),
@@ -317,7 +317,6 @@ namespace Raven.Server.Documents.Indexes.Static
                 var expression = SyntaxFactory.ParseExpression(reduce).NormalizeWhitespace();
                 fieldNamesValidator?.Validate(reduce, expression);
                 methodsDetector.Visit(expression);
-                MethodsInGroupByValidator.SearchTerms = new [] {"Count","Average"};
                 var queryExpression = expression as QueryExpressionSyntax;
                 if (queryExpression != null)
                 {
@@ -327,7 +326,7 @@ namespace Raven.Server.Documents.Indexes.Static
                                 ResultsVariableNameRewriter.QuerySyntax,
                                 GroupByFieldsRetriever.QuerySyntax,
                                 SelectManyRewriter.QuerySyntax),
-                            MethodsInGroupByValidator.QuerySyntaxValidator, 
+                            MethodsInGroupByValidator.QuerySyntaxValidator,
                             queryExpression, out groupByFields);
                 }
 
@@ -391,11 +390,11 @@ namespace Raven.Server.Documents.Indexes.Static
 
             return results;
         }
-        
+
         private static StatementSyntax HandleSyntaxInReduce(ReduceFunctionProcessor reduceFunctionProcessor, MethodsInGroupByValidator methodsInGroupByValidator,
             ExpressionSyntax expression, out string[] groupByFields)
         {
-        
+
             var rewrittenExpression = (CSharpSyntaxNode)reduceFunctionProcessor.Visit(expression);
 
             var reducingFunction =
@@ -404,7 +403,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     rewrittenExpression);
 
             methodsInGroupByValidator.Start(expression);
-            
+
             groupByFields = reduceFunctionProcessor.GroupByFields;
 
             return RoslynHelper.This(nameof(StaticIndexBase.Reduce)).Assign(reducingFunction).AsExpressionStatement();

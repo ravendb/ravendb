@@ -409,7 +409,7 @@ namespace FastTests
                 TcpPort = tcpPort;
 
                 _releasePort = releasePort;
-    }
+            }
 
             public RavenServer Server { get; private set; }
             public int Port { get; private set; }

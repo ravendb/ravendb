@@ -5,26 +5,20 @@ using Raven.Abstractions.Replication;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Shard;
-using Raven.Server;
-
 using Xunit;
 
 namespace SlowTests.Issues
 {
-   
     public class RavenDB_579 : RavenTestBase
     {
-        private  readonly RavenServer[] servers;
-        private readonly ShardedDocumentStore documentStore;
-
-        private readonly IList<string> shardNames = new List<string>
+        private readonly IList<string> _shardNames = new List<string>
         {
             "1",
             "2",
             "3"
-        }; 
+        };
 
-        public class Person
+        private class Person
         {
             public string Id { get; set; }
             public string FirstName { get; set; }
@@ -32,134 +26,123 @@ namespace SlowTests.Issues
             public string MiddleName { get; set; }
         }
 
-        public RavenDB_579()
+        public ShardedDocumentStore CreateStore()
         {
-            servers = new[]
-            {
-                CreateServer(8079,8009),
-                CreateServer(8078,8008),
-                CreateServer(8077,8007),
-            };
+            var store = new ShardedDocumentStore(
+                new ShardStrategy(
+                    new Dictionary<string, IDocumentStore>
+                    {
+                        {_shardNames[0], GetDocumentStore()},
+                        {_shardNames[1], GetDocumentStore()},
+                        {_shardNames[2], GetDocumentStore()}
+                    }));
 
-            documentStore = new ShardedDocumentStore(new ShardStrategy(new Dictionary<string, IDocumentStore>
-            {
-                {shardNames[0], CreateDocumentStore(8079)},
-                {shardNames[1], CreateDocumentStore(8078)},
-                {shardNames[2], CreateDocumentStore(8077)}
-            }));
-            documentStore.Initialize();
+            store.Initialize();
+
+            return store;
         }
 
-
-        private static IDocumentStore CreateDocumentStore(int port)
+        protected override void ModifyStore(DocumentStore store)
         {
-            return new DocumentStore
-            {
-                Url = string.Format("http://localhost:{0}/", port),
-                Conventions =
-                {
-                    FailoverBehavior = FailoverBehavior.FailImmediately
-                }
-            };
+            store.Conventions.FailoverBehavior = FailoverBehavior.FailImmediately;
+
+            base.ModifyStore(store);
         }
 
-        [Fact(Skip = "Missing feature: Sharding")]
+        [Fact]
         public void OneShardPerSessionStrategy()
         {
-            using (var session = documentStore.OpenSession())
+            using (var store = CreateStore())
             {
-                var sessionMetadata = ExtractSessionMetadataFromSession(session);
+                using (var session = store.OpenSession())
+                {
+                    var sessionMetadata = ExtractSessionMetadataFromSession(session);
 
-                var expectedShard = shardNames[sessionMetadata.GetHashCode() % shardNames.Count];
+                    var expectedShard = _shardNames[sessionMetadata.GetHashCode() % _shardNames.Count];
 
-                var entity1 = new Person { Id = "1", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
-                session.Store(entity1);
-                var entity2 = new Person { Id = "2", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
-                session.Store(entity2);
-                session.SaveChanges();
+                    var entity1 = new Person { Id = "1", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
+                    session.Store(entity1);
+                    var entity2 = new Person { Id = "2", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
+                    session.Store(entity2);
+                    session.SaveChanges();
 
-                var entity3 = new Person { Id = "3", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
-                session.Store(entity3);
-                var entity4 = new Person { Id = "4", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
-                session.Store(entity4);
-                session.SaveChanges();
+                    var entity3 = new Person { Id = "3", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
+                    session.Store(entity3);
+                    var entity4 = new Person { Id = "4", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
+                    session.Store(entity4);
+                    session.SaveChanges();
 
-                Assert.Equal(expectedShard + "/1", entity1.Id);
-                Assert.Equal(expectedShard + "/2", entity2.Id);
-                Assert.Equal(expectedShard + "/3", entity3.Id);
-                Assert.Equal(expectedShard + "/4", entity4.Id);
-            }
+                    Assert.Equal(expectedShard + "/1", entity1.Id);
+                    Assert.Equal(expectedShard + "/2", entity2.Id);
+                    Assert.Equal(expectedShard + "/3", entity3.Id);
+                    Assert.Equal(expectedShard + "/4", entity4.Id);
+                }
 
-            using (var session = documentStore.OpenSession())
-            {
-                var sessionMetadata = ExtractSessionMetadataFromSession(session);
+                using (var session = store.OpenSession())
+                {
+                    var sessionMetadata = ExtractSessionMetadataFromSession(session);
 
-                var expectedShard = shardNames[sessionMetadata.GetHashCode() % shardNames.Count];
+                    var expectedShard = _shardNames[sessionMetadata.GetHashCode() % _shardNames.Count];
 
-                var entity1 = new Person { Id = "1", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
-                session.Store(entity1);
-                var entity2 = new Person { Id = "2", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
-                session.Store(entity2);
-                session.SaveChanges();
+                    var entity1 = new Person { Id = "1", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
+                    session.Store(entity1);
+                    var entity2 = new Person { Id = "2", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
+                    session.Store(entity2);
+                    session.SaveChanges();
 
-                Assert.Equal(expectedShard + "/1", entity1.Id);
-                Assert.Equal(expectedShard + "/2", entity2.Id);
+                    Assert.Equal(expectedShard + "/1", entity1.Id);
+                    Assert.Equal(expectedShard + "/2", entity2.Id);
+                }
             }
         }
 
-        [Fact(Skip = "Missing feature: Sharding")]
+        [Fact]
         public async Task OneShardPerSessionStrategyAsync()
         {
-            using (var session = documentStore.OpenAsyncSession())
+            using (var store = CreateStore())
             {
-                var sessionMetadata = ExtractSessionMetadataFromSession(session);
+                using (var session = store.OpenAsyncSession())
+                {
+                    var sessionMetadata = ExtractSessionMetadataFromSession(session);
 
-                var expectedShard = shardNames[sessionMetadata.GetHashCode() % shardNames.Count];
+                    var expectedShard = _shardNames[sessionMetadata.GetHashCode() % _shardNames.Count];
 
-                var entity1 = new Person { Id = "1", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
-                await session.StoreAsync(entity1);
-                var entity2 = new Person { Id = "2", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
-                await session.StoreAsync(entity2);
-                await session.SaveChangesAsync();
+                    var entity1 = new Person { Id = "1", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
+                    await session.StoreAsync(entity1);
+                    var entity2 = new Person { Id = "2", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
+                    await session.StoreAsync(entity2);
+                    await session.SaveChangesAsync();
 
-                var entity3 = new Person { Id = "3", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
-                await session.StoreAsync(entity3);
-                var entity4 = new Person { Id = "4", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
-                await session.StoreAsync(entity4);
-                await session.SaveChangesAsync();
+                    var entity3 = new Person { Id = "3", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
+                    await session.StoreAsync(entity3);
+                    var entity4 = new Person { Id = "4", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
+                    await session.StoreAsync(entity4);
+                    await session.SaveChangesAsync();
 
-                Assert.Equal(expectedShard + "/1", entity1.Id);
-                Assert.Equal(expectedShard + "/2", entity2.Id);
-                Assert.Equal(expectedShard + "/3", entity3.Id);
-                Assert.Equal(expectedShard + "/4", entity4.Id);
-            }
+                    Assert.Equal(expectedShard + "/1", entity1.Id);
+                    Assert.Equal(expectedShard + "/2", entity2.Id);
+                    Assert.Equal(expectedShard + "/3", entity3.Id);
+                    Assert.Equal(expectedShard + "/4", entity4.Id);
+                }
 
-            using (var session = documentStore.OpenAsyncSession())
-            {
-                var sessionMetadata = ExtractSessionMetadataFromSession(session);
+                using (var session = store.OpenAsyncSession())
+                {
+                    var sessionMetadata = ExtractSessionMetadataFromSession(session);
 
-                var expectedShard = shardNames[sessionMetadata.GetHashCode() % shardNames.Count];
+                    var expectedShard = _shardNames[sessionMetadata.GetHashCode() % _shardNames.Count];
 
-                var entity1 = new Person { Id = "1", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
-                await session.StoreAsync(entity1);
-                var entity2 = new Person { Id = "2", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
-                await session.StoreAsync(entity2);
-                await session.SaveChangesAsync();
+                    var entity1 = new Person { Id = "1", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
+                    await session.StoreAsync(entity1);
+                    var entity2 = new Person { Id = "2", FirstName = "William", MiddleName = "Edgard", LastName = "Smith" };
+                    await session.StoreAsync(entity2);
+                    await session.SaveChangesAsync();
 
-                Assert.Equal(expectedShard + "/1", entity1.Id);
-                Assert.Equal(expectedShard + "/2", entity2.Id);
+                    Assert.Equal(expectedShard + "/1", entity1.Id);
+                    Assert.Equal(expectedShard + "/2", entity2.Id);
+                }
             }
         }
 
-        public override void Dispose()
-        {
-            documentStore.Dispose();
-            foreach (var server in servers)
-            {
-                server.Dispose();
-            }
-            base.Dispose();
-        }
         // TODO: Refactor this function when the feature is available
         private object ExtractSessionMetadataFromSession(object session)
         {

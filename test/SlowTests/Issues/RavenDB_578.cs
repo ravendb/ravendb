@@ -1,17 +1,12 @@
-using System.Threading.Tasks;
-using FastTests.Server.Documents.Replication;
-using Raven.Abstractions.Data;
+using FastTests.Server.Replication;
+using Raven.Client.Exceptions;
+using Xunit;
 
 namespace SlowTests.Issues
 {
-    using System.Threading;
-    using Raven.Client.Exceptions;
-
-    using Xunit;
-
     public class RavenDB_578 : ReplicationTestsBase
     {
-        public class Person
+        private class Person
         {
             public string FirstName { get; set; }
 
@@ -21,12 +16,11 @@ namespace SlowTests.Issues
         }
 
         [Fact(Skip = "Waiting for RavenDB-6018")]
-        public async Task DeletingConflictedDocumentOnServer1ShouldCauseConflictOnServer2AndResolvingItOnServer2ShouldRecreateDocumentOnServer1()
+        public void DeletingConflictedDocumentOnServer1ShouldCauseConflictOnServer2AndResolvingItOnServer2ShouldRecreateDocumentOnServer1()
         {
             var store1 = GetDocumentStore();
             var store2 = GetDocumentStore();
 
-           
             using (var session = store1.OpenSession())
             {
                 session.Store(new Person { FirstName = "John" });
@@ -40,12 +34,12 @@ namespace SlowTests.Issues
             }
             SetupReplication(store1, store2);
 
-            var conflicts = await WaitUntilHasConflict(store2, "people/1");
-            Assert.Equal(2,conflicts["people/1"].Count);
+            var conflicts = WaitUntilHasConflict(store2, "people/1");
+            Assert.Equal(2, conflicts["people/1"].Count);
 
             SetupReplication(store2, store1);
-            
-            conflicts = await WaitUntilHasConflict(store1, "people/1");
+
+            conflicts = WaitUntilHasConflict(store1, "people/1");
             Assert.Equal(2, conflicts["people/1"].Count);
 
             store2.DatabaseCommands.Delete("people/1", null);
@@ -63,7 +57,7 @@ namespace SlowTests.Issues
                 Assert.NotNull(c1);
                 Assert.Null(c2);
 
-         //       c1.Metadata.Remove(Constants.RavenReplicationConflictDocument);
+                //       c1.Metadata.Remove(Constants.RavenReplicationConflictDocument);
                 store1.DatabaseCommands.Put("people/1", null, c1.DataAsJson, c1.Metadata);
             }
 

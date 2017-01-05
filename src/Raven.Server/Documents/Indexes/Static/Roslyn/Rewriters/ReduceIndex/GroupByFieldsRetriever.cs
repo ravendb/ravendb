@@ -4,38 +4,18 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using NetTopologySuite.Index.Bintree;
-using Raven.Abstractions.Extensions;
 using Raven.Client.Exceptions;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
 {
-
     public abstract class MethodsInGroupByValidator : CSharpSyntaxWalker
     {
-        public static string[] SearchTerms;
-        
-        protected Dictionary<string,string> SearchPatterns = new Dictionary<string, string>();
+        protected static string[] ForbiddenMethods = { "Count", "Average" };
 
-        public static MethodsInGroupByValidator MethodSyntaxValidator 
-            => new MethodsInGroupByValidatorMethodSyntax();
-        public static MethodsInGroupByValidator QuerySyntaxValidator 
-            => new MethodsInGroupByValidatorQuerySyntax();
+        protected Dictionary<string, string> SearchPatterns = new Dictionary<string, string>();
 
-        protected MethodsInGroupByValidator()
-        {
-            ValidatedSearchTerms();
-        }
-
-        protected void ValidatedSearchTerms()
-        {
-            SearchTerms = SearchTerms.Where(s => !String.IsNullOrEmpty(s)).Distinct().ToArray();
-
-            if (SearchTerms.Length == 0)
-            {
-                throw new ArgumentNullException(nameof(SearchTerms), "Cannot be empty");
-            }
-        }
+        public static MethodsInGroupByValidator MethodSyntaxValidator => new MethodsInGroupByValidatorMethodSyntax();
+        public static MethodsInGroupByValidator QuerySyntaxValidator => new MethodsInGroupByValidatorQuerySyntax();
 
         public void Start(ExpressionSyntax node)
         {
@@ -45,12 +25,12 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
 
     public class MethodsInGroupByValidatorMethodSyntax : MethodsInGroupByValidator
     {
-        private ParameterSyntax _root; 
-        
+        private ParameterSyntax _root;
+
         public void SetSearchPatterns()
         {
             SearchPatterns.Clear();
-            foreach (var searchTerm in SearchTerms)
+            foreach (var searchTerm in ForbiddenMethods)
             {
                 SearchPatterns.Add(searchTerm, $"Enumerable.{searchTerm}({_root.Identifier})");
             }
@@ -84,7 +64,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
                         {
                             if (str.Contains(searchPattern.Value))
                             {
-                                throw new IndexCompilationException($"Expression cannot contain Enumerable.{searchPattern.Key} methods in grouping.");
+                                throw new IndexCompilationException($"Reduce cannot contain {searchPattern.Key}() methods in grouping.");
                             }
                         }
                     }
@@ -98,7 +78,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
     public class MethodsInGroupByValidatorQuerySyntax : MethodsInGroupByValidator
     {
         private SyntaxToken _root;
-        
+
         public override void VisitQueryContinuation(QueryContinuationSyntax node)
         {
             if (_root == default(SyntaxToken) && node.IntoKeyword.ToString().Contains("into"))
@@ -121,9 +101,9 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
         public void SetSearchPatterns()
         {
             SearchPatterns.Clear();
-            foreach (var searchTerm in SearchTerms)
+            foreach (var searchTerm in ForbiddenMethods)
             {
-                SearchPatterns.Add(searchTerm,$"{_root}.{searchTerm}()");
+                SearchPatterns.Add(searchTerm, $"{_root}.{searchTerm}()");
             }
         }
 
@@ -135,18 +115,13 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
                 {
                     if (node.ToString().Contains(searchTerm.Value))
                     {
-                        throw new IndexCompilationException($"Expression cannot contain {searchTerm.Key}() methods in grouping.");
+                        throw new IndexCompilationException($"Reduce cannot contain {searchTerm.Key}() methods in grouping.");
                     }
                 }
             }
             base.VisitInvocationExpression(node);
         }
     }
-
-   
-
-
-
 
     public abstract class GroupByFieldsRetriever : CSharpSyntaxRewriter
     {
@@ -191,7 +166,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
             public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
             {
                 var expression = node.Expression.ToString();
-                if (expression.StartsWith("results.") == false || expression.EndsWith("GroupBy") == false)
+                if (expression.StartsWith("results.") == false || expression.EndsWith(".GroupBy") == false)
                     return base.VisitInvocationExpression(node);
 
                 var groupByLambda = node.ArgumentList.DescendantNodes(x => true)
