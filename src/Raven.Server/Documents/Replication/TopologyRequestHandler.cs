@@ -52,14 +52,18 @@ namespace Raven.Server.Documents.Replication
                     if (replicationDocument?.Destinations == null || replicationDocument.Destinations.Count == 0)
                     {
                         //return record of node without any incoming or outgoing connections
-                        WriteDiscoveryResponse(tcp, context, new FullTopologyInfo
+                        var localNodeTopologyInfo = new NodeTopologyInfo();
+                        var topology = new FullTopologyInfo
                         {
                             DatabaseId = localDbId,
                             NodesById =
                             {
-                                {tcp.DocumentDatabase.DbId.ToString(), new NodeTopologyInfo()}
+                                { tcp.DocumentDatabase.DbId.ToString(), localNodeTopologyInfo }
                             }
-                        }, null, TopologyDiscoveryResponseHeader.Status.Ok);
+                        };                        
+                        ReplicationUtils.GetLocalIncomingTopology(tcp.DocumentDatabase.DocumentReplicationLoader, localNodeTopologyInfo);
+                        WriteDiscoveryResponse(tcp, context, topology, null, TopologyDiscoveryResponseHeader.Status.Ok);
+
                         return;
                     }
                 }

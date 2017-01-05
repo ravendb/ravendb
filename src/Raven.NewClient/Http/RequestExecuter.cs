@@ -166,6 +166,7 @@ namespace Raven.NewClient.Client.Http
                 try
                 {
                     response = await _httpClient.SendAsync(request, token).ConfigureAwait(false);
+                    command.StatusCode = response.StatusCode;
                     sp.Stop();
                 }
                 catch (HttpRequestException e) // server down, network down
