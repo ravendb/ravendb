@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Sparrow.Utils;
 using Voron.Global;
 using Voron.Impl.FileHeaders;
@@ -358,6 +359,11 @@ namespace Voron
                 new Dictionary<string, IntPtr>(StringComparer.OrdinalIgnoreCase);
             private readonly int _instanceId;
 
+            public override void SetPosixOptions()
+            {
+                PosixOpenFlags = 0;
+            }
+
             public PureMemoryStorageEnvironmentOptions(string name, string configTempPath) : base(configTempPath)
             {
                 _name = name;
@@ -365,11 +371,14 @@ namespace Voron
                 var guid = Guid.NewGuid();
                 var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-data.pager-{guid}";
 
+                WinOpenFlags = Win32NativeFileAttributes.Temporary;
+
                 _dataPager = new Lazy<AbstractPager>(() =>
                 {
                     if (RunningOnPosix)
                         return new PosixTempMemoryMapPager(this, Path.Combine(TempPath, filename), InitialFileSize);
-                    return new Win32MemoryMapPager(this, Path.Combine(TempPath, filename), InitialFileSize, Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
+                    return new Win32MemoryMapPager(this, Path.Combine(TempPath, filename), InitialFileSize, 
+                        Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
                     //return new SparseMemoryMappedPager(this, Path.Combine(TempPath, filename), InitialFileSize);
                 }, true);
             }
@@ -547,5 +556,20 @@ namespace Voron
         public const Win32NativeFileAttributes SafeWin32OpenFlags = Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering;
         public OpenFlags SafePosixOpenFlags = OpenFlags.O_DSYNC | PerPlatformValues.OpenFlags.O_DIRECT;
         private readonly Logger _log;
+
+        public virtual void SetPosixOptions()
+        {
+            if (PlatformDetails.RunningOnPosix == false)
+                return;
+            if(BasePath != null && StorageEnvironment.IsStorageSupportingO_Direct(_log, BasePath) == false)
+            {
+                SafePosixOpenFlags &= ~PerPlatformValues.OpenFlags.O_DIRECT;
+                var message = "Path " + BasePath +
+                              " not supporting O_DIRECT writes. As a result - data durability is not guarenteed";
+                InvokeNonDurabaleFileSystemError(this, message, null);
+            }
+
+            PosixOpenFlags = SafePosixOpenFlags;
+        }
     }
 }
