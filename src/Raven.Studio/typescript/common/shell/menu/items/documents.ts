@@ -34,7 +34,8 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             route: "databases/edit",
             title: "Edit Document",
             moduleId: "viewmodels/database/documents/editDocument",
-            nav: false
+            nav: false,
+            itemRouteToHighlight: "databases/documents"
         })
     ];
 
