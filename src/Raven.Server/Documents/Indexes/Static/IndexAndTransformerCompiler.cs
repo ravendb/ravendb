@@ -18,6 +18,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
 using Raven.Client.Exceptions;
+using Raven.Client.Indexes;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes.Static.Roslyn;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
@@ -38,7 +39,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private const string IndexExtension = ".index";
 
         private const string TransformerExtension = ".transformer";
-
+        
         private static readonly UsingDirectiveSyntax[] Usings =
         {
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System")),
@@ -314,10 +315,9 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 reduce = NormalizeFunction(reduce);
                 var expression = SyntaxFactory.ParseExpression(reduce).NormalizeWhitespace();
-
                 fieldNamesValidator?.Validate(reduce, expression);
                 methodsDetector.Visit(expression);
-
+                MethodsInGroupByValidator.SearchTerms = new [] {"Count","Average"};
                 var queryExpression = expression as QueryExpressionSyntax;
                 if (queryExpression != null)
                 {
@@ -327,6 +327,7 @@ namespace Raven.Server.Documents.Indexes.Static
                                 ResultsVariableNameRewriter.QuerySyntax,
                                 GroupByFieldsRetriever.QuerySyntax,
                                 SelectManyRewriter.QuerySyntax),
+                            MethodsInGroupByValidator.QuerySyntaxValidator, 
                             queryExpression, out groupByFields);
                 }
 
@@ -339,6 +340,7 @@ namespace Raven.Server.Documents.Indexes.Static
                                 ResultsVariableNameRewriter.MethodSyntax,
                                 GroupByFieldsRetriever.MethodSyntax,
                                 SelectManyRewriter.MethodSyntax),
+                            MethodsInGroupByValidator.MethodSyntaxValidator,
                             invocationExpression, out groupByFields);
                 }
 
@@ -389,9 +391,11 @@ namespace Raven.Server.Documents.Indexes.Static
 
             return results;
         }
-
-        private static StatementSyntax HandleSyntaxInReduce(ReduceFunctionProcessor reduceFunctionProcessor, ExpressionSyntax expression, out string[] groupByFields)
+        
+        private static StatementSyntax HandleSyntaxInReduce(ReduceFunctionProcessor reduceFunctionProcessor, MethodsInGroupByValidator methodsInGroupByValidator,
+            ExpressionSyntax expression, out string[] groupByFields)
         {
+        
             var rewrittenExpression = (CSharpSyntaxNode)reduceFunctionProcessor.Visit(expression);
 
             var reducingFunction =
@@ -399,6 +403,8 @@ namespace Raven.Server.Documents.Indexes.Static
                     SyntaxFactory.Parameter(SyntaxFactory.Identifier(ResultsVariableNameRewriter.ResultsVariable)),
                     rewrittenExpression);
 
+            methodsInGroupByValidator.Start(expression);
+            
             groupByFields = reduceFunctionProcessor.GroupByFields;
 
             return RoslynHelper.This(nameof(StaticIndexBase.Reduce)).Assign(reducingFunction).AsExpressionStatement();

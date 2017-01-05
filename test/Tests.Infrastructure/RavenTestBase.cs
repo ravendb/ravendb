@@ -137,7 +137,7 @@ namespace FastTests
             return new ServerLease(server, port, tcpPort, RemoveUsedPort);
         }
 
-        private static RavenServer CreateServer(int port, int tcpPort)
+        public static RavenServer CreateServer(int port, int tcpPort)
         {
             var configuration = new RavenConfiguration();
             configuration.Initialize();
