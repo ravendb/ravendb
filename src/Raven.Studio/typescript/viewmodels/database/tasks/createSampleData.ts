@@ -63,8 +63,11 @@ class createSampleData extends viewModelBase {
     }
 
     private onCollectionsFetched(stats: collectionsStats) {
-        const nonSystemCollectionsCount = stats.collections.filter(x => !x.isSystemDocuments).length;
-        this.canCreateSampleData(nonSystemCollectionsCount === 0);
+        const nonEmptyNonSystemCollectionsCount = stats
+            .collections
+            .filter(x => !x.isSystemDocuments && x.documentCount() > 0)
+            .length;
+        this.canCreateSampleData(nonEmptyNonSystemCollectionsCount === 0);
     }
 
     private fetchSampleDataClasses(): JQueryPromise<string> {
