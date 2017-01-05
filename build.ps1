@@ -40,6 +40,7 @@ $SPARROW_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Sparrow")
 $SPARROW_OUT_DIR = [io.path]::combine($PROJECT_DIR, "src", "Sparrow", "bin", "Release")
 
 $TYPINGS_GENERATOR_SRC_DIR = [io.path]::combine($PROJECT_DIR, "tools", "TypingsGenerator")
+$TYPINGS_GENERATOR_BIN_DIR = [io.path]::combine($TYPINGS_GENERATOR_SRC_DIR, "bin")
 
 $STUDIO_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Studio")
 $STUDIO_OUT_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Studio", "build")
@@ -74,6 +75,7 @@ $SPECS = @(
 SetVersionEnvironmentVariableInTeamCity $version
 
 CleanBuildDirectories $RELEASE_DIR
+CleanBuildDirectories $TYPINGS_GENERATOR_BIN_DIR
 
 DownloadDependencies
 
