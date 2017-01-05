@@ -1,14 +1,16 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
-using Raven.Abstractions.Extensions;
-using Raven.Client.Indexes;
 using Raven.Json.Linq;
+using Raven.NewClient.Client.Commands;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
+using Sparrow.Json;
 using Xunit;
 
 namespace FastTests.Client.Documents
 {
-    public class BasicDocuments : RavenTestBase
+    public class BasicDocuments : NewClientTests.RavenTestBase
     {
         [Fact]
         public async Task CanStoreAnonymousObject()
@@ -41,38 +43,74 @@ namespace FastTests.Client.Documents
                     await session.SaveChangesAsync();
                 }
 
-                var docs = await store.AsyncDatabaseCommands.GetAsync(new[] { "users/1", "users/2" }, null);
-                Assert.Equal(2, docs.Results.Count);
+                var requestExecuter = store
+                    .GetRequestExecuterForDefaultDatabase();
 
-                var doc1 = docs.Results[0];
-                var doc2 = docs.Results[1];
+                JsonOperationContext context;
+                using (requestExecuter.ContextPool.AllocateOperationContext(out context))
+                {
+                    var getDocumentCommand = new GetDocumentCommand
+                    {
+                        Ids = new[] { "users/1", "users/2" }
+                    };
 
-                Assert.NotNull(doc1);
-                Assert.True(doc1.ContainsKey("@metadata"));
-                Assert.Equal(dummy.Keys.Count + 1, doc1.Keys.Count); // +1 for @metadata
+                    requestExecuter
+                        .Execute(getDocumentCommand, context);
 
-                Assert.NotNull(doc2);
-                Assert.True(doc2.ContainsKey("@metadata"));
-                Assert.Equal(dummy.Keys.Count + 1, doc2.Keys.Count); // +1 for @metadata
+                    var docs = getDocumentCommand.Result;
+                    Assert.Equal(2, docs.Results.Length);
 
-                var user1 = docs.Results[0].JsonDeserialization<User>();
-                var user2 = docs.Results[1].JsonDeserialization<User>();
+                    var doc1 = docs.Results[0] as BlittableJsonReaderObject;
+                    var doc2 = docs.Results[1] as BlittableJsonReaderObject;
 
-                Assert.Equal("Fitzchak", user1.Name);
-                Assert.Equal("Arek", user2.Name);
+                    Assert.NotNull(doc1);
 
-                docs = await store.AsyncDatabaseCommands.GetAsync(new[] { "users/1", "users/2" }, null, metadataOnly: true);
+                    var doc1Properties = doc1.GetPropertyNames();
+                    Assert.True(doc1Properties.Contains("@metadata"));
+                    Assert.Equal(dummy.Keys.Count + 1, doc1Properties.Length); // +1 for @metadata
 
-                doc1 = docs.Results[0];
-                doc2 = docs.Results[1];
+                    Assert.NotNull(doc2);
 
-                Assert.NotNull(doc1);
-                Assert.True(doc1.ContainsKey("@metadata"));
-                Assert.Equal(1, doc1.Keys.Count);
+                    var doc2Properties = doc2.GetPropertyNames();
+                    Assert.True(doc2Properties.Contains("@metadata"));
+                    Assert.Equal(dummy.Keys.Count + 1, doc2Properties.Length); // +1 for @metadata
 
-                Assert.NotNull(doc2);
-                Assert.True(doc2.ContainsKey("@metadata"));
-                Assert.Equal(1, doc2.Keys.Count);
+                    using (var session = (DocumentSession)store.OpenSession())
+                    {
+                        var user1 = (User)session.EntityToBlittable.ConvertToEntity(typeof(User), "users/1", doc1);
+                        var user2 = (User)session.EntityToBlittable.ConvertToEntity(typeof(User), "users/2", doc2);
+
+                        Assert.Equal("Fitzchak", user1.Name);
+                        Assert.Equal("Arek", user2.Name);
+                    }
+
+                    getDocumentCommand = new GetDocumentCommand
+                    {
+                        Ids = new[] { "users/1", "users/2" },
+                        MetadataOnly = true
+                    };
+
+                    requestExecuter
+                        .Execute(getDocumentCommand, context);
+
+                    docs = getDocumentCommand.Result;
+                    Assert.Equal(2, docs.Results.Length);
+
+                    doc1 = docs.Results[0] as BlittableJsonReaderObject;
+                    doc2 = docs.Results[1] as BlittableJsonReaderObject;
+
+                    Assert.NotNull(doc1);
+
+                    doc1Properties = doc1.GetPropertyNames();
+                    Assert.True(doc1Properties.Contains("@metadata"));
+                    Assert.Equal(1, doc1Properties.Length);
+
+                    Assert.NotNull(doc2);
+
+                    doc2Properties = doc2.GetPropertyNames();
+                    Assert.True(doc2Properties.Contains("@metadata"));
+                    Assert.Equal(1, doc2Properties.Length);
+                }
             }
         }
 
@@ -95,44 +133,82 @@ namespace FastTests.Client.Documents
                     await session.SaveChangesAsync();
                 }
 
-                var docs = await store.AsyncDatabaseCommands.GetAsync(new[] { "users/1", "users/2" }, null, transformer: transformer.TransformerName);
-                Assert.Equal(2, docs.Results.Count);
+                var requestExecuter = store
+                    .GetRequestExecuterForDefaultDatabase();
 
-                var doc1 = docs.Results[0];
-                var doc2 = docs.Results[1];
+                JsonOperationContext context;
+                using (requestExecuter.ContextPool.AllocateOperationContext(out context))
+                {
+                    var getDocumentCommand = new GetDocumentCommand
+                    {
+                        Ids = new[] { "users/1", "users/2" },
+                        Transformer = transformer.TransformerName
+                    };
 
-                Assert.NotNull(doc1);
-                Assert.True(doc1.ContainsKey("@metadata"));
-                Assert.Equal(1 + 1, doc1.Keys.Count); // +1 for @metadata
+                    requestExecuter
+                        .Execute(getDocumentCommand, context);
 
-                Assert.NotNull(doc2);
-                Assert.True(doc2.ContainsKey("@metadata"));
-                Assert.Equal(1 + 1, doc2.Keys.Count); // +1 for @metadata
+                    var docs = getDocumentCommand.Result;
+                    Assert.Equal(2, docs.Results.Length);
 
-                var values1 = docs.Results[0].Value<RavenJArray>("$values");
-                var values2 = docs.Results[1].Value<RavenJArray>("$values");
+                    var doc1 = docs.Results[0] as BlittableJsonReaderObject;
+                    var doc2 = docs.Results[1] as BlittableJsonReaderObject;
 
-                Assert.Equal(1, values1.Length);
-                Assert.Equal(1, values2.Length);
+                    Assert.NotNull(doc1);
 
-                var user1 = values1[0].JsonDeserialization<Transformer.Result>();
-                var user2 = values2[0].JsonDeserialization<Transformer.Result>();
+                    var doc1Properties = doc1.GetPropertyNames();
+                    Assert.True(doc1Properties.Contains("@metadata"));
+                    Assert.Equal(1 + 1, doc1Properties.Length); // +1 for @metadata
 
-                Assert.Equal("Fitzchak", user1.Name);
-                Assert.Equal("Arek", user2.Name);
+                    Assert.NotNull(doc2);
 
-                docs = await store.AsyncDatabaseCommands.GetAsync(new[] { "users/1", "users/2" }, null, transformer: transformer.TransformerName, metadataOnly: true);
+                    var doc2Properties = doc2.GetPropertyNames();
+                    Assert.True(doc2Properties.Contains("@metadata"));
+                    Assert.Equal(1 + 1, doc2Properties.Length); // +1 for @metadata
 
-                doc1 = docs.Results[0];
-                doc2 = docs.Results[1];
+                    var values1 = (BlittableJsonReaderArray)doc1["$values"];
+                    var values2 = (BlittableJsonReaderArray)doc2["$values"];
 
-                Assert.NotNull(doc1);
-                Assert.True(doc1.ContainsKey("@metadata"));
-                Assert.Equal(1, doc1.Keys.Count);
+                    Assert.Equal(1, values1.Length);
+                    Assert.Equal(1, values2.Length);
 
-                Assert.NotNull(doc2);
-                Assert.True(doc2.ContainsKey("@metadata"));
-                Assert.Equal(1, doc2.Keys.Count);
+                    using (var session = (DocumentSession)store.OpenSession())
+                    {
+                        var user1 = (User)session.EntityToBlittable.ConvertToEntity(typeof(User), "users/1", (BlittableJsonReaderObject)values1[0]);
+                        var user2 = (User)session.EntityToBlittable.ConvertToEntity(typeof(User), "users/2", (BlittableJsonReaderObject)values2[0]);
+
+                        Assert.Equal("Fitzchak", user1.Name);
+                        Assert.Equal("Arek", user2.Name);
+                    }
+
+                    getDocumentCommand = new GetDocumentCommand
+                    {
+                        Ids = new[] { "users/1", "users/2" },
+                        Transformer = transformer.TransformerName,
+                        MetadataOnly = true
+                    };
+
+                    requestExecuter
+                        .Execute(getDocumentCommand, context);
+
+                    docs = getDocumentCommand.Result;
+                    Assert.Equal(2, docs.Results.Length);
+
+                    doc1 = docs.Results[0] as BlittableJsonReaderObject;
+                    doc2 = docs.Results[1] as BlittableJsonReaderObject;
+
+                    Assert.NotNull(doc1);
+
+                    doc1Properties = doc1.GetPropertyNames();
+                    Assert.True(doc1Properties.Contains("@metadata"));
+                    Assert.Equal(1, doc1Properties.Length); // +1 for @metadata
+
+                    Assert.NotNull(doc2);
+
+                    doc2Properties = doc2.GetPropertyNames();
+                    Assert.True(doc2Properties.Contains("@metadata"));
+                    Assert.Equal(1, doc2Properties.Length); // +1 for @metadata
+                }
             }
         }
 

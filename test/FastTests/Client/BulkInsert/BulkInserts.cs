@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.Indexes;
 using Xunit;
 
 namespace FastTests.Client.BulkInsert
 {
-    public class BulkInserts : RavenTestBase
+    public class BulkInserts : NewClientTests.RavenTestBase
     {
         [Fact]
         public async Task SimpleBulkInsertShouldWork()
@@ -18,6 +16,7 @@ namespace FastTests.Client.BulkInsert
                 new FooBar { Name = "Mega John" },
                 new FooBar { Name = "Mega Jane" }
             };
+
             using (var store = GetDocumentStore())
             {
                 using (var bulkInsert = store.BulkInsert())
@@ -28,32 +27,27 @@ namespace FastTests.Client.BulkInsert
                     await bulkInsert.StoreAsync(fooBars[3]);
                 }
 
-                var doc1 = store.DatabaseCommands.Get("FooBars/1");
-                var doc2 = store.DatabaseCommands.Get("FooBars/2");
-                var doc3 = store.DatabaseCommands.Get("FooBars/3");
-                var doc4 = store.DatabaseCommands.Get("FooBars/4");
+                using (var session = store.OpenSession())
+                {
+                    var doc1 = session.Load<FooBar>("FooBars/1");
+                    var doc2 = session.Load<FooBar>("FooBars/2");
+                    var doc3 = session.Load<FooBar>("FooBars/3");
+                    var doc4 = session.Load<FooBar>("FooBars/4");
 
-                Assert.NotNull(doc1);
-                Assert.NotNull(doc2);
-                Assert.NotNull(doc3);
-                Assert.NotNull(doc4);
+                    Assert.NotNull(doc1);
+                    Assert.NotNull(doc2);
+                    Assert.NotNull(doc3);
+                    Assert.NotNull(doc4);
 
-                Assert.Equal("John Doe", doc1.DataAsJson.Value<string>("Name"));
-                Assert.Equal("Jane Doe", doc2.DataAsJson.Value<string>("Name"));
-                Assert.Equal("Mega John", doc3.DataAsJson.Value<string>("Name"));
-                Assert.Equal("Mega Jane", doc4.DataAsJson.Value<string>("Name"));
+                    Assert.Equal("John Doe", doc1.Name);
+                    Assert.Equal("Jane Doe", doc2.Name);
+                    Assert.Equal("Mega John", doc3.Name);
+                    Assert.Equal("Mega Jane", doc4.Name);
+                }
             }
         }
 
-        public class FooBarIndex : AbstractIndexCreationTask<FooBar>
-        {
-            public FooBarIndex()
-            {
-                Map = foos => foos.Select(x => new { x.Name });
-            }
-        }
-
-        public class FooBar : IEquatable<FooBar>
+        private class FooBar : IEquatable<FooBar>
         {
             public string Name { get; set; }
 
@@ -69,7 +63,7 @@ namespace FastTests.Client.BulkInsert
                 if (ReferenceEquals(null, obj)) return false;
                 if (ReferenceEquals(this, obj)) return true;
                 if (obj.GetType() != this.GetType()) return false;
-                return Equals((FooBar) obj);
+                return Equals((FooBar)obj);
             }
 
             public override int GetHashCode()
