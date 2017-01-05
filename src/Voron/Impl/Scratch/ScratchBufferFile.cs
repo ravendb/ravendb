@@ -254,8 +254,13 @@ namespace Voron.Impl.Scratch
             return _scratchPager.CopyPage(destI4KbBatchWrites, p, pagerState);
         }
 
-        public Page ReadPage(LowLevelTransaction tx, long p, PagerState pagerState = null)
+        public Page ReadPage(LowLevelTransaction tx, long p, PagerState pagerState = null, LowLevelTransaction.PagerRef pagerRef = null)
         {
+            if (pagerRef != null)
+            {
+                pagerRef.Pager = _scratchPager;
+                pagerRef.PagerPageNumber = p;
+            }
             return new Page(_scratchPager.AcquirePagePointer(tx, p, pagerState));
         }
 
