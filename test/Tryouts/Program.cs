@@ -16,15 +16,19 @@ namespace Tryouts
     {
         static void Main(string[] args)
         {
-            using (var a = new SlowTests.MailingList.RenamedProperty())
+            for (int i = 0; i < 100; i++)
             {
-                a.OrderByWithAttributeShouldStillWork();
-            }
+                Console.WriteLine(i);
+                using (var a = new FastTests.Client.BulkInsert.BulkInserts())
+                {
+                    a.SimpleBulkInsertShouldWork().Wait();
+                }
 
-            using (var a = new CanUseStream())
-            {
-                a.CanCopyTo(16897);
             }
+            //using (var a = new CanUseStream())
+            //{
+            //    a.CanCopyTo(16897);
+            //}
         }
     }
 

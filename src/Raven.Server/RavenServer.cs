@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -199,13 +200,21 @@ namespace Raven.Server
             try
             {
                 var host = new Uri(Configuration.Core.ServerUrl).DnsSafeHost;
-                var port = 9090;
+                var port = 0;
                 if (string.IsNullOrWhiteSpace(Configuration.Core.TcpServerUrl) == false)
                 {
-                    var uri = new Uri(Configuration.Core.TcpServerUrl);
-                    host = uri.DnsSafeHost;
-                    if (uri.IsDefaultPort == false)
-                        port = uri.Port;
+                    short shortPort;
+                    if (short.TryParse(Configuration.Core.TcpServerUrl, out shortPort))
+                    {
+                        port = shortPort;
+                    }
+                    else
+                    {
+                        var uri = new Uri(Configuration.Core.TcpServerUrl);
+                        host = uri.DnsSafeHost;
+                        if (uri.IsDefaultPort == false)
+                            port = uri.Port;
+                    }
                 }
 
                 foreach (var ipAddress in await GetTcpListenAddresses(host))
@@ -215,9 +224,17 @@ namespace Raven.Server
 
                     var listener = new TcpListener(ipAddress, port);
                     status.Listeners.Add(listener);
-                    status.Port = port;
                     listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-                    listener.Start();
+                    try
+                    {
+                        listener.Start();
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new IOException("Unable to start tcp listener on " + ipAddress + " on port " + port, ex);
+                    }
+                    status.Port = ((IPEndPoint) listener.LocalEndpoint).Port;
+
                     for (int i = 0; i < 4; i++)
                     {
                         ListenToNewTcpConnection(listener);

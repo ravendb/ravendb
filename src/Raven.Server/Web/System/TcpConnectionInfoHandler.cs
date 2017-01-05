@@ -20,7 +20,13 @@ namespace Raven.Server.Web.System
 
                 string host = HttpContext.Request.Host.Host;
                 if (string.IsNullOrWhiteSpace(Server.Configuration.Core.TcpServerUrl) == false)
-                    host = new UriBuilder(Server.Configuration.Core.TcpServerUrl).Host;
+                {
+                    Uri uri;
+                    short shortPort;
+                    if(short.TryParse(Server.Configuration.Core.TcpServerUrl, out shortPort) == false &&
+                        Uri.TryCreate(Server.Configuration.Core.TcpServerUrl, UriKind.RelativeOrAbsolute, out uri))
+                        host = uri.Host;
+                }
 
                 var output = new DynamicJsonValue
                 {
