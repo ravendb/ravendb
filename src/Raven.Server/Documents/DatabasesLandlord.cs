@@ -66,7 +66,15 @@ namespace Raven.Server.Documents
                 var task = new Task<DocumentDatabase>(() => CreateDocumentsStorage(databaseName, config));
                 var database = ResourcesStoresCache.GetOrAdd(databaseName, task);
                 if (database == task)
+                {
+                    task.ContinueWith(completedTask =>
+                    {
+                        if (completedTask.IsCompleted)
+                            ServerStore.TrackChange("Loaded", Constants.Database.Prefix + databaseName);
+                    });
+
                     task.Start();
+                }
 
                 if (database.IsFaulted && database.Exception != null)
                 {
@@ -80,7 +88,6 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                database.ContinueWith(_ => ServerStore.TrackChange("Loaded", Constants.Database.Prefix + databaseName));
 
                 return database;
             }
