@@ -22,7 +22,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [Fact(Skip = "ChunkedSparseMmapStream")]
         public async Task CanCompact()
         {
             var path = NewDataPath();

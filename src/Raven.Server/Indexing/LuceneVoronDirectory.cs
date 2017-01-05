@@ -54,13 +54,16 @@ namespace Raven.Server.Indexing
         public override long FileModified(string name)
         {
             var filesTree = _currentTransaction.Value.ReadTree("Files");
-            var readResult = filesTree.Read(name);
-            if (readResult == null)
-                throw new FileNotFoundException("Could not find file", name);
-
-            var fileInfo = *(LuceneFileInfo*)readResult.Reader.Base;
-
-            return fileInfo.Version;
+            Slice str;
+            using (Slice.From(_currentTransaction.Value.Allocator, name, out str))
+            {
+                long length;
+                int version;
+                filesTree.GetStreamLengthAndVersion(str, out length, out version);
+                if (length == -1)
+                    throw new FileNotFoundException(name);
+                return version;
+            }
         }
 
         public override void TouchFile(string name)
@@ -70,24 +73,27 @@ namespace Raven.Server.Indexing
             if (readResult == null)
                 throw new FileNotFoundException("Could not find file", name);
 
-            var fileInfo = *(LuceneFileInfo*)readResult.Reader.Base;
-            fileInfo.Version++;
-
-            var pos = filesTree.DirectAdd(name, readResult.Reader.Length);
-
-            *(LuceneFileInfo*)pos = fileInfo;
+            Slice str;
+            using (Slice.From(_currentTransaction.Value.Allocator, name, out str))
+            {
+                if(filesTree.TouchStream(str) == 0)
+                    throw new FileNotFoundException(name);
+            }
         }
 
         public override long FileLength(string name)
         {
             var filesTree = _currentTransaction.Value.ReadTree("Files");
-            var readResult = filesTree.Read(name);
-            if (readResult == null)
-                return 0;
-
-            var fileInfo = *(LuceneFileInfo*)readResult.Reader.Base;
-
-            return fileInfo.Length;
+            Slice str;
+            using (Slice.From(_currentTransaction.Value.Allocator, name, out str))
+            {
+                long length;
+                int version;
+                filesTree.GetStreamLengthAndVersion(str, out length, out version);
+                if(length == -1)
+                    throw new FileNotFoundException(name);
+                return length;
+            }
         }
 
         public override void DeleteFile(string name)
@@ -97,29 +103,20 @@ namespace Raven.Server.Indexing
             if (readResult == null)
                 throw new FileNotFoundException("Could not find file", name);
 
-            filesTree.Delete(name);
-            _currentTransaction.Value.DeleteTree(name);
+            Slice str;
+            using (Slice.From(_currentTransaction.Value.Allocator, name, out str))
+                filesTree.Delete(str);
         }
 
         public override IndexInput OpenInput(string name)
         {
             return new VoronIndexInput(_currentTransaction, name);
+            
         }
 
         public override IndexOutput CreateOutput(string name)
         {
-            var filesTree = _currentTransaction.Value.ReadTree("Files");
-
-            var read = filesTree.Read(name);
-
-            LuceneFileInfo fileInfo;
-
-            if (read == null)
-                fileInfo = new LuceneFileInfo();
-            else
-                fileInfo = *(LuceneFileInfo*)read.Reader.Base;
-
-            return new VoronIndexOutput(_environment.Options.TempPath, name, _currentTransaction.Value, fileInfo);
+            return new VoronIndexOutput(_environment.Options.TempPath, name, _currentTransaction.Value);
         }
 
         public IDisposable SetTransaction(Transaction tx)

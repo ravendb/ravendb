@@ -14,13 +14,11 @@ namespace Raven.Server.Indexing
         private readonly string _name;
         private readonly Transaction _tx;
         private readonly FileStream _file;
-        private LuceneFileInfo _fileInfo;
 
-        public VoronIndexOutput(string tempPath, string name, Transaction tx, LuceneFileInfo fileInfo)
+        public VoronIndexOutput(string tempPath, string name, Transaction tx)
         {
             _name = name;
             _tx = tx;
-            _fileInfo = fileInfo;
             var fileTempPath = Path.Combine(tempPath, name + "_" + Guid.NewGuid());
             //TODO: Pass this flag
             //const FileOptions FILE_ATTRIBUTE_TEMPORARY = (FileOptions)256;
@@ -50,33 +48,17 @@ namespace Raven.Server.Indexing
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
-            var tree = _tx.CreateTree(_name);
-            _file.Seek(0, SeekOrigin.Begin);
-
-            var size = _file.Length;
-
-            var numberOfChunks = size / MaxFileChunkSize + (size % MaxFileChunkSize != 0 ? 1 : 0);
-
-            Slice key;
-            for (int i = 0; i < numberOfChunks; i++)
-            {
-                using (Slice.From(_tx.Allocator, i.ToString("D9"), out key))
-                {
-                    tree.Add(key, new LimitedStream(_file, _file.Position, Math.Min(_file.Position + MaxFileChunkSize, _file.Length)));
-                }
-            }
+            
+            Slice nameSlice;
 
             var files = _tx.ReadTree("Files");
-            using (Slice.From(_tx.Allocator, _name, out key))
+
+            using (Slice.From(_tx.Allocator, _name, out nameSlice))
             {
-                var pos = files.DirectAdd(key, sizeof(LuceneFileInfo));
-
-                _fileInfo.Length = size;
-                _fileInfo.Version++;
-
-                *(LuceneFileInfo*)pos = _fileInfo;
+                _file.Seek(0, SeekOrigin.Begin);
+                files.AddStream(nameSlice, _file);
             }
-
+            
             _file.Dispose();
         }
     }
