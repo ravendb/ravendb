@@ -20,7 +20,7 @@ namespace Raven.Server
             }
 
             string lastModifiedStringValue;
-            if (!metadata.TryGet("Raven-Last-Modified", out lastModifiedStringValue))
+            if (!metadata.TryGet(Constants.Headers.RavenLastModified, out lastModifiedStringValue))
             {
                 throw new InvalidDataException("A document missing 'Raven-Last-Modified' in @metadata section, cannot fetch it's value.");
             }
@@ -59,7 +59,7 @@ namespace Raven.Server
                 };
             }
             
-            mutableMetadata["Raven-Last-Modified"] = SystemTime.UtcNow.GetDefaultRavenFormat(isUtc: true);
+            mutableMetadata[Constants.Headers.RavenLastModified] = SystemTime.UtcNow.GetDefaultRavenFormat(isUtc: true);
         }
     }
 }

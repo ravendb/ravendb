@@ -383,10 +383,8 @@ namespace Raven.Server.Smuggler.Documents
                     if (metadata.TryGet(Constants.Metadata.Id, out key) == false)
                         throw new InvalidOperationException("Document's metadata must include the document's key.");
 
-                    DynamicJsonValue mutatedMetadata;
-                    metadata.Modifications = mutatedMetadata = new DynamicJsonValue(metadata);
-                    mutatedMetadata.Remove(Constants.Metadata.Id);
-                    mutatedMetadata.Remove(Constants.Metadata.Etag);
+                    document.PrepareForStorage();
+                    BlittableJsonReaderObject modifiedDocument = context.ReadObject(document, key);
 
                     if (IsRevision)
                     {
@@ -394,7 +392,7 @@ namespace Raven.Server.Smuggler.Documents
                         if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
                             throw new InvalidOperationException("Document's metadata must include the document's key.");
 
-                        _database.BundleLoader.VersioningStorage.PutDirect(context, key, etag, document);
+                        _database.BundleLoader.VersioningStorage.PutDirect(context, key, etag, modifiedDocument);
                     }
                     else if (_buildVersion < 4000 && key.Contains("/revisions/"))
                     {
@@ -405,11 +403,11 @@ namespace Raven.Server.Smuggler.Documents
                         var endIndex = key.IndexOf("/revisions/", StringComparison.OrdinalIgnoreCase);
                         key = key.Substring(0, endIndex);
 
-                        _database.BundleLoader.VersioningStorage.PutDirect(context, key, etag, document);
+                        _database.BundleLoader.VersioningStorage.PutDirect(context, key, etag, modifiedDocument);
                     }
                     else
                     {
-                        _database.DocumentsStorage.Put(context, key, null, document);
+                        _database.DocumentsStorage.Put(context, key, null, modifiedDocument);
                     }
                 }
             }
