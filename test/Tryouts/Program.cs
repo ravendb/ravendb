@@ -16,18 +16,9 @@ namespace Tryouts
     {
         static void Main(string[] args)
         {
-            //Parallel.For(0, 100, i =>
-            //{
-            //    Console.WriteLine(i);
-            //    using (var a = new SlowTests.Tests.Sorting.AlphaNumericSorting())
-            //    {
-            //        a.random_words_using_document_query_async().Wait();
-            //    }
-            //});
-
-            using (var a = new CanUseStream())
+            using (var a = new SlowTests.MailingList.RenamedProperty())
             {
-                a.CanUpdate();
+                a.OrderByWithAttributeShouldStillWork();
             }
         }
     }

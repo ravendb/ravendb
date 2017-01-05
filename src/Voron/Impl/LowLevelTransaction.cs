@@ -527,6 +527,10 @@ namespace Voron.Impl
                 value.Size, lowerNumberOfPages));
             _env.ScratchBufferPool.ReduceAllocation(value, lowerNumberOfPages);
             _overflowPagesInTransaction -= value.NumberOfPages - lowerNumberOfPages;
+            for (int i = lowerNumberOfPages; i < prevNumberOfPages; i++)
+            {
+                FreePage(page.PageNumber + i);
+            }
         }
 
         [Conditional("DEBUG")]
