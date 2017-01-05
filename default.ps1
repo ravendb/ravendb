@@ -533,12 +533,12 @@ task Upload {
 }
 
 task InitNuget {
+    $global:nugetVersion = "$version.$env:buildlabel"
+    if ($global:uploadCategory -and $global:uploadCategory -ne "RavenDB") {
+        $nugetVersionSuffix = $global:uploadCategory.Replace("RavenDB-", "")
+        $global:nugetVersion += "-" + $nugetVersionSuffix
 
-	$global:nugetVersion = "$version.$env:buildlabel"
-	if ($global:uploadCategory -and $global:uploadCategory -ne "RavenDB"){
-        $global:nugetVersion += "-" + $global:uploadCategory
     }
-
 }
 
 task PushNugetPackages {
