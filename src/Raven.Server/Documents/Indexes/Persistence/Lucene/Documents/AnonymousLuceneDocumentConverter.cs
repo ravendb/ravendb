@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using Lucene.Net.Documents;
 using Raven.Client.Data;
-using Raven.Client.Linq;
-using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -13,11 +10,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
     public class AnonymousLuceneDocumentConverter : LuceneDocumentConverterBase
     {
+        private readonly bool _isMultiMap;
         private PropertyAccessor _propertyAccessor;
 
-        public AnonymousLuceneDocumentConverter(ICollection<IndexField> fields, bool reduceOutput = false)
+        public AnonymousLuceneDocumentConverter(ICollection<IndexField> fields, bool isMultiMap, bool reduceOutput = false)
             : base(fields, reduceOutput)
         {
+            _isMultiMap = isMultiMap;
         }
         
         protected override IEnumerable<AbstractField> GetFields(LazyStringValue key, object document, JsonOperationContext indexContext)
@@ -28,12 +27,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             var boostedValue = document as BoostedValue;
             var documentToProcess = boostedValue == null ? document : boostedValue.Value;
 
-            if (_propertyAccessor == null)
-                _propertyAccessor = PropertyAccessor.Create(documentToProcess.GetType());
+            PropertyAccessor accessor;
 
-            DynamicJsonValue reduceResult = _reduceOutput ? new DynamicJsonValue() : null;
+            if (_isMultiMap == false)
+                accessor = _propertyAccessor ??
+                           (_propertyAccessor = PropertyAccessor.Create(documentToProcess.GetType()));
+            else
+                accessor = TypeConverter.GetPropertyAccessor(documentToProcess);
 
-            foreach (var property in _propertyAccessor.PropertiesInOrder)
+            var reduceResult = _reduceOutput ? new DynamicJsonValue() : null;
+
+            foreach (var property in accessor.PropertiesInOrder)
             {
                 var value = property.Value.GetValue(documentToProcess);
 

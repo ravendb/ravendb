@@ -245,6 +245,8 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual bool HasBoostedFields => false;
 
+        public virtual bool IsMultiMap => false;
+
         protected void Initialize(DocumentDatabase documentDatabase, IndexingConfiguration configuration)
         {
             _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
@@ -1952,7 +1954,7 @@ namespace Raven.Server.Documents.Indexes
         public abstract int? ActualMaxNumberOfIndexOutputs { get; }
 
         public abstract int MaxNumberOfIndexOutputs { get; }
-
+        
         protected virtual bool EnsureValidNumberOfOutputsForDocument(int numberOfAlreadyProducedOutputs)
         {
             return numberOfAlreadyProducedOutputs <= MaxNumberOfIndexOutputs;
