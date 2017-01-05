@@ -70,7 +70,7 @@ namespace Voron.Data
                 {
                     if (pos + _chunksDetails[i].ChunkSize > value)
                     {
-                        _positions[_index] = (int)((value - pos) % _chunksDetails[i].ChunkSize);
+                        _positions[i] = (int)((value - pos) % _chunksDetails[i].ChunkSize);
                         _index = i;
                         break;
                     }

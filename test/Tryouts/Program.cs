@@ -20,6 +20,11 @@ namespace Tryouts
             {
                 a.OrderByWithAttributeShouldStillWork();
             }
+
+            using (var a = new CanUseStream())
+            {
+                a.CanCopyTo(16897);
+            }
         }
     }
 

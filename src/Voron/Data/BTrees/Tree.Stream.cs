@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using Sparrow;
 using Voron.Data.Fixed;
 using Voron.Global;
@@ -234,6 +235,13 @@ namespace Voron.Data.BTrees
                 length = chunkDetails->PageNumber;
                 version = chunkDetails->ChunkSize;
             }
+        }
+
+        public int DeleteStream(string key)
+        {
+            Slice str;
+            using (Slice.From(_tx.Allocator, key, out str))
+                return DeleteStream(str);
         }
 
         public int DeleteStream(Slice key)
