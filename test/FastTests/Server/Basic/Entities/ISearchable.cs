@@ -1,4 +1,4 @@
-namespace Raven.Tests.Core.Utils.Entities
+namespace FastTests.Server.Basic.Entities
 {
     public interface ISearchable
     {

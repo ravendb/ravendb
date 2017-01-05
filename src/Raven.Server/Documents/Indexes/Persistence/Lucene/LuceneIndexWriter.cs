@@ -104,6 +104,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private void CreateIndexWriter()
         {
             indexWriter = new IndexWriter(directory, analyzer, indexDeletionPolicy, maxFieldLength);
+            indexWriter.UseCompoundFile = false;
             if (_indexReaderWarmer != null)
             {
                 indexWriter.MergedSegmentWarmer = _indexReaderWarmer;

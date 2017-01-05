@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Threading.Tasks;
 using FastTests.Voron;
+using FastTests.Voron.Streams;
 using SlowTests.Voron;
 using StressTests;
 using Voron;
@@ -15,24 +16,19 @@ namespace Tryouts
     {
         static void Main(string[] args)
         {
-            //Parallel.For(0, 100, i =>
-            //{
-            //    Console.WriteLine(i);
-            //    using (var a = new SlowTests.Tests.Sorting.AlphaNumericSorting())
-            //    {
-            //        a.random_words_using_document_query_async().Wait();
-            //    }
-            //});
-
-            for (int i = 0; i < 199; i++)
+            for (int i = 0; i < 100; i++)
             {
-                var sp = Stopwatch.StartNew();
-                using (var a = new LongKeys())
+                Console.WriteLine(i);
+                using (var a = new FastTests.Client.BulkInsert.BulkInserts())
                 {
-                    a.NoDebugAssertShouldThrownDuringRebalancing(seed: 4);
+                    a.SimpleBulkInsertShouldWork().Wait();
                 }
-                Console.WriteLine(sp.ElapsedMilliseconds);
+
             }
+            //using (var a = new CanUseStream())
+            //{
+            //    a.CanCopyTo(16897);
+            //}
         }
     }
 

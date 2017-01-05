@@ -131,13 +131,13 @@ namespace Raven.NewClient.Client.Document.Async
         {
             await asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges().WithCancellation(token).ConfigureAwait(false);
 
-            var saveChangesOeration = new BatchOperation(this);
+            var saveChangesOperation = new BatchOperation(this);
 
-            var command = saveChangesOeration.CreateRequest();
+            var command = saveChangesOperation.CreateRequest();
             if (command != null)
             {
                 await RequestExecuter.ExecuteAsync(command, Context, token);
-                saveChangesOeration.SetResult(command.Result);
+                saveChangesOperation.SetResult(command.Result);
             }
         }
     }

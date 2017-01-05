@@ -10,8 +10,8 @@ using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client.Indexes;
 using Xunit;
 using System.Linq;
+using FastTests.Server.Basic.Entities;
 using Raven.NewClient.Client.Commands;
-using Raven.Tests.Core.Utils.Entities;
 using Raven.NewClient.Client.Linq.Indexing;
 using Sparrow.Json;
 

@@ -1,5 +1,5 @@
+using FastTests.Server.Basic.Entities;
 using NewClientTests;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 using User = SlowTests.Core.Utils.Entities.User;

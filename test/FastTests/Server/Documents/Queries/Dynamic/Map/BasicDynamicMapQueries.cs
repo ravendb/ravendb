@@ -3,7 +3,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
 using Raven.Client;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.Map

@@ -3,9 +3,9 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests.Server.Basic.Entities;
+using FastTests.Server.Documents.Notifications;
 using Raven.Abstractions.Data;
-using Raven.Tests.Core.Utils.Entities;
-using Raven.Tests.Notifications;
 using Xunit;
 using Xunit.Extensions;
 

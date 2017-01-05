@@ -1,10 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Raven.Tests.Core.Utils.Entities
+namespace FastTests.Server.Basic.Entities
 {
     public class Headquater : ISearchable
     {

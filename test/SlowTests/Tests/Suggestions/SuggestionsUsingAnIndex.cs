@@ -10,7 +10,6 @@ using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace SlowTests.Tests.Suggestions

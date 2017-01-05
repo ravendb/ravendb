@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using System.Linq.Expressions;
 using FastTests;
-using Raven.Tests.Core.Utils.Entities;
+using FastTests.Server.Basic.Entities;
 using Xunit;
 
 namespace SlowTests.MailingList

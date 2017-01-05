@@ -254,8 +254,13 @@ namespace Voron.Impl.Scratch
             return _scratchPager.CopyPage(destI4KbBatchWrites, p, pagerState);
         }
 
-        public Page ReadPage(LowLevelTransaction tx, long p, PagerState pagerState = null)
+        public Page ReadPage(LowLevelTransaction tx, long p, PagerState pagerState = null, LowLevelTransaction.PagerRef pagerRef = null)
         {
+            if (pagerRef != null)
+            {
+                pagerRef.Pager = _scratchPager;
+                pagerRef.PagerPageNumber = p;
+            }
             return new Page(_scratchPager.AcquirePagePointer(tx, p, pagerState));
         }
 
@@ -300,6 +305,20 @@ namespace Voron.Impl.Scratch
                 _allocatedPages.Add(value.PositionInScratchBuffer + i,
                     new PageFromScratchBuffer(value.ScratchFileNumber, value.PositionInScratchBuffer + i, 0, 1));
             }
+        }
+
+        public void ReduceAllocation(PageFromScratchBuffer value, int lowerNumberOfPages)
+        {
+            if (_allocatedPages.Remove(value.PositionInScratchBuffer) == false)
+                throw new InvalidOperationException("Attempt to split a page that wasn't currently allocated: " +
+                                                    value.PositionInScratchBuffer);
+
+            if(value.NumberOfPages < lowerNumberOfPages)
+                throw new InvalidOperationException("Attempt to split a page to a size that is bigger or equal its size" +
+                                                    value.PositionInScratchBuffer);
+
+            _allocatedPages.Add(value.PositionInScratchBuffer,
+                       new PageFromScratchBuffer(value.ScratchFileNumber, value.PositionInScratchBuffer, value.Size, lowerNumberOfPages));
         }
 
         public void EnsureMapped(LowLevelTransaction tx, long p, int numberOfPages)

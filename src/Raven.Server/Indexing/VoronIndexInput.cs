@@ -8,6 +8,8 @@ using Raven.Abstractions.Extensions;
 using Raven.Server.Utils;
 using Sparrow;
 using Voron;
+using Voron.Data;
+using Voron.Data.BTrees;
 using Voron.Impl;
 using Voron.Util;
 
@@ -17,86 +19,60 @@ namespace Raven.Server.Indexing
     {
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
-        private readonly Transaction _originalTransaction;
         private readonly AsyncLocal<Transaction> _currentTransaction;
 
         private readonly string _name;
-        private ChunkedMmapStream _stream;
+        private VoronStream _stream;
 
         private bool _isOriginal = true;
-        private PtrSize[] _ptrs;
 
         public VoronIndexInput(AsyncLocal<Transaction> transaction, string name)
         {
             _name = name;
-            _originalTransaction = transaction.Value;
             _currentTransaction = transaction;
 
             OpenInternal();
         }
 
+        public override string ToString()
+        {
+            return _name;
+        }
+
         private void OpenInternal()
         {
-            var fileTree = _currentTransaction.Value.ReadTree(_name);
-
+            var fileTree = _currentTransaction.Value.ReadTree("Files");
             if (fileTree == null)
                 throw new FileNotFoundException("Could not find index input", _name);
 
-            var numberOfChunks = fileTree.State.NumberOfEntries;
-
-            _ptrs = new PtrSize[numberOfChunks];
-
-            int index = 0;
-
-            using (var it = fileTree.Iterate(prefetch: false))
+            Slice fileName;
+            using (Slice.From(_currentTransaction.Value.Allocator, _name, out fileName))
             {
-                if (it.Seek(Slices.BeforeAllKeys) == false)
-                    throw new InvalidDataException("Could not seek to any chunk of this file");
-
-                do
-                {
-                    var readResult = fileTree.Read(it.CurrentKey);
-
-                    _ptrs[index] = PtrSize.Create(readResult.Reader.Base, readResult.Reader.Length);
-
-                    index++;
-                } while (it.MoveNext());
-            }
-            
-            if (numberOfChunks != index)
-                throw new InvalidDataException($"Read invalid number of file chunks. Expected {numberOfChunks}, read {index}.");
-
-            _stream = new ChunkedMmapStream(_ptrs, VoronIndexOutput.MaxFileChunkSize);
+                _stream = fileTree.ReadStream(fileName);
+                if (_stream == null)
+                    throw new FileNotFoundException("Could not find index input", _name);
+            }          
         }
 
         public override object Clone()
         {
-            AssertNotDisposed();
+            ThrowIfDisposed();
 
             var clone = (VoronIndexInput)base.Clone();
             GC.SuppressFinalize(clone);
             clone._isOriginal = false;
 
-            if (clone._originalTransaction != clone._currentTransaction.Value)
-            {
-                clone.OpenInternal();
-                clone._stream.Position = _stream.Position;
-            }
-            else
-            {
-                clone._stream = new ChunkedMmapStream(_ptrs, VoronIndexOutput.MaxFileChunkSize)
-                {
-                    Position = _stream.Position
-                };
-            }
+            clone.OpenInternal();
+            clone._stream.Position = _stream.Position;
 
             return clone;
         }
 
         public override byte ReadByte()
         {
-            AssertNotDisposed();
+            ThrowIfDisposed();
 
+            _stream.UpdateCurrentTransaction(_currentTransaction.Value);
             var readByte = _stream.ReadByte();
             if (readByte == -1)
                 throw new EndOfStreamException();
@@ -106,14 +82,15 @@ namespace Raven.Server.Indexing
 
         public override void ReadBytes(byte[] buffer, int offset, int len)
         {
-            AssertNotDisposed();
+            ThrowIfDisposed();
 
+            _stream.UpdateCurrentTransaction(_currentTransaction.Value);
             _stream.ReadEntireBlock(buffer, offset, len);
         }
 
         public override void Seek(long pos)
         {
-            AssertNotDisposed();
+            ThrowIfDisposed();
 
             _stream.Seek(pos, SeekOrigin.Begin);
         }
@@ -137,21 +114,38 @@ namespace Raven.Server.Indexing
         {
             get
             {
-                AssertNotDisposed();
-
+                ThrowIfDisposed();
                 return _stream.Position;
             }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void AssertNotDisposed()
+        private void ThrowIfDisposed()
         {
-            if (_cts.IsCancellationRequested)
-                throw new ObjectDisposedException("VoronIndexInput");
-            if(_currentTransaction.Value == null)
-                throw new ObjectDisposedException("No Transaction in thread");
+            if (_currentTransaction.Value == null)
+            {
+                ThrowDisposed();
+                return; // never hit
+            }
             if (_currentTransaction.Value.LowLevelTransaction.IsDisposed)
-                throw new ObjectDisposedException("No Transaction in thread");
+                ThrowTransactionDisposed();
+            if (_cts.IsCancellationRequested)
+                ThrowCancelled();
+        }
+
+        private static void ThrowTransactionDisposed()
+        {
+            throw new ObjectDisposedException("No Transaction in thread");
+        }
+
+        private static void ThrowDisposed()
+        {
+            throw new ObjectDisposedException("No Transaction in thread");
+        }
+
+        private static void ThrowCancelled()
+        {
+            throw new OperationCanceledException("VoronIndexInput");
         }
     }
 }

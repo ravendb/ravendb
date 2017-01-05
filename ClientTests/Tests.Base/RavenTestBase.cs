@@ -76,8 +76,7 @@ namespace NewClientTests
                 if (_doNotReuseServer)
                 {
                     NonReusedServerPort = GetAvailablePort();
-                    NonReusedTcpServerPort = GetAvailablePort();
-                    _localServer = CreateServer(NonReusedServerPort, NonReusedTcpServerPort);
+                    _localServer = CreateServer(NonReusedServerPort);
                     return _localServer;
                 }
 
@@ -91,7 +90,7 @@ namespace NewClientTests
                     if (_globalServer == null)
                     {
                         Console.WriteLine("\tTo attach debugger to test process, use process id: {0}", Process.GetCurrentProcess().Id);
-                        var globalServer = CreateServer(GetAvailablePort(), GetAvailablePort());
+                        var globalServer = CreateServer(GetAvailablePort());
                         AssemblyLoadContext.Default.Unloading += context =>
                         {
                             globalServer.Dispose();
@@ -142,13 +141,13 @@ namespace NewClientTests
             }
         }
 
-        private static RavenServer CreateServer(int port, int tcpPort)
+        private static RavenServer CreateServer(int port)
         {
             var configuration = new RavenConfiguration();
             configuration.Initialize();
             configuration.DebugLog.LogMode = LogMode.None;
             configuration.Core.ServerUrl = $"http://localhost:{port}";
-            configuration.Core.TcpServerUrl = $"tcp://localhost:{tcpPort}";
+            configuration.Core.TcpServerUrl = "0";
             configuration.Server.Name = ServerName;
             configuration.Core.RunInMemory = true;
             string postfix = port == 8080 ? "" : "_" + port;

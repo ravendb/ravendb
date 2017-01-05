@@ -36,5 +36,11 @@ namespace Voron.Impl.Paging
             overflowSize += Constants.Tree.PageHeaderSize;
             return checked((int)(overflowSize / Constants.Storage.PageSize) + (overflowSize % Constants.Storage.PageSize == 0 ? 0 : 1));
         }
+
+        public static int GetNumberOfOverflowPages(long overflowSize)
+        {
+            overflowSize += Constants.Tree.PageHeaderSize;
+            return checked((int)(overflowSize / Constants.Storage.PageSize) + (overflowSize % Constants.Storage.PageSize == 0 ? 0 : 1));
+        }
     }
 }

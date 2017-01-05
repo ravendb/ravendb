@@ -1,11 +1,9 @@
 ﻿using System.Threading.Tasks;
-
-using FastTests;
+using FastTests.Server.Basic.Entities;
 using Raven.Json.Linq;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace Raven.Tests.Core
+namespace FastTests.Server.Basic
 {
     public class Crud : RavenTestBase
     {

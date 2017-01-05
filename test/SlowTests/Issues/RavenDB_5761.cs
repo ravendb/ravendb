@@ -1,8 +1,8 @@
 ﻿using System.Linq;
 
 using FastTests;
+using FastTests.Server.Basic.Entities;
 using Raven.Client.Indexes;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace SlowTests.Issues

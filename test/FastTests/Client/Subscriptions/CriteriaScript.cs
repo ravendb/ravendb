@@ -3,9 +3,9 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Server.Documents.Notifications;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
-using Raven.Tests.Notifications;
 using Xunit;
 
 namespace FastTests.Client.Subscriptions

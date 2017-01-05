@@ -1,10 +1,10 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.Basic.Entities;
 using Raven.Abstractions.Connection;
 using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace SlowTests.Core.Indexing
