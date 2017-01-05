@@ -2,9 +2,9 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.Basic.Entities;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace SlowTests.SlowTests.Indexes

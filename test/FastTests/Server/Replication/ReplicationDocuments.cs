@@ -4,15 +4,14 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests.Server.Basic.Entities;
 using Raven.Client.Exceptions;
 using Raven.Json.Linq;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace FastTests.Server.Documents.Replication
+namespace FastTests.Server.Replication
 {
     public class DocumentReplication : ReplicationTestsBase
     {

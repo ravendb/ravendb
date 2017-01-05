@@ -10,7 +10,6 @@ using Raven.Abstractions.Indexing;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
-using Raven.Tests.Core;
 using Sparrow.Logging;
 using Xunit;
 

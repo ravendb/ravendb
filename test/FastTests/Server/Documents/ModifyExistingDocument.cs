@@ -2,7 +2,6 @@ using System;
 using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Json.Linq;
-using Raven.Tests.Core;
 using Xunit;
 
 namespace FastTests.Server.Documents

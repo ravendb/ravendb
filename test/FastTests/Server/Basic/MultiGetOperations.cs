@@ -1,14 +1,7 @@
-﻿using System.Linq;
-using System.Threading.Tasks;
-
-using FastTests;
-
-using Raven.Tests.Core.Utils.Entities;
+﻿using FastTests.Server.Basic.Entities;
 using Xunit;
-using Raven.Client;
-using Raven.Client.Linq;
 
-namespace Raven.Tests.Core
+namespace FastTests.Server.Basic
 {
     public class MultiGetOperations : RavenTestBase
     {

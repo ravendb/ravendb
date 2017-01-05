@@ -7,12 +7,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.Basic.Entities;
 using Raven.Abstractions.Data;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Raven.Client.Shard;
 using Raven.Json.Linq;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace SlowTests.Issues

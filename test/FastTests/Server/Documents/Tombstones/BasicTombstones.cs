@@ -9,7 +9,6 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Metrics;
-using Raven.Tests.Core;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;

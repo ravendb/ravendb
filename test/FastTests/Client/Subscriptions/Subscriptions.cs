@@ -2,10 +2,10 @@
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests.Server.Documents.Notifications;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions.Subscriptions;
 using Xunit;
-using Raven.Tests.Notifications;
 using Sparrow;
 
 namespace FastTests.Client.Subscriptions
