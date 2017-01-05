@@ -122,6 +122,11 @@ namespace Sparrow.Json
                         var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfStringArray), BindingFlags.NonPublic | BindingFlags.Static);
                         return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
                     }
+                    if (valueType == typeof(List<string>))
+                    {
+                        var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfStringList), BindingFlags.NonPublic | BindingFlags.Static);
+                        return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
+                    }
                     if (valueType.GetTypeInfo().IsEnum)
                     {
                         var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfEnum), BindingFlags.NonPublic | BindingFlags.Static);
@@ -258,6 +263,31 @@ namespace Sparrow.Json
                 if (obj.TryGet(propertyName, out val))
                 {
                     dic[propertyName] = val;
+                }
+            }
+            return dic;
+        }
+
+        private static Dictionary<string, List<string>> ToDictionaryOfStringList(BlittableJsonReaderObject json, string name)
+        {
+            var dic = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+            BlittableJsonReaderObject obj;
+            //should a "null" exist in json? -> not sure that "null" can exist there
+            if (json.TryGet(name, out obj) == false || obj == null)
+                return dic;
+
+            foreach (var propertyName in obj.GetPropertyNames())
+            {
+                BlittableJsonReaderArray val;
+                if (obj.TryGet(propertyName, out val))
+                {
+                    var array = new List<string>(val.Length);
+                    for (int i = 0; i < val.Length; i++)
+                    {
+                        array[i] = val[i]?.ToString();
+                    }
+                    dic[propertyName] = array;
                 }
             }
             return dic;
