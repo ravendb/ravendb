@@ -46,6 +46,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         public override bool HasBoostedFields => _compiled.HasBoostedFields;
 
+        public override bool IsMultiMap => _compiled.Maps.Count > 1 || _compiled.Maps.Any(x => x.Value.Count > 1);
+
         protected override void InitializeInternal()
         {
             base.InitializeInternal();
@@ -195,16 +197,18 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         {
             private IEnumerable _items;
             private TransactionOperationContext _indexContext;
-            private PropertyAccessor _propertyAccessor;
             private IndexingStatsScope _stats;
             private IndexingStatsScope _createBlittableResultStats;
             private readonly ReduceKeyProcessor _reduceKeyProcessor;
             private readonly HashSet<string> _groupByFields;
+            private readonly bool _isMultiMap;
+            private PropertyAccessor _propertyAccessor;
 
             public AnonymousObjectToBlittableMapResultsEnumerableWrapper(MapReduceIndex index, TransactionOperationContext indexContext)
             {
                 _indexContext = indexContext;
                 _groupByFields = index.Definition.GroupByFields;
+                _isMultiMap = index.IsMultiMap;
                 _reduceKeyProcessor = new ReduceKeyProcessor(index.Definition.GroupByFields.Count, index._unmanagedBuffersPool);
             }
 
@@ -257,7 +261,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                     using (_createBlittableResult.Start())
                     {
-                        var accessor = _parent._propertyAccessor ?? (_parent._propertyAccessor = PropertyAccessor.Create(document.GetType()));
+                        PropertyAccessor accessor;
+
+                        if (_parent._isMultiMap == false)
+                            accessor = _parent._propertyAccessor ??
+                                       (_parent._propertyAccessor = PropertyAccessor.Create(document.GetType()));
+                        else
+                            accessor = TypeConverter.GetPropertyAccessor(document);
 
                         var mapResult = new DynamicJsonValue();
 
