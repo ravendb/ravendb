@@ -43,6 +43,9 @@ namespace Raven.Server.Documents.Replication
         public IEnumerable<IncomingConnectionInfo> IncomingConnections => _incoming.Values.Select(x => x.ConnectionInfo);
         public IEnumerable<ReplicationDestination> OutgoingConnections => _outgoing.Select(x => x.Destination);
 
+        public IEnumerable<OutgoingReplicationHandler> OutgoingHandlers => _outgoing;
+        public IEnumerable<IncomingReplicationHandler> IncomingHandlers => _incoming.Values;
+
         private readonly ConcurrentQueue<TaskCompletionSource<object>> _waitForReplicationTasks = new ConcurrentQueue<TaskCompletionSource<object>>();
 
         public DocumentReplicationLoader(DocumentDatabase database)
@@ -128,12 +131,12 @@ namespace Raven.Server.Documents.Replication
 
                 var lastEtagFromSrc = _database.DocumentsStorage.GetLastReplicateEtagFrom(documentsOperationContext, getLatestEtagMessage.SourceDatabaseId);
                 if (_log.IsInfoEnabled)
-                {
                     _log.Info($"GetLastEtag response, last etag: {lastEtagFromSrc}");
-                }
+
                 documentsOperationContext.Write(writer, new DynamicJsonValue
                 {
                     [nameof(ReplicationMessageReply.Type)] = "Ok",
+                    [nameof(ReplicationMessageReply.DbId)] = tcpConnectionOptions.DocumentDatabase.DbId.ToString(),
                     [nameof(ReplicationMessageReply.MessageType)] = ReplicationMessageType.Heartbeat,
                     [nameof(ReplicationMessageReply.LastEtagAccepted)] = lastEtagFromSrc,
                     [nameof(ReplicationMessageReply.LastIndexTransformerEtagAccepted)] = _database.IndexMetadataPersistence.GetLastReplicateEtagFrom(configTx.InnerTransaction, getLatestEtagMessage.SourceDatabaseId),
@@ -341,6 +344,13 @@ namespace Raven.Server.Documents.Replication
                 ConnectionFailureInfo failureInfo;
                 if (_outgoingFailureInfo.TryGetValue(instance.Destination, out failureInfo) == false)
                     return;
+                
+                failureInfo.DestinationDbId = instance.DestinationDbId;
+                failureInfo.LastHeartbeatTicks = instance.LastHeartbeatTicks;
+                failureInfo.LastSentDocumentEtag = instance._lastSentDocumentEtag;
+                failureInfo.LastSentIndexOrTransformerEtag = instance._lastSentIndexOrTransformerEtag;
+                using (instance._documentsContext.OpenReadTransaction())
+                    failureInfo.GlobalChangeVector = instance._database.DocumentsStorage.GetDatabaseChangeVector(instance._documentsContext);
 
                 _reconnectQueue.Add(failureInfo);
 
@@ -447,6 +457,15 @@ namespace Raven.Server.Documents.Replication
 
         public class ConnectionFailureInfo
         {
+            public string DestinationDbId;
+
+            public long LastSentDocumentEtag;
+            public long LastSentIndexOrTransformerEtag;
+
+            public long LastHeartbeatTicks;
+
+            public ChangeVectorEntry[] GlobalChangeVector;
+
             public const int MaxConnectionTimout = 60000;
 
             public int ErrorCount { get; set; }
