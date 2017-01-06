@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -33,24 +34,7 @@ namespace Raven.Server.Utils
             var topologyInfo = new NodeTopologyInfo { DatabaseId = database.DbId.ToString() };
             var replicationLoader = database.DocumentReplicationLoader;
 
-            foreach (var incomingHandler in replicationLoader.IncomingHandlers)
-            {
-                topologyInfo.Incoming.Add(
-                    new ActiveNodeStatus
-                    {
-                        DbId = incomingHandler.ConnectionInfo.SourceDatabaseId,
-                        Database = incomingHandler.ConnectionInfo.SourceDatabaseName,
-                        Url = new UriBuilder(incomingHandler.ConnectionInfo.SourceUrl)
-                        {
-                            Host = incomingHandler.ConnectionInfo.RemoteIp
-                        }.Uri.ToString(),
-                        IsCurrentlyConnected = true,
-                        NodeStatus = ActiveNodeStatus.Status.Online,
-                        LastDocumentEtag = incomingHandler.LastDocumentEtag,
-                        LastIndexTransformerEtag = incomingHandler.LastIndexOrTransformerEtag,
-                        LastHeartbeatTicks = incomingHandler.LastHeartbeatTicks
-                    });
-            }
+            GetLocalIncomingTopology(replicationLoader, topologyInfo);
 
             foreach (var destination in replicationDocument.Destinations)
             {
@@ -99,6 +83,27 @@ namespace Raven.Server.Utils
             return topologyInfo;
         }
 
+        public static void GetLocalIncomingTopology(DocumentReplicationLoader replicationLoader, NodeTopologyInfo topologyInfo)
+        {
+            foreach (var incomingHandler in replicationLoader.IncomingHandlers)
+            {
+                topologyInfo.Incoming.Add(
+                    new ActiveNodeStatus
+                    {
+                        DbId = incomingHandler.ConnectionInfo.SourceDatabaseId,
+                        Database = incomingHandler.ConnectionInfo.SourceDatabaseName,
+                        Url = new UriBuilder(incomingHandler.ConnectionInfo.SourceUrl)
+                        {
+                            Host = incomingHandler.ConnectionInfo.RemoteIp
+                        }.Uri.ToString(),
+                        IsCurrentlyConnected = true,
+                        NodeStatus = ActiveNodeStatus.Status.Online,
+                        LastDocumentEtag = incomingHandler.LastDocumentEtag,
+                        LastIndexTransformerEtag = incomingHandler.LastIndexOrTransformerEtag,
+                        LastHeartbeatTicks = incomingHandler.LastHeartbeatTicks
+                    });
+            }
+        }
 
         public static bool TryGetActiveDestination(ReplicationDestination destination,
             IEnumerable<OutgoingReplicationHandler> outgoingReplicationHandlers,
@@ -127,6 +132,11 @@ namespace Raven.Server.Utils
             {
                 var getTcpInfoCommand = new GetTcpInfoCommand();
                 requestExecuter.Execute(getTcpInfoCommand, context);
+
+                //notfound status also sets command's Result to null, so this prevents NRE
+                if (getTcpInfoCommand.StatusCode == HttpStatusCode.NotFound)
+                    throw new InvalidOperationException($"Failed to connect with specified URL ({url}). The response status is 404 - NotFound.");
+
                 return getTcpInfoCommand.Result.Url;
             }
         }
@@ -140,6 +150,11 @@ namespace Raven.Server.Utils
             {
                 var getTcpInfoCommand = new GetTcpInfoCommand();
                 await requestExecuter.ExecuteAsync(getTcpInfoCommand, context);
+
+                //notfound status also sets command's Result to null, so this prevents NRE
+                if (getTcpInfoCommand.StatusCode == HttpStatusCode.NotFound)
+                    throw new InvalidOperationException($"Failed to connect with specified URL ({url}). The response status is 404 - NotFound.");
+
                 return getTcpInfoCommand.Result.Url;
             }
         }

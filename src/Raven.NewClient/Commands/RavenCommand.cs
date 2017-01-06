@@ -21,6 +21,8 @@ namespace Raven.NewClient.Client.Commands
         public int AuthenticationRetries;
         public bool IsReadRequest = true;
 
+        public HttpStatusCode StatusCode;
+
         public abstract HttpRequestMessage CreateRequest(ServerNode node, out string url);
         public abstract void SetResponse(BlittableJsonReaderObject response);
 
