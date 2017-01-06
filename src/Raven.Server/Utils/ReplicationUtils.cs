@@ -133,9 +133,6 @@ namespace Raven.Server.Utils
                 var getTcpInfoCommand = new GetTcpInfoCommand();
                 requestExecuter.Execute(getTcpInfoCommand, context);
 
-                //notfound status also sets command's Result to null, so this prevents NRE
-                if (getTcpInfoCommand.StatusCode == HttpStatusCode.NotFound)
-                    throw new InvalidOperationException($"Failed to connect with specified URL ({url}). The response status is 404 - NotFound.");
 
                 return getTcpInfoCommand.Result.Url;
             }
@@ -150,10 +147,6 @@ namespace Raven.Server.Utils
             {
                 var getTcpInfoCommand = new GetTcpInfoCommand();
                 await requestExecuter.ExecuteAsync(getTcpInfoCommand, context);
-
-                //notfound status also sets command's Result to null, so this prevents NRE
-                if (getTcpInfoCommand.StatusCode == HttpStatusCode.NotFound)
-                    throw new InvalidOperationException($"Failed to connect with specified URL ({url}). The response status is 404 - NotFound.");
 
                 return getTcpInfoCommand.Result.Url;
             }

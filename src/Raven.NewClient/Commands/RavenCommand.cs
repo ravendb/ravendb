@@ -20,7 +20,6 @@ namespace Raven.NewClient.Client.Commands
         public TResult Result;
         public int AuthenticationRetries;
         public bool IsReadRequest = true;
-
         public HttpStatusCode StatusCode;
 
         public abstract HttpRequestMessage CreateRequest(ServerNode node, out string url);
