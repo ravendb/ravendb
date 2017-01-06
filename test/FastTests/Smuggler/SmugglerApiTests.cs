@@ -2,11 +2,9 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using FastTests.Server.Documents.Versioning;
-using Raven.Client.Bundles.Versioning;
 using Raven.Client.Smuggler;
 using Xunit;
 using System.Linq;
-using System.Threading;
 using FastTests.Server.Basic.Entities;
 using FastTests.Server.Documents.Expiration;
 using Raven.Abstractions;
@@ -122,20 +120,21 @@ namespace FastTests.Smuggler
             {
                 using (var exportStore = GetDocumentStore(dbSuffixIdentifier: "exportStore"))
                 {
+                    var database = await GetDocumentDatabaseInstanceFor(exportStore);
+
                     using (var session = exportStore.OpenAsyncSession())
                     {
                         await Expiration.SetupExpiration(exportStore);
                         var person1 = new Person { Name = "Name1" };
                         await session.StoreAsync(person1).ConfigureAwait(false);
                         var metadata = session.Advanced.GetMetadataFor(person1);
-                        metadata[Constants.Expiration.RavenExpirationDate] =
-                            new RavenJValue(DateTime.UtcNow.AddSeconds(10)
-                                .ToString(Default.DateTimeOffsetFormatsToWrite));
+                        metadata[Constants.Expiration.RavenExpirationDate] = new RavenJValue(database.Time.GetUtcNow().AddSeconds(10).ToString(Default.DateTimeOffsetFormatsToWrite));
 
                         await session.SaveChangesAsync().ConfigureAwait(false);
                     }
 
-                    await Task.Delay(10000);
+                    database.Time.UtcDateTime = () => DateTime.UtcNow.AddSeconds(11);
+
                     await exportStore.Smuggler.ExportAsync(new DatabaseSmugglerOptions { IncludeExpired = false }, file).ConfigureAwait(false);
 
                 }

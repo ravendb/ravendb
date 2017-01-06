@@ -1,39 +1,28 @@
 ﻿using System;
-using System.Runtime.CompilerServices;
 using Raven.Abstractions.Indexing;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.Json;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Documents.Processors
 {
     public class TransformerProcessor
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Import(BlittableJsonDocumentBuilder builder, DocumentDatabase database, long buildVersion)
+        public static TransformerDefinition ReadTransformerDefinition(BlittableJsonReaderObject reader, long buildVersion)
         {
-            using (var reader = builder.CreateReader())
-                Import(reader, database, buildVersion);
+            if (buildVersion == 0) // pre 4.0 support
+                return ReadLegacyTransformerDefinition(reader);
+
+            if (buildVersion >= 40000 && buildVersion <= 44999 || buildVersion == 40)
+                return JsonDeserializationServer.TransformerDefinition(reader);
+
+            throw new NotSupportedException($"We do not support importing transformers from '{buildVersion}' build.");
         }
 
         public static void Import(BlittableJsonReaderObject transformerDefinitionDoc, DocumentDatabase database, long buildVersion)
         {
-            TransformerDefinition transformerDefinition;
-            if (buildVersion == 0) // pre 4.0 support
-            {
-                transformerDefinition = ReadLegacyTransformerDefinition(transformerDefinitionDoc);
-            }
-            //I think supporting only major version as a number should be here,
-            //so we can use ServerVersion.Build to get the build and not hardcode it
-            else if ((buildVersion >= 40000 && buildVersion <= 44999) || (buildVersion >= 40 && buildVersion <= 44))
-            {
-                transformerDefinition = JsonDeserializationServer.TransformerDefinition(transformerDefinitionDoc);
-            }
-            else
-                throw new NotSupportedException($"We do not support importing transformers from '{buildVersion}' build.");
-
+            var transformerDefinition = ReadTransformerDefinition(transformerDefinitionDoc, buildVersion);
             database.TransformerStore.CreateTransformer(transformerDefinition);
         }
 

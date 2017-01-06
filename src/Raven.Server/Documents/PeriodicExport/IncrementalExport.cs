@@ -1,7 +1,5 @@
 using System.IO;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Smuggler;
-using Raven.Server.Smuggler.Documents;
 
 namespace Raven.Server.Documents.PeriodicExport
 {
@@ -9,16 +7,22 @@ namespace Raven.Server.Documents.PeriodicExport
     {
         private const string IncrementalExportStateFile = "IncrementalExport.state.json";
 
-        public static void ReadLastEtagsFromFile(string exportDirectory, DocumentsOperationContext context, SmugglerExporter smugglerExporter)
+        public static long? ReadLastEtagsFromFile(string exportDirectory, DocumentsOperationContext context)
         {
             var etagFileLocation = Path.Combine(exportDirectory, IncrementalExportStateFile);
             if (File.Exists(etagFileLocation) == false)
-                return;
+                return null;
 
             using (var fileStream = new FileStream(etagFileLocation, FileMode.Open))
             {
-                var reader = context.ReadForMemory(fileStream, IncrementalExportStateFile);
-                reader.TryGet("LastDocsEtag", out smugglerExporter.StartDocsEtag);
+                using (var reader = context.ReadForMemory(fileStream, IncrementalExportStateFile))
+                {
+                    long lastDocsEtag;
+                    if (reader.TryGet("LastDocsEtag", out lastDocsEtag) == false)
+                        return null;
+
+                    return lastDocsEtag;
+                }
             }
         }
     }

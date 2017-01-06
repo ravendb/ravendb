@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Runtime.CompilerServices;
+using System.Diagnostics;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
@@ -15,57 +15,71 @@ namespace Raven.Server.Smuggler.Documents.Processors
 {
     public static class IndexProcessor
     {
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Import(BlittableJsonDocumentBuilder builder, DocumentDatabase database, long buildVersion, bool removeAnalyzers)
-        {
-            using (var reader = builder.CreateReader())
-                Import(reader, database, buildVersion, removeAnalyzers);
-        }
-
-        public static void Import(BlittableJsonReaderObject indexDefinitionDoc, DocumentDatabase database, long buildVersion, bool removeAnalyzers )
+        public static object ReadIndexDefinition(BlittableJsonReaderObject reader, long buildVersion, out IndexType type)
         {
             if (buildVersion == 0) // pre 4.0 support
             {
-                var indexDefinition = ReadLegacyIndexDefinition(indexDefinitionDoc);
-                if (string.Equals(indexDefinition.Name, "Raven/DocumentsByEntityName", StringComparison.OrdinalIgnoreCase))
-                    // skipping not needed old default index
-                    return;
+                var indexDefinition = ReadLegacyIndexDefinition(reader);
 
-                database.IndexStore.CreateIndex(indexDefinition);
+                type = indexDefinition.Type;
+                Debug.Assert(type.IsStatic());
+
+                return indexDefinition;
             }
-            //I think supporting only major version as a number should be here,
-            //so we can use ServerVersion.Build to get the build and not hardcode it
-            else if (buildVersion == 13 || (buildVersion >= 40000 && buildVersion <= 44999) || (buildVersion >= 40 && buildVersion <= 44))
+
+            if (buildVersion >= 40000 && buildVersion <= 44999 || buildVersion == 40)
             {
-                var indexType = ReadIndexType(indexDefinitionDoc, out indexDefinitionDoc);
-                switch (indexType)
+                type = ReadIndexType(reader, out reader);
+                switch (type)
                 {
                     case IndexType.AutoMap:
-                        var autoMapIndexDefinition = AutoMapIndexDefinition.LoadFromJson(indexDefinitionDoc);
-                        database.IndexStore.CreateIndex(autoMapIndexDefinition);
-                        break;
+                        return AutoMapIndexDefinition.LoadFromJson(reader);
                     case IndexType.AutoMapReduce:
-                        var autoMapReduceIndexDefinition = AutoMapReduceIndexDefinition.LoadFromJson(indexDefinitionDoc);
-                        database.IndexStore.CreateIndex(autoMapReduceIndexDefinition);
-                        break;
+                        return AutoMapReduceIndexDefinition.LoadFromJson(reader);
                     case IndexType.Map:
                     case IndexType.MapReduce:
-                        var indexDefinition = JsonDeserializationServer.IndexDefinition(indexDefinitionDoc);
-                        if (removeAnalyzers)
-                        {
-                            foreach (var indexDefinitionField in indexDefinition.Fields)
-                            {
-                                indexDefinitionField.Value.Analyzer = null;
-                            }
-                        }
-                        database.IndexStore.CreateIndex(indexDefinition);
-                        break;
+                        return JsonDeserializationServer.IndexDefinition(reader);
                     default:
-                        throw new NotSupportedException(indexType.ToString());
+                        throw new NotSupportedException(type.ToString());
                 }
             }
-            else
-                throw new NotSupportedException($"We do not support importing indexes from '{buildVersion}' build.");
+
+            throw new NotSupportedException($"We do not support importing indexes from '{buildVersion}' build.");
+        }
+
+        public static void Import(BlittableJsonReaderObject indexDefinitionDoc, DocumentDatabase database, long buildVersion, bool removeAnalyzers)
+        {
+            IndexType indexType;
+            var definition = ReadIndexDefinition(indexDefinitionDoc, buildVersion, out indexType);
+            
+            switch (indexType)
+            {
+                case IndexType.AutoMap:
+                    var autoMapIndexDefinition = (AutoMapIndexDefinition)definition;
+                    database.IndexStore.CreateIndex(autoMapIndexDefinition);
+                    break;
+                case IndexType.AutoMapReduce:
+                    var autoMapReduceIndexDefinition = (AutoMapReduceIndexDefinition)definition;
+                    database.IndexStore.CreateIndex(autoMapReduceIndexDefinition);
+                    break;
+                case IndexType.Map:
+                case IndexType.MapReduce:
+                    var indexDefinition = (IndexDefinition)definition;
+                    if (string.Equals(indexDefinition.Name, "Raven/DocumentsByEntityName", StringComparison.OrdinalIgnoreCase))
+                        return;
+
+                    if (removeAnalyzers)
+                    {
+                        foreach (var indexDefinitionField in indexDefinition.Fields)
+                        {
+                            indexDefinitionField.Value.Analyzer = null;
+                        }
+                    }
+                    database.IndexStore.CreateIndex(indexDefinition);
+                    break;
+                default:
+                    throw new NotSupportedException(indexType.ToString());
+            }
         }
 
         public static void Export(BlittableJsonTextWriter writer, Index index, JsonOperationContext context, bool removeAnalyzers)
@@ -104,7 +118,7 @@ namespace Raven.Server.Smuggler.Documents.Processors
             if (reader.TryGet(nameof(IndexDefinition.Type), out typeAsString) == false)
                 throw new InvalidOperationException("Could not read index type.");
 
-            if(reader.TryGet(nameof(IndexDefinition), out indexDef) ==false)
+            if (reader.TryGet(nameof(IndexDefinition), out indexDef) == false)
                 throw new InvalidOperationException("Could not read index definition");
 
 
