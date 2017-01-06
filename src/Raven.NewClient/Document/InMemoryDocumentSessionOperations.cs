@@ -1202,9 +1202,13 @@ more responsive application.
             if (result is T)
                 return (T)result;
 
-            var results = result as T[];
-            if (results != null && results.Length > 0)
-                return results[0];
+            var resultsArray = result as T[];
+            if (resultsArray != null && resultsArray.Length > 0)
+                return resultsArray[0];
+
+            var resultsDictionary = result as Dictionary<string, T>;
+            if (resultsDictionary != null && resultsDictionary.Count > 0)
+                return resultsDictionary.Values.FirstOrDefault();
 
             throw new InvalidCastException($"Unable to cast {result.GetType().Name} to {typeof(T).Name}");
         }

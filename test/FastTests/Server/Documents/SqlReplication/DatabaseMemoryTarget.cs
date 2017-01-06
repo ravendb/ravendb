@@ -3,13 +3,14 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 
-namespace Raven.Database.Util
+namespace FastTests.Server.Documents.SqlReplication
 {
     public class DatabaseMemoryTarget : Target
     {

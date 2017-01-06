@@ -42,6 +42,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public override bool HasBoostedFields => _compiled.HasBoostedFields;
 
+        public override bool IsMultiMap => _compiled.Maps.Count > 1 || _compiled.Maps.Any(x => x.Value.Count > 1);
+
         protected override void InitializeInternal()
         {
             base.InitializeInternal();
@@ -140,7 +142,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection, stats, StaticIndexDocsEnumerator.EnumerationType.Index);
+            return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection, stats);
         }
 
         public override Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()

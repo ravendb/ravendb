@@ -29,6 +29,7 @@ namespace Voron.Platform.Win32
         private readonly FileInfo _fileInfo;
         private readonly FileStream _fileStream;
         private readonly SafeFileHandle _handle;
+        private readonly Win32NativeFileAttributes _fileAttributes;
         private readonly Win32NativeFileAccess _access;
         private readonly MemoryMappedFileAccess _memoryMappedFileAccess;
         private bool _copyOnWriteMode;
@@ -73,6 +74,7 @@ namespace Voron.Platform.Win32
                 ? MemoryMappedFileAccess.Read
                 : MemoryMappedFileAccess.ReadWrite;
             }
+            _fileAttributes = fileAttributes;
 
             _handle = Win32NativeFileMethods.CreateFile(file, access,
                                                         Win32NativeFileShare.Read | Win32NativeFileShare.Write | Win32NativeFileShare.Delete, IntPtr.Zero,
@@ -346,6 +348,11 @@ namespace Voron.Platform.Win32
         {
             if (Disposed)
                 ThrowAlreadyDisposedException();
+
+            if ((_fileAttributes & Win32NativeFileAttributes.Temporary) == Win32NativeFileAttributes.Temporary ||
+                (_fileAttributes & Win32NativeFileAttributes.DeleteOnClose) == Win32NativeFileAttributes.DeleteOnClose)
+                return; // no need to do this
+
 
             var currentState = GetPagerStateAndAddRefAtomically();
             try

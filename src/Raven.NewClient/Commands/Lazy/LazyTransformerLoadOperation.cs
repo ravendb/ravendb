@@ -1,14 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document.Batches;
-using Raven.NewClient.Client.Shard;
 using Sparrow.Json;
-
+using Raven.NewClient.Client.Json;
 
 namespace Raven.NewClient.Client.Commands.Lazy
 {
@@ -19,7 +16,7 @@ namespace Raven.NewClient.Client.Commands.Lazy
 
         private readonly Dictionary<string, object> transformerParameters;
 
-        private readonly LoadTransformerOperation loadTransformerOperation;
+        private readonly LoadTransformerOperation _loadTransformerOperation;
         private readonly bool singleResult;
 
         public LazyTransformerLoadOperation(string[] ids, string transformer, Dictionary<string, object> transformerParameters, LoadTransformerOperation loadTransformerOperation, bool singleResult)
@@ -27,7 +24,9 @@ namespace Raven.NewClient.Client.Commands.Lazy
             this.ids = ids;
             this.transformer = transformer;
             this.transformerParameters = transformerParameters;
-            this.loadTransformerOperation = loadTransformerOperation;
+            this._loadTransformerOperation = loadTransformerOperation;
+            _loadTransformerOperation.ByIds(ids);
+            _loadTransformerOperation.WithTransformer(transformer, transformerParameters);
             this.singleResult = singleResult;
         }
 
@@ -50,49 +49,32 @@ namespace Raven.NewClient.Client.Commands.Lazy
         }
 
         public object Result { get; set; }
-
         public QueryResult QueryResult { get; set; }
-
         public bool RequiresRetry { get; set; }
-
-        public void HandleResponses(BlittableJsonReaderObject[] responses, ShardStrategy shardStrategy)
-        {
-            throw new NotImplementedException();
-           /* var response = responses.OrderBy(x => x.Status).First(); // this way, 200 response is higher than 404
-            HandleResponse(response);*/
-        }
 
         public void HandleResponse(BlittableJsonReaderObject response)
         {
-            throw new NotImplementedException();
-            /*if (response.RequestHasErrors())
-            {
-                throw new InvalidOperationException("Got bad status code: " + response.Status);
-            }
+            bool forceRetry;
+            response.TryGet("ForceRetry", out forceRetry);
 
-            HandleRespose(new LoadResult
+            if (forceRetry)
             {
-                Includes = response.Result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
-                Results = response.Result.Value<RavenJArray>("Results").Select(x => x as RavenJObject).ToList()
-            });*/
-        }
-
-        public IDisposable EnterContext()
-        {
-            return null;
-        }
-        /*
-        private void HandleRespose(LoadResult loadResult)
-        {
-            throw new NotImplementedException();
-            T[] complete = loadTransformerOperation.Complete<T>(loadResult);
-            if (singleResult)
-            {
-                Result = complete.Length > 0 ? complete[0] : (object)null;
+                Result = null;
+                RequiresRetry = true;
                 return;
             }
 
-            Result = complete;
-        }*/
+            BlittableJsonReaderObject result;
+            response.TryGet("Result", out result);
+            var loadTransformerOperation = JsonDeserializationClient.GetDocumentResult(result);
+            HandleResponse(loadTransformerOperation);
+        }
+
+        private void HandleResponse(GetDocumentResult loadResult)
+        {
+            _loadTransformerOperation.SetResult(loadResult);
+            if (RequiresRetry == false)
+                Result = _loadTransformerOperation.GetTransformedDocuments<T>(loadResult);
+        }
     }
 }

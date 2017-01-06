@@ -4,10 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Server.Alerts;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.LowMemoryNotification;
@@ -53,10 +55,12 @@ namespace Raven.Server.ServerWide
         private long _lastEtag;
         private readonly ConcurrentSet<AsyncQueue<GlobalAlertNotification>> _changes = new ConcurrentSet<AsyncQueue<GlobalAlertNotification>>();
 
-        private readonly TimeSpan _frequencyToCheckForIdleDatabases = TimeSpan.FromMinutes(1);
+        private readonly TimeSpan _frequencyToCheckForIdleDatabases;
 
         static ServerStore()
         {
+            
+
             Slice.From(StorageEnvironment.LabelsContext, "EtagIndexName", out EtagIndexName);
 
             _itemsSchema = new TableSchema();
@@ -88,6 +92,9 @@ namespace Raven.Server.ServerWide
             Alerts = new AlertsStorage("Raven/Server", this);
 
             DatabaseInfoCache = new DatabaseInfoCache();
+
+            _frequencyToCheckForIdleDatabases = Configuration.Databases.FrequencyToCheckForIdle.AsTimeSpan;
+
         }
 
         public DatabaseInfoCache DatabaseInfoCache { get; set; }
@@ -347,7 +354,7 @@ namespace Raven.Server.ServerWide
             exceptionAggregator.ThrowIfNeeded();
         }
 
-        private void IdleOperations(object state)
+        public void IdleOperations(object state)
         {
             try
             {
@@ -360,9 +367,10 @@ namespace Raven.Server.ServerWide
 
                         var database = db.Value.Result;
 
-                        if (DatabaseNeedToRunIdleOperations(database))
-                            database.RunIdleOperations();
+                        if (DatabaseNeedsToRunIdleOperations(database))                        
+                            database.RunIdleOperations();                        
                     }
+
                     catch (Exception e)
                     {
                         if (_logger.IsInfoEnabled)
@@ -372,19 +380,20 @@ namespace Raven.Server.ServerWide
 
                 try
                 {
-                    //var databasesToCleanup = DatabasesLandlord.LastRecentlyUsed
-                    //   .Where(x => SystemTime.UtcNow - x.Value > maxTimeDatabaseCanBeIdle)
-                    //   .Select(x => x.Key)
-                    //   .ToArray();
+                    var maxTimeDatabaseCanBeIdle = Configuration.Databases.MaxIdleTime.AsTimeSpan;
 
-                    //foreach (var databaseToCleanup in databasesToCleanup)
-                    //{
-                    //    // intentionally inside the loop, so we get better concurrency overall
-                    //    // since shutting down a database can take a while
-                    //    DatabasesLandlord.Cleanup(databaseToCleanup, skipIfActiveInDuration: maxTimeDatabaseCanBeIdle, shouldSkip: database => database.Configuration.RunInMemory);
-                    //}
+                    var databasesToCleanup = DatabasesLandlord.LastRecentlyUsed
+                       .Where(x => SystemTime.UtcNow - x.Value > maxTimeDatabaseCanBeIdle)
+                       .Select(x => x.Key)
+                       .ToArray();
 
-                    // TODO [ppekrol]
+                    foreach (var db in databasesToCleanup)
+                    {
+                        // intentionally inside the loop, so we get better concurrency overall
+                        // since shutting down a database can take a while
+                        DatabasesLandlord.UnloadResource(db, skipIfActiveInDuration: maxTimeDatabaseCanBeIdle, shouldSkip: database => database.Configuration.Core.RunInMemory);
+                    }
+
                 }
                 catch (Exception e)
                 {
@@ -404,17 +413,21 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static bool DatabaseNeedToRunIdleOperations(DocumentDatabase database)
+        private static bool DatabaseNeedsToRunIdleOperations(DocumentDatabase database) 
         {
-            //var dateTime = SystemTime.UtcNow;
-            //if ((dateTime - database.WorkContext.LastWorkTime).TotalMinutes > 5)
-            //    return true;
-            //if ((dateTime - database.WorkContext.LastIdleTime).TotalHours > 2)
-            //    return true;
-            //return false;
-            // TODO [ppekrol]
+            var now = DateTime.UtcNow;
 
-            return true;
+            var envs = database.GetAllStoragesEnvironment();
+
+            var maxLastWork = DateTime.MinValue;
+
+            foreach (var env in envs)
+            {
+                if (env.Environment.LastWorkTime > maxLastWork)
+                    maxLastWork = env.Environment.LastWorkTime;
+            }
+
+            return ((now - maxLastWork).TotalMinutes > 5) || ((now - database.LastIdleTime).TotalMinutes > 10);
         }
 
         public IDisposable TrackChanges(AsyncQueue<GlobalAlertNotification> asyncQueue)

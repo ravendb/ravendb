@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Commands
 {
-    public class PatchByIndexCommand : RavenCommand<PatchResult>
+    public class PatchByIndexCommand : RavenCommand<OperationIdResult>
     {
         public BlittableJsonReaderObject Script;
         public JsonOperationContext Context;
@@ -45,7 +45,7 @@ namespace Raven.NewClient.Client.Commands
         {
             if (response == null)
                 throw new InvalidOperationException("Got null response from the server after doing a patch by index, something is very wrong. ");
-            Result = JsonDeserializationClient.PatchResult(response);
+            Result = JsonDeserializationClient.OperationIdResult(response);
         }
     }
 }

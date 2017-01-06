@@ -4,15 +4,14 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests.Server.Basic.Entities;
 using Raven.Client.Exceptions;
 using Raven.Json.Linq;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace FastTests.Server.Documents.Replication
+namespace FastTests.Server.Replication
 {
     public class DocumentReplication : ReplicationTestsBase
     {
@@ -72,7 +71,7 @@ namespace FastTests.Server.Documents.Replication
         }
 
         [Fact(Skip = "Client API needs to support changed protocol of replication conflicts before this would work")]
-        public async Task ShouldCreateConflictThenResolveIt()
+        public void ShouldCreateConflictThenResolveIt()
         {
             using (var source = GetDocumentStore())
             using (var destination = GetDocumentStore())
@@ -88,7 +87,7 @@ namespace FastTests.Server.Documents.Replication
 
                 Assert.NotNull(marker);
 
-                var conflicts = await GetConflicts(destination, "docs/1");
+                var conflicts = GetConflicts(destination, "docs/1");
                 Assert.Equal(2,conflicts["docs/1"].Count);
                 Assert.NotEqual(conflicts["docs/1"][0][0].DbId, conflicts["docs/1"][1][0].DbId);
                 Assert.Equal(1,conflicts["docs/1"][0][0].Etag);

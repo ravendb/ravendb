@@ -32,14 +32,14 @@ namespace Raven.NewClient.Client.Document.Batches
         ///     Loads the specified entities with the specified ids.
         /// </summary>
         /// <param name="ids">Enumerable of Ids that should be loaded</param>
-        Lazy<TResult[]> Load<TResult>(IEnumerable<string> ids);
+        Lazy<Dictionary<string, TResult>> Load<TResult>(IEnumerable<string> ids);
 
         /// <summary>
         ///     Loads the specified entities with the specified ids and a function to call when it is evaluated
         /// </summary>
         /// <param name="ids">Enumerable of Ids that should be loaded</param>
         /// <param name="onEval">Action to be executed on evaluation.</param>
-        Lazy<TResult[]> Load<TResult>(IEnumerable<string> ids, Action<TResult[]> onEval);
+        Lazy<Dictionary<string, TResult>> Load<TResult>(IEnumerable<string> ids, Action<Dictionary<string, TResult>> onEval);
 
         /// <summary>
         ///     Loads the specified entity with the specified id.
@@ -85,7 +85,7 @@ namespace Raven.NewClient.Client.Document.Batches
         ///     <para>Load&lt;Post&gt;("posts/1", "posts/2", "posts/3");</para>
         ///     <para>Or whatever your conventions specify.</para>
         /// </summary>
-        Lazy<TResult[]> Load<TResult>(params ValueType[] ids);
+        Lazy<Dictionary<string, TResult>> Load<TResult>(params ValueType[] ids);
 
         /// <summary>
         ///     Loads the specified entities with the specified ids after applying
@@ -96,7 +96,7 @@ namespace Raven.NewClient.Client.Document.Batches
         ///     <para>Load&lt;Post&gt;("posts/1", "posts/2", "posts/3");</para>
         ///     <para>Or whatever your conventions specify.</para>
         /// </summary>
-        Lazy<TResult[]> Load<TResult>(IEnumerable<ValueType> ids);
+        Lazy<Dictionary<string, TResult>> Load<TResult>(IEnumerable<ValueType> ids);
 
         /// <summary>
         ///     Loads the specified entities with the specified ids after applying
@@ -107,7 +107,7 @@ namespace Raven.NewClient.Client.Document.Batches
         ///     <para>Load&lt;Post&gt;("posts/1", "posts/2", "posts/3");</para>
         ///     <para>Or whatever your conventions specify.</para>
         /// </summary>
-        Lazy<TResult[]> Load<TResult>(IEnumerable<ValueType> ids, Action<TResult[]> onEval);
+        Lazy<Dictionary<string, TResult>> Load<TResult>(IEnumerable<ValueType> ids, Action<IDictionary<string, TResult>> onEval);
 
         /// <summary>
         ///     Performs a load that will use the specified results transformer against the specified id
@@ -168,9 +168,9 @@ namespace Raven.NewClient.Client.Document.Batches
         ///     skip document fetching until given key is found and return documents after that key (default:
         ///     null)
         /// </param>
-        Lazy<TResult[]> LoadStartingWith<TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null);
+        Lazy<IDictionary<string, TResult>> LoadStartingWith<TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null);
 
-        Lazy<TResult[]> MoreLikeThis<TResult>(MoreLikeThisQuery query);
+        Lazy<Dictionary<string, TResult>> MoreLikeThis<TResult>(MoreLikeThisQuery query);
     }
 
     /// <summary>
@@ -195,7 +195,7 @@ namespace Raven.NewClient.Client.Document.Batches
         /// </summary>
         /// <param name="ids">Enumerable of Ids that should be loaded</param>
         /// <param name="token">The cancellation token.</param>
-        Lazy<Task<TResult[]>> LoadAsync<TResult>(IEnumerable<string> ids, CancellationToken token = default (CancellationToken));
+        Lazy<Task<Dictionary<string, TResult>>> LoadAsync<TResult>(IEnumerable<string> ids, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Loads the specified entities with the specified ids and a function to call when it is evaluated.
@@ -203,7 +203,7 @@ namespace Raven.NewClient.Client.Document.Batches
         /// <param name="ids">Enumerable of Ids that should be loaded</param>
         /// <param name="token">The cancellation token.</param>
         /// <param name="onEval">Action to be executed on evaluation.</param>
-        Lazy<Task<TResult[]>> LoadAsync<TResult>(IEnumerable<string> ids, Action<TResult[]> onEval, CancellationToken token = default (CancellationToken));
+        Lazy<Task<Dictionary<string, TResult>>> LoadAsync<TResult>(IEnumerable<string> ids, Action<Dictionary<string, TResult>> onEval, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Loads the specified entity with the specified id.
@@ -251,7 +251,7 @@ namespace Raven.NewClient.Client.Document.Batches
         ///     <para>LoadAsync&lt;Post&gt;("posts/1");</para>
         ///     <para>Or whatever your conventions specify.</para>
         /// </summary>
-        Lazy<Task<TResult[]>> LoadAsync<TResult>(CancellationToken token = default (CancellationToken),params ValueType[] ids);
+        Lazy<Task<Dictionary<string, TResult>>> LoadAsync<TResult>(CancellationToken token = default (CancellationToken),params ValueType[] ids);
 
         /// <summary>
         ///     Loads the specified entity with the specified ids after applying
@@ -262,7 +262,7 @@ namespace Raven.NewClient.Client.Document.Batches
         ///     <para>LoadAsync&lt;Post&gt;("posts/1");</para>
         ///     <para>Or whatever your conventions specify.</para>
         /// </summary>
-        Lazy<Task<TResult[]>> LoadAsync<TResult>(IEnumerable<ValueType> ids, CancellationToken token = default (CancellationToken));
+        Lazy<Task<Dictionary<string, TResult>>> LoadAsync<TResult>(IEnumerable<ValueType> ids, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Loads the specified entity with the specified ids after applying
@@ -273,7 +273,7 @@ namespace Raven.NewClient.Client.Document.Batches
         ///     <para>LoadAsync&lt;Post&gt;("posts/1");</para>
         ///     <para>Or whatever your conventions specify.</para>
         /// </summary>
-        Lazy<Task<TResult[]>> LoadAsync<TResult>(IEnumerable<ValueType> ids, Action<TResult[]> onEval, CancellationToken token = default (CancellationToken));
+        Lazy<Task<Dictionary<string, TResult>>> LoadAsync<TResult>(IEnumerable<ValueType> ids, Action<Dictionary<string, TResult>> onEval, CancellationToken token = default (CancellationToken));
 
         /// <summary>
         ///     Performs a load that will use the specified results transformer against the specified id
@@ -317,9 +317,9 @@ namespace Raven.NewClient.Client.Document.Batches
         ///     null)
         /// </param>
         /// <param name="token">The cancellation token.</param>
-        Lazy<Task<TResult[]>> LoadStartingWithAsync<TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null, CancellationToken token = default (CancellationToken));
+        Lazy<Task<Dictionary<string, TResult>>> LoadStartingWithAsync<TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null, CancellationToken token = default (CancellationToken));
 
-        Lazy<Task<TResult[]>> MoreLikeThisAsync<TResult>(MoreLikeThisQuery query, CancellationToken token = default (CancellationToken));
+        Lazy<Task<Dictionary<string, TResult>>> MoreLikeThisAsync<TResult>(MoreLikeThisQuery query, CancellationToken token = default (CancellationToken));
     }
 
     /// <summary>

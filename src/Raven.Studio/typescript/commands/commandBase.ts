@@ -35,7 +35,7 @@ class commandBase {
             var task = $.Deferred<T>();
             ajax.done((results, status, xhr) => {
                 var transformedResults = resultsSelector(results);
-                task.resolve(transformedResults);
+                task.resolve(transformedResults, status, xhr);
             });
             ajax.fail((request, status, error) => {
                 task.reject(request, status, error);
@@ -209,9 +209,6 @@ class commandBase {
         messagePublisher.reportWarning(title, details, httpStatusText);
     }
 
-    reportWarningWithButton(title: string, details: string, buttonName: string, action: () => any) {
-        messagePublisher.reportWarningWithButton(title, details, buttonName, action);
-    }
 }
 
 

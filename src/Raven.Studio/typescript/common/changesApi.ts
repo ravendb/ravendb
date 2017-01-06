@@ -4,6 +4,8 @@ import resource = require("models/resources/resource");
 import changeSubscription = require("common/changeSubscription");
 import changesCallback = require("common/changesCallback");
 
+import EVENTS = require("common/constants/events");
+
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
 
 class changesApi extends abstractWebSocketClient {
@@ -61,8 +63,8 @@ class changesApi extends abstractWebSocketClient {
         this.serverStartTime(null);
     }
 
-    protected onClose() {
-        super.onClose();
+    protected onClose(e: CloseEvent) {
+        super.onClose(e);
         this.serverStartTime(null);
     }
 
@@ -79,7 +81,7 @@ class changesApi extends abstractWebSocketClient {
             case "ServerStartTimeNotification":
                 this.onServerStartTimeReceived(value as string);
                 this.connectToWebSocketTask.resolve();
-                ko.postbox.publish("ChangesApiReconnected", this.rs);
+                ko.postbox.publish(EVENTS.ChangesApi.Reconnected, this.rs);
                 break;
             case "DocumentChangeNotification":
                 this.fireEvents<Raven.Abstractions.Data.DocumentChangeNotification>(this.allDocsHandlers(), value, () => true);

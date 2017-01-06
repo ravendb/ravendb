@@ -15,7 +15,6 @@ namespace Raven.Server.Web.System
         [RavenAction("/test/empty-message", "GET")]
         public Task Get()
         {
-            HttpContext.Response.StatusCode = 200;
             return Task.CompletedTask;
         }
 

@@ -19,11 +19,15 @@ namespace Raven.Client.Replication.Messages
 
         public string Exception { get; set; }
 
+        public string Message { get; set; }
+
         public string MessageType { get; set; }
 
         public ChangeVectorEntry[] DocumentsChangeVector { get; set; }
 
         public ChangeVectorEntry[] IndexTransformerChangeVector { get; set; }
+
+        public string DatabaseId { get; set; }
     }
 
     public struct ChangeVectorEntry

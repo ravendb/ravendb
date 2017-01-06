@@ -146,9 +146,7 @@ namespace Raven.NewClient.Client.Commands
                 string id;
                 if (document.TryGet(Constants.Metadata.Key, out metadata) == false)
                     throw new InvalidOperationException("Document must have a metadata");
-                if (metadata.TryGet(Constants.Metadata.Id, out id) == false)
-                    throw new InvalidOperationException("Document must have an id");
-
+                metadata.TryGet(Constants.Metadata.Id, out id);
                 list.Add(_session.TrackEntity<T>(id, document, metadata, _disableEntitiesTracking));
             }
 
@@ -187,6 +185,16 @@ namespace Raven.NewClient.Client.Commands
                 var isStale = result.IsStale ? "stale " : "";
                 _logger.Info($"Query returned {result.Results.Items.Count()}/{result.TotalResults} {isStale}results");
             }
+        }
+
+        public IndexQuery IndexQuery
+        {
+            get { return _indexQuery; }
+        }
+
+        public string IndexName
+        {
+            get { return _indexName; }
         }
     }
 }

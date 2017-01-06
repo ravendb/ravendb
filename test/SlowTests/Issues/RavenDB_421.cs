@@ -6,6 +6,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client;
 using Raven.Client.Indexes;
 using Xunit;
 
@@ -13,14 +14,14 @@ namespace SlowTests.Issues
 {
     public class RavenDB_421 : RavenTestBase
     {
-        public class Person
+        private class Person
         {
             public string Id { get; set; }
             public string Name { get; set; }
             public string[] Parents { get; set; }
         }
 
-        public class Family : AbstractMultiMapIndexCreationTask<Family.Result>
+        private class Family_MultiMapReduce : AbstractMultiMapIndexCreationTask<Family_MultiMapReduce.Result>
         {
             public class Result
             {
@@ -36,7 +37,7 @@ namespace SlowTests.Issues
 
             }
 
-            public Family()
+            public Family_MultiMapReduce()
             {
                 AddMap<Person>(people =>
                                from person in people
@@ -60,12 +61,52 @@ namespace SlowTests.Issues
                          from result in results
                          group result by result.PersonId
                              into g
-                             select new
-                             {
-                                 PersonId = g.Key,
-                                 g.FirstOrDefault(x => x.Name != null).Name,
-                                 Children = g.SelectMany(x => x.Children)
-                             };
+                         select new
+                         {
+                             PersonId = g.Key,
+                             g.FirstOrDefault(x => x.Name != null).Name,
+                             Children = g.SelectMany(x => x.Children)
+                         };
+            }
+
+        }
+
+
+        private class Family_MultiMap : AbstractMultiMapIndexCreationTask<Family_MultiMap.Result>
+        {
+            public class Result
+            {
+                public string PersonId { get; set; }
+                public string Name { get; set; }
+                public Child[] Children { get; set; }
+            }
+
+            public class Child
+            {
+                public string Id { get; set; }
+                public string Name { get; set; }
+
+            }
+
+            public Family_MultiMap()
+            {
+                AddMap<Person>(people =>
+                               from person in people
+                               select new
+                               {
+                                   PersonId = person.Id,
+                                   person.Name,
+                                   Children = new object[0]
+                               });
+                AddMap<Person>(people =>
+                               from person in people
+                               from parent in person.Parents
+                               select new
+                               {
+                                   PersonId = parent,
+                                   Name = (string)null,
+                                   Children = new[] { new { person.Name, person.Id } }
+                               });
             }
 
         }
@@ -75,7 +116,11 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                new Family().Execute(store);
+                var familyMultiMapReduce = new Family_MultiMapReduce();
+                familyMultiMapReduce.Execute(store);
+
+                var familyMultiMap = new Family_MultiMap();
+                familyMultiMap.Execute(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -92,20 +137,29 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
+                WaitForIndexing(store);
+
                 using (var session = store.OpenSession())
                 {
-                    var results = session.Query<Family.Result, Family>()
-                        .Customize(x => x.WaitForNonStaleResults())
+                    var results = session.Query<Family_MultiMapReduce.Result, Family_MultiMapReduce>()
                         .Where(x => x.PersonId == "people/1")
                         .ToList();
 
-                    WaitForUserToContinueTheTest(store);
                     var stats = await store.AsyncDatabaseCommands.GetIndexErrorsAsync();
-                    Assert.Equal(0, stats[0].Errors.Length);
+                    Assert.Equal(0, stats.First(x => x.Name == familyMultiMapReduce.IndexName).Errors.Length);
+                }
 
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<Family_MultiMap.Result, Family_MultiMap>()
+                        .Where(x => x.PersonId == "people/1")
+                        .ProjectFromIndexFieldsInto<Family_MultiMap.Result>()
+                        .ToList();
+
+                    var stats = await store.AsyncDatabaseCommands.GetIndexErrorsAsync();
+                    Assert.Equal(0, stats.First(x => x.Name == familyMultiMap.IndexName).Errors.Length);
                 }
             }
         }
-
     }
 }

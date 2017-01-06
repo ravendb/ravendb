@@ -10,7 +10,7 @@ using Raven.NewClient.Client.Http;
 
 namespace Raven.NewClient.Client.Commands
 {
-    public class GetRevisionCommand : RavenCommand<GetRevisionResult>
+    public class GetRevisionCommand : RavenCommand<BlittableArrayResult>
     {
 
         public string Key;
@@ -24,7 +24,7 @@ namespace Raven.NewClient.Client.Commands
                 Method = HttpMethod.Get,
             };
 
-            url = $"{node.Url}/databases/{node.Database}/revisions?key={Uri.EscapeDataString(Key)}&start={Start.ToInvariantString()}&pageSize={PageSize.ToInvariantString()}";
+            url = $"{node.Url}/databases/{node.Database}/revisions?id={Uri.EscapeDataString(Key)}&start={Start.ToInvariantString()}&pageSize={PageSize.ToInvariantString()}";
             IsReadRequest = false;
             return request;
         }
@@ -34,7 +34,7 @@ namespace Raven.NewClient.Client.Commands
         {
             if (response == null)
                 throw new InvalidOperationException();
-            Result = JsonDeserializationClient.GetRevisionResult(response);
+            Result = JsonDeserializationClient.BlittableArrayResult(response);
         }
     }
 }

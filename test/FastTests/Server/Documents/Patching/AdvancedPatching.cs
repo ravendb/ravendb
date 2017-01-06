@@ -9,7 +9,6 @@ using Raven.Client.Data;
 using Raven.Client.Indexing;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
-using Raven.Tests.Core;
 using Xunit;
 
 namespace FastTests.Server.Documents.Patching

@@ -82,6 +82,8 @@
 
     // Actual tabs (as links)
     > a {
+
+      color:@nav-tabs-color;
       margin-right: 2px;
       line-height: @line-height-base;
       border: 1px solid transparent;
@@ -221,6 +223,8 @@
 
 // Hide tabbable panes to start, show them when `.active`
 .tab-content {
+    padding: @grid-gutter-width / 2;
+    background-color: fadeout(@gray-darker,50%);
   > .tab-pane {
     display: none;
   }

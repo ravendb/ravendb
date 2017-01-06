@@ -301,6 +301,35 @@ namespace Raven.Server.Json
                 writer.WriteEndObject();
         }
 
+        public static void WriteTermsQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, TermsQueryResult queryResult)
+        {
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(nameof(queryResult.IndexName));
+            writer.WriteString(queryResult.IndexName);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(queryResult.ResultEtag));
+            writer.WriteInteger(queryResult.ResultEtag);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(queryResult.Terms));
+            var first = true;
+            writer.WriteStartArray();
+            foreach (var term in queryResult.Terms)
+            {
+                if (first == false)
+                    writer.WriteComma();
+
+                first = false;
+
+                writer.WriteString(term);
+            }
+            writer.WriteEndArray();
+
+            writer.WriteEndObject();
+        }
+
         public static void WriteIndexingPerformanceStats(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexingPerformanceStats stats)
         {
             var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(stats);
@@ -1312,7 +1341,11 @@ namespace Raven.Server.Json
         public static void WriteResults<T>(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<T> items, Action<BlittableJsonTextWriter, JsonOperationContext, T> onWrite)
         {
             writer.WritePropertyName("Results");
+            writer.WriteArray(context, items, onWrite);
+        }
 
+        public static void WriteArray<T>(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<T> items, Action<BlittableJsonTextWriter, JsonOperationContext, T> onWrite)
+        {
             writer.WriteStartArray();
             var first = true;
             foreach (var item in items)

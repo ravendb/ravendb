@@ -79,6 +79,9 @@ namespace Voron
         internal int SizeOfUnflushedTransactionsInJournalFile;
         internal DateTime LastFlushTime;
 
+        private long _lastWorkTimeTicks;
+        public DateTime LastWorkTime => new DateTime(_lastWorkTimeTicks);
+
         private readonly Queue<TemporaryPage> _tempPagesPool = new Queue<TemporaryPage>();
         public bool Disposed;
         private readonly Logger _log;
@@ -107,17 +110,7 @@ namespace Voron
 
                 _scratchBufferPool = new ScratchBufferPool(this);
 
-                if (PlatformDetails.RunningOnPosix &&
-                    options.BasePath != null && 
-                    IsStorageSupportingO_Direct(options.BasePath) == false)
-                {
-                    options.SafePosixOpenFlags &= ~PerPlatformValues.OpenFlags.O_DIRECT;
-                    var message = "Path " + options.BasePath +
-                                  " not supporting O_DIRECT writes. As a result - data durability is not guarenteed";
-                    _options.InvokeNonDurabaleFileSystemError(this, message, null);
-                }
-
-                options.PosixOpenFlags = options.SafePosixOpenFlags;
+                options.SetPosixOptions();
 
                 _journal = new WriteAheadJournal(this);
 
@@ -136,7 +129,7 @@ namespace Voron
             }
         }
 
-        private bool IsStorageSupportingO_Direct(string path)
+        internal static bool IsStorageSupportingO_Direct(Logger log, string path)
         {
             var filename = Path.Combine(path, "test-" + Guid.NewGuid() + ".tmp");
             var fd = Syscall.open(filename,
@@ -149,8 +142,8 @@ namespace Voron
             {
                 if (fd == -1)
                 {
-                    if (_log.IsInfoEnabled)
-                        _log.Info(
+                    if (log.IsInfoEnabled)
+                        log.Info(
                             $"Failed to create test file at \'{filename}\'. Cannot determine if O_DIRECT supported by the file system. Assuming it is");
                     return true;
                 }
@@ -158,8 +151,8 @@ namespace Voron
                 result = Syscall.posix_fallocate(fd, IntPtr.Zero, (UIntPtr)(64L * 1024));
                 if (result == (int)Errno.EINVAL)
                 {
-                    if (_log.IsInfoEnabled)
-                        _log.Info(
+                    if (log.IsInfoEnabled)
+                        log.Info(
                             $"Cannot fallocate (rc = EINVAL) to a file \'{filename}\' opened using O_DIRECT. Assuming O_DIRECT is not supported by this file system");
 
                     return false;
@@ -167,8 +160,8 @@ namespace Voron
 
                 if (result != 0)
                 {
-                    if (_log.IsInfoEnabled)
-                        _log.Info(
+                    if (log.IsInfoEnabled)
+                        log.Info(
                             $"Failed to fallocate test file at \'{filename}\'. (rc = {result}). Cannot determine if O_DIRECT supported by the file system. Assuming it is");
                 }
                
@@ -178,15 +171,15 @@ namespace Voron
                 result = Syscall.close(fd);
                 if (result != 0)
                 {
-                    if (_log.IsInfoEnabled)
-                        _log.Info($"Failed to close test file at \'{filename}\'. (rc = {result}).");
+                    if (log.IsInfoEnabled)
+                        log.Info($"Failed to close test file at \'{filename}\'. (rc = {result}).");
                 }
 
                 result = Syscall.unlink(filename);
                 if (result != 0)
                 {
-                    if (_log.IsInfoEnabled)
-                        _log.Info($"Failed to delete test file at \'{filename}\'. (rc = {result}).");
+                    if (log.IsInfoEnabled)
+                        log.Info($"Failed to delete test file at \'{filename}\'. (rc = {result}).");
                 }
             }
 
@@ -209,10 +202,11 @@ namespace Voron
                 {
                     if (await _writeTransactionRunning.WaitAsync(TimeSpan.FromMilliseconds(Options.IdleFlushTimeout)) == false)
                     {
-                        if (Volatile.Read(ref SizeOfUnflushedTransactionsInJournalFile) != 0)
+                        if (Volatile.Read(ref SizeOfUnflushedTransactionsInJournalFile) != 0)                                                   
                             GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
-                        else if (Journal.Applicator.TotalWrittenButUnsyncedBytes != 0)
-                            QueueForSyncDataFile();
+
+                        else if (Journal.Applicator.TotalWrittenButUnsyncedBytes != 0)                        
+                            QueueForSyncDataFile();                            
                     }
                     else
                     {
@@ -462,6 +456,8 @@ namespace Voron
                     }
                     _currentTransactionHolder = NativeMemory.ThreadAllocations.Value;
                     _writeTransactionRunning.SetByAsyncCompletion();
+
+                    _lastWorkTimeTicks = DateTime.UtcNow.Ticks;
 
                     if (_endOfDiskSpace != null)
                     {
@@ -909,6 +905,11 @@ namespace Voron
         public void LogsApplied()
         {
             OnLogsApplied?.Invoke();
+        }
+
+        public void ResetLastWorkTime()
+        {
+            _lastWorkTimeTicks = DateTime.MinValue.Ticks;
         }
     }
 }

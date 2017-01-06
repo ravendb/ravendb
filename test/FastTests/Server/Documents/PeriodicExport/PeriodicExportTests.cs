@@ -14,9 +14,9 @@ using Raven.Abstractions.Extensions;
 using Raven.Client.Smuggler;
 using Raven.Server.Documents.PeriodicExport;
 using Raven.Server.Utils;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using System.Linq;
+using FastTests.Server.Basic.Entities;
 
 namespace FastTests.Server.Documents.PeriodicExport
 {

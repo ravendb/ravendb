@@ -37,7 +37,7 @@ namespace NewClientTests.NewClient
                     await session.SaveChangesAsync();
 
                     var user = await session.LoadAsync<User>(new[] { "users/1", "users/2" });
-                    Assert.Equal(user.Length, 2);
+                    Assert.Equal(user.Count, 2);
                 }
             }
         }
@@ -72,7 +72,7 @@ namespace NewClientTests.NewClient
                     await session.SaveChangesAsync();
 
                     var users = await session.LoadAsync<User>(CancellationToken.None, 1,2);
-                    Assert.Equal(users.Length, 2);
+                    Assert.Equal(users.Count, 2);
                 }
             }
         }
@@ -89,7 +89,7 @@ namespace NewClientTests.NewClient
                     await session.SaveChangesAsync();
 
                     var users = await session.LoadAsync<User>(new List<System.ValueType> { 1, 2 });
-                    Assert.Equal(users.Length, 2);
+                    Assert.Equal(users.Count, 2);
                 }
             }
         }

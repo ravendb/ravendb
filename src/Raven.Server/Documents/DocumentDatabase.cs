@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
+using Raven.Abstractions.Data;
 using Raven.Client.Data;
 using Raven.Server.Alerts;
 using Raven.Server.Config;
@@ -21,6 +22,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
 using Voron.Impl.Backup;
+using DatabaseInfo = Raven.Client.Data.DatabaseInfo;
 
 namespace Raven.Server.Documents
 {
@@ -35,6 +37,12 @@ namespace Raven.Server.Documents
         private Task _transformerStoreTask;
         private long _usages;
         private readonly ManualResetEventSlim _waitForUsagesOnDisposal = new ManualResetEventSlim(false);
+        private long _lastIdleTicks = DateTime.UtcNow.Ticks;
+
+        public void ResetIdleTime()
+        {
+            _lastIdleTicks = DateTime.MinValue.Ticks;
+        }
 
         public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore)
         {
@@ -61,6 +69,8 @@ namespace Raven.Server.Documents
             ConfigurationStorage = new ConfigurationStorage(this, serverStore);
             DatabaseInfoCache = serverStore?.DatabaseInfoCache;
         }
+
+        public DateTime LastIdleTime => new DateTime(_lastIdleTicks);
 
         public DatabaseInfoCache DatabaseInfoCache { get; set; }
 
@@ -342,6 +352,7 @@ namespace Raven.Server.Documents
 
             try
             {
+                _lastIdleTicks = DateTime.UtcNow.Ticks;
                 IndexStore?.RunIdleOperations();
                 Operations?.CleanupOperations();
             }
@@ -355,14 +366,24 @@ namespace Raven.Server.Documents
         public IEnumerable<StorageEnvironmentWithType> GetAllStoragesEnvironment()
         {
             // TODO :: more storage environments ?
-            yield return new StorageEnvironmentWithType(Name, StorageEnvironmentWithType.StorageEnvironmentType.Documents, DocumentsStorage.Environment);
-            yield return new StorageEnvironmentWithType("Subscriptions", StorageEnvironmentWithType.StorageEnvironmentType.Subscriptions, SubscriptionStorage.Environment());
-            yield return new StorageEnvironmentWithType("Configuration", StorageEnvironmentWithType.StorageEnvironmentType.Configuration, ConfigurationStorage.Environment);
-            foreach (var index in IndexStore.GetIndexes())
+            yield return
+                new StorageEnvironmentWithType(Name, StorageEnvironmentWithType.StorageEnvironmentType.Documents,
+                    DocumentsStorage.Environment);
+            yield return
+                new StorageEnvironmentWithType("Subscriptions",
+                    StorageEnvironmentWithType.StorageEnvironmentType.Subscriptions, SubscriptionStorage.Environment());
+            yield return
+                new StorageEnvironmentWithType("Configuration",
+                    StorageEnvironmentWithType.StorageEnvironmentType.Configuration, ConfigurationStorage.Environment);
+
+            //check for null to prevent NRE when disposing the DocumentDatabase
+            foreach (var index in (IndexStore?.GetIndexes()).EmptyIfNull())
             {
                 var env = index._indexStorage?.Environment();
                 if (env != null)
-                    yield return new StorageEnvironmentWithType(index.Name, StorageEnvironmentWithType.StorageEnvironmentType.Index, env);
+                    yield return
+                        new StorageEnvironmentWithType(index.Name,
+                            StorageEnvironmentWithType.StorageEnvironmentType.Index, env);
             }
         }
 

@@ -19,6 +19,24 @@ namespace Raven.Server.Json
 {
     public class JsonDeserializationServer : JsonDeserializationBase
     {
+        public static readonly Func<BlittableJsonReaderObject, TopologyDiscoveryRequest> TopologyDiscoveryRequest =
+            GenerateJsonDeserializationRoutine<TopologyDiscoveryRequest>();
+
+        public static readonly Func<BlittableJsonReaderObject, TopologyDiscoveryResponseHeader> TopologyDiscoveryResponse =
+            GenerateJsonDeserializationRoutine<TopologyDiscoveryResponseHeader>();
+
+        public static readonly Func<BlittableJsonReaderObject, NodeTopologyInfo> NodeTopologyInfo =
+            GenerateJsonDeserializationRoutine<NodeTopologyInfo>();
+
+        public static readonly Func<BlittableJsonReaderObject, FullTopologyInfo> FullTopologyInfo =
+            GenerateJsonDeserializationRoutine<FullTopologyInfo>();
+
+        public static readonly Func<BlittableJsonReaderObject, ActiveNodeStatus> ActiveNodeStatus =
+            GenerateJsonDeserializationRoutine<ActiveNodeStatus>();
+
+        public static readonly Func<BlittableJsonReaderObject, InactiveNodeStatus> InactiveNodeStatus =
+            GenerateJsonDeserializationRoutine<InactiveNodeStatus>();
+
         public static readonly Func<BlittableJsonReaderObject, DatabaseSmugglerOptions> DatabaseSmugglerOptions = GenerateJsonDeserializationRoutine<DatabaseSmugglerOptions>();
 
         public static readonly Func<BlittableJsonReaderObject, ReplicationMessageReply> ReplicationMessageReply = GenerateJsonDeserializationRoutine<ReplicationMessageReply>();
@@ -28,7 +46,7 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, SubscriptionConnectionClientMessage> SubscriptionConnectionClientMessage = GenerateJsonDeserializationRoutine<SubscriptionConnectionClientMessage>();
 
         public static readonly Func<BlittableJsonReaderObject, SubscriptionConnectionOptions> SubscriptionConnectionOptions = GenerateJsonDeserializationRoutine<SubscriptionConnectionOptions>();
-
+        
         public static readonly Func<BlittableJsonReaderObject, ReplicationDocument> ReplicationDocument = GenerateJsonDeserializationRoutine<ReplicationDocument>();
 
         public static readonly Func<BlittableJsonReaderObject, SqlReplicationConfiguration> SqlReplicationConfiguration = GenerateJsonDeserializationRoutine<SqlReplicationConfiguration>();

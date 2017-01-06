@@ -11,7 +11,7 @@ using Raven.NewClient.Client.Http;
 
 namespace Raven.NewClient.Client.Commands
 {
-    public class BatchCommand : RavenCommand<BatchResult>
+    public class BatchCommand : RavenCommand<BlittableArrayResult>
     {
         public JsonOperationContext Context;
         public List<DynamicJsonValue> Commands;
@@ -59,7 +59,7 @@ namespace Raven.NewClient.Client.Commands
             if (response == null)
                 throw new InvalidOperationException("Got null response from the server after doing a batch, something is very wrong. Probably a garbled response. " +
                                                          "Commands: " + string.Join(",", Commands));
-            Result = JsonDeserializationClient.BatchResult(response);
+            Result = JsonDeserializationClient.BlittableArrayResult(response);
         }
 
         private void AppendOptions(StringBuilder sb)

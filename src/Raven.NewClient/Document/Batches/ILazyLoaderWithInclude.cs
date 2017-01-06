@@ -27,13 +27,13 @@ namespace Raven.NewClient.Client.Document.Batches
         ///     Loads the specified entities with the specified ids.
         /// </summary>
         /// <param name="ids">Enumerable of Ids that should be loaded</param>
-        Lazy<T[]> Load(params string[] ids);
+        Lazy<Dictionary<string, T>> Load(params string[] ids);
 
         /// <summary>
         ///     Loads the specified entities with the specified ids.
         /// </summary>
         /// <param name="ids">Enumerable of Ids that should be loaded</param>
-        Lazy<T[]> Load(IEnumerable<string> ids);
+        Lazy<Dictionary<string, T>> Load(IEnumerable<string> ids);
 
         /// <summary>
         ///     Loads the specified entity with the specified id.
@@ -61,7 +61,7 @@ namespace Raven.NewClient.Client.Document.Batches
         ///     <para>Load&lt;Post&gt;("posts/1", "posts/2", "posts/3");</para>
         ///     <para>Or whatever your conventions specify.</para>
         /// </summary>
-        Lazy<T[]> Load(params ValueType[] ids);
+        Lazy<Dictionary<string, T>> Load(params ValueType[] ids);
 
         /// <summary>
         ///     Loads the specified entities with the specified ids after applying
@@ -72,19 +72,19 @@ namespace Raven.NewClient.Client.Document.Batches
         ///     <para>Load&lt;Post&gt;("posts/1", "posts/2", "posts/3");</para>
         ///     <para>Or whatever your conventions specify.</para>
         /// </summary>
-        Lazy<T[]> Load(IEnumerable<ValueType> ids);
+        Lazy<Dictionary<string, T>> Load(IEnumerable<ValueType> ids);
 
         /// <summary>
         ///     Loads the specified entities with the specified ids.
         /// </summary>
         /// <param name="ids">Enumerable of Ids that should be loaded</param>
-        Lazy<TResult[]> Load<TResult>(params string[] ids);
+        Lazy<Dictionary<string, TResult>> Load<TResult>(params string[] ids);
 
         /// <summary>
         ///     Loads the specified entities with the specified ids.
         /// </summary>
         /// <param name="ids">Enumerable of Ids that should be loaded</param>
-        Lazy<TResult[]> Load<TResult>(IEnumerable<string> ids);
+        Lazy<Dictionary<string, TResult>> Load<TResult>(IEnumerable<string> ids);
 
         /// <summary>
         ///     Loads the specified entity with the specified id.
@@ -112,7 +112,7 @@ namespace Raven.NewClient.Client.Document.Batches
         ///     <para>Load&lt;Post&gt;("posts/1", "posts/2", "posts/3");</para>
         ///     <para>Or whatever your conventions specify.</para>
         /// </summary>
-        Lazy<TResult[]> Load<TResult>(params ValueType[] ids);
+        Lazy<Dictionary<string, TResult>> Load<TResult>(params ValueType[] ids);
 
         /// <summary>
         ///     Loads the specified entities with the specified ids after applying
@@ -123,7 +123,7 @@ namespace Raven.NewClient.Client.Document.Batches
         ///     <para>Load&lt;Post&gt;("posts/1", "posts/2", "posts/3");</para>
         ///     <para>Or whatever your conventions specify.</para>
         /// </summary>
-        Lazy<TResult[]> Load<TResult>(IEnumerable<ValueType> ids);
+        Lazy<Dictionary<string, TResult>> Load<TResult>(IEnumerable<ValueType> ids);
     }
 
     public interface IAsyncLazyLoaderWithInclude<T>
@@ -144,13 +144,13 @@ namespace Raven.NewClient.Client.Document.Batches
         ///     Loads the specified entities with the specified ids.
         /// </summary>
         /// <param name="ids">Enumerable of Ids that should be loaded</param>
-        Lazy<Task<T[]>> LoadAsync(params string[] ids);
+        Lazy<Task<Dictionary<string, T>>> LoadAsync(params string[] ids);
 
         /// <summary>
         ///     Loads the specified entities with the specified ids.
         /// </summary>
         /// <param name="ids">Enumerable of Ids that should be loaded</param>
-        Lazy<Task<T[]>> LoadAsync(IEnumerable<string> ids);
+        Lazy<Task<Dictionary<string, T>>> LoadAsync(IEnumerable<string> ids);
 
         /// <summary>
         ///     Loads the specified entity with the specified id.
@@ -178,7 +178,7 @@ namespace Raven.NewClient.Client.Document.Batches
         ///     <para>Load&lt;Post&gt;("posts/1", "posts/2", "posts/3");</para>
         ///     <para>Or whatever your conventions specify.</para>
         /// </summary>
-        Lazy<Task<T[]>> LoadAsync(params ValueType[] ids);
+        Lazy<Task<Dictionary<string, T>>> LoadAsync(params ValueType[] ids);
 
         /// <summary>
         ///     Loads the specified entities with the specified ids after applying
@@ -189,19 +189,19 @@ namespace Raven.NewClient.Client.Document.Batches
         ///     <para>Load&lt;Post&gt;("posts/1", "posts/2", "posts/3");</para>
         ///     <para>Or whatever your conventions specify.</para>
         /// </summary>
-        Lazy<Task<T[]>> LoadAsync(IEnumerable<ValueType> ids);
+        Lazy<Task<Dictionary<string, T>>> LoadAsync(IEnumerable<ValueType> ids);
 
         /// <summary>
         ///     Loads the specified entities with the specified ids.
         /// </summary>
         /// <param name="ids">Enumerable of Ids that should be loaded</param>
-        Lazy<Task<TResult[]>> LoadAsync<TResult>(params string[] ids);
+        Lazy<Task<Dictionary<string, TResult>>> LoadAsync<TResult>(params string[] ids);
 
         /// <summary>
         ///     Loads the specified entities with the specified ids.
         /// </summary>
         /// <param name="ids">Enumerable of Ids that should be loaded</param>
-        Lazy<Task<TResult[]>> LoadAsync<TResult>(IEnumerable<string> ids);
+        Lazy<Task<Dictionary<string, TResult>>> LoadAsync<TResult>(IEnumerable<string> ids);
 
         /// <summary>
         ///     Loads the specified entity with the specified id.
@@ -229,7 +229,7 @@ namespace Raven.NewClient.Client.Document.Batches
         ///     <para>Load&lt;Post&gt;("posts/1", "posts/2", "posts/3");</para>
         ///     <para>Or whatever your conventions specify.</para>
         /// </summary>
-        Lazy<Task<TResult[]>> LoadAsync<TResult>(params ValueType[] ids);
+        Lazy<Task<Dictionary<string, TResult>>> LoadAsync<TResult>(params ValueType[] ids);
 
         /// <summary>
         ///     Loads the specified entities with the specified ids after applying
@@ -240,6 +240,6 @@ namespace Raven.NewClient.Client.Document.Batches
         ///     <para>Load&lt;Post&gt;("posts/1", "posts/2", "posts/3");</para>
         ///     <para>Or whatever your conventions specify.</para>
         /// </summary>
-        Lazy<Task<TResult[]>> LoadAsync<TResult>(IEnumerable<ValueType> ids);
+        Lazy<Task<Dictionary<string, TResult>>> LoadAsync<TResult>(IEnumerable<ValueType> ids);
     }
 }

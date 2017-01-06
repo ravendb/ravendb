@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.Basic.Entities;
+using FastTests.Server.Documents.Notifications;
 using Raven.Abstractions.Data;
 using Raven.Json.Linq;
-using Raven.Tests.Core.Utils.Entities;
-using Raven.Tests.Notifications;
 using Xunit;
 
 namespace SlowTests.Core.Subscriptions

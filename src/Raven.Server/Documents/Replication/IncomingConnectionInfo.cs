@@ -13,6 +13,8 @@ namespace Raven.Server.Documents.Replication
 
         public string SourceMachineName { get; set; }
 
+        public string RemoteIp { get; set; }
+
         public static IncomingConnectionInfo FromGetLatestEtag(ReplicationLatestEtagRequest message)
         {
             return new IncomingConnectionInfo

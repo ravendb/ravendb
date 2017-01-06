@@ -330,6 +330,17 @@ class viewModelBase {
         }
     }
 
+    protected isValid(context: KnockoutValidationGroup, showErrors = true): boolean {
+        if (context.isValid()) {
+            return true;
+        } else {
+            if (showErrors) {
+                context.errors.showAllMessages();
+            }
+            return false;
+        }
+    }
+
 }
 
 export = viewModelBase;

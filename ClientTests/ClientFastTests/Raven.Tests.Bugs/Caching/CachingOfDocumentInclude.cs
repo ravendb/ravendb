@@ -84,7 +84,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
             }
         }
 
-        [Fact(Skip = "TODO : Lazy Not Implemented")]
+        [Fact]
         public void Can_avoid_using_server_for_load_with_include_if_everything_is_in_session_cacheLazy()
         {
             using (var store = GetDocumentStore())

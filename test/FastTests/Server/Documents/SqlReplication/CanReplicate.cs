@@ -20,7 +20,6 @@ using Raven.Client.Document;
 using Raven.Database.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.SqlReplication;
-using Raven.Tests.Core;
 using Sparrow;
 using Sparrow.Platform;
 using Xunit;

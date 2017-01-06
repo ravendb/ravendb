@@ -303,10 +303,16 @@ namespace Voron.Impl
         private PagerStateCacheItem _lastScratchFileUsed = new PagerStateCacheItem(InvalidScratchFile, null);
         private bool _disposed;
 
-        public Page GetPage(long pageNumber)
+        public class PagerRef
+        {
+            public AbstractPager Pager;
+            public long PagerPageNumber;
+        }
+
+        public Page GetPage(long pageNumber, PagerRef pagerRef = null)
         {
             if (_disposed)
-                throw new ObjectDisposedException("Transaction");
+                ThrowObjectDisposed();
 
             // Check if we can hit the lowest level locality cache.
             Page p;
@@ -329,12 +335,12 @@ namespace Voron.Impl
                     }
                 }
 
-                p = _env.ScratchBufferPool.ReadPage(this, value.ScratchFileNumber, value.PositionInScratchBuffer, state);
+                p = _env.ScratchBufferPool.ReadPage(this, value.ScratchFileNumber, value.PositionInScratchBuffer, state, pagerRef);
                 Debug.Assert(p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from scratch", pageNumber, p.PageNumber));
             }
             else
             {
-                var pageFromJournal = _journal.ReadPage(this, pageNumber, _scratchPagerStates);
+                var pageFromJournal = _journal.ReadPage(this, pageNumber, _scratchPagerStates, pagerRef);
                 if (pageFromJournal != null)
                 {
                     p = pageFromJournal.Value;
@@ -344,6 +350,8 @@ namespace Voron.Impl
                 else
                 {
                     p = DataPager.ReadPage(this, pageNumber);
+                    if (pagerRef != null)
+                        pagerRef.Pager = DataPager;
                     Debug.Assert(p.PageNumber == pageNumber,
                         string.Format("Requested ReadOnly page #{0}. Got #{1} from data file", pageNumber, p.PageNumber));
                 }
@@ -352,6 +360,11 @@ namespace Voron.Impl
             TrackReadOnlyPage(p);
 
             return p;
+        }
+
+        private static void ThrowObjectDisposed()
+        {
+            throw new ObjectDisposedException("Transaction");
         }
 
         public Page AllocatePage(int numberOfPages, long? pageNumber = null, Page? previousPage = null, bool zeroPage = true)
@@ -488,6 +501,37 @@ namespace Voron.Impl
             }
         }
 
+        internal void ShrinkOverflowPage(long pageNumber, int newSize)
+        {
+            if (_disposed)
+                throw new ObjectDisposedException("Transaction");
+
+            PageFromScratchBuffer value;
+            if (_scratchPagesTable.TryGetValue(pageNumber, out value) == false)
+                throw new InvalidOperationException("The page " + pageNumber + " was not previous allocated in this transaction");
+
+            var page = _env.ScratchBufferPool.ReadPage(this, value.ScratchFileNumber, value.PositionInScratchBuffer);
+            if (page.IsOverflow == false || page.OverflowSize < newSize)
+                throw new InvalidOperationException("The page " + pageNumber +
+                                                    " was is not an overflow page greater than " + newSize);
+
+            var prevNumberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
+            page.OverflowSize = newSize;
+            var lowerNumberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(newSize);
+
+            if (prevNumberOfPages == lowerNumberOfPages)
+                return;
+
+            _transactionPages.Remove(value);
+            _transactionPages.Add(new PageFromScratchBuffer(value.ScratchFileNumber, value.PositionInScratchBuffer,
+                value.Size, lowerNumberOfPages));
+            _env.ScratchBufferPool.ReduceAllocation(value, lowerNumberOfPages);
+            _overflowPagesInTransaction -= value.NumberOfPages - lowerNumberOfPages;
+            for (int i = lowerNumberOfPages; i < prevNumberOfPages; i++)
+            {
+                FreePage(page.PageNumber + i);
+            }
+        }
 
         [Conditional("DEBUG")]
         public void VerifyNoDuplicateScratchPages()

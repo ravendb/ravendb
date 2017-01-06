@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.NewClient.Client;
 using Raven.NewClient.Client.Indexes;
 using Raven.Server.Documents.Indexes;
@@ -11,7 +12,7 @@ namespace NewClientTests.NewClient
     public class QueryAsync : RavenTestBase
     {
         [Fact]
-        public async void QueryAsync_Simple()
+        public async Task QueryAsync_Simple()
         {
             using (var store = GetDocumentStore())
             {
@@ -32,7 +33,7 @@ namespace NewClientTests.NewClient
 
         //[Fact(Skip = "ClearSortHints not implemented")]
         [Fact]
-        public async void QueryAsync_With_Where_Clause()
+        public async Task QueryAsync_With_Where_Clause()
         {
             using (var store = GetDocumentStore())
             {
@@ -58,7 +59,7 @@ namespace NewClientTests.NewClient
         }
 
         [Fact]
-        public async void QueryAsync_By_Index()
+        public async Task QueryAsync_By_Index()
         {
             using (var store = GetDocumentStore())
             {

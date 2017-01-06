@@ -25,7 +25,7 @@ namespace Voron.Global
 
         public static class Storage
         {
-            public const int PageSize = 4 * Size.Kilobyte;
+            public const int PageSize = 16 * Size.Kilobyte;
 
             static Storage()
             {

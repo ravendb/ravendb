@@ -14,7 +14,7 @@ class getSingleTransformerCommand extends commandBase {
         };
         const url = endpoints.databases.transformer.transformers + this.urlEncodeArgs(args);
         return this.query<Raven.Abstractions.Indexing.TransformerDefinition>(url, null, this.db,
-            (r: Raven.Abstractions.Indexing.TransformerDefinition[]) => r[0]);
+            (r: resultsDto<Raven.Abstractions.Indexing.TransformerDefinition>) => r.Results[0]);
     }
 }
 

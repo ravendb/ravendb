@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -11,11 +12,13 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.DependencyInjection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
 using Raven.Client.Data;
 using Raven.Client.Json;
 using Raven.Server.Alerts;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Exceptions;
 using Raven.Server.Routing;
@@ -197,13 +200,21 @@ namespace Raven.Server
             try
             {
                 var host = new Uri(Configuration.Core.ServerUrl).DnsSafeHost;
-                var port = 9090;
+                var port = 0;
                 if (string.IsNullOrWhiteSpace(Configuration.Core.TcpServerUrl) == false)
                 {
-                    var uri = new Uri(Configuration.Core.TcpServerUrl);
-                    host = uri.DnsSafeHost;
-                    if (uri.IsDefaultPort == false)
-                        port = uri.Port;
+                    short shortPort;
+                    if (short.TryParse(Configuration.Core.TcpServerUrl, out shortPort))
+                    {
+                        port = shortPort;
+                    }
+                    else
+                    {
+                        var uri = new Uri(Configuration.Core.TcpServerUrl);
+                        host = uri.DnsSafeHost;
+                        if (uri.IsDefaultPort == false)
+                            port = uri.Port;
+                    }
                 }
 
                 foreach (var ipAddress in await GetTcpListenAddresses(host))
@@ -213,9 +224,17 @@ namespace Raven.Server
 
                     var listener = new TcpListener(ipAddress, port);
                     status.Listeners.Add(listener);
-                    status.Port = port;
                     listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-                    listener.Start();
+                    try
+                    {
+                        listener.Start();
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new IOException("Unable to start tcp listener on " + ipAddress + " on port " + port, ex);
+                    }
+                    status.Port = ((IPEndPoint) listener.LocalEndpoint).Port;
+
                     for (int i = 0; i < 4; i++)
                     {
                         ListenToNewTcpConnection(listener);
@@ -384,6 +403,10 @@ namespace Raven.Server
                                 var documentReplicationLoader = tcp.DocumentDatabase.DocumentReplicationLoader;
                                 documentReplicationLoader.AcceptIncomingConnection(tcp);
                                 break;
+                            case TcpConnectionHeaderMessage.OperationTypes.TopologyDiscovery:
+                                var responder = new TopologyRequestHandler();
+                                responder.AcceptIncomingConnectionAndRespond(tcp);
+                                break;
                             default:
                                 throw new InvalidOperationException("Unknown operation for tcp " + header.Operation);
                         }
@@ -403,7 +426,8 @@ namespace Raven.Server
                                 tcp.Context.Write(errorWriter, new DynamicJsonValue
                                 {
                                     ["Type"] = "Error",
-                                    ["Exception"] = e.ToString()
+                                    ["Exception"] = e.ToString(),
+                                    ["Message"] = e.Message
                                 });
                             }
                         }

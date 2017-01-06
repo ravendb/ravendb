@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.Replication;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -15,9 +16,9 @@ namespace SlowTests.Issues
         {
             Parallel.For(0, 10, RavenTestHelper.DefaultParallelOptions, i =>
             {
-                using (var store = new FastTests.Server.Documents.Replication.ReplicationTombstoneTests())
+                using (var store = new ReplicationTombstoneTests())
                 {
-                    store.Two_tombstones_should_replicate_in_master_master().Wait();
+                    store.Two_tombstones_should_replicate_in_master_master();
                 }
             });
         }

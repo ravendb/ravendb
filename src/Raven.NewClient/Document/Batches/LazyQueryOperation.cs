@@ -1,112 +1,71 @@
 using System;
 using System.Collections.Specialized;
+using System.Text;
 using Raven.NewClient.Client.Shard;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
+using Raven.NewClient.Client.Json;
 using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Document.Batches
 {
     public class LazyQueryOperation<T> : ILazyOperation
     {
-        private readonly QueryOperation queryOperation;
+        private readonly QueryOperation _queryOperation;
         private readonly Action<QueryResult> afterQueryExecuted;
 
-        private NameValueCollection headers;
 
-        public LazyQueryOperation(QueryOperation queryOperation, Action<QueryResult> afterQueryExecuted, NameValueCollection headers)
+        public LazyQueryOperation(QueryOperation queryOperation, Action<QueryResult> afterQueryExecuted)
         {
-            this.queryOperation = queryOperation;
+            this._queryOperation = queryOperation;
             this.afterQueryExecuted = afterQueryExecuted;
-            this.headers = headers;
         }
 
         public GetRequest CreateRequest()
         {
-            throw new NotImplementedException();
-            /* var stringBuilder = new StringBuilder();
-             queryOperation.IndexQuery.AppendQueryString(stringBuilder);
+            var stringBuilder = new StringBuilder();
+            _queryOperation.IndexQuery.AppendQueryString(stringBuilder);
 
-             var request = new GetRequest
-             {
-                 Url = "/queries/" + queryOperation.IndexName,
-                 Query = stringBuilder.ToString()
-             };
-             if (headers != null)
-             {
-                 foreach (var headerKey in headers.Keys)
-                 {
-                     request.Headers[headerKey.ToString()] = headers[headerKey.ToString()];
-                 }
-             }
-             return request;*/
+            var request = new GetRequest
+            {
+                Url = "/queries/" + _queryOperation.IndexName,
+                Query = stringBuilder.ToString()
+            };
+
+            return request;
         }
 
         public object Result { get; set; }
-
         public QueryResult QueryResult { get; set; }
-
         public bool RequiresRetry { get; set; }
-        public void HandleResponses(BlittableJsonReaderObject[] responses, ShardStrategy shardStrategy)
-        {
-            throw new NotImplementedException();
-            /* var count = responses.Count(x => x.Status == 404);
-             if (count != 0)
-             {
-                 throw new InvalidOperationException("There is no index named: " + queryOperation.IndexName + " in " + count + " shards");
-             }
-
-             var list = responses
-                 .Select(response => SerializationHelper.ToQueryResult((RavenJObject)response.Result, response.GetEtagHeader(), response.Headers[Constants.Headers.RequestTime], -1))
-                 .ToList();
-
-             var queryResult = shardStrategy.MergeQueryResults(queryOperation.IndexQuery, list);
-
-             queryOperation.EnsureIsAcceptable(queryResult);
-
-             if (afterQueryExecuted != null)
-                 afterQueryExecuted(queryResult);
-             Result = queryOperation.Complete<T>();
-             QueryResult = queryResult;*/
-        }
 
         public void HandleResponse(BlittableJsonReaderObject response)
         {
-            throw new NotImplementedException();
-            /*if (response.ForceRetry)
+            bool forceRetry;
+            response.TryGet("ForceRetry", out forceRetry);
+
+            if (forceRetry)
             {
                 Result = null;
                 RequiresRetry = true;
                 return;
             }
+            BlittableJsonReaderObject result;
+            response.TryGet("Result", out result);
+            var queryResult = JsonDeserializationClient.QueryResult(result);
 
-            if (response.Status == 404)
-                throw new InvalidOperationException("There is no index named: " + queryOperation.IndexName + Environment.NewLine + response.Result);
-            var json = (RavenJObject)response.Result;
-            var queryResult = SerializationHelper.ToQueryResult(json, response.GetEtagHeader(), response.Headers[Constants.Headers.RequestTime], -1);
-            HandleResponse(queryResult);*/
+            HandleResponse(queryResult);
         }
 
         private void HandleResponse(QueryResult queryResult)
         {
-            throw new NotImplementedException();
-            /*queryOperation.EnsureIsAcceptable(queryResult);
+            _queryOperation.EnsureIsAcceptableAndSaveResult(queryResult);
 
-            if (afterQueryExecuted != null)
-                afterQueryExecuted(queryResult);
-            Result = queryOperation.Complete<T>();
-            QueryResult = queryResult;*/
+            afterQueryExecuted?.Invoke(queryResult);
+            Result = _queryOperation.Complete<T>();
+            QueryResult = queryResult;
         }
 
-        public IDisposable EnterContext()
-        {
-            return queryOperation.EnterQueryContext();
-        }
-
-        public void SetHeaders(NameValueCollection theHeaders)
-        {
-            headers = theHeaders;
-        }
     }
 }

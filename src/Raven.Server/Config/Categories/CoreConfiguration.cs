@@ -40,9 +40,9 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Raven/ServerUrl")]
         public string ServerUrl { get; set; }
 
-        [Description("The URLs which the server should listen to. By default we listen to localhost:8081")]
+        [Description("If not specified, will use the server url host and random port. If it just a number specify, will use that port. Otherwise, will bind to the host & port specified")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Raven/ServerUrl/TCP")]
+        [ConfigurationEntry("Raven/ServerUrl/Tcp")]
         public string TcpServerUrl { get; set; }
 
         [Description("Whatever the database should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost. This is mostly useful for testing.")]

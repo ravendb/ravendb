@@ -47,45 +47,5 @@ namespace Raven.NewClient.Client.Document.Batches
             var result = (RavenJObject)response.Result;
             Result = result.JsonDeserialization<FacetedQueryResult>();*/
         }
-
-        public void HandleResponses(BlittableJsonReaderObject[] responses, ShardStrategy shardStrategy)
-        {
-            throw new NotImplementedException();
-
-            /*var result = new FacetedQueryResult();
-
-            foreach (var response in responses.Select(response => (RavenJObject)response.Result))
-            {
-                var facet = response.JsonDeserialization<FacetedQueryResult>();
-                foreach (var facetResult in facet.Results)
-                {
-                    if (!result.Results.ContainsKey(facetResult.Key))
-                        result.Results[facetResult.Key] = new FacetResult();
-
-                    var newFacetResult = result.Results[facetResult.Key];
-                    foreach (var facetValue in facetResult.Value.Values)
-                    {
-                        var existingFacetValueRange = newFacetResult.Values.Find((x) => x.Range == facetValue.Range);
-                        if (existingFacetValueRange != null)
-                            existingFacetValueRange.Hits += facetValue.Hits;
-                        else
-                            newFacetResult.Values.Add(new FacetValue() { Hits = facetValue.Hits, Range = facetValue.Range });
-                    }
-
-                    foreach (var facetTerm in facetResult.Value.RemainingTerms)
-                    {
-                        if (!newFacetResult.RemainingTerms.Contains(facetTerm))
-                            newFacetResult.RemainingTerms.Add(facetTerm);
-                    }
-                }
-            }
-
-            Result = result;*/
-        }
-
-        public IDisposable EnterContext()
-        {
-            return null;
-        }
     }
 }

@@ -9,7 +9,7 @@ describe(viewUnderTest, () => {
 
         utils.mockCommand('commands/database/transformers/getTransformersCommand', () => []);
 
-        return utils.mockActiveDatabase(dbCtr => new dbCtr("default"))
+        return utils.mockActiveDatabase()
             .then(() => utils.runViewmodelTest(viewUnderTest, {}));
     });
 
@@ -17,7 +17,7 @@ describe(viewUnderTest, () => {
 
         utils.mockCommand('commands/database/transformers/getTransformersCommand', () => getSampleData());
 
-        return utils.mockActiveDatabase(dbCtr => new dbCtr("default"))
+        return utils.mockActiveDatabase()
             .then(() => utils.runViewmodelTest(viewUnderTest, {}));
     });
 

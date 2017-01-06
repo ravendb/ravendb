@@ -13,8 +13,10 @@ class database extends resource {
     static readonly type = "database";
     static readonly qualifier = "db";
 
-    constructor(name: string, isAdminCurrentTenant: boolean, disabled: boolean, bundles: string[]) {
-        super(name, isAdminCurrentTenant, disabled, bundles);
+    constructor(dbInfo: Raven.Client.Data.DatabaseInfo) {
+        super(dbInfo);
+
+        this.updateUsing(dbInfo);
         /* TODO
         this.isLicensed = ko.pureComputed(() => {
             if (!!license.licenseStatus() && license.licenseStatus().IsCommercial) {
@@ -69,7 +71,7 @@ class database extends resource {
         return database.type;
     }
 
-    updateUsing(incomingCopy: this): void {
+    updateUsing(incomingCopy: Raven.Client.Data.DatabaseInfo): void {
         super.updateUsing(incomingCopy);
 
         //TODO: assign other props

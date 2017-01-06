@@ -13,7 +13,7 @@ class getAllDocumentsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<pagedResultSet<any>> {
+    execute(): JQueryPromise<pagedResultSet<document>> {
 
         // Getting all documents requires a 2 step process:
         // 1. Fetch /collections/stats to get the total doc count.
@@ -21,9 +21,9 @@ class getAllDocumentsCommand extends commandBase {
 
         var docsTask = this.fetchDocs();
         var totalResultsTask = this.fetchTotalResultCount();
-        var doneTask = $.Deferred();
+        var doneTask = $.Deferred<pagedResultSet<document>>();
         var combinedTask = $.when<any>(docsTask, totalResultsTask);
-        combinedTask.done((docsResult: document[], resultsCount: number) => doneTask.resolve(new pagedResultSet(docsResult, resultsCount)));
+        combinedTask.done(([docsResult]: [document[]], resultsCount: number) => doneTask.resolve(new pagedResultSet(docsResult, resultsCount)));
         combinedTask.fail(xhr => doneTask.reject(xhr));
         return doneTask;
     }
@@ -34,8 +34,10 @@ class getAllDocumentsCommand extends commandBase {
             pageSize: this.take
         };
 
-        var docSelector = (docs: documentDto[]) => docs.map(d => new document(d));
-        return this.query("/docs", args, this.ownerDatabase, docSelector);//TODO: use endpoints
+        const docSelector = (docs: resultsDto<documentDto>) => docs.Results.map(d => new document(d));
+        const url = endpoints.databases.document.docs;
+
+        return this.query(url, args, this.ownerDatabase, docSelector);
     }
 
     private fetchTotalResultCount(): JQueryPromise<number> {

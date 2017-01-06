@@ -100,9 +100,9 @@ namespace NewClientTests.NewClient.FastTests.Patching
                 using (var x = store.OpenSession())
                 {
                     var users = x.Load<User>(Enumerable.Range(1, 100).Select(i => "users/" + i));
-                    Assert.Equal(100, users.Length);
+                    Assert.Equal(100, users.Count);
 
-                    foreach (var user in users)
+                    foreach (var user in users.Values)
                     {
                         Assert.NotNull(user.Name);
                     }

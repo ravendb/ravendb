@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
 using Sparrow;
 using Sparrow.Logging;
@@ -166,7 +167,7 @@ namespace Raven.Server.Documents.Transformers
         {
             var transformer = GetTransformer(name);
             if (transformer == null)
-                throw new InvalidOperationException("There is no transformer with name: " + name);
+                TransformerDoesNotExistsException.ThrowFor(name);
 
             DeleteTransformerInternal(transformer.TransformerId);
         }
@@ -190,7 +191,7 @@ namespace Raven.Server.Documents.Transformers
         {
             Transformer transformer;
             if (_transformers.TryRemoveById(id, out transformer) == false)
-                throw new InvalidOperationException("There is no transformer with id: " + id);
+                TransformerDoesNotExistsException.ThrowFor(id);
 
             transformer.Delete();
             var tombstoneEtag = _documentDatabase.IndexMetadataPersistence.OnTransformerDeleted(transformer);

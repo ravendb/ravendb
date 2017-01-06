@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Util;
 using Sparrow.Json;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.NewClient.Client.Blittable
 {
@@ -31,6 +30,9 @@ namespace Raven.NewClient.Client.Blittable
             serializer.Serialize(writer, entity);
             writer.FinalizeDocument();
             var reader = writer.CreateReader();
+
+            RemoveIdentityProperty(reader, entity.GetType(), _session.Conventions);
+
             return reader;
         }
 
@@ -42,7 +44,22 @@ namespace Raven.NewClient.Client.Blittable
             serializer.Serialize(writer, entity);
             writer.FinalizeDocument();
             var reader = writer.CreateReader();
+
+            RemoveIdentityProperty(reader, entity.GetType(), documentConvention);
+
             return reader;
+        }
+
+        private void RemoveIdentityProperty(BlittableJsonReaderObject document, Type entityType, DocumentConvention conventions)
+        {
+            var identityProperty = conventions.GetIdentityProperty(entityType);
+            if (identityProperty != null)
+            {
+                if (document.Modifications == null)
+                    document.Modifications = new DynamicJsonValue(document);
+
+                document.Modifications.Remove(identityProperty.Name);
+            }
         }
 
         /// <summary>

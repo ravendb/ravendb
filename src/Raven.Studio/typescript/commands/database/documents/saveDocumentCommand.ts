@@ -11,6 +11,7 @@ class saveDocumentCommand extends commandBase {
 
     execute(): JQueryPromise<saveDocumentResponseDto> {
         if (this.reportSaveProgress) {
+            //TODO: use spinners instead
             this.reportInfo("Saving " + this.id + "...");
         }
 

@@ -32,6 +32,12 @@ namespace Raven.Server.Config.Categories
         [LegacyConfigurationEntry("Raven/Replication/ReplicationRequestTimeout")]
         public TimeSetting ReplicationRequestTimeout { get; set; }
 
+        [Description("Number of seconds before replication topology discovery requests will timeout")]
+        [DefaultValue(60)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Raven/Replication/ReplicationTopologyDiscoveryTimeoutInSec")]
+        public TimeSetting ReplicationTopologyDiscoveryTimeout { get; set; }
+
         [Description("Force us to buffer replication requests (useful if using windows auth under certain scenarios)")]
         [DefaultValue(false)]
         [ConfigurationEntry("Raven/Replication/ForceReplicationRequestBuffering")]

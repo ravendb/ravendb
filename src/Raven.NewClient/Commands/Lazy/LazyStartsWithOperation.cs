@@ -94,38 +94,5 @@ namespace Raven.NewClient.Client.Commands.Lazy
                 .Select(sessionOperations.TrackEntity<T>)
                 .ToArray();*/
         }
-
-        public void HandleResponses(BlittableJsonReaderObject[] responses, ShardStrategy shardStrategy)
-        {
-            throw new NotImplementedException();
-            /*if (responses.Any(x => x.RequestHasErrors()))
-            {
-                Result = null;
-                RequiresRetry = true;
-                return;
-            }
-
-            var jsonDocuments = new List<JsonDocument>();
-            foreach (var response in responses)
-            {
-                var documents = SerializationHelper.RavenJObjectsToJsonDocuments(((RavenJArray)response.Result).OfType<RavenJObject>()).ToArray();
-                var duplicate = documents.FirstOrDefault(document => jsonDocuments.Any(x => x.Key == document.Key));
-                if (duplicate != null)
-                {
-                    throw new InvalidOperationException("Found document with id: " + duplicate.Key + " on more than a single shard, which is not allowed. Document keys have to be unique cluster-wide.");
-                }
-
-                jsonDocuments.AddRange(documents);
-            }
-
-            Result = jsonDocuments
-                .Select(sessionOperations.TrackEntity<T>)
-                .ToArray();*/
-        }
-
-        public IDisposable EnterContext()
-        {
-            return null;
-        }
     }
 }

@@ -1,13 +1,11 @@
 ﻿using System.Threading.Tasks;
-
+using FastTests.Server.Basic.Entities;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Data.Queries;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
-using Raven.Tests.Core.Utils.Entities;
-
 using Xunit;
 
 namespace FastTests.Client.Indexing

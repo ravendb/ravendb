@@ -43,6 +43,7 @@ var paths = {
         //'wwwroot/lib/jquery-ui/themes/base-wo-comments/all.css',
         //'wwwroot/lib/jquery.dynatree/dist/skin/ui.dynatree.css',
         'wwwroot/lib/animate.css/animate.css',
+        'wwwroot/lib/toastr/toastr.css',
         'wwwroot/Content/css/styles.css',
         'wwwroot/Content/css/legacy_styles.css'
     ],

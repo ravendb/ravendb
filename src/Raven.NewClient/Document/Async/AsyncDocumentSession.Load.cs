@@ -42,7 +42,7 @@ namespace Raven.NewClient.Client.Document.Async
         /// 
         /// Or whatever your conventions specify.
         /// </remarks>
-        public Task<T[]> LoadAsync<T>(CancellationToken token = default(CancellationToken), params ValueType[] ids)
+        public Task<Dictionary<string, T>> LoadAsync<T>(CancellationToken token = default(CancellationToken), params ValueType[] ids)
         {
             var documentKeys =
                 ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
@@ -61,7 +61,7 @@ namespace Raven.NewClient.Client.Document.Async
         /// 
         /// Or whatever your conventions specify.
         /// </remarks>
-        public Task<T[]> LoadAsync<T>(IEnumerable<ValueType> ids)
+        public Task<Dictionary<string, T>> LoadAsync<T>(IEnumerable<ValueType> ids)
         {
             return LoadAsync<T>(ids, new CancellationToken());
         }
@@ -78,7 +78,7 @@ namespace Raven.NewClient.Client.Document.Async
         /// 
         /// Or whatever your conventions specify.
         /// </remarks>
-        public Task<T[]> LoadAsync<T>(IEnumerable<ValueType> ids, CancellationToken token = default(CancellationToken))
+        public Task<Dictionary<string, T>> LoadAsync<T>(IEnumerable<ValueType> ids, CancellationToken token = default(CancellationToken))
         {
             var documentKeys =
                 ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
@@ -172,7 +172,7 @@ namespace Raven.NewClient.Client.Document.Async
             return loadOeration.GetDocument<T>();
         }
 
-        public async Task<T[]> LoadAsync<T>(IEnumerable<string> ids,
+        public async Task<Dictionary<string, T>> LoadAsync<T>(IEnumerable<string> ids,
             CancellationToken token = default(CancellationToken))
         {
             var loadOeration = new LoadOperation(this);
@@ -188,7 +188,7 @@ namespace Raven.NewClient.Client.Document.Async
             return loadOeration.GetDocuments<T>();
         }
 
-        public async Task<T[]> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes,
+        public async Task<Dictionary<string, T>> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes,
             CancellationToken token = new CancellationToken())
         {
             var loadOeration = new LoadOperation(this);

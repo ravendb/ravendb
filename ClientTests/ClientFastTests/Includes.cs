@@ -79,8 +79,7 @@ namespace NewClientTests.NewClient
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
                     var customers = session.Load<Customer>(orders.Select(x => x.CustomerId));
-                    Assert.Equal(3, customers.Length);
-                    Assert.Equal(2, customers.Distinct().Count());
+                    Assert.Equal(2, customers.Count);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
             }

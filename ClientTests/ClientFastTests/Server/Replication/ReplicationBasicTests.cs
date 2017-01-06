@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using Raven.Client.Linq;
 using Xunit;
 
 namespace NewClientTests.NewClient.Server.Replication
@@ -166,10 +169,7 @@ namespace NewClientTests.NewClient.Server.Replication
                         "users/4"
                     });
 
-                    Assert.Contains(docs, d => d.Name.Equals("John Dow"));
-                    Assert.Contains(docs, d => d.Name.Equals("Jane Dow"));
-                    Assert.Contains(docs, d => d.Name.Equals("Jack Dow"));
-                    Assert.Contains(docs, d => d.Name.Equals("Jessy Dow"));
+                    Assert.True(docs.All(key => new[] { "John Dow", "Jane Dow", "Jack Dow", "Jessy Dow" }.Contains(key.Value.Name)));
                 }
 
             }
@@ -240,10 +240,7 @@ namespace NewClientTests.NewClient.Server.Replication
                         "users/4"
                     });
 
-                    Assert.Contains(docs, d => d.Name.Equals("John Dow"));
-                    Assert.Contains(docs, d => d.Name.Equals("Jane Dow"));
-                    Assert.Contains(docs, d => d.Name.Equals("Jack Dow"));
-                    Assert.Contains(docs, d => d.Name.Equals("Jessy Dow"));
+                    Assert.True(docs.All(key => new[] { "John Dow", "Jane Dow", "Jack Dow", "Jessy Dow" }.Contains(key.Value.Name)));
                 }
 
                 using (var session = store2.OpenSession())
@@ -256,10 +253,7 @@ namespace NewClientTests.NewClient.Server.Replication
                         "users/4"
                     });
 
-                    Assert.Contains(docs, d => d.Name.Equals("John Dow"));
-                    Assert.Contains(docs, d => d.Name.Equals("Jane Dow"));
-                    Assert.Contains(docs, d => d.Name.Equals("Jack Dow"));
-                    Assert.Contains(docs, d => d.Name.Equals("Jessy Dow"));
+                    Assert.True(docs.All(key => new[] {"John Dow", "Jane Dow", "Jack Dow", "Jessy Dow"}.Contains(key.Value.Name)));
                 }
 
             }
@@ -330,7 +324,8 @@ namespace NewClientTests.NewClient.Server.Replication
 
                 using (var session = store2.OpenSession())
                 {
-                    Assert.NotNull(session.Load<User>("users/1"));
+                    var user = session.Load<User>("users/1");
+                    Assert.NotNull(user);
                 }
 
                 DeleteReplication(store1, store2);
@@ -380,7 +375,7 @@ namespace NewClientTests.NewClient.Server.Replication
                     Assert.NotNull(session.Load<User>("users/1"));
                 }
 
-                using (var session = store2.OpenSession())
+                using (var session = store3.OpenSession())
                 {
                     Assert.NotNull(session.Load<User>("users/1"));
                 }
@@ -409,20 +404,21 @@ namespace NewClientTests.NewClient.Server.Replication
                 }
 
                 EnableOrDisableReplication(store1, store2);
+
                 using (var session = store1.OpenSession())
                 {
                     session.Advanced.WaitForReplicationAfterSaveChanges();
                     session.Store(new User
                     {
-                        Name = "John Snow",
+                        Name = "Idan Haim",
                         Age = 30
-                    }, "users/1");
+                    }, "users/3");
                     session.SaveChanges();
                 }
 
                 using (var session = store2.OpenSession())
                 {
-                    Assert.NotNull(session.Load<User>("users/1"));
+                    Assert.NotNull(session.Load<User>("users/3"));
                 }
             }
         }

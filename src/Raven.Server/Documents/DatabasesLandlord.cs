@@ -8,17 +8,13 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
-using Raven.Abstractions.Logging;
-using Raven.Client.Connection;
-using Raven.Client.Document;
 using Raven.Client.Json;
 using Raven.Server.Config;
-using Raven.Server.Json;
+using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
-using Sparrow.Logging;
 
 namespace Raven.Server.Documents
 {
@@ -70,7 +66,15 @@ namespace Raven.Server.Documents
                 var task = new Task<DocumentDatabase>(() => CreateDocumentsStorage(databaseName, config));
                 var database = ResourcesStoresCache.GetOrAdd(databaseName, task);
                 if (database == task)
+                {
+                    task.ContinueWith(completedTask =>
+                    {
+                        if (completedTask.IsCompleted)
+                            ServerStore.TrackChange("Loaded", Constants.Database.Prefix + databaseName);
+                    });
+
                     task.Start();
+                }
 
                 if (database.IsFaulted && database.Exception != null)
                 {
@@ -84,7 +88,6 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                database.ContinueWith(_ => ServerStore.TrackChange("Loaded", Constants.Database.Prefix + databaseName));
 
                 return database;
             }
@@ -112,7 +115,7 @@ namespace Raven.Server.Documents
                 var sp = Stopwatch.StartNew();
                 var documentDatabase = new DocumentDatabase(config.DatabaseName, config, ServerStore);
                 documentDatabase.Initialize();
-                DeleteDatabaseCachedInfo(documentDatabase,ServerStore);
+                DeleteDatabaseCachedInfo(documentDatabase, ServerStore);
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Started database {config.DatabaseName} in {sp.ElapsedMilliseconds:#,#;;0}ms");
 
@@ -122,7 +125,7 @@ namespace Raven.Server.Documents
                 LastRecentlyUsed.AddOrUpdate(databaseName, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
                 return documentDatabase;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Failed to start database {config.DatabaseName}", e);
@@ -221,11 +224,11 @@ namespace Raven.Server.Documents
 
                 var dataDirectoryKey = RavenConfiguration.GetKey(x => x.Core.DataDirectory);
                 string dataDirectory;
-                if (document.Settings.TryGetValue(dataDirectoryKey,out dataDirectory) == false || dataDirectory == null)
-                    throw new InvalidOperationException($"Could not find {dataDirectoryKey}");
+                if (document.Settings.TryGetValue(dataDirectoryKey, out dataDirectory) == false || dataDirectory == null)
+                    throw new DatabaseNotFoundException($"Could not find {dataDirectoryKey}");
 
                 if (document.Disabled && !ignoreDisabledDatabase)
-                    throw new InvalidOperationException("The database has been disabled.");
+                    throw new DatabaseDisabledException("The database has been disabled.");
 
                 return document;
             }
@@ -234,6 +237,31 @@ namespace Raven.Server.Documents
         public DatabasesLandlord(ServerStore serverStore) : base(serverStore)
         {
 
+        }
+
+        public override DateTime LastWork(DocumentDatabase resource)
+        {
+            // this allow us to increase the time large databases will be held in memory
+            // because they are more expensive to unload & reload. Using this method, we'll
+            // add 0.5 ms per each KB, or roughly half a second of idle time per MB.
+            // A DB with 1GB will remain live another 16 minutes after being idle. Given the default idle time
+            // that means that we'll keep it alive for about 30 minutes without shutting down.
+            // A database with 50GB will take roughly 8 hours of idle time to shut down.
+
+            var envs = resource.GetAllStoragesEnvironment();
+
+            long dbSize = 0;
+            var maxLastWork = DateTime.MinValue;
+
+            foreach (var env in envs)
+            {
+                dbSize += env.Environment.Stats().AllocatedDataFileSizeInBytes;
+
+                if (env.Environment.LastWorkTime > maxLastWork)
+                    maxLastWork = env.Environment.LastWorkTime;
+            }
+
+            return maxLastWork + TimeSpan.FromMilliseconds(dbSize / 1024L);
         }
     }
 }

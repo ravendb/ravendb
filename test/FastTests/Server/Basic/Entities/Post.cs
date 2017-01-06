@@ -6,7 +6,7 @@
 
 using System;
 
-namespace Raven.Tests.Core.Utils.Entities
+namespace FastTests.Server.Basic.Entities
 {
     public class Post
     {

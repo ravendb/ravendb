@@ -11,6 +11,7 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -37,7 +38,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
     public class SmugglerHandler : DatabaseRequestHandler
     {
 
-        [RavenAction("/databases/*/smuggler/validateOptions", "POST")]
+        [RavenAction("/databases/*/smuggler/validate-options", "POST")]
         public async Task PostValidateOptions()
         {
             DocumentsOperationContext context;
@@ -71,13 +72,15 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 {
                     throw new InvalidOperationException("Incorrect transform script", e);
                 }
+
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             }
         }
 
         [RavenAction("/databases/*/smuggler/export", "POST")]
         public async Task PostExport()
         {
-            DocumentsOperationContext context;            
+            DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
@@ -97,7 +100,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     fileName = $"Dump of {context.DocumentDatabase.Name} {SystemTime.UtcNow.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)}";
                 }
 
-                var contentDisposition = "attachment; filename=" + Uri.EscapeDataString(fileName)+ ".ravendbdump";
+                var contentDisposition = "attachment; filename=" + Uri.EscapeDataString(fileName) + ".ravendbdump";
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
 
                 if (operationId.HasValue)
@@ -143,7 +146,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         {
             try
             {
-                return exporter.Export(context, ResponseBodyStream(), onProgress); 
+                return exporter.Export(context, ResponseBodyStream(), onProgress);
             }
             finally
             {
@@ -220,7 +223,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                         using (var stream = new GZipStream(file, CompressionMode.Decompress))
                         {
                             var importer = new SmugglerImporter(Database);
-                            var result =  await importer.Import(context, stream);
+                            var result = await importer.Import(context, stream);
                             results.Enqueue(result);
                         }
                     }
@@ -305,7 +308,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             {
                 if (HttpContext.Request.HasFormContentType == false)
                 {
-                    HttpContext.Response.StatusCode = 400; // Bad request
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest; // Bad request
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         context.Write(writer, new DynamicJsonValue
@@ -335,7 +338,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                     MultipartRequestHelper.MultipartBoundaryLengthLimit);
                                 var reader = new MultipartReader(boundary, HttpContext.Request.Body);
                                 DatabaseSmugglerOptions smugglerOptions = null;
-                            
+
                                 while (true)
                                 {
                                     var section = await reader.ReadNextSectionAsync().ConfigureAwait(false);
@@ -379,9 +382,10 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                             {
                                 result.Message = $"Error occured during export. Exception: {e.Message}";
                                 result.Exception = e.ToString();
+                                throw;
                             }
 
-                            return (IOperationResult) result;
+                            return (IOperationResult)result;
                         });
                     }, operationId, token).ConfigureAwait(false);
 
@@ -435,9 +439,5 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 context.Write(writer, json);
             }
         }
-    }
-
-    internal class DocumentsOperationContextout
-    {
     }
 }

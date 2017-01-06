@@ -1,12 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Http;
+using Raven.Client.Replication.Messages;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -34,12 +39,71 @@ namespace Raven.Server.Documents.Handlers
                 }
                 //here we need to construct the topology from the replication document 
                 var replicationDocument = JsonDeserializationServer.ReplicationDocument(configurationDocument.Data);
-            
                 var nodes = GenerateNodesFromReplicationDocument(replicationDocument);
-                
                 GenerateTopology(context, writer, nodes, configurationDocument.Etag);
             }
             return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/topology/full", "GET")]
+        public async Task GetFullTopology()
+        {
+            var sp = Stopwatch.StartNew();
+            DocumentsOperationContext context;
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            {
+                ReplicationDocument replicationDocument;
+                using (context.OpenReadTransaction())
+                {
+                    var configurationDocument = Database.DocumentsStorage.Get(context, Constants.Replication.DocumentReplicationConfiguration);
+                    if (configurationDocument == null)
+                    {
+                        WriteEmptyTopology(context);
+                        return;
+                    }
+
+                    replicationDocument = JsonDeserializationServer.ReplicationDocument(configurationDocument.Data);
+                    if (replicationDocument.Destinations?.Count == 0)
+                    {
+                        WriteEmptyTopology(context);
+                        return;
+                    }
+                }
+                var replicationDiscovertTimeout = Database.Configuration
+                    .Replication
+                    .ReplicationTopologyDiscoveryTimeout
+                    .AsTimeSpan;
+                using (var clusterTopologyExplorer = new ClusterTopologyExplorer(
+                    Database,
+                    new List<string>
+                    {
+                        Database.DbId.ToString()
+                    },
+                    replicationDiscovertTimeout,
+                    replicationDocument.Destinations))
+                {
+                    var topology = await clusterTopologyExplorer.DiscoverTopologyAsync();
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        var json = topology.ToJson();
+                        json["Duration"] = sp.Elapsed.ToString();
+                        context.Write(writer, json);
+                        writer.Flush();
+                    }
+                }
+            }
+        }
+
+        private void WriteEmptyTopology(JsonOperationContext context)
+        {
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                context.Write(writer, new FullTopologyInfo
+                {
+                    DatabaseId = Database.DbId.ToString()
+                }.ToJson());
+                writer.Flush();
+            }
         }
 
         private void GenerateTopology(DocumentsOperationContext context, BlittableJsonTextWriter writer, IEnumerable<DynamicJsonValue> nodes = null, long etag = -1)

@@ -9,7 +9,7 @@ describe(viewUnderTest, () => {
     it('should bind', () => {
         utils.mockCommand('commands/alerts/getGlobalAlertsCommand', () => []);
 
-        return utils.mockActiveDatabase(dbCtr => new dbCtr("default"))
+        return utils.mockActiveDatabase()
             .then(() => utils.runViewmodelTest(viewUnderTest, {}));
     });
 });

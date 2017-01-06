@@ -39,7 +39,8 @@ namespace SlowTests.Tests.Indexes
 
             indexDefinition.Name = "Index1";
             var index = IndexAndTransformerCompiler.Compile(indexDefinition);
-            var map = index.Maps.Values.First();
+  
+            var map = index.Maps.Values.First().First();
 
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
@@ -63,7 +64,7 @@ namespace SlowTests.Tests.Indexes
                     .Select(x => IndexField.Create(x, new IndexFieldOptions(), null))
                     .ToList();
 
-                var converter = new AnonymousLuceneDocumentConverter(fields);
+                var converter = new AnonymousLuceneDocumentConverter(fields, false);
                 foreach (var result in results)
                 {
                     using (var lazyStringValue = context.GetLazyString("docs/1"))

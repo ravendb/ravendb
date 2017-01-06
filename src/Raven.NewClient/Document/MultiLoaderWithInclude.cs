@@ -66,7 +66,7 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         /// <param name="ids">The ids.</param>
         /// <returns></returns>
-        public T[] Load(params string[] ids)
+        public Dictionary<string, T> Load(params string[] ids)
         {
             return session.LoadInternal<T>(ids, includes.ToArray());
         }
@@ -76,7 +76,7 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         /// <param name="ids">The ids.</param>
         /// <returns></returns>
-        public T[] Load(IEnumerable<string> ids)
+        public Dictionary<string, T> Load(IEnumerable<string> ids)
         {
             return session.LoadInternal<T>(ids.ToArray(), includes.ToArray());
         }
@@ -87,7 +87,7 @@ namespace Raven.NewClient.Client.Document
         /// <param name="id">The id.</param>
         public T Load(string id)
         {
-            return session.LoadInternal<T>(new[] { id }, includes.ToArray()).FirstOrDefault();
+            return session.LoadInternal<T>(new[] { id }, includes.ToArray()).Values.FirstOrDefault();
         }
 
         /// <summary>
@@ -120,7 +120,7 @@ namespace Raven.NewClient.Client.Document
         /// 
         /// Or whatever your conventions specify.
         /// </remarks>
-        public T[] Load(params ValueType[] ids)
+        public Dictionary<string, T> Load(params ValueType[] ids)
         {
             var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
             return Load(documentKeys);
@@ -138,7 +138,7 @@ namespace Raven.NewClient.Client.Document
         /// 
         /// Or whatever your conventions specify.
         /// </remarks>
-        public T[] Load(IEnumerable<ValueType> ids)
+        public Dictionary<string, T> Load(IEnumerable<ValueType> ids)
         {
             var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
             return Load(documentKeys);
@@ -158,7 +158,7 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         /// <typeparam name="TResult"></typeparam>
         /// <param name="ids">The ids.</param>
-        public TResult[] Load<TResult>(params string[] ids)
+        public Dictionary<string, TResult> Load<TResult>(params string[] ids)
         {
             return session.LoadInternal<TResult>(ids, includes.ToArray());
         }
@@ -168,7 +168,7 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         /// <typeparam name="TResult"></typeparam>
         /// <param name="ids">The ids.</param>
-        public TResult[] Load<TResult>(IEnumerable<string> ids)
+        public Dictionary<string, TResult> Load<TResult>(IEnumerable<string> ids)
         {
             return session.LoadInternal<TResult>(ids.ToArray(), includes.ToArray());
         }
@@ -180,7 +180,7 @@ namespace Raven.NewClient.Client.Document
         /// <param name="id">The id.</param>
         public TResult Load<TResult>(string id)
         {
-            return Load<TResult>(new[] { id }).FirstOrDefault();
+            return Load<TResult>(new[] { id }).Values.FirstOrDefault();
         }
 
         /// <summary>
@@ -201,13 +201,13 @@ namespace Raven.NewClient.Client.Document
             return Load<TResult>(documentKey);
         }
 
-        public TResult[] Load<TResult>(params ValueType[] ids)
+        public Dictionary<string, TResult> Load<TResult>(params ValueType[] ids)
         {
             var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
             return Load<TResult>(documentKeys);
         }
 
-        public TResult[] Load<TResult>(IEnumerable<ValueType> ids)
+        public Dictionary<string, TResult> Load<TResult>(IEnumerable<ValueType> ids)
         {
             var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
             return Load<TResult>(documentKeys);
@@ -218,8 +218,7 @@ namespace Raven.NewClient.Client.Document
         {
             var transformer = new TTransformer().TransformerName;
             var configuration = new RavenLoadConfiguration();
-            if (configure != null)
-                configure(configuration);
+            configure?.Invoke(configuration);
 
             return session.LoadInternal<TResult>(new[] { id }, includes.ToArray(), transformer, configuration.TransformerParameters).FirstOrDefault();
         }
@@ -229,8 +228,7 @@ namespace Raven.NewClient.Client.Document
         {
             var transformer = new TTransformer().TransformerName;
             var configuration = new RavenLoadConfiguration();
-            if (configure != null)
-                configure(configuration);
+            configure?.Invoke(configuration);
 
             return session.LoadInternal<TResult>(ids.ToArray(), includes.ToArray(), transformer, configuration.TransformerParameters);
         }

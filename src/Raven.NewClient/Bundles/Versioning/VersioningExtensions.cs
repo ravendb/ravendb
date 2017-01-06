@@ -1,6 +1,9 @@
+using System;
 using System.Threading.Tasks;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Commands;
+using Raven.NewClient.Extensions;
 using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Bundles.Versioning
@@ -24,10 +27,11 @@ namespace Raven.NewClient.Client.Bundles.Versioning
             var res = new T[results.Length];
             for (int i = 0; i < results.Length; i++)
             {
-                var obj = (BlittableJsonReaderObject) results[i];
-                object key;
-                obj.TryGetMember("Id", out key);
-                res[i] = (T) session.ConvertToEntity(typeof(T), key.ToString(), obj);
+                var document = (BlittableJsonReaderObject) results[i];
+                var metadata = document.GetMetadata();
+                var id = metadata.GetId();
+
+                res[i] = (T) session.ConvertToEntity(typeof(T), id, document);
             }
             return res;
         }

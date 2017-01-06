@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -30,7 +31,7 @@ namespace Raven.Server.Documents
         private readonly ConcurrentDictionary<long, SubscriptionState> _subscriptionStates = new ConcurrentDictionary<long, SubscriptionState>();
         private readonly TableSchema _subscriptionsSchema = new TableSchema();
         private readonly StorageEnvironment _environment;
-        private readonly Logger _logger; 
+        private readonly Logger _logger;
 
         private readonly UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool;
 
@@ -39,14 +40,14 @@ namespace Raven.Server.Documents
             var options = db.Configuration.Core.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly(Path.Combine(db.Configuration.Core.DataDirectory, "Subscriptions"))
                 : StorageEnvironmentOptions.ForPath(Path.Combine(db.Configuration.Core.DataDirectory, "Subscriptions"));
-            
+
 
             options.SchemaVersion = 1;
-            options.TransactionsMode=TransactionsMode.Lazy;
+            options.TransactionsMode = TransactionsMode.Lazy;
             _environment = new StorageEnvironment(options);
             var databaseName = db.Name;
             _unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling("Subscriptions", databaseName);
-            
+
             _logger = LoggingSource.Instance.GetLogger<SubscriptionStorage>(databaseName);
             _subscriptionsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
@@ -77,9 +78,8 @@ namespace Raven.Server.Documents
             }
         }
 
-        public unsafe long CreateSubscription(BlittableJsonReaderObject criteria, long ackEtag=0)
+        public unsafe long CreateSubscription(BlittableJsonReaderObject criteria, long ackEtag = 0)
         {
-
             // Validate that this can be properly parsed into a criteria object
             // and doing that without holding the tx lock
             JsonDeserializationServer.SubscriptionCriteria(criteria);
@@ -91,8 +91,8 @@ namespace Raven.Server.Documents
                 var subscriptionsTree = tx.ReadTree(SubscriptionSchema.IdsTree);
                 var id = subscriptionsTree.Increment(SubscriptionSchema.Id, 1);
 
-                long timeOfSendingLastBatch = 0;
-                long timeOfLastClientActivity = 0;
+                const long timeOfSendingLastBatch = 0;
+                const long timeOfLastClientActivity = 0;
 
                 var bigEndianId = Bits.SwapBytes((ulong)id);
 
@@ -119,7 +119,6 @@ namespace Raven.Server.Documents
             return subscriptionState;
         }
 
-
         public unsafe void AcknowledgeBatchProcessed(long id, long lastEtag)
         {
             var transactionPersistentContext = new TransactionPersistentContext();
@@ -127,11 +126,11 @@ namespace Raven.Server.Documents
             {
                 var config = GetSubscriptionConfig(id, tx);
 
-                var subscriptionId = Bits.SwapBytes((ulong)id); ;
+                var subscriptionId = Bits.SwapBytes((ulong)id);
 
                 int oldCriteriaSize;
                 var now = SystemTime.UtcNow.Ticks;
-                
+
                 var tvb = new TableValueBuilder
                 {
                     {(byte*)&subscriptionId, sizeof (long)},
@@ -142,19 +141,13 @@ namespace Raven.Server.Documents
                 var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
                 TableValueReader existingSubscription;
                 Slice subscriptionSlice;
-                using (Slice.External(tx.Allocator, (byte*) &subscriptionId, sizeof(long), out subscriptionSlice))
+                using (Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(long), out subscriptionSlice))
                 {
                     existingSubscription = table.ReadByKey(subscriptionSlice);
                 }
                 table.Update(existingSubscription.Id, tvb);
                 tx.Commit();
             }
-        }
-
-        public void AssertSubscriptionExists(long id)
-        {
-            if (_subscriptionStates.ContainsKey(id) == false)
-                throw new SubscriptionClosedException("There is no open subscription with id: " + id);
         }
 
         public unsafe void GetCriteriaAndEtag(long id, DocumentsOperationContext context, out SubscriptionCriteria criteria, out long startEtag)
@@ -170,24 +163,6 @@ namespace Raven.Server.Documents
                 criteria = JsonDeserializationServer.SubscriptionCriteria(criteriaBlittable);
                 startEtag = *(long*)config.Read(SubscriptionSchema.SubscriptionTable.AckEtagIndex, out criteriaSize);
             }
-        }
-
-        private unsafe TableValueReader GetSubscriptionConfig(long id, Transaction tx)
-        {
-            var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
-            var subscriptionId = Bits.SwapBytes((ulong)id);
-
-            TableValueReader config;
-            Slice subsriptionSlice;
-            using(Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(long),out subsriptionSlice))
-            {
-                config = table.ReadByKey(subsriptionSlice);
-            }
-
-            if (config == null)
-                throw new SubscriptionDoesNotExistException(
-                    "There is no subscription configuration for specified identifier (id: " + id + ")");
-            return config;
         }
 
         public unsafe void AssertSubscriptionIdExists(long id)
@@ -206,7 +181,7 @@ namespace Raven.Server.Documents
                             "There is no subscription configuration for specified identifier (id: " + id + ")");
                 }
             }
-               
+
         }
 
 
@@ -242,41 +217,182 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void DropSubscriptionConnection(long subscriptionId)
+        public bool DropSubscriptionConnection(long subscriptionId)
         {
             SubscriptionState subscriptionState;
-            if (_subscriptionStates.TryGetValue(subscriptionId, out subscriptionState))
-            {
-                subscriptionState.Connection.ConnectionException = new SubscriptionClosedException("Closed by request");
-                subscriptionState.RegisterRejectedConnection(subscriptionState.Connection,
-                    new SubscriptionClosedException("Closed by request"));
-                subscriptionState.Connection.CancellationTokenSource.Cancel();
-            }
+            if (_subscriptionStates.TryGetValue(subscriptionId, out subscriptionState) == false)
+                return false;
+
+            subscriptionState.Connection.ConnectionException = new SubscriptionClosedException("Closed by request");
+            subscriptionState.RegisterRejectedConnection(subscriptionState.Connection, new SubscriptionClosedException("Closed by request"));
+            subscriptionState.Connection.CancellationTokenSource.Cancel();
+
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Subscription with id {subscriptionId} connection was dropped");
+
+            return true;
         }
 
-        private unsafe DynamicJsonValue ExtractSubscriptionConfigValue(TableValueReader tvr, JsonOperationContext context)
+        public IEnumerable<DynamicJsonValue> GetAllSubscriptions(DocumentsOperationContext context, bool history, int start, int take)
+        {
+            var transactionPersistentContext = new TransactionPersistentContext();
+            using (var tx = _environment.ReadTransaction(transactionPersistentContext))
+            {
+                var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
+
+                foreach (var subscriptionTvr in table.SeekByPrimaryKey(Slices.BeforeAllKeys))
+                {
+                    if (start > 0)
+                    {
+                        start--;
+                        continue;
+                    }
+
+                    if (take-- <= 0)
+                        yield break;
+
+                    yield return GetSubscriptionInternal(context, subscriptionTvr, history);
+                }
+            }
+        }
+
+        private void SetSubscriptionConnectionStats(SubscriptionConnection connection, DynamicJsonValue config)
+        {
+            config["ClientUri"] = connection.TcpConnection.TcpClient.Client.RemoteEndPoint.ToString();
+            config["ConnectedAt"] = connection.Stats.ConnectedAt;
+            config["ConnectionException"] = connection.ConnectionException;
+
+            config["LastMessageSentAt"] = connection.Stats.LastMessageSentAt;
+            config["LastAckReceivedAt"] = connection.Stats.LastAckReceivedAt;
+
+            config["DocsRate"] = connection.Stats.DocsRate.CreateMeterData();
+            config["BytesRate"] = connection.Stats.BytesRate.CreateMeterData();
+            config["AckRate"] = connection.Stats.AckRate.CreateMeterData();
+        }
+
+        public IEnumerable<DynamicJsonValue> GetAllRunningSubscriptions(DocumentsOperationContext context, bool history, int start, int take)
+        {
+            var transactionPersistentContext = new TransactionPersistentContext();
+            using (var tx = _environment.ReadTransaction(transactionPersistentContext))
+            {
+                foreach (var kvp in _subscriptionStates)
+                {
+                    var subscriptionState = kvp.Value;
+                    var subscriptionId = kvp.Key;
+
+                    if (subscriptionState?.Connection == null)
+                        continue;
+
+                    if (start > 0)
+                    {
+                        start--;
+                        continue;
+                    }
+
+                    if (take-- <= 0)
+                        yield break;
+
+                    yield return GetRunningSubscriptionInternal(context, history, subscriptionId, tx, subscriptionState);
+                }
+            }
+        }
+
+        public unsafe DynamicJsonValue GetSubscription(DocumentsOperationContext context, long id, bool history)
+        {
+            var transactionPersistentContext = new TransactionPersistentContext();
+            using (var tx = _environment.ReadTransaction(transactionPersistentContext))
+            {
+                var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
+
+                Slice subscriptionSlice;
+                using (Slice.External(tx.Allocator, (byte*)&id, sizeof(long), out subscriptionSlice))
+                {
+                    var tvr = table.ReadByKey(subscriptionSlice);
+                    if (tvr == null)
+                        return null;
+
+                    return GetSubscriptionInternal(context, tvr, history);
+                }
+            }
+        }
+
+        public DynamicJsonValue GetRunningSubscription(DocumentsOperationContext context, long id, bool history)
+        {
+            SubscriptionState subscriptionState;
+            if (_subscriptionStates.TryGetValue(id, out subscriptionState) == false)
+                return null;
+
+            if (subscriptionState.Connection == null)
+                return null;
+
+            var transactionPersistentContext = new TransactionPersistentContext();
+            using (var tx = _environment.ReadTransaction(transactionPersistentContext))
+            {
+                return GetRunningSubscriptionInternal(context, history, id, tx, subscriptionState);
+            }
+        }
+
+        public DynamicJsonValue GetRunningSubscriptionConnectionHistory(JsonOperationContext context, long subscriptionId)
+        {
+            SubscriptionState subscriptionState;
+            if (!_subscriptionStates.TryGetValue(subscriptionId, out subscriptionState))
+                return null;
+
+            var subscriptionConnection = subscriptionState.Connection;
+            if (subscriptionConnection == null)
+                return null;
+
+            var transactionPersistentContext = new TransactionPersistentContext();
+            using (var tx = _environment.ReadTransaction(transactionPersistentContext))
+            {
+                long _;
+                var subscriptionData = ExtractSubscriptionConfigValue(GetSubscriptionConfig(subscriptionId, tx), context, out _);
+                SetSubscriptionStateData(subscriptionState, subscriptionData);
+                SetSubscriptionHistory(subscriptionState, subscriptionData);
+
+                return subscriptionData;
+            }
+        }
+
+        public long GetRunningCount()
+        {
+            return _subscriptionStates.Count(x => x.Value.Connection != null);
+        }
+
+
+        public StorageEnvironment Environment()
+        {
+            return _environment;
+        }
+
+        public long GetAllSubscriptionsCount()
+        {
+            var transactionPersistentContext = new TransactionPersistentContext();
+            using (var tx = _environment.ReadTransaction(transactionPersistentContext))
+            {
+                var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
+                return table.NumberOfEntries;
+            }
+        }
+
+        private static unsafe DynamicJsonValue ExtractSubscriptionConfigValue(TableValueReader tvr, JsonOperationContext context, out long id)
         {
             int size;
-            var subscriptionId =
-                Bits.SwapBytes(*(long*)tvr.Read(SubscriptionSchema.SubscriptionTable.IdIndex, out size));
-            var ackEtag =
-                *(long*)tvr.Read(SubscriptionSchema.SubscriptionTable.AckEtagIndex, out size);
-            var timeOfReceivingLastAck =
-                *(long*)tvr.Read(SubscriptionSchema.SubscriptionTable.TimeOfReceivingLastAck, out size);
+            id = Bits.SwapBytes(*(long*)tvr.Read(SubscriptionSchema.SubscriptionTable.IdIndex, out size));
+            var ackEtag = *(long*)tvr.Read(SubscriptionSchema.SubscriptionTable.AckEtagIndex, out size);
+            var timeOfReceivingLastAck = *(long*)tvr.Read(SubscriptionSchema.SubscriptionTable.TimeOfReceivingLastAck, out size);
             var ptr = tvr.Read(SubscriptionSchema.SubscriptionTable.CriteriaIndex, out size);
             var data = context.GetMemory(size);
-            Memory.Copy((byte*) data.Address, ptr, size);
-            var criteria = new BlittableJsonReaderObject((byte*)data.Address, size, context);
-            
+            Memory.Copy(data.Address, ptr, size);
+            var criteria = new BlittableJsonReaderObject(data.Address, size, context);
+
             return new DynamicJsonValue
-                {
-                    ["SubscriptionId"] = subscriptionId,
-                    ["Criteria"] = criteria,
-                    ["AckEtag"] = ackEtag,
-                    ["TimeOfReceivingLastAck"] = new DateTime(timeOfReceivingLastAck).ToString(CultureInfo.InvariantCulture),
-                };
+            {
+                ["SubscriptionId"] = id,
+                ["Criteria"] = criteria,
+                ["AckEtag"] = ackEtag,
+                ["TimeOfReceivingLastAck"] = new DateTime(timeOfReceivingLastAck).ToString(CultureInfo.InvariantCulture),
+            };
         }
 
         private void SetSubscriptionStateData(SubscriptionState subscriptionState, DynamicJsonValue subscriptionData)
@@ -312,140 +428,52 @@ namespace Raven.Server.Documents
 
         }
 
-        public unsafe void GetAllSubscriptions(BlittableJsonTextWriter writer,
-            DocumentsOperationContext context, int start, int take)
+        private DynamicJsonValue GetRunningSubscriptionInternal(JsonOperationContext context, bool history, long id, Transaction tx, SubscriptionState subscriptionState)
         {
-            var transactionPersistentContext = new TransactionPersistentContext();
-            using (var tx = _environment.WriteTransaction(transactionPersistentContext))
-            {
-                var subscriptions = new List<DynamicJsonValue>();
-                var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
-                var seen = 0;
-                var taken = 0;
-                foreach (var subscriptionTvr in table.SeekByPrimaryKey(Slices.BeforeAllKeys))
-                {
-                    if (seen < start)
-                    {
-                        seen++;
-                        continue;
-                    }
+            long subscriptionId;
+            var subscriptionData = ExtractSubscriptionConfigValue(GetSubscriptionConfig(id, tx), context, out subscriptionId);
+            Debug.Assert(id == subscriptionId);
 
-                    var subscriptionData = ExtractSubscriptionConfigValue(subscriptionTvr,context);
-                    subscriptions.Add(subscriptionData);
-                    int size;
-                    var subscriptionId = 
-                        Bits.SwapBytes(*(long*)subscriptionTvr.Read(SubscriptionSchema.SubscriptionTable.IdIndex, out size));
-                    SubscriptionState subscriptionState = null;
+            SetSubscriptionStateData(subscriptionState, subscriptionData);
 
-                    if (_subscriptionStates.TryGetValue(subscriptionId, out subscriptionState))
-                    {
-                        SetSubscriptionStateData(subscriptionState, subscriptionData);
-                    }
-
-                    taken++;
-
-                    if (taken > take)
-                        break;
-                }
-
-                writer.WriteStartObject();
-                writer.WritePropertyName("Subscriptions");
-                context.Write(writer, new DynamicJsonArray(subscriptions));
-                writer.WriteEndObject();
-            }
-        }
-
-        private void SetSubscriptionConnectionStats(SubscriptionConnection connection, DynamicJsonValue config)
-        {
-            config["ClientUri"] = connection.TcpConnection.TcpClient.Client.RemoteEndPoint.ToString();
-            config["ConnectedAt"] = connection.Stats.ConnectedAt;
-            config["ConnectionException"] = connection.ConnectionException;
-
-            config["LastMessageSentAt"] = connection.Stats.LastMessageSentAt;
-            config["LastAckReceivedAt"] = connection.Stats.LastAckReceivedAt;
-
-            config["DocsRate"] = connection.Stats.DocsRate.CreateMeterData();
-            config["BytesRate"] = connection.Stats.BytesRate.CreateMeterData();
-            config["AckRate"] = connection.Stats.AckRate.CreateMeterData();
-        }
-
-        public void GetRunningSusbscriptions(BlittableJsonTextWriter writer,
-           DocumentsOperationContext context, int start, int take)
-        {
-            var transactionPersistentContext = new TransactionPersistentContext();
-            using (var tx = _environment.ReadTransaction(transactionPersistentContext))
-            {
-                var connections = new List<DynamicJsonValue>(take);
-                var skipped = 0;
-                var taken = 0;
-                foreach (var kvp in _subscriptionStates)
-                {
-                    var subscriptionState = kvp.Value;
-                    var subscriptionId = kvp.Key;
-
-                    if (taken > take)
-                    {
-                        break;
-                    }
-
-                    if (subscriptionState?.Connection == null)
-                        continue;
-
-                    if (skipped < start)
-                    {
-                        skipped++;
-                        continue;
-                    }
-
-                    var subscriptionData = ExtractSubscriptionConfigValue(GetSubscriptionConfig(subscriptionId, tx), context);
-                    SetSubscriptionStateData(subscriptionState, subscriptionData);
-                    connections.Add(subscriptionData);
-                    taken++;
-                }
-
-                context.Write(writer, new DynamicJsonArray(connections));
-                writer.Flush();
-            }
-        }
-
-        public DynamicJsonValue GetRunningSubscriptionConnectionHistory(JsonOperationContext context, long subscriptionId)
-        {
-            SubscriptionState subscriptionState;
-            if (!_subscriptionStates.TryGetValue(subscriptionId, out subscriptionState)) return null;
-
-            var subscriptionConnection = subscriptionState.Connection;
-            if (subscriptionConnection == null) return null;
-
-            var transactionPersistentContext = new TransactionPersistentContext();
-            using (var tx = _environment.ReadTransaction(transactionPersistentContext))
-            {
-                var subscriptionData =
-                    ExtractSubscriptionConfigValue(GetSubscriptionConfig(subscriptionId, tx), context);
-                SetSubscriptionStateData(subscriptionState, subscriptionData);
+            if (history)
                 SetSubscriptionHistory(subscriptionState, subscriptionData);
-
-                return subscriptionData;
-            }
-        }
-        
-        public long GetRunningCount()
-        {
-            return _subscriptionStates.Count(x=>x.Value.Connection!=null);
+            return subscriptionData;
         }
 
+        private DynamicJsonValue GetSubscriptionInternal(JsonOperationContext context, TableValueReader tvr, bool history)
+        {
+            long id;
+            var subscriptionData = ExtractSubscriptionConfigValue(tvr, context, out id);
 
-        public StorageEnvironment Environment()
-        {
-            return _environment;
-        }
-        public long GetAllSubscriptionsCount()
-        {
-            var transactionPersistentContext = new TransactionPersistentContext();
-            using (var tx = _environment.ReadTransaction(transactionPersistentContext))
+            SubscriptionState subscriptionState;
+            if (_subscriptionStates.TryGetValue(id, out subscriptionState))
             {
-                var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
-                return table.NumberOfEntries;
+                SetSubscriptionStateData(subscriptionState, subscriptionData);
+
+                if (history)
+                    SetSubscriptionHistory(subscriptionState, subscriptionData);
             }
+
+            return subscriptionData;
+        }
+
+        private unsafe TableValueReader GetSubscriptionConfig(long id, Transaction tx)
+        {
+            var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
+            var subscriptionId = Bits.SwapBytes((ulong)id);
+
+            TableValueReader config;
+            Slice subscriptionSlice;
+            using (Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(long), out subscriptionSlice))
+            {
+                config = table.ReadByKey(subscriptionSlice);
+            }
+
+            if (config == null)
+                throw new SubscriptionDoesNotExistException(
+                    "There is no subscription configuration for specified identifier (id: " + id + ")");
+            return config;
         }
     }
 

@@ -37,6 +37,7 @@ namespace Raven.Server.Documents.Replication
         private Thread _sendingThread;
 
         internal long _lastSentDocumentEtag;
+        public long LastAcceptedDocumentEtag;
         internal long _lastSentIndexOrTransformerEtag;
 
         internal DateTime _lastDocumentSentTime;
@@ -55,6 +56,10 @@ namespace Raven.Server.Documents.Replication
         internal TransactionOperationContext _configurationContext;
 
         internal CancellationToken CancellationToken => _cts.Token;
+
+        internal string DestinationDbId;
+
+        public long LastHeartbeatTicks;
 
         public event Action<OutgoingReplicationHandler, Exception> Failed;
 
@@ -154,10 +159,10 @@ namespace Raven.Server.Documents.Replication
                                     var response = HandleServerResponse();
                                     if (response.Item1 == ReplicationMessageReply.ReplyType.Error)
                                     {
-                                        if(response.Item2.Contains("DatabaseDoesNotExistsException"))
-                                            throw new DatabaseDoesNotExistsException();
+                                        if(response.Item2.Exception.Contains("DatabaseDoesNotExistsException"))
+                                            throw new DatabaseDoesNotExistsException(response.Item2.Message, new InvalidOperationException(response.Item2.Exception));
 
-                                        throw new InvalidOperationException(response.Item2);
+                                        throw new InvalidOperationException(response.Item2.Exception);
                                     }                                    
                                 }
                             }
@@ -320,6 +325,7 @@ namespace Raven.Server.Documents.Replication
         {
             _lastSentDocumentEtag = Math.Max(_lastSentDocumentEtag, replicationBatchReply.LastEtagAccepted);
             _lastSentIndexOrTransformerEtag = Math.Max(_lastSentIndexOrTransformerEtag, replicationBatchReply.LastIndexTransformerEtagAccepted);
+            LastAcceptedDocumentEtag = replicationBatchReply.LastEtagAccepted;
 
             _destinationLastKnownDocumentChangeVectorAsString = replicationBatchReply.DocumentsChangeVector.Format();
             _destinationLastKnownIndexOrTransformerChangeVectorAsString =
@@ -396,7 +402,7 @@ namespace Raven.Server.Documents.Replication
         }
 
         private readonly AsyncManualResetEvent _neverSetEvent = new AsyncManualResetEvent();
-        internal Tuple<ReplicationMessageReply.ReplyType,string> HandleServerResponse()
+        internal Tuple<ReplicationMessageReply.ReplyType, ReplicationMessageReply> HandleServerResponse()
         {
             while (true)
             {
@@ -406,10 +412,12 @@ namespace Raven.Server.Documents.Replication
                     if(replicationBatchReply == null)
                         continue;
 
+                    LastHeartbeatTicks = _database.Time.GetUtcNow().Ticks;
+
                     return Tuple.Create(replicationBatchReply.Type,
                         replicationBatchReply.Type == ReplicationMessageReply.ReplyType.Error
-                            ? replicationBatchReply.Exception
-                            : string.Empty);
+                            ? replicationBatchReply
+                            : null);
                 }
             }
         }
@@ -420,6 +428,8 @@ namespace Raven.Server.Documents.Replication
             var replicationBatchReply = JsonDeserializationServer.ReplicationMessageReply(replicationBatchReplyMessage);
             if (allowNotify == false && replicationBatchReply.MessageType == "Notify")
                 return null;
+
+            DestinationDbId = replicationBatchReply.DatabaseId;
 
             switch (replicationBatchReply.Type)
             {

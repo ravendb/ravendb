@@ -1,9 +1,9 @@
 ﻿using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.Documents.Notifications;
 using Raven.Abstractions.Data;
 using Raven.Client.Document;
-using Raven.Tests.Notifications;
 using Xunit;
 
 namespace SlowTests.Tests

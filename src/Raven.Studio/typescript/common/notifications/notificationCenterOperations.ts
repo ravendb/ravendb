@@ -1,6 +1,7 @@
 ﻿import resource = require("models/resources/resource");
 import database = require("models/resources/database");
 
+import EVENTS = require("common/constants/events");
 import watchedOperation = require("common/notifications/watchedOperation");
 import notificationCenterPersistanceStorage = require("common/notifications/notificationCenterPersistanceStorage");
 import messagePublisher = require("common/messagePublisher");
@@ -9,7 +10,7 @@ import changesContext = require("common/changesContext");
 
 import getOperationCommand = require("commands/operations/getOperationCommand");
 import dismissOperationCommand = require("commands/operations/dismissOperationCommand");
-import getRunningTasksCommand = require("commands/operations/getRunningTasksCommand");
+import getOperationsCommand = require("commands/operations/getOperationsCommand");
 import killOperationCommand = require("commands/operations/killOperationCommand");
 
 class notificationCenterOperations {
@@ -21,7 +22,7 @@ class notificationCenterOperations {
     constructor() {
         this.storage = new notificationCenterPersistanceStorage(this.serverTime);
         this.activeChangesApi = changesContext.default.currentResourceChangesApi;
-        ko.postbox.subscribe("ChangesApiReconnected", () => this.onReconnect());
+        ko.postbox.subscribe(EVENTS.ChangesApi.Reconnected, () => this.onReconnect());
         $(window).bind("storage", (event) => this.onStorageEvent(event));
     }
 
@@ -61,7 +62,7 @@ class notificationCenterOperations {
 
         const operationIds = this.storage.loadOperations(changes.getResource());
 
-        new getRunningTasksCommand(rs as database)
+        new getOperationsCommand(rs as database)
             .execute()
             .done((operations: Raven.Server.Documents.PendingOperation[]) => {
                 operationIds.forEach(operationId => {

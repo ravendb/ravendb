@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Indexes;
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
     public class RavenDB_72 : RavenTestBase
     {
         [Fact]
-        public async void CanWork()
+        public async Task CanWork()
         {
             using (var store = GetDocumentStore())
             {
@@ -46,7 +47,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async void CanWork2()
+        public async Task CanWork2()
         {
             using (var store = GetDocumentStore())
             {

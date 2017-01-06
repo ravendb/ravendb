@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Threading.Tasks;
 using Xunit;
 
-namespace FastTests.Server.Documents.Replication
+namespace FastTests.Server.Replication
 {
     public class ReplicationBasicTests : ReplicationTestsBase
     {

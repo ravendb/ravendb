@@ -3,6 +3,7 @@
 import resource = require("models/resources/resource");
 import changeSubscription = require("common/changeSubscription");
 import changesCallback = require("common/changesCallback");
+import EVENTS = require("common/constants/events");
 
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
 
@@ -17,6 +18,7 @@ class adminWatchClient extends abstractWebSocketClient {
         super(null);
     }
 
+    private allReconnectHandlers = ko.observableArray<changesCallback<void>>();
     private allAlertsHandlers = ko.observableArray<changesCallback<globalAlertNotification>>();
     private allItemsHandlers = ko.observableArray<changesCallback<globalAlertNotification>>();
 
@@ -35,6 +37,8 @@ class adminWatchClient extends abstractWebSocketClient {
     protected onOpen() {
         super.onOpen();
         this.connectToWebSocketTask.resolve();
+
+        this.fireEvents<void>(this.allReconnectHandlers(), undefined, () => true);
     }
 
     protected onMessage(e: any) {
@@ -68,6 +72,16 @@ class adminWatchClient extends abstractWebSocketClient {
             default:
                 console.error("Unhandled Changes API notification type: " + eventDto.Id);
         }
+    }
+
+    watchReconnect(onChange: () => void) {
+        const callback = new changesCallback<void>(onChange);
+
+        this.allReconnectHandlers.push(callback);
+
+        return new changeSubscription(() => {
+            this.allReconnectHandlers.remove(callback);
+        });
     }
 
     watchAlerts(onChange: (e: globalAlertNotification) => void) {
