@@ -2,7 +2,6 @@ import app = require("durandal/app");
 import router = require("plugins/router");
 
 import document = require("models/database/documents/document");
-import database = require("models/resources/database");
 import documentMetadata = require("models/database/documents/documentMetadata");
 import collection = require("models/database/documents/collection");
 import querySort = require("models/database/query/querySort");
