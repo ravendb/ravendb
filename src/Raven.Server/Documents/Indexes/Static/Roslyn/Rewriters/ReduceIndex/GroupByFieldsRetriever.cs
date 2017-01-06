@@ -1,11 +1,128 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Raven.Client.Exceptions;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
 {
+    public abstract class MethodsInGroupByValidator : CSharpSyntaxWalker
+    {
+        protected static string[] ForbiddenMethods = { "Count", "Average" };
+
+        protected Dictionary<string, string> SearchPatterns = new Dictionary<string, string>();
+
+        public static MethodsInGroupByValidator MethodSyntaxValidator => new MethodsInGroupByValidatorMethodSyntax();
+        public static MethodsInGroupByValidator QuerySyntaxValidator => new MethodsInGroupByValidatorQuerySyntax();
+
+        public void Start(ExpressionSyntax node)
+        {
+            Visit(node.SyntaxTree.GetRoot());
+        }
+    }
+
+    public class MethodsInGroupByValidatorMethodSyntax : MethodsInGroupByValidator
+    {
+        private ParameterSyntax _root;
+
+        public void SetSearchPatterns()
+        {
+            SearchPatterns.Clear();
+            foreach (var searchTerm in ForbiddenMethods)
+            {
+                SearchPatterns.Add(searchTerm, $"Enumerable.{searchTerm}({_root.Identifier})");
+            }
+        }
+
+        public override void VisitInvocationExpression(InvocationExpressionSyntax node)
+        {
+            var exp = node.Expression as MemberAccessExpressionSyntax;
+
+            if (exp != null && exp.ToString().EndsWith("Select"))
+            {// find GroupBy(...).Select(root => .. )
+                var group = exp.Expression as InvocationExpressionSyntax;
+                if (group != null && group.Expression.ToString().EndsWith("GroupBy"))
+                {
+                    // we should be in the right place
+                    var myLambda = node.ArgumentList.Arguments.First().Expression as SimpleLambdaExpressionSyntax;
+                    if (myLambda == null)
+                    {
+                        throw new IndexCompilationException("Select expression must contain parameter(s)");
+                    }
+                    _root = myLambda.Parameter;
+                    SetSearchPatterns();
+
+                    var candidates = myLambda.DescendantNodes()
+                        .Where(n => n.IsKind(SyntaxKind.InvocationExpression)).ToList();
+
+                    foreach (var syntaxNode in candidates)
+                    {
+                        var str = syntaxNode.ToFullString();
+                        foreach (var searchPattern in SearchPatterns)
+                        {
+                            if (str.Contains(searchPattern.Value))
+                            {
+                                throw new IndexCompilationException($"Reduce cannot contain {searchPattern.Key}() methods in grouping.");
+                            }
+                        }
+                    }
+                    return;
+                }
+            }
+            base.VisitInvocationExpression(node);
+        }
+    }
+
+    public class MethodsInGroupByValidatorQuerySyntax : MethodsInGroupByValidator
+    {
+        private SyntaxToken _root;
+
+        public override void VisitQueryContinuation(QueryContinuationSyntax node)
+        {
+            if (_root == default(SyntaxToken) && node.IntoKeyword.ToString().Contains("into"))
+            {
+                _root = node.Identifier; // get the into object
+                SetSearchPatterns();
+            }
+            base.VisitQueryContinuation(node);
+        }
+
+        public override void VisitFromClause(FromClauseSyntax node)
+        {
+            if (_root != default(SyntaxToken))
+            {
+                base.VisitFromClause(node);
+            }
+            // else skip the from clause
+        }
+
+        public void SetSearchPatterns()
+        {
+            SearchPatterns.Clear();
+            foreach (var searchTerm in ForbiddenMethods)
+            {
+                SearchPatterns.Add(searchTerm, $"{_root}.{searchTerm}()");
+            }
+        }
+
+        public override void VisitInvocationExpression(InvocationExpressionSyntax node)
+        {
+            if (_root != default(SyntaxToken))
+            {
+                foreach (var searchTerm in SearchPatterns)
+                {
+                    if (node.ToString().Contains(searchTerm.Value))
+                    {
+                        throw new IndexCompilationException($"Reduce cannot contain {searchTerm.Key}() methods in grouping.");
+                    }
+                }
+            }
+            base.VisitInvocationExpression(node);
+        }
+    }
+
     public abstract class GroupByFieldsRetriever : CSharpSyntaxRewriter
     {
         public string[] GroupByFields { get; protected set; }
@@ -49,10 +166,10 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
             public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
             {
                 var expression = node.Expression.ToString();
-                if (expression.StartsWith("results.GroupBy") == false)
+                if (expression.StartsWith("results.") == false || expression.EndsWith(".GroupBy") == false)
                     return base.VisitInvocationExpression(node);
 
-                var groupByLambda = node.Expression.DescendantNodes(x => true)
+                var groupByLambda = node.ArgumentList.DescendantNodes(x => true)
                     .FirstOrDefault(x => x.IsKind(SyntaxKind.SimpleLambdaExpression)) as SimpleLambdaExpressionSyntax;
 
                 if (groupByLambda == null)

@@ -3,31 +3,30 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
+using System.Linq;
+using FastTests;
 using Raven.Abstractions.Exceptions;
-using Raven.Tests.Common;
+using Raven.Client.Exceptions;
+using Raven.Client.Indexes;
+using Raven.Client.Indexing;
+using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
-    using System;
-    using System.ComponentModel.Composition.Hosting;
-    using System.Linq;
-    using Raven.Abstractions.Indexing;
-    using Raven.Client.Indexes;
-    using Xunit;
-
     /// <remarks>
     /// Similar to RavenDB_783
     /// </remarks>
-    public class RavenDB_644 : RavenTest
+    public class RavenDB_644 : RavenTestBase
     {
-        public class Item
+        private class Item
         {
             public int Year { get; set; }
 
             public int Number { get; set; }
         }
 
-        public class Record
+        private class Record
         {
             public int Year { get; set; }
 
@@ -36,7 +35,7 @@ namespace Raven.Tests.Issues
             public int Count { get; set; }
         }
 
-        public class Record2
+        private class Record2
         {
             public int Year { get; set; }
 
@@ -45,13 +44,13 @@ namespace Raven.Tests.Issues
             public Subrecord Count { get; set; }
         }
 
-        public class Subrecord
+        private class Subrecord
         {
             public int Number { get; set; }
             public int Count { get; set; }
         }
 
-        public class Index : AbstractIndexCreationTask<Item, Record>
+        private class Index : AbstractIndexCreationTask<Item, Record>
         {
             public Index()
             {
@@ -75,7 +74,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class FancyIndex : AbstractIndexCreationTask<Item, Record>
+        private class FancyIndex : AbstractIndexCreationTask<Item, Record>
         {
             public FancyIndex()
             {
@@ -100,7 +99,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        public class ValidFancyIndex : AbstractIndexCreationTask<Item, Record2>
+        private class ValidFancyIndex : AbstractIndexCreationTask<Item, Record2>
         {
             public ValidFancyIndex()
             {
@@ -129,13 +128,15 @@ namespace Raven.Tests.Issues
             }
         }
 
+
+
         [Fact]
         public void IndexDefinitionBuilderShouldThrow()
         {
             var exception = Assert.Throws<IndexCompilationException>(
                 () =>
                 {
-                    using (var store = NewDocumentStore())
+                    using (var store = GetDocumentStore())
                     {
                         new Index().Execute(store);
                     }
@@ -147,31 +148,49 @@ namespace Raven.Tests.Issues
         [Fact]
         public void ServerShouldThrow()
         {
-            var exception = Assert.Throws<AggregateException>(
+            var exception = Assert.Throws<IndexCompilationException>(
                 () =>
                 {
-                    using (var store = NewDocumentStore())
+                    using (var store = GetDocumentStore())
                     {
-                        var container = new CompositionContainer(new TypeCatalog(typeof(Index), typeof(Record)));
-                        IndexCreation.CreateIndexes(container, store);
+                        new Index().Execute(store);
                     }
                 });
 
-            var e = (IndexCompilationException)exception.InnerException.InnerException;
-            Assert.Equal("Reduce cannot contain Count() methods in grouping.", e.InnerException.Message);
+            Assert.Equal("Reduce cannot contain Count() methods in grouping.", exception.InnerException.Message);
 
-            exception = Assert.Throws<AggregateException>(
+            exception = Assert.Throws<IndexCompilationException>(
                 () =>
                 {
-                    using (var store = NewDocumentStore())
+                    using (var store = GetDocumentStore())
                     {
-                        var container = new CompositionContainer(new TypeCatalog(typeof(FancyIndex), typeof(Record)));
-                        IndexCreation.CreateIndexes(container, store);
+                        store.DatabaseCommands.PutIndex("test", new Index().CreateIndexDefinition());
                     }
                 });
 
-            e = (IndexCompilationException)exception.InnerException;
-            Assert.Equal("Reduce cannot contain Count() methods in grouping.", e.InnerException.Message);
+            Assert.Equal("Reduce cannot contain Count() methods in grouping.", exception.InnerException.Message);
+
+            exception = Assert.Throws<IndexCompilationException>(
+                () =>
+                {
+                    using (var store = GetDocumentStore())
+                    {
+                        new FancyIndex().Execute(store);
+                    }
+                });
+
+            Assert.Equal("Reduce cannot contain Count() methods in grouping.", exception.Message);
+
+            exception = Assert.Throws<IndexCompilationException>(
+                () =>
+                {
+                    using (var store = GetDocumentStore())
+                    {
+                        store.DatabaseCommands.PutIndex("test", new FancyIndex().CreateIndexDefinition());
+                    }
+                });
+
+            Assert.Equal("Reduce cannot contain Count() methods in grouping.", exception.Message);
         }
 
         [Fact]
@@ -180,15 +199,15 @@ namespace Raven.Tests.Issues
             var exception = Assert.Throws<IndexCompilationException>(
                 () =>
                 {
-                    using (var store = this.NewRemoteDocumentStore())
+                    using (var store = GetDocumentStore())
                     {
                         store.DatabaseCommands.PutIndex(
                             "Index1",
                             new IndexDefinition
                             {
-                                Map = "from i in items select new { Year = i.Year, Number = i.Number, Count = 0 }",
+                                Maps = { "from i in docs select new { Year = i.Year, Number = i.Number, Count = 0 }" },
                                 Reduce =
-                                    "from r in records group r by new { r.Year, r.Number } into yearAndNumber select new { Year = yearAndNumber.Key.Year, Number = yearAndNumber.Key.Number, Count = yearAndNumber.Count() }"
+                                    "from r in results group r by new { r.Year, r.Number } into yearAndNumber select new { Year = yearAndNumber.Key.Year, Number = yearAndNumber.Key.Number, Count = yearAndNumber.Count() }"
                             });
                     }
                 });
@@ -198,13 +217,13 @@ namespace Raven.Tests.Issues
             exception = Assert.Throws<IndexCompilationException>(
                 () =>
                 {
-                    using (var store = this.NewRemoteDocumentStore())
+                    using (var store = GetDocumentStore())
                     {
                         store.DatabaseCommands.PutIndex(
                             "Index1",
                             new IndexDefinition
                             {
-                                Map = "from i in items select new { Year = i.Year, Number = i.Number, Count = 0 }",
+                                Maps = { "from i in items select new { Year = i.Year, Number = i.Number, Count = 0 }" },
                                 Reduce =
                                     "from r in records group r by new { r.Year, r.Number } into yearAndNumber select new { Year = yearAndNumber.Key.Year, Number = yearAndNumber.Key.Number, Count = yearAndNumber.Where(x => x.Number == 0).Select(x => yearAndNumber.Count()) }"
                             });
@@ -217,14 +236,15 @@ namespace Raven.Tests.Issues
         [Fact]
         public void ServerShouldNotThrow()
         {
-            Assert.DoesNotThrow(
-                () =>
-                {
-                    using (var store = NewDocumentStore())
-                    {
-                        new ValidFancyIndex().Execute(store);
-                    }
-                });
+            using (var store = GetDocumentStore())
+            {
+                new ValidFancyIndex().Execute(store);
+            }
+            var index = new ValidFancyIndex().CreateIndexDefinition();
+            using (var store = GetDocumentStore())
+            {
+                store.DatabaseCommands.PutIndex("test", index);
+            }
         }
     }
 }
