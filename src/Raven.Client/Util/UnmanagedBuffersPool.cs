@@ -47,7 +47,18 @@ namespace Raven.Client.Util
                 {
                     size += allocatedMemoryDatas.SizeInBytes;
                     NativeMemory.Free(allocatedMemoryDatas.Address, allocatedMemoryDatas.SizeInBytes, allocatedMemoryDatas.AllocatingThread);
+
+#if MEM_GUARD
+#if MEM_GUARD_STACK
+            allocatedMemoryDatas.FreedBy = Environment.StackTrace;
+#endif
+            GC.SuppressFinalize(allocatedMemoryDatas);
+#endif
                 }
+
+
+
+
             }
             return size;
         }
@@ -163,6 +174,13 @@ namespace Raven.Client.Util
             if (index == -1)
             {
                 NativeMemory.Free(returned.Address, returned.SizeInBytes, returned.AllocatingThread);
+
+#if MEM_GUARD
+#if MEM_GUARD_STACK
+            returned.FreedBy = Environment.StackTrace;
+#endif
+            GC.SuppressFinalize(returned);
+#endif
 
                 return; // strange size, just free it
             }

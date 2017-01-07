@@ -308,6 +308,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                 public void Dispose()
                 {
+                    _reduceKeyProcessor.ReleaseBuffer();
                 }
             }
         }

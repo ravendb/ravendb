@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Compression;
 using Sparrow.Json.Parsing;
+using Sparrow.Platform;
 
 namespace Sparrow.Json
 {
@@ -108,6 +109,9 @@ namespace Sparrow.Json
             _jsonParserState = new JsonParserState();
             _objectJsonParser = new ObjectJsonParser(_jsonParserState, this);
             _documentBuilder = new BlittableJsonDocumentBuilder(this, _jsonParserState, _objectJsonParser);
+            ElectricFencedMemory.IncrementConext();
+            ElectricFencedMemory.RegisterContextAllocation(this,Environment.StackTrace);
+
         }
 
         public ReturnBuffer GetManagedBuffer(out ManagedPinnedBuffer buffer)
@@ -195,8 +199,10 @@ namespace Sparrow.Json
             if (_disposed)
                 return;
 
-            Reset();
-
+            ElectricFencedMemory.DecrementConext();
+            ElectricFencedMemory.UnRegisterContextAllocation(this);
+            Reset(true);
+            
             _objectJsonParser.Dispose();
             _documentBuilder.Dispose();
             _arenaAllocator.Dispose();
@@ -233,9 +239,11 @@ namespace Sparrow.Json
             var key = new StringSegment(field, 0, field.Length);
             value = GetLazyString(key, longLived: true);
             _fieldNames[field] = value;
+            
             return value;
         }
 
+        
         public LazyStringValue GetLazyString(string field)
         {
             if (field == null)
@@ -368,8 +376,7 @@ namespace Sparrow.Json
             using (GetManagedBuffer(out bytes))
             using (var parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag))
             {
-                var builder = new BlittableJsonDocumentBuilder(this, mode, debugTag, parser, _jsonParserState);
-                try
+                using (var builder = new BlittableJsonDocumentBuilder(this, mode, debugTag, parser, _jsonParserState))
                 {
                     CachedProperties.NewDocument();
                     builder.ReadObjectDocument();
@@ -387,11 +394,6 @@ namespace Sparrow.Json
                     var reader = builder.CreateReader();
                     RegisterLiveReader(reader);
                     return reader;
-                }
-                catch (Exception)
-                {
-                    builder.Dispose();
-                    throw;
                 }
             }
         }
@@ -438,7 +440,7 @@ namespace Sparrow.Json
         }
 
 
-        public async Task<BlittableJsonReaderArray> ParseArrayToMemoryAsync(Stream stream, string debugTag,
+        public async Task<Tuple<BlittableJsonReaderArray, IDisposable>> ParseArrayToMemoryAsync(Stream stream, string debugTag,
             BlittableJsonDocumentBuilder.UsageMode mode)
         {
             _jsonParserState.Reset();
@@ -463,7 +465,9 @@ namespace Sparrow.Json
                     writer.FinalizeDocument();
                     // here we "leak" the memory used by the array, in practice this is used
                     // in short scoped context, so we don't care
-                    return writer.CreateArrayReader();
+                    var arrayReader = writer.CreateArrayReader();
+                    this.RegisterLiveReader(arrayReader.Parent);
+                    return Tuple.Create(arrayReader, (IDisposable)arrayReader.Parent);
                 }
                 catch (Exception)
                 {
@@ -668,7 +672,7 @@ namespace Sparrow.Json
             Renew();
         }
 
-        protected internal virtual void Renew()
+        protected internal virtual unsafe void Renew()
         {
             _arenaAllocator.RenewArena();
             if (_arenaAllocatorForLongLivedValues == null)
@@ -676,11 +680,15 @@ namespace Sparrow.Json
                 _arenaAllocatorForLongLivedValues = new ArenaMemoryAllocator(_longLivedSize);
                 CachedProperties = new CachedProperties(this);
             }
+            
+            if (_tempBuffer != null)
+                GetNativeTempBuffer(_tempBuffer.SizeInBytes);
+
         }
 
-        protected internal virtual unsafe void Reset()
+        protected internal virtual unsafe void Reset(bool forceReleaseLongLivedAllocator = false)
         {
-            if (_tempBuffer != null)
+            if (_tempBuffer != null && _tempBuffer.Address != null)
             {
                 _arenaAllocator.Return(_tempBuffer);
                 _tempBuffer.Address = null;
@@ -697,20 +705,26 @@ namespace Sparrow.Json
 
             _documentBuilder.Reset();
 
-            if (_tempBuffer != null)
-                GetNativeTempBuffer(_tempBuffer.SizeInBytes);
-
             // We don't reset _arenaAllocatorForLongLivedValues. It's used as a cache buffer for long lived strings like field names.
             // When a context is re-used, the buffer containing those field names was not reset and the strings are still valid and alive.
 
-            if (_arenaAllocatorForLongLivedValues.Allocated > _initialSize)
+            if (_arenaAllocatorForLongLivedValues.Allocated > _initialSize || forceReleaseLongLivedAllocator)
             {
+
+                
+                foreach(var mem in _fieldNames.Values){
+                    _arenaAllocatorForLongLivedValues.Return(mem.AllocatedMemoryData);              
+                }                
+                
                 // at this point, the long lived section is far too large, this is something that can happen
                 // if we have dynamic properties. A back of the envelope calculation gives us roughly 32K 
                 // property names before this kicks in, which is a true abuse of the system. In this case, 
                 // in order to avoid unlimited growth, we'll reset the long lived section
                 _arenaAllocatorForLongLivedValues.Dispose();
                 _arenaAllocatorForLongLivedValues = null;
+
+               
+
                 _fieldNames.Clear();
                 CachedProperties = null; // need to release this so can be collected
             }

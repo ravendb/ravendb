@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Raven.Server.Json;
 using Sparrow.Json;
@@ -53,7 +55,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         public void Can_reuse_reader_multiple_times()
         {
             var r = new Random();
-
+            
             for (int i = 0; i < 10; i++)
             {
                 var bytes = new byte[r.Next(1, 2000)];
@@ -62,14 +64,17 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 var expected = Encoding.UTF8.GetString(bytes);
 
                 var lazyString = _ctx.GetLazyString(expected);
-
+             
                 var stringResult = _sut.GetStringFor(lazyString);
                 var readerResult = _sut.GetTextReaderFor(lazyString);
 
                 Assert.Equal(expected, stringResult);
                 Assert.Equal(expected, readerResult.ReadToEnd());
+                _ctx.ReturnMemory(lazyString.AllocatedMemoryData);
             }
+            
         }
+
 
         public override void Dispose()
         {

@@ -177,6 +177,7 @@ namespace Raven.Server.Documents.TcpHandlers
         private void InsertDocuments()
         {
             DocumentsOperationContext context;
+
             using (TcpConnection.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
                 int totalSize = 0;
@@ -372,6 +373,11 @@ namespace Raven.Server.Documents.TcpHandlers
 
         public void Dispose()
         {
+            _docsToRelease.CompleteAdding();
+            foreach (var bulkInsertDoc in _docsToRelease)
+            {
+                TcpConnection.Context.ReturnMemory(bulkInsertDoc.Memory);
+            }
             _docsToRelease.Dispose();
             _docsToWrite.Dispose();
             _messagesToClient.Dispose();

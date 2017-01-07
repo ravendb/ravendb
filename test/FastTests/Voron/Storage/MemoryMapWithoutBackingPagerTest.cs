@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Sparrow.Platform.Posix;
+using Sparrow.Platform.Win32;
 using Xunit;
 using Voron;
 using Voron.Global;
@@ -95,8 +96,8 @@ namespace FastTests.Voron.Storage
                 }
                 return (byte*)p.ToPointer();
             }
-            return Win32NativeMethods.VirtualAlloc(Env.Options.DataPager.PagerState.MapBase + totalAllocationSize, new UIntPtr(16),
-                Win32NativeMethods.AllocationType.RESERVE, Win32NativeMethods.MemoryProtection.EXECUTE_READWRITE);
+            return Win32MemoryProtectMethods.VirtualAlloc(Env.Options.DataPager.PagerState.MapBase + totalAllocationSize, new UIntPtr(16),
+                Win32MemoryProtectMethods.AllocationType.RESERVE, Win32MemoryProtectMethods.MemoryProtection.EXECUTE_READWRITE);
         }
 
         static void FreeMemoryAtEndOfPager(byte* adjacentBlockAddress)
@@ -108,7 +109,7 @@ namespace FastTests.Voron.Storage
                 Syscall.munmap(new IntPtr(adjacentBlockAddress), (UIntPtr)16);
                 return;
             }
-            Win32NativeMethods.VirtualFree(adjacentBlockAddress, UIntPtr.Zero, Win32NativeMethods.FreeType.MEM_RELEASE);
+            Win32MemoryProtectMethods.VirtualFree(adjacentBlockAddress, UIntPtr.Zero, Win32MemoryProtectMethods.FreeType.MEM_RELEASE);
         }
 
         [Fact]

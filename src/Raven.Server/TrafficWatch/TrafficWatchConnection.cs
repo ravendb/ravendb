@@ -16,7 +16,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.TrafficWatch
 {
-    public class TrafficWatchConnection
+    public class TrafficWatchConnection:IDisposable
     {
         private static readonly ILog Logger = LogManager.GetLogger(typeof(TrafficWatchConnection));
         readonly JsonContextPool _jsonContextPool = new JsonContextPool();
@@ -134,6 +134,13 @@ namespace Raven.Server.TrafficWatch
         {
             _msgs.Enqueue(msg);
             _manualResetEvent.Set();
+        }
+
+        public void Dispose()
+        {
+            _jsonContextPool.Dispose();
+            
+            _websocket.Dispose();
         }
     }
 }

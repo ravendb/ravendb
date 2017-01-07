@@ -193,9 +193,10 @@ namespace Raven.Server.Documents.Queries.Faceted
         {
             using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(facetsArrayAsString)))
             {
-                var json = await context.ParseArrayToMemoryAsync(stream, "facets", BlittableJsonDocumentBuilder.UsageMode.None);
+                var jsonParseResult = await context.ParseArrayToMemoryAsync(stream, "facets", BlittableJsonDocumentBuilder.UsageMode.None);
 
-                return ParseFromJson(json);
+                using (jsonParseResult.Item2)
+                return ParseFromJson(jsonParseResult.Item1);
             }
         }
 
