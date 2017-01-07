@@ -100,8 +100,7 @@ class virtualGrid<T> {
     private render() {
         // The grid may not be visible if the results returned quickly and we haven't finished initializing the UI.
         // In such a case, we queue up a render to occur later.
-        var isGridVisible = this.checkGridVisibility();
-        if (isGridVisible) {
+        if (this.checkGridVisibility()) {
             this.checkForUpdatedGridHeight();
             this.layoutVirtualRowPositions();
             this.fillDataIntoRows();
@@ -166,10 +165,11 @@ class virtualGrid<T> {
         if (this.isGridVisible) {
             return true;
         }
-
         // Grid hasn't yet become visible. Do the more expensive JQuery call.
-        this.isGridVisible = this.$gridElement.is(":visible");
-        return this.isGridVisible;
+        else if (this.$gridElement) {
+            return (this.isGridVisible = this.$gridElement.is(":visible"));
+        }
+        return false;
     }
 
     private runQueuedFetch() {
