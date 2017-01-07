@@ -6,22 +6,30 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Abstractions;
-using Raven.Abstractions.Indexing;
-using Raven.Database.Linq.PrivateExtensions;
-using Raven.Tests.Common;
-using Rhino.Mocks.Constraints;
 using Xunit;
 using System.Collections.Generic;
+using FastTests;
+using Raven.Client.Indexing;
 
-namespace Raven.Tests.Bugs.Caching
+namespace SlowTests.Bugs.Caching
 {
-    public class CachingOfDocumentInclude : RavenTest
+    public class CachingOfDocumentInclude : RavenTestBase
     {
+        private class User
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+            public string PartnerId { get; set; }
+            public string Email { get; set; }
+            public string[] Tags { get; set; }
+            public int Age { get; set; }
+            public bool Active { get; set; }
+        }
+
         [Fact]
         public void Can_cache_document_with_includes()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -49,7 +57,7 @@ namespace Raven.Tests.Bugs.Caching
         [Fact]
         public async Task Can_avoid_using_server_for_load_with_include_if_everything_is_in_session_cacheAsync()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -75,7 +83,7 @@ namespace Raven.Tests.Bugs.Caching
         [Fact]
         public void Can_avoid_using_server_for_load_with_include_if_everything_is_in_session_cacheLazy()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -103,7 +111,7 @@ namespace Raven.Tests.Bugs.Caching
         [Fact]
         public void Can_avoid_using_server_for_load_with_include_if_everything_is_in_session_cache()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -129,7 +137,7 @@ namespace Raven.Tests.Bugs.Caching
         [Fact]
         public void Can_avoid_using_server_for_multiload_with_include_if_everything_is_in_session_cache()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -168,7 +176,7 @@ namespace Raven.Tests.Bugs.Caching
         [Fact]
         public void Will_refresh_result_when_main_document_changes()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -206,26 +214,30 @@ namespace Raven.Tests.Bugs.Caching
         [Fact]
         public void New_query_returns_correct_value_when_cache_is_enabled_and_data_changes()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
                     s.Store(new User { Name = "Ayende", Email = "same.email@example.com" });
+
+                    var maps = new List<string>();
+                    maps.Add("from user in docs.Users select new {Email=user.Email}");
+
                     store.DatabaseCommands.PutIndex("index",
                                                          new IndexDefinition()
                                                              {
-                                                                 Map =
-                                                                     "from user in docs.Users select new {Email=user.Email}"
+                                                                 Maps = new HashSet<string>(maps)                                                                     
                                                              });
                     s.SaveChanges();
                 }
 
-                DateTime firstTime = SystemTime.UtcNow;
+                //DateTime firstTime = SystemTime.UtcNow;
+                var latestEtag1 = store.LastEtagHolder.GetLastWrittenEtag();
 
                 using (var s = store.OpenSession())
                 {
                     var results = s.Query<User>("index")
-                        .Customize(q => q.WaitForNonStaleResultsAsOf(firstTime))
+                        .Customize(q => q.WaitForNonStaleResultsAsOf(latestEtag1))
                         .Where(u => u.Email == "same.email@example.com")
                         .ToArray();
                     // Cache is done by url, so including a cutoff date invalidates the cache.
@@ -235,12 +247,13 @@ namespace Raven.Tests.Bugs.Caching
                         .Where(u => u.Email == "same.email@example.com")
                         .ToArray();
                     Assert.Equal(1, results.Length);
+
+                    //to ensure that latestEtag2 != latestEtag1
+                    s.Store(new object());
+                    s.SaveChanges();
                 }
 
-                DateTime secondTime = SystemTime.UtcNow;
-
-                if (firstTime == secondTime) // avoid getting the exact same url
-                    secondTime = secondTime.AddMilliseconds(100);
+                var latestEtag2 = store.LastEtagHolder.GetLastWrittenEtag();
 
                 using (var s = store.OpenSession())
                 {
@@ -248,11 +261,10 @@ namespace Raven.Tests.Bugs.Caching
                     s.SaveChanges();
                 }
 
-
                 using (var s = store.OpenSession())
                 {
                     var results = s.Query<User>("index")
-                        .Customize(q => q.WaitForNonStaleResultsAsOf(secondTime))
+                        .Customize(q => q.WaitForNonStaleResultsAsOf(latestEtag2))
                         .Where(u => u.Email == "same.email@example.com")
                         .ToArray();
                     // this works, since we don't hit the cache
@@ -271,7 +283,7 @@ namespace Raven.Tests.Bugs.Caching
         [Fact]
         public void Will_refresh_result_when_included_document_changes()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -294,7 +306,6 @@ namespace Raven.Tests.Bugs.Caching
                     s.Load<User>("users/1").Name = "foo";
                     s.SaveChanges();
                 }
-
 
                 using (var s = store.OpenSession())
                 {
