@@ -25,6 +25,7 @@ using Lucene.Net.Util;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Exceptions;
 using Constants = Raven.Abstractions.Data.Constants;
+using Raven.Server.Documents.TcpHandlers;
 using ThreadState = System.Threading.ThreadState;
 
 namespace Raven.Server.Documents.Replication
@@ -53,20 +54,18 @@ namespace Raven.Server.Documents.Replication
         public long LastHeartbeatTicks;
 
         public IncomingReplicationHandler(
-            JsonOperationContext.MultiDocumentParser multiDocumentParser,
-            DocumentDatabase database,
-            TcpClient tcpClient,
-            NetworkStream stream,
+            TcpConnectionOptions options,
             ReplicationLatestEtagRequest replicatedLastEtag,
             DocumentReplicationLoader parent)
         {
-
+            _connectionOptions = options;
             ConnectionInfo = IncomingConnectionInfo.FromGetLatestEtag(replicatedLastEtag);
-            ConnectionInfo.RemoteIp = ((IPEndPoint)tcpClient.Client.RemoteEndPoint).Address.ToString();
-            _multiDocumentParser = multiDocumentParser;
-            _database = database;
-            _tcpClient = tcpClient;
-            _stream = stream;
+            
+            _multiDocumentParser = options.MultiDocumentParser;
+            _database = options.DocumentDatabase;
+            _tcpClient = options.TcpClient;
+            _stream = options.Stream;
+            ConnectionInfo.RemoteIp = ((IPEndPoint)_tcpClient.Client.RemoteEndPoint).Address.ToString();
             _parent = parent;
 
             _disposables.Add(_database.DocumentsStorage.ContextPool
@@ -796,6 +795,7 @@ namespace Raven.Server.Documents.Replication
                     null,
                     resolved,
                     merged);
+                resolved.Dispose();
             }
             else //resolving to tombstone
             {
@@ -1064,6 +1064,7 @@ namespace Raven.Server.Documents.Replication
         private readonly List<ReplicationIndexOrTransformerPositions> _replicatedIndexesAndTransformers = new List<ReplicationIndexOrTransformerPositions>();
         private long _lastDocumentEtag;
         private long _lastIndexOrTransformerEtag;
+        private TcpConnectionOptions _connectionOptions;
 
         public struct ReplicationDocumentsPositions
         {
@@ -1155,6 +1156,15 @@ namespace Raven.Server.Documents.Replication
             }
             catch (Exception)
             {
+            }
+
+            try
+            {
+                _connectionOptions.Dispose();
+            }
+            catch
+            {
+                // do nothing
             }
 
             if (_incomingThread != Thread.CurrentThread)

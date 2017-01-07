@@ -11,7 +11,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.TcpHandlers
 {
-    public class TcpConnectionOptions : IDisposable
+    public class TcpConnectionOptions: IDisposable
     {
         private static long _sequence;
 

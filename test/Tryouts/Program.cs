@@ -1,37 +1,26 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using FastTests.Voron;
-using FastTests.Voron.Streams;
-using SlowTests.Voron;
-using StressTests;
 using Voron;
 using Voron.Global;
 using Voron.Impl.Scratch;
 using Xunit;
+using Sparrow.Platform;
+using System.Linq;
+using FastTests.Blittable;
+using FastTests.Voron.RawData;
 
 namespace Tryouts
 {
     public class Program
     {
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
-            for (int i = 0; i < 100; i++)
+            var a = new SlowTests.Tests.Indexes.CastingInIndexDefinition();
             {
-                Console.WriteLine(i);
-                using (var a = new FastTests.Client.BulkInsert.BulkInserts())
-                {
-                    a.SimpleBulkInsertShouldWork().Wait();
-                }
-
+                a.CanCastValuesToString();
             }
-            //using (var a = new CanUseStream())
-            //{
-            //    a.CanCopyTo(16897);
-            //}
         }
     }
-
-
 }
 

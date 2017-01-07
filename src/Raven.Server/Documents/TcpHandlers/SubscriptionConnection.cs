@@ -179,70 +179,78 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             Task.Run(async () =>
             {
-                var connection = new SubscriptionConnection(tcpConnectionOptions);
-                tcpConnectionOptions.DisposeOnConnectionClose.Add(connection);
-                try
+                using (var connection = new SubscriptionConnection(tcpConnectionOptions))
                 {
-                    if (await connection.InitAsync() == false)
-                        return;
-                    await connection.ProcessSubscriptionAysnc();
-                }
-                catch (Exception e)
-                {
-                    if (connection._logger.IsInfoEnabled)
-                    {
-                        connection._logger.Info($"Failed to process subscription {connection._options?.SubscriptionId} / from client {connection.TcpConnection.TcpClient.Client.RemoteEndPoint}",
-                            e);
-                    }
+                    tcpConnectionOptions.DisposeOnConnectionClose.Add(connection);
                     try
                     {
-                        if (connection.ConnectionException != null)
+                        if (await connection.InitAsync() == false)
                             return;
-                        using (var writer = new BlittableJsonTextWriter(tcpConnectionOptions.Context, tcpConnectionOptions.Stream))
+                        await connection.ProcessSubscriptionAysnc();
+                    }
+                    catch (Exception e)
+                    {
+                        if (connection._logger.IsInfoEnabled)
                         {
-                            tcpConnectionOptions.Context.Write(writer, new DynamicJsonValue
-                            {
-                                ["Type"] = "Error",
-                                ["Exception"] = e.ToString()
-                            });
+                            connection._logger.Info(
+                                $"Failed to process subscription {connection._options?.SubscriptionId} / from client {connection.TcpConnection.TcpClient.Client.RemoteEndPoint}",
+                                e);
                         }
-                    }
-                    catch (Exception)
-                    {
-                        // ignored
-                    }
-                }
-                finally
-                {
-                    if (connection._options!= null && connection._logger.IsInfoEnabled)
-                    {
-                        connection._logger.Info($"Finished proccessing subscription {connection._options?.SubscriptionId} / from client {connection.TcpConnection.TcpClient.Client.RemoteEndPoint}");
-                    }
-
-                    if (connection.ConnectionException != null)
-                    {
                         try
                         {
-                            var status = "None";
-                            if (connection.ConnectionException is SubscriptionClosedException)
-                                status = "Closed";
-                            
-                            using (var writer = new BlittableJsonTextWriter(tcpConnectionOptions.Context, tcpConnectionOptions.Stream))
+                            if (connection.ConnectionException != null)
+                                return;
+                            using (
+                                var writer = new BlittableJsonTextWriter(tcpConnectionOptions.Context,
+                                    tcpConnectionOptions.Stream))
                             {
                                 tcpConnectionOptions.Context.Write(writer, new DynamicJsonValue
                                 {
                                     ["Type"] = "Error",
-                                    ["Status"] = status,
-                                    ["Exception"] = connection.ConnectionException.ToString()
+                                    ["Exception"] = e.ToString()
                                 });
                             }
                         }
-                        catch
+                        catch (Exception)
                         {
                             // ignored
                         }
                     }
-                    tcpConnectionOptions.Dispose();
+                    finally
+                    {
+                        if (connection._options != null && connection._logger.IsInfoEnabled)
+                        {
+                            connection._logger.Info(
+                                $"Finished proccessing subscription {connection._options?.SubscriptionId} / from client {connection.TcpConnection.TcpClient.Client.RemoteEndPoint}");
+                        }
+
+                        if (connection.ConnectionException != null)
+                        {
+                            try
+                            {
+                                var status = "None";
+                                if (connection.ConnectionException is SubscriptionClosedException)
+                                    status = "Closed";
+
+                                using (
+                                    var writer = new BlittableJsonTextWriter(tcpConnectionOptions.Context,
+                                        tcpConnectionOptions.Stream))
+                                {
+                                    tcpConnectionOptions.Context.Write(writer, new DynamicJsonValue
+                                    {
+                                        ["Type"] = "Error",
+                                        ["Status"] = status,
+                                        ["Exception"] = connection.ConnectionException.ToString()
+                                    });
+                                }
+                            }
+                            catch
+                            {
+                                // ignored
+                            }
+                        }
+                        tcpConnectionOptions.Dispose();
+                    }
                 }
             });
         }
@@ -272,6 +280,7 @@ namespace Raven.Server.Documents.TcpHandlers
             }
 
             DocumentsOperationContext dbContext;
+            
             using (DisposeOnDisconnect)
             using (TcpConnection.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out dbContext))
             {
@@ -281,7 +290,8 @@ namespace Raven.Server.Documents.TcpHandlers
                     out criteria, out startEtag);
 
                 var replyFromClientTask = TcpConnection.MultiDocumentParser.ParseToMemoryAsync("client reply");
-                using (RegisterForNotificationOnNewDocuments(criteria))
+                var registrenNotificationDisposable = RegisterForNotificationOnNewDocuments(criteria);
+                try
                 {
                     var patch = SetupFilterScript(criteria);
 
@@ -294,7 +304,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         {
                             var documents = TcpConnection.DocumentDatabase.DocumentsStorage.GetDocumentsFrom(dbContext,
                                 criteria.Collection,
-                                startEtag+1, 0, _options.MaxDocsPerBatch);
+                                startEtag + 1, 0, _options.MaxDocsPerBatch);
                             _buffer.SetLength(0);
                             var docsToFlush = 0;
 
@@ -344,7 +354,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 {
                                     ["Type"] = "EndOfBatch"
                                 });
-                                
+
                                 await FlushDocsToClient(docsToFlush, true);
                             }
 
@@ -359,18 +369,22 @@ namespace Raven.Server.Documents.TcpHandlers
                             while (true)
                             {
                                 var result =
-                                    await Task.WhenAny(replyFromClientTask, Task.Delay(TimeSpan.FromSeconds(5), CancellationTokenSource.Token));
+                                    await
+                                        Task.WhenAny(replyFromClientTask,
+                                            Task.Delay(TimeSpan.FromSeconds(5), CancellationTokenSource.Token));
                                 if (result == replyFromClientTask)
                                 {
                                     using (var reply = await replyFromClientTask)
                                     {
                                         TcpConnection.RegisterBytesReceived(reply.Size);
-                                        clientReply = JsonDeserializationServer.SubscriptionConnectionClientMessage(reply);
+                                        clientReply =
+                                            JsonDeserializationServer.SubscriptionConnectionClientMessage(reply);
                                     }
 
                                     TcpConnection.ResetAndRenew();
 
-                                    replyFromClientTask = TcpConnection.MultiDocumentParser.ParseToMemoryAsync("client reply");
+                                    replyFromClientTask =
+                                        TcpConnection.MultiDocumentParser.ParseToMemoryAsync("client reply");
                                     break;
                                 }
                                 await SendHeartBeat();
@@ -378,7 +392,8 @@ namespace Raven.Server.Documents.TcpHandlers
                             switch (clientReply.Type)
                             {
                                 case SubscriptionConnectionClientMessage.MessageType.Acknowledge:
-                                    TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(_options.SubscriptionId,
+                                    TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
+                                        _options.SubscriptionId,
                                         clientReply.Etag);
                                     Stats.LastAckReceivedAt = DateTime.UtcNow;
                                     Stats.AckRate.Mark();
@@ -394,6 +409,22 @@ namespace Raven.Server.Documents.TcpHandlers
                                                                 clientReply.Type);
                             }
                         }
+                    }
+                }
+                finally
+                {
+                    registrenNotificationDisposable.Dispose();
+                    if (replyFromClientTask != null)
+                    {
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                        replyFromClientTask.ContinueWith(x =>
+                        {
+                            if (x.IsCompleted)
+                            {
+                                x.Result.Dispose();
+                            }
+                        }, null);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                     }
                 }
             }

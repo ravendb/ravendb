@@ -50,7 +50,12 @@ namespace FastTests.Server.Documents.Indexing
                     Assert.Equal(2, filter.Count);
 
                     tx.Commit();
+
+                    context.ReturnMemory(key1.AllocatedMemoryData);
+                    context.ReturnMemory(key2.AllocatedMemoryData);
                 }
+
+                
             }
         }
 
@@ -86,6 +91,8 @@ namespace FastTests.Server.Documents.Indexing
                     Assert.False(filter.Add(key1));
                     Assert.Equal(1, filter.Count);
                 }
+
+                context.ReturnMemory(key1.AllocatedMemoryData);
             }
         }
 
@@ -130,6 +137,9 @@ namespace FastTests.Server.Documents.Indexing
                     Assert.Equal(2, filter.Count);
                     Assert.True(filter.Writeable);
                 }
+
+                context.ReturnMemory(key1.AllocatedMemoryData);
+                context.ReturnMemory(key2.AllocatedMemoryData);
             }
         }
 
@@ -193,6 +203,9 @@ namespace FastTests.Server.Documents.Indexing
                     var collection = CollectionOfBloomFilters.Load(2, context);
                     Assert.Equal(2, collection.Count);
                 }
+
+                context.ReturnMemory(key1.AllocatedMemoryData);
+                context.ReturnMemory(key2.AllocatedMemoryData);
             }
         }
     }

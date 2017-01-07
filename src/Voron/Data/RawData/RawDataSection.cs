@@ -17,8 +17,8 @@ namespace Voron.Data.RawData
         private PageLocator _pageLocator;
 
         protected readonly LowLevelTransaction _tx;
-        
-        public readonly int MaxItemSize;
+
+        public const int MaxItemSize = (Constants.Storage.PageSize - RawDataSmallPageHeader.SizeOf)/2;
 
         protected RawDataSmallSectionPageHeader* _sectionHeader;
 
@@ -35,8 +35,7 @@ namespace Voron.Data.RawData
             _tx = tx;
             _pageLocator = tx.PersistentContext.AllocatePageLocator(tx);
 
-            MaxItemSize = (Constants.Storage.PageSize - sizeof(RawDataSmallPageHeader)) / 2;
-
+            
             _sectionHeader = (RawDataSmallSectionPageHeader*)_pageLocator.GetReadOnlyPage(pageNumber).Pointer;
         }
 

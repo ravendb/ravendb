@@ -91,16 +91,20 @@ namespace Raven.Server.Documents.Handlers
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                var array = await context.ParseArrayToMemoryAsync(RequestBodyStream(), "docs", BlittableJsonDocumentBuilder.UsageMode.None);
+                var parseArrayResults = await context.ParseArrayToMemoryAsync(RequestBodyStream(), "docs", BlittableJsonDocumentBuilder.UsageMode.None);
 
-                var ids = new string[array.Length];
-                for (int i = 0; i < array.Length; i++)
+                var array = parseArrayResults.Item1;
+                using (parseArrayResults.Item2)
                 {
-                    ids[i] = array.GetStringByIndex(i);
-                }
+                    var ids = new string[array.Length];
+                    for (int i = 0; i < array.Length; i++)
+                    {
+                        ids[i] = array.GetStringByIndex(i);
+                    }
 
-                context.OpenReadTransaction();
-                GetDocumentsById(context, new StringValues(ids), null, metadataOnly);
+                    context.OpenReadTransaction();
+                    GetDocumentsById(context, new StringValues(ids), null, metadataOnly);
+                }
             }
         }
 

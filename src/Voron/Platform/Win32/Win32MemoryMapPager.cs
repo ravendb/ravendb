@@ -11,6 +11,7 @@ using Microsoft.Win32.SafeHandles;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Platform.Win32;
 using Sparrow.Utils;
 using Voron.Data.BTrees;
 using Voron.Global;
@@ -454,18 +455,18 @@ namespace Voron.Platform.Win32
 
             if (UsePageProtection || force)
             {
-                Win32NativeMethods.MEMORY_BASIC_INFORMATION memoryInfo1 = new Win32NativeMethods.MEMORY_BASIC_INFORMATION();
-                int vQueryFirstOutput = Win32NativeMethods.VirtualQuery(start, &memoryInfo1, new UIntPtr(size));
+                Win32MemoryProtectMethods.MEMORY_BASIC_INFORMATION memoryInfo1 = new Win32MemoryProtectMethods.MEMORY_BASIC_INFORMATION();
+                int vQueryFirstOutput = Win32MemoryProtectMethods.VirtualQuery(start, &memoryInfo1, new UIntPtr(size));
                 int vQueryFirstError = Marshal.GetLastWin32Error();
 
-                Win32NativeMethods.MemoryProtection oldProtection;
-                bool status = Win32NativeMethods.VirtualProtect(start, new UIntPtr(size), Win32NativeMethods.MemoryProtection.READONLY, out oldProtection);
+                Win32MemoryProtectMethods.MemoryProtection oldProtection;
+                bool status = Win32MemoryProtectMethods.VirtualProtect(start, new UIntPtr(size), Win32MemoryProtectMethods.MemoryProtection.READONLY, out oldProtection);
                 if (!status)
                 {
                     int vProtectError = Marshal.GetLastWin32Error();
 
-                    Win32NativeMethods.MEMORY_BASIC_INFORMATION memoryInfo2 = new Win32NativeMethods.MEMORY_BASIC_INFORMATION();
-                    int vQuerySecondOutput = Win32NativeMethods.VirtualQuery(start, &memoryInfo2, new UIntPtr(size));
+                    Win32MemoryProtectMethods.MEMORY_BASIC_INFORMATION memoryInfo2 = new Win32MemoryProtectMethods.MEMORY_BASIC_INFORMATION();
+                    int vQuerySecondOutput = Win32MemoryProtectMethods.VirtualQuery(start, &memoryInfo2, new UIntPtr(size));
                     int vQuerySecondError = Marshal.GetLastWin32Error();
                     Debugger.Break();
                 }
@@ -479,18 +480,18 @@ namespace Voron.Platform.Win32
 
             if (UsePageProtection || force)
             {
-                Win32NativeMethods.MEMORY_BASIC_INFORMATION memoryInfo1 = new Win32NativeMethods.MEMORY_BASIC_INFORMATION();
-                int vQueryFirstOutput = Win32NativeMethods.VirtualQuery(start, &memoryInfo1, new UIntPtr(size));
+                Win32MemoryProtectMethods.MEMORY_BASIC_INFORMATION memoryInfo1 = new Win32MemoryProtectMethods.MEMORY_BASIC_INFORMATION();
+                int vQueryFirstOutput = Win32MemoryProtectMethods.VirtualQuery(start, &memoryInfo1, new UIntPtr(size));
                 int vQueryFirstError = Marshal.GetLastWin32Error();
 
-                Win32NativeMethods.MemoryProtection oldProtection;
-                bool status = Win32NativeMethods.VirtualProtect(start, new UIntPtr(size), Win32NativeMethods.MemoryProtection.READWRITE, out oldProtection);
+                Win32MemoryProtectMethods.MemoryProtection oldProtection;
+                bool status = Win32MemoryProtectMethods.VirtualProtect(start, new UIntPtr(size), Win32MemoryProtectMethods.MemoryProtection.READWRITE, out oldProtection);
                 if (!status)
                 {
                     int vProtectError = Marshal.GetLastWin32Error();
 
-                    Win32NativeMethods.MEMORY_BASIC_INFORMATION memoryInfo2 = new Win32NativeMethods.MEMORY_BASIC_INFORMATION();
-                    int vQuerySecondOutput = Win32NativeMethods.VirtualQuery(start, &memoryInfo2, new UIntPtr(size));
+                    Win32MemoryProtectMethods.MEMORY_BASIC_INFORMATION memoryInfo2 = new Win32MemoryProtectMethods.MEMORY_BASIC_INFORMATION();
+                    int vQuerySecondOutput = Win32MemoryProtectMethods.VirtualQuery(start, &memoryInfo2, new UIntPtr(size));
                     int vQuerySecondError = Marshal.GetLastWin32Error();
                     Debugger.Break();
                 }

@@ -17,9 +17,12 @@ namespace FastTests.Blittable
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
                 var ms = new MemoryStream(Encoding.UTF8.GetBytes("[\"Oren\",\"Arava\"]"));
-                var array = await ctx.ParseArrayToMemoryAsync(ms, "array",BlittableJsonDocumentBuilder.UsageMode.None);
-                Assert.Equal("Oren", array.GetStringByIndex(0));
-                Assert.Equal("Arava", array.GetStringByIndex(1));
+                var arrayParseResult = await ctx.ParseArrayToMemoryAsync(ms, "array",BlittableJsonDocumentBuilder.UsageMode.None);
+                using (arrayParseResult.Item2)
+                {
+                    Assert.Equal("Oren", arrayParseResult.Item1.GetStringByIndex(0));
+                    Assert.Equal("Arava", arrayParseResult.Item1.GetStringByIndex(1));
+                }
             }
         }
     }

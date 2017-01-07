@@ -101,9 +101,9 @@ namespace Raven.Server.ServerWide.Context
                 Allocator = new ByteStringContext();
         }
 
-        protected override void Reset()
+        protected override void Reset(bool forceResetLongLivedAllocator = false)
         {
-            base.Reset();
+            base.Reset(forceResetLongLivedAllocator);
 
             CloseTransaction();
 

@@ -1,7 +1,9 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Raven.Abstractions.Connection;
 using Raven.Client.Document;
 using Raven.Client.Replication.Messages;
@@ -272,13 +274,22 @@ namespace FastTests.Server.Replication
                 SetupReplication(master, slave1, slave2);
 
                 var topologyInfo = await GetFullTopology(master);
+                try
+                {
 
-                Assert.NotNull(topologyInfo); //sanity check
-                Assert.Equal(3, topologyInfo.NodesById.Count);
-                var masterOutgoing = topologyInfo.NodesById[masterDocumentDatabase.DbId.ToString()].Outgoing;
-                Assert.Equal(2, masterOutgoing.Count);
-                Assert.True(masterOutgoing.Select(x => x.DbId).Any(x => x == slave1DocumentDatabase.DbId.ToString()));
-                Assert.True(masterOutgoing.Select(x => x.DbId).Any(x => x == slave2DocumentDatabase.DbId.ToString()));
+                    Assert.NotNull(topologyInfo); //sanity check
+                    Assert.Equal(3, topologyInfo.NodesById.Count);
+                    var masterOutgoing = topologyInfo.NodesById[masterDocumentDatabase.DbId.ToString()].Outgoing;
+                    Assert.Equal(2, masterOutgoing.Count);
+                    Assert.True(masterOutgoing.Select(x => x.DbId).Any(x => x == slave1DocumentDatabase.DbId.ToString()));
+                    Assert.True(masterOutgoing.Select(x => x.DbId).Any(x => x == slave2DocumentDatabase.DbId.ToString()));
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException(
+                        "Topology error: " + JsonConvert.SerializeObject(topologyInfo, Formatting.Indented)
+                        , e);
+                }
             }
         }
 

@@ -28,8 +28,10 @@ namespace Raven.Server.Documents.Handlers
             JsonOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                var requests = await context.ParseArrayToMemoryAsync(RequestBodyStream(), "multi_get", BlittableJsonDocumentBuilder.UsageMode.None);
+                var requestsParseResult = await context.ParseArrayToMemoryAsync(RequestBodyStream(), "multi_get", BlittableJsonDocumentBuilder.UsageMode.None);
+                var requests = requestsParseResult.Item1;
 
+                using (requestsParseResult.Item2)
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();

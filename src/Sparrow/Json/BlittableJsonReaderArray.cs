@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Sparrow.Json
 {
-    public unsafe class BlittableJsonReaderArray : BlittableJsonReaderBase, IEnumerable<object>
+    public unsafe class BlittableJsonReaderArray : BlittableJsonReaderBase,IEnumerable<object>
     {
         private readonly int _count;
         private readonly byte* _metadataPtr;

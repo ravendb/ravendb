@@ -123,6 +123,7 @@ namespace Sparrow.Json
         private class Segment
         {
             public Segment Previous;
+            public Segment PreviousAllocated;
             public bool PreviousHoldsNoData;
             public AllocatedMemoryData Allocation;
             public byte* Address;
@@ -221,7 +222,8 @@ namespace Sparrow.Json
                 Address = (byte*)allocatedMemoryData.Address,
                 Allocation = allocatedMemoryData,
                 Used = 0,
-                Previous = _current
+                Previous = _current,
+                PreviousAllocated = _current
             };
         }
 
@@ -273,7 +275,7 @@ namespace Sparrow.Json
             while (_current != null)
             {
                 _context.ReturnMemory(_current.Allocation);
-                _current = _current.Previous;
+                _current = _current.PreviousAllocated;
             }
         }
 
@@ -281,6 +283,7 @@ namespace Sparrow.Json
         {
             EnsureSingleChunk(out state.StringBuffer, out state.StringSize);
         }
+
         public void EnsureSingleChunk(out byte* ptr, out int size)
         {
             if (_current.Previous == null || _current.PreviousHoldsNoData)

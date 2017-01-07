@@ -416,6 +416,10 @@ namespace Raven.Server.Smuggler.Documents
 
             public void Dispose()
             {
+                foreach (var doc in Documents)
+                {
+                    doc.Dispose();
+                }
                 Documents.Clear();
                 _resetContext.Dispose();
             }
