@@ -613,7 +613,7 @@
     <Compile Include="RavenDB_3555.cs" />
     <Compile Include="RavenDB_3994.cs" />
     <Compile Include="RavenDB_4836.cs" />
-    <Compile Include="Ravendb_PlaceHolder.cs" />
+    <Compile Include="RavenDB_6065.cs" />
     <Compile Include="RDBQA_1.cs" />
     <Compile Include="RDBQA_11.cs" />
     <Compile Include="RDBQA_13.cs" />

@@ -50,16 +50,16 @@ main: node EOF {
 ;
 node: NOT node           {
 		//Console.WriteLine("Found rule node -> NOT node");
-		$$ = new OperatorLuceneASTNode($2,null,OperatorLuceneASTNode.Operator.NOT);
+		$$ = new OperatorLuceneASTNode($2,null,OperatorLuceneASTNode.Operator.NOT, IsDefaultOperatorAnd);
 	}
 	| node operator node {
 		//Console.WriteLine("Found rule node -> node operator node");
-		var res =  new OperatorLuceneASTNode($1,$3,$2);
+		var res =  new OperatorLuceneASTNode($1,$3,$2, IsDefaultOperatorAnd);
 		$$ = res;
 	}
 	| node node          {
 		//Console.WriteLine("Found rule node -> node node");
-		$$ = new OperatorLuceneASTNode($1,$2,OperatorLuceneASTNode.Operator.Implicit);
+		$$ = new OperatorLuceneASTNode($1,$2,OperatorLuceneASTNode.Operator.Implicit, IsDefaultOperatorAnd);
 	}
 	| field_exp{
 		//Console.WriteLine("Found rule node -> field_exp");
