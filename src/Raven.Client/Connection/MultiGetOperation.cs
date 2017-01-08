@@ -125,7 +125,9 @@ namespace Raven.Client.Connection
                     {
                         nameValueCollection[header.Key] = header.Value;
                     }
-                    jsonRequestFactory.CacheResponse(url + requests[i].UrlAndQuery, responses[i].Result, nameValueCollection);
+
+                    jsonRequestFactory.CacheResponse(requests[i].UrlAndQuery, responses[i].Result, nameValueCollection);
+
                 }
             }
 
