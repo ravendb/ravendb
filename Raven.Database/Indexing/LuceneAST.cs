@@ -28,16 +28,9 @@ namespace Raven.Database.Indexing
         public abstract Query ToQuery(LuceneASTQueryConfiguration configuration);
 
 
-        public virtual void AddQueryToBooleanQuery(BooleanQuery b, LuceneASTQueryConfiguration configuration, Occur o, bool letChildrenDecide = false)
+        public virtual void AddQueryToBooleanQuery(BooleanQuery b, LuceneASTQueryConfiguration configuration, Occur o)
         {
-            var oc = letChildrenDecide ? GetDefaultOccurFromConfiguration(configuration) : o;
-            b.Add(ToQuery(configuration), oc);
-        }
-
-        protected static Occur GetDefaultOccurFromConfiguration(LuceneASTQueryConfiguration configuration)
-        {
-            if(configuration.DefaultOperator == QueryOperator.And) return Occur.MUST;
-            return Occur.SHOULD;
+            b.Add(ToQuery(configuration), o);
         }
 
         public virtual Query ToGroupFieldQuery(LuceneASTQueryConfiguration configuration)
@@ -518,11 +511,30 @@ This edge-case has a very slim chance of happening, but still we should not igno
 
     public class OperatorLuceneASTNode : LuceneASTNodeBase
     {
-        public OperatorLuceneASTNode(LuceneASTNodeBase leftNode, LuceneASTNodeBase rightNode, Operator op)
+        public OperatorLuceneASTNode(LuceneASTNodeBase leftNode, LuceneASTNodeBase rightNode, Operator op, bool isDefaultOperatorAnd)
         {
-            LeftNode = leftNode;
-            RightNode = rightNode;
-            Op = op;
+            var rightHandBooleanNode = rightNode as OperatorLuceneASTNode;
+            //This basically say that if we have a nested boolean query and the child boolean is not an OR operation do nothing special.
+            if (rightHandBooleanNode == null || 
+                rightHandBooleanNode.Op == Operator.AND || 
+                rightHandBooleanNode.Op == Operator.INTERSECT || 
+                (rightHandBooleanNode.Op == Operator.Implicit && isDefaultOperatorAnd))
+            {
+                LeftNode = leftNode;
+                RightNode = rightNode;
+                Op = op;
+            }
+            //if we are in this case we are a boolean query with a child who is a boolean query with an OR operator .
+            //we shall roll the nodes so (A) and (B or C) will become (A and b) or (C).
+            else
+            {
+                LeftNode = new OperatorLuceneASTNode(leftNode, rightHandBooleanNode.LeftNode, op, isDefaultOperatorAnd);
+                RightNode = rightHandBooleanNode.RightNode;
+                Op = Operator.OR;
+                //this should not be used but if it does a NRE exception will be thrown and it would be easy to locate it.
+                rightHandBooleanNode.RightNode = null;
+                rightHandBooleanNode.LeftNode = null;
+            }
         }
         public override IEnumerable<LuceneASTNodeBase> Children
         {
@@ -538,12 +550,12 @@ This edge-case has a very slim chance of happening, but still we should not igno
             switch (Op)
             {
                 case Operator.AND:
-                    LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.MUST, out hasExplicitPrefix));
-                    RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.MUST, out hasExplicitPrefix));
+                    LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.MUST));
+                    RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.MUST));
                     break;
                 case Operator.OR:
-                    LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.SHOULD, out hasExplicitPrefix));
-                    RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.SHOULD, out hasExplicitPrefix), !hasExplicitPrefix);
+                    LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.SHOULD));
+                    RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.SHOULD));
                     break;
                 case Operator.NOT:
                     query.Add(LeftNode.ToQuery(configuration), Occur.MUST_NOT);
@@ -552,20 +564,20 @@ This edge-case has a very slim chance of happening, but still we should not igno
                     switch (configuration.DefaultOperator)
                     {
                         case QueryOperator.Or:
-                            LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.SHOULD, out hasExplicitPrefix));
-                            RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.SHOULD, out hasExplicitPrefix), !hasExplicitPrefix);
+                            LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.SHOULD));
+                            RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.SHOULD));
                             break;
                         case QueryOperator.And:
-                            LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.MUST, out hasExplicitPrefix));
-                            RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.MUST, out hasExplicitPrefix));
+                            LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.MUST));
+                            RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.MUST));
                             break;
                         default:
                             throw new ArgumentOutOfRangeException("defaultOperator");
                     }
                     break;
                 case Operator.INTERSECT:
-                    LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.MUST, out hasExplicitPrefix));
-                    RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.MUST, out hasExplicitPrefix));
+                    LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.MUST));
+                    RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.MUST));
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -573,36 +585,32 @@ This edge-case has a very slim chance of happening, but still we should not igno
             return query;
         }
 
-        private Occur PrefixToOccurance(LuceneASTNodeBase node, Occur defaultOccurance,out bool hasExplicitPrefix)
+        private Occur PrefixToOccurance(LuceneASTNodeBase node, Occur defaultOccurance)
         {             
             switch (node.Prefix)
             {
                 case PrefixOperator.None:
-                    hasExplicitPrefix = false;
                     return defaultOccurance;
                 case PrefixOperator.Plus:
-                    hasExplicitPrefix = true;
                     return Occur.MUST;
                 case PrefixOperator.Minus:
-                    hasExplicitPrefix = true;
                     return Occur.MUST_NOT;
                 default:
                     throw new ArgumentOutOfRangeException("Unknown query prefix " + node.Prefix);
             }
         }
 
-        public override void AddQueryToBooleanQuery(BooleanQuery query, LuceneASTQueryConfiguration configuration, Occur o, bool letChildrenDecide = false)
+        public override void AddQueryToBooleanQuery(BooleanQuery query, LuceneASTQueryConfiguration configuration, Occur o)
         {
-            bool hasExplicitPrefix;
             switch (Op)
             {
                 case Operator.AND:
-                    LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, letChildrenDecide? Occur.MUST:o, out hasExplicitPrefix));
-                    RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.MUST, out hasExplicitPrefix));
+                    LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.MUST));
+                    RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.MUST));
                     break;
                 case Operator.OR:
-                    LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, letChildrenDecide ? Occur.SHOULD : o, out hasExplicitPrefix));
-                    RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.SHOULD, out hasExplicitPrefix), !hasExplicitPrefix);
+                    LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.SHOULD));
+                    RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.SHOULD));
                     break;
                 case Operator.NOT:
                     query.Add(LeftNode.ToQuery(configuration), Occur.MUST_NOT);
@@ -611,20 +619,20 @@ This edge-case has a very slim chance of happening, but still we should not igno
                     switch (configuration.DefaultOperator)
                     {
                         case QueryOperator.Or:
-                            LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, letChildrenDecide ? Occur.SHOULD : o, out hasExplicitPrefix));
-                            RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.SHOULD, out hasExplicitPrefix), !hasExplicitPrefix);
+                            LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode,Occur.SHOULD));
+                            RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.SHOULD));
                             break;
                         case QueryOperator.And:
-                            LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, letChildrenDecide ? Occur.MUST : o, out hasExplicitPrefix));
-                            RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.MUST, out hasExplicitPrefix));
+                            LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.MUST));
+                            RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.MUST));
                             break;
                         default:
                             throw new ArgumentOutOfRangeException("defaultOperator");
                     }
                     break;
                 case Operator.INTERSECT:
-                    LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, letChildrenDecide ? Occur.MUST : o, out hasExplicitPrefix));
-                    RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.MUST, out hasExplicitPrefix));
+                    LeftNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(LeftNode, Occur.MUST));
+                    RightNode.AddQueryToBooleanQuery(query, configuration, PrefixToOccurance(RightNode, Occur.MUST));
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -667,8 +675,9 @@ This edge-case has a very slim chance of happening, but still we should not igno
         public override Query ToQuery(LuceneASTQueryConfiguration configuration)
         {
             var query = new BooleanQuery();
-            //Here the Occur.MUST is ignored we will use the default occur in children nodes
-            Node.AddQueryToBooleanQuery(query, configuration, Occur.MUST,true); 
+            var occur = configuration.DefaultOperator == QueryOperator.And ? Occur.MUST : Occur.SHOULD;
+            //if the node is boolean query than it is going to ignore this value.
+            Node.AddQueryToBooleanQuery(query, configuration, occur); 
             query.Boost = GetBoost();
             return query;
         }

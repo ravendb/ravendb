@@ -7,6 +7,7 @@ namespace Raven.Database.Indexing
     {
         public LuceneQueryParser() : base(null) { }
         private bool inMethod;
+        public bool IsDefaultOperatorAnd { get; set; }
         public bool InMethod
         {
             get
