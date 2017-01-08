@@ -29,6 +29,17 @@ namespace FastTests.Server.Replication
             }
         }
 
+        private void EnsureReplicating(DocumentStore src, DocumentStore dst)
+        {
+            var id = "marker/"+Guid.NewGuid().ToString();
+            using (var s = src.OpenSession())
+            {
+                s.Store(new {}, id);
+                s.SaveChanges();
+            }
+            WaitForDocumentToReplicate<object>(dst, id, 15 *1000);
+        }
+
         [Fact]
         public async Task Master_slave_full_topology_should_be_correctly_detected()
         {
@@ -39,7 +50,7 @@ namespace FastTests.Server.Replication
                 var slaveDocumentDatabase = await GetDocumentDatabaseInstanceFor(slave);
 
                 SetupReplication(master,slave);
-
+                EnsureReplicating(master, slave);
                 var topologyInfo = await GetFullTopology(master);
 
                 Assert.NotNull(topologyInfo); //sanity check
@@ -66,7 +77,7 @@ namespace FastTests.Server.Replication
                     var masterDocumentDatabase = await GetDocumentDatabaseInstanceFor(master);
 
                     SetupReplication(master, slave);
-
+                    EnsureReplicating(master, slave);
                     var topologyInfo = await GetFullTopology(master);
 
                     Assert.NotNull(topologyInfo); //sanity check
@@ -117,7 +128,7 @@ namespace FastTests.Server.Replication
                 var slaveDocumentDatabase = await GetDocumentDatabaseInstanceFor(slave);
 
                 SetupReplication(master, slave);
-
+                EnsureReplicating(master, slave);
                 var topologyInfo = await GetFullTopology(master);
 
                 Assert.NotNull(topologyInfo); //sanity check
@@ -155,8 +166,12 @@ namespace FastTests.Server.Replication
                 var DDocumentDatabase = await GetDocumentDatabaseInstanceFor(D);
 
                 SetupReplication(A, B, C);
+                EnsureReplicating(A, B);
+                EnsureReplicating(A, C);
                 SetupReplication(B, D);
+                EnsureReplicating(B, D);
                 SetupReplication(C, D);
+                EnsureReplicating(C, D);
 
                 var topologyInfo = await GetFullTopology(A);
 
@@ -188,7 +203,9 @@ namespace FastTests.Server.Replication
                     var BDocumentDatabase = await GetDocumentDatabaseInstanceFor(B);
 
                     SetupReplication(A, B);
+                    EnsureReplicating(A, B);
                     SetupReplication(B, C);
+                    EnsureReplicating(B, C);
 
                     var topologyInfo = await GetFullTopology(A);
                     //total two nodes, master and slave
@@ -246,7 +263,7 @@ namespace FastTests.Server.Replication
                 };
 
                 SetupReplicationWithCustomDestinations(master, destinations);
-
+             
                 var topologyInfo = await GetFullTopology(master);
 
                 Assert.NotNull(topologyInfo); //sanity check
@@ -272,24 +289,17 @@ namespace FastTests.Server.Replication
                 var slave2DocumentDatabase = await GetDocumentDatabaseInstanceFor(slave2);
 
                 SetupReplication(master, slave1, slave2);
+                EnsureReplicating(master, slave1);
+                EnsureReplicating(master, slave2);
 
                 var topologyInfo = await GetFullTopology(master);
-                try
-                {
 
-                    Assert.NotNull(topologyInfo); //sanity check
-                    Assert.Equal(3, topologyInfo.NodesById.Count);
-                    var masterOutgoing = topologyInfo.NodesById[masterDocumentDatabase.DbId.ToString()].Outgoing;
-                    Assert.Equal(2, masterOutgoing.Count);
-                    Assert.True(masterOutgoing.Select(x => x.DbId).Any(x => x == slave1DocumentDatabase.DbId.ToString()));
-                    Assert.True(masterOutgoing.Select(x => x.DbId).Any(x => x == slave2DocumentDatabase.DbId.ToString()));
-                }
-                catch (Exception e)
-                {
-                    throw new InvalidOperationException(
-                        "Topology error: " + JsonConvert.SerializeObject(topologyInfo, Formatting.Indented)
-                        , e);
-                }
+                Assert.NotNull(topologyInfo); //sanity check
+                Assert.Equal(3, topologyInfo.NodesById.Count);
+                var masterOutgoing = topologyInfo.NodesById[masterDocumentDatabase.DbId.ToString()].Outgoing;
+                Assert.Equal(2, masterOutgoing.Count);
+                Assert.True(masterOutgoing.Select(x => x.DbId).Any(x => x == slave1DocumentDatabase.DbId.ToString()));
+                Assert.True(masterOutgoing.Select(x => x.DbId).Any(x => x == slave2DocumentDatabase.DbId.ToString()));
             }
         }
 
@@ -313,6 +323,9 @@ namespace FastTests.Server.Replication
 
                 SetupReplication(nodeA,nodeB);
                 SetupReplication(nodeB,nodeA);
+
+                EnsureReplicating(nodeA, nodeB);
+                EnsureReplicating(nodeB, nodeA);
 
                 WaitForDocument(nodeA, "users/2");
                 WaitForDocument(nodeB, "users/1");
@@ -351,6 +364,10 @@ namespace FastTests.Server.Replication
                 SetupReplication(nodeB, nodeC);
                 SetupReplication(nodeC, nodeA);
 
+                EnsureReplicating(nodeA, nodeB);
+                EnsureReplicating(nodeB, nodeC);
+                EnsureReplicating(nodeC, nodeA);
+
                 var nodeADocumentDatabase = await GetDocumentDatabaseInstanceFor(nodeA);
                 var nodeBDocumentDatabase = await GetDocumentDatabaseInstanceFor(nodeB);
                 var nodeCDocumentDatabase = await GetDocumentDatabaseInstanceFor(nodeC);
@@ -384,6 +401,12 @@ namespace FastTests.Server.Replication
                 SetupReplication(nodeA, nodeB, nodeALeaf);
                 SetupReplication(nodeB, nodeC);
                 SetupReplication(nodeC, nodeA, nodeCLeaf);
+
+                EnsureReplicating(nodeA, nodeB);
+                EnsureReplicating(nodeA, nodeALeaf);
+                EnsureReplicating(nodeB, nodeC);
+                EnsureReplicating(nodeC, nodeA);
+                EnsureReplicating(nodeC, nodeCLeaf);
 
                 var nodeADocumentDatabase = await GetDocumentDatabaseInstanceFor(nodeA);
                 var nodeALeafDocumentDatabase = await GetDocumentDatabaseInstanceFor(nodeALeaf);
@@ -419,6 +442,10 @@ namespace FastTests.Server.Replication
             {
                 SetupReplication(master, slave);
                 SetupReplication(slave, slaveOfSlave);
+
+                EnsureReplicating(master, slave);
+
+                EnsureReplicating(slave, slaveOfSlave);
 
                 var masterDocumentDatabase = await GetDocumentDatabaseInstanceFor(master);
                 masterDocumentDatabase.Configuration.Replication.ReplicationTopologyDiscoveryTimeout = new TimeSetting(24,TimeUnit.Hours);
