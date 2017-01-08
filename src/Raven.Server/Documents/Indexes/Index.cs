@@ -143,6 +143,9 @@ namespace Raven.Server.Documents.Indexes
 
         public Task WaitForNextIndexingRound()
         {
+            if(_disposed)
+                ThrowObjectDisposed();
+
             TaskCompletionSource<object> result;
             if (_indexedWatchers.TryPeek(out result))
                 return result.Task;
@@ -150,6 +153,11 @@ namespace Raven.Server.Documents.Indexes
             var tcs = new TaskCompletionSource<object>();
             _indexedWatchers.Enqueue(tcs);
             return tcs.Task;
+        }
+
+        private static void ThrowObjectDisposed()
+        {
+            throw new ObjectDisposedException("index");
         }
 
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
@@ -503,6 +511,8 @@ namespace Raven.Server.Documents.Indexes
                     _contextPool?.Dispose();
                     _contextPool = null;
                 });
+
+                exceptionAggregator.Execute(RaiseIndexChanged);
 
                 exceptionAggregator.ThrowIfNeeded();
             }
@@ -1016,6 +1026,11 @@ namespace Raven.Server.Documents.Indexes
             if (notification.Type == IndexChangeTypes.IndexMarkedAsErrored)
                 Stop();
 
+            RaiseIndexChanged();
+        }
+
+        private void RaiseIndexChanged()
+        {
             TaskCompletionSource<object> result;
             while (_indexedWatchers.TryDequeue(out result))
             {

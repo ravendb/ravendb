@@ -185,6 +185,21 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 var id = _indexStore.CreateIndex(definition);
                 index = _indexStore.GetIndex(id);
 
+                CleanupSupercededAutoIndexes(index, map)
+                    .ContinueWith(task =>
+                    {
+                        if (task.Exception != null)
+                        {
+                            if (_token.Token.IsCancellationRequested)
+                                return;
+
+                            if (_indexStore.Logger.IsInfoEnabled)
+                            {
+                                _indexStore.Logger.Info($"Failed to delete superceded indexes for index " + index.Name);
+                            }
+                        }
+                    });
+
                 if (query.WaitForNonStaleResultsTimeout.HasValue == false)
                     query.WaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // allow new auto indexes to have some results
             }
@@ -192,6 +207,59 @@ namespace Raven.Server.Documents.Queries.Dynamic
             EnsureValidQuery(query, map);
 
             return index;
+        }
+
+        private async Task CleanupSupercededAutoIndexes(Index index, DynamicQueryMapping map)
+        {
+            if (map.SupercededIndexes == null || map.SupercededIndexes.Count == 0)
+                return;
+
+            // this is meant to remove superceded indexes immediately when they are of no use
+            // however, they'll also be cleaned by the idle timer, so we don't worry too much
+            // about this being in memory only operation
+
+            while (_token.Token.IsCancellationRequested == false)
+            {
+                Task waitForNextIndexingRound;
+                try
+                {
+                    waitForNextIndexingRound = index.WaitForNextIndexingRound();
+                }
+                catch (ObjectDisposedException)
+                {
+                    break;
+                }
+
+                var maxSupercededEtag = 0L;
+                foreach (var supercededIndex in map.SupercededIndexes)
+                {
+                    var etag = supercededIndex.GetLastMappedEtagFor(map.ForCollection);
+                    maxSupercededEtag = Math.Max(etag, maxSupercededEtag);
+                }
+
+                var currentEtag = index.GetLastMappedEtagFor(map.ForCollection);
+                if (currentEtag >= maxSupercededEtag)
+                {
+                    foreach (var supercededIndex in map.SupercededIndexes)
+                    {
+                        try
+                        {
+                            _indexStore.DeleteIndex(supercededIndex.IndexId);
+                        }
+                        catch (IndexDoesNotExistsException)
+                        {
+                        }
+                    }
+                }
+                try
+                {
+                    await waitForNextIndexingRound;
+                }
+                catch (ObjectDisposedException)
+                {
+                    break;
+                }
+            }
         }
 
         public List<DynamicQueryToIndexMatcher.Explanation> ExplainIndexSelection(string dynamicIndexName, IndexQueryServerSide query)
@@ -225,6 +293,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     // We can then use our new index instead
 
                     var currentIndex = _indexStore.GetIndex(matchResult.IndexName);
+
+                    if (map.SupercededIndexes == null)
+                        map.SupercededIndexes = new List<Index>();
+
+                    map.SupercededIndexes.Add(currentIndex);
+
                     map.ExtendMappingBasedOn(currentIndex.Definition);
 
                     break;

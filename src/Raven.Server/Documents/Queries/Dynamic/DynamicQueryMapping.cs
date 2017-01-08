@@ -29,6 +29,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public bool IsMapReduce { get; private set; }
 
+        public List<Index> SupercededIndexes;
+
         public IndexDefinitionBase CreateAutoIndexDefinition()
         {
             if (IsMapReduce == false)

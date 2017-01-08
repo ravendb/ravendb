@@ -8,6 +8,7 @@ using Xunit;
 using Sparrow.Platform;
 using System.Linq;
 using FastTests.Blittable;
+using FastTests.Issues;
 using FastTests.Voron.RawData;
 
 namespace Tryouts
@@ -16,9 +17,9 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            var a = new SlowTests.Tests.Indexes.CastingInIndexDefinition();
+            var a = new FastTests.Client.Indexing.IndexesFromClient();
             {
-                a.CanCastValuesToString();
+                a.CanExplain().Wait();
             }
         }
     }

@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Indexes
 {
     public class IndexStore : IDisposable
     {
-        private static Logger _logger;
+        private readonly Logger _logger;
 
         private readonly DocumentDatabase _documentDatabase;
 
@@ -45,6 +45,8 @@ namespace Raven.Server.Documents.Indexes
         private bool _run = true;
 
         public readonly IndexIdentities Identities = new IndexIdentities();
+
+        public Logger Logger => _logger;
 
         public IndexStore(DocumentDatabase documentDatabase)
         {
