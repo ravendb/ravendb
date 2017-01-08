@@ -134,6 +134,11 @@ namespace Raven.Server
                         break;
 
                     case "help":
+                    case "–help":
+                    case "-help":
+                    case "--help":
+                    case "/?":
+                    case "--?":
                         Console.WriteLine("Avaliable Commands :");
                         Console.WriteLine("[cls] : clear screen");
                         Console.WriteLine("[log]: dump logs to console");
