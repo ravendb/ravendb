@@ -17,9 +17,9 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            var a = new FastTests.Client.Indexing.IndexesFromClient();
+            using (var a = new FastTests.Issues.RavenDb6055())
             {
-                a.CanExplain().Wait();
+                a.CreatingNewAutoIndexWillDeleteSmallerOnes().Wait();
             }
         }
     }

@@ -606,8 +606,6 @@ namespace FastTests.Client.Indexing
                     await session.SaveChangesAsync();
                 }
 
-                store.DatabaseCommands.Admin.StopIndexing();
-
                 using (var session = store.OpenSession())
                 {
                     RavenQueryStatistics stats;

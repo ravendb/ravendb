@@ -240,6 +240,11 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 var currentEtag = index.GetLastMappedEtagFor(map.ForCollection);
                 if (currentEtag >= maxSupercededEtag)
                 {
+                    // we'll give it a few seconds to drain any pending queries,
+                    // and because it make it easier to demonstrate how we auto
+                    // clear the old auto indexes.
+                    await Task.Delay(TimeSpan.FromSeconds(15));
+
                     foreach (var supercededIndex in map.SupercededIndexes)
                     {
                         try
@@ -250,6 +255,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         {
                         }
                     }
+                    break;
                 }
                 try
                 {
