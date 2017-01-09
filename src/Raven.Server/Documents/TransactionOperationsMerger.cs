@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,6 +12,10 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents
 {
+    /// <summary>
+    /// Merges multiple commands into a single transaction. Any commands that implement IDisposable
+    /// will be disposed after the command is executed and transaction is committed
+    /// </summary>
     public class TransactionOperationsMerger : IDisposable
     {
         private readonly DocumentDatabase _parent;
@@ -46,6 +51,10 @@ namespace Raven.Server.Documents
             public Exception Exception;
         }
 
+        /// <summary>
+        /// Enqueue the command to be eventually executed. If the command implements
+        ///  IDisposable, the command will be disposed after it is run and a tx is committed.
+        /// </summary>
         public Task Enqueue(MergedTransactionCommand cmd)
         {
             _edi?.Throw();
@@ -88,7 +97,7 @@ namespace Raven.Server.Documents
                         }
                     }
                     finally
-                    {
+                    {                        
                         pendingOps.Clear();
                     }
                 }
@@ -123,6 +132,13 @@ namespace Raven.Server.Documents
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void DisposeIfRelevant(MergedTransactionCommand op)
+        {
+            var disposable = op as IDisposable;
+            disposable?.Dispose();
+        }
+
         private bool MergeTransactionsOnce(List<MergedTransactionCommand> pendingOps)
         {
             try
@@ -147,6 +163,9 @@ namespace Raven.Server.Documents
                                 break;
                         } while (true);
                         tx.Commit();
+
+                        foreach(var op in pendingOps)
+                            DisposeIfRelevant(op);
                     }
                 }
                 return true;

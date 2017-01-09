@@ -71,10 +71,11 @@ namespace Raven.Server.Web.System
                     {
                         var dbId = Constants.Database.Prefix + resourceName;
                         long etag;
-                        var dbDoc = ServerStore.Read(context, dbId, out etag);
-                        WriteDatabaseInfo(resourceName, dbDoc, context, writer);
-
-                        return Task.CompletedTask;
+                        using (var dbDoc = ServerStore.Read(context, dbId, out etag))
+                        {
+                            WriteDatabaseInfo(resourceName, dbDoc, context, writer);
+                            return Task.CompletedTask;
+                        }
                     }
 
                     throw new ArgumentOutOfRangeException("type");

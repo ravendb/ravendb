@@ -148,8 +148,7 @@ namespace Raven.Server.Documents.Handlers
 
                 newDoc["Max"] = oldMax + Capacity;
 
-                using (
-                    var freshHilo = context.ReadObject(newDoc, hiLoDocumentKey,
+                using (var freshHilo = context.ReadObject(newDoc, hiLoDocumentKey,
                         BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
                     Database.DocumentsStorage.Put(context, hiLoDocumentKey, null, freshHilo);

@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Exceptions;
@@ -29,9 +30,10 @@ namespace NewClientTests.NewClient.Server.Basic
                     using (var requestExecuter = new RequestExecuter(store.Url, store.DefaultDatabase, null))
                     {
                         requestExecuter.Execute(getCommand, context);
-                        var putCommand = new PutDatabaseDocumentTestCommand(getCommand.Result);
-
-                        Assert.Throws<ConcurrencyException>(() => requestExecuter.Execute(putCommand, context));
+                        using (var putCommand = new PutDatabaseDocumentTestCommand(getCommand.Result))
+                        {
+                            Assert.Throws<ConcurrencyException>(() => requestExecuter.Execute(putCommand, context));
+                        }
                     }
                 }
             }
@@ -50,7 +52,7 @@ namespace NewClientTests.NewClient.Server.Basic
             }
         }
 
-        public class PutDatabaseDocumentTestCommand : RavenCommand<BlittableJsonReaderObject>
+        public class PutDatabaseDocumentTestCommand : RavenCommand<BlittableJsonReaderObject>, IDisposable
         {
             private readonly BlittableJsonReaderObject databaseDocument;
 
@@ -79,6 +81,10 @@ namespace NewClientTests.NewClient.Server.Basic
                 Result = response;
             }
 
+            public void Dispose()
+            {
+                databaseDocument.Dispose();
+            }
         }
 
         public class GetDatabaseDocumentTestCommand : RavenCommand<BlittableJsonReaderObject>

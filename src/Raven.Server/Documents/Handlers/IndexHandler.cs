@@ -36,8 +36,12 @@ namespace Raven.Server.Documents.Handlers
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                var json = await context.ReadForDiskAsync(RequestBodyStream(), name);
-                var indexDefinition = JsonDeserializationServer.IndexDefinition(json);
+                IndexDefinition indexDefinition;
+                using (var json = await context.ReadForDiskAsync(RequestBodyStream(), name))
+                {
+                    indexDefinition = JsonDeserializationServer.IndexDefinition(json);
+                }
+
                 if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
                     throw new ArgumentException("Index must have a 'Maps' fields");
 

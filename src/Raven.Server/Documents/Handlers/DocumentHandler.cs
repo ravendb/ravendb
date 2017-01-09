@@ -151,10 +151,9 @@ namespace Raven.Server.Documents.Handlers
 
                 if (transformer != null)
                 {
-                    var transformerParameters = GetTransformerParameters(context);
-
+                    using (var transformerParameters = GetTransformerParameters(context))
                     using (var scope = transformer.OpenTransformationScope(transformerParameters, null, Database.DocumentsStorage,
-                            Database.TransformerStore, context))
+                        Database.TransformerStore, context))
                     {
                         writer.WriteDocuments(context, scope.Transform(documents).ToList(), metadataOnly);
                     }

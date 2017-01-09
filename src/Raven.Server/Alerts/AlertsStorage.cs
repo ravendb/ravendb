@@ -79,14 +79,15 @@ namespace Raven.Server.Alerts
                 var existingTvr = table.ReadByKey(slice);
                 if (existingTvr != null)
                 {
-                    var existingAlert = Read(context, existingTvr);
-
-                    object dismissedUntilValue;
-                    existingAlert.TryGetMember(nameof(alert.DismissedUntil), out dismissedUntilValue);
-                    if (dismissedUntilValue != null)
+                    using (var existingAlert = Read(context, existingTvr))
                     {
-                        var dismissedUntil = (LazyStringValue) dismissedUntilValue;
-                        alertAsJson[nameof(alert.DismissedUntil)] = dismissedUntil;
+                        object dismissedUntilValue;
+                        existingAlert.TryGetMember(nameof(alert.DismissedUntil), out dismissedUntilValue);
+                        if (dismissedUntilValue != null)
+                        {
+                            var dismissedUntil = (LazyStringValue) dismissedUntilValue;
+                            alertAsJson[nameof(alert.DismissedUntil)] = dismissedUntil;
+                        }
                     }
                 }
             }

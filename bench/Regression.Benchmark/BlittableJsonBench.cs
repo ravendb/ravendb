@@ -42,25 +42,28 @@ namespace Regression
         [Benchmark]
         public void WriteJsonFromStream()
         {
-            var objects = new List<BlittableJsonReaderObject>();
-            using (var context = JsonOperationContext.ShortTermSingleUse())
+            List<BlittableJsonReaderObject> objects;
+            objects = new List<BlittableJsonReaderObject>();
+            try
             {
-                foreach (var name in new[] { "1.json", "2.json", "3.json", "monsters.json" })
-                {                
-                    var resource = "Regression.Benchmark.Data." + name;
-
-                    using (var stream = typeof(BlittableJsonBench).GetTypeInfo().Assembly.GetManifestResourceStream(resource))
-                    {
-                        // We parse the whole thing.
-                        var obj = context.Read(stream, "id/" + name);
-                        objects.Add(obj);
-                    }
-                }
-
-                var memoryStream = new MemoryStream();
-
-                ExecuteBenchmark(() =>
+                using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
+                    foreach (var name in new[] { "1.json", "2.json", "3.json", "monsters.json" })
+                    {                
+                        var resource = "Regression.Benchmark.Data." + name;
+
+                        using (var stream = typeof(BlittableJsonBench).GetTypeInfo().Assembly.GetManifestResourceStream(resource))
+                        {
+                            // We parse the whole thing.
+                            var obj = context.Read(stream, "id/" + name);
+                            objects.Add(obj);
+                        }
+                    }
+
+                    var memoryStream = new MemoryStream();
+
+                    ExecuteBenchmark(() =>
+                    {
 
                         foreach (var obj in objects)
                         {
@@ -68,7 +71,14 @@ namespace Regression
                             context.Write(memoryStream, obj);
                         }
 
-                });
+                    });
+                }
+
+            }
+            finally
+            {
+                foreach(var doc in objects)
+                    doc.Dispose();
             }
         }
     }
