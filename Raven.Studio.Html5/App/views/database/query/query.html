@@ -307,7 +307,7 @@
                             <div class="suggestion-box" data-bind="visible: $root.showSuggestions, foreach: $root.indexSuggestions">
                                 <div>Did you mean <a data-bind="text: Suggestion, click: $root.applySuggestion.bind($root, $data)" href="#"></a> for the field <i data-bind="text: FieldName"></i>?</div>
                             </div>
-                            <div id="queryResultsGrid" data-bind="widget: { kind: 'virtualTable', customColumns: currentColumnsParams, itemsSource: queryResults, selectedIndices: selectedResultIndices, gridSelector: '#queryResultsGrid', useContextMenu: true, showIds: true, showCheckboxes: true, maxHeight: '450px', isIndexMapReduce: isIndexMapReduce, collections: collections, contextMenuOptions: ['CopyItems', 'CopyIDs' , 'Delete', 'EditItem' ], noResultsMessage: 'No results were found. For NotAnalyzed fields you may wish to search with [[term]].'}"></div>
+                            <div id="queryResultsGrid" data-bind="widget: { kind: 'virtualTable', customColumns: currentColumnsParams, itemsSource: queryResults, selectedIndices: selectedResultIndices, gridSelector: '#queryResultsGrid', useContextMenu: true, showIds: true, showCheckboxes: true, maxHeight: '450px', minHeight: '200px', isIndexMapReduce: isIndexMapReduce, collections: collections, contextMenuOptions: ['CopyItems', 'CopyIDs' , 'Delete', 'EditItem' ], noResultsMessage: 'No results were found. For NotAnalyzed fields you may wish to search with [[term]].'}"></div>
                         </div>
                     </div>
                 </div>
