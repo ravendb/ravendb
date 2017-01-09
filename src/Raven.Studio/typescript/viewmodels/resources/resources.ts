@@ -302,14 +302,14 @@ class resources extends viewModelBase {
 
     toggleDatabaseIndexing(db: databaseInfo) {
         const enableIndexing = !db.indexingEnabled();
-        const message = enableIndexing ? "Enable" : "Disable";
+        const message = enableIndexing ? "Enable" : "Pause";
 
         this.confirmationMessage("Are you sure?", message + " indexing?")
             .done(result => {
                 if (result.can) {
                     this.spinners.disableIndexing.push(db.qualifiedName);
 
-                    new toggleIndexingCommand(true, db.asResource())
+                    new toggleIndexingCommand(enableIndexing, db.asResource())
                         .execute()
                         .done(() => db.indexingEnabled(enableIndexing))
                         .always(() => this.spinners.disableIndexing.remove(db.qualifiedName));
