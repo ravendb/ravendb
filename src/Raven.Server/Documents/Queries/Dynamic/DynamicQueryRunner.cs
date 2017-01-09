@@ -10,6 +10,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries.Dynamic
@@ -220,10 +221,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             while (_token.Token.IsCancellationRequested == false)
             {
-                Task waitForNextIndexingRound;
+                AsyncManualResetEvent.FrozenAwaiter indexingBatchCompleted;
                 try
                 {
-                    waitForNextIndexingRound = index.WaitForNextIndexingRound();
+                    indexingBatchCompleted = index.GetIndexingBatchAwaiter();
                 }
                 catch (ObjectDisposedException)
                 {
@@ -257,14 +258,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     }
                     break;
                 }
-                try
-                {
-                    await waitForNextIndexingRound;
-                }
-                catch (ObjectDisposedException)
-                {
+
+                if (await indexingBatchCompleted.WaitAsync() == false)
                     break;
-                }
             }
         }
 
