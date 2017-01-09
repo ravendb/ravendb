@@ -518,7 +518,8 @@ This edge-case has a very slim chance of happening, but still we should not igno
             if (rightHandBooleanNode == null || 
                 rightHandBooleanNode.Op == Operator.AND || 
                 rightHandBooleanNode.Op == Operator.INTERSECT || 
-                (rightHandBooleanNode.Op == Operator.Implicit && isDefaultOperatorAnd))
+                (rightHandBooleanNode.Op == Operator.Implicit && isDefaultOperatorAnd) ||
+                rightHandBooleanNode.Op == Operator.NOT)
             {
                 LeftNode = leftNode;
                 RightNode = rightNode;
