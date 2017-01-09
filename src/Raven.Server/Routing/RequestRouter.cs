@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -16,6 +17,7 @@ using Raven.Server.Config.Attributes;
 using Raven.Server.Documents;
 using System.Threading;
 using Raven.Client.Data;
+using Raven.Client.Util;
 using Raven.Server.Web;
 
 namespace Raven.Server.Routing
@@ -58,10 +60,11 @@ namespace Raven.Server.Routing
             HandleRequest handler;
             if (tryMatch.Value.TryGetHandler(reqCtx, out handler) == false)
                 handler = await tryMatch.Value.CreateHandlerAsync(reqCtx);
+
             var metricsCountersManager = reqCtx.Database?.Metrics ?? reqCtx.RavenServer.Metrics;
             metricsCountersManager.RequestsMeter.Mark();
-            metricsCountersManager.RequestsPerSecondCounter.Mark();
             Interlocked.Increment(ref metricsCountersManager.ConcurrentRequestsCount);
+
             if (handler == null)
             {
                 context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
