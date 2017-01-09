@@ -6,7 +6,7 @@
 
 
         <ul class="nav nav-pills nav-stacked document-collections" data-bind="with: allDocumentsCollection">
-            <li class="all-docs-collection" data-bind="event: { mousedown: $parent.selectCollection.bind($parent) }, css: { active: $data === $parent.selectedCollection() }">
+            <li class="all-docs-collection" data-bind="event: { click: $parent.selectCollection.bind($parent) }, css: { active: $data === $parent.selectedCollection() }">
                 <a href="javascript:void(0)">
                     <div class="collection-name">
                         <div class="collection-text pull-left collection-color-strip" data-bind="css: colorClass"></div>
@@ -37,10 +37,10 @@
                 </div>
             </div>
             <div class="btn-group">
-                <button type="button" class="btn btn-primary" accesskey="n" data-bind="click: newDocument" title="Create new document (Alt+N)">
+                <button type="button" class="btn btn-primary" accesskey="n" data-bind="click: newDocument.bind($root)" title="Create new document (Alt+N)">
                     <i class="fa fa-plus"></i> New document
                 </button>
-                <button type="button" class="btn btn-primary" data-bind="click: newDocumentInCollection" title="Create new document (Alt+N)">
+                <button type="button" class="btn btn-primary" data-bind="click: newDocumentInCollection.bind($root)" title="Create new document (Alt+N)">
                     <i class="fa fa-plus"></i> New document in current collection
                 </button>
             </div>

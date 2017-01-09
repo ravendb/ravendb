@@ -460,13 +460,23 @@ class documents extends viewModelBase {
         });
     }
 
-    newDocument() {
+    newDocument(docs: documents, $event: JQueryEventObject) {
         eventsCollector.default.reportEvent("document", "new");
-        router.navigate(appUrl.forNewDoc(this.activeDatabase()));
+        const url = appUrl.forNewDoc(this.activeDatabase());
+        if ($event.ctrlKey) {
+            window.open(url);
+        } else {
+            router.navigate(url);
+        }
     }
 
-    newDocumentInCollection() {
-        router.navigate(appUrl.forNewDoc(this.activeDatabase(), this.currentCollection().name));
+    newDocumentInCollection(docs: documents, $event: JQueryEventObject) {
+        const url = appUrl.forNewDoc(this.activeDatabase(), this.currentCollection().name);
+        if ($event.ctrlKey) {
+            window.open(url);
+        } else {
+            router.navigate(url);
+        }
     }
 
     refresh() {
