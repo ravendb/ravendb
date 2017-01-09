@@ -60,7 +60,6 @@ namespace Raven.Server.Routing
                 handler = await tryMatch.Value.CreateHandlerAsync(reqCtx);
             var metricsCountersManager = reqCtx.Database?.Metrics ?? reqCtx.RavenServer.Metrics;
             metricsCountersManager.RequestsMeter.Mark();
-            metricsCountersManager.RequestsPerSecondCounter.Mark();
             Interlocked.Increment(ref metricsCountersManager.ConcurrentRequestsCount);
             if (handler == null)
             {
