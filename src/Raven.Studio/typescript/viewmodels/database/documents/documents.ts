@@ -3,11 +3,7 @@ import router = require("plugins/router");
 import virtualTable = require("widgets/virtualTable/viewModel");
 import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
-import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeightBindingHandler");
-
 import EVENTS = require("common/constants/events");
-
-import changesContext = require("common/changesContext");
 import viewModelBase = require("viewmodels/viewModelBase");
 import deleteCollection = require("viewmodels/database/documents/deleteCollection");
 import selectColumns = require("viewmodels/common/selectColumns");
@@ -415,10 +411,16 @@ class documents extends viewModelBase {
 
     selectCollection(collection: collection, event?: MouseEvent) {
         if (!event || event.which !== 3) {
-            collection.activate();
-            var documentsWithCollectionUrl = appUrl.forDocuments(collection.name, this.activeDatabase());
-            router.navigate(documentsWithCollectionUrl, false);
-            this.showCollectionChanged(false);
+            const documentsWithCollectionUrl = appUrl.forDocuments(collection.name, this.activeDatabase());
+
+            if (event.ctrlKey) {
+                window.open(documentsWithCollectionUrl);
+                $(document.activeElement).blur();
+            } else {
+                router.navigate(documentsWithCollectionUrl, false);
+                this.showCollectionChanged(false);
+                collection.activate();
+            }
         }
     }
 
