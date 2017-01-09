@@ -17,8 +17,6 @@ namespace Raven.Server.Utils
     {
         public MeterMetric RequestsMeter { get; private set; }
 
-        public MeterMetric RequestsPerSecondCounter { get; private set; }
-
         public MeterMetric DocPutsPerSecond { get; private set; }
         public MeterMetric IndexedPerSecond { get; private set; }
         
@@ -37,7 +35,6 @@ namespace Raven.Server.Utils
         public void Dispose()
         {
             RequestsMeter?.Dispose();
-            RequestsPerSecondCounter?.Dispose();
             DocPutsPerSecond?.Dispose();
             IndexedPerSecond?.Dispose();
             MapReduceMappedPerSecond?.Dispose();
@@ -54,7 +51,6 @@ namespace Raven.Server.Utils
         private void CreateNew()
         {
             RequestsMeter = new MeterMetric();
-            RequestsPerSecondCounter = new MeterMetric();
             DocPutsPerSecond = new MeterMetric();
             IndexedPerSecond = new MeterMetric();
             MapReduceMappedPerSecond = new MeterMetric();
@@ -73,7 +69,6 @@ namespace Raven.Server.Utils
                 ["IndexedPerSecond"] = self.IndexedPerSecond.CreateMeterData(),
 
                 ["RequestsMeter "] = self.RequestsMeter.CreateMeterData(),
-                ["RequestsPerSecondCounter"] = self.RequestsPerSecondCounter.CreateMeterData(),
                 ["MapReduceMappedPerSecond"] = self.MapReduceMappedPerSecond.CreateMeterData(),
                 ["MapReduceReducedPerSecond"] = self.MapReduceReducedPerSecond.CreateMeterData(),
                 ["ConcurrentRequestsCount"] = self.ConcurrentRequestsCount,
