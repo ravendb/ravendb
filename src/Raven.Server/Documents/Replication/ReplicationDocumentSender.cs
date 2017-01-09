@@ -30,6 +30,69 @@ namespace Raven.Server.Documents.Replication
             _parent = parent;
         }
 
+        [Flags]
+        private enum CurrentEnumerationState
+        {
+            None = 0,
+            HasDocs = 1,
+            HasTombs = 2,
+            HasDocsAndTombs = HasDocs | HasTombs
+        }
+
+        private IEnumerable<ReplicationBatchDocumentItem> GetDocsAndTombstonesAfter(long etag)
+        {
+            var docs = _parent._database.DocumentsStorage.GetDocumentsFrom(_parent._documentsContext,etag+ 1);
+            var tombs = _parent._database.DocumentsStorage.GetTombstonesFrom(_parent._documentsContext,etag + 1,0, int.MaxValue);
+
+            using (var docsIt = docs.GetEnumerator())
+            using (var tombsIt = tombs.GetEnumerator())
+            {
+                var state = CurrentEnumerationState.None;
+
+                if(docsIt.MoveNext())
+                    state |= CurrentEnumerationState.HasDocs;
+                if(tombsIt.MoveNext())
+                    state |= CurrentEnumerationState.HasTombs;
+
+                while (true)
+                {
+                    switch (state)
+                    {
+                        case CurrentEnumerationState.None:
+                            yield break;
+                        case CurrentEnumerationState.HasDocs:
+                            yield return new ReplicationBatchDocumentItem
+                            {
+                                Etag = docsIt.Current.Etag,
+                                ChangeVector = docsIt.Current.ChangeVector,
+                                Data = docsIt.Current.Data,
+                                Key = docsIt.Current.Key
+                            };
+                            if (docsIt.MoveNext() == false)
+                                state &= ~CurrentEnumerationState.HasDocs;
+                            break;
+                        case CurrentEnumerationState.HasTombs:
+                            yield return new ReplicationBatchDocumentItem
+                            {
+                                Etag = tombsIt.Current.Etag,
+                                ChangeVector = tombsIt.Current.ChangeVector,
+                                Collection = tombsIt.Current.Collection,
+                                Key = tombsIt.Current.Key
+                            };
+                            if (tombsIt.MoveNext() == false)
+                                state &= ~CurrentEnumerationState.HasTombs;
+                            break;
+                        case CurrentEnumerationState.HasDocsAndTombs:
+                            if (docsIt.Current.Etag > tombsIt.Current.Etag)
+                                goto case CurrentEnumerationState.HasDocs;
+                            goto case CurrentEnumerationState.HasTombs;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                }
+            }
+        }
+
         public bool ExecuteReplicationOnce()
         {            
             var readTx = _parent._documentsContext.OpenReadTransaction();
@@ -38,66 +101,22 @@ namespace Raven.Server.Documents.Replication
                 // we scan through the documents to send to the other side, we need to be careful about
                 // filtering a lot of documents, because we need to let the other side know about this, and 
                 // at the same time, we need to send a heartbeat to keep the tcp connection alive
-                long maxEtag;
-                maxEtag = _lastEtag = _parent._lastSentDocumentEtag;
+                _lastEtag = _parent._lastSentDocumentEtag;
                 _parent.CancellationToken.ThrowIfCancellationRequested();
 
-                var docs =
-                    _parent._database.DocumentsStorage.GetDocumentsFrom(_parent._documentsContext,
-                            _lastEtag + 1, 0, 1024)
-                        .ToList();
-                var tombstones =
-                    _parent._database.DocumentsStorage.GetTombstonesFrom(_parent._documentsContext,
-                            _lastEtag + 1, 0, 1024)
-                        .ToList();
-
-                   
-                if (docs.Count > 0)
-                {
-                    maxEtag = docs[docs.Count - 1].Etag;
-                }
-
-                if (tombstones.Count > 0)
-                {
-                    maxEtag = Math.Max(maxEtag, tombstones[tombstones.Count - 1].Etag);
-                }
-
                 long size = 0;
-
-                foreach (var doc in docs)
+                foreach (var item in GetDocsAndTombstonesAfter(_lastEtag))
                 {
-                    if (doc.Etag > maxEtag)
-                        break;
+                    if (item.Data != null)
+                        size += item.Data.Size;
 
+                    _lastEtag = item.Etag;
 
-                    size += doc.Data.Size;
-
-                    AddReplicationItemToBatch(new ReplicationBatchDocumentItem
-                    {
-                        Etag = doc.Etag,
-                        ChangeVector = doc.ChangeVector,
-                        Data = doc.Data,
-                        Key = doc.Key
-                    });
+                    AddReplicationItemToBatch(item);
 
                     if (size > 16*1024*1024)
                         break; // we want to limit batch sizes to reasonable limits
                 }
-
-                foreach (var tombstone in tombstones)
-                {
-                    if (tombstone.Etag > maxEtag)
-                        break;
-
-                    AddReplicationItemToBatch(new ReplicationBatchDocumentItem
-                    {
-                        Etag = tombstone.Etag,
-                        ChangeVector = tombstone.ChangeVector,
-                        Collection = tombstone.Collection,
-                        Key = tombstone.Key
-                    });
-                }
-
                  
                 if (_log.IsInfoEnabled)
                 {
@@ -107,17 +126,12 @@ namespace Raven.Server.Documents.Replication
                 if (_orderedReplicaItems.Count == 0)
                 {
                     var hasModification = _lastEtag != _parent._lastSentDocumentEtag;
-                    if (hasModification == false)
-                    {
-                        _parent._lastSentDocumentEtag = maxEtag;
-                    }
-                    else
-                    {
-                        _parent._lastSentDocumentEtag = _lastEtag;
-                    }
+
                     // ensure that the other server is aware that we skipped 
                     // on (potentially a lot of) documents to send, and we update
                     // the last etag they have from us on the other side
+                    _parent._lastSentDocumentEtag = _lastEtag;
+
                     using (_parent._configurationContext.OpenReadTransaction())
                     {
                         _parent._lastDocumentSentTime = DateTime.UtcNow;
@@ -171,7 +185,6 @@ namespace Raven.Server.Documents.Replication
                 }
                 return;
             }
-            _lastEtag = Math.Max(_lastEtag, item.Etag);
             _orderedReplicaItems.Add(item.Etag, item);
         }
 

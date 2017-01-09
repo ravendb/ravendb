@@ -17,9 +17,9 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var a = new FastTests.Issues.RavenDb6055())
+            using (var a = new FastTests.Server.Replication.DocumentReplication())
             {
-                a.CreatingNewAutoIndexWillDeleteSmallerOnes().Wait();
+                a.CanReplicateDocumentDeletion();
             }
         }
     }
