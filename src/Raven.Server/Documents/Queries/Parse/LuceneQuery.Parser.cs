@@ -7,6 +7,9 @@ namespace Raven.Server.Documents.Queries.Parse
         public LuceneQueryParser() : base(null) { }
 
         private bool _inMethod;
+		
+		public bool IsDefaultOperatorAnd { get; set; }
+		
         public bool InMethod
         {
             get

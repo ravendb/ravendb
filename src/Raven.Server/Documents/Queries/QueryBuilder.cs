@@ -57,6 +57,7 @@ namespace Raven.Server.Documents.Queries
                     try
                     {
                         var parser = new LuceneQueryParser();
+                        parser.IsDefaultOperatorAnd = defaultOperator == QueryOperator.And;
                         parser.Parse(query);
                         var res = parser.LuceneAST.ToQuery(
                             new LuceneASTQueryConfiguration
