@@ -183,6 +183,9 @@ namespace Raven.NewClient.Client.Json
             if (TokenType == JsonToken.EndArray)
                 return new int?();
 
+            if (TokenType == JsonToken.Null)
+                return new int?();
+
             return (int)Convert.ChangeType(Value, typeof(int));
         }
 
