@@ -190,7 +190,8 @@ namespace Sparrow.Json
 
                 var bytesToWrite = Math.Min(lengthLeft, _current.Allocation.SizeInBytes - _current.Used);
 
-                Memory.Copy(_current.Address + _current.Used, buffer, bytesToWrite);
+                Memory.CopyInline(_current.Address + _current.Used, buffer, bytesToWrite);
+
                 _sizeInBytes += bytesToWrite;
                 lengthLeft -= bytesToWrite;
                 bufferPosition += bytesToWrite;
