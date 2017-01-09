@@ -38,7 +38,7 @@ namespace Sparrow.Json
 
         private readonly List<PropertyName> _docPropNames = new List<PropertyName>();
         private readonly SortedDictionary<PropertyName, object> _propertiesSortOrder = new SortedDictionary<PropertyName, object>();
-        private readonly Dictionary<LazyStringValue, PropertyName> _propertyNameToId = new Dictionary<LazyStringValue, PropertyName>();
+        private readonly Dictionary<LazyStringValue, PropertyName> _propertyNameToId = new Dictionary<LazyStringValue, PropertyName>(LazyStringValueComparer.Instance);
         private bool _propertiesNeedSorting;
 
         public int PropertiesDiscovered;
