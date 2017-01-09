@@ -106,7 +106,7 @@
                         <i class="icon-clone"></i>
                         <span>Clone</span>
                     </button>
-                    <button type="button" data-bind="click: deleteDocument" class="delete-btn btn btn-danger">
+                    <button type="button" data-bind="click: deleteDocument, enable: metadata().etag" class="delete-btn btn btn-danger">
                         <i class="icon-trash"></i>
                         <span>Delete</span>
                     </button>
