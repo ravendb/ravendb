@@ -1,35 +1,33 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using Lucene.Net.Documents;
-using Raven.Abstractions.Data;
+using FastTests;
 using Raven.Client;
-using Raven.Client.Document;
+using Raven.Client.Data;
 using Raven.Client.Document.Async;
 using Raven.Client.Indexes;
-using Raven.Tests.Common;
 using Xunit;
 
-namespace Raven.Tests.Bugs.Caching
+namespace SlowTests.Bugs.Caching
 {
-    public class CachingOfPostQueries:RavenTest,IDisposable
+    public class CachingOfPostQueries : RavenTestBase
     {
-        public class Person { 
+        private class Person
+        {
             public string Name { get; set; }
             public int Age { get; set; }
         }
 
-        public class PersonsIndex : AbstractIndexCreationTask<Person>
+        private class PersonsIndex : AbstractIndexCreationTask<Person>
         {
             public PersonsIndex()
             {
                 Map = results => from result in results
-                    select new Person
-                    {
-                        Name = result.Name
-                    };
+                                 select new Person
+                                 {
+                                     Name = result.Name
+                                 };
             }
         }
 
@@ -48,7 +46,8 @@ namespace Raven.Tests.Bugs.Caching
 
         private IDocumentStore GetTestStore()
         {
-            var store = NewDocumentStore();
+            var store = GetDocumentStore();
+
             new PersonsIndex().Execute(store);
             InitData(store);
             WaitForIndexing(store);
@@ -146,16 +145,13 @@ namespace Raven.Tests.Bugs.Caching
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await ((AsyncDocumentSession) session).AsyncDatabaseCommands.GetMultiFacetsAsync(new []
+                    await ((AsyncDocumentSession)session).AsyncDatabaseCommands.GetMultiFacetsAsync(new[]
                     {
                         new FacetQuery()
                         {
-                            Query = new IndexQuery()
-                            {
-                                Query = "Name:Johnny"
-                            },
+                            Query = "Name:Johnny",
                             IndexName = "PersonsIndex",
-                            PageStart = 0,
+                            Start = 0,
                             PageSize = 16,
                             Facets = new List<Facet>()
                             {
@@ -167,16 +163,13 @@ namespace Raven.Tests.Bugs.Caching
                         }
                     }).ConfigureAwait(false);
                     Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
-                    await ((AsyncDocumentSession) session).AsyncDatabaseCommands.GetMultiFacetsAsync(new FacetQuery[]
+                    await ((AsyncDocumentSession)session).AsyncDatabaseCommands.GetMultiFacetsAsync(new FacetQuery[]
                     {
                         new FacetQuery()
                         {
-                            Query = new IndexQuery()
-                            {
-                                Query = "Name:Johnny"
-                            },
+                            Query = "Name:Johnny",
                             IndexName = "PersonsIndex",
-                            PageStart = 0,
+                            Start = 0,
                             PageSize = 16,
                             Facets = new List<Facet>()
                             {

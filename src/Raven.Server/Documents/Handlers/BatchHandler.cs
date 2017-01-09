@@ -4,9 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
-using Lucene.Net.Util;
-using Microsoft.Extensions.Logging.Abstractions;
-using Newtonsoft.Json;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Extensions;
 using Raven.Server.Documents.Indexes;
@@ -14,6 +11,7 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron.Exceptions;
@@ -43,12 +41,13 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out readBatchCommandContext))
             using (ContextPool.AllocateOperationContext(out readDocumentsContext))
             {
-                BlittableJsonReaderArray commands;
+                Tuple<BlittableJsonReaderArray, IDisposable> commandsParseResult;
                 try
                 {
-                    commands = await readBatchCommandContext.ParseArrayToMemoryAsync(RequestBodyStream(), "bulk/docs",
-                        // we will prepare the docs to disk in the actual PUT command
-                        BlittableJsonDocumentBuilder.UsageMode.None);
+                    commandsParseResult =
+                        await readBatchCommandContext.ParseArrayToMemoryAsync(RequestBodyStream(), "bulk/docs",
+                            // we will prepare the docs to disk in the actual PUT command
+                            BlittableJsonDocumentBuilder.UsageMode.None);
                 }
                 catch (InvalidDataException)
                 {
@@ -59,91 +58,100 @@ namespace Raven.Server.Documents.Handlers
                     throw new InvalidDataException("Could not parse json", ioe);
                 }
 
-                CommandData[] parsedCommands = new CommandData[commands.Length];
-
-                for (int i = 0; i < commands.Length; i++)
+                using (commandsParseResult.Item2)
                 {
-                    var cmd = commands.GetByIndex<BlittableJsonReaderObject>(i);
+                    var commands = commandsParseResult.Item1;
+                    CommandData[] parsedCommands = new CommandData[commands.Length];
 
-                    if (cmd.TryGet(nameof(CommandData.Method), out parsedCommands[i].Method) == false)
-                        throw new InvalidDataException($"Missing '{nameof(CommandData.Method)}' property");
-
-                    cmd.TryGet(nameof(CommandData.Key), out parsedCommands[i].Key); // Key can be null, we will generate new one
-
-                    // optional
-                    cmd.TryGet(nameof(CommandData.Etag), out parsedCommands[i].Etag);
-                    cmd.TryGet(nameof(CommandData.AdditionalData), out parsedCommands[i].AdditionalData);
-
-                    // We have to do additional processing on the documents
-                    // in particular, prepare them for disk by compressing strings, validating floats, etc
-
-                    // We **HAVE** to do that outside of the write transaction lock, that is why we are handling
-                    // it in this manner, first parse the commands, then prepare for the put, finally open
-                    // the transaction and actually write
-                    switch (parsedCommands[i].Method)
+                    for (int i = 0; i < commands.Length; i++)
                     {
-                        case "PUT":
-                            BlittableJsonReaderObject doc;
-                            if (cmd.TryGet(nameof(PutCommandData.Document), out doc) == false)
-                                throw new InvalidDataException($"Missing '{nameof(PutCommandData.Document)}' property");
+                        var cmd = commands.GetByIndex<BlittableJsonReaderObject>(i);
 
-                            // we need to split this document to an independent blittable document
-                            // and this time, we'll prepare it for disk.
-                            doc.PrepareForStorage();
-                            parsedCommands[i].Document = readDocumentsContext.ReadObject(doc, parsedCommands[i].Key,
-                                BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                            break;
-                        case "PATCH":
-                            cmd.TryGet(nameof(PatchCommandData.DebugMode), out parsedCommands[i].IsDebugMode);
+                        if (cmd.TryGet(nameof(CommandData.Method), out parsedCommands[i].Method) == false)
+                            throw new InvalidDataException($"Missing '{nameof(CommandData.Method)}' property");
 
-                            BlittableJsonReaderObject patch;
-                            if (cmd.TryGet(nameof(PatchCommandData.Patch), out patch) == false)
-                                throw new InvalidDataException($"Missing '{nameof(PatchCommandData.Patch)}' property");
+                        cmd.TryGet(nameof(CommandData.Key), out parsedCommands[i].Key);
+                            // Key can be null, we will generate new one
 
-                            parsedCommands[i].Patch = PatchRequest.Parse(patch);
-                            break;
+                        // optional
+                        cmd.TryGet(nameof(CommandData.Etag), out parsedCommands[i].Etag);
+                        cmd.TryGet(nameof(CommandData.AdditionalData), out parsedCommands[i].AdditionalData);
+
+                        // We have to do additional processing on the documents
+                        // in particular, prepare them for disk by compressing strings, validating floats, etc
+
+                        // We **HAVE** to do that outside of the write transaction lock, that is why we are handling
+                        // it in this manner, first parse the commands, then prepare for the put, finally open
+                        // the transaction and actually write
+                        switch (parsedCommands[i].Method)
+                        {
+                            case "PUT":
+                                BlittableJsonReaderObject doc;
+                                if (cmd.TryGet(nameof(PutCommandData.Document), out doc) == false)
+                                    throw new InvalidDataException(
+                                        $"Missing '{nameof(PutCommandData.Document)}' property");
+
+                                // we need to split this document to an independent blittable document
+                                // and this time, we'll prepare it for disk.
+                                doc.PrepareForStorage();
+                                parsedCommands[i].Document = readDocumentsContext.ReadObject(doc, parsedCommands[i].Key,
+                                    BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                                break;
+                            case "PATCH":
+                                cmd.TryGet(nameof(PatchCommandData.DebugMode), out parsedCommands[i].IsDebugMode);
+
+                                BlittableJsonReaderObject patch;
+                                if (cmd.TryGet(nameof(PatchCommandData.Patch), out patch) == false)
+                                    throw new InvalidDataException(
+                                        $"Missing '{nameof(PatchCommandData.Patch)}' property");
+
+                                parsedCommands[i].Patch = PatchRequest.Parse(patch);
+                                break;
+                        }
                     }
-                }
 
-                var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
+                    var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
 
-                var mergedCmd = new MergedBatchCommand
-                {
-                    Database = Database,
-                    ParsedCommands = parsedCommands,
-                    Reply = new DynamicJsonArray()
-                };
-                if(waitForIndexesTimeout != null)
-                    mergedCmd.ModifiedCollections = new HashSet<string>();
-                try
-                {
-                    await Database.TxMerger.Enqueue(mergedCmd);
-                }
-                catch (ConcurrencyException)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
-                    throw;
-                }
-
-                var waitForReplicasTimeout = GetTimeSpanQueryString("waitForReplicasTimeout", required: false);
-                if (waitForReplicasTimeout != null)
-                {
-                    await WaitForReplicationAsync(waitForReplicasTimeout.Value, mergedCmd);
-                }
-
-                if (waitForIndexesTimeout != null)
-                {
-                    await WaitForIndexesAsync(waitForIndexesTimeout.Value, mergedCmd.LastEtag, mergedCmd.ModifiedCollections);
-                }
-
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-
-                using (var writer = new BlittableJsonTextWriter(readBatchCommandContext, ResponseBodyStream()))
-                {
-                    readBatchCommandContext.Write(writer, new DynamicJsonValue
+                    var mergedCmd = new MergedBatchCommand
                     {
-                        ["Results"] = mergedCmd.Reply
-                    });
+                        Database = Database,
+                        ParsedCommands = parsedCommands,
+                        Reply = new DynamicJsonArray()
+                    };
+                    if (waitForIndexesTimeout != null)
+                        mergedCmd.ModifiedCollections = new HashSet<string>();
+                    try
+                    {
+                        await Database.TxMerger.Enqueue(mergedCmd);
+                    }
+                    catch (ConcurrencyException)
+                    {
+                        HttpContext.Response.StatusCode = (int) HttpStatusCode.Conflict;
+                        throw;
+                    }
+
+                    var waitForReplicasTimeout = GetTimeSpanQueryString("waitForReplicasTimeout", required: false);
+                    if (waitForReplicasTimeout != null)
+                    {
+                        await WaitForReplicationAsync(waitForReplicasTimeout.Value, mergedCmd);
+                    }
+
+                    if (waitForIndexesTimeout != null)
+                    {
+                        await
+                            WaitForIndexesAsync(waitForIndexesTimeout.Value, mergedCmd.LastEtag,
+                                mergedCmd.ModifiedCollections);
+                    }
+
+                    HttpContext.Response.StatusCode = (int) HttpStatusCode.Created;
+
+                    using (var writer = new BlittableJsonTextWriter(readBatchCommandContext, ResponseBodyStream()))
+                    {
+                        readBatchCommandContext.Write(writer, new DynamicJsonValue
+                        {
+                            ["Results"] = mergedCmd.Reply
+                        });
+                    }
                 }
             }
         }
@@ -188,44 +196,61 @@ namespace Raven.Server.Documents.Handlers
 
             var throwOnTimeout = GetBoolValueQueryString("waitForIndexThrow", required: false) ?? true;
 
-            var indexesTask = new List<Task>();
+            var indexesToWait = new List<WaitForIndexItem>();
 
             var indexesToCheck = GetImpactedIndexesToWaitForToBecomeNonStale(modifiedCollections);
 
-            var sp = Stopwatch.StartNew();
-            while (true)
-            {
-                indexesTask.Clear();
+            if (indexesToCheck.Count == 0)
+                return;
 
-                DocumentsOperationContext context;
-                using (ContextPool.AllocateOperationContext(out context))
-                using (context.OpenReadTransaction())
+            var sp = Stopwatch.StartNew();
+
+            // we take the awaiter _before_ the indexing transaction happens, 
+            // so if there are any changes, it will already happen to it, and we'll 
+            // query the index again. This is important because of: 
+            // http://issues.hibernatingrhinos.com/issue/RavenDB-5576
+            foreach (var index in indexesToCheck)
+            {
+                var indexToWait = new WaitForIndexItem
                 {
-                    foreach (var index in indexesToCheck)
+                    Index = index,
+                    IndexBatchAwaiter = index.GetIndexingBatchAwaiter(),
+                    WaitForIndexing = new AsyncWaitForIndexing(sp, timeout, index)
+                };
+
+                indexesToWait.Add(indexToWait);
+            }
+
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                while (true)
+                {
+                    var hadStaleIndexes = false;
+
+                    using (context.OpenReadTransaction())
                     {
-                        if (index.IsStale(context, lastEtag))
+                        foreach (var waitForIndexItem in indexesToWait)
                         {
-                            indexesTask.Add(index.WaitForNextIndexingRound());
+                            if (waitForIndexItem.Index.IsStale(context, lastEtag) == false)
+                                continue;
+
+                            hadStaleIndexes = true;
+
+                            await waitForIndexItem.WaitForIndexing.WaitForIndexingAsync(waitForIndexItem.IndexBatchAwaiter);
+
+                            if (waitForIndexItem.WaitForIndexing.TimeoutExceeded && throwOnTimeout)
+                            {
+                                throw new TimeoutException(
+                                    $"After waiting for {sp.Elapsed}, could not verify that {indexesToCheck.Count} " +
+                                    $"indexes has caught up with the changes as of etag: {lastEtag}");
+                            }
                         }
                     }
+
+                    if (hadStaleIndexes == false)
+                        return;
                 }
-
-                if (indexesTask.Count == 0)
-                    return;
-
-                var remaining = timeout - sp.Elapsed;
-                if (remaining < TimeSpan.Zero)
-                    break; // will throw timeout exception
-
-                indexesTask.Add(Task.Delay(remaining));
-
-                await Task.WhenAny(indexesTask);
-            }
-            if (throwOnTimeout)
-            {
-                throw new TimeoutException(
-                    $"After waiting for {sp.Elapsed}, could not verify that {indexesToCheck.Count} " +
-                    $"indexes has caught up with the changes as of etag: {lastEtag}");
             }
         }
 
@@ -299,7 +324,8 @@ namespace Raven.Server.Documents.Handlers
                             // TODO: Move this code out of the merged transaction
                             // TODO: We should have an object that handles this externally, 
                             // TODO: and apply it there
-                            var patchResult = Database.Patch.Apply(context, cmd.Key, cmd.Etag, cmd.Patch, null, cmd.IsDebugMode);
+                            var patchResult = Database.Patch.Apply(context, cmd.Key, cmd.Etag, cmd.Patch, null,
+                                cmd.IsDebugMode);
                             var additionalData = new DynamicJsonValue
                             {
                                 ["Debug"] = patchResult.DebugInfo,
@@ -308,7 +334,6 @@ namespace Raven.Server.Documents.Handlers
                             if (cmd.Document != null)
                             {
                                 context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Key, cmd.Document.Size);
-
                             }
                             if (cmd.IsDebugMode)
                             {
@@ -346,9 +371,14 @@ namespace Raven.Server.Documents.Handlers
                             break;
                     }
                 }
-
             }
+        }
+
+        private class WaitForIndexItem
+        {
+            public Index Index;
+            public AsyncManualResetEvent.FrozenAwaiter IndexBatchAwaiter;
+            public AsyncWaitForIndexing WaitForIndexing;
         }
     }
 }
-

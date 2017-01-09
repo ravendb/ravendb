@@ -3,6 +3,7 @@
 import database = require("models/resources/database");
 
 class starredDocumentsStorage {
+
     static getStarredDocuments(db: database): Array<string> {
         const localStorageName = db.starredDocumentsLocalStorageName;
         let starredDocumentsFromLocalStorage: Array<string> = this.getFromLocalStorage(localStorageName);
@@ -25,7 +26,8 @@ class starredDocumentsStorage {
         let alreadyStored = _.includes(starred, documentId); 
         if (asStarred) {
             if (!alreadyStored) {
-                starred.unshift(documentId);
+                let locationToInsert = _.sortedIndex(starred, documentId);
+                starred.splice(locationToInsert, 0, documentId);
                 starredDocumentsStorage.saveToLocalStorage(db, starred);
             }
         } else {

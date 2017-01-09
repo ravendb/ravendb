@@ -170,13 +170,14 @@ class connectedDocuments {
     }
 
     toggleStar() {
-        starredDocumentsStorage.markDocument(this.db(), this.document().getId(), !this.currentDocumentIsStarred());
-        this.currentDocumentIsStarred(starredDocumentsStorage.isStarred(this.db(), this.document().getId()));
+        this.currentDocumentIsStarred(!this.currentDocumentIsStarred());
+        starredDocumentsStorage.markDocument(this.db(), this.document().getId(), this.currentDocumentIsStarred());       
     }
 
     private onDocumentLoaded(document: document) {
         if (document) {
-            this.recentDocuments.appendRecentDocument(this.db(), document.getId());
+            this.recentDocuments.appendRecentDocument(this.db(), this.document().getId());
+            this.currentDocumentIsStarred(starredDocumentsStorage.isStarred(this.db(), this.document().getId()));
         }
     }
 

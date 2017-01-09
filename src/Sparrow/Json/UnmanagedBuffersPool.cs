@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using Sparrow.Binary;
-using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Sparrow.Utils;
 
-namespace Raven.Client.Util
+namespace Sparrow.Json
 {
     public unsafe class UnmanagedBuffersPool : IDisposable
     {
@@ -47,7 +47,18 @@ namespace Raven.Client.Util
                 {
                     size += allocatedMemoryDatas.SizeInBytes;
                     NativeMemory.Free(allocatedMemoryDatas.Address, allocatedMemoryDatas.SizeInBytes, allocatedMemoryDatas.AllocatingThread);
+
+#if MEM_GUARD
+#if MEM_GUARD_STACK
+            allocatedMemoryDatas.FreedBy = Environment.StackTrace;
+#endif
+            GC.SuppressFinalize(allocatedMemoryDatas);
+#endif
                 }
+
+
+
+
             }
             return size;
         }
@@ -94,6 +105,14 @@ namespace Raven.Client.Util
 
         public AllocatedMemoryData Allocate(int size)
         {
+#if MEM_GUARD
+            return new AllocatedMemoryData
+            {
+                SizeInBytes = size,
+                Address = ElectricFencedMemory.Allocate(size),
+            };
+#else
+
             var actualSize = Bits.NextPowerOf2(size);
 
             var index = GetIndexFromSize(actualSize);
@@ -121,6 +140,7 @@ namespace Raven.Client.Util
                 Address = NativeMemory.AllocateMemory(actualSize, out stats),
                 AllocatingThread = stats
             };
+#endif
         }
 
 
@@ -158,6 +178,11 @@ namespace Raven.Client.Util
 
         public void Return(AllocatedMemoryData returned)
         {
+#if MEM_GUARD
+            ElectricFencedMemory.Free(returned.Address);
+            GC.SuppressFinalize(returned);
+#else
+
             if (returned == null) throw new ArgumentNullException(nameof(returned));
             var index = GetIndexFromSize(returned.SizeInBytes);
             if (index == -1)
@@ -167,6 +192,8 @@ namespace Raven.Client.Util
                 return; // strange size, just free it
             }
             _freeSegments[index].Push(returned);
+#endif
+
         }
     }
 }

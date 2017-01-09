@@ -47,6 +47,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                 sut.Process(bsc, SystemTime.UtcNow);
 
                 Assert.NotEqual((ulong)0, sut.Hash);
+                sut.ReleaseBuffer();
             }
         }
     }

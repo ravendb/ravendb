@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.Indexes
 
         internal TransactionContextPool _contextPool;
 
-        private bool _disposed;
+        internal bool _disposed;
 
         protected readonly ManualResetEventSlim _mre = new ManualResetEventSlim();
 
@@ -137,20 +137,6 @@ namespace Raven.Server.Documents.Indexes
         private readonly ReaderWriterLockSlim _currentlyRunningQueriesLock = new ReaderWriterLockSlim();
         private volatile bool _priorityChanged;
         private volatile bool _hadRealIndexingWorkToDo;
-
-        private readonly ConcurrentQueue<TaskCompletionSource<object>> _indexedWatchers =
-            new ConcurrentQueue<TaskCompletionSource<object>>();
-
-        public Task WaitForNextIndexingRound()
-        {
-            TaskCompletionSource<object> result;
-            if (_indexedWatchers.TryPeek(out result))
-                return result.Task;
-
-            var tcs = new TaskCompletionSource<object>();
-            _indexedWatchers.Enqueue(tcs);
-            return tcs.Task;
-        }
 
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
@@ -246,6 +232,19 @@ namespace Raven.Server.Documents.Indexes
         public virtual bool HasBoostedFields => false;
 
         public virtual bool IsMultiMap => false;
+
+        public AsyncManualResetEvent.FrozenAwaiter GetIndexingBatchAwaiter()
+        {
+            if (_disposed)
+                ThrowObjectDisposed();
+
+            return _indexingBatchCompleted.GetFrozenAwaiter();
+        }
+
+        internal static void ThrowObjectDisposed()
+        {
+            throw new ObjectDisposedException("index");
+        }
 
         protected void Initialize(DocumentDatabase documentDatabase, IndexingConfiguration configuration)
         {
@@ -454,7 +453,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             var needToLock = _currentlyRunningQueriesLock.IsWriteLockHeld == false;
             if (needToLock)
@@ -1015,12 +1014,6 @@ namespace Raven.Server.Documents.Indexes
 
             if (notification.Type == IndexChangeTypes.IndexMarkedAsErrored)
                 Stop();
-
-            TaskCompletionSource<object> result;
-            while (_indexedWatchers.TryDequeue(out result))
-            {
-                ThreadPool.QueueUserWorkItem(task => ((TaskCompletionSource<object>) task).TrySetResult(null), result);
-            }
         }
 
         protected virtual void HandleDocumentChange(DocumentChangeNotification notification)
@@ -1406,7 +1399,7 @@ namespace Raven.Server.Documents.Indexes
                     // so if there are any changes, it will already happen to it, and we'll 
                     // query the index again. This is important because of: 
                     // http://issues.hibernatingrhinos.com/issue/RavenDB-5576
-                    var frozenAwaiter = _indexingBatchCompleted.GetFrozenAwaiter();
+                    var frozenAwaiter = GetIndexingBatchAwaiter();
 
                     using (var indexTx = indexContext.OpenReadTransaction())
                     {
@@ -1427,7 +1420,7 @@ namespace Raven.Server.Documents.Indexes
                             Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
 
                             if (wait == null)
-                                wait = new AsyncWaitForIndexing(queryDuration, query.WaitForNonStaleResultsTimeout.Value);
+                                wait = new AsyncWaitForIndexing(queryDuration, query.WaitForNonStaleResultsTimeout.Value, this);
 
 
                             marker.ReleaseLock();
@@ -1534,7 +1527,7 @@ namespace Raven.Server.Documents.Indexes
                     // so if there are any changes, it will already happen to it, and we'll 
                     // query the index again. This is important because of: 
                     // http://issues.hibernatingrhinos.com/issue/RavenDB-5576
-                    var frozenAwaiter = _indexingBatchCompleted.GetFrozenAwaiter();
+                    var frozenAwaiter = GetIndexingBatchAwaiter();
 
                     using (var indexTx = indexContext.OpenReadTransaction())
                     {
@@ -1556,7 +1549,7 @@ namespace Raven.Server.Documents.Indexes
                             Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
 
                             if (wait == null)
-                                wait = new AsyncWaitForIndexing(queryDuration, query.WaitForNonStaleResultsTimeout.Value);
+                                wait = new AsyncWaitForIndexing(queryDuration, query.WaitForNonStaleResultsTimeout.Value, this);
 
                             marker.ReleaseLock();
 

@@ -18,6 +18,7 @@ namespace Raven.Server.TrafficWatch
         public static void Disconnect(TrafficWatchConnection connection)
         {
             ServerHttpTrace.TryRemove(connection);
+            connection.Dispose();
         }
 
         public static void DispatchMessage(TrafficWatchNotification trafficWatchData)
@@ -26,7 +27,7 @@ namespace Raven.Server.TrafficWatch
             {
                 if (connection.IsAlive == false)
                 {
-                    ServerHttpTrace.TryRemove(connection);
+                    Disconnect(connection);
                     continue;
                 }
 

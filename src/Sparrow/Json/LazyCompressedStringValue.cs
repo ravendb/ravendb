@@ -44,7 +44,16 @@ namespace Sparrow.Json
 
         public byte* DecompressToTempBuffer()
         {
-            var tempBuffer = _context.GetNativeTempBuffer(UncompressedSize);
+            var escapeSequencePos = CompressedSize;
+            var numberOfEscapeSequences = BlittableJsonReaderBase.ReadVariableSizeInt(Buffer, ref escapeSequencePos);
+            while (numberOfEscapeSequences > 0)
+            {
+                numberOfEscapeSequences--;
+                BlittableJsonReaderBase.ReadVariableSizeInt(Buffer, ref escapeSequencePos);
+            }
+
+            var sizeOfEscapePositions = escapeSequencePos - CompressedSize;
+            var tempBuffer = _context.GetNativeTempBuffer(UncompressedSize + sizeOfEscapePositions);
             int uncompressedSize;
 
             if (UncompressedSize > 128)
@@ -66,6 +75,7 @@ namespace Sparrow.Json
             if (uncompressedSize != UncompressedSize)
                 throw new FormatException("Wrong size detected on decompression");
 
+            Memory.Copy(tempBuffer + uncompressedSize, Buffer+CompressedSize, sizeOfEscapePositions);
             return tempBuffer;
         }
 

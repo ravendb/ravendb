@@ -16,11 +16,13 @@ namespace FastTests.Issues
             {
                 for (int i = 0; i < 3; i++)
                 {
-                    var multiDocumentParser = context.ParseMultiFrom(new MemoryStream(Encoding.UTF8.GetBytes(json)));
-                    var blittableJsonReaderObject = multiDocumentParser.Parse(BlittableJsonDocumentBuilder.UsageMode.None, "n");
-                    string s;
-                    blittableJsonReaderObject.TryGet("Type", out s);
-                    Assert.Equal("Acknowledge", s);
+                    using (var multiDocumentParser = context.ParseMultiFrom(new MemoryStream(Encoding.UTF8.GetBytes(json))))
+                    using (var blittableJsonReaderObject = multiDocumentParser.Parse(BlittableJsonDocumentBuilder.UsageMode.None, "n"))
+                    {
+                        string s;
+                        blittableJsonReaderObject.TryGet("Type", out s);
+                        Assert.Equal("Acknowledge", s);
+                    }
                     context.ResetAndRenew();
                 }   
             }

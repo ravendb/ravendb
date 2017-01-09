@@ -63,10 +63,14 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     using (var parser = new UnmanagedJsonParser(ctx, state, "test"))
                     {
                         parser.SetBuffer(pBuffer, buffer.Length);
-                        var writer = new BlittableJsonDocumentBuilder(ctx, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "test", parser, state);
+                        using (
+                            var writer = new BlittableJsonDocumentBuilder(ctx,
+                                BlittableJsonDocumentBuilder.UsageMode.ToDisk, "test", parser, state))
+                        {
 
-                        writer.ReadObjectDocument();
-                        Assert.Throws<InvalidDataException>(() => writer.Read());
+                            writer.ReadObjectDocument();
+                            Assert.Throws<InvalidDataException>(() => writer.Read());
+                        }
                     }
                 }
             }

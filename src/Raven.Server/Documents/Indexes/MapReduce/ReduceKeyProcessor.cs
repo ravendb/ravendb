@@ -47,18 +47,31 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             get
             {
                 if (_processedFields != _numberOfReduceFields)
-                    throw new InvalidOperationException($"It processed {_processedFields} while expected to get {_numberOfReduceFields}");
+                    ThrowInvalidNumberOfFields();
 
                 switch (_mode)
                 {
                     case Mode.SingleValue:
                         return _singleValueHash;
                     case Mode.MultipleValues:
-                        return Hashing.XXHash64.CalculateInline((byte*)_buffer.Address, (ulong)_bufferPos);
+                        if (_buffer == null)
+                            return 0;
+                        return Hashing.XXHash64.CalculateInline(_buffer.Address, (ulong)_bufferPos);
                     default:
-                        throw new NotSupportedException($"Unknown reduce value processing mode: {_mode}");
+                        ThrowUnknownReduceValueMode();
+                        return 0;// never hit
                 }
             }
+        }
+
+        private void ThrowUnknownReduceValueMode()
+        {
+            throw new NotSupportedException($"Unknown reduce value processing mode: {_mode}");
+        }
+
+        private void ThrowInvalidNumberOfFields()
+        {
+            throw new InvalidOperationException($"It processed {_processedFields} while expected to get {_numberOfReduceFields}");
         }
 
         public void Process(ByteStringContext context,object value, bool internalCall = false)
@@ -261,16 +274,19 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void CopyToBuffer(byte* value, int size)
         {
-            if (_bufferPos + size > _buffer.SizeInBytes)
+            if (_buffer == null || 
+                _bufferPos + size > _buffer.SizeInBytes)
             {
                 var newBuffer = _buffersPool.Allocate(Bits.NextPowerOf2(_bufferPos + size));
-                Memory.Copy((byte*)newBuffer.Address, (byte*)_buffer.Address, _buffer.SizeInBytes);
-
-                _buffersPool.Return(_buffer);
+                if (_buffer != null)
+                {
+                    Memory.Copy(newBuffer.Address, _buffer.Address, _buffer.SizeInBytes);
+                    _buffersPool.Return(_buffer);
+                }
                 _buffer = newBuffer;
             }
 
-            Memory.Copy((byte*)_buffer.Address + _bufferPos, value, size);
+            Memory.Copy(_buffer.Address + _bufferPos, value, size);
             _bufferPos += size;
         }
 
@@ -278,6 +294,15 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         {
             SingleValue,
             MultipleValues
+        }
+
+        public void ReleaseBuffer()
+        {
+            if (_buffer != null)
+            {
+                _buffersPool.Return(_buffer);
+                _buffer = null;
+            }
         }
     }
 }

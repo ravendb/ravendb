@@ -29,8 +29,8 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     builder.WriteObjectEnd();
                     builder.FinalizeDocument();
 
-                    var reader = builder.CreateReader();
-                    Assert.Equal(1, reader.Count);
+                    using (var reader = builder.CreateReader())
+                        Assert.Equal(1, reader.Count);
                 }
             }
         }
@@ -80,10 +80,12 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     }
                     builder.FinalizeDocument();
 
-                    var reader = builder.CreateReader();
-                    Assert.Equal(1, reader.Count);
-                    var nested = reader["EmptyObject"] as BlittableJsonReaderObject;
-                    Assert.Equal(0, nested.Count);
+                    using (var reader = builder.CreateReader())
+                    {
+                        Assert.Equal(1, reader.Count);
+                        var nested = reader["EmptyObject"] as BlittableJsonReaderObject;
+                        Assert.Equal(0, nested.Count);
+                    }
                 }
             }
         }
@@ -275,34 +277,35 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                         builder.WriteObjectEnd();
                     }
                     builder.FinalizeDocument();
-                    var reader = builder.CreateReader();
-                    
-                    Assert.Equal(2, reader.Count);
+                    using (var reader = builder.CreateReader())
+                    {
+                        Assert.Equal(2, reader.Count);
 
-                    var megaData = reader["MegaData"] as BlittableJsonReaderObject;
+                        var megaData = reader["MegaData"] as BlittableJsonReaderObject;
 
-                    var data = megaData["Data"] as BlittableJsonReaderObject;
-                    Assert.Equal(2, data.Count);
-                    Assert.Equal(44, int.Parse(data["Volume"].ToString(), CultureInfo.InvariantCulture));
-                    Assert.Equal(55, int.Parse(data["Height"].ToString(), CultureInfo.InvariantCulture));
+                        var data = megaData["Data"] as BlittableJsonReaderObject;
+                        Assert.Equal(2, data.Count);
+                        Assert.Equal(44, int.Parse(data["Volume"].ToString(), CultureInfo.InvariantCulture));
+                        Assert.Equal(55, int.Parse(data["Height"].ToString(), CultureInfo.InvariantCulture));
 
-                    var metadata = megaData["@MetaData"] as BlittableJsonReaderObject;
-                    Assert.Equal(2, metadata.Count);
-                    Assert.Equal(22, int.Parse(metadata["Ticks"].ToString(), CultureInfo.InvariantCulture));
-                    Assert.Equal(11, int.Parse(metadata["Tacks"].ToString(), CultureInfo.InvariantCulture));
+                        var metadata = megaData["@MetaData"] as BlittableJsonReaderObject;
+                        Assert.Equal(2, metadata.Count);
+                        Assert.Equal(22, int.Parse(metadata["Ticks"].ToString(), CultureInfo.InvariantCulture));
+                        Assert.Equal(11, int.Parse(metadata["Tacks"].ToString(), CultureInfo.InvariantCulture));
 
-                    var megaMetaData = reader["MegaMetaData"] as BlittableJsonReaderObject;
-                    Assert.Equal(2, megaMetaData.Count);
+                        var megaMetaData = reader["MegaMetaData"] as BlittableJsonReaderObject;
+                        Assert.Equal(2, megaMetaData.Count);
 
-                    var metaObject = megaMetaData["MetaObject"] as BlittableJsonReaderObject;
-                    Assert.Equal(2, metaObject.Count);
-                    Assert.Equal(78, int.Parse(metaObject["Age"].ToString(), CultureInfo.InvariantCulture));
-                    Assert.Equal(100, int.Parse(metaObject["Code"].ToString(), CultureInfo.InvariantCulture));
+                        var metaObject = megaMetaData["MetaObject"] as BlittableJsonReaderObject;
+                        Assert.Equal(2, metaObject.Count);
+                        Assert.Equal(78, int.Parse(metaObject["Age"].ToString(), CultureInfo.InvariantCulture));
+                        Assert.Equal(100, int.Parse(metaObject["Code"].ToString(), CultureInfo.InvariantCulture));
 
-                    var metaMetaData = megaMetaData["@MetaMetaData"] as BlittableJsonReaderObject;
-                    Assert.Equal(2, metaMetaData.Count);
-                    Assert.Equal(2, int.Parse(metaMetaData["Tricks"].ToString(), CultureInfo.InvariantCulture));
-                    Assert.Equal(111, int.Parse(metaMetaData["Tracks"].ToString(), CultureInfo.InvariantCulture));
+                        var metaMetaData = megaMetaData["@MetaMetaData"] as BlittableJsonReaderObject;
+                        Assert.Equal(2, metaMetaData.Count);
+                        Assert.Equal(2, int.Parse(metaMetaData["Tricks"].ToString(), CultureInfo.InvariantCulture));
+                        Assert.Equal(111, int.Parse(metaMetaData["Tracks"].ToString(), CultureInfo.InvariantCulture));
+                    }
                 }
             }
         }
@@ -379,20 +382,22 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     }
                     builder.FinalizeDocument();
 
-                    var reader = builder.CreateReader();
-
-                    Assert.Equal(2, reader.Count);
-
-                    var array = reader["MyArray"] as BlittableJsonReaderArray;
-                    Assert.Equal(8, array.Length);
-
-                    for (var i = 0; i < 8; i++)
+                    using (var reader = builder.CreateReader())
                     {
-                        var nested = array[i] as BlittableJsonReaderObject;
-                        Assert.Equal(0, nested.Count);
-                    }
 
-                    Assert.Equal(55, int.Parse(reader["Height"].ToString(), CultureInfo.InvariantCulture));
+                        Assert.Equal(2, reader.Count);
+
+                        var array = reader["MyArray"] as BlittableJsonReaderArray;
+                        Assert.Equal(8, array.Length);
+
+                        for (var i = 0; i < 8; i++)
+                        {
+                            var nested = array[i] as BlittableJsonReaderObject;
+                            Assert.Equal(0, nested.Count);
+                        }
+
+                        Assert.Equal(55, int.Parse(reader["Height"].ToString(), CultureInfo.InvariantCulture));
+                    }
 
                 }
             }
@@ -541,21 +546,21 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     }
                     builder.FinalizeDocument();
 
-                    var reader = builder.CreateReader();
-
-                    Assert.Equal(2, reader.Count);
-
-                    var array = reader["MyObjects"] as BlittableJsonReaderArray;
-                    Assert.Equal(8, array.Length);
-                    for (var i = 0; i < 8; i++)
+                    using (var reader = builder.CreateReader())
                     {
-                        var nested = array[i] as BlittableJsonReaderObject;
-                        Assert.Equal(i, int.Parse(nested["NestedNode"].ToString(), CultureInfo.InvariantCulture));
+                        Assert.Equal(2, reader.Count);
+
+                        var array = reader["MyObjects"] as BlittableJsonReaderArray;
+                        Assert.Equal(8, array.Length);
+                        for (var i = 0; i < 8; i++)
+                        {
+                            var nested = array[i] as BlittableJsonReaderObject;
+                            Assert.Equal(i, int.Parse(nested["NestedNode"].ToString(), CultureInfo.InvariantCulture));
+                        }
+
+
+                        Assert.Equal(55, int.Parse(reader["Height"].ToString(), CultureInfo.InvariantCulture));
                     }
-
-
-                    Assert.Equal(55, int.Parse(reader["Height"].ToString(), CultureInfo.InvariantCulture));
-
                 }
             }
         }
@@ -681,14 +686,15 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     builder.WriteObjectEnd();
                     builder.FinalizeDocument();
 
-                    var reader = builder.CreateReader();
-                    Assert.Equal(propertiesAmount, reader.Count);
-                    for (var i = 0; i < propertiesAmount; i++)
+                    using (var reader = builder.CreateReader())
                     {
-                        var val = reader["Age" + i];
-                        Assert.Equal(i, int.Parse(val.ToString(), CultureInfo.InvariantCulture));
+                        Assert.Equal(propertiesAmount, reader.Count);
+                        for (var i = 0; i < propertiesAmount; i++)
+                        {
+                            var val = reader["Age" + i];
+                            Assert.Equal(i, int.Parse(val.ToString(), CultureInfo.InvariantCulture));
+                        }
                     }
-                    
                 }
             }
         }

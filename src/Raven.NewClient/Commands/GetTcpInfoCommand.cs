@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Json;
 using Sparrow.Json;
@@ -22,8 +23,7 @@ namespace Raven.NewClient.Client.Commands
         {
             if (response == null)
             {
-                Result = null;
-                return;
+                throw new InvalidOperationException("Got 404 / null response from querying the /info/tcp endpoint");
             }
             Result = JsonDeserializationClient.GetTcpInfoResult(response);
         }

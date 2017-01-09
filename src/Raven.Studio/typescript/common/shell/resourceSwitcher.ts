@@ -2,6 +2,8 @@
 import EVENTS = require("common/constants/events");
 import resource = require("models/resources/resource");
 import resourcesManager = require("common/shell/resourcesManager");
+import appUrl = require("common/appUrl");
+
 /*
     Events emitted through ko.postbox
         * ResourceSwitcher.Show - when searchbox is opened
@@ -71,16 +73,20 @@ class resourceSwitcher {
         });
     }
 
-    selectResource(rs: resource) {
-        rs.activate();
-        this.hide();
+    selectResource(rs: resource, $event: JQueryEventObject) {
+        if ($event.ctrlKey) {
+            window.open(appUrl.forDocumentsByDatabaseName(null, rs.name));
+        } else {
+            rs.activate();
+            this.hide();
+        }
     }
 
     private show() {
         window.addEventListener("click", this.hideHandler, true);
 
         this.$selectDatabaseContainer.addClass('active');
-        this.$filter.focus()
+        this.$filter.focus();
     }
 
     private hide() {

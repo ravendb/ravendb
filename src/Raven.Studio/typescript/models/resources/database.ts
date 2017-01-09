@@ -28,10 +28,11 @@ class database extends resource {
             }
             return true;
         });*/
-        this.recentQueriesLocalStorageName = "ravenDB-recentQueries." + name;
-        this.recentPatchesLocalStorageName = "ravenDB-recentPatches." + name;
-        this.mergedIndexLocalStoragePrefix = "ravenDB-mergedIndex." + name;
-        this.starredDocumentsLocalStorageName = "ravenDB-starredDocuments." + name;
+        const dbName = dbInfo.Name;
+        this.recentQueriesLocalStorageName = "ravenDB-recentQueries." + dbName;
+        this.recentPatchesLocalStorageName = "ravenDB-recentPatches." + dbName;
+        this.mergedIndexLocalStoragePrefix = "ravenDB-mergedIndex." + dbName;
+        this.starredDocumentsLocalStorageName = "ravenDB-starredDocuments." + dbName;
     }
 
     private attributeValue(attributes: any, bundleName: string) {

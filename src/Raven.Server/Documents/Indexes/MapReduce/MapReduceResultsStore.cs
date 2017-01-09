@@ -61,14 +61,20 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             ModifiedPages = new HashSet<long>();
             FreedPages = new HashSet<long>();
 
-            Tree.PageModified += page =>
+            Tree.PageModified += (page, flags) =>
             {
+                if ((flags & PageFlags.Overflow) == PageFlags.Overflow)
+                    return;
+
                 ModifiedPages.Add(page);
                 FreedPages.Remove(page);
             };
 
-            Tree.PageFreed += page =>
+            Tree.PageFreed += (page, flags) =>
             {
+                if ((flags & PageFlags.Overflow) == PageFlags.Overflow)
+                    return;
+
                 FreedPages.Add(page);
                 ModifiedPages.Remove(page);
             };

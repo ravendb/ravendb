@@ -121,6 +121,11 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                         Assert.Equal("music", ((BlittableJsonReaderArray)results[0].Data["Hobbies"])[0].ToString());
                         Assert.Equal("sport", ((BlittableJsonReaderArray)results[0].Data["Hobbies"])[1].ToString());
                         Assert.Equal(2L, results[0].Data["Count"]);
+
+                        foreach (var document in results)
+                        {
+                            document.Data.Dispose();
+                        }
                     }
                 }
             }

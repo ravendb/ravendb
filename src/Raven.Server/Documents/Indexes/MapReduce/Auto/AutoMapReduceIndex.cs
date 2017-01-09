@@ -25,6 +25,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         private IndexingStatsScope _statsInstance;
         private readonly MapPhaseStats _stats = new MapPhaseStats();
 
+        public override int? ActualMaxNumberOfIndexOutputs { get; }
+        public override int MaxNumberOfIndexOutputs { get; }
+
         private readonly MapResult[] _singleOutputList = new MapResult[1]
         {
             new MapResult()
@@ -181,8 +184,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             return resultsCount;
         }
 
-        public override int? ActualMaxNumberOfIndexOutputs { get; }
-        public override int MaxNumberOfIndexOutputs { get; }
+        public override void Dispose()
+        {
+            base.Dispose();
+            _reduceKeyProcessor.ReleaseBuffer();
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EnsureValidStats(IndexingStatsScope stats)

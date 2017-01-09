@@ -610,13 +610,11 @@ namespace FastTests.Client.Indexing
                 {
                     RavenQueryStatistics stats;
                     var users = session.Query<User>()
-                        .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stats)
                         .Where(x => x.Name == "Arek")
                         .ToList();
 
                     users = session.Query<User>()
-                        .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stats)
                         .Where(x => x.Age > 10)
                         .ToList();

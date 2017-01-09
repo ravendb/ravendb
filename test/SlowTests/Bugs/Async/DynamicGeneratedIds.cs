@@ -1,15 +1,15 @@
 using System.Dynamic;
-using Raven.Tests.Common;
+using FastTests;
 using Xunit;
 
-namespace Raven.Tests.Bugs.Async
+namespace SlowTests.Bugs.Async
 {
-   public class DynamicGeneratedIds : RavenTest
+   public class DynamicGeneratedIds : RavenTestBase
    {
       [Fact]
       public void AsyncMatchesSyncGeneratedIdForDynamicBehavior()
       {
-         using (var store = NewDocumentStore())
+         using (var store = GetDocumentStore())
          {
             using (var session = store.OpenAsyncSession())
             {
@@ -26,7 +26,7 @@ namespace Raven.Tests.Bugs.Async
       [Fact]
       public void GeneratedIdForDynamicTagNameAsync()
       {
-         using (var store = NewDocumentStore())
+         using (var store = GetDocumentStore())
          {
             store.Conventions.FindDynamicTagName = (entity) => entity.EntityName;
 

@@ -52,8 +52,15 @@ namespace FastTests.Server.Replication
                         Name = "1st"
                     }, "users/2");
 
+                    session.Store(new
+                    {
+                        Foo = "marker"
+                    }, "marker1");
+
                     session.SaveChanges();
                 }
+
+                Assert.True(WaitForDocument(slave, "marker1"));
 
                 using (var session = slave.OpenSession())
                 {
@@ -75,14 +82,12 @@ namespace FastTests.Server.Replication
                     session.Store(new
                     {
                         Foo = "marker"
-                    }, "marker");
+                    }, "marker2");
 
                     session.SaveChanges();
                 }
 
-                var marker = WaitForDocument(slave, "marker");
-
-                Assert.NotNull(marker);
+                Assert.True(WaitForDocument(slave, "marker2"));
 
                 using (var session = slave.OpenSession())
                 {
