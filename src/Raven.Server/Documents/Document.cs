@@ -26,6 +26,7 @@ namespace Raven.Server.Documents
         public ChangeVectorEntry[] ChangeVector;
         public DateTime LastModified;
         public DocumentFlags Flags;
+        public short TransactionMarker;
 
         public unsafe ulong DataHash
         {

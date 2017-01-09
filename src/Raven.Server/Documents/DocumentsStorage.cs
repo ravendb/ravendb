@@ -741,10 +741,9 @@ namespace Raven.Server.Documents
 
             result.LastModified = new DateTime(*(long*)tvr.Read(5, out size));
 
-            if (tvr.Count > 6)
-            {
-                result.Flags = (DocumentFlags)(*(int*)tvr.Read(6, out size));
-            }
+            result.Flags = (DocumentFlags)(*(int*)tvr.Read(6, out size));
+
+            result.TransactionMarker = *(short*)tvr.Read(7, out size);
 
             return result;
         }
@@ -805,13 +804,15 @@ namespace Raven.Server.Documents
             result.Key = new LazyStringValue(null, ptr + offset, size, context);
 
             ptr = tvr.Read(1, out size);
-            result.Etag = IPAddress.NetworkToHostOrder(*(long*)ptr);
+            result.Etag = Bits.SwapBytes(*(long*)ptr);
             ptr = tvr.Read(2, out size);
             result.DeletedEtag = Bits.SwapBytes(*(long*)ptr);
 
             result.ChangeVector = GetChangeVectorEntriesFromTableValueReader(tvr, 4);
 
             result.Collection = new LazyStringValue(null, tvr.Read(5, out size), size, context);
+
+            result.TransactionMarker = *(short*)tvr.Read(6, out size);
 
             return result;
         }
@@ -1081,7 +1082,8 @@ namespace Raven.Server.Documents
                         {(byte*) &documentEtagBigEndian, sizeof(long)},
                         {keyPtr, keySize},
                         {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length},
-                        collectionSlice
+                        collectionSlice,
+                        context.GetTransactionMarker()
                     };
 
                     var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
@@ -1517,16 +1519,7 @@ namespace Raven.Server.Documents
 
                 fixed (ChangeVectorEntry* pChangeVector = changeVector)
                 {
-                    var tbv = new TableValueBuilder
-                    {
-                        {lowerKey, lowerSize}, //0
-                        newEtagBigEndian, //1
-                        {keyPtr, keySize}, //2
-                        {document.BasePointer, document.Size}, //3
-                        {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length}, //4
-                        lastModifiedTicks // 5
-                    };
-
+                    int flags = 0;
                     if (collectionName.IsSystem == false)
                     {
                         bool hasVersion =
@@ -1534,20 +1527,29 @@ namespace Raven.Server.Documents
                                 key, newEtagBigEndian, document) ?? false;
                         if (hasVersion)
                         {
-                            int flags = (int)DocumentFlags.Versioned;
-                            tbv.Add((byte*)&flags, sizeof(int));
+                            flags = (int)DocumentFlags.Versioned;
                         }
                     }
+
+                    var tbv = new TableValueBuilder
+                    {
+                        {lowerKey, lowerSize}, 
+                        newEtagBigEndian, 
+                        {keyPtr, keySize}, 
+                        {document.BasePointer, document.Size}, 
+                        {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length},
+                        lastModifiedTicks,
+                        flags,
+                        context.GetTransactionMarker()
+                    };
+
+                  
 
                     if (oldValue == null)
                     {
                         if (expectedEtag != null && expectedEtag != 0)
                         {
-                            throw new ConcurrencyException(
-                                $"Document {key} does not exists, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
-                            {
-                                ExpectedETag = (long)expectedEtag
-                            };
+                            ThrowConcurrentExceptionOnMissingDoc(key, expectedEtag);
                         }
                         table.Insert(tbv);
                     }
@@ -1558,20 +1560,13 @@ namespace Raven.Server.Documents
                         var oldEtag = Bits.SwapBytes(*(long*)pOldEtag);
                         //TODO
                         if (expectedEtag != null && oldEtag != expectedEtag)
-                            throw new ConcurrencyException(
-                                $"Document {key} has etag {oldEtag}, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
-                            {
-                                ActualETag = oldEtag,
-                                ExpectedETag = (long)expectedEtag
-                            };
+                            ThrowConcurrentException(key, expectedEtag, oldEtag);
 
                         int oldSize;
                         var oldDoc = new BlittableJsonReaderObject(oldValue.Read(3, out oldSize), oldSize, context);
                         var oldCollectionName = ExtractCollectionName(context, key, oldDoc);
                         if (oldCollectionName != collectionName)
-                            throw new InvalidOperationException(
-                                $"Changing '{key}' from '{oldCollectionName.Name}' to '{collectionName.Name}' via update is not supported.{System.Environment.NewLine}" +
-                                $"Delete the document and recreate the document {key}.");
+                            ThrowInvalidCollectionNameChange(key, oldCollectionName, collectionName);
 
                         table.Update(oldValue.Id, tbv);
                     }
@@ -1601,6 +1596,33 @@ namespace Raven.Server.Documents
                 Etag = newEtag,
                 Key = key,
                 Collection = collectionName
+            };
+        }
+
+        private static void ThrowConcurrentExceptionOnMissingDoc(string key, long? expectedEtag)
+        {
+            throw new ConcurrencyException(
+                $"Document {key} does not exists, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
+            {
+                ExpectedETag = (long) expectedEtag
+            };
+        }
+
+        private static void ThrowInvalidCollectionNameChange(string key, CollectionName oldCollectionName,
+            CollectionName collectionName)
+        {
+            throw new InvalidOperationException(
+                $"Changing '{key}' from '{oldCollectionName.Name}' to '{collectionName.Name}' via update is not supported.{System.Environment.NewLine}" +
+                $"Delete the document and recreate the document {key}.");
+        }
+
+        private static void ThrowConcurrentException(string key, long? expectedEtag, long oldEtag)
+        {
+            throw new ConcurrencyException(
+                $"Document {key} has etag {oldEtag}, but Put was called with etag {expectedEtag}. Optimistic concurrency violation, transaction will be aborted.")
+            {
+                ActualETag = oldEtag,
+                ExpectedETag = (long) expectedEtag
             };
         }
 

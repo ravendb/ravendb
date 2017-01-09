@@ -8,6 +8,23 @@ namespace Raven.Server.ServerWide.Context
     {
         private readonly DocumentDatabase _documentDatabase;
 
+        public short TransactionMarkerOffset;
+
+        private short _currentTxMarker;
+
+        public short GetTransactionMarker()
+        {
+            if (Transaction != null && Transaction.Disposed == false && Transaction.InnerTransaction.LowLevelTransaction.Flags != TransactionFlags.ReadWrite)
+                MustHaveWriteTransactionOpened();
+
+            return Math.Abs((short)(_currentTxMarker + TransactionMarkerOffset));
+        }
+
+        private static void MustHaveWriteTransactionOpened()
+        {
+            throw new InvalidOperationException("Write transaction must be opened");
+        }
+
         public static DocumentsOperationContext ShortTermSingleUse(DocumentDatabase documentDatabase)
         {
             var shortTermSingleUse = new DocumentsOperationContext(documentDatabase, 4096, 1024);
@@ -28,6 +45,8 @@ namespace Raven.Server.ServerWide.Context
         protected override DocumentsTransaction CreateWriteTransaction()
         {
             var tx = new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.WriteTransaction(PersistentContext, Allocator), _documentDatabase.Notifications);
+
+            _currentTxMarker = (short) tx.InnerTransaction.LowLevelTransaction.Id;
 
             var options = _documentDatabase.DocumentsStorage.Environment.Options;
 

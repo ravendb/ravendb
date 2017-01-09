@@ -61,23 +61,27 @@ namespace Raven.Server.Documents.Replication
                         case CurrentEnumerationState.None:
                             yield break;
                         case CurrentEnumerationState.HasDocs:
+                            var docsItCurrent = docsIt.Current;
                             yield return new ReplicationBatchDocumentItem
                             {
-                                Etag = docsIt.Current.Etag,
-                                ChangeVector = docsIt.Current.ChangeVector,
-                                Data = docsIt.Current.Data,
-                                Key = docsIt.Current.Key
+                                Etag = docsItCurrent.Etag,
+                                ChangeVector = docsItCurrent.ChangeVector,
+                                Data = docsItCurrent.Data,
+                                Key = docsItCurrent.Key,
+                                TransactionMarker = docsItCurrent.TransactionMarker
                             };
                             if (docsIt.MoveNext() == false)
                                 state &= ~CurrentEnumerationState.HasDocs;
                             break;
                         case CurrentEnumerationState.HasTombs:
+                            var tombsItCurrent = tombsIt.Current;
                             yield return new ReplicationBatchDocumentItem
                             {
-                                Etag = tombsIt.Current.Etag,
-                                ChangeVector = tombsIt.Current.ChangeVector,
-                                Collection = tombsIt.Current.Collection,
-                                Key = tombsIt.Current.Key
+                                Etag = tombsItCurrent.Etag,
+                                ChangeVector = tombsItCurrent.ChangeVector,
+                                Collection = tombsItCurrent.Collection,
+                                Key = tombsItCurrent.Key,
+                                TransactionMarker = tombsItCurrent.TransactionMarker
                             };
                             if (tombsIt.MoveNext() == false)
                                 state &= ~CurrentEnumerationState.HasTombs;
@@ -104,9 +108,22 @@ namespace Raven.Server.Documents.Replication
                 _lastEtag = _parent._lastSentDocumentEtag;
                 _parent.CancellationToken.ThrowIfCancellationRequested();
 
+                const int batchSize = 1024;//TODO: Make batchSize & maxSizeToSend configurable
+                const int maxSizeToSend = 16*1024*1024;
                 long size = 0;
+                int numberOfItemsSent = 0;
+                short lastTransactionMarker = -1;
                 foreach (var item in GetDocsAndTombstonesAfter(_lastEtag))
                 {
+                    if (lastTransactionMarker != item.TransactionMarker)// TODO: add a configuration option to disable this check
+                    {
+                        // we want to limit batch sizes to reasonable limits
+                        if (size > maxSizeToSend || numberOfItemsSent > batchSize)
+                            break;
+
+                        lastTransactionMarker = item.TransactionMarker;
+                    }
+
                     if (item.Data != null)
                         size += item.Data.Size;
 
@@ -114,8 +131,7 @@ namespace Raven.Server.Documents.Replication
 
                     AddReplicationItemToBatch(item);
 
-                    if (size > 16*1024*1024)
-                        break; // we want to limit batch sizes to reasonable limits
+                    numberOfItemsSent++;
                 }
                  
                 if (_log.IsInfoEnabled)
@@ -208,8 +224,7 @@ namespace Raven.Server.Documents.Replication
                 _parent.WriteToServerAndFlush(headerJson);
                 foreach (var item in _orderedReplicaItems)
                 {
-                    WriteDocumentToServer(item.Value.Key, item.Value.ChangeVector, item.Value.Data,
-                        item.Value.Collection);
+                    WriteDocumentToServer(item.Value);
                 }
             }
             finally //do try-finally as precaution
@@ -235,54 +250,56 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private unsafe void WriteDocumentToServer(
-            LazyStringValue key,
-            ChangeVectorEntry[] changeVector,
-            BlittableJsonReaderObject data,
-            LazyStringValue collection)
+        private unsafe void WriteDocumentToServer(ReplicationBatchDocumentItem item)
         {
-            var changeVectorSize = changeVector.Length * sizeof(ChangeVectorEntry);
+            var changeVectorSize = item.ChangeVector.Length * sizeof(ChangeVectorEntry);
             var requiredSize = changeVectorSize +
                                sizeof(int) + // # of change vectors
                                sizeof(int) + // size of document key
-                               key.Size +
-                               sizeof(int) // size of document
+                               item.Key.Size +
+                               sizeof(int)  + // size of document
+                               sizeof(short) // transaction marker
                 ;
             if (requiredSize > _tempBuffer.Length)
-                ThrowTooManyChangeVectorEntries(key, changeVector);
+                ThrowTooManyChangeVectorEntries(item.Key, item.ChangeVector);
 
             fixed (byte* pTemp = _tempBuffer)
             {
                 int tempBufferPos = 0;
-                fixed (ChangeVectorEntry* pChangeVectorEntries = changeVector)
+                fixed (ChangeVectorEntry* pChangeVectorEntries = item.ChangeVector)
                 {
-                    *(int*)pTemp = changeVector.Length;
+                    *(int*)pTemp = item.ChangeVector.Length;
                     tempBufferPos += sizeof(int);
                     Memory.Copy(pTemp + tempBufferPos, (byte*)pChangeVectorEntries, changeVectorSize);
                     tempBufferPos += changeVectorSize;
                 }
-                *(int*)(pTemp + tempBufferPos) = key.Size;
+
+                *(short*)(pTemp + tempBufferPos) = item.TransactionMarker;
+                tempBufferPos += sizeof(short);
+
+                *(int*)(pTemp + tempBufferPos) = item.Key.Size;
                 tempBufferPos += sizeof(int);
-                Memory.Copy(pTemp + tempBufferPos, key.Buffer, key.Size);
-                tempBufferPos += key.Size;
+
+                Memory.Copy(pTemp + tempBufferPos, item.Key.Buffer, item.Key.Size);
+                tempBufferPos += item.Key.Size;
 
                 //if data == null --> this is a tombstone, and a document otherwise
-                if (data != null)
+                if (item.Data != null)
                 {
-                    *(int*)(pTemp + tempBufferPos) = data.Size;
+                    *(int*)(pTemp + tempBufferPos) = item.Data.Size;
                     tempBufferPos += sizeof(int);
 
                     var docReadPos = 0;
-                    while (docReadPos < data?.Size)
+                    while (docReadPos < item.Data?.Size)
                     {
-                        var sizeToCopy = Math.Min(data.Size - docReadPos, _tempBuffer.Length - tempBufferPos);
+                        var sizeToCopy = Math.Min(item.Data.Size - docReadPos, _tempBuffer.Length - tempBufferPos);
                         if (sizeToCopy == 0) // buffer is full, need to flush it
                         {
                             _stream.Write(_tempBuffer, 0, tempBufferPos);
                             tempBufferPos = 0;
                             continue;
                         }
-                        Memory.Copy(pTemp + tempBufferPos, data.BasePointer + docReadPos, sizeToCopy);
+                        Memory.Copy(pTemp + tempBufferPos, item.Data.BasePointer + docReadPos, sizeToCopy);
                         tempBufferPos += sizeToCopy;
                         docReadPos += sizeToCopy;
                     }
@@ -293,15 +310,15 @@ namespace Raven.Server.Documents.Replication
                     *(int*)(pTemp + tempBufferPos) = -1;
                     tempBufferPos += sizeof(int);
 
-                    if (collection == null) //precaution
+                    if (item.Collection == null) //precaution
                     {
                         throw new InvalidDataException("Cannot write tombstone with empty collection name...");
                     }
 
-                    *(int*)(pTemp + tempBufferPos) = collection.Size;
+                    *(int*)(pTemp + tempBufferPos) = item.Collection.Size;
                     tempBufferPos += sizeof(int);
-                    Memory.Copy(pTemp + tempBufferPos, collection.Buffer, collection.Size);
-                    tempBufferPos += collection.Size;
+                    Memory.Copy(pTemp + tempBufferPos, item.Collection.Buffer, item.Collection.Size);
+                    tempBufferPos += item.Collection.Size;
                 }
                 _stream.Write(_tempBuffer, 0, tempBufferPos);
             }

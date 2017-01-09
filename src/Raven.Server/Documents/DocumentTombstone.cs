@@ -18,5 +18,7 @@ namespace Raven.Server.Documents
         public LazyStringValue Collection;
 
         public ChangeVectorEntry[] ChangeVector;
+
+        public short TransactionMarker;
     }
 }

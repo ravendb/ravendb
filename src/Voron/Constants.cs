@@ -8,7 +8,7 @@ namespace Voron.Global
 {
     public unsafe class Constants
     {
-        public const int CurrentVersion = 10;
+        public const int CurrentVersion = 11;
 
         public const ulong MagicMarker = 0xB16BAADC0DEF0015;
         public const ulong TransactionHeaderMarker = 0x1A4C92AD90ABC123;
@@ -32,7 +32,7 @@ namespace Voron.Global
                 GC.KeepAlive(new int[
                     // this is a way to have static assert
                     PageSize > ushort.MaxValue || PageSize < 4*Constants.Size.Kilobyte ||
-                    PageSize%Constants.Size.Sector != 0
+                    PageSize% Size.Sector != 0
                         ? -1
                         : 0
                     ]);

@@ -17,9 +17,9 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var a = new FastTests.Server.Replication.DocumentReplication())
+            using (var a = new FastTests.Server.Replication.ManualConflictResolution())
             {
-                a.CanReplicateDocumentDeletion();
+                a.ScriptResolveToTombstone();
             }
         }
     }

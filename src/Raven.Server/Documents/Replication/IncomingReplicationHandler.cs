@@ -585,6 +585,8 @@ namespace Raven.Server.Documents.Replication
 
                     foreach (var doc in _replicatedDocs)
                     {
+                        _documentsContext.TransactionMarkerOffset = doc.TransactionMarker;
+
                         ReadChangeVector(doc, buffer, maxReceivedChangeVectorByDatabase);                        
                         BlittableJsonReaderObject json = null;
                         if (doc.DocumentSize >= 0) //no need to load document data for tombstones
@@ -1071,6 +1073,7 @@ namespace Raven.Server.Documents.Replication
             public string Id;
             public int Position;
             public int ChangeVectorCount;
+            public short TransactionMarker;
             public int DocumentSize;
             public string Collection;
         }
@@ -1107,10 +1110,15 @@ namespace Raven.Server.Documents.Replication
                     _multiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(ChangeVectorEntry) * curDoc.ChangeVectorCount);
                     writeBuffer.Write(_tempBuffer, 0, sizeof(ChangeVectorEntry) * curDoc.ChangeVectorCount);
 
+                    _multiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(short));
+                    curDoc.TransactionMarker = *(short*)pTemp;
+
                     _multiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(int));
                     var keySize = *(int*)pTemp;
                     _multiDocumentParser.ReadExactly(_tempBuffer, 0, keySize);
                     curDoc.Id = Encoding.UTF8.GetString(_tempBuffer, 0, keySize);
+
+                
 
                     _multiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(int));
                     var documentSize = curDoc.DocumentSize = *(int*)pTemp;
