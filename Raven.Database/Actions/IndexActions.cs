@@ -119,7 +119,7 @@ namespace Raven.Database.Actions
             return indexEtag;
         }
 
-        internal void CheckReferenceBecauseOfDocumentUpdate(string key, IStorageActionsAccessor actions, HashSet<string> participatingIds = null)
+        internal void CheckReferenceBecauseOfDocumentUpdate(string key, IStorageActionsAccessor actions, IEnumerable<string> participatingIds = null)
         {
             TouchedDocumentInfo touch;
             RecentTouches.TryRemove(key, out touch);

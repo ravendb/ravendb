@@ -716,7 +716,7 @@ namespace Raven.Database.Actions
         }
 
 
-        public PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation, HashSet<string> participatingIds = null)
+        public PutResult Put(string key, Etag etag, RavenJObject document, RavenJObject metadata, TransactionInformation transactionInformation, IEnumerable<string> participatingIds = null)
         {
             WorkContext.MetricsCounters.DocsPerSecond.Mark();
             key = string.IsNullOrWhiteSpace(key) ? Guid.NewGuid().ToString() : key.Trim();
@@ -809,13 +809,13 @@ namespace Raven.Database.Actions
             }
         }
 
-        public bool Delete(string key, Etag etag, TransactionInformation transactionInformation, HashSet<string> participatingIds = null)
+        public bool Delete(string key, Etag etag, TransactionInformation transactionInformation, IEnumerable<string> participatingIds = null)
         {
             RavenJObject metadata;
             return Delete(key, etag, transactionInformation, out metadata, participatingIds);
         }
 
-        public bool Delete(string key, Etag etag, TransactionInformation transactionInformation, out RavenJObject metadata, HashSet<string> participatingIds = null)
+        public bool Delete(string key, Etag etag, TransactionInformation transactionInformation, out RavenJObject metadata, IEnumerable<string> participatingIds = null)
         {
             if (key == null)
                 throw new ArgumentNullException("key");

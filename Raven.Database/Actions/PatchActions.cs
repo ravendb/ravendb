@@ -27,7 +27,7 @@ namespace Raven.Database.Actions
         }
 
         public PatchResultData ApplyPatch(string docId, Etag etag, PatchRequest[] patchDoc,
-                                  TransactionInformation transactionInformation, bool debugMode = false, HashSet<string> participatingIds = null)
+                                  TransactionInformation transactionInformation, bool debugMode = false, IEnumerable<string> participatingIds = null)
         {
             if (docId == null)
                 throw new ArgumentNullException("docId");
@@ -39,7 +39,7 @@ namespace Raven.Database.Actions
         public PatchResultData ApplyPatch(string docId, Etag etag,
                                           PatchRequest[] patchExistingDoc, PatchRequest[] patchDefaultDoc, RavenJObject defaultMetadata,
                                           TransactionInformation transactionInformation, bool debugMode = false, bool skipPatchIfEtagMismatch = false,
-                                          HashSet<string> participatingIds = null)
+                                          IEnumerable<string> participatingIds = null)
         {
             if (docId == null)
                 throw new ArgumentNullException("docId");
@@ -69,7 +69,7 @@ namespace Raven.Database.Actions
                                        Func<RavenJObject> getDebugActions,
                                        bool debugMode,
                                        bool skipPatchIfEtagMismatch = false,
-                                       HashSet<string> participatingIds = null)
+                                       IEnumerable<string> participatingIds = null)
         {
             if (docId == null) throw new ArgumentNullException("docId");
             docId = docId.Trim();
@@ -228,7 +228,7 @@ namespace Raven.Database.Actions
 
         public Tuple<PatchResultData, List<string>> ApplyPatch(string docId, Etag etag,
                                                                ScriptedPatchRequest patchExisting, ScriptedPatchRequest patchDefault, RavenJObject defaultMetadata,
-                                                               TransactionInformation transactionInformation, bool debugMode = false, HashSet<string> participatingIds = null)
+                                                               TransactionInformation transactionInformation, bool debugMode = false, IEnumerable<string> participatingIds = null)
         {
             ScriptedJsonPatcher scriptedJsonPatcher = null;
             DefaultScriptedJsonPatcherOperationScope scope = null;

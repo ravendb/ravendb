@@ -19,7 +19,7 @@ namespace Raven.Database.Extensions
             Execute(self, database, null);
         }
 
-        public static BatchResult ExecuteBatch(this ICommandData self, DocumentDatabase database, HashSet<string> participatingIds = null)
+        public static BatchResult ExecuteBatch(this ICommandData self, DocumentDatabase database, IEnumerable<string> participatingIds = null)
         {
             var batchResult = new BatchResult();
 
@@ -34,7 +34,7 @@ namespace Raven.Database.Extensions
             return batchResult;
         }
 
-        private static void Execute(ICommandData self, DocumentDatabase database, BatchResult batchResult, HashSet<string> participatingIds = null)
+        private static void Execute(ICommandData self, DocumentDatabase database, BatchResult batchResult, IEnumerable<string> participatingIds = null)
         {
             var deleteCommandData = self as DeleteCommandData;
             if (deleteCommandData != null)

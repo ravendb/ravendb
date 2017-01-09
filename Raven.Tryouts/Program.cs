@@ -26,10 +26,7 @@ namespace Raven.Tryouts
             for (int i = 0; i < 2000; i++)
             {
                 Console.WriteLine(i);
-                using (var x = new RavenDB_5617())
-                {
-                    x.CanAutomaticallyWaitForIndexes_ForSpecificIndex();
-                }
+             
             }
         }
 
