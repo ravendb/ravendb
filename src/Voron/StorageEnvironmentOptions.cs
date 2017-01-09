@@ -371,7 +371,7 @@ namespace Voron
                 var guid = Guid.NewGuid();
                 var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-data.pager-{guid}";
 
-                WinOpenFlags = Win32NativeFileAttributes.Temporary;
+                WinOpenFlags = Win32NativeFileAttributes.Temporary | Win32NativeFileAttributes.DeleteOnClose;
 
                 _dataPager = new Lazy<AbstractPager>(() =>
                 {
