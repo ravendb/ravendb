@@ -6,9 +6,9 @@
 //
 //  GPLEX Version:  1.2.2
 //  Machine:  TAL-PC
-//  DateTime: 11/7/2016 3:58:44 PM
+//  DateTime: 1/8/2017 5:16:34 PM
 //  UserName: Tal
-//  GPLEX input file <Indexing\LuceneQuery.Language.analyzer.lex - 11/7/2016 3:55:08 PM>
+//  GPLEX input file <Indexing\LuceneQuery.Language.analyzer.lex - 12/6/2016 2:02:18 PM>
 //  GPLEX frame file <embedded resource>
 //
 //  Option settings: verbose, parser, stack, minimize
