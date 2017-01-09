@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 {
     public class MapReduceIndex : MapReduceIndexBase<MapReduceIndexDefinition>
     {
-        private readonly HashSet<CollectionName> _referencedCollections = new HashSet<CollectionName>();
+        private readonly HashSet<CollectionName> _referencedCollections = new HashSet<CollectionName>(CollectionNameComparer.Instance);
 
         protected internal readonly StaticIndexBase _compiled;
 
@@ -301,10 +301,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                 public MapResult Current { get; } = new MapResult();
 
-                object IEnumerator.Current
-                {
-                    get { return Current; }
-                }
+                object IEnumerator.Current => Current;
 
                 public void Dispose()
                 {

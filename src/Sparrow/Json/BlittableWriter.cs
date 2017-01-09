@@ -293,6 +293,7 @@ namespace Sparrow.Json
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe int WriteVariableSizeLong(long value)
         {
             // see zig zap trick here:
@@ -312,6 +313,7 @@ namespace Sparrow.Json
             return count;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe int WriteVariableSizeInt(int value)
         {
             // assume that we don't use negative values very often
@@ -328,6 +330,7 @@ namespace Sparrow.Json
             return count;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe int WriteVariableSizeIntInReverse(int value)
         {
             // assume that we don't use negative values very often
