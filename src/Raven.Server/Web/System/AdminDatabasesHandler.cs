@@ -36,23 +36,24 @@ namespace Raven.Server.Web.System
 
                 var dbId = Constants.Database.Prefix + name;
                 long etag;
-                var dbDoc = ServerStore.Read(context, dbId, out etag);
-
-                if (dbDoc == null)
+                using (var dbDoc = ServerStore.Read(context, dbId, out etag))
                 {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return HttpContext.Response.WriteAsync("Database " + name + " wasn't found");
-                }
-
-                UnprotectSecuredSettingsOfDatabaseDocument(dbDoc);
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteDocument(context, new Document
+                    if (dbDoc == null)
                     {
-                        Etag = etag,
-                        Data = dbDoc,
-                    });
+                        HttpContext.Response.StatusCode = (int) HttpStatusCode.NotFound;
+                        return HttpContext.Response.WriteAsync("Database " + name + " wasn't found");
+                    }
+
+                    UnprotectSecuredSettingsOfDatabaseDocument(dbDoc);
+
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        writer.WriteDocument(context, new Document
+                        {
+                            Etag = etag,
+                            Data = dbDoc,
+                        });
+                    }
                 }
             }
 

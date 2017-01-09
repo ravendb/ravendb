@@ -312,8 +312,7 @@ namespace Raven.Server.ServerWide
                 }
                 else
                 {
-                    int size;
-                    var test = GetCurrentItem(ctx, oldValue);
+                    int size;                    
                     var oldEtag = Bits.SwapBytes(*(long*)oldValue.Read(3, out size));
                     if (expectedEtag != null && oldEtag != expectedEtag)
                         throw new ConcurrencyException(

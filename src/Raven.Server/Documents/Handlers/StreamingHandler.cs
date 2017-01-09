@@ -73,12 +73,14 @@ namespace Raven.Server.Documents.Handlers
 
                     if (transformer != null)
                     {
-                        var transformerParameters = GetTransformerParameters(context);
-
-                        using (var scope = transformer.OpenTransformationScope(transformerParameters, null, Database.DocumentsStorage,
-                                Database.TransformerStore, context))
+                        using (var transformerParameters = GetTransformerParameters(context))
                         {
-                            writer.WriteDocuments(context, scope.Transform(documents), metadataOnly: false);
+                            using (var scope = transformer.OpenTransformationScope(transformerParameters, null,
+                                Database.DocumentsStorage,
+                                Database.TransformerStore, context))
+                            {
+                                writer.WriteDocuments(context, scope.Transform(documents), metadataOnly: false);
+                            }
                         }
                     }
                     else

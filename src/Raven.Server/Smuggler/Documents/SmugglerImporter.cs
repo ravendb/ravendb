@@ -308,19 +308,14 @@ namespace Raven.Server.Smuggler.Documents
         {
             if (_prevCommand != null)
             {
-                using (_prevCommand)
-                {
-                    await _prevCommandTask;
-                }
+                await _prevCommandTask;
                 _prevCommand = null;
             }
 
             if (_batchPutCommand.Documents.Count > 0)
             {
-                using (_batchPutCommand)
-                {
-                    await _database.TxMerger.Enqueue(_batchPutCommand);
-                }
+                //note: _batchPutCommand will be disposed by TxMerger after it's execution
+                await _database.TxMerger.Enqueue(_batchPutCommand);
             }
             _batchPutCommand = null;
         }
@@ -331,11 +326,8 @@ namespace Raven.Server.Smuggler.Documents
             {
                 if (_prevCommand != null)
                 {
-                    using (_prevCommand)
-                    {
-                        await _prevCommandTask;
-                        ResetContextAndParser(context, parser);
-                    }
+                    await _prevCommandTask;
+                    ResetContextAndParser(context, parser);
                 }
                 _prevCommandTask = _database.TxMerger.Enqueue(_batchPutCommand);
                 _prevCommand = _batchPutCommand;
@@ -359,7 +351,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public long TotalSize;
             public readonly List<BlittableJsonReaderObject> Documents = new List<BlittableJsonReaderObject>();
-            private readonly IDisposable _resetContext;
+            private IDisposable _resetContext;
             private readonly DocumentsOperationContext _context;
 
             public MergedBatchPutCommand(DocumentDatabase database, long buildVersion)
@@ -421,7 +413,8 @@ namespace Raven.Server.Smuggler.Documents
                     doc.Dispose();
                 }
                 Documents.Clear();
-                _resetContext.Dispose();
+                _resetContext?.Dispose();
+                _resetContext = null;
             }
 
             public void Add(BlittableJsonReaderObject doc)

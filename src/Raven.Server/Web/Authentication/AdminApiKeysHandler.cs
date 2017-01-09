@@ -87,47 +87,59 @@ namespace Raven.Server.Web.Authentication
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                ServerStore.Item[] apiKeys;
-                if (string.IsNullOrEmpty(name))
-                    apiKeys = ServerStore
-                        .StartingWith(context, Constants.ApiKeyPrefix, start, pageSize)
-                        .ToArray();
-                else
+                ServerStore.Item[] apiKeys = null;
+                try
                 {
-                    var key = Constants.ApiKeyPrefix + name;
-                    var apiKey = ServerStore.Read(context, key);
-                    if (apiKey == null)
+                    if (string.IsNullOrEmpty(name))
+                        apiKeys = ServerStore
+                            .StartingWith(context, Constants.ApiKeyPrefix, start, pageSize)
+                            .ToArray();
+                    else
                     {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        return Task.CompletedTask;
+                        var key = Constants.ApiKeyPrefix + name;
+                        var apiKey = ServerStore.Read(context, key);
+                        if (apiKey == null)
+                        {
+                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                            return Task.CompletedTask;
+                        }
+
+                        apiKeys = new[]
+                        {
+                            new ServerStore.Item
+                            {
+                                Data = apiKey,
+                                Key = key
+                            }
+                        };
                     }
 
-                    apiKeys = new[]
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))                
                     {
-                        new ServerStore.Item
+                        writer.WriteStartObject();
+                        writer.WriteResults(context, apiKeys, (w, c, apiKey) =>
                         {
-                            Data = apiKey,
-                            Key = key
-                        }
-                    };
+                            var username = apiKey.Key.Substring(Constants.ApiKeyPrefix.Length);
+
+                            apiKey.Data.Modifications = new DynamicJsonValue(apiKey.Data)
+                            {
+                                [nameof(NamedApiKeyDefinition.UserName)] = username
+                            };
+
+                            c.Write(w, apiKey.Data);
+                        });
+
+                        writer.WriteEndObject();
+                    }
+
                 }
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                finally
                 {
-                    writer.WriteStartObject();
-                    writer.WriteResults(context, apiKeys, (w, c, apiKey) =>
+                    if (apiKeys != null)
                     {
-                        var username = apiKey.Key.Substring(Constants.ApiKeyPrefix.Length);
-
-                        apiKey.Data.Modifications = new DynamicJsonValue(apiKey.Data)
-                        {
-                            [nameof(NamedApiKeyDefinition.UserName)] = username
-                        };
-
-                        c.Write(w, apiKey.Data);
-                    });
-
-                    writer.WriteEndObject();
+                        foreach(var apiKey in apiKeys)
+                            apiKey.Data?.Dispose();
+                    }
                 }
             }
 

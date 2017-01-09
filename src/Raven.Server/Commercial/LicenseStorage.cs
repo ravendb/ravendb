@@ -94,12 +94,14 @@ namespace Raven.Server.Commercial
                 if (infoTvr == null)
                     return null;
 
-                var firstServerStartDateJson = Read(context, infoTvr);
-                DateTime result;
-                if (firstServerStartDateJson.TryGet(FirstServerStartDateKey, out result))
-                    return result;
+                using (var firstServerStartDateJson = Read(context, infoTvr))
+                {
+                    DateTime result;
+                    if (firstServerStartDateJson.TryGet(FirstServerStartDateKey, out result))
+                        return result;
+                }
 
-                return null;
+                return null;                
             }
         }
 
@@ -152,9 +154,10 @@ namespace Raven.Server.Commercial
                 if (reader == null)
                     return null;
 
-                var licenseJson = Read(context, reader);
-
-                return JsonDeserializationServer.License(licenseJson);
+                using (var licenseJson = Read(context, reader))
+                {
+                    return JsonDeserializationServer.License(licenseJson);
+                }
             }
         }
 

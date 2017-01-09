@@ -112,45 +112,57 @@ namespace Raven.Server.Documents.Handlers
 
                     var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
 
-                    var mergedCmd = new MergedBatchCommand
-                    {
-                        Database = Database,
-                        ParsedCommands = parsedCommands,
-                        Reply = new DynamicJsonArray()
-                    };
-                    if (waitForIndexesTimeout != null)
-                        mergedCmd.ModifiedCollections = new HashSet<string>();
+                    MergedBatchCommand mergedCmd = null;
+
                     try
                     {
-                        await Database.TxMerger.Enqueue(mergedCmd);
-                    }
-                    catch (ConcurrencyException)
-                    {
-                        HttpContext.Response.StatusCode = (int) HttpStatusCode.Conflict;
-                        throw;
-                    }
-
-                    var waitForReplicasTimeout = GetTimeSpanQueryString("waitForReplicasTimeout", required: false);
-                    if (waitForReplicasTimeout != null)
-                    {
-                        await WaitForReplicationAsync(waitForReplicasTimeout.Value, mergedCmd);
-                    }
-
-                    if (waitForIndexesTimeout != null)
-                    {
-                        await
-                            WaitForIndexesAsync(waitForIndexesTimeout.Value, mergedCmd.LastEtag,
-                                mergedCmd.ModifiedCollections);
-                    }
-
-                    HttpContext.Response.StatusCode = (int) HttpStatusCode.Created;
-
-                    using (var writer = new BlittableJsonTextWriter(readBatchCommandContext, ResponseBodyStream()))
-                    {
-                        readBatchCommandContext.Write(writer, new DynamicJsonValue
+                        mergedCmd = new MergedBatchCommand
                         {
-                            ["Results"] = mergedCmd.Reply
-                        });
+                            Database = Database,
+                            ParsedCommands = parsedCommands,
+                            Reply = new DynamicJsonArray()
+                        };
+                        if (waitForIndexesTimeout != null)
+                            mergedCmd.ModifiedCollections = new HashSet<string>();
+                        try
+                        {
+                            await Database.TxMerger.Enqueue(mergedCmd);
+                        }
+                        catch (ConcurrencyException)
+                        {
+                            HttpContext.Response.StatusCode = (int) HttpStatusCode.Conflict;
+                            throw;
+                        }
+
+                        var waitForReplicasTimeout = GetTimeSpanQueryString("waitForReplicasTimeout", required: false);
+                        if (waitForReplicasTimeout != null)
+                        {
+                            await WaitForReplicationAsync(waitForReplicasTimeout.Value, mergedCmd);
+                        }
+
+                        if (waitForIndexesTimeout != null)
+                        {
+                            await
+                                WaitForIndexesAsync(waitForIndexesTimeout.Value, mergedCmd.LastEtag,
+                                    mergedCmd.ModifiedCollections);
+                        }
+
+                        HttpContext.Response.StatusCode = (int) HttpStatusCode.Created;
+
+                        using (var writer = new BlittableJsonTextWriter(readBatchCommandContext, ResponseBodyStream()))
+                        {
+                            readBatchCommandContext.Write(writer, new DynamicJsonValue
+                            {
+                                ["Results"] = mergedCmd.Reply
+                            });
+                        }
+                    }
+                    finally
+                    {
+                        //since the usage of this object does not end with TxMerger,
+                        //it is wrong to have it implement IDisposable.
+                        //Still, we need to dispose the BlittableJsonReaderObject objects that are in this command
+                        mergedCmd?.ManualDispose();
                     }
                 }
             }
@@ -283,7 +295,7 @@ namespace Raven.Server.Documents.Handlers
             return indexesToCheck;
         }
 
-        private class MergedBatchCommand : TransactionOperationsMerger.MergedTransactionCommand
+        private class MergedBatchCommand : TransactionOperationsMerger.MergedTransactionCommand//, IDisposable
         {
             public DynamicJsonArray Reply;
             public CommandData[] ParsedCommands;
@@ -370,6 +382,15 @@ namespace Raven.Server.Documents.Handlers
                             });
                             break;
                     }
+                }
+            }
+
+            public void ManualDispose()
+            {
+                foreach (var cmd in ParsedCommands)
+                {
+                    cmd.Document?.Dispose();
+                    cmd.AdditionalData?.Dispose();
                 }
             }
         }

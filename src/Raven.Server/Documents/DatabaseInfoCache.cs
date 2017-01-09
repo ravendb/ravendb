@@ -93,13 +93,17 @@ namespace Raven.Server.Documents
                 //It seems like the database was shutdown rudly and never wrote it stats onto the disk
                 if (infoTvr == null)
                     return false;
-                var databaseInfoJson = Read(context, infoTvr);
-                databaseInfoJson.Modifications = new DynamicJsonValue(databaseInfoJson)
+
+                using (var databaseInfoJson = Read(context, infoTvr))
                 {
-                    [nameof(ResourceInfo.Disabled)] = disabled
-                };
-                ctx.Write(writer, databaseInfoJson);
-                return true;
+                    databaseInfoJson.Modifications = new DynamicJsonValue(databaseInfoJson)
+                    {
+                        [nameof(ResourceInfo.Disabled)] = disabled
+                    };
+
+                    ctx.Write(writer, databaseInfoJson);
+                    return true;
+                }
             }
         }
 
