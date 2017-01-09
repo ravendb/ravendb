@@ -609,6 +609,11 @@ class appUrl {
         return "#databases/documents?" + collectionPart + databasePart;
     }
 
+    static forDocumentsByDatabaseName(collection: string, dbName: string): string {
+        var collectionPart = collection ? "collection=" + encodeURIComponent(collection) : "";
+        return "#/databases/documents?" + collectionPart + "&database=" + encodeURIComponent(dbName);;
+    }
+
     static forConflicts(db: database): string {
         var databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/conflicts?" + databasePart;

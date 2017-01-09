@@ -84,7 +84,11 @@ class menu {
         this.deepestOpenItem(item);
 
         if (item.path()) {
-            router.navigate(item.path());
+            if ($event.ctrlKey) {
+                window.open(item.path());
+            } else {
+                router.navigate(item.path());
+            }
         }
     }
 
@@ -97,7 +101,12 @@ class menu {
                 });
         } else {
             let a = $event.currentTarget as HTMLAnchorElement;
-            router.navigate(a.href);        
+
+            if ($event.ctrlKey) {
+                window.open(a.href);
+            } else {
+                router.navigate(a.href);
+            }
         }
     }
 
