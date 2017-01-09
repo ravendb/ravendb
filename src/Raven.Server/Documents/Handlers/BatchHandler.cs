@@ -11,6 +11,7 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron.Exceptions;
@@ -195,44 +196,61 @@ namespace Raven.Server.Documents.Handlers
 
             var throwOnTimeout = GetBoolValueQueryString("waitForIndexThrow", required: false) ?? true;
 
-            var indexesTask = new List<Task>();
+            var indexesToWait = new List<WaitForIndexItem>();
 
             var indexesToCheck = GetImpactedIndexesToWaitForToBecomeNonStale(modifiedCollections);
 
-            var sp = Stopwatch.StartNew();
-            while (true)
-            {
-                indexesTask.Clear();
+            if (indexesToCheck.Count == 0)
+                return;
 
-                DocumentsOperationContext context;
-                using (ContextPool.AllocateOperationContext(out context))
-                using (context.OpenReadTransaction())
+            var sp = Stopwatch.StartNew();
+
+            // we take the awaiter _before_ the indexing transaction happens, 
+            // so if there are any changes, it will already happen to it, and we'll 
+            // query the index again. This is important because of: 
+            // http://issues.hibernatingrhinos.com/issue/RavenDB-5576
+            foreach (var index in indexesToCheck)
+            {
+                var indexToWait = new WaitForIndexItem
                 {
-                    foreach (var index in indexesToCheck)
+                    Index = index,
+                    IndexBatchAwaiter = index.GetIndexingBatchAwaiter(),
+                    WaitForIndexing = new AsyncWaitForIndexing(sp, timeout, index)
+                };
+
+                indexesToWait.Add(indexToWait);
+            }
+
+            DocumentsOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            {
+                while (true)
+                {
+                    var hadStaleIndexes = false;
+
+                    using (context.OpenReadTransaction())
                     {
-                        if (index.IsStale(context, lastEtag))
+                        foreach (var waitForIndexItem in indexesToWait)
                         {
-                            indexesTask.Add(index.WaitForNextIndexingRound());
+                            if (waitForIndexItem.Index.IsStale(context, lastEtag) == false)
+                                continue;
+
+                            hadStaleIndexes = true;
+
+                            await waitForIndexItem.WaitForIndexing.WaitForIndexingAsync(waitForIndexItem.IndexBatchAwaiter);
+
+                            if (waitForIndexItem.WaitForIndexing.TimeoutExceeded && throwOnTimeout)
+                            {
+                                throw new TimeoutException(
+                                    $"After waiting for {sp.Elapsed}, could not verify that {indexesToCheck.Count} " +
+                                    $"indexes has caught up with the changes as of etag: {lastEtag}");
+                            }
                         }
                     }
+
+                    if (hadStaleIndexes == false)
+                        return;
                 }
-
-                if (indexesTask.Count == 0)
-                    return;
-
-                var remaining = timeout - sp.Elapsed;
-                if (remaining < TimeSpan.Zero)
-                    break; // will throw timeout exception
-
-                indexesTask.Add(Task.Delay(remaining));
-
-                await Task.WhenAny(indexesTask);
-            }
-            if (throwOnTimeout)
-            {
-                throw new TimeoutException(
-                    $"After waiting for {sp.Elapsed}, could not verify that {indexesToCheck.Count} " +
-                    $"indexes has caught up with the changes as of etag: {lastEtag}");
             }
         }
 
@@ -354,6 +372,13 @@ namespace Raven.Server.Documents.Handlers
                     }
                 }
             }
+        }
+
+        private class WaitForIndexItem
+        {
+            public Index Index;
+            public AsyncManualResetEvent.FrozenAwaiter IndexBatchAwaiter;
+            public AsyncWaitForIndexing WaitForIndexing;
         }
     }
 }
