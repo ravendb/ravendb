@@ -78,6 +78,7 @@ namespace Voron.Util
                 UpdateMaxSeenTxId(tx);
                 _transactionPages.Add(tx.Id, items);
             }
+
             // here we rely on the fact that only one thread can update the concurrent dictionary
             foreach (var item in items)
             {

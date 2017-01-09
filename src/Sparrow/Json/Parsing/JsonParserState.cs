@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace Sparrow.Json.Parsing
 {
@@ -21,18 +22,19 @@ namespace Sparrow.Json.Parsing
             return GetEscapePositionsSize(EscapePositions);
         }
 
-        public static int GetEscapePositionsSize(List<int> escapePosiitons)
+        public static int GetEscapePositionsSize(List<int> escapePositions)
         {
-            int size = VariableSizeIntSize(escapePosiitons.Count);
-            // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (int pos in escapePosiitons)
+            int size = VariableSizeIntSize(escapePositions.Count);
+
+            // PERF: Using a for in this way will evict the bounds-check and also avoid the cost of using an struct enumerator. 
+            for (int i = 0; i < escapePositions.Count; i++)
             {
-                size += VariableSizeIntSize(pos);
+                size += VariableSizeIntSize(escapePositions[i]);
             }
             return size;
         }
 
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteVariableSizeInt(ref byte* dest, int value)
         {
             // assume that we don't use negative values very often
@@ -45,6 +47,7 @@ namespace Sparrow.Json.Parsing
             *dest++ = (byte)(v);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int VariableSizeIntSize(int value)
         {
             int count = 0;
@@ -75,11 +78,13 @@ namespace Sparrow.Json.Parsing
 
         public void WriteEscapePositionsTo(byte* buffer)
         {
-            WriteVariableSizeInt(ref buffer, EscapePositions.Count);
-            foreach (int pos in EscapePositions)
-            {
-                WriteVariableSizeInt(ref buffer, pos);
-            }
+            var escapePositions = EscapePositions;
+
+            WriteVariableSizeInt(ref buffer, escapePositions.Count);
+
+            // PERF: Using a for in this way will evict the bounds-check and also avoid the cost of using an struct enumerator. 
+            for (int i = 0; i < escapePositions.Count; i++)
+                WriteVariableSizeInt(ref buffer, escapePositions[i]);
         }
 
         public void Reset()

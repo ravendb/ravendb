@@ -8,6 +8,28 @@ using Sparrow.Binary;
 
 namespace Sparrow.Json
 {
+    public class LazyStringValueComparer : IEqualityComparer<LazyStringValue>
+    {
+        public static readonly LazyStringValueComparer Instance = new LazyStringValueComparer();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Equals(LazyStringValue x, LazyStringValue y)
+        {
+            if (x == y) return true;
+            if (x == null || y == null) return false;
+            return x.CompareTo(y) == 0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int GetHashCode(LazyStringValue obj)
+        {
+            unsafe
+            {
+                return (int)Hashing.XXHash32.CalculateInline(obj.Buffer, obj.Size);
+            }            
+        }
+    }
+
     public unsafe class LazyStringValue : IComparable<string>, IEquatable<string>,
         IComparable<LazyStringValue>, IEquatable<LazyStringValue>, IDisposable, IComparable
     {
@@ -53,11 +75,13 @@ namespace Sparrow.Json
             _string = str;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Equals(string other)
         {
             return CompareTo(other) == 0;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Equals(LazyStringValue other)
         {
             return CompareTo(other) == 0;
@@ -81,13 +105,15 @@ namespace Sparrow.Json
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int CompareTo(LazyStringValue other)
         {
             if (other.Buffer == Buffer && other.Size == Size)
                 return 0;
             return Compare(other.Buffer, other.Size);
         }
-        
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Compare(byte* other, int otherSize)
         {
             var result = Memory.CompareInline(Buffer, other, Math.Min(Size, otherSize));
