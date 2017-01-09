@@ -102,11 +102,8 @@ class dynamicHeightBindingHandler {
                 var windowHeight: number = ko.utils.domData.get(element, windowHeightKey);
                 desiredElementHeight = windowHeight - elementTop - padding;
             }
-            var minimumHeight = 100;
-            if (desiredElementHeight >= minimumHeight) {
-                $element.innerHeight(desiredElementHeight);
-                $element.trigger("DynamicHeightSet", desiredElementHeight);
-            }
+            $element.innerHeight(desiredElementHeight);
+            $element.trigger("DynamicHeightSet", desiredElementHeight);
         }
     }
 }
