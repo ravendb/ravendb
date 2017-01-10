@@ -30,7 +30,7 @@ namespace Raven.Server.Utils.Metrics
         {
             var oldCount = count;
             double sum = 0;
-            var index = Volatile.Read(ref _index);
+            var index = Volatile.Read(ref _index) % _m15Rate.Length;
             for (int i = index; i >= 0 && count >= 0; i--, count--)
             {
                 sum += _m15Rate[i];
@@ -68,8 +68,7 @@ namespace Raven.Server.Utils.Metrics
                 OneSecondRate = (current - last) / timeDiff;
             }
 
-            var index = Volatile.Read(ref _index) + 1;
-            Volatile.Write(ref _index, index);
+            var index = Interlocked.Increment(ref _index);
             _m15Rate[index % (60 * 15)] = OneSecondRate;
         }
 
