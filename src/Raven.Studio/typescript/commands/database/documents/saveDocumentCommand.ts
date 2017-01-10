@@ -10,11 +10,6 @@ class saveDocumentCommand extends commandBase {
     }
 
     execute(): JQueryPromise<saveDocumentResponseDto> {
-        if (this.reportSaveProgress) {
-            //TODO: use spinners instead
-            this.reportInfo("Saving " + this.id + "...");
-        }
-
         this.document.__metadata.id = this.id;
 
         const commands: Array<bulkDocumentDto> = [this.document.toBulkDoc("PUT")];
