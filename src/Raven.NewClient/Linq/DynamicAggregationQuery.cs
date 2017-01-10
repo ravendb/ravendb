@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 
 namespace Raven.NewClient.Client.Linq

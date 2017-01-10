@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
 using Raven.NewClient.Abstractions.Data;
+using Sparrow.Json;
 
-namespace Raven.NewClient.Client.Data
+namespace Raven.NewClient.Client.Commands
 {
     public class FacetedQueryResult
     {

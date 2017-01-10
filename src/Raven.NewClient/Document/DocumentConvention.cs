@@ -20,6 +20,7 @@ using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Abstractions.Replication;
 
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Utilities;
 using Newtonsoft.Json.Serialization;
@@ -542,6 +543,7 @@ namespace Raven.NewClient.Client.Document
             };
 
             CustomizeJsonSerializer(jsonSerializer);
+            jsonSerializer.Converters.Add(new StringEnumConverter());
             // TODO: Iftah
             /*var convertersToUse = SaveEnumsAsIntegers ? DefaultConvertersEnumsAsIntegers : DefaultConverters;
             if (jsonSerializer.Converters.Count == 0)
