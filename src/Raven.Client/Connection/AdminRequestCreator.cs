@@ -162,11 +162,13 @@ namespace Raven.Client.Connection
         /// </summary>
         public async Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0, CancellationToken token = default (CancellationToken))
         {
-            using (var requestForSystemDatabase = createRequestForSystemDatabase(string.Format(CultureInfo.InvariantCulture, "/databases?pageSize={0}&start={1}", pageSize, start), HttpMethods.Get))
+            using (var requestForSystemDatabase = createRequestForSystemDatabase(string.Format(CultureInfo.InvariantCulture, "/resources?namesOnly=true&pageSize={0}&start={1}", pageSize, start), HttpMethods.Get))
             {
-                var result = await requestForSystemDatabase.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-                var json = (RavenJArray)result;
-                return json.Select(x => x.Value<string>("Name"))
+                var json = (RavenJObject)await requestForSystemDatabase.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                var array = json.Value<RavenJArray>("Databases");
+
+                return array
+                    .Select(x => x.Value<string>())
                     .ToArray();
             }
         }

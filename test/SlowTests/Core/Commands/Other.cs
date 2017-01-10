@@ -52,7 +52,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact(Skip = "Missing endpoint: /databases")]
+        [Fact]
         public async Task CanGetAListOfDatabasesAsync()
         {
             using (var store = GetDocumentStore())
