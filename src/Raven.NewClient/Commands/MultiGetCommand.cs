@@ -35,7 +35,7 @@ namespace Raven.NewClient.Client.Commands
                 commands.Add(new DynamicJsonValue()
                 {
                     ["Url"] = $"/databases/{node.Database}{req.Url}",
-                    ["Query"] = req.Query,
+                    ["Query"] = $"?{req.Query}",
                     ["Method"] = req.Method,
                     ["Headers"] = headers,
                     ["Content"] = req.Content
@@ -73,6 +73,7 @@ namespace Raven.NewClient.Client.Commands
         {
             if (response == null)
                 throw new InvalidOperationException();
+
             Result = JsonDeserializationClient.BlittableArrayResult(response);
         }
     }

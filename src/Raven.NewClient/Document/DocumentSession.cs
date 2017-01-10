@@ -6,6 +6,7 @@
 
 using Raven.NewClient.Client.Connection;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Threading;
@@ -18,7 +19,9 @@ using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Linq;
 using System.Linq;
+using System.Net.Http;
 using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Json;
 using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Document
@@ -138,7 +141,31 @@ namespace Raven.NewClient.Client.Document
          
         public FacetedQueryResult[] MultiFacetedSearch(params FacetQuery[] queries)
         {
-            throw new NotImplementedException();
+            IncrementRequestCount();
+            var requests = new List<GetRequest>();
+            var results = new List<FacetedQueryResult>();
+            foreach (var q in queries)
+            {
+                var method = q.CalculateHttpMethod();
+                requests.Add(new GetRequest()
+                {
+                    Url = "/queries/" + q.IndexName,
+                    Query = q.GetQueryString(method),
+                    Method = method.Method,
+                    Content = method == HttpMethod.Post ? q.GetFacetsAsJson() : null
+                });
+            }
+            var multiGetOperation = new MultiGetOperation(this);
+            var command = multiGetOperation.CreateRequest(requests);
+            RequestExecuter.Execute(command, Context);
+            foreach (var result in command.Result.Results)
+            {
+                var facetResult = (BlittableJsonReaderObject)result;
+                BlittableJsonReaderObject res;
+                facetResult.TryGet("Result", out res);
+                results.Add(JsonDeserializationClient.FacetedQueryResult(res));
+            }
+            return results.ToArray();
         }
 
         /// <summary>

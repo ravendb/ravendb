@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Document;
 
@@ -221,39 +222,53 @@ namespace Raven.NewClient.Client.Linq
             var q = GetIndexQuery(false);
             var query = FacetQuery.Create(indexName, q, facetSetupDoc, null, start, pageSize);
 
-            // TODO iftah
-            return null;
-            //return databaseCommands.GetFacets(query);
+            var command = new GetFacetsCommand()
+            {
+                Query = query
+            };
+            session.RequestExecuter.Execute(command, session.Context);
+            return command.Result;
         }
 
         public virtual FacetedQueryResult GetFacets(List<Facet> facets, int start, int? pageSize)
         {
             var q = GetIndexQuery(false);
             var query = FacetQuery.Create(indexName, q, null, facets, start, pageSize);
-
-            // TODO iftah
-            return null;
-            //return databaseCommands.GetFacets(query);
+            var command = new GetFacetsCommand()
+            {
+                Query = query,
+                Context = session.Context
+            };
+            session.RequestExecuter.Execute(command, session.Context);
+            return command.Result;
         }
 
-        public virtual Task<FacetedQueryResult> GetFacetsAsync(string facetSetupDoc, int start, int? pageSize, CancellationToken token = default (CancellationToken))
+        public virtual async Task<FacetedQueryResult> GetFacetsAsync(string facetSetupDoc, int start, int? pageSize, CancellationToken token = default (CancellationToken))
         {
             var q = GetIndexQuery();
             var query = FacetQuery.Create(indexName, q, facetSetupDoc, null, start, pageSize);
 
-            // TODO iftah
-            return null;
-            //return asyncDatabaseCommands.GetFacetsAsync(query, token);
+            var command = new GetFacetsCommand()
+            {
+                Query = query
+            };
+            await session.RequestExecuter.ExecuteAsync(command, session.Context, token).ConfigureAwait(false);
+
+            return command.Result;
         }
 
-        public virtual Task<FacetedQueryResult> GetFacetsAsync(List<Facet> facets, int start, int? pageSize, CancellationToken token = default (CancellationToken))
+        public virtual async Task<FacetedQueryResult> GetFacetsAsync(List<Facet> facets, int start, int? pageSize, CancellationToken token = default (CancellationToken))
         {
             var q = GetIndexQuery();
             var query = FacetQuery.Create(indexName, q, null, facets, start, pageSize);
 
-            // TODO iftah
-            return null;
-            //return asyncDatabaseCommands.GetFacetsAsync(query, token);
+            var command = new GetFacetsCommand()
+            {
+                Query = query
+            };
+            await session.RequestExecuter.ExecuteAsync(command, session.Context, token).ConfigureAwait(false);
+
+            return command.Result;
         }
 
         private RavenQueryProviderProcessor<T> GetRavenQueryProvider()

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
-
-using Newtonsoft.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.NewClient.Client.Data
 {
@@ -40,7 +39,7 @@ namespace Raven.NewClient.Client.Data
             }
         }
 
-        public string Content { get; set; }
+        public DynamicJsonArray Content { get; set; }
 
         public GetRequest()
         {
