@@ -31,8 +31,15 @@ class activeResourceTracker {
 
     constructor() {
         ko.postbox.subscribe(EVENTS.Resource.Activate, (e: resourceActivatedEventArgs) => {
+
+            // If the 'same' resource was selected from the top resources selector dropdown, 
+            // then we want the knockout observable to be aware of it so that scrollling on page will occur
+            if (e.resource === this.resource()) {
+                this.resource(null);
+            }
+            // Set the active resource
             this.resource(e.resource);
-        });
+          });
 
         ko.postbox.subscribe(EVENTS.Resource.Disconnect, (e: resourceDisconnectedEventArgs) => {
             if (e.resource === this.resource()) {
