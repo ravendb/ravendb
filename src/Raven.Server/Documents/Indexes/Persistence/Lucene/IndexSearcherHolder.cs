@@ -205,27 +205,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 _hashCode = values.Count;
                 _hash = (uint)values.Count;
 
-                int size = 0;
+                _hash = 0;
                 foreach (var value in values)
                 {
-                    size += value.Length;
-                }
-                var buffer = context.GetNativeTempBuffer(size * sizeof(char));
-                var destChars = (char*)buffer;
-
-                var position = 0;
-                foreach (var value in values)
-                {
-                    for (var i = 0; i < value.Length; i++)
-                        destChars[position++] = value[i];
-
-                    unchecked
+                    fixed (char* p = value)
                     {
-                        _hashCode = _hashCode * 397 ^ value.GetHashCode();
+                        _hash = Hashing.XXHash32.Calculate((byte*)p, sizeof(char)*value.Length, _hash);
                     }
+                    _hashCode = _hashCode*397 ^ value.GetHashCode();
                 }
-
-                _hash = Hashing.XXHash32.Calculate(buffer, size);
             }
 
             private static void ThrowEmptyFacets()
