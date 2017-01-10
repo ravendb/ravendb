@@ -54,7 +54,7 @@ namespace NewClientTests
         private bool _doNotReuseServer;
         private int NonReusedServerPort { get; set; }
         private int NonReusedTcpServerPort { get; set; }
-        private const int MaxParallelServer = 79;
+        private const int MaxParallelServer = 78; // port 8000 might be reserved on some cases for IPv6 translation
         private static readonly List<int> _usedServerPorts = new List<int>();
 
         private static readonly List<int> _availableServerPorts =
