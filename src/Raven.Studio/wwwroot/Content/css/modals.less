@@ -1,6 +1,16 @@
 .modal-dialog {
     transition: all 0.3s ease-in-out !important;
 
+    .modal-body {
+        section {
+            h4, h5, h6 {
+                text-transform:uppercase;
+                color: @brand-info;
+                font-weight: bold;
+            }
+        }
+    }
+
     .modal-settings-panel {
         @media (min-width: @screen-sm) {
             display: flex;
@@ -166,6 +176,7 @@
 
     .modal-body {
         overflow: hidden;
+
     }
 
     .form-container {
@@ -217,4 +228,19 @@
             }
         }
     }
+
+}
+
+#index-performance-operation-details {
+
+    .operationName {
+        font-size: 24px;
+        color: @brand-primary;
+    }
+
+    .operationDuration {
+        margin-left: 10px;
+        font-size: 20px;
+    }
+
 }
