@@ -37,8 +37,8 @@
 
 <div id="gridContextMenu">
     <ul class="dropdown-menu" role="menu" data-bind="visible: settings.contextMenuOptions.length > 0 ">
-        <li data-bind="visible: _.includes(settings.contextMenuOptions, 'EditItem') && settings.selectedIndices().length == 1">
-            <a tabindex="-1" href="#" data-bind="click: editItem">Edit Item</a>
+        <li data-bind="visible: _.includes(settings.contextMenuOptions, 'ViewItem') && settings.selectedIndices().length == 1">
+            <a tabindex="-1" href="#" data-bind="click: viewItem">View Item</a>
         </li>
         <li data-bind="visible: _.includes(settings.contextMenuOptions, 'CopyItems')">
             <a tabindex="-1" href="#" data-bind="disable: isIndexMapReduce, click: copySelectedDocs, text: settings.selectedIndices().length === 1 ? 'Copy Item' : 'Copy Items'"></a>

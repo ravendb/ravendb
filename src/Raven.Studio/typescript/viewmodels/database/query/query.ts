@@ -36,6 +36,7 @@ import virtualTable = require("widgets/virtualTable/viewModel");
 import queryUtil = require("common/queryUtil");
 import eventsCollector = require("common/eventsCollector");
 import genUtils = require("common/generalUtils");
+import showDataDialog = require("viewmodels/common/showDataDialog");
 
 class query extends viewModelBase {
     isTestIndex = ko.observable<boolean>(false);
@@ -307,14 +308,13 @@ class query extends viewModelBase {
 
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
         return [
-            ko.postbox.subscribe("EditItem", (itemNumber: number) => {
-                //(itemNumber: number, res: resource, index: string, query?: string, sort?:string)
-                var queriess = this.recentQueries();
-                var recentq = this.recentQueries()[0];
-                var sorts = recentq.Sorts
-                    .join(',');
-                //alert(appUrl.forEditQueryItem(itemNumber, this.activeDatabase(), recentq.IndexName,recentq.QueryText,sorts));
-                router.navigate(appUrl.forEditQueryItem(itemNumber, this.activeDatabase(), recentq.IndexName, recentq.QueryText, sorts), true);
+            ko.postbox.subscribe("ViewItem", (itemNumber: number) => {
+                this.queryResults().getNthItem(itemNumber)
+                    .done((item: document) => {
+                        const dto = item.toDto(true);
+
+                        app.showBootstrapDialog(new showDataDialog(item.getId(), JSON.stringify(dto, null, 2)));
+                    });
             })
         ];
     }

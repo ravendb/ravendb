@@ -8,7 +8,6 @@ import querySort = require("models/database/query/querySort");
 
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
-import queryIndexCommand = require("commands/database/query/queryIndexCommand");
 import resolveMergeCommand = require("commands/database/studio/resolveMergeCommand");
 import getDocumentsFromCollectionCommand = require("commands/database/documents/getDocumentsFromCollectionCommand");
 import generateClassCommand = require("commands/database/documents/generateClassCommand");
@@ -54,7 +53,6 @@ class editDocument extends viewModelBase {
     $docEditor: JQuery;
 
     isConflictDocument = ko.observable<boolean>(false);
-    isInDocMode = ko.observable<boolean>(true);
     isNewLineFriendlyMode = ko.observable<boolean>(false);
     autoCollapseMode = ko.observable<boolean>(false);
     isSaving = ko.observable<boolean>(false);
@@ -63,12 +61,6 @@ class editDocument extends viewModelBase {
     private metaPropsToRestoreOnSave: any[] = [];
 
     private changeNotification: changeSubscription;
-
-    queryMode = {
-        queryIndex: ko.observable<string>(),
-        queryResultList: ko.observable<pagedList>(),
-        currentQueriedItemIndex: undefined as number    
-    };
 
     connectedDocuments = new connectedDocuments(this.document, this.activeDatabase, (docId) => this.loadDocument(docId));
     
@@ -88,8 +80,6 @@ class editDocument extends viewModelBase {
 
         if (args && args.id) {
             return this.activateById(args.id);
-        } else if (args && args.index) {
-            return this.activateByIndex(args.index, args.query, args.sorts, args.item);
         } else {
             return $.Deferred().resolve({ can: true });
         }
@@ -101,12 +91,15 @@ class editDocument extends viewModelBase {
 
         this.dirtyFlag = new ko.DirtyFlag([this.documentText, this.userSpecifiedId], false, jsonUtil.newLineNormalizingHashFunction);
 
-        this.isSaveEnabled = ko.pureComputed(() => this.dirtyFlag().isDirty());
+        this.isSaveEnabled = ko.pureComputed(() => {
+            const dirty = this.dirtyFlag().isDirty();
+            const isSaving = this.isSaving();
+
+            return dirty && !isSaving;
+        });
 
         if (navigationArgs && navigationArgs.id) {
             ko.postbox.publish("SetRawJSONUrl", appUrl.forDocumentRawData(this.activeDatabase(), navigationArgs.id));
-        } else if (navigationArgs && navigationArgs.index) {
-            //TODO: set raw url?
         } else {
             return this.editNewDocument(navigationArgs ? navigationArgs.new : null);
         }
@@ -155,45 +148,22 @@ class editDocument extends viewModelBase {
     }
 
     createNotifications(): Array<changeSubscription> {
-        if (!this.document() || !this.isInDocMode())
-            return [];
-        //TODO: support for query results
+        this.syncChangeNotification();
 
-        this.changeNotification = this.createDocumentChangeNotification(this.document().getId());
-        return [
-            this.changeNotification
-        ];
+        return [];
     }
 
-
-    private activateByIndex(indexName: string, query: string, argSorts: string, argItem: any) {
-        const canActivateResult = $.Deferred<canActivateResultDto>();
-        this.isInDocMode(false);
-        let sorts: querySort[];
-
-        if (argSorts) {
-            sorts = argSorts.split(",").map((curSort: string) => querySort.fromQuerySortString(curSort.trim()));
-        } else {
-            sorts = [];
+    private syncChangeNotification() {
+        if (this.changeNotification) {
+            this.removeNotification(this.changeNotification);
+            this.changeNotification.off();
         }
 
-        const resultsFetcher = (skip: number, take: number) => new queryIndexCommand(indexName, this.activeDatabase(), skip, take, query, sorts).execute();
-        const list = new pagedList(resultsFetcher);
-        const item = !!argItem && !isNaN(argItem) ? argItem : 0;
+        if (!this.document() || this.isCreatingNewDocument())
+            return;
 
-        list.getNthItem(item)
-            .done((doc: document) => {
-                this.document(doc);
-                canActivateResult.resolve({ can: true });
-            })
-            .fail(() => {
-                messagePublisher.reportError("Could not find query result");
-                canActivateResult.resolve({ redirect: appUrl.forDocuments(collection.allDocsCollectionName, this.activeDatabase()) });
-            });
-        this.queryMode.currentQueriedItemIndex = item;
-        this.queryMode.queryResultList(list);
-        this.queryMode.queryIndex(indexName);
-        return canActivateResult;
+        this.changeNotification = this.createDocumentChangeNotification(this.document().getId());
+        this.addNotification(this.changeNotification);
     }
 
     private initializeObservables(): void {
@@ -364,6 +334,8 @@ class editDocument extends viewModelBase {
         // Show current document as a new document..
         this.isCreatingNewDocument(true);
 
+        this.syncChangeNotification();
+
         // Clear data..
         this.userSpecifiedId("");
         this.metadata().etag(null);
@@ -376,8 +348,6 @@ class editDocument extends viewModelBase {
     }
 
     private saveInternal(documentId: string, eraseEtag: boolean) {
-        this.isInDocMode(true);
-
         let message = "";
         let updatedDto: any;
 
@@ -450,6 +420,7 @@ class editDocument extends viewModelBase {
                 // Try to restore the selection.
                 this.docEditor.selection.setRange(currentSelection, false);
                 this.isSaving(false);
+                this.syncChangeNotification();
             });
         this.updateUrl(savedDocumentDto.Key);
 
@@ -457,6 +428,7 @@ class editDocument extends viewModelBase {
 
         this.isCreatingNewDocument(false);
         this.collectionForNewDocument(null);
+        
     }
 
     private attachReservedMetaProperties(id: string, target: documentMetadataDto) {
@@ -491,15 +463,11 @@ class editDocument extends viewModelBase {
         eventsCollector.default.reportEvent("document", "refresh");
         this.canContinueIfNotDirty("Refresh", "You have unsaved data. Are you sure you want to continue?")
         .done(() => {
-            if (this.isInDocMode()) {
-                const docId = this.editedDocId();
-                this.document(null);
-                this.documentText(null);
-                this.userSpecifiedId("");
-                this.loadDocument(docId);
-            } else {
-                this.queryMode.queryResultList().getNthItem(this.queryMode.currentQueriedItemIndex).done((doc) => this.document(doc));
-            }
+            const docId = this.editedDocId();
+            this.document(null);
+            this.documentText(null);
+            this.userSpecifiedId("");
+            this.loadDocument(docId);
 
             this.displayDocumentChangeNotification(false);
         });
@@ -553,7 +521,7 @@ class editDocument extends viewModelBase {
         const doc: document = this.document();
         const generate = new generateClassCommand(this.activeDatabase(), doc.getId(), "csharp");
         const deffered = generate.execute();
-        deffered.done((code: string) => app.showBootstrapDialog(new showDataDialog("Generated Class", code, null, true)));
+        deffered.done((code: string) => app.showBootstrapDialog(new showDataDialog("Generated Class", code, null)));
     }
 }
 

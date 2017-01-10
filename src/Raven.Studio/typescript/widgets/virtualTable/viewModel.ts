@@ -93,7 +93,7 @@ class ctor {
             customColumnParams: {},
             isIndexMapReduce: ko.observable<boolean>(true),
             isCopyAllowed: true,
-            contextMenuOptions: ["CopyItems", "CopyIDs", "Delete", "EditItem"],
+            contextMenuOptions: ["CopyItems", "CopyIDs", "Delete", "ViewItem"],
             selectionEnabled: true,
             customColumns: ko.observable(customColumns.empty()),
             customFunctions: ko.observable(customFunctions.empty()),
@@ -717,9 +717,9 @@ class ctor {
         return indices;
     }
 
-    editItem() {
+    viewItem() {
         if (this.settings.selectedIndices().length > 0) {
-            ko.postbox.publish("EditItem", this.settings.selectedIndices()[0]);
+            ko.postbox.publish("ViewItem", this.settings.selectedIndices()[0]);
         }
     }
 
