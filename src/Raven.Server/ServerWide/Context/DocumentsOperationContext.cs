@@ -17,7 +17,20 @@ namespace Raven.Server.ServerWide.Context
             if (Transaction != null && Transaction.Disposed == false && Transaction.InnerTransaction.LowLevelTransaction.Flags != TransactionFlags.ReadWrite)
                 MustHaveWriteTransactionOpened();
 
-            return Math.Abs((short)(_currentTxMarker + TransactionMarkerOffset));
+            var value = (short)(_currentTxMarker + TransactionMarkerOffset);
+            if (value <= 0)
+            {
+                switch (value)
+                {
+                    case short.MaxValue:
+                        return 1;
+                    case 0:
+                        return 2;
+                    default:
+                        return (short) -value;
+                }
+            }
+            return value;
         }
 
         private static void MustHaveWriteTransactionOpened()
