@@ -67,6 +67,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\CommonAssemblyInfo.cs">
+      <Link>CommonAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="Behaviors\AbstractRaftStateBehavior.cs" />
     <Compile Include="Behaviors\SnapshotInstallationStateBehavior.cs" />
     <Compile Include="Behaviors\CandidateStateBehavior.cs" />
@@ -100,7 +103,6 @@
     <Compile Include="Messages\RequestVoteRequest.cs" />
     <Compile Include="Messages\RequestVoteResponse.cs" />
     <Compile Include="Messages\TimeoutNowRequest.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RaftEngine.cs" />
     <Compile Include="RaftEngineOptions.cs" />
     <Compile Include="RaftEngineState.cs" />
@@ -129,6 +131,9 @@
   </ItemGroup>
   <ItemGroup>
     <Analyzer Include="..\..\SharedLibs\Raven.CodeAnalysis.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Properties\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

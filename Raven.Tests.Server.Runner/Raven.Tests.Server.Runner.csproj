@@ -100,10 +100,12 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="Controllers\ServersController.cs" />
     <Compile Include="Data\Context.cs" />
     <Compile Include="Program.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Data\ServerConfiguration.cs" />
     <Compile Include="ServerRunner.cs" />
     <Compile Include="Startup.cs" />

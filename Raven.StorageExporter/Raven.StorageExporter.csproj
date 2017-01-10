@@ -76,12 +76,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="ConsoleUtils.cs" />
     <Compile Include="CsvFileWriter.cs" />
     <Compile Include="StorageExporter.cs" />
     <Compile Include="StorgaeExporterConfiguration.cs" />
     <Compile Include="Program.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="EsentExportOperation.cs" />
   </ItemGroup>
   <ItemGroup>
