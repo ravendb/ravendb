@@ -6,6 +6,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client.Data;
 using Raven.Server.Documents;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -19,6 +20,8 @@ namespace Raven.Server.Web.System
         [RavenAction("/resources", "GET")]
         public Task Resources()
         {
+            var namesOnly = GetBoolValueQueryString("namesOnly", required: false) ?? false;
+
             //TODO: fill all required information (see: RavenDB-5438) - return Raven.Client.Data.ResourcesInfo
             TransactionOperationContext context;
             using (ServerStore.ContextPool.AllocateOperationContext(out context))
@@ -29,22 +32,17 @@ namespace Raven.Server.Web.System
                     writer.WriteStartObject();
 
                     writer.WritePropertyName(nameof(ResourcesInfo.Databases));
-
-                    writer.WriteStartArray();
-                    var first = true;
-
-                    foreach (var dbDoc in ServerStore.StartingWith(context, Constants.Database.Prefix, GetStart(), GetPageSize(int.MaxValue)))
+                    writer.WriteArray(context, ServerStore.StartingWith(context, Constants.Database.Prefix, GetStart(), GetPageSize(int.MaxValue)), (w, c, dbDoc) =>
                     {
-                        if (first == false)
-                            writer.WriteComma();
-
-                        first = false;
-
                         var databaseName = dbDoc.Key.Substring(Constants.Database.Prefix.Length);
-                        WriteDatabaseInfo(databaseName, dbDoc.Data, context, writer);
-                    }
+                        if (namesOnly)
+                        {
+                            w.WriteString(databaseName);
+                            return;
+                        }
 
-                    writer.WriteEndArray();
+                        WriteDatabaseInfo(databaseName, dbDoc.Data, context, w);
+                    }); 
 
                     //TODO: write fs, cs, ts
 
