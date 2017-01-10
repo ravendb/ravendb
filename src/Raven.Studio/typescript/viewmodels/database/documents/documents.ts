@@ -528,7 +528,7 @@ class documents extends viewModelBase {
     }
 
     deleteSelectedDocs() {
-        if (this.selectedCollection().isSystemDocuments === false && this.hasAllDocumentsSelected()) {
+        if (this.selectedCollection().isSystemDocuments === false && this.hasAllDocumentsSelected() && !this.selectedCollection().isAllDocuments) {
             eventsCollector.default.reportEvent("collection", "delete");
             this.deleteCollection(this.selectedCollection());
         } else {

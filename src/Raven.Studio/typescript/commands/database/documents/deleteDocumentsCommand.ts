@@ -11,8 +11,6 @@ class deleteDocumentsCommand extends executeBulkDocsCommand {
     execute(): JQueryPromise<bulkDocumentDto[]> {        
         var docCount = this.docs.length;
         var docsDescription = docCount === 1 ? this.docs[0].Key : docCount + " docs";
-        var alertInfoTitle = "Deleting " + docsDescription + "...";
-        this.reportInfo(alertInfoTitle);
 
         var deleteTask = super.execute();
 
