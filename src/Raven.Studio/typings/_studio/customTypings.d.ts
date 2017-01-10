@@ -69,6 +69,7 @@ interface KnockoutObservable<T> {
     throttle(throttleTimeInMs: number): KnockoutObservable<T>;
     distinctUntilChanged(): KnockoutObservable<T>;
     toggle(): KnockoutObservable<T>;
+    withLabel(option: Array<valueAndLabelItem<any, any>>, defaultValue?: any): KnockoutObservable<any>;
 }
 
 interface KnockoutStatic {

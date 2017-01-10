@@ -1,119 +1,132 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
-import luceneField = require("models/database/index/luceneField");
-import spatialIndexField = require("models/database/index/spatialIndexField");
+import indexFieldOptions = require("models/database/index/indexFieldOptions");
+import configuration = require("configuration");
+
+class configurationItem {
+    key = ko.observable<string>();
+    value = ko.observable<string>();
+
+    constructor(key: string, value: string) {
+        this.key(key);
+        this.value(value);
+    }
+
+    static empty() {
+        return new configurationItem("", "");
+    }
+}
 
 class indexDefinition {
+
     name = ko.observable<string>();
-    map = ko.observable<string>();
     maps = ko.observableArray<KnockoutObservable<string>>();
     reduce = ko.observable<string>();
-    luceneFields = ko.observableArray<luceneField>();
     isTestIndex = ko.observable<boolean>(false);
     isSideBySideIndex = ko.observable<boolean>(false);
-    numOfLuceneFields = ko.computed(() => this.luceneFields().length);
+    fields = ko.observableArray<indexFieldOptions>();
+    defaultFieldOptions = ko.observable<indexFieldOptions>();
 
-    // This is an amalgamation of several properties from the index (Fields, Stores, Indexes, SortOptions, Analyzers, Suggestions, TermVectors) 
-    // Stored as multiple luceneFields for the sake of data binding.
-    // Each luceneField corresponds to a Field box in the index editor UI.
-    spatialFields = ko.observableArray<spatialIndexField>();
-    numOfSpatialFields = ko.computed(() => this.spatialFields().length);
+    numberOfLuceneFields = ko.pureComputed(() => this.fields().length);
+    numberOfConfigurationFields = ko.pureComputed(() => this.configuration() ? this.configuration().length : 0);
 
-    maxIndexOutputsPerDocument = ko.observable<number>(0);
-    storeAllFields = ko.observable<boolean>(false);
-
-    analyzers: any;
-    fields = ko.observableArray<string>();
-    indexes: any;
-    internalFieldsMapping: any;
-    isCompiled: boolean;
-    isMapReduce: boolean;
-    lockMode: string;
-    sortOptions: any;
-    spatialIndexes: any;
-    stores: any;
-    suggestionsOptions: any[];
-    termVectors: any;
-    type: Raven.Client.Data.Indexes.IndexType;
+    configuration = ko.observableArray<configurationItem>();
+    maxIndexOutputsPerDocument = ko.observable<number>();
+    lockMode: Raven.Abstractions.Indexing.IndexLockMode;
 
     constructor(dto: Raven.Client.Indexing.IndexDefinition) {
-        //TODO: this.analyzers = dto.Analyzers;
-        //TODO: this.fields(dto.Fields);
-        //TODO: this.indexes = dto.Indexes;
-        //TODO: this.internalFieldsMapping = dto.InternalFieldsMapping;
+        this.name(dto.Name);
+        this.maps(dto.Maps.map(x => ko.observable<string>(x)));
+        this.reduce(dto.Reduce);
         this.isTestIndex(dto.IsTestIndex);
         this.isSideBySideIndex(dto.IsSideBySideIndex);
-        //TODO: this.isCompiled = dto.IsCompiled;
-        //TODO: this.isMapReduce = dto.IsMapReduce;
+        this.fields(_.map(dto.Fields, (fieldDto, indexName) => new indexFieldOptions(indexName, fieldDto)));
+        const defaultFieldOptions = this.fields().find(x => x.name() === indexFieldOptions.DefaultFieldOptions);
+        if (defaultFieldOptions) {
+            this.defaultFieldOptions(defaultFieldOptions);
+            this.fields.remove(defaultFieldOptions);
+        }
         this.lockMode = dto.LockMode;
-        //TODO: this.map(dto.Map);
-        this.maps(dto.Maps.map(m => ko.observable(m)));
-        this.name(dto.Name);
-        this.reduce(dto.Reduce);
-        //TODO: this.sortOptions = dto.SortOptions;
-        //TODO: this.spatialIndexes = dto.SpatialIndexes;
-        //TODO: this.stores = dto.Stores;
-        //TODO: this.suggestionsOptions = dto.SuggestionsOptions;
-        //TODO: this.termVectors = dto.TermVectors;
-        this.type = dto.Type;
+        this.configuration(this.parseConfiguration(dto.Configuration));
 
-        this.luceneFields(this.parseFields());
-        this.spatialFields(this.parseSpatialFields());
-
-        this.maxIndexOutputsPerDocument(0);
-        //TODO this.maxIndexOutputsPerDocument(dto.MaxIndexOutputsPerDocument ? dto.MaxIndexOutputsPerDocument : 0);
-        this.storeAllFields(this.isStoreAllFields());
+        const existingMaxIndexOutputs = this.configuration().find(x => x.key() === configuration.indexing.maxMapIndexOutputsPerDocument);
+        if (existingMaxIndexOutputs) {
+            this.maxIndexOutputsPerDocument(parseInt(existingMaxIndexOutputs.value()));
+            this.configuration.remove(existingMaxIndexOutputs);
+        }
     }
 
-    isStoreAllFields(): boolean {
-        if (this.stores && this.stores.hasOwnProperty("__all_fields")) {
-            return this.stores["__all_fields"] === "Yes";
+    private parseConfiguration(config: Raven.Client.Indexing.IndexConfiguration): Array<configurationItem> {
+        const configurations = [] as configurationItem[];
+
+        if (config) {
+            _.forIn(config, (value, key) => {
+                configurations.push(new configurationItem(key, value));
+            });
         }
 
-        return false;
+        return configurations;
     }
 
-    setOrRemoveStoreAllFields(add: boolean) {
-        if (add) {
-            this.stores["__all_fields"] = "Yes";
-        } else {
-            delete this.stores["__all_fields"];
+    private detectIndexType(): Raven.Client.Data.Indexes.IndexType {
+        return this.reduce() ? "MapReduce" : "Map";
+    }
+
+    private fieldToDto(): dictionary<Raven.Client.Indexing.IndexFieldOptions> {
+        const fields = {} as dictionary<Raven.Client.Indexing.IndexFieldOptions>;
+
+        this.fields().forEach((indexField: indexFieldOptions) => {
+            fields[indexField.name()] = indexField.toDto();
+        });
+
+        if (this.defaultFieldOptions()) {
+            fields[indexFieldOptions.DefaultFieldOptions] = this.defaultFieldOptions().toDto();
         }
 
-        this.storeAllFields(this.isStoreAllFields());
+        return fields;
     }
 
-    setStoreAllFieldsToObject(obj: any): any {
-        if (this.isStoreAllFields())
-            obj["__all_fields"] = "Yes";
-        return obj;
+    private configurationToDto(): Raven.Client.Indexing.IndexConfiguration {
+        const result = {} as Raven.Client.Indexing.IndexConfiguration;
+
+        this.configuration().forEach((configItem: configurationItem) => {
+            result[configItem.key()] = configItem.value();
+        });
+
+        if (_.isNumber(this.maxIndexOutputsPerDocument())) {
+            result[configuration.indexing.maxMapIndexOutputsPerDocument] = this.maxIndexOutputsPerDocument().toString();
+        }
+
+        return result;
     }
 
     toDto(): Raven.Client.Indexing.IndexDefinition {
         return {
-            //Analyzers: this.makeFieldObject(f => f.indexing() === "Analyzed", f => f.analyzer()),
-            Fields: {},//this.fields(),
-            //Indexes: this.makeFieldObject(f => f.indexing() !== "Default", f => f.indexing()),
-            //InternalFieldsMapping: this.internalFieldsMapping,
-            IsTestIndex: this.isTestIndex(),
-            IsSideBySideIndex: this.isSideBySideIndex(),
-            //IsCompiled: this.isCompiled,
-            //IsMapReduce: this.isMapReduce,
-            LockMode: "Unlock", //TODO:
-            IndexId: null, 
-            //Map: this.maps()[0](),
-            Maps: this.maps().map(m => m()).filter(m => m && m.length > 0),
             Name: this.name(),
+            Maps: this.maps().map(m => m()),
             Reduce: this.reduce(),
-            //SortOptions: this.makeFieldObject(f => f.sort() !== "None", f => f.sort()),
-            //SpatialIndexes: this.makeSpatialIndexesObject(),
-            //Stores: this.setStoreAllFieldsToObject(this.makeFieldObject(f => f.stores() === "Yes", f => f.stores())),
-            //SuggestionsOptions: this.luceneFields().filter(x => x.suggestionEnabled()).map(x => x.name()),
-            //TermVectors: this.makeFieldObject(f => f.termVector() !== "No", f => f.termVector()),
-            Type: this.type,
-            Configuration: null //TODO
-            //TODO MaxIndexOutputsPerDocument: this.maxIndexOutputsPerDocument() ? this.maxIndexOutputsPerDocument() > 0 ? this.maxIndexOutputsPerDocument() : null : null
-        };
+            IndexId: null,
+            Type: this.detectIndexType(),
+            LockMode: this.lockMode,
+            Configuration: this.configurationToDto(),
+            Fields: this.fieldToDto(),
+            IsSideBySideIndex: false, //TODO side by side
+            IsTestIndex: false, //TODO: test indexes
+        }
+    }
+
+    addField() {
+        this.fields.push(indexFieldOptions.empty());
+    }
+
+    addDefaultField() {
+        const fieldOptions = indexFieldOptions.empty();
+        fieldOptions.name(indexFieldOptions.DefaultFieldOptions);
+        this.defaultFieldOptions(fieldOptions);
+    }
+
+    addConfigurationOption() {
+        this.configuration.push(configurationItem.empty());
     }
 
     static empty(): indexDefinition {
@@ -123,71 +136,12 @@ class indexDefinition {
             Maps: [""],
             Name: "",
             LockMode: "Unlock",
-            Reduce: "",
-            Configuration: null, //TODO
-            //TODO IndexVersion: -1,
+            Reduce: undefined,
+            Configuration: null,
             IsSideBySideIndex: false,
             IsTestIndex: false,
-            //TODO MaxIndexOutputsPerDocument: null,
             Type: "Map"
         });
-    }
-
-    private makeSpatialIndexesObject(): any {
-        var spatialIndexesObj = {};
-        this.spatialFields().forEach(f => (<any>spatialIndexesObj)[f.name()] = f.toDto());
-        return spatialIndexesObj;
-    }
-
-    private makeFieldObject(filter: (field: luceneField) => boolean, selector: (field: luceneField) => any): any {
-        var obj = {};
-        this.luceneFields()
-            .filter(filter)
-            .forEach(f => (<any>obj)[f.name()] = selector(f));
-        return obj;
-    }
-
-    private parseFields(): luceneField[] {
-        var fieldSources = [
-            this.analyzers,
-            this.indexes,
-            this.sortOptions,
-            this.stores,
-            this.suggestionsOptions,
-            this.termVectors
-        ];
-
-        var keys: Array<string> = [];
-        for (var i = 0; i < fieldSources.length; i++) {
-            var src = fieldSources[i];
-            if (src == null)
-                continue;
-            for (var key in src) {
-                if (src.hasOwnProperty(key) === true && !_.includes(keys, key))
-                    keys.push(key);
-            }
-        }
-
-        return keys
-            .map(fieldName => {
-                var suggestionsEnabled = this.suggestionsOptions && this.suggestionsOptions.indexOf(fieldName) >= 0;
-                return new luceneField(fieldName, this.stores[fieldName], this.indexes[fieldName], this.sortOptions[fieldName], this.analyzers[fieldName], suggestionsEnabled, this.termVectors[fieldName], this.fields());
-            });        
-    }
-
-    private parseSpatialFields(): spatialIndexField[] {
-        // The spatial fields are stored as properties on the .spatialIndexes object.
-        // The property names will be one of the .fields.
-        
-        var fields: spatialIndexField[] = [];
-        if (this.spatialIndexes == null)
-            return fields;
-
-        for (var key in this.spatialIndexes) {
-            var spatialIndex = this.spatialIndexes[key];
-            fields.push(new spatialIndexField(key, spatialIndex));
-        }
-        return fields;
     }
 }
 

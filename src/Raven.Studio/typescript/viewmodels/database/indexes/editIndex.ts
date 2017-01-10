@@ -2,8 +2,6 @@ import router = require("plugins/router");
 import viewModelBase = require("viewmodels/viewModelBase");
 import index = require("models/database/index/index");
 import indexDefinition = require("models/database/index/indexDefinition");
-import luceneField = require("models/database/index/luceneField");
-import spatialIndexField = require("models/database/index/spatialIndexField");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
 import appUrl = require("common/appUrl");
 import dialog = require("plugins/dialog");
@@ -32,47 +30,46 @@ import getCSharpIndexDefinitionCommand = require("commands/database/index/getCSh
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import formatIndexCommand = require("commands/database/index/formatIndexCommand");
 import renameOrDuplicateIndexDialog = require("viewmodels/database/indexes/renameOrDuplicateIndexDialog");
+import indexFieldOptions = require("models/database/index/indexFieldOptions");
 
 import eventsCollector = require("common/eventsCollector");
 
 class editIndex extends viewModelBase { 
 
     isEditingExistingIndex = ko.observable<boolean>(false);
-    mergeSuggestion = ko.observable<indexMergeSuggestion>(null);
     editedIndex = ko.observable<indexDefinition>();
-    hasExistingReduce: KnockoutComputed<string>;
-    hasMultipleMaps: KnockoutComputed<boolean>;
-    termsUrl = ko.observable<string>();
-    queryUrl = ko.observable<string>();
-    editMaxIndexOutputsPerDocument = ko.observable<boolean>(false);
-    indexErrorsList = ko.observableArray<string>();
-    appUrls: computedAppUrls;
-    indexName: KnockoutComputed<string>;
-    currentIndexName: KnockoutComputed<string>;
-    isSaveEnabled: KnockoutComputed<boolean>;
-    indexAutoCompleter: indexAceAutoCompleteProvider;
-    loadedIndexName = ko.observable<string>();
     originalIndexName: string;
+    isSaveEnabled: KnockoutComputed<boolean>;
+    saveInProgress = ko.observable<boolean>(false);
+
+    fieldNames = ko.observableArray<string>([]); //TODO: use real values!
+
+    hasReduce = ko.observable<boolean>(false);
+    queryUrl = ko.observable<string>();
+    termsUrl = ko.observable<string>();
+
+    /* TODO
+    indexAutoCompleter: indexAceAutoCompleteProvider;
     canSaveSideBySideIndex: KnockoutComputed<boolean>;
-    // Scripted Index Part
-    isScriptedIndexBundleActive = ko.observable<boolean>(false);
-    scriptedIndex = ko.observable<scriptedIndexModel>(null);
-    indexScript = ko.observable<string>("");
-    deleteScript = ko.observable<string>("");
+     mergeSuggestion = ko.observable<indexMergeSuggestion>(null);
+    */
+
+    /*TODO scripted index
+        isScriptedIndexBundleActive = ko.observable<boolean>(false);
+        scriptedIndex = ko.observable<scriptedIndexModel>(null);
+        indexScript = ko.observable<string>("");
+        deleteScript = ko.observable<string>("");
+    */
     
     constructor() {
         super();
+
+        this.bindToCurrentInstance("removeMap", "removeField", "createFieldNameAutocompleter");
       
         aceEditorBindingHandler.install();
         autoCompleteBindingHandler.install();
 
-        this.appUrls = appUrl.forCurrentDatabase();
-
-        this.hasExistingReduce = ko.computed(() => this.editedIndex() && this.editedIndex().reduce());
-        this.hasMultipleMaps = ko.computed(() => this.editedIndex() && this.editedIndex().maps().length > 1);
-        this.indexName = ko.computed(() => (!!this.editedIndex() && this.isEditingExistingIndex()) ? this.editedIndex().name() : "New Index");
-        this.currentIndexName = ko.computed(() => this.isEditingExistingIndex() ? this.editedIndex().name() : (this.mergeSuggestion() != null) ? "Merged Index" : "New Index");
-
+        /* TODO scripted index
         this.isScriptedIndexBundleActive.subscribe((active: boolean) => {
             if (active) {
                 this.fetchOrCreateScriptedIndex();
@@ -90,210 +87,278 @@ class editIndex extends viewModelBase {
             this.deleteScript = scriptedIndex.deleteScript;
             this.initializeDirtyFlag();
             this.editedIndex().name.valueHasMutated();
-        });
+        });*/
 
-        this.editedIndex(this.createNewIndexDefinition());
+        
+        /* TODO: side by side
         this.canSaveSideBySideIndex = ko.computed(() => {
             if (!this.isEditingExistingIndex()) {
                 return false;
             }
-            var loadedIndex = this.loadedIndexName();
+            var loadedIndex = this.loadedIndexName(); // use loaded index name
             var editedName = this.editedIndex().name();
             return loadedIndex === editedName;
-        });
+        });*/
     }
 
-    canActivate(indexToEditName: string) {
+    canActivate(unescapedIndexToEditName: string): JQueryPromise<canActivateResultDto> {
+        const indexToEditName = unescapedIndexToEditName ? decodeURIComponent(unescapedIndexToEditName) : undefined;
         super.canActivate(indexToEditName);
         
-        var db = this.activeDatabase();
+        const db = this.activeDatabase();
+
+        if (indexToEditName) {
+            this.isEditingExistingIndex(true);
+            const canActivateResult = $.Deferred<canActivateResultDto>();
+            this.fetchIndexToEdit(indexToEditName)
+                .done(() => canActivateResult.resolve({ can: true }))
+                .fail(() => {
+                    messagePublisher.reportError("Could not find " + indexToEditName + " index");
+                    canActivateResult.resolve({ redirect: appUrl.forIndexes(db) });
+                });
+            return canActivateResult;
+        } else {
+            this.editedIndex(indexDefinition.empty());
+        }
+
+        return $.Deferred<canActivateResultDto>().resolve({ can: true });
+
+        /* TODO merge suggesions
         var mergeSuggestion: indexMergeSuggestion = mergedIndexesStorage.getMergedIndex(db, indexToEditName);
         if (mergeSuggestion != null) {
             this.mergeSuggestion(mergeSuggestion);
             this.editedIndex(mergeSuggestion.mergedIndexDefinition);
-        }
-        else if (indexToEditName) {
-            this.isEditingExistingIndex(true);
-            var canActivateResult = $.Deferred();
-            this.fetchIndexData(indexToEditName)
-                .done(() => canActivateResult.resolve({ can: true }))
-                .fail(() => {
-                    messagePublisher.reportError("Could not find " + decodeURIComponent(indexToEditName) + " index");
-                    canActivateResult.resolve({ redirect: appUrl.forIndexes(db) });
-                });
-            return canActivateResult;
-        }
-
-        return $.Deferred().resolve({ can: true });
+        }*/
     }
 
     activate(indexToEditName: string) {
         super.activate(indexToEditName);
-        
+
         if (this.isEditingExistingIndex()) {
             this.editExistingIndex(indexToEditName);
         }
+
         this.updateHelpLink('CQ5AYO');
 
         this.initializeDirtyFlag();
-        this.indexAutoCompleter = new indexAceAutoCompleteProvider(this.activeDatabase(), this.editedIndex);
-        this.checkIfScriptedIndexBundleIsActive();
-    }
-
-    attached() {
-        super.attached();
-        this.addMapHelpPopover();
-        this.addReduceHelpPopover();
-        this.addScriptsLabelPopover();
+        //TODO: this.indexAutoCompleter = new indexAceAutoCompleteProvider(this.activeDatabase(), this.editedIndex);
+        //TODO: scripted index this.checkIfScriptedIndexBundleIsActive();
     }
 
     private initializeDirtyFlag() {
-        var indexDef: indexDefinition = this.editedIndex();
-        var checkedFieldsArray = [indexDef.storeAllFields, indexDef.name, indexDef.map, indexDef.maps, indexDef.reduce, indexDef.numOfLuceneFields, indexDef.numOfSpatialFields, indexDef.maxIndexOutputsPerDocument];
+        const indexDef: indexDefinition = this.editedIndex();
+        const checkedFieldsArray: Array<KnockoutObservable<any>> = [indexDef.name, indexDef.maps, indexDef.reduce, indexDef.numberOfLuceneFields];
 
-        indexDef.luceneFields().forEach((lf: luceneField) => {
-            checkedFieldsArray.push(lf.name);
-            checkedFieldsArray.push(lf.stores);
-            checkedFieldsArray.push(lf.sort);
-            checkedFieldsArray.push(lf.termVector);
-            checkedFieldsArray.push(lf.indexing);
-            checkedFieldsArray.push(lf.analyzer);
-            checkedFieldsArray.push(lf.suggestionEnabled);
+
+        const configuration = indexDef.configuration();
+        if (configuration) {
+            checkedFieldsArray.push(indexDef.numberOfConfigurationFields);
+
+            configuration.forEach(configItem => {
+                checkedFieldsArray.push(configItem.key);
+                checkedFieldsArray.push(configItem.value);
+            });
+        }
+        checkedFieldsArray.push(indexDef.maxIndexOutputsPerDocument);
+
+        indexDef.fields().forEach(field => {
+            checkedFieldsArray.push(field.name);
+            checkedFieldsArray.push(field.analyzer);
+            checkedFieldsArray.push(field.indexing);
+            checkedFieldsArray.push(field.sort);
+            checkedFieldsArray.push(field.storage);
+            checkedFieldsArray.push(field.suggestions);
+            checkedFieldsArray.push(field.termVector);
+            checkedFieldsArray.push(field.hasSpatialOptions);
+
+            const spatial = field.spatial();
+            if (spatial) {
+                checkedFieldsArray.push(spatial.type);
+                checkedFieldsArray.push(spatial.strategy);
+                checkedFieldsArray.push(spatial.maxTreeLevel);
+                checkedFieldsArray.push(spatial.minX);
+                checkedFieldsArray.push(spatial.maxX);
+                checkedFieldsArray.push(spatial.minY);
+                checkedFieldsArray.push(spatial.maxY);
+                checkedFieldsArray.push(spatial.units);
+            }
         });
 
-        indexDef.spatialFields().forEach((sf: spatialIndexField) => {
-            checkedFieldsArray.push(sf.name);
-            checkedFieldsArray.push(sf.type);
-            checkedFieldsArray.push(sf.strategy);
-            checkedFieldsArray.push(sf.minX);
-            checkedFieldsArray.push(sf.maxX);
-            checkedFieldsArray.push(sf.circleRadiusUnits);
-            checkedFieldsArray.push(sf.maxTreeLevel);
-            checkedFieldsArray.push(sf.minY);
-            checkedFieldsArray.push(sf.maxY);
-        });
-
-
-        checkedFieldsArray.push(this.indexScript);
-        checkedFieldsArray.push(this.deleteScript);
+        /* TODO: scripted index part
+            checkedFieldsArray.push(this.indexScript);
+            checkedFieldsArray.push(this.deleteScript);
+        */
 
         this.dirtyFlag = new ko.DirtyFlag(checkedFieldsArray, false, jsonUtil.newLineNormalizingHashFunction);
 
-        this.isSaveEnabled = ko.computed(() => !!this.editedIndex().name() && this.dirtyFlag().isDirty());
+        this.isSaveEnabled = ko.pureComputed(() => {
+            const editIndex = this.isEditingExistingIndex();
+            const isDirty = this.dirtyFlag().isDirty();
+
+            return !editIndex || isDirty;
+        });
     }
 
     private editExistingIndex(unescapedIndexName: string) {
-        var indexName = decodeURIComponent(unescapedIndexName);
-        this.loadedIndexName(indexName);
-        this.termsUrl(appUrl.forTerms(unescapedIndexName, this.activeDatabase()));
+        const indexName = decodeURIComponent(unescapedIndexName);
+        this.originalIndexName = indexName;
+        this.termsUrl(appUrl.forTerms(indexName, this.activeDatabase()));
         this.queryUrl(appUrl.forQuery(this.activeDatabase(), indexName));
     }
 
-    addMapHelpPopover() {
-        $("#indexMapsLabel").popover({
-            html: true,
-            trigger: 'hover',
-            content: 'Maps project the fields to search on or to group by. It uses LINQ query syntax.<br/><br/>Example:</br><pre><span class="code-keyword">from</span> order <span class="code-keyword">in</span> docs.Orders<br/><span class="code-keyword">where</span> order.IsShipped<br/><span class="code-keyword">select new</span><br/>{</br>   order.Date, <br/>   order.Amount,<br/>   RegionId = order.Region.Id <br />}</pre>Each map function should project the same set of fields.',
+    addMap() {
+        eventsCollector.default.reportEvent("index", "add-map");
+        this.editedIndex().maps.push(ko.observable<string>());
+    }
+
+    addReduce() {
+        eventsCollector.default.reportEvent("index", "add-reduce");
+        if (!this.hasReduce()) {
+            this.editedIndex().reduce("");
+            this.hasReduce(true);
+        }
+    }
+
+    removeMap(mapIndex: number) {
+        eventsCollector.default.reportEvent("index", "remove-map");
+        this.editedIndex().maps.splice(mapIndex, 1);
+    }
+
+    removeReduce() {
+        eventsCollector.default.reportEvent("index", "remove-reduce");
+        this.editedIndex().reduce(null);
+        this.hasReduce(false);
+    }
+
+    addField() {
+        eventsCollector.default.reportEvent("index", "add-field");
+        this.editedIndex().addField();
+    }
+
+    removeField(fieldIndex: number) {
+        eventsCollector.default.reportEvent("index", "remove-field");
+        const fieldToRemove = this.editedIndex().fields()[fieldIndex];
+        this.editedIndex().fields.splice(fieldIndex, 1);
+    }
+
+    addDefaultField() {
+        eventsCollector.default.reportEvent("index", "add-field");
+        this.editedIndex().addDefaultField();
+    }
+
+    addConfigurationOption() {
+        this.editedIndex().addConfigurationOption();
+    }
+
+    createFieldNameAutocompleter(field: indexFieldOptions): KnockoutComputed<string[]> {
+        return ko.pureComputed(() => {
+            const name = field.name();
+            const fieldNames = this.fieldNames();
+
+            if (name) {
+                return fieldNames.filter(x => x.toLowerCase().includes(name.toLowerCase()));
+            } else {
+                return fieldNames;
+            }
+
         });
     }
 
-    addReduceHelpPopover() {
-        $("#indexReduceLabel").popover({
-            html: true,
-            trigger: 'hover',
-            content: 'The Reduce function consolidates documents from the Maps stage into a smaller set of documents. It uses LINQ query syntax.<br/><br/>Example:</br><pre><span class="code-keyword">from</span> result <span class="code-keyword">in</span> results<br/><span class="code-keyword">group</span> result <span class="code-keyword">by new</span> { result.RegionId, result.Date } into g<br/><span class="code-keyword">select new</span><br/>{<br/>  Date = g.Key.Date,<br/>  RegionId = g.Key.RegionId,<br/>  Amount = g.Sum(x => x.Amount)<br/>}</pre>The objects produced by the Reduce function should have the same fields as the inputs.',
-        });
-    }
-
-    private fetchIndexData(unescapedIndexName: string): JQueryPromise<any> {
-        var indexName = decodeURIComponent(unescapedIndexName);
-        return $.when(this.fetchIndexToEdit(indexName));
-    }
-
-    private fetchIndexToEdit(indexName: string): JQueryPromise<any> {
-        var deferred = $.Deferred();
-
-        new getIndexDefinitionCommand(indexName, this.activeDatabase())
+    private fetchIndexToEdit(indexName: string): JQueryPromise<Raven.Client.Indexing.IndexDefinition> {
+        return new getIndexDefinitionCommand(indexName, this.activeDatabase())
             .execute()
             .done(result => {
                 this.editedIndex(new indexDefinition(result));
                 this.originalIndexName = this.editedIndex().name();
-                //TODO this.editMaxIndexOutputsPerDocument(result.MaxIndexOutputsPerDocument ? result.MaxIndexOutputsPerDocument > 0 ? true : false : false);
-                this.editMaxIndexOutputsPerDocument(false);
-                deferred.resolve();
+                this.hasReduce(!!this.editedIndex().reduce());
             })
-            .fail(() => deferred.reject());
-
-        return deferred;
-    }
-
-
-
-    createNewIndexDefinition(): indexDefinition {
-        return indexDefinition.empty();
     }
 
     save() {
-        var editedIndex = this.editedIndex();         
+        //TODO: validation 
+
+        this.saveInProgress(true);
+
+        const editedIndex = this.editedIndex();         
+
         //if index name has changed it isn't the same index
+        /*
         if (this.originalIndexName === this.indexName() && editedIndex.lockMode === "LockedIgnore") {
             messagePublisher.reportWarning("Can not overwrite locked index: " + editedIndex.name() + ". " + 
                                             "Any changes to the index will be ignored.");
             return;
-        }
+        }*/
 
-        if (editedIndex.name()) {
-            var index = editedIndex.toDto();
+        const indexDto = editedIndex.toDto();
 
-            if (this.isEditingExistingIndex() && index.Name !== this.loadedIndexName()) {
-                // user changed index name on edit page, ask him what to do: rename or duplicate
-                var dialog = new renameOrDuplicateIndexDialog(this.loadedIndexName(), this.editedIndex().name());
+        /* TODO
+        if (this.isEditingExistingIndex() && index.Name !== this.loadedIndexName()) {
+            // user changed index name on edit page, ask him what to do: rename or duplicate
+            var dialog = new renameOrDuplicateIndexDialog(this.loadedIndexName(), this.editedIndex().name());
 
-                dialog.getSaveAsNewTask()
-                    .done(() => this.saveIndex(index));
+            dialog.getSaveAsNewTask()
+                .done(() => this.saveIndex(indexDto));
 
-                dialog.getRenameTask()
-                    .done(() => this.renameIndex(this.loadedIndexName(), index.Name as string));
+            dialog.getRenameTask()
+                .done(() => this.renameIndex(this.loadedIndexName(), index.Name as string));
 
-                app.showBootstrapDialog(dialog);
-            } else {
-                this.saveIndex(index);
-            }
-        }
+            app.showBootstrapDialog(dialog);
+        } else {*/
+        this.saveIndex(indexDto)
+            .always(() => this.saveInProgress(false));
+        //TODO: }
     }
 
-    private deleteMergedIndexes(indexesToDelete: string[]) {
-        var db = this.activeDatabase();
-        var deleteViewModel = new deleteIndexesConfirm(indexesToDelete, db, "Delete Merged Indexes?");
-        dialog.show(deleteViewModel);
+    private saveIndex(indexDto: Raven.Client.Indexing.IndexDefinition): JQueryPromise<any> { //TODO: use type
+        eventsCollector.default.reportEvent("index", "save");
+        const commands: Array<JQueryPromise<any>> = [];
+
+        commands.push(new saveIndexDefinitionCommand(indexDto, this.activeDatabase()).execute());
+        /* TODO scripted index
+        if (this.scriptedIndex() !== null) {
+            commands.push(new saveScriptedIndexesCommand([this.scriptedIndex()], this.activeDatabase()).execute());
+        }*/
+
+        return $.when.apply($, commands).done(() => {
+
+            /* TODO
+            if (this.scriptedIndex()) {
+                this.fetchOrCreateScriptedIndex(); // reload scripted index to obtain fresh etag and metadata
+            }*/
+            this.initializeDirtyFlag();
+            this.editedIndex().name.valueHasMutated();
+            //TODO: merge suggestion: var isSavingMergedIndex = this.mergeSuggestion() != null;
+
+            if (!this.isEditingExistingIndex()) {
+                this.isEditingExistingIndex(true);
+                this.editExistingIndex(indexDto.Name);
+            }
+            /* TODO merge suggestion
+            if (isSavingMergedIndex) {
+                var indexesToDelete = this.mergeSuggestion().canMerge.filter((indexName: string) => indexName != this.editedIndex().name());
+                this.deleteMergedIndexes(indexesToDelete);
+                this.mergeSuggestion(null);
+            }*/
+
+            this.updateUrl(indexDto.Name, false /* TODO isSavingMergedIndex */);
+        });
     }
 
     updateUrl(indexName: string, isSavingMergedIndex: boolean = false) {
-        var url = appUrl.forEditIndex(indexName, this.activeDatabase());
-        if (this.loadedIndexName() !== indexName) {
-            super.navigate(url);
+        const url = appUrl.forEditIndex(indexName, this.activeDatabase());
+        if (this.originalIndexName !== indexName) {
+            this.navigate(url);
         }
+        /* TODO:merged index
         else if (isSavingMergedIndex) {
             super.updateUrl(url);
-        }
-    }
-
-    refreshIndex() {
-        eventsCollector.default.reportEvent("index", "refresh");
-        var canContinue = this.canContinueIfNotDirty('Unsaved Data', 'You have unsaved data. Are you sure you want to refresh the index from the server?');
-        canContinue.done(() => {
-            this.fetchIndexData(this.loadedIndexName())
-                .done(() => {
-                    this.initializeDirtyFlag();
-                    this.editedIndex().name.valueHasMutated();
-            });
-        });
+        }*/
     }
 
     deleteIndex() {
         eventsCollector.default.reportEvent("index", "delete");
-        var indexName = this.loadedIndexName();
-        if (indexName) {            
+        var indexName = this.originalIndexName;
+        if (indexName) {
             var db = this.activeDatabase();
             var deleteViewModel = new deleteIndexesConfirm([indexName], db);
             deleteViewModel.deleteTask.done(() => {
@@ -306,82 +371,17 @@ class editIndex extends viewModelBase {
         }
     }
 
-    cancelSideBySideIndex() {
-        eventsCollector.default.reportEvent("index", "cancel-side-by-side");
-        var indexName = this.loadedIndexName();
-        if (indexName) {
-            var db = this.activeDatabase();
-            var cancelSideBySideIndexViewModel = new cancelSideBySizeConfirm([indexName], db);
-            cancelSideBySideIndexViewModel.cancelTask.done(() => {
-                //prevent asking for unsaved changes
-                this.dirtyFlag().reset(); // Resync Changes
-                router.navigate(appUrl.forIndexes(db));
+    /* TODO
+    refreshIndex() {
+        eventsCollector.default.reportEvent("index", "refresh");
+        var canContinue = this.canContinueIfNotDirty('Unsaved Data', 'You have unsaved data. Are you sure you want to refresh the index from the server?');
+        canContinue.done(() => {
+            this.fetchIndexData(this.originalIndexName)
+                .done(() => {
+                    this.initializeDirtyFlag();
+                    this.editedIndex().name.valueHasMutated();
             });
-
-            dialog.show(cancelSideBySideIndexViewModel);
-        }
-    }
-
-    addMap() {
-        eventsCollector.default.reportEvent("index", "add-map");
-        this.editedIndex().maps.push(ko.observable<string>());
-    }
-
-    addReduce() {
-        eventsCollector.default.reportEvent("index", "add-reduce");
-        if (!this.hasExistingReduce()) {
-            this.editedIndex().reduce(" ");
-            this.addReduceHelpPopover();
-        }
-    }
-
-    addField() {
-        eventsCollector.default.reportEvent("index", "add-field");
-        var field = new luceneField("");
-        field.indexFieldNames = this.editedIndex().fields();
-        field.calculateFieldNamesAutocomplete();
-        this.editedIndex().luceneFields.push(field);
-    }
-
-    removeStoreAllFields() {
-        eventsCollector.default.reportEvent("index", "remove-store-all-fields");
-        this.editedIndex().setOrRemoveStoreAllFields(false);
-    }
-
-    removeMaxIndexOutputs() {
-        eventsCollector.default.reportEvent("index", "remove-max-index-outputs");
-        this.editedIndex().maxIndexOutputsPerDocument(0);
-        this.editMaxIndexOutputsPerDocument(false);
-    }
-
-    addSpatialField() {
-        eventsCollector.default.reportEvent("index", "add-spatial-field");
-        var field = spatialIndexField.empty();
-        this.editedIndex().spatialFields.push(field);
-    }
-    
-    removeMap(mapIndex: number) {
-        eventsCollector.default.reportEvent("index", "remove-map");
-        this.editedIndex().maps.splice(mapIndex, 1);
-    }
-
-    removeReduce() {
-        eventsCollector.default.reportEvent("index", "remove-reduce");
-        this.editedIndex().reduce(null);
-    }
-
-    removeLuceneField(fieldIndex: number) {
-        eventsCollector.default.reportEvent("index", "remove-lucene-field");
-        var fieldToRemove = this.editedIndex().luceneFields()[fieldIndex];
-        this.editedIndex().luceneFields.splice(fieldIndex, 1);
-        if (fieldToRemove.name() === "__all_fields") {
-            this.editedIndex().setOrRemoveStoreAllFields(false);
-        }
-    }
-
-    removeSpatialField(fieldIndex: number) {
-        eventsCollector.default.reportEvent("index", "remove-spatial-field");
-        this.editedIndex().spatialFields.splice(fieldIndex, 1);
+        });
     }
 
     copyIndex() {
@@ -420,59 +420,54 @@ class editIndex extends viewModelBase {
                     }
                 });
         });
-    }
+    }*/
 
-    checkIfScriptedIndexBundleIsActive() {
-        var db = this.activeDatabase();
-        var activeBundles = db.activeBundles();
-        this.isScriptedIndexBundleActive(activeBundles.indexOf("ScriptedIndexResults") != -1);
-    }
-
-    fetchOrCreateScriptedIndex() {
-        var self = this;
-        new getScriptedIndexesCommand(this.activeDatabase(), this.indexName())
+    /* TODO
+    private renameIndex(existingIndexName: string, newIndexName: string): JQueryPromise<any> {
+        eventsCollector.default.reportEvent("index", "rename");
+        return new renameIndexCommand(existingIndexName, newIndexName, this.activeDatabase())
             .execute()
-            .done((scriptedIndexes: scriptedIndexModel[]) => {
-                if (scriptedIndexes.length > 0) {
-                    self.scriptedIndex(scriptedIndexes[0]);
-                } else {
-                    self.scriptedIndex(scriptedIndexModel.emptyForIndex(self.indexName()));
-                }
-
+            .done(() => {
                 this.initializeDirtyFlag();
+                this.updateUrl(newIndexName, false);
             });
     }
 
-    private addScriptsLabelPopover() {
-        var indexScriptpopOverSettings = {
-            html: true,
-            trigger: 'hover',
-            content: 'Index Scripts are written in JavaScript.<br/><br/>Example:</br><pre><span class="code-keyword">var</span> company = LoadDocument(<span class="code-keyword">this</span>.Company);<br/><span class="code-keyword">if</span>(company == null) <span class="code-keyword">return</span>;<br/>company.Orders = { Count: <span class="code-keyword">this</span>.Count, Total: <span class="code-keyword">this</span>.Total };<br/>PutDocument(<span class="code-keyword">this</span>.Company, company);</pre>',
-            selector: '.index-script-label',
-        };
-        $('#indexScriptPopover').popover(indexScriptpopOverSettings);
-        var deleteScriptPopOverSettings = {
-            html: true,
-            trigger: 'hover',
-            content: 'Index Scripts are written in JavaScript.<br/><br/>Example:</br><pre><span class="code-keyword">var</span> company = LoadDocument(<span class="code-keyword">this</span>.Company);<br/><span class="code-keyword">if</span> (company == null) <span class="code-keyword">return</span>;<br/><span class="code-keyword">delete</span> company.Orders;<br/>PutDocument(<span class="code-keyword">this</span>.Company, company);</pre>',
-            selector: '.delete-script-label',
-        };
-        $('#deleteScriptPopover').popover(deleteScriptPopOverSettings);
-    }
+    replaceIndex() {
+        eventsCollector.default.reportEvent("index", "replace");
+        var indexToReplaceName = this.editedIndex().name();
+        var replaceDialog = new replaceIndexDialog(indexToReplaceName, this.activeDatabase());
 
-    private scriptedIndexCompleter(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], wordlist: { name: string; value: string; score: number; meta: string }[]) => void) {
-      var completions = [ 
-        { name: "LoadDocument", args: "id" },
-        { name: "PutDocument", args: "id, doc" },
-        { name: "DeleteDocument", args: "id" }
-      ];
-        var result = completions
-            .filter(entry => autoCompleterSupport.wordMatches(prefix, entry.name))
-            .map(entry => { return { name: entry.name, value: entry.name, score: 100, meta: entry.args} });
+        replaceDialog.replaceSettingsTask.done((replaceDocument: any) => {
+            if (!this.editedIndex().isSideBySideIndex()) {
+                this.editedIndex().name(index.SideBySideIndexPrefix + this.editedIndex().name());
+            }
 
-        callback(null, result);
-    }
+            var indexDef = this.editedIndex().toDto();
+            var replaceDocumentKey = indexReplaceDocument.replaceDocumentPrefix + this.editedIndex().name();
 
+            if (this.scriptedIndex() !== null) {
+                // reset etag as we save different document
+                this.scriptedIndex().__metadata.etag(null);
+            }
+
+            this.saveIndex(indexDef)
+                .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to save replace index.", response.responseText, response.statusText))
+                .done(() => {
+                    new saveDocumentCommand(replaceDocumentKey, replaceDocument, this.activeDatabase(), false)
+                        .execute()
+                        .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to save replace index document.", response.responseText, response.statusText))
+                        .done(() => messagePublisher.reportSuccess("Successfully saved side-by-side index"));
+                })
+                .always(() => dialog.close(replaceDialog));
+        });
+
+        app.showBootstrapDialog(replaceDialog);
+    }*/
+
+    //TODO: below we have functions for remaining features: 
+
+    /* TODO test index
     makePermanent() {
         eventsCollector.default.reportEvent("index", "make-permanent");
         if (this.editedIndex().name() && this.editedIndex().isTestIndex()) {
@@ -509,84 +504,70 @@ class editIndex extends viewModelBase {
             
             this.saveIndex(indexDef);
         }
+    }*/
+
+    /* TODO side by side
+
+
+    cancelSideBySideIndex() {
+        eventsCollector.default.reportEvent("index", "cancel-side-by-side");
+        var indexName = this.originalIndexName;
+        if (indexName) {
+            var db = this.activeDatabase();
+            var cancelSideBySideIndexViewModel = new cancelSideBySizeConfirm([indexName], db);
+            cancelSideBySideIndexViewModel.cancelTask.done(() => {
+                //prevent asking for unsaved changes
+                this.dirtyFlag().reset(); // Resync Changes
+                router.navigate(appUrl.forIndexes(db));
+            });
+
+            dialog.show(cancelSideBySideIndexViewModel);
+        }
     }
 
-    private renameIndex(existingIndexName: string, newIndexName: string): JQueryPromise<any> {
-        eventsCollector.default.reportEvent("index", "rename");
-        return new renameIndexCommand(existingIndexName, newIndexName, this.activeDatabase())
+    */
+
+     /*TODO merged indexes
+    private deleteMergedIndexes(indexesToDelete: string[]) {
+        var db = this.activeDatabase();
+        var deleteViewModel = new deleteIndexesConfirm(indexesToDelete, db, "Delete Merged Indexes?");
+        dialog.show(deleteViewModel);
+    }*/
+
+    /* TODO scripted index
+    checkIfScriptedIndexBundleIsActive() {
+        var db = this.activeDatabase();
+        var activeBundles = db.activeBundles();
+        this.isScriptedIndexBundleActive(activeBundles.indexOf("ScriptedIndexResults") != -1);
+    }
+
+    fetchOrCreateScriptedIndex() {
+        var self = this;
+        new getScriptedIndexesCommand(this.activeDatabase(), this.indexName())
             .execute()
-            .done(() => {
+            .done((scriptedIndexes: scriptedIndexModel[]) => {
+                if (scriptedIndexes.length > 0) {
+                    self.scriptedIndex(scriptedIndexes[0]);
+                } else {
+                    self.scriptedIndex(scriptedIndexModel.emptyForIndex(self.indexName()));
+                }
+
                 this.initializeDirtyFlag();
-                this.updateUrl(newIndexName, false);
             });
     }
 
-    private saveIndex(index: any): JQueryPromise<any> { //TODO: use type
-        eventsCollector.default.reportEvent("index", "save");
-        var commands: Array<JQueryPromise<any>> = [];
+    private scriptedIndexCompleter(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], wordlist: { name: string; value: string; score: number; meta: string }[]) => void) {
+      var completions = [ 
+        { name: "LoadDocument", args: "id" },
+        { name: "PutDocument", args: "id, doc" },
+        { name: "DeleteDocument", args: "id" }
+      ];
+        var result = completions
+            .filter(entry => autoCompleterSupport.wordMatches(prefix, entry.name))
+            .map(entry => { return { name: entry.name, value: entry.name, score: 100, meta: entry.args} });
 
-        index.Type = index.Reduce ? "MapReduce" : index.Type;
-
-        commands.push(new saveIndexDefinitionCommand(index, this.activeDatabase()).execute());
-        if (this.scriptedIndex() !== null) {
-            commands.push(new saveScriptedIndexesCommand([this.scriptedIndex()], this.activeDatabase()).execute());
-        }
-
-        return $.when.apply($, commands).done(() => {
-
-            if (this.scriptedIndex()) {
-                this.fetchOrCreateScriptedIndex(); // reload scripted index to obtain fresh etag and metadata
-            }
-            
-            this.initializeDirtyFlag();
-            this.editedIndex().name.valueHasMutated();
-            var isSavingMergedIndex = this.mergeSuggestion() != null;
-
-            if (!this.isEditingExistingIndex()) {
-                this.isEditingExistingIndex(true);
-                this.editExistingIndex(index.Name);
-            }
-            if (isSavingMergedIndex) {
-                var indexesToDelete = this.mergeSuggestion().canMerge.filter((indexName: string) => indexName != this.editedIndex().name());
-                this.deleteMergedIndexes(indexesToDelete);
-                this.mergeSuggestion(null);
-            }
-
-            this.updateUrl(index.Name, isSavingMergedIndex);
-        });
-    }
-
-    replaceIndex() {
-        eventsCollector.default.reportEvent("index", "replace");
-        var indexToReplaceName = this.editedIndex().name();
-        var replaceDialog = new replaceIndexDialog(indexToReplaceName, this.activeDatabase());
-
-        replaceDialog.replaceSettingsTask.done((replaceDocument: any) => {
-            if (!this.editedIndex().isSideBySideIndex()) {
-                this.editedIndex().name(index.SideBySideIndexPrefix + this.editedIndex().name());
-            }
-
-            var indexDef = this.editedIndex().toDto();
-            var replaceDocumentKey = indexReplaceDocument.replaceDocumentPrefix + this.editedIndex().name();
-
-            if (this.scriptedIndex() !== null) {
-                // reset etag as we save different document
-                this.scriptedIndex().__metadata.etag(null);
-            }
-
-            this.saveIndex(indexDef)
-                .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to save replace index.", response.responseText, response.statusText))
-                .done(() => {
-                    new saveDocumentCommand(replaceDocumentKey, replaceDocument, this.activeDatabase(), false)
-                        .execute()
-                        .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to save replace index document.", response.responseText, response.statusText))
-                        .done(() => messagePublisher.reportSuccess("Successfully saved side-by-side index"));
-                })
-                .always(() => dialog.close(replaceDialog));
-        });
-
-        app.showBootstrapDialog(replaceDialog);
-    }
+        callback(null, result);
+    }*/
 }
 
 export = editIndex;

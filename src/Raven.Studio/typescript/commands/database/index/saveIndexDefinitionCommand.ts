@@ -1,5 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
+import endpoints = require("endpoints");
 
 class saveIndexDefinitionCommand extends commandBase {
 
@@ -8,8 +9,6 @@ class saveIndexDefinitionCommand extends commandBase {
     }
 
     execute(): JQueryPromise<any> {
-        this.reportInfo("Saving " + this.index.Name + "...");
-
         return this.saveDefinition()
             .fail((response: JQueryXHR) => {
                 this.reportError("Failed to save " + this.index.Name, response.responseText, response.statusText);
@@ -20,14 +19,13 @@ class saveIndexDefinitionCommand extends commandBase {
 
     }
 
-    private saveDefinition(): JQueryPromise<any> {
-        var urlArgs = {
-            definition: "yes",
+    private saveDefinition(): JQueryPromise<saveIndexResult> {
+        const args = {
             name: this.index.Name
         };
-        var putArgs = JSON.stringify(this.index);
-        var url = "/indexes" + this.urlEncodeArgs(urlArgs);//TODO: use endpoints
-        return this.put(url, putArgs, this.db);
+        const payload = JSON.stringify(this.index);
+        const url = endpoints.databases.index.indexes + this.urlEncodeArgs(args);
+        return this.put(url, payload, this.db);
     }
 }
 

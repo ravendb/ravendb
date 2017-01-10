@@ -45,6 +45,22 @@ class extensions {
             return matches;
         };
 
+        subscribableFn.withLabel = function (option: Array<valueAndLabelItem<any, any>>, defaultValue: any = undefined) {
+            const observable: KnockoutObservable<any> = this;
+
+            return ko.pureComputed(() => {
+                const value = observable();
+                const matchedItem = option.find(x => x.value === value);
+                if (matchedItem) {
+                    return matchedItem.label;
+                } else if (defaultValue) {
+                    const matchedDefault = option.find(x => x.value === defaultValue);
+                    return matchedDefault.label;
+                }
+                return null;
+            });
+        }
+
         subscribableFn.throttle = function (throttleTimeMs: number) {
             const observable = this;
             return ko.pureComputed(() => observable()).extend({ throttle: throttleTimeMs });
@@ -115,8 +131,10 @@ class extensions {
                 var interceptor = ko.computed({
                     read: underlyingObservable,
                     write: (value: any) => {
-                        if (!isNaN(value)) {
+                        if (value && !isNaN(value)) {
                             underlyingObservable(parseFloat(value));
+                        } else {
+                            underlyingObservable(undefined);
                         }
                     },
                     disposeWhenNodeIsRemoved: element
