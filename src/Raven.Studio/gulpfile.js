@@ -256,7 +256,7 @@ gulp.task('compile', ['less', 'compile:app'], function() { });
 gulp.task('watch', ['compile'], function () {
     gulp.watch(PATHS.tsSource, ['compile:app-changed']);
     gulp.watch(PATHS.test.tsSource, ['compile:test']);
-    gulp.watch(PATHS.lessSource, ['less']);
+    gulp.watch(PATHS.lessSourcesToWatch, ['less']);
 });
 
 gulp.task('generate-ts', ['parse-handlers', 'parse-configuration', 'generate-typings'], function() {});
