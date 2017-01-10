@@ -197,23 +197,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private static unsafe uint CalculateQueryFieldsHash(FacetQuery query, JsonOperationContext context)
         {
-            int size = 0;
-            // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var s in query.FieldsToFetch)
-            {
-                size += s.Length;
-            }
-            var buffer = context.GetNativeTempBuffer(size * sizeof(char));
-            var destChars = (char*)buffer;
-
-            var position = 0;
+            uint hash = 0;
+           
             foreach (var field in query.FieldsToFetch)
             {
-                for (var i = 0; i < field.Length; i++)
-                    destChars[position++] = field[i];
+                fixed (char* p = field)
+                {
+                    hash = Hashing.XXHash32.Calculate((byte*) p, sizeof(char)*field.Length, hash);
+                }
             }
 
-            return Hashing.XXHash32.Calculate(buffer, size);
+            return hash;
         }
 
         private void UpdateFacetResults(Dictionary<string, FacetResult> results, FacetQuery query, Dictionary<string, Facet> facets, Dictionary<string, Dictionary<string, FacetValue>> facetsByName)
