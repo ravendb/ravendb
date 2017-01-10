@@ -98,15 +98,15 @@
             </div>
             <div class="btn-bar toolbar">
                 <div class="pull-left-sm">
-                    <button type="submit" class="btn btn-primary save-btn" data-bind="enable: isSaveEnabled">
+                    <button type="submit" class="btn btn-primary save-btn" data-bind="enable: isSaveEnabled, css: { 'btn-spinner': isSaving }">
                         <i class="icon-save"></i>
                         <span>Save</span>
                     </button>
-                    <button type="button" class="clone-btn btn btn-default" data-bind="click: createClone">
+                    <button type="button" class="clone-btn btn btn-default" data-bind="click: createClone, enable: !isCreatingNewDocument()">
                         <i class="icon-clone"></i>
                         <span>Clone</span>
                     </button>
-                    <button type="button" data-bind="click: deleteDocument, enable: metadata().etag" class="delete-btn btn btn-danger">
+                    <button type="button" data-bind="click: deleteDocument, enable: !isCreatingNewDocument()" class="delete-btn btn btn-danger">
                         <i class="icon-trash"></i>
                         <span>Delete</span>
                     </button>

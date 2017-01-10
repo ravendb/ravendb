@@ -8,19 +8,10 @@ class showDataDialog extends dialogViewModelBase {
     width = ko.observable<string>("");
     inputData = ko.observable<string>();
 
-    constructor(private title: string, inputData: string, elementToFocusOnDismissal?: string, calcWidth: boolean = false) {
+    constructor(private title: string, inputData: string, elementToFocusOnDismissal?: string) {
         super(elementToFocusOnDismissal);
 
         this.inputData(inputData);
-        if (calcWidth) {
-            this.width(this.calcWidth(inputData) + "px");
-        }  
-    }
-
-    calcWidth(code: string): number {
-        const arrayOfLines = code.match(/[^\r\n]+/g);
-        const maxLineLength = Math.max.apply(Math, $.map(arrayOfLines, el => el.length));
-        return Math.max(Math.min(maxLineLength * 12, $(window).width() - 200), 598 /*default*/);
     }
 
     attached() {
