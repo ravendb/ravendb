@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Handlers
                             throw new InvalidDataException($"Missing '{nameof(CommandData.Method)}' property");
 
                         cmd.TryGet(nameof(CommandData.Key), out parsedCommands[i].Key);
-                            // Key can be null, we will generate new one
+                        // Key can be null, we will generate new one
 
                         // optional
                         cmd.TryGet(nameof(CommandData.Etag), out parsedCommands[i].Etag);
@@ -112,16 +112,19 @@ namespace Raven.Server.Documents.Handlers
 
                     var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
 
-                    MergedBatchCommand mergedCmd = null;
-
-                    try
+                    using (var mergedCmd = new MergedBatchCommand
                     {
-                        mergedCmd = new MergedBatchCommand
-                        {
-                            Database = Database,
-                            ParsedCommands = parsedCommands,
-                            Reply = new DynamicJsonArray()
-                        };
+                        Database = Database,
+                        ParsedCommands = parsedCommands,
+                        Reply = new DynamicJsonArray(),
+
+                        //in this particular case we should not let TxMerger dispose this command
+                        //because it is also used _after_ we pass it to TxMerger
+                        //instead we dispose it by ourselves after we finish using it
+                        ShouldDisposeAfterCommit = false
+                    })
+                    {
+
                         if (waitForIndexesTimeout != null)
                             mergedCmd.ModifiedCollections = new HashSet<string>();
                         try
@@ -156,13 +159,6 @@ namespace Raven.Server.Documents.Handlers
                                 ["Results"] = mergedCmd.Reply
                             });
                         }
-                    }
-                    finally
-                    {
-                        //since the usage of this object does not end with TxMerger,
-                        //it is wrong to have it implement IDisposable.
-                        //Still, we need to dispose the BlittableJsonReaderObject objects that are in this command
-                        mergedCmd?.ManualDispose();
                     }
                 }
             }
@@ -295,7 +291,7 @@ namespace Raven.Server.Documents.Handlers
             return indexesToCheck;
         }
 
-        private class MergedBatchCommand : TransactionOperationsMerger.MergedTransactionCommand//, IDisposable
+        private class MergedBatchCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
         {
             public DynamicJsonArray Reply;
             public CommandData[] ParsedCommands;
@@ -385,7 +381,7 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
 
-            public void ManualDispose()
+            public void Dispose()
             {
                 foreach (var cmd in ParsedCommands)
                 {

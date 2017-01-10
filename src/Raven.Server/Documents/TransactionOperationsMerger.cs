@@ -46,6 +46,10 @@ namespace Raven.Server.Documents
 
         public abstract class MergedTransactionCommand
         {
+            //overriding this property and setting it to false
+            //will cause TxMerger not to dispose this command after tx commit
+            public bool ShouldDisposeAfterCommit { get; set; } = true;
+
             public abstract void Execute(DocumentsOperationContext context, RavenTransaction tx);
             public TaskCompletionSource<object> TaskCompletionSource = new TaskCompletionSource<object>();
             public Exception Exception;
@@ -135,8 +139,11 @@ namespace Raven.Server.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void DisposeIfRelevant(MergedTransactionCommand op)
         {
-            var disposable = op as IDisposable;
-            disposable?.Dispose();
+            if (op.ShouldDisposeAfterCommit)
+            {
+                var disposable = op as IDisposable;
+                disposable?.Dispose();
+            }
         }
 
         private bool MergeTransactionsOnce(List<MergedTransactionCommand> pendingOps)
