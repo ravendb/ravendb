@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Util;
 using Raven.Database.FileSystem.Extensions;
 using Raven.Database.FileSystem.Storage;
 using Raven.Database.FileSystem.Util;
@@ -38,7 +39,7 @@ namespace Raven.Tests.FileSystem.Issues
                         s.WriteByte(3);
                     });
 
-                    await ThrowsAsync<ErrorResponseException>(() => session.SaveChangesAsync()); // 10 bytes declared but only 3 has been uploaded, IndicateFileToDelete is going to be called underhood
+                    Assert.Throws<ErrorResponseException>(() => AsyncHelpers.RunSync(() => session.SaveChangesAsync())); // 10 bytes declared but only 3 has been uploaded, IndicateFileToDelete is going to be called underhood
                 }
 
                 using (var session = store.OpenAsyncSession())
@@ -79,7 +80,7 @@ namespace Raven.Tests.FileSystem.Issues
                 // await store.AsyncFilesCommands.RenameAsync(fileName, newName);
                 // let's create a config to indicate rename operation - for example restart in the middle could happen
                 var renameOpConfig = RavenFileNameHelper.RenameOperationConfigNameForFile(name);
-                var renameOperation = new RenameFileOperation(name, renamed, (await store.AsyncFilesCommands.GetAsync(new [] {name}))[0].Etag, new RavenJObject {{"version", 1}});
+                var renameOperation = new RenameFileOperation(name, renamed, (await store.AsyncFilesCommands.GetAsync(new[] { name }))[0].Etag, new RavenJObject { { "version", 1 } });
 
                 rfs.Storage.Batch(accessor => accessor.SetConfigurationValue(renameOpConfig, renameOperation));
 

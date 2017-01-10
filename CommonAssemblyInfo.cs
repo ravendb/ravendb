@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 [assembly: AssemblyCompany("Hibernating Rhinos")]
-[assembly: AssemblyCopyright("© Hibernating Rhinos 2004 - 2016 All rights reserved.")]
+[assembly: AssemblyCopyright("© Hibernating Rhinos 2004 - 2017 All rights reserved.")]
 [assembly: AssemblyTrademark("")]
 [assembly: ComVisible(false)]
 [assembly: CLSCompliant(true)]

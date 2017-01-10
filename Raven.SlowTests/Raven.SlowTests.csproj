@@ -93,6 +93,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="..\Raven.Tests\Properties\TestAssemblyInfo.cs">
       <Link>Properties\TestAssemblyInfo.cs</Link>
     </Compile>
@@ -137,7 +140,6 @@
     <Compile Include="MailingList\StressTestIssue.cs" />
     <Compile Include="Migration\MigrationTests.cs" />
     <Compile Include="Migration\Northwind.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Queries\IntersectionWithLargeDataset.cs" />
     <Compile Include="RavenThreadPool\ParallelCalculation.cs" />
     <Compile Include="Replication\AsyncReadStriping.cs" />

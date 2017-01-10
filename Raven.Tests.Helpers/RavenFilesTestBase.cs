@@ -15,7 +15,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Util;
 using Raven.Abstractions.Util.Encryptors;
 using Raven.Client.Connection;
 using Raven.Client.Connection.Async;
@@ -29,7 +28,6 @@ using Raven.Database.Server;
 using Raven.Database.Server.Security;
 using Raven.Server;
 using Raven.Tests.Helpers.Util;
-using Xunit;
 
 namespace Raven.Tests.Helpers
 {
@@ -56,7 +54,7 @@ namespace Raven.Tests.Helpers
         protected static readonly int[] Ports = { 8079, 8078, 8077, 8076, 8075 };
 
         protected TimeSpan SynchronizationInterval { get; set; }
-        
+
         private static bool checkedAsyncVoid;
         protected RavenFilesTestBase()
         {
@@ -115,7 +113,7 @@ namespace Raven.Tests.Helpers
 
             var ravenDbServer = new RavenDbServer(ravenConfiguration)
             {
-                UseEmbeddedHttpServer = true,                
+                UseEmbeddedHttpServer = true,
             };
 
             ravenDbServer.Initialize();
@@ -132,19 +130,19 @@ namespace Raven.Tests.Helpers
             return ravenDbServer;
         }
 
-        protected virtual FilesStore NewStore( int index = 0, bool fiddler = false, bool enableAuthentication = false, string apiKey = null, 
-                                                ICredentials credentials = null, string requestedStorage = null, [CallerMemberName] string fileSystemName = null, 
+        protected virtual FilesStore NewStore(int index = 0, bool fiddler = false, bool enableAuthentication = false, string apiKey = null,
+                                                ICredentials credentials = null, string requestedStorage = null, [CallerMemberName] string fileSystemName = null,
                                                 bool runInMemory = true, Action<RavenConfiguration> customConfig = null, string activeBundles = null, string connectionStringName = null)
         {
             fileSystemName = NormalizeFileSystemName(fileSystemName);
 
-            var server = CreateServer(Ports[index], 
+            var server = CreateServer(Ports[index],
                 fileSystemName: fileSystemName,
-                enableAuthentication: enableAuthentication, 
+                enableAuthentication: enableAuthentication,
                 customConfig: customConfig,
-                requestedStorage: requestedStorage, 
-                runInMemory:runInMemory,
-                activeBundles:activeBundles);
+                requestedStorage: requestedStorage,
+                runInMemory: runInMemory,
+                activeBundles: activeBundles);
 
             server.Url = GetServerUrl(fiddler, server.SystemDatabase.ServerUrl);
 
@@ -153,7 +151,7 @@ namespace Raven.Tests.Helpers
                 Url = server.Url,
                 DefaultFileSystem = fileSystemName,
                 Credentials = credentials,
-                ApiKey = apiKey,                 
+                ApiKey = apiKey,
                 ConnectionStringName = connectionStringName
             };
 
@@ -165,16 +163,16 @@ namespace Raven.Tests.Helpers
 
             this.filesStores.Add(store);
 
-            return store;                        
+            return store;
         }
 
-        protected virtual IAsyncFilesCommands NewAsyncClient(int index = 0, 
-            bool fiddler = false, 
-            bool enableAuthentication = false, 
-            string apiKey = null, 
-            ICredentials credentials = null, 
-            string requestedStorage = null, 
-            [CallerMemberName] string fileSystemName = null, 
+        protected virtual IAsyncFilesCommands NewAsyncClient(int index = 0,
+            bool fiddler = false,
+            bool enableAuthentication = false,
+            string apiKey = null,
+            ICredentials credentials = null,
+            string requestedStorage = null,
+            [CallerMemberName] string fileSystemName = null,
             Action<RavenConfiguration> customConfig = null,
             string activeBundles = null,
             string dataDirectory = null,
@@ -204,7 +202,7 @@ namespace Raven.Tests.Helpers
             var client = store.AsyncFilesCommands;
             asyncCommandClients.Add(client);
 
-            return client;       
+            return client;
         }
 
         protected RavenFileSystem GetFileSystem(int index = 0, [CallerMemberName] string fileSystemName = null)
@@ -243,7 +241,7 @@ namespace Raven.Tests.Helpers
             var newDataDir = Path.GetFullPath(string.Format(@".\{0}-{1}-{2}-{3}\", DateTime.Now.ToString("yyyy-MM-dd,HH-mm-ss"), prefix ?? "RavenFS_Test", suffix, Interlocked.Increment(ref pathCount)));
             Directory.CreateDirectory(newDataDir);
 
-            if(deleteOnDispose)
+            if (deleteOnDispose)
                 pathsToDelete.Add(newDataDir);
             return newDataDir;
         }
@@ -424,7 +422,7 @@ namespace Raven.Tests.Helpers
 
         private Random generator = new Random();
 
-        protected void ReseedRandom ( int seed )
+        protected void ReseedRandom(int seed)
         {
             generator = new Random(seed);
         }
@@ -435,19 +433,19 @@ namespace Raven.Tests.Helpers
 
             // Write in blocks
             byte[] buffer = new byte[4096];
-            for ( int i = 0 ; i < size / buffer.Length; i++ )
+            for (int i = 0; i < size / buffer.Length; i++)
             {
                 generator.NextBytes(buffer);
                 ms.Write(buffer, 0, buffer.Length);
             }
-            
+
             // Write last block
             buffer = new byte[size % buffer.Length];
             if (buffer.Length != 0)
             {
                 generator.NextBytes(buffer);
                 ms.Write(buffer, 0, buffer.Length);
-            }                
+            }
 
             ms.Flush();
             ms.Position = 0;
@@ -473,25 +471,12 @@ namespace Raven.Tests.Helpers
                 Url = url
             }.Initialize())
             {
-                await new Operation((AsyncServerClient) sysDbStore.AsyncDatabaseCommands, operationId).WaitForCompletionAsync();
+                await new Operation((AsyncServerClient)sysDbStore.AsyncDatabaseCommands, operationId).WaitForCompletionAsync();
             }
-        }
-
-        public async static Task<T> ThrowsAsync<T>(Func<Task> testCode) where T : Exception
-        {
-            try
-            {
-                await testCode();
-                Assert.Throws<T>(() => { }); // Use xUnit's default behavior.
-            }
-            catch (T exception)
-            {
-                return exception;
-            }
-            return null;
         }
 
         protected virtual void ModifyStore(FilesStore store)
         {
+        }
     }
-}}
+}

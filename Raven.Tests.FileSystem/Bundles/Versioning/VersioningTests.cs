@@ -11,6 +11,7 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Util;
 using Raven.Client.FileSystem.Bundles.Versioning;
 using Raven.Database.Bundles.Versioning.Data;
 using Raven.Database.FileSystem.Bundles.Versioning;
@@ -422,7 +423,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 
                     session.RegisterUpload(revisions[0], StringToStream(Content2));
 
-                    var ex = await ThrowsAsync<ErrorResponseException>(() => session.SaveChangesAsync());
+                    var ex = Assert.Throws<ErrorResponseException>(() => AsyncHelpers.RunSync(() => session.SaveChangesAsync()));
 
                     Assert.Contains("PUT vetoed on file /file.txt/revisions/1 by Raven.Database.FileSystem.Bundles.Versioning.Plugins.VersioningPutTrigger because: Modifying a historical revision is not allowed", ex.Message);
                 }
@@ -470,7 +471,7 @@ namespace Raven.Tests.FileSystem.Bundles.Versioning
 
                     revision.Metadata.Add("new", "item");
 
-                    var ex = await ThrowsAsync<ErrorResponseException>(() => session.SaveChangesAsync());
+                    var ex = Assert.Throws<ErrorResponseException>(() => AsyncHelpers.RunSync(() => session.SaveChangesAsync()));
 
                     Assert.Contains("POST vetoed on file /file.txt/revisions/1 by Raven.Database.FileSystem.Bundles.Versioning.Plugins.VersioningMetadataUpdateTrigger because: Modifying a historical revision is not allowed", ex.Message);
                 }
