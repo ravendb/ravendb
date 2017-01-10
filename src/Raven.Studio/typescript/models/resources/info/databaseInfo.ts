@@ -8,7 +8,8 @@ class databaseInfo extends resourceInfo {
 
     rejectClients = ko.observable<boolean>();
     indexingStatus = ko.observable<Raven.Client.Data.Indexes.IndexRunningStatus>();
-    indexingEnabled = ko.observable<boolean>();
+    indexingNotPaused = ko.observable<boolean>();
+    indexingEnable = ko.observable<boolean>();
     documentsCount = ko.observable<number>();
     indexesCount = ko.observable<number>();
 
@@ -38,7 +39,8 @@ class databaseInfo extends resourceInfo {
         super.update(databaseInfo);
         this.rejectClients(databaseInfo.RejectClients);
         this.indexingStatus(databaseInfo.IndexingStatus);
-        this.indexingEnabled(databaseInfo.IndexingStatus === "Running");
+        this.indexingNotPaused(databaseInfo.IndexingStatus === "Running");
+        this.indexingEnable(databaseInfo.IndexingStatus === "Running");
         this.documentsCount(databaseInfo.DocumentsCount);
         this.indexesCount(databaseInfo.IndexesCount);
     }

@@ -65,14 +65,14 @@
         </div>
         <div class="pull-right" id="toggleIndexing">
             <button class="btn btn-default btn-toggle disable-indexing" title="Pause indexing process for ALL indexes until restart"
-                    data-bind="click: stopIndexing, visible: indexingEnabled(), enable: !spinners.globalStartStop(), css: { 'btn-spinner': spinners.globalStartStop() }">
+                    data-bind="click: stopIndexing, visible: indexingNotPaused(), enable: !spinners.globalStartStop(), css: { 'btn-spinner': spinners.globalStartStop() }">
                 <i class="icon-pause"></i>
                 <span>Pause indexing until restart</span>
             </button>
             <button class="btn btn-success btn-toggle enable-indexing" title="Enable indexing process"
-                    data-bind="click: startIndexing, visible: !indexingEnabled(), enable: !spinners.globalStartStop(), css: { 'btn-spinner': spinners.globalStartStop() }">
+                    data-bind="click: startIndexing, visible: !indexingNotPaused(), enable: !spinners.globalStartStop(), css: { 'btn-spinner': spinners.globalStartStop() }">
                 <i class="icon-play"></i>
-                <span>Enable indexing</span>
+                <span>Resume indexing</span>
             </button>
         </div>
     </div>
@@ -156,7 +156,7 @@
     <span class="properties-label">Priority:</span>
     <div class="btn-group properties-value">
         <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown"
-                data-bind="css: { 'btn-spinner': _.includes($root.spinners.localPriority(), name) }, enable: $root.indexingEnabled() && !_.includes($root.spinners.localPriority(), name)">
+                data-bind="css: { 'btn-spinner': _.includes($root.spinners.localPriority(), name) }, enable: $root.indexingNotPaused() && !_.includes($root.spinners.localPriority(), name)">
             <span data-bind="visible: isNormalPriority()">
                 <i class="icon-check"></i>
                 <span>Normal</span>
@@ -195,7 +195,7 @@
     <span class="properties-label">State:</span>
     <div class="btn-group properties-value">
         <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown"
-                data-bind="css: { 'btn-spinner': _.includes($root.spinners.localState(), name) }, enable: $root.indexingEnabled() && !_.includes($root.spinners.localState(), name)">
+                data-bind="css: { 'btn-spinner': _.includes($root.spinners.localState(), name) }, enable: $root.indexingNotPaused() && !_.includes($root.spinners.localState(), name)">
             <span class="text-warning" data-bind="visible: pausedUntilRestart()">
                 <i class="icon-cancel"></i>
                 <span>Paused until restart</span>
