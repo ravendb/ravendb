@@ -8,14 +8,18 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
+using Raven.Client.Connection.Request;
 using Raven.Client.Replication.Messages;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Voron;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -48,12 +52,89 @@ namespace Raven.Server.Documents.Replication
 
         private readonly ConcurrentQueue<TaskCompletionSource<object>> _waitForReplicationTasks = new ConcurrentQueue<TaskCompletionSource<object>>();
 
+        public delegate void ResolveFun(DocumentsOperationContext context, string key, IReadOnlyList<DocumentConflict> conflicts, params object[] args);
+        private ResolveFun _localResolverFun;
+        private ResolveFun _scriptResolverFun;
+
+
         public DocumentReplicationLoader(DocumentDatabase database)
         {
             _database = database;
             _log = LoggingSource.Instance.GetLogger<DocumentReplicationLoader>(_database.Name);
             _reconnectAttemptTimer = new Timer(AttemptReconnectFailedOutgoing,
                 null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
+
+            ResolveFunInit();
+        }
+       
+        public void ResolveFunInit()
+        {
+            _localResolverFun = (context, key, conflicts, args) =>
+            {
+                var mergedChangeVector =
+                    ReplicationUtils.MergeVectors(conflicts.Select(v => v.ChangeVector).ToList());
+                var originalChangeVector = _database.DocumentsStorage.GetOriginalChangeVector(context,key);
+                var original = _database.DocumentsStorage.GetConflictForChangeVector(context,key, originalChangeVector);
+                _database.DocumentsStorage.DeleteConflictsFor(context, key);
+
+                _database.DocumentsStorage.Put(context, key, null, original.Doc,
+                            mergedChangeVector);
+            };
+
+            _scriptResolverFun = (context, key, conflicts, args) =>
+            {
+                var patch = new PatchConflict(_database, conflicts);
+                var collection = args[0] as string;
+                var script = ScriptConflictResolversCache[collection].Script;
+
+                var patchRequest = new PatchRequest
+                {
+                    Script = script
+                };
+
+                BlittableJsonReaderObject resolved;
+                if (patch.TryResolveConflict(context, patchRequest, out resolved) == false)
+                {
+                    if (_log.IsInfoEnabled)
+                    {
+                        _log.Info($"Conflict resolution script for {collection} collection declined to resolve the conflict for {key}");
+                    }
+                    return;
+                }
+                _database.DocumentsStorage.DeleteConflictsFor(context, key);
+
+                var mergedChangeVector =
+                    ReplicationUtils.MergeVectors(conflicts.Select(v => v.ChangeVector).ToList());
+
+                if (resolved != null)
+                {
+                    ReplicationUtils.EnsureRavenEntityName(resolved, collection);
+                    if (_log.IsInfoEnabled)
+                    {
+                        _log.Info($"Conflict resolution script for {collection} collection resolved the conflict for {key}.");
+                    }
+
+                    _database.DocumentsStorage.Put(
+                        context,
+                        key,
+                        null,
+                        resolved,
+                        mergedChangeVector);
+                    resolved.Dispose();
+                }
+                else //resolving to tombstone
+                {
+                    if (_log.IsInfoEnabled)
+                    {
+                        _log.Info($"Conflict resolution script for {collection} collection resolved the conflict for {key} by deleting the document, tombstone created");
+                    }
+                    _database.DocumentsStorage.AddTombstoneOnReplicationIfRelevant(
+                        context,
+                        key,
+                        mergedChangeVector,
+                        collection);
+                }
+            };
         }
 
         public IReadOnlyDictionary<ReplicationDestination, ConnectionFailureInfo> OutgoingFailureInfo => _outgoingFailureInfo;
@@ -253,8 +334,6 @@ namespace Raven.Server.Documents.Replication
                 }
                 value.Dispose();
             }
-
-
         }
 
         public void Initialize()
@@ -276,23 +355,61 @@ namespace Raven.Server.Documents.Replication
             {
                 if (ScriptConflictResolversCache.Count > 0)
                     ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
-                return;
             }
-            var copy = new Dictionary<string, ScriptResolver>();
-            foreach (var kvp in _replicationDocument.ResolveByCollection)
+            else
             {
-                var collection = kvp.Key;
-                var script = kvp.Value.Script;
-                if (string.IsNullOrEmpty(script.Trim()))
+                var copy = new Dictionary<string, ScriptResolver>();
+                foreach (var kvp in _replicationDocument.ResolveByCollection)
                 {
-                    continue;
+                    var collection = kvp.Key;
+                    var script = kvp.Value.Script;
+                    if (string.IsNullOrEmpty(script.Trim()))
+                    {
+                        continue;
+                    }
+                    copy[collection] = new ScriptResolver
+                    {
+                        Script = script
+                    };
                 }
-                copy[collection] = new ScriptResolver
-                {
-                    Script = script
-                };
+
+                ScriptConflictResolversCache = copy;
             }
-            ScriptConflictResolversCache = copy;
+          
+            foreach (var scriptResolver in ScriptConflictResolversCache)
+            {
+                ResolveConflictsWith(_scriptResolverFun, scriptResolver.Key);
+            }
+
+            if (_replicationDocument?.DocumentConflictResolution == StraightforwardConflictResolution.ResolveToLocal)
+            {
+                ResolveConflictsWith(_localResolverFun);
+            }
+        }
+        
+        private void ResolveConflictsWith(ResolveFun resolver,params object[] args)
+        {
+            DocumentsOperationContext context;
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                var conflictedKeys = new HashSet<string>();
+                var collections = _database.DocumentsStorage.GetCollections(context);
+                foreach (var collection in collections)
+                {
+                    _database.DocumentsStorage.GetAllConflictedKeysInCollection(context, collection.Name, ref conflictedKeys);
+                    foreach (var conflictedKey in conflictedKeys)
+                    {
+                        var conflicts = _database.DocumentsStorage.GetConflictsFor(context, conflictedKey);
+                        if (conflicts.Count < 2)
+                        {
+                            throw new ArgumentException($"Somehow we have a conflict in {conflictedKey}, but the number of conflicted documents is {conflicts.Count}.");
+                        }
+                        resolver(context, conflictedKey, conflicts, args);
+                    }
+                }
+                tx.Commit();
+            }
         }
 
         private void InitializeOutgoingReplications()

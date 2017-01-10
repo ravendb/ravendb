@@ -50,6 +50,17 @@ namespace Raven.Server.Documents
 
         private Dictionary<string, CollectionName> _collectionsCache;
 
+        private readonly Dictionary<string, ChangeVectorEntry[]> _originalChangeVector 
+            = new Dictionary<string, ChangeVectorEntry[]>();
+
+        public ChangeVectorEntry[] GetOriginalChangeVector(DocumentsOperationContext context,string key)
+        {
+            if (!_originalChangeVector.ContainsKey(key)) return null;
+            var vector = _originalChangeVector[key];
+            _originalChangeVector.Remove(key);
+            return vector;
+        }
+
         static DocumentsStorage()
         {
             Slice.From(StorageEnvironment.LabelsContext, "AllTombstonesEtags", ByteStringType.Immutable, out AllTombstonesEtagsSlice);
@@ -1224,23 +1235,36 @@ namespace Raven.Server.Documents
                             break;
 
                         var currentChangeVector = GetChangeVectorEntriesFromTableValueReader(tvr, 1);
-                        if (currentChangeVector.Equals(changeVector))
+                        if (currentChangeVector.SequenceEqual(changeVector))
                         {
-                            int size;
-                            var dataPtr = tvr.Read(3, out size);
-                            return new DocumentConflict
-                            {
-                                ChangeVector = currentChangeVector,
-                                Key = new LazyStringValue(key, tvr.Read(2, out size), size, context),
-                                StorageId = tvr.Id,
-                                //size == 0 --> this is a tombstone conflict
-                                Doc = (size == 0) ? null : new BlittableJsonReaderObject(dataPtr, size, context)
-                            };
+                            return TableValueToConflictDocument(context,tvr);
                         }
                     }
                 }
             }
             return null;
+        }
+
+        public void GetAllConflictedKeysInCollection(DocumentsOperationContext context, string collection, ref HashSet<string> items)
+        {
+            items.Clear();
+
+            if (_hasConflicts == 0)
+            {
+                return;
+            }
+
+            var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
+            Slice collectionSlice;
+            using (Slice.From(context.Allocator, collection, out collectionSlice))
+            {
+                foreach (var tvr in conflictsTable.SeekByPrimaryKey(collectionSlice))
+                {
+                    int conflictKeySize;
+                    var conflictKey = tvr.Read(0, out conflictKeySize);
+                    items.Add(new LazyStringValue(null, conflictKey, conflictKeySize, context));
+                }
+            }   
         }
 
         public IReadOnlyList<DocumentConflict> GetConflictsFor(DocumentsOperationContext context, string key)
@@ -1354,7 +1378,7 @@ namespace Raven.Server.Documents
                         {keyPtr, keySize},
                         {existingDoc.Data.BasePointer, existingDoc.Data.Size}
                     });
-
+                    _originalChangeVector.Add(key, existingDoc.ChangeVector);
                     // we delete the data directly, without generating a tombstone, because we have a 
                     // conflict instead
                     EnsureLastEtagIsPersisted(context, existingDoc.Etag);
@@ -1379,10 +1403,10 @@ namespace Raven.Server.Documents
                         {keyPtr, keySize},
                         {null, 0}
                     });
-
+                    _originalChangeVector.Add(key, existingTombstone.ChangeVector);
                     // we delete the data directly, without generating a tombstone, because we have a 
-                        // conflict instead
-                        EnsureLastEtagIsPersisted(context, existingTombstone.Etag);
+                    // conflict instead
+                    EnsureLastEtagIsPersisted(context, existingTombstone.Etag);
 
                     var collectionName = GetCollection(existingTombstone.Collection, throwIfDoesNotExist: true);
 

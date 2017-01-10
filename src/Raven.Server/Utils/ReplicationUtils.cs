@@ -6,6 +6,7 @@ using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
 using Raven.NewClient.Client.Commands;
@@ -381,6 +382,30 @@ namespace Raven.Server.Utils
                 ["DocId"] = docId,
                 ["Conflics"] = conflictsArray
             };
+        }
+
+        public static void EnsureRavenEntityName(BlittableJsonReaderObject obj, string collection)
+        {
+            DynamicJsonValue mutatedMetadata;
+            BlittableJsonReaderObject metadata;
+            if (obj.TryGet(Constants.Metadata.Key, out metadata))
+            {
+                if (metadata.Modifications == null)
+                    metadata.Modifications = new DynamicJsonValue(metadata);
+
+                mutatedMetadata = metadata.Modifications;
+            }
+            else
+            {
+                obj.Modifications = new DynamicJsonValue(obj)
+                {
+                    [Constants.Metadata.Key] = mutatedMetadata = new DynamicJsonValue()
+                };
+            }
+            if (mutatedMetadata[Constants.Headers.RavenEntityName] == null)
+            {
+                mutatedMetadata[Constants.Headers.RavenEntityName] = collection;
+            }
         }
 
     }
