@@ -304,9 +304,10 @@ This edge-case has a very slim chance of happening, but still we should not igno
                 {
                     Clauses =
                     {
-                        new BooleanClause(new PrefixQuery(new Term(configuration.FieldName, removeStar )),Occur.SHOULD),
-                        new BooleanClause(new PrefixQuery(new Term(configuration.FieldName, removeStar.ToLowerInvariant())),Occur.SHOULD),
+                        new BooleanClause(new PrefixQuery(new Term(configuration.FieldName, removeStar )), Occur.SHOULD),
+                        new BooleanClause(new PrefixQuery(new Term(configuration.FieldName, removeStar.ToLowerInvariant())), Occur.SHOULD)
                     }
+                    , Boost = boost
                 };
                 return booleanQuery;
             }
