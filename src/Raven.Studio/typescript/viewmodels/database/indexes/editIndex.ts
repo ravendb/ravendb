@@ -393,7 +393,7 @@ class editIndex extends viewModelBase {
         eventsCollector.default.reportEvent("index", "generate-csharp-code");
         new getCSharpIndexDefinitionCommand(this.editedIndex().name(), this.activeDatabase())
             .execute()
-            .done((data: string) => app.showBootstrapDialog(new showDataDialog("C# Index Definition", data, null, true)));
+            .done((data: string) => app.showBootstrapDialog(new showDataDialog("C# Index Definition", data, null)));
     }
 
     formatIndex() {
