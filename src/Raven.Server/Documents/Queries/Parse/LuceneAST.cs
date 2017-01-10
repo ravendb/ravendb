@@ -297,13 +297,25 @@ This edge-case has a very slim chance of happening, but still we should not igno
             }
             if (Type == TermType.PrefixTerm)
             {
-                var actualTerm = string.Empty;
                 if (terms.Count != 0)
                 {
                     var first = terms.First();
-                    actualTerm = first[first.Length - 1] == '*' ? first.Substring(0, first.Length - 1) : first;
+                    var actualTerm = first[first.Length - 1] == '*' ? first.Substring(0, first.Length - 1) : first;
+                    return new PrefixQuery(new Term(configuration.FieldName, actualTerm)) { Boost = boost };
                 }
-                return new PrefixQuery(new Term(configuration.FieldName, actualTerm)) { Boost = boost };
+                // if the term that we are trying to prefix has been removed entirely by the analyzer, then we are going
+                // to cheat a bit, and check for both the term in as specified and the term in lower case format so we can
+                // find it regardless of casing
+                var removeStar = Term.Substring(0, Term.Length - 1);
+                var booleanQuery = new BooleanQuery
+                {
+                    Clauses =
+                    {
+                        new BooleanClause(new PrefixQuery(new Term(configuration.FieldName, removeStar )),Occur.SHOULD),
+                        new BooleanClause(new PrefixQuery(new Term(configuration.FieldName, removeStar.ToLowerInvariant())),Occur.SHOULD),
+                    }
+                };
+                return booleanQuery;
             }
             if (terms.Count == 0) return new BooleanQuery();
 
