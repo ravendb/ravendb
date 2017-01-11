@@ -289,9 +289,13 @@ namespace FastTests
             request = databaseCommands.CreateRequest("/indexes/errors", HttpMethod.Get);
             var errors = request.ReadResponseJson();
 
+            request = databaseCommands.CreateRequest("/indexes/stats", HttpMethod.Get);
+            var stats = request.ReadResponseJson();
+
             var total = new RavenJObject
             {
                 ["Errors"] = errors,
+                ["Stats"] = stats,
                 ["Performance"] = perf
             };
 
@@ -303,9 +307,9 @@ namespace FastTests
                 jsonTextWriter.Flush();
             }
 
-            var stats = databaseCommands.GetStatistics();
+            var statistics = databaseCommands.GetStatistics();
 
-            var corrupted = stats.Indexes.Where(x => x.State == IndexState.Error).ToList();
+            var corrupted = statistics.Indexes.Where(x => x.State == IndexState.Error).ToList();
             if (corrupted.Count > 0)
             {
                 throw new InvalidOperationException(
