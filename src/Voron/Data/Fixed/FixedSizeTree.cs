@@ -665,7 +665,7 @@ namespace Voron.Data.Fixed
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private long KeyFor(FixedSizeTreePage page, int num)
+        internal long KeyFor(FixedSizeTreePage page, int num)
         {
             return KeyFor(page.Pointer + page.StartPosition, num, page.IsLeaf ? _entrySize : BranchEntrySize);
         }
@@ -1176,7 +1176,11 @@ namespace Voron.Data.Fixed
             {
                 // we can just collapse this to the parent
                 // write the page value to the parent
-                SetSeparatorKeyAtPosition(parentPage, PageValueFor(page, 0), parentPage.LastSearchPosition);
+
+                var dataStart = GetSeparatorKeyAtPosition(parentPage, parentPage.LastSearchPosition);
+                dataStart[0] = KeyFor(page, 0);
+                dataStart[1] = PageValueFor(page, 0);
+
                 // then delete the page
                 FreePage(page.PageNumber);
                 largeTreeHeader->PageCount--;
