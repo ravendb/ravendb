@@ -12,7 +12,15 @@ class rangeAggregator {
 
     constructor(inputItems: Array<[Date, Date]>) {
         this.maxConcurrentIndexes = 0;
-        this.items = inputItems.map((x) => ({ startTime: x[0].getTime(), endTime: x[1].getTime() }));
+        // Subtract 1 from endTime if we can
+        // Because the endTime of one work batch can be reported by the server
+        // as exactly the same time as the startTime of ANOTHER work batch for the SAME index
+
+        this.items = inputItems.map((x) => (
+            (x[0].getTime() === x[1].getTime()) ?
+                { startTime: x[0].getTime(), endTime: x[1].getTime() } :
+                { startTime: x[0].getTime(), endTime: x[1].getTime() -1 }
+        ));
     }
 
     inputItems(inputItems: Array<workTimeUnit>) {
