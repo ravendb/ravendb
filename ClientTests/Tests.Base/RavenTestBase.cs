@@ -47,20 +47,10 @@ namespace NewClientTests
 
         private static RavenServer _globalServer;
         private static readonly object ServerLocker = new object();
-        private static readonly object AvailableServerPortsLocker = new object();
         private RavenServer _localServer;
 
         public void DoNotReuseServer() => _doNotReuseServer = true;
         private bool _doNotReuseServer;
-        private int NonReusedServerPort { get; set; }
-        private int NonReusedTcpServerPort { get; set; }
-
-        
-        private const int MaxParallelServer = 75; // port 8000-8002 might be reserved on some cases for IPv6 translation and other uses
-        private static readonly List<int> _usedServerPorts = new List<int>();
-
-        private static readonly List<int> _availableServerPorts =
-            Enumerable.Range(8079 - MaxParallelServer, MaxParallelServer).ToList();
 
         public async Task<DocumentDatabase> GetDatabase(string databaseName)
         {
@@ -77,9 +67,7 @@ namespace NewClientTests
 
                 if (_doNotReuseServer)
                 {
-                    NonReusedServerPort = GetAvailablePort();
-                    NonReusedTcpServerPort = GetAvailablePort();
-                    _localServer = CreateServer(NonReusedServerPort, NonReusedTcpServerPort);
+                    _localServer = CreateServer();
                     return _localServer;
                 }
 
@@ -93,7 +81,7 @@ namespace NewClientTests
                     if (_globalServer == null)
                     {
                         Console.WriteLine("\tTo attach debugger to test process, use process id: {0}", Process.GetCurrentProcess().Id);
-                        var globalServer = CreateServer(GetAvailablePort(), GetAvailablePort());
+                        var globalServer = CreateServer();
                         AssemblyLoadContext.Default.Unloading += context =>
                         {
                             globalServer.Dispose();
@@ -115,48 +103,15 @@ namespace NewClientTests
             }
         }
 
-        private static int GetAvailablePort()
-        {
-            int available;
-            lock (AvailableServerPortsLocker)
-            {
-                if (_availableServerPorts.Count != 0)
-                {
-                    available = _availableServerPorts[0];
-                    _usedServerPorts.Add(available);
-                    _availableServerPorts.RemoveAt(0);
-                }
-                else
-                {
-                    throw new InvalidOperationException(
-                        $"Maximum allowed parallel servers pool in test is exhausted (max={MaxParallelServer}");
-                }
-            }
-            return available;
-        }
-
-        private static void RemoveUsedPort(int port)
-        {
-            lock (AvailableServerPortsLocker)
-            {
-                _availableServerPorts.Add(port);
-                _usedServerPorts.Remove(port);
-                Console.WriteLine("Remove port " + port);
-                Console.Out.Flush();
-            }
-        }
-
-        private static RavenServer CreateServer(int port, int tcpPort)
+        private static RavenServer CreateServer()
         {
             var configuration = new RavenConfiguration();
             configuration.Initialize();
             configuration.DebugLog.LogMode = LogMode.None;
-            configuration.Core.ServerUrl = $"http://127.0.0.1:{port}";
-            configuration.Core.TcpServerUrl = $"http://127.0.0.1:{tcpPort}";
+            configuration.Core.ServerUrl = $"http://127.0.0.1:0"; // dynamic port allocation must be specified with 127.0.0.1 rather then localhost
             configuration.Server.Name = ServerName;
             configuration.Core.RunInMemory = true;
-            string postfix = port == 8080 ? "" : "_" + port;
-            configuration.Core.DataDirectory = Path.Combine(configuration.Core.DataDirectory, $"Tests{postfix}");
+            configuration.Core.DataDirectory = Path.Combine(configuration.Core.DataDirectory, $"Tests{Interlocked.Increment(ref _serverCounter)}");
             configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(60, TimeUnit.Seconds);
             configuration.Storage.AllowOn32Bits = true;
 
@@ -178,6 +133,7 @@ namespace NewClientTests
         }
 
         private static int _counter;
+        private static int _serverCounter;
 
         protected virtual DocumentStore GetDocumentStore([CallerMemberName] string caller = null,
             string dbSuffixIdentifier = null, string path = null,
@@ -216,7 +172,7 @@ namespace NewClientTests
 
             var store = new DocumentStore
             {
-                Url = UseFiddler(Server.Configuration.Core.ServerUrl),
+                Url = UseFiddler(Server.WebUrls[0]),
                 DefaultDatabase = name,
                 ApiKey = apiKey
             };
@@ -383,7 +339,7 @@ namespace NewClientTests
         {
             if (suffix != null)
                 prefix += suffix;
-            var path = RavenTestHelper.NewDataPath(prefix, NonReusedServerPort, forceCreateDir);
+            var path = RavenTestHelper.NewDataPath(prefix, _serverCounter, forceCreateDir);
 
             PathsToDelete.Add(path);
             return path;
@@ -407,8 +363,6 @@ namespace NewClientTests
                     {
                         _localServer.Dispose();
                         _localServer = null;
-                        RemoveUsedPort(NonReusedServerPort);
-                        RemoveUsedPort(NonReusedTcpServerPort);
                     });
                 }
 
