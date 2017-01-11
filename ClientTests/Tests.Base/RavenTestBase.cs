@@ -223,7 +223,7 @@ namespace NewClientTests
         private static string UseFiddler(string url)
         {
             if (Debugger.IsAttached && Process.GetProcessesByName("fiddler").Any())
-                return url.Replace("localhost", "localhost.fiddler");
+                return url.Replace("127.0.0.1", "localhost.fiddler");
 
             return url;
         }
