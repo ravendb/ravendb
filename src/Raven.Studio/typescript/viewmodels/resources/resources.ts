@@ -300,6 +300,7 @@ class resources extends viewModelBase {
         }
     }
 
+    /*
     toggleDatabaseIndexing(db: databaseInfo) {
         const enableIndexing = !db.indexingEnabled();
         const message = enableIndexing ? "Enable" : "Disable";
@@ -312,6 +313,23 @@ class resources extends viewModelBase {
                     new toggleIndexingCommand(true, db.asResource())
                         .execute()
                         .done(() => db.indexingEnabled(enableIndexing))
+                        .always(() => this.spinners.disableIndexing.remove(db.qualifiedName));
+                }
+            });
+    */
+
+    toggleDatabaseIndexing(db: databaseInfo) {
+        const pauseIndexing = db.indexingPaused();
+        const message = pauseIndexing ? "Resume" : "Pause";
+
+        this.confirmationMessage("Are you sure?", message + " indexing?")
+            .done(result => {
+                if (result.can) {
+                    this.spinners.disableIndexing.push(db.qualifiedName);
+
+                    new toggleIndexingCommand(pauseIndexing, db.asResource())
+                        .execute()
+                        .done(() => db.indexingPaused(!pauseIndexing))
                         .always(() => this.spinners.disableIndexing.remove(db.qualifiedName));
                 }
             });
