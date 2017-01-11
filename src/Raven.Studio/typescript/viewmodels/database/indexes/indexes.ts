@@ -42,7 +42,8 @@ class indexes extends viewModelBase {
         localState: ko.observableArray<string>([])
     }
 
-    indexingEnabled = ko.observable<boolean>(true);
+    indexingNotPaused = ko.observable<boolean>(true);
+    indexingEnable = ko.observable<boolean>(true);
 
     resetsInProgress = new Set<string>();
 
@@ -135,7 +136,7 @@ class indexes extends viewModelBase {
     private processData(stats: Array<Raven.Client.Data.Indexes.IndexStats>, replacements: indexReplaceDocument[], statuses: Raven.Client.Data.Indexes.IndexingStatus) {
         //TODO: handle replacements
 
-        this.indexingEnabled(statuses.Status !== "Paused");
+        this.indexingNotPaused(statuses.Status !== "Paused");
 
         stats
             .map(i => new index(i))
@@ -439,7 +440,7 @@ class indexes extends viewModelBase {
                     this.spinners.globalStartStop(true);
                     new toggleIndexingCommand(true, this.activeDatabase())
                         .execute()
-                        .done(() => this.indexingEnabled(true))
+                        .done(() => this.indexingNotPaused(true))
                         .always(() => {
                             this.spinners.globalStartStop(false);
                             this.fetchIndexes();
@@ -456,7 +457,7 @@ class indexes extends viewModelBase {
                     this.spinners.globalStartStop(true);
                     new toggleIndexingCommand(false, this.activeDatabase())
                         .execute()
-                        .done(() => this.indexingEnabled(false))
+                        .done(() => this.indexingNotPaused(false))
                         .always(() => {
                             this.spinners.globalStartStop(false);
                             this.fetchIndexes();

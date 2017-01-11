@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.SqlTypes;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
@@ -18,13 +16,9 @@ using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries.Dynamic;
-using Raven.Server.Documents.SqlReplication;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 
 using Voron.Platform.Posix;
-
-using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Platform;
 

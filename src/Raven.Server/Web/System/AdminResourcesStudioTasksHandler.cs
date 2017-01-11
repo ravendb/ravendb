@@ -91,11 +91,6 @@ namespace Raven.Server.Web.System
                         continue;
                     }
 
-                    dbDoc.Modifications = new DynamicJsonValue(dbDoc)
-                    {
-                        ["Disabled"] = disableRequested
-                    };
-
                     var newDoc2 = context.ReadObject(dbDoc, dbId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
                     ServerStore.Write(context, dbId, newDoc2);

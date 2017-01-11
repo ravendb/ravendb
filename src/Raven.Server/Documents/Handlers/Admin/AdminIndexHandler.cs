@@ -7,6 +7,7 @@ using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Admin
@@ -137,10 +138,81 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
+        private void ToogleIndexesStatus(bool enableRequest)
+        {
+            var dbName = Database.Name;
+            TransactionOperationContext context;
+            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                var dbId = $"db/{dbName}";
+                var dbConfigDoc = ServerStore.Read(context, dbId);
+                BlittableJsonReaderObject settings;
+                dbConfigDoc.TryGet("Settings", out settings);
+                if (settings == null)
+                    return;
+
+                var disable = Database.Configuration.Indexing.Disabled;
+                if (disable != enableRequest)
+                {
+                    var state = disable ? "disabled" : "enabled";
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        ["Database Name"] = dbName,
+                        ["Success"] = false,
+                        ["Indexing Disabled"] = disable,
+                        ["Reason"] = $"Indexing are already {state}"
+                    });
+
+                    tx.Commit();
+                    writer.WriteEndArray();
+                    return;
+                }
+
+                if (disable)
+                {
+                    settings.Modifications = new DynamicJsonValue(settings);
+                    settings.Modifications.Remove("Raven/Indexing/Disable");
+                }
+                else
+                {
+                    settings.Modifications = new DynamicJsonValue(settings)
+                    {
+                        ["Raven/Indexing/Disable"] = true
+                    };
+                }
+
+                var newDoc2 = context.ReadObject(dbConfigDoc, dbId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                ServerStore.Write(context, dbId, newDoc2);
+
+                context.Write(writer, new DynamicJsonValue
+                {
+                    ["Database Name"] = dbName,
+                    ["Success"] = true,
+                    ["Indexing Disabled"] = !disable
+                });
+
+                tx.Commit();
+                writer.WriteEndArray();
+            }
+
+            ServerStore.DatabasesLandlord.UnloadAndLock(dbName, () =>
+            {
+                //empty by design
+            });
+        }
+
         [RavenAction("/databases/*/admin/indexes/enable", "POST")]
         public Task Enable()
         {
-            var name = GetStringQueryString("name");
+            var name = GetStringQueryString("name", required: false);
+            if (string.IsNullOrEmpty(name))
+            {
+                ToogleIndexesStatus(enableRequest: true);
+                return Task.CompletedTask;
+            }
+
             var index = Database.IndexStore.GetIndex(name);
             if (index == null)
                 IndexDoesNotExistsException.ThrowFor(name);
@@ -154,7 +226,13 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/databases/*/admin/indexes/disable", "POST")]
         public Task Disable()
         {
-            var name = GetStringQueryString("name");
+            var name = GetStringQueryString("name", required: false);
+            if (string.IsNullOrEmpty(name))
+            {
+                ToogleIndexesStatus(enableRequest: false);
+                return Task.CompletedTask;
+            }
+
             var index = Database.IndexStore.GetIndex(name);
             if (index == null)
                 IndexDoesNotExistsException.ThrowFor(name);
