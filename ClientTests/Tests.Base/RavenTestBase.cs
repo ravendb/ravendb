@@ -54,6 +54,8 @@ namespace NewClientTests
         private bool _doNotReuseServer;
         private int NonReusedServerPort { get; set; }
         private int NonReusedTcpServerPort { get; set; }
+
+        
         private const int MaxParallelServer = 75; // port 8000-8002 might be reserved on some cases for IPv6 translation and other uses
         private static readonly List<int> _usedServerPorts = new List<int>();
 
@@ -76,7 +78,8 @@ namespace NewClientTests
                 if (_doNotReuseServer)
                 {
                     NonReusedServerPort = GetAvailablePort();
-                    _localServer = CreateServer(NonReusedServerPort);
+                    NonReusedTcpServerPort = GetAvailablePort();
+                    _localServer = CreateServer(NonReusedServerPort, NonReusedTcpServerPort);
                     return _localServer;
                 }
 
@@ -90,7 +93,7 @@ namespace NewClientTests
                     if (_globalServer == null)
                     {
                         Console.WriteLine("\tTo attach debugger to test process, use process id: {0}", Process.GetCurrentProcess().Id);
-                        var globalServer = CreateServer(GetAvailablePort());
+                        var globalServer = CreateServer(GetAvailablePort(), GetAvailablePort());
                         AssemblyLoadContext.Default.Unloading += context =>
                         {
                             globalServer.Dispose();
@@ -138,16 +141,18 @@ namespace NewClientTests
             {
                 _availableServerPorts.Add(port);
                 _usedServerPorts.Remove(port);
+                Console.WriteLine("Remove port " + port);
+                Console.Out.Flush();
             }
         }
 
-        private static RavenServer CreateServer(int port)
+        private static RavenServer CreateServer(int port, int tcpPort)
         {
             var configuration = new RavenConfiguration();
             configuration.Initialize();
             configuration.DebugLog.LogMode = LogMode.None;
-            configuration.Core.ServerUrl = $"http://localhost:{port}";
-            configuration.Core.TcpServerUrl = "0";
+            configuration.Core.ServerUrl = $"http://127.0.0.1:{port}";
+            configuration.Core.TcpServerUrl = $"http://127.0.0.1:{tcpPort}";
             configuration.Server.Name = ServerName;
             configuration.Core.RunInMemory = true;
             string postfix = port == 8080 ? "" : "_" + port;
