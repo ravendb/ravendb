@@ -24,6 +24,7 @@
   },
 
   "dependencies": {
+    "DotNetCross.Memory.Unsafe": "0.2.3.4",
     "System.Runtime.InteropServices.RuntimeInformation": "4.3.0"
   },
 
