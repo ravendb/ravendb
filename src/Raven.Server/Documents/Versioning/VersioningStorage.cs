@@ -261,17 +261,6 @@ namespace Raven.Server.Documents.Versioning
             }
         }
 
-        public IEnumerable<Document> GetRevisionsAfter(DocumentsOperationContext context, long etag)
-        {
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocuments);
-
-            foreach (var tvr in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[EtagSlice], etag))
-            {
-                var document = TableValueToDocument(context, tvr);
-                yield return document;
-            }
-        }
-
         public IEnumerable<Document> GetRevisionsAfter(DocumentsOperationContext context, long etag, int take)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocuments);

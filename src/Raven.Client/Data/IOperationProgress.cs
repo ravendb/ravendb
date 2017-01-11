@@ -1,6 +1,4 @@
-﻿using System.Runtime.Serialization.Formatters;
-using Raven.Imports.Newtonsoft.Json.Utilities;
-using Sparrow.Json.Parsing;
+﻿using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Data
 {
@@ -40,6 +38,6 @@ namespace Raven.Client.Data
             {
                 ["Progress"] = Progress
             };
-;        }
+        }
     }
 }
