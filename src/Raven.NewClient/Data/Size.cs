@@ -1,9 +1,10 @@
-﻿
-namespace Raven.NewClient.Client.Data
+﻿using System;
+
+namespace Raven.NewClient.Data
 {
     public class Size
     {
-        /*private static readonly string ZeroHumaneSize = FileHeader.Humane(0);
+        private static readonly string ZeroHumaneSize = Humane(0);
 
         public Size()
         {
@@ -27,10 +28,32 @@ namespace Raven.NewClient.Client.Data
             set
             {
                 _sizeInBytes = value;
-                HumaneSize = FileHeader.Humane(value);
+                HumaneSize = Humane(value);
             }
         }
 
-        public string HumaneSize { get; private set; }*/
+        public string HumaneSize { get; private set; }
+
+        public static string Humane(long? size)
+        {
+            if (size == null)
+                return null;
+
+            var absSize = Math.Abs(size.Value);
+            const double GB = 1024 * 1024 * 1024;
+            const double MB = 1024 * 1024;
+            const double KB = 1024;
+
+            if (absSize == 0)
+                return "0 Bytes";
+
+            if (absSize > GB) // GB
+                return string.Format("{0:#,#.##} GBytes", size / GB);
+            if (absSize > MB)
+                return string.Format("{0:#,#.##} MBytes", size / MB);
+            if (absSize > KB)
+                return string.Format("{0:#,#.##} KBytes", size / KB);
+            return string.Format("{0:#,#} Bytes", size);
+        }
     }
 }

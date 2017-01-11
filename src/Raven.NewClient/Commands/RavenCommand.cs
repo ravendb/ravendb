@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
@@ -22,8 +23,15 @@ namespace Raven.NewClient.Client.Commands
         public bool IsReadRequest = true;
         public HttpStatusCode StatusCode;
 
+        public RavenCommandResponseType ResponseType { get; protected set; } = RavenCommandResponseType.Object;
+
         public abstract HttpRequestMessage CreateRequest(ServerNode node, out string url);
         public abstract void SetResponse(BlittableJsonReaderObject response);
+
+        public virtual void SetResponse(BlittableJsonReaderArray response)
+        {
+            throw new NotSupportedException($"When {nameof(ResponseType)} is set to Array then please override this method to handle the response.");
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected string UrlEncode(string value)
@@ -44,22 +52,40 @@ namespace Raven.NewClient.Client.Commands
 
         public virtual async Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
         {
-            using(response)
+            using (response)
             using (var stream = await response.Content.ReadAsStreamAsync())
             {
-                // we intentionally don't dispose the reader here, we'll be using it
-                // in the command, any associated memory will be released on context reset
-                var blittableJsonReaderObject = await context.ReadForMemoryAsync(stream, "PutResult");
-                if (response.Headers.ETag != null)
+                if (ResponseType == RavenCommandResponseType.Object)
                 {
-                    long? etag = response.GetEtagHeader();
-                    if (etag != null)
+                    // we intentionally don't dispose the reader here, we'll be using it
+                    // in the command, any associated memory will be released on context reset
+                    var json = await context.ReadForMemoryAsync(stream, "response/object");
+                    if (response.Headers.ETag != null)
                     {
-                        cache.Set(url, (long)etag, blittableJsonReaderObject);
+                        long? etag = response.GetEtagHeader();
+                        if (etag != null)
+                        {
+                            cache.Set(url, (long)etag, json);
+                        }
                     }
+                    SetResponse(json);
+                    return;
                 }
-                SetResponse(blittableJsonReaderObject);
+
+                var array = await context.ParseArrayToMemoryAsync(stream, "response/array", BlittableJsonDocumentBuilder.UsageMode.None);
+                SetResponse(array.Item1);
             }
+        }
+
+        protected static void ThrowInvalidResponse()
+        {
+            throw new InvalidDataException("Response is invalid.");
+        }
     }
+
+    public enum RavenCommandResponseType
+    {
+        Object,
+        Array
     }
 }

@@ -4,6 +4,11 @@ namespace Raven.NewClient.Data.Indexes
 {
     public class IndexingPerformanceOperation
     {
+        public IndexingPerformanceOperation()
+        {
+            // for deserialization
+        }
+
         public IndexingPerformanceOperation(TimeSpan duration)
         {
             DurationInMilliseconds = Math.Round(duration.TotalMilliseconds, 2);
