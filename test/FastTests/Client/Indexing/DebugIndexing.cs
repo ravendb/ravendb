@@ -4,13 +4,10 @@ using System.Net.Http;
 using System.Threading.Tasks;
 
 using Raven.Abstractions;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
-using Raven.Client.Bundles.MoreLikeThis;
 using Raven.Client.Connection;
 using Raven.Client.Data;
 using Raven.Client.Data.Queries;
-using Raven.Client.Indexing;
 using Raven.Json.Linq;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.MoreLikeThis;

@@ -10,8 +10,6 @@ using System.Net.Http.Headers;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml;
-using Newtonsoft.Json;
 using Raven.NewClient.Abstractions.Connection;
 using Raven.NewClient.Client.Connection;
 using Sparrow.Json;
@@ -20,7 +18,6 @@ using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Exceptions;
 using Sparrow.Logging;
-using Raven.NewClient.Client.Connection;
 
 namespace Raven.NewClient.Client.Http
 {
@@ -242,7 +239,10 @@ namespace Raven.NewClient.Client.Http
             switch (response.StatusCode)
             {
                 case HttpStatusCode.NotFound:
-                    command.SetResponse(null);
+                    if (command.ResponseType == RavenCommandResponseType.Object)
+                        command.SetResponse((BlittableJsonReaderObject)null);
+                    else
+                        command.SetResponse((BlittableJsonReaderArray)null);
                     return true;
                 case HttpStatusCode.Unauthorized:
                 case HttpStatusCode.PreconditionFailed:

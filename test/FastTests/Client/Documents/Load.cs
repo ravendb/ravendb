@@ -1,20 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Raven.Client.Document;
 using Xunit;
 
 namespace FastTests.Client.Documents
 {
-    public class Load:RavenTestBase
+    public class Load : NewClientTests.RavenTestBase
     {
-        public class Foo
+        private class Foo
         {
             public string Name { get; set; }
         }
 
-        public class Bar
+        private class Bar
         {
             /*public string FooStringId { get; set; }
             public long FooLongId { get; set; }
@@ -38,12 +36,12 @@ namespace FastTests.Client.Documents
                 string barId;
                 using (var session = store.OpenSession())
                 {
-                    var foo = new Foo {Name="Beginning"};
+                    var foo = new Foo { Name = "Beginning" };
                     session.Store(foo);
                     var fooId = barId = session.Advanced.GetDocumentId(foo);
                     var bar = new Bar
                     {
-                        Name="End",
+                        Name = "End",
                         FooId = fooId
                     };
                     session.Store(bar);
@@ -53,12 +51,12 @@ namespace FastTests.Client.Documents
 
                 using (var newSession = (DocumentSession)store.OpenSession())
                 {
-                    var bar  = newSession.LoadInternal<Bar>(new[] {barId},new []
+                    var bar = newSession.LoadInternal<Bar>(new[] { barId }, new[]
                     {
                         new KeyValuePair<string, Type>("FooId",typeof(string))
                     });
                     Assert.NotNull(bar);
-                    Assert.Equal(1,bar.Length);
+                    Assert.Equal(1, bar.Length);
                     Assert.NotNull(bar[0]);
 
                     var numOfRequests = newSession.NumberOfRequests;
@@ -66,10 +64,10 @@ namespace FastTests.Client.Documents
                     var foo = newSession.Load<Foo>((string)bar[0].FooId);
 
                     Assert.NotNull(foo);
-                    Assert.Equal("Beginning",foo.Name);
+                    Assert.Equal("Beginning", foo.Name);
                     Assert.Equal(numOfRequests, newSession.NumberOfRequests);
                 }
-                
+
             }
         }
 
@@ -81,7 +79,7 @@ namespace FastTests.Client.Documents
                 string barId;
                 using (var session = store.OpenSession())
                 {
-                    
+
                     var bar = new Bar
                     {
                         Name = "End",
