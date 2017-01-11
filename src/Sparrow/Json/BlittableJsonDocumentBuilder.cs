@@ -352,6 +352,7 @@ namespace Sparrow.Json
             public int PropertyId;
             public byte Type;
         }
+
         [Flags]
         public enum UsageMode
         {

@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
+using DotNetCross.Memory;
 using Sparrow.Binary;
 using Sparrow.Json.Parsing;
 
@@ -44,7 +45,25 @@ namespace Sparrow.Json
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Write(byte* buffer, int length)
+        {
+            if (length == 0)
+                return;
+
+            if (_buffer.Length - Used > length)
+            {
+                Unsafe.CopyBlock(_buffer.Pointer + Used, buffer, (uint)length);
+                _sizeInBytes += length;
+                Used += length;
+            }
+            else
+            {
+                UnlikelyWrite(buffer, length);
+            }
+        }
+
+        private void UnlikelyWrite(byte* buffer, int length)
         {
             if (length == 0)
                 return;
@@ -61,7 +80,8 @@ namespace Sparrow.Json
 
                 var bytesToWrite = Math.Min(lengthLeft, _buffer.Length - Used);
 
-                Memory.Copy(_buffer.Pointer + Used, buffer, bytesToWrite);
+                Unsafe.CopyBlock(_buffer.Pointer + Used, buffer, (uint)bytesToWrite);
+
                 _sizeInBytes += bytesToWrite;
                 lengthLeft -= bytesToWrite;
                 bufferPosition += bytesToWrite;
@@ -166,6 +186,7 @@ namespace Sparrow.Json
             };
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Write(byte[] buffer, int start, int count)
         {
             fixed (byte* p = buffer)
@@ -187,6 +208,20 @@ namespace Sparrow.Json
             if (length == 0)
                 return;
 
+            if (_current.Allocation.SizeInBytes - _current.Used > length)
+            {
+                Unsafe.CopyBlock(_current.Address + _current.Used, buffer, (uint)length);
+                _sizeInBytes += length;
+                _current.Used += length;
+            }
+            else
+            {
+                UnlikelyWrite(buffer, length);
+            }
+        }
+
+        private void UnlikelyWrite(byte* buffer, int length)
+        {
             var bufferPosition = 0;
             var lengthLeft = length;
             do
@@ -199,7 +234,7 @@ namespace Sparrow.Json
 
                 var bytesToWrite = Math.Min(lengthLeft, _current.Allocation.SizeInBytes - _current.Used);
 
-                Memory.CopyInline(_current.Address + _current.Used, buffer, bytesToWrite);
+                Unsafe.CopyBlock(_current.Address + _current.Used, buffer, (uint)bytesToWrite);
 
                 _sizeInBytes += bytesToWrite;
                 lengthLeft -= bytesToWrite;

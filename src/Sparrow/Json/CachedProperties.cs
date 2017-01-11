@@ -112,8 +112,12 @@ namespace Sparrow.Json
                 }
                 _propertiesNeedSorting = false;
             }
+
             _hasDuplicates = false;
             properties.Sort(this);
+
+            // The item comparison method has a side effect, which can modify the _hasDuplicates field.
+            // This can either be true or false at any given time. 
             if (_hasDuplicates)
             {
                 // leave just the latest
