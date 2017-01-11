@@ -191,7 +191,7 @@ namespace Raven.Database.Server.Controllers
                         tasks[i] = indexingRounds[i];
                     }
                     var timeSpan = timeout - sp.Elapsed;
-                    if (timeout < TimeSpan.Zero)
+                    if (timeout < TimeSpan.Zero || timeSpan <= TimeSpan.Zero)
                     {
                         if (throwOnTimeout)
                         {
