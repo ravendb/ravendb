@@ -130,5 +130,35 @@ namespace Raven.NewClient.Client.Commands
                 _session.RegisterMissingIncludes(result.Results, _includes);
             }
         }
+
+        public void SetResultWithoutIds(GetDocumentResult result)
+        {
+            var ids = new List<string>();
+            var includes = new List<string>();
+            if (result.Includes != null)
+            {
+                foreach (BlittableJsonReaderObject include in result.Includes)
+                {
+                    var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(include);
+                    _session.includedDocumentsByKey[newDocumentInfo.Id] = newDocumentInfo;
+                    includes.Add(newDocumentInfo.Id);
+                }
+            }
+
+            foreach (BlittableJsonReaderObject document in result.Results)
+            {
+                var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(document);
+                _session.DocumentsById[newDocumentInfo.Id] = newDocumentInfo;
+                ids.Add(newDocumentInfo.Id);
+            }
+
+            _ids = ids.ToArray();
+            _includes = includes.ToArray();
+
+            if (_includes != null && _includes.Length > 0)
+            {
+                _session.RegisterMissingIncludes(result.Results, _includes);
+            }
+        }
     }
 }
