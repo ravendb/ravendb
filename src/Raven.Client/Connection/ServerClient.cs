@@ -289,7 +289,7 @@ namespace Raven.Client.Connection
 
         public BuildNumber GetBuildNumber()
         {
-            return AsyncHelpers.RunSync(() => asyncServerClient.GetBuildNumberAsync());
+            return AsyncHelpers.RunSync(() => asyncServerClient.GlobalAdmin.GetBuildNumberAsync());
         }
 
         public IndexMergeResults GetIndexMergeSuggestions()
