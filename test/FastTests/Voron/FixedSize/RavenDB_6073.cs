@@ -45,7 +45,7 @@ namespace FastTests.Voron.FixedSize
                             {
                                 for (int j = 0; j < page.NumberOfEntries; j++)
                                 {
-                                    var key = fst.KeyFor(page, j);
+                                    var key = page.GetKey(j);
                                     keysToRemove.Add(key);
                                 }
                                     
