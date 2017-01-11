@@ -19,13 +19,13 @@ using ThreadState = System.Threading.ThreadState;
 
 namespace Raven.Database.Config
 {
-    internal interface ILowMemoryHandler
+    public interface ILowMemoryHandler
     {
         LowMemoryHandlerStatistics HandleLowMemory();
         LowMemoryHandlerStatistics GetStats();
     }
 
-    internal static class MemoryStatistics
+    public static class MemoryStatistics
     {
         private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 

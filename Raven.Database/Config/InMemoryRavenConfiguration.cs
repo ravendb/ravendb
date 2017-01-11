@@ -11,6 +11,7 @@ using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,6 +28,7 @@ using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Enum = System.Enum;
 using Raven.Abstractions;
+using Raven.Database.Impl;
 
 namespace Raven.Database.Config
 {
@@ -172,6 +174,24 @@ namespace Raven.Database.Config
             MemoryCacheLimitPercentage = ravenSettings.MemoryCacheLimitPercentage.Value;
 
             MemoryCacheLimitCheckInterval = ravenSettings.MemoryCacheLimitCheckInterval.Value;
+
+            if (!string.IsNullOrWhiteSpace(ravenSettings.MemoryCacher.Value))
+            {
+                CustomMemoryCacher = config =>
+                {
+                    var customCacherType = Type.GetType(ravenSettings.MemoryCacher.Value);
+
+                    var argTypes = new Type[] { typeof(InMemoryRavenConfiguration) };
+                    var argValues = new object[] { config };
+
+                    var ctor = customCacherType.GetConstructor(argTypes);
+                    var obj = ctor.Invoke(argValues);
+
+                    var cacher = obj as IDocumentCacher;
+
+                    return cacher;
+                };
+            }
 
             // Discovery
             DisableClusterDiscovery = ravenSettings.DisableClusterDiscovery.Value;
@@ -1086,6 +1106,11 @@ namespace Raven.Database.Config
         /// Limit of how much memory a batch processing can take (in MBytes)
         /// </summary>
         public int MemoryLimitForProcessingInMb { get; set; }
+
+        /// <summary>
+        /// Custom MemoryCacher type to use for caching database documents.
+        /// </summary>
+        public Func<InMemoryRavenConfiguration, IDocumentCacher> CustomMemoryCacher { get; set; }
 
         public long DynamicMemoryLimitForProcessing
         {

@@ -852,9 +852,19 @@ namespace Raven.Storage.Voron
         private IDocumentCacher CreateDocumentCacher(InMemoryRavenConfiguration configuration)
         {
             if (configuration.CacheDocumentsInMemory == false)
-                return new NullDocumentCacher();
+            {
+                documentCacher = new NullDocumentCacher();
+            }
+            else if (configuration.CustomMemoryCacher != null)
+            {
+                documentCacher = configuration.CustomMemoryCacher(configuration);
+            }
+            else
+            {
+                documentCacher = new DocumentCacher(configuration);
+            }
 
-            return new DocumentCacher(configuration);
+            return documentCacher;
         }
     }
 }
