@@ -63,6 +63,7 @@ class ctor {
         useContextMenu: boolean;
         container?: string;
         maxHeight: string;
+        minHeight: string;
         customColumnParams: { [column: string]: customColumnParams };
         isIndexMapReduce: KnockoutObservable<boolean>;
         isCopyAllowed: boolean;
@@ -88,6 +89,7 @@ class ctor {
             showIds: true,
             useContextMenu: true,
             maxHeight: 'none',
+            minHeight: 0,
             customColumnParams: {},
             isIndexMapReduce: ko.observable<boolean>(true),
             isCopyAllowed: true,
