@@ -37,7 +37,7 @@ namespace SlowTests.Voron
                     Slice read;
                     using (fst.Read(i, out read))
                     {
-                        Assert.NotNull(read);
+                        Assert.True(read.HasValue);
                     }
                 }
 

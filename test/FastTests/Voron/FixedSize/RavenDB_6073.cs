@@ -60,20 +60,20 @@ namespace FastTests.Voron.FixedSize
                 Assert.True(fst.Depth >= 3);
                 Assert.NotNull(keysToRemove);
 
-                for (int i = 0; i < keysToRemove.Count; i++)
+                foreach (var key in keysToRemove)
                 {
-                    fst.Delete(keysToRemove[i]);
+                    fst.Delete(key);
                 }
 
                 for (int i = 0; i < insertCount; i++)
                 {
-                    if (keysToRemove.Contains(i))
-                        continue;
-
                     Slice value;
-                    using (var read = fst.Read(keysToRemove[keysToRemove.Count - 1], out value))
+                    using (fst.Read(i, out value))
                     {
-                        Assert.NotNull(read);
+                        if (keysToRemove.Contains(i))
+                            Assert.False(value.HasValue);
+                        else
+                            Assert.True(value.HasValue);
                     }
                 }
             }
