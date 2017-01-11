@@ -1063,17 +1063,6 @@ namespace Raven.Client.Connection.Async
             }
         }
 
-        public async Task<BuildNumber> GetBuildNumberAsync(CancellationToken token = default(CancellationToken))
-        {
-            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (Url + "/build/version"), HttpMethod.Get, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention, GetRequestTimeMetric(Url))))
-            {
-                request.AddOperationHeaders(OperationsHeaders);
-
-                var result = await request.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
-                return convention.CreateSerializer().Deserialize<BuildNumber>(new RavenJTokenReader(result));
-            }
-        }
-
         public async Task<TcpConnectionInfo> GetTcpInfoAsync(CancellationToken token = default(CancellationToken))
         {
             using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, (MultiDatabase.GetRootDatabaseUrl(Url) + "/info/tcp"), HttpMethod.Get,

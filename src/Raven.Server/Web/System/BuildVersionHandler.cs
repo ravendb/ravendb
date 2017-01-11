@@ -7,6 +7,7 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
@@ -27,10 +28,10 @@ namespace Raven.Server.Web.System
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        ["BuildVersion"] = ServerVersion.Build,
-                        ["ProductVersion"] = ServerVersion.Version,
-                        ["CommitHash"] = ServerVersion.CommitHash,
-                        ["FullVersion"] = ServerVersion.FullVersion
+                        [nameof(BuildNumber.BuildVersion)] = ServerVersion.Build,
+                        [nameof(BuildNumber.ProductVersion)] = ServerVersion.Version,
+                        [nameof(BuildNumber.CommitHash)] = ServerVersion.CommitHash,
+                        [nameof(BuildNumber.FullVersion)] = ServerVersion.FullVersion
                     });
                 }
                 var versionBuffer = stream.ToArray();
