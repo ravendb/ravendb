@@ -88,10 +88,18 @@ namespace Raven.Storage.Esent
             configuration.Container.SatisfyImportsOnce(this);
 
             if (configuration.CacheDocumentsInMemory == false)
+            {
                 documentCacher = new NullDocumentCacher();
+            }
+            else if (configuration.CustomMemoryCacher != null)
+            {
+                documentCacher = configuration.CustomMemoryCacher(configuration);
+            }
             else
-                documentCacher = new DocumentCacher(configuration);    
-            
+            {
+                documentCacher = new DocumentCacher(configuration);
+            }
+
             database = configuration.DataDirectory;
             this.configuration = configuration;
             this.onCommit = onCommit;

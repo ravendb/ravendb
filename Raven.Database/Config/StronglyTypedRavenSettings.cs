@@ -123,6 +123,8 @@ namespace Raven.Database.Config
                 new TimeSpanSetting(settings["Raven/MemoryCacheLimitCheckInterval"], MemoryCache.Default.PollingInterval,
                                     TimeSpanArgumentType.FromParse);
 
+            MemoryCacher = new StringSetting(settings["Raven/MemoryCacher"], (string)null);
+
             PrewarmFacetsSyncronousWaitTime =
                 new TimeSpanSetting(settings["Raven/PrewarmFacetsSyncronousWaitTime"], TimeSpan.FromSeconds(3),
                                     TimeSpanArgumentType.FromParse);
@@ -422,6 +424,8 @@ namespace Raven.Database.Config
         public IntegerSetting MemoryCacheLimitPercentage { get; private set; }
 
         public TimeSpanSetting MemoryCacheLimitCheckInterval { get; private set; }
+
+        public StringSetting MemoryCacher { get; private set; }
 
         public TimeSpanSetting MaxProcessingRunLatency { get; private set; }
 
