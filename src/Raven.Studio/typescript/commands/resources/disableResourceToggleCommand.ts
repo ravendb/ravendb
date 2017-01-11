@@ -58,14 +58,15 @@ class disableResourceToggleCommand extends commandBase {
 
     private toggleDisableForGroup(qualifer: string, resources: resource[]): JQueryPromise<Array<disableResourceResult>> {
         const args = {
-            name: resources.map(x => x.name),
-            disable: this.disable
+            name: resources.map(x => x.name)
         };
 
+        const endPoint = this.disable ?
+            endpoints.admin.adminResources.disable :
+            endpoints.admin.adminResources.enable;
+
         const url = "/admin/" +
-            resources[0].urlPrefix +
-            endpoints.admin.adminResourcesStudioTasks.toggleDisable +
-            this.urlEncodeArgs(args);
+            resources[0].urlPrefix + endPoint + this.urlEncodeArgs(args);
 
         const task = $.Deferred<Array<disableResourceResult>>();
 

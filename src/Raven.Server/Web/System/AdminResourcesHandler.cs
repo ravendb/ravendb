@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="AdminResourcesStudioTasksHandler.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="AdminResourcesHandler.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -14,10 +14,25 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System
 {
-    public class AdminResourcesStudioTasksHandler : RequestHandler
+    public class AdminResourcesHandler : RequestHandler
     {
-        [RavenAction("/admin/*/toggle-disable", "POST", "/admin/{resourceType:databases|fs|cs|ts}/toggle-disable?name={resourceName:string|multiple}&isDisabled={isDisabled:bool}")]
-        public Task PostToggleDisableDatabases()
+        [RavenAction("/admin/*/disable", "POST", "/admin/{resourceType:databases|fs|cs|ts}/disable?name={resourceName:string|multiple}")]
+        public Task DisableDatabases()
+        {
+            ToggleDisableDatabases(disableRequested: true);
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/admin/*/enable", "POST", "/admin/{resourceType:databases|fs|cs|ts}/enable?name={resourceName:string|multiple}")]
+        public Task EnableDatabases()
+        {
+            ToggleDisableDatabases(disableRequested: false);
+
+            return Task.CompletedTask;
+        }
+
+        private void ToggleDisableDatabases(bool disableRequested)
         {
             var resourceType = RouteMatch.Url.Substring(RouteMatch.CaptureStart, RouteMatch.CaptureLength);
             string resourcePrefix;
@@ -40,7 +55,6 @@ namespace Raven.Server.Web.System
             }
 
             var names = GetStringValuesQueryString("name");
-            var disableRequested = GetBoolValueQueryString("disable").Value;
 
             var databasesToUnload = new List<string>();
 
@@ -91,11 +105,6 @@ namespace Raven.Server.Web.System
                         continue;
                     }
 
-                    dbDoc.Modifications = new DynamicJsonValue(dbDoc)
-                    {
-                        ["Disabled"] = disableRequested
-                    };
-
                     var newDoc2 = context.ReadObject(dbDoc, dbId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
                     ServerStore.Write(context, dbId, newDoc2);
@@ -122,8 +131,6 @@ namespace Raven.Server.Web.System
                     // empty by design
                 });
             }
-
-            return Task.CompletedTask;
         }
     }
 }
