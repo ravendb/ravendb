@@ -115,7 +115,7 @@ namespace Voron.Data.Fixed
                 {
                     if (_pos == _header->NumberOfEntries)
                         throw new InvalidOperationException("Invalid position, cannot read past end of tree");
-                    return _fst.KeyFor(_dataStart, _pos, _fst._entrySize);
+                    return FixedSizeTreePage.GetEntry(_dataStart, _pos, _fst._entrySize)->Key;
                 }
             }
 
@@ -207,7 +207,7 @@ namespace Voron.Data.Fixed
                     if (_currentPage == null)
                         throw new InvalidOperationException("No current page was set");
 
-                    return _parent.KeyFor(_currentPage, _currentPage.LastSearchPosition);
+                    return _currentPage.GetKey(_currentPage.LastSearchPosition);
                 }
             }
 
@@ -238,7 +238,7 @@ namespace Voron.Data.Fixed
                         while (_currentPage.IsBranch)
                         {
                             _parent._cursor.Push(_currentPage);
-                            var childParentNumber = _parent.PageValueFor(_currentPage, _currentPage.LastSearchPosition);
+                            var childParentNumber = _currentPage.GetEntry(_currentPage.LastSearchPosition)->PageNumber;
                             _currentPage = _parent.GetReadOnlyPage(childParentNumber);
 
                             _currentPage.LastSearchPosition = 0;
@@ -270,7 +270,7 @@ namespace Voron.Data.Fixed
                         while (_currentPage.IsBranch)
                         {
                             _parent._cursor.Push(_currentPage);
-                            var childParentNumber = _parent.PageValueFor(_currentPage, _currentPage.LastSearchPosition);
+                            var childParentNumber = _currentPage.GetEntry(_currentPage.LastSearchPosition)->PageNumber;
                             _currentPage = _parent.GetReadOnlyPage(childParentNumber);
 
                             _currentPage.LastSearchPosition = _currentPage.NumberOfEntries - 1;

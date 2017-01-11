@@ -222,7 +222,7 @@ namespace Voron.Debugging
                         s = "[smallest]";
 
                     var fstPage = tx.GetPage(pageNum);
-                    RenderFixedSizeTreePage(tx, new FixedSizeTreePage(fstPage.Pointer, Constants.Storage.PageSize), sw, header, s, false);
+                    RenderFixedSizeTreePage(tx, new FixedSizeTreePage(fstPage.Pointer, header->ValueSize + sizeof(long), Constants.Storage.PageSize), sw, header, s, false);
                 }
             }
 
