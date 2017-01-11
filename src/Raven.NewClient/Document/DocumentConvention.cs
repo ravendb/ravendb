@@ -543,6 +543,7 @@ namespace Raven.NewClient.Client.Document
             };
 
             CustomizeJsonSerializer(jsonSerializer);
+            //TODO - EFRAT
             jsonSerializer.Converters.Add(new StringEnumConverter());
             // TODO: Iftah
             /*var convertersToUse = SaveEnumsAsIntegers ? DefaultConvertersEnumsAsIntegers : DefaultConverters;
