@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Runtime.Loader;
 using System.Threading;
 using Raven.Server.Config;
@@ -41,7 +42,21 @@ namespace Raven.Server
                     try
                     {
                         server.Initialize();
-                        Console.WriteLine($"Listening to: {string.Join(", ", configuration.Core.ServerUrl)}");
+                        Console.WriteLine($"Listening to: {string.Join(", ", server.WebUrls)}");
+
+                        var serverWebUrl = server.WebUrls[0];
+                        server.GetTcpServerStatusAsync()
+                            .ContinueWith(tcp =>
+                            {
+                                if (tcp.IsCompleted)
+                                {
+                                    Console.WriteLine($"Tcp listening on {string.Join(", ", tcp.Result.Listeners.Select(l => l.LocalEndpoint))}");
+                                }
+                                else
+                                {
+                                    Console.Error.WriteLine($"Tcp listen failure (see {serverWebUrl}/info/tcp for details) {tcp.Exception.Message}");
+                                }
+                            });
                         Console.WriteLine("Server started, listening to requests...");
 
                         if (configuration.Core.RunAsService)
