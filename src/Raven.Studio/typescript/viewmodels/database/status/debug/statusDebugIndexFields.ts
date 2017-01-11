@@ -80,6 +80,9 @@ class statusDebugIndexFields extends viewModelBase {
     fetchIndexFields(): JQueryPromise<statusDebugIndexFieldsDto> {
         eventsCollector.default.reportEvent("index-fields", "show");
 
+
+        // TODO: in v4.0 we have /studio/index-field endpoint, but please we wanted it swallows IndexCompilationException
+
         this.result(null);
         var db = this.activeDatabase();
         if (db) {

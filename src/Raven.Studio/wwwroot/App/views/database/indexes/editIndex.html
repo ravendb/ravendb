@@ -3,7 +3,7 @@
         <div class="toolbar">
             <div class="row">
                 <div class="col-lg-6">
-                    <div class="input-group toolbar">
+                    <div class="input-group toolbar" data-bind="validationElement: editedIndex().name">
                         <div class="input-group-addon">Index name</div>
                         <input class="form-control" data-bind="textInput: editedIndex().name">
                     </div>
@@ -13,7 +13,6 @@
             <button class="btn btn-success" data-bind="click: save, enable: isSaveEnabled, css: { 'btn-spinner': saveInProgress }"><i class="icon-save"></i><span>Save</span></button>
             <button class="btn btn-default btn-prerelease" disabled="disabled"><i class="icon-clone"></i><span>Clone</span></button>
             <button class="btn btn-default btn-prerelease" disabled="disabled"><i class="icon-rocket"></i><span>Try</span></button>
-            
             
             <button class="btn btn-danger" data-bind="visible: isEditingExistingIndex, click: deleteIndex"><i class="icon-trash"></i> <span>Delete</span></button>
 
@@ -31,7 +30,8 @@
                     <div class="clearfix">
                         <div class="btn-group btn-group-sm pull-right" role="group" aria-label="...">
                             <button type="button" class="btn"><i class="icon-indent"></i> <span>Format</span></button>
-                            <button type="button" class="btn btn-danger" data-bind="click: _.partial($root.removeMap, $index())" title="Remove this map from the index">
+                            <button type="button" class="btn btn-danger" data-bind="click: _.partial($root.removeMap, $index()), enable: $root.editedIndex().maps().length > 1" 
+                                    title="Remove this map from the index">
                                 <i class="icon-trash"></i> <span>Delete</span>
                             </button>
                         </div>
@@ -43,7 +43,9 @@
                             completerHostObject: $root.indexAutoCompleter 
                              -->
                         <pre class="form-control map" 
-                             data-bind="aceEditor: { code: $data, allowResize: true, getFocus: true, lang: 'ace/mode/ravenMapLinq', typeName: 'map' }"></pre>
+                             data-bind="aceEditor: { code: map, allowResize: true, getFocus: true, lang: 'ace/mode/ravenMapLinq', typeName: 'map' }"></pre>
+                        
+                        <div class="bg-danger" data-bind="validationMessage: map"></div>
                     </p>
                 </div>
                 <div class="margin-bottom">
@@ -58,7 +60,7 @@
                 <h2>Reduce</h2>
             </div>
             <div class="col-sm-10">
-                <div data-bind="if: hasReduce">
+                <div data-bind="if: editedIndex().hasReduce">
                     <div class="clearfix">
                         <div class="btn-group btn-group-sm pull-right" role="group" aria-label="...">
                             <button type="button" class="btn"><i class="icon-indent"></i> <span>Format</span></button>
@@ -76,10 +78,12 @@
                     <p>
                         <pre class="form-control map"
                              data-bind="aceEditor: { code: editedIndex().reduce, allowResize: true, getFocus: true, lang: 'ace/mode/ravenReduceLinq', typeName: 'reduce' }"></pre>
+                        
+                        <div class="bg-danger" data-bind="validationMessage: editedIndex().reduce"></div>
                     </p>
                 </div>
 
-                <div class="margin-bottom" data-bind="visible: !hasReduce()">
+                <div class="margin-bottom" data-bind="visible: !editedIndex().hasReduce()">
                     <button class="btn btn-info" data-bind="click: addReduce">
                         <i class="icon-plus"></i><span>Add reduction</span>
                     </button>
@@ -124,7 +128,7 @@
                             <label class="col-sm-2 control-label">Path</label>
                             <div class="col-sm-10">
                                 <div class="dropdown visible-block">
-                                    <button class="btn dropdown-toggle btn-block text-left" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                    <button class="btn dropdown-toggle btn-prerelease btn-block text-left" type="button" id="dropdownMenu1" disabled="disabled" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                                         Path
                                         <span class="caret"></span>
                                     </button>
@@ -144,17 +148,14 @@
                             </div>
                         </div>
                         <hr />
-                        <div class="form-group">
-                            
-                        </div>
                         
                         <div data-bind="foreach: editedIndex().configuration">
                             <div class="form-group">
                                 <label class="col-sm-2 control-label" data-bind="visible: $index() === 0">Customized options</label>
-                                <div class="col-sm-4" data-bind="css: { 'col-sm-offset-2': $index() > 0 } ">
+                                <div class="col-sm-4" data-bind="css: { 'col-sm-offset-2': $index() > 0 }, validationElement: key">
                                     <input class="form-control" placeholder="Key" data-bind="textInput: key">
                                 </div>
-                                <div class="col-sm-6">
+                                <div class="col-sm-6" data-bind="validationElement: value">
                                     <input class="form-control" placeholder="Value" data-bind="textInput: value">
                                 </div>
                             </div>
@@ -177,7 +178,7 @@
         <div class="row">
             <div class="col-xs-8 col-sm-6 col-xl-3  margin-bottom">
                 <h3 data-bind="visible: isDefaultOptions()">Default field options</h3>
-                <div data-bind="if: !isDefaultOptions()">
+                <div class="form-group" data-bind="if: !isDefaultOptions(), validationElement: name" >
                     <input class="form-control" placeholder="Field name" autocomplete="off" data-bind="textInput: name, attr: { id: 'fieldName' + $index() }">
                     <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#' + 'fieldName' + $index(), foreach: $root.createFieldNameAutocompleter($data)">
                         <li role="presentation" data-bind="click: $parent.name.bind($parent, $data)">
@@ -201,47 +202,70 @@
                     <div class="properties-item">
                         <span class="properties-label">Sort</span>
                         <div class="btn-group properties-value">
-                            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                                <span data-bind="text: sort.withLabel($data.constructor.SortOptions)"></span> <span class="caret"></span>
+                            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false" data-bind="attr: { title: effectiveSort }">
+                                <span data-bind="text: effectiveSort"></span> <span class="caret"></span>
                             </button>
-                            <ul class="dropdown-menu" data-bind="foreach: $data.constructor.SortOptions">
-                                <li><a href="#" data-bind="click: $parent.sort.bind($parent, value)"><span data-bind="text: label"></span></a></li>
+                            <ul class="dropdown-menu">
+                                <li><a href="#" data-bind="click: sort.bind(sort, null)"><span data-bind="text: defaultSort"></span></a></li>
+                                <!-- ko foreach: $data.constructor.SortOptions -->
+                                    <li><a href="#" data-bind="click: $parent.sort.bind($parent.sort, value)"><span data-bind="text: label"></span></a></li>
+                                <!-- /ko -->
                             </ul>
                         </div>
                     </div>
 
                     <div class="properties-item">
-                        <div class="toggle toggle-right">
-                            <input id="store_toggle" class="styled" type="checkbox" data-bind="checked: storage">
-                            <label for="store_toggle" class="properties-label">
-                                Store
-                            </label>
+                        <span class="properties-label">Store</span>
+                        <div class="btn-group properties-value">
+                            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                <span data-bind="text: effectiveStorage"></span> <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a href="#" data-bind="click: storage.bind(storage, null)"><span data-bind="text: defaultStorage"></span></a></li>
+                                <li><a href="#" data-bind="click: storage.bind(storage, 'Yes')"><span>Yes</span></a></li>
+                                <li><a href="#" data-bind="click: storage.bind(storage, 'No')"><span>No</span></a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="properties-item">
+                        <span class="properties-label">Full-Text Search</span>
+                        <div class="btn-group properties-value">
+                            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                <span data-bind="text: effectiveFullTextSearch"></span> <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a href="#" data-bind="click: fullTextSearch.bind(fullTextSearch, null)"><span data-bind="text: defaultFullTextSearch"></span></a></li>
+                                <li><a href="#" data-bind="click: fullTextSearch.bind(fullTextSearch, true)"><span>Yes</span></a></li>
+                                <li><a href="#" data-bind="click: fullTextSearch.bind(fullTextSearch, false)"><span>No</span></a></li>
+                            </ul>
                         </div>
                     </div>
 
                     <div class="properties-item">
-                        <div class="toggle toggle-right toggle-prerelease">
-                            <input id="toggle5" class="styled" disabled="disabled" type="checkbox">
-                            <label for="toggle5" class="properties-label">
-                                Full-Text Search
-                            </label>
-                        </div>
-                    </div>
-                    <div class="properties-item">
-                        <div class="toggle toggle-right toggle-prerelease">
-                            <input id="toggle6" class="styled" type="checkbox" disabled="disabled">
-                            <label for="toggle6" class="properties-label">
-                                Highlighting
-                            </label>
+                        <span class="properties-label">Highlighting</span>
+                        
+                        <div class="btn-group properties-value">
+                            <button type="button" class="btn set-size dropdown-toggle btn-prerelease" disabled="disabled" data-toggle="dropdown" aria-expanded="false">
+                                <span>Default (No)</span> <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <!-- TODO: -->
+                            </ul>
                         </div>
                     </div>
 
                     <div class="properties-item">
-                        <div class="toggle toggle-right">
-                            <input id="suggestions_toggle" class="styled" type="checkbox" data-bind="checked: suggestions">
-                            <label for="suggestions_toggle" class="properties-label">
-                                Suggestions
-                            </label>
+                        <span class="properties-label">Suggestions</span>
+                        <div class="btn-group properties-value">
+                            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                <span data-bind="text: effectiveSuggestions"></span> <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a href="#" data-bind="click: suggestions.bind(suggestions, null)"><span data-bind="text: defaultSuggestions"></span></a></li>
+                                <li><a href="#" data-bind="click: suggestions.bind(suggestions, 'Yes')"><span>Yes</span></a></li>
+                                <li><a href="#" data-bind="click: suggestions.bind(suggestions, 'No')"><span>No</span></a></li>
+                            </ul>
                         </div>
                     </div>
 
@@ -263,11 +287,14 @@
                     <div class="properties-item">
                         <span class="properties-label">TermVector</span>
                         <div class="btn-group properties-value">
-                            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                                <span data-bind="text: termVector.withLabel($data.constructor.TermVectors)"></span> <span class="caret"></span>
+                            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false" data-bind="attr: { title: effectiveTermVector }">
+                                <span data-bind="text: effectiveTermVector"></span> <span class="caret"></span>
                             </button>
-                            <ul class="dropdown-menu" data-bind="foreach: $data.constructor.TermVectors">
-                                <li><a href="#" data-bind="click: $parent.termVector.bind($parent, value)"><span data-bind="text: label"></span></a></li>
+                            <ul class="dropdown-menu">
+                                <li><a href="#" data-bind="click: termVector.bind(termVector, null)"><span data-bind="text: defaultTermVector"></span></a></li>
+                                <!-- ko foreach: $data.constructor.TermVectors -->
+                                <li><a href="#" data-bind="click: $parent.termVector.bind($parent.termVector, value)"><span data-bind="text: label"></span></a></li>
+                                <!-- /ko -->
                             </ul>
                         </div>
                     </div>
@@ -275,11 +302,14 @@
                     <div class="properties-item">
                         <span class="properties-label">Indexing</span>
                         <div class="btn-group properties-value">
-                            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                                <span data-bind="text: indexing.withLabel($data.constructor.Indexing)"></span> <span class="caret"></span>
+                            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false" data-bind="attr: { title: effectiveIndexing }">
+                                <span data-bind="text: effectiveIndexing"></span> <span class="caret"></span>
                             </button>
-                            <ul class="dropdown-menu" data-bind="foreach: $data.constructor.Indexing">
-                                <li><a href="#" data-bind="click: $parent.indexing.bind($parent, value)"><span data-bind="text: label"></span></a></li>
+                            <ul class="dropdown-menu">
+                                <li><a href="#" data-bind="click: indexing.bind(indexing, null)"><span data-bind="text: defaultIndexing"></span></a></li>
+                                <!-- ko foreach: $data.constructor.Indexing -->
+                                <li><a href="#" data-bind="click: $parent.indexing.bind($parent.indexing, value)"><span data-bind="text: label"></span></a></li>
+                                <!-- /ko -->
                             </ul>
                         </div>
                     </div>
@@ -287,7 +317,7 @@
                     <div class="properties-item" data-bind="visible: canProvideAnalyzer">
                         <span class="properties-label">Analyzer</span>
                         <div class="btn-group properties-value">
-                            <input class="form-control" type="text" value="" data-bind="textInput: analyzer" />
+                            <input class="form-control" type="text" value="" placeholder="StandardAnalyzer" data-bind="textInput: analyzer" />
                         </div>
                     </div>
 
