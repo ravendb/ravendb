@@ -31,6 +31,7 @@ import showDataDialog = require("viewmodels/common/showDataDialog");
 import formatIndexCommand = require("commands/database/index/formatIndexCommand");
 import renameOrDuplicateIndexDialog = require("viewmodels/database/indexes/renameOrDuplicateIndexDialog");
 import indexFieldOptions = require("models/database/index/indexFieldOptions");
+import getIndexFieldsCommand = require("commands/database/index/getIndexFieldsCommand");
 
 import eventsCollector = require("common/eventsCollector");
 
@@ -42,9 +43,8 @@ class editIndex extends viewModelBase {
     isSaveEnabled: KnockoutComputed<boolean>;
     saveInProgress = ko.observable<boolean>(false);
 
-    fieldNames = ko.observableArray<string>([]); //TODO: use real values!
+    fieldNames = ko.observableArray<string>([]);
 
-    hasReduce = ko.observable<boolean>(false);
     queryUrl = ko.observable<string>();
     termsUrl = ko.observable<string>();
 
@@ -68,6 +68,14 @@ class editIndex extends viewModelBase {
       
         aceEditorBindingHandler.install();
         autoCompleteBindingHandler.install();
+
+        this.editedIndex.subscribe(indexDef => {
+            const firstMap = indexDef.maps()[0].map;
+
+            firstMap.throttle(1000).subscribe(map => {
+                this.updateIndexFields();
+            });
+        });
 
         /* TODO scripted index
         this.isScriptedIndexBundleActive.subscribe((active: boolean) => {
@@ -145,9 +153,18 @@ class editIndex extends viewModelBase {
         //TODO: scripted index this.checkIfScriptedIndexBundleIsActive();
     }
 
+    private updateIndexFields() {
+        const map = this.editedIndex().maps()[0].map();
+        new getIndexFieldsCommand(this.activeDatabase(), map)
+            .execute()
+            .done((fields: string[]) => {
+                this.fieldNames(fields);
+            });
+    }
+
     private initializeDirtyFlag() {
         const indexDef: indexDefinition = this.editedIndex();
-        const checkedFieldsArray: Array<KnockoutObservable<any>> = [indexDef.name, indexDef.maps, indexDef.reduce, indexDef.numberOfLuceneFields];
+        const checkedFieldsArray: Array<KnockoutObservable<any>> = [indexDef.name, indexDef.maps, indexDef.reduce, indexDef.numberOfFields];
 
 
         const configuration = indexDef.configuration();
@@ -208,14 +225,14 @@ class editIndex extends viewModelBase {
 
     addMap() {
         eventsCollector.default.reportEvent("index", "add-map");
-        this.editedIndex().maps.push(ko.observable<string>());
+        this.editedIndex().addMap();
     }
 
     addReduce() {
         eventsCollector.default.reportEvent("index", "add-reduce");
-        if (!this.hasReduce()) {
+        if (!this.editedIndex().hasReduce()) {
+            this.editedIndex().hasReduce(true);
             this.editedIndex().reduce("");
-            this.hasReduce(true);
         }
     }
 
@@ -227,7 +244,7 @@ class editIndex extends viewModelBase {
     removeReduce() {
         eventsCollector.default.reportEvent("index", "remove-reduce");
         this.editedIndex().reduce(null);
-        this.hasReduce(false);
+        this.editedIndex().hasReduce(false);
     }
 
     addField() {
@@ -235,10 +252,13 @@ class editIndex extends viewModelBase {
         this.editedIndex().addField();
     }
 
-    removeField(fieldIndex: number) {
+    removeField(field: indexFieldOptions) {
         eventsCollector.default.reportEvent("index", "remove-field");
-        const fieldToRemove = this.editedIndex().fields()[fieldIndex];
-        this.editedIndex().fields.splice(fieldIndex, 1);
+        if (field.isDefaultOptions()) {
+            this.editedIndex().removeDefaultFieldOptions();
+        } else {
+            this.editedIndex().fields.remove(field);
+        }
     }
 
     addDefaultField() {
@@ -254,11 +274,14 @@ class editIndex extends viewModelBase {
         return ko.pureComputed(() => {
             const name = field.name();
             const fieldNames = this.fieldNames();
+            const otherFieldNames = this.editedIndex().fields().filter(f => f !== field).map(x => x.name());
+
+            const filteredFieldNames = _.difference(fieldNames, otherFieldNames);
 
             if (name) {
-                return fieldNames.filter(x => x.toLowerCase().includes(name.toLowerCase()));
+                return filteredFieldNames.filter(x => x.toLowerCase().includes(name.toLowerCase()));
             } else {
-                return fieldNames;
+                return filteredFieldNames;
             }
 
         });
@@ -270,16 +293,50 @@ class editIndex extends viewModelBase {
             .done(result => {
                 this.editedIndex(new indexDefinition(result));
                 this.originalIndexName = this.editedIndex().name();
-                this.hasReduce(!!this.editedIndex().reduce());
+                this.editedIndex().hasReduce(!!this.editedIndex().reduce());
+                this.updateIndexFields();
             })
     }
 
+    private validate(): boolean {
+        let valid = true;
+
+        const editedIndex = this.editedIndex();   
+
+        if (!this.isValid(this.editedIndex().validationGroup))
+            valid = false;
+
+        editedIndex.fields().forEach(field => {
+            if (!this.isValid(field.validationGroup)) {
+                valid = false;
+            }
+        });
+
+        editedIndex.maps().forEach(map => {
+            if (!this.isValid(map.validationGroup)) {
+                valid = false;
+            }
+        });
+
+        editedIndex.configuration().forEach(config => {
+            if (!this.isValid(config.validationGroup)) {
+                valid = false;
+            }
+        });
+
+        return valid;
+    }
+
     save() {
-        //TODO: validation 
+        const editedIndex = this.editedIndex();         
+
+        if (!this.validate()) {
+            return;
+        }
 
         this.saveInProgress(true);
 
-        const editedIndex = this.editedIndex();         
+        
 
         //if index name has changed it isn't the same index
         /*
@@ -325,7 +382,7 @@ class editIndex extends viewModelBase {
             if (this.scriptedIndex()) {
                 this.fetchOrCreateScriptedIndex(); // reload scripted index to obtain fresh etag and metadata
             }*/
-            this.initializeDirtyFlag();
+            this.dirtyFlag().reset();
             this.editedIndex().name.valueHasMutated();
             //TODO: merge suggestion: var isSavingMergedIndex = this.mergeSuggestion() != null;
 

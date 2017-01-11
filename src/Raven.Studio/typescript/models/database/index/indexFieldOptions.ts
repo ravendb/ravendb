@@ -2,6 +2,14 @@
 
 import spatialOptions = require("models/database/index/spatialOptions");
 
+function labelMatcher<T>(labels: Array<valueAndLabelItem<T, string>>): (arg: T) => string {
+    return(arg) => labels.find(x => x.value === arg).label;
+}
+
+function yesNoLabelProvider(arg: boolean) {
+    return arg ? 'Yes' : 'No';
+}
+
 class indexFieldOptions {
 
     static readonly DefaultFieldOptions = "__all_fields";
@@ -9,13 +17,13 @@ class indexFieldOptions {
             label: "None",
             value: "None"
         }, {
-            label: "Numeric (default)",
+            label: "Numeric",
             value: "NumericDefault"
         }, {
-            label: "Numeric (double)",
+            label: "Double",
             value: "NumericDouble"
         }, {
-            label: "Numeric (long)",
+            label: "Long",
             value: "NumericLong"
         }, {
             label: "String", 
@@ -59,24 +67,49 @@ class indexFieldOptions {
 
     name = ko.observable<string>();
 
+    parent = ko.observable<indexFieldOptions>();
+
     analyzer = ko.observable<string>();
+
     indexing = ko.observable<Raven.Abstractions.Indexing.FieldIndexing>();
+    effectiveIndexing = this.effectiveComputed(x => x.indexing(), labelMatcher(indexFieldOptions.Indexing));
+    defaultIndexing = this.defaultComputed(x => x.indexing(), labelMatcher(indexFieldOptions.Indexing));
+
     sort = ko.observable<Raven.Abstractions.Indexing.SortOptions>();
-    storage = ko.observable<boolean>();
+    effectiveSort = this.effectiveComputed(x => x.sort(), labelMatcher(indexFieldOptions.SortOptions));
+    defaultSort = this.defaultComputed(x => x.sort(), labelMatcher(indexFieldOptions.SortOptions));
+
+    storage = ko.observable<Raven.Abstractions.Indexing.FieldStorage>();
+    effectiveStorage = this.effectiveComputed(x => x.storage());
+    defaultStorage = this.defaultComputed(x => x.storage());
+
     suggestions = ko.observable<boolean>();
+    effectiveSuggestions = this.effectiveComputed(x => x.suggestions(), yesNoLabelProvider);
+    defaultSuggestions = this.defaultComputed(x => x.suggestions(), yesNoLabelProvider);
+
     termVector = ko.observable<Raven.Abstractions.Indexing.FieldTermVector>();
+    effectiveTermVector = this.effectiveComputed(x => x.termVector(), labelMatcher(indexFieldOptions.TermVectors));
+    defaultTermVector = this.defaultComputed(x => x.termVector(), labelMatcher(indexFieldOptions.TermVectors));
+
+    fullTextSearch = ko.observable<boolean>();
+    effectiveFullTextSearch = this.effectiveComputed(x => x.fullTextSearch(), yesNoLabelProvider);
+    defaultFullTextSearch = this.defaultComputed(x => x.fullTextSearch(), yesNoLabelProvider);
+
     spatial = ko.observable<spatialOptions>();
 
     hasSpatialOptions = ko.observable<boolean>(false);
     showAdvancedOptions = ko.observable<boolean>(false);
     canProvideAnalyzer = ko.pureComputed(() => this.indexing() === "Analyzed");
 
-    constructor(name: string, dto: Raven.Client.Indexing.IndexFieldOptions) {
+    validationGroup: KnockoutObservable<any>;
+
+    constructor(name: string, dto: Raven.Client.Indexing.IndexFieldOptions, parentFields?: indexFieldOptions) {
         this.name(name);
+        this.parent(parentFields);
         this.analyzer(dto.Analyzer);
         this.indexing(dto.Indexing);
         this.sort(dto.Sort);
-        this.storage(dto.Storage === "Yes");
+        this.storage(dto.Storage);
         this.suggestions(dto.Suggestions);
         this.termVector(dto.TermVector);
         this.hasSpatialOptions(!!dto.Spatial);
@@ -87,18 +120,116 @@ class indexFieldOptions {
         }
 
         _.bindAll(this, "toggleAdvancedOptions");
+
+        this.initValidation();
+
+        // used to avoid circular updates
+        let fullTextChangeInProgress = false;
+        let indexingChangeInProgess = false;
+
+        const onFullTextChanged = () => {
+            if (!indexingChangeInProgess) {
+                const newValue = this.fullTextSearch();
+                fullTextChangeInProgress = true;
+                if (newValue) {
+                    this.analyzer(null);
+                    this.indexing("Analyzed");
+                } else {
+                    this.analyzer(null);
+                    this.indexing("Default");
+                }
+                fullTextChangeInProgress = false;
+            }
+        }
+
+        this.fullTextSearch.subscribe(() => onFullTextChanged());
+
+        this.indexing.subscribe(newIndexing => {
+            if (!fullTextChangeInProgress) {
+                indexingChangeInProgess = true;
+                this.fullTextSearch(newIndexing === "Analyzed" && !this.fullTextSearch() && !this.analyzer());
+                indexingChangeInProgess = false;
+            }
+        });
+
+        this.analyzer.subscribe(newAnalyzer => {
+            if (!fullTextChangeInProgress) {
+                indexingChangeInProgess = true;
+                this.fullTextSearch(!newAnalyzer && !this.fullTextSearch() && this.indexing() == "Analyzed");
+                indexingChangeInProgess = false;
+            }
+        });
+    }
+
+    private effectiveComputed<T>(extractor: (field: indexFieldOptions) => T, labelProvider?: (arg: T) => string): KnockoutComputed<string> {
+        return ko.pureComputed(() => this.extractEffectiveValue(x => extractor(x), true, labelProvider));
+    }
+
+    private defaultComputed<T>(extractor: (field: indexFieldOptions) => T, labelProvider?: (arg: T) => string): KnockoutComputed<string> {
+        return ko.pureComputed(() => "Default (" + this.parent().extractEffectiveValue(x => extractor(x), false, labelProvider) + ")");
+    }
+
+    private extractEffectiveValue<T>(extractor: (field: indexFieldOptions) => T, wrapWithDefault: boolean, labelProvider?: (arg: T) => string): string {
+        const candidates = [] as T[];
+
+        let field = this as indexFieldOptions;
+
+        while (field) {
+            candidates.push(extractor(field));
+            field = field.parent();
+        }
+
+        const index = candidates.findIndex(x => !_.isNull(x) && !_.isUndefined(x));
+        const value = candidates[index];
+
+        const label = labelProvider ? labelProvider(value) : value;
+
+        return (index > 0 && wrapWithDefault) ? "Default (" + label + ")" : <any>label;
+    }
+
+    private initValidation() {
+        if (!this.isDefaultOptions()) {
+            this.name.extend({ required: true });
+        }
+
+        this.validationGroup = ko.validatedObservable({
+            name: this.name
+        });
+    }
+
+    static defaultFieldOptions() {
+        return new indexFieldOptions(indexFieldOptions.DefaultFieldOptions, indexFieldOptions.getDefaultDto(), indexFieldOptions.globalDefaults());
     }
 
     static empty() {
-        return new indexFieldOptions("", {
+        return new indexFieldOptions("", indexFieldOptions.getDefaultDto(), indexFieldOptions.globalDefaults());
+    }
+
+    static globalDefaults() {
+        const field = new indexFieldOptions("", {
             Storage: "No",
             Indexing: "Default",
             Sort: "None",
             Analyzer: "StandardAnalyzer",
             Suggestions: false,
-            Spatial: null as Raven.Abstractions.Indexing.SpatialOptions, 
+            Spatial: null as Raven.Abstractions.Indexing.SpatialOptions,
             TermVector: "No"
-        } as Raven.Client.Indexing.IndexFieldOptions);
+        });
+        field.fullTextSearch(false);
+
+        return field;
+    }
+
+    private static getDefaultDto() {
+        return {
+            Storage: null,
+            Indexing: null,
+            Sort: null,
+            Analyzer: null,
+            Suggestions: null,
+            Spatial: null as Raven.Abstractions.Indexing.SpatialOptions,
+            TermVector: null
+        } as Raven.Client.Indexing.IndexFieldOptions;
     }
 
     toggleAdvancedOptions() {
@@ -114,7 +245,7 @@ class indexFieldOptions {
             Analyzer: this.analyzer(),
             Indexing: this.indexing(),
             Sort: this.sort(),
-            Storage: this.storage() ? "Yes" : "No",
+            Storage: this.storage(),
             Suggestions: this.suggestions(),
             TermVector: this.termVector(),
             Spatial: this.hasSpatialOptions() ? this.spatial().toDto() : undefined

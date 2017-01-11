@@ -163,7 +163,7 @@ class indexAceAutoCompleteProvider {
 
 
     getIndexReduceCompleterValues(): string[] {
-        var firstMapSrting = this.editedIndex().maps()[0]();
+        var firstMapSrting = this.editedIndex().maps()[0].map();
 
         var dotPrefixes = firstMapSrting.match(/[.]\w*/g);
         var equalPrefixes = firstMapSrting.match(/\w*\s*=\s*/g);

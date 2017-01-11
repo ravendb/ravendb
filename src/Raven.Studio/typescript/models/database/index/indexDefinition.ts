@@ -3,13 +3,54 @@
 import indexFieldOptions = require("models/database/index/indexFieldOptions");
 import configuration = require("configuration");
 
+class mapItem {
+    map = ko.observable<string>();
+
+    validationGroup: KnockoutObservable<any>;
+
+    constructor(map: string) {
+        this.map(map);
+
+        this.initValidation();
+    }
+
+    private initValidation() {
+        this.map.extend({
+            required: true
+        });
+
+        this.validationGroup = ko.validatedObservable({
+            map: this.map
+        });
+    }
+}
+
 class configurationItem {
     key = ko.observable<string>();
     value = ko.observable<string>();
 
+    validationGroup: KnockoutObservable<any>;
+
     constructor(key: string, value: string) {
         this.key(key);
         this.value(value);
+
+        this.initValidation();
+    }
+
+    private initValidation() {
+        this.key.extend({
+            required: true
+        });
+
+        this.value.extend({
+            required: true
+        });
+
+        this.validationGroup = ko.validatedObservable({
+            key: this.key,
+            value: this.value
+        });
     }
 
     static empty() {
@@ -20,31 +61,40 @@ class configurationItem {
 class indexDefinition {
 
     name = ko.observable<string>();
-    maps = ko.observableArray<KnockoutObservable<string>>();
+    maps = ko.observableArray<mapItem>();
     reduce = ko.observable<string>();
     isTestIndex = ko.observable<boolean>(false);
     isSideBySideIndex = ko.observable<boolean>(false);
     fields = ko.observableArray<indexFieldOptions>();
     defaultFieldOptions = ko.observable<indexFieldOptions>();
 
-    numberOfLuceneFields = ko.pureComputed(() => this.fields().length);
+    numberOfFields = ko.pureComputed(() => this.fields().length);
     numberOfConfigurationFields = ko.pureComputed(() => this.configuration() ? this.configuration().length : 0);
 
     configuration = ko.observableArray<configurationItem>();
     maxIndexOutputsPerDocument = ko.observable<number>();
     lockMode: Raven.Abstractions.Indexing.IndexLockMode;
 
+    hasReduce = ko.observable<boolean>(false);
+
+    validationGroup: KnockoutObservable<any>;
+
     constructor(dto: Raven.Client.Indexing.IndexDefinition) {
         this.name(dto.Name);
-        this.maps(dto.Maps.map(x => ko.observable<string>(x)));
+        this.maps(dto.Maps.map(x => new mapItem(x)));
         this.reduce(dto.Reduce);
         this.isTestIndex(dto.IsTestIndex);
         this.isSideBySideIndex(dto.IsSideBySideIndex);
-        this.fields(_.map(dto.Fields, (fieldDto, indexName) => new indexFieldOptions(indexName, fieldDto)));
+        this.fields(_.map(dto.Fields, (fieldDto, indexName) => new indexFieldOptions(indexName, fieldDto, indexFieldOptions.defaultFieldOptions())));
         const defaultFieldOptions = this.fields().find(x => x.name() === indexFieldOptions.DefaultFieldOptions);
         if (defaultFieldOptions) {
             this.defaultFieldOptions(defaultFieldOptions);
+            defaultFieldOptions.parent(indexFieldOptions.globalDefaults());
             this.fields.remove(defaultFieldOptions);
+
+            this.fields().forEach(field => {
+                field.parent(defaultFieldOptions);
+            });
         }
         this.lockMode = dto.LockMode;
         this.configuration(this.parseConfiguration(dto.Configuration));
@@ -54,6 +104,25 @@ class indexDefinition {
             this.maxIndexOutputsPerDocument(parseInt(existingMaxIndexOutputs.value()));
             this.configuration.remove(existingMaxIndexOutputs);
         }
+
+        this.initValidation();
+    }
+
+    private initValidation() {
+        this.name.extend({
+            required: true
+        });
+
+        this.reduce.extend({
+            required: {
+                onlyIf: () => this.hasReduce()
+            }
+        })
+
+        this.validationGroup = ko.validatedObservable({
+            name: this.name,
+            reduce: this.reduce
+        });
     }
 
     private parseConfiguration(config: Raven.Client.Indexing.IndexConfiguration): Array<configurationItem> {
@@ -103,7 +172,7 @@ class indexDefinition {
     toDto(): Raven.Client.Indexing.IndexDefinition {
         return {
             Name: this.name(),
-            Maps: this.maps().map(m => m()),
+            Maps: this.maps().map(m => m.map()),
             Reduce: this.reduce(),
             IndexId: null,
             Type: this.detectIndexType(),
@@ -115,18 +184,38 @@ class indexDefinition {
         }
     }
 
+    addMap() {
+        const map = new mapItem("");
+        this.maps.push(map);
+    }
+
     addField() {
-        this.fields.push(indexFieldOptions.empty());
+        const field = indexFieldOptions.empty();
+        if (this.defaultFieldOptions()) {
+            field.parent(this.defaultFieldOptions());
+        }
+        this.fields.push(field);
     }
 
     addDefaultField() {
-        const fieldOptions = indexFieldOptions.empty();
-        fieldOptions.name(indexFieldOptions.DefaultFieldOptions);
+        const fieldOptions = indexFieldOptions.defaultFieldOptions();
         this.defaultFieldOptions(fieldOptions);
+
+        this.fields().forEach(field => {
+            field.parent(fieldOptions);
+        });
     }
 
     addConfigurationOption() {
         this.configuration.push(configurationItem.empty());
+    }
+
+    removeDefaultFieldOptions() {
+        this.defaultFieldOptions(null);
+
+        this.fields().forEach(field => {
+            field.parent(indexFieldOptions.defaultFieldOptions());
+        });
     }
 
     static empty(): indexDefinition {
