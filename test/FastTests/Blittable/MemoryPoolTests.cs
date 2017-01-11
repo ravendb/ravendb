@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Server.Json;
@@ -18,7 +19,18 @@ namespace FastTests.Blittable
                 var allocatedMemory = new List<AllocatedMemoryData>();
                 for (var i = 0; i < 1000; i++)
                 {
-                    allocatedMemory.Add(pool.Allocate(i));
+                    var alloc = pool.Allocate(i);
+                    if (i == 500)
+                    {
+                        Console.WriteLine("*****************************************");
+                        Console.Out.Flush();
+                        byte* offset = (byte*) new IntPtr(alloc.Address + 1024L*1024).ToPointer();
+                        *(offset) = Byte.MaxValue;
+                        Console.WriteLine("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
+                        Console.Out.Flush();
+
+                    }
+                    allocatedMemory.Add(alloc);
                 }
                 foreach (var data in allocatedMemory)
                 {
