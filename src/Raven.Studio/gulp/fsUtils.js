@@ -2,8 +2,8 @@ const fs = require('fs');
 
 module.exports = {
     getLastRecentlyModifiedFile(paths) {
-        let result = paths.map(x => {
-            let stat = null;
+        var result = paths.map(x => {
+            var stat = null;
             try {
                 stat = fs.statSync(x);
             } catch (err) {

@@ -18,7 +18,7 @@ var gulp = require('gulp'),
     gutil = require('gulp-util'),
     autoPrefixer = require('gulp-autoprefixer'),
     fileExists = require('file-exists'),
-    { getLastRecentlyModifiedFile } = require('./gulp/fsUtils');
+    fsUtils = require('./gulp/fsUtils');
 
 var PATHS = require('./gulp/paths');
 
@@ -58,11 +58,11 @@ gulp.task('less', function() {
 });
 
 gulp.task('generate-typings', function (cb) {
-    const possibleTypingsGenPaths = [
+    var possibleTypingsGenPaths = [
         '../../tools/TypingsGenerator/bin/Debug/netcoreapp1.1/TypingsGenerator.dll',
         '../../tools/TypingsGenerator/bin/Release/netcoreapp1.1/TypingsGenerator.dll' ];
 
-    let dllPath = getLastRecentlyModifiedFile(possibleTypingsGenPaths);
+    var dllPath = fsUtils.getLastRecentlyModifiedFile(possibleTypingsGenPaths);
     if (!dllPath) {
         cb(new Error('TypingsGenerator.dll not found neither for Release nor Debug directory.'));
         return;
