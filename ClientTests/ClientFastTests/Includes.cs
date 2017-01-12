@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Globalization;
 using System.Linq;
+using FastTests;
 using Raven.NewClient.Client;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace NewClientTests.NewClient
 {
-    public class Includes :  RavenTestBase
+    public class Includes :  RavenNewTestBase
     {
         [Fact]
         public void Can_Load_With_Include()

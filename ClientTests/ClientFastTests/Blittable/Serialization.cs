@@ -1,8 +1,9 @@
-﻿using Xunit;
+﻿using FastTests;
+using Xunit;
 
 namespace NewClientTests.NewClient.Blittable
 {
-    public class Serialization : RavenTestBase
+    public class Serialization : RavenNewTestBase
     {
         [Fact]
         public void Can_Store_And_Load_Boolean_And_Nullable_Boolean()

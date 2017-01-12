@@ -5,12 +5,13 @@
 // -----------------------------------------------------------------------
 
 using System.Linq;
+using FastTests;
 using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace NewClientTests.NewClient.ResultsTransformer
 {
-    public class NestingTransformers : RavenTestBase
+    public class NestingTransformers : RavenNewTestBase
     {
         public class Product
         {

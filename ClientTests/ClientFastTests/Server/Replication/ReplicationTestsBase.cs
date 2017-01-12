@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Linq;
@@ -9,7 +10,7 @@ using Raven.NewClient.Client.Document;
 
 namespace NewClientTests.NewClient.Server.Replication
 {
-    public class ReplicationTestsBase : RavenTestBase
+    public class ReplicationTestsBase : RavenNewTestBase
     {
         
         protected bool WaitForDocumentDeletion(DocumentStore store,

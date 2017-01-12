@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using FastTests;
 using NewClientTests;
 using Raven.NewClient.Client.Exceptions;
 
@@ -8,7 +9,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace NewClientTests.NewClient.Raven.Tests.Core.Sessiont
 {
-    public class OptimisticConcurrency : RavenTestBase
+    public class OptimisticConcurrency : RavenNewTestBase
     {
 #if DNXCORE50
         public OptimisticConcurrency(TestServerFixture fixture)

@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using NewClientTests;
 using Raven.NewClient.Client.Document;
 
 namespace NewClientTests.NewClient.Subscriptions
 {
-    public class SubscriptionTestBase: RavenTestBase
+    public class SubscriptionTestBase: RavenNewTestBase
     {
         public class Thing
         {

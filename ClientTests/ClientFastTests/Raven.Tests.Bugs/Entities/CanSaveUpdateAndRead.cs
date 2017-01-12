@@ -1,9 +1,10 @@
 ﻿using System.Linq;
+using FastTests;
 using Xunit;
 
 namespace NewClientTests.NewClient.Raven.Tests.Bugs.Entities
 {
-    public class CanSaveUpdateAndRead : RavenTestBase
+    public class CanSaveUpdateAndRead : RavenNewTestBase
     {
         [Fact]
         public void Can_read_entity_name_after_update()

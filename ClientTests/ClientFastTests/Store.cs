@@ -1,9 +1,10 @@
-﻿using Raven.Tests.Core.Utils.Entities;
+﻿using FastTests;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace NewClientTests.NewClient
 {
-    public class Store : RavenTestBase
+    public class Store : RavenNewTestBase
     {
         [Fact]
         public void Store_Document()

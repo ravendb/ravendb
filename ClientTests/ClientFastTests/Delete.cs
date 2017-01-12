@@ -1,9 +1,10 @@
-﻿using Raven.Tests.Core.Utils.Entities;
+﻿using FastTests;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace NewClientTests.NewClient
 {
-    public class Delete : RavenTestBase
+    public class Delete : RavenNewTestBase
     {
         [Fact]
         public void Delete_Document_By_entity()

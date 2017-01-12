@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.NewClient.Client;
 using Raven.NewClient.Client.Indexes;
 using Xunit;
@@ -15,7 +16,7 @@ using Xunit.Sdk;
 
 namespace NewClientTests.NewClient.ResultsTransformer
 {
-    public class RavenDB_4161 : RavenTestBase
+    public class RavenDB_4161 : RavenNewTestBase
     {
         [Fact]
         public void CanUseTransfromer()

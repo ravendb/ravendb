@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Linq;
+using FastTests;
 using Raven.NewClient.Client.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace NewClientTests.NewClient.ResultsTransformer
 {
-    public class TransformerParametersToResultTransformer : RavenTestBase
+    public class TransformerParametersToResultTransformer : RavenNewTestBase
     {
         public class Product
         {

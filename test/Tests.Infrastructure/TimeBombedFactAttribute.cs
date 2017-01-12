@@ -1,7 +1,7 @@
 ﻿using System;
 using Xunit;
 
-namespace Tests.Infrastructure
+namespace FastTests
 {
     public class TimeBombedFactAttribute : FactAttribute
     {

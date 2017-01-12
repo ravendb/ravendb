@@ -1,10 +1,11 @@
 ﻿using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using System.Linq;
+using FastTests;
 
 namespace NewClientTests.NewClient.Raven.Tests.Bugs.Metadata
 {
-    public class Querying : RavenTestBase
+    public class Querying : RavenNewTestBase
     {
         [Fact]
         public void Can_query_metadata()

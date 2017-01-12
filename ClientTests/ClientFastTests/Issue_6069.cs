@@ -1,10 +1,11 @@
-﻿using Raven.NewClient.Client.Document;
+﻿using FastTests;
+using Raven.NewClient.Client.Document;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace NewClientTests.NewClient
 {
-    public class Issue_6069 : RavenTestBase
+    public class Issue_6069 : RavenNewTestBase
     {
         [Fact]
         public void CRUD_Operations()

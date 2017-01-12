@@ -1,3 +1,4 @@
+using FastTests;
 using FastTests.Server.Basic.Entities;
 using NewClientTests;
 using Xunit;
@@ -6,7 +7,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace NewClientTests.NewClient.Raven.Tests.Core.Session
 { 
-    public class Includes : RavenTestBase
+    public class Includes : RavenNewTestBase
     {
 #if DNXCORE50
         public Includes(TestServerFixture fixture)

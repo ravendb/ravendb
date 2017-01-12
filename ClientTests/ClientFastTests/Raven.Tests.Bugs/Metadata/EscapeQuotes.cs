@@ -4,12 +4,13 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using FastTests;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace NewClientTests.NewClient.Raven.Tests.Bugs.Metadata
 {
-    public class EscapeQuotes : RavenTestBase
+    public class EscapeQuotes : RavenNewTestBase
     {
         [Fact]
         public void CanProperlyEscapeQuotesInMetadata_Local_1()

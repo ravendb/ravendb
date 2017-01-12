@@ -7,12 +7,13 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.NewClient.Abstractions;
 using Xunit;
 
 namespace NewClientTests.NewClient.Raven.Tests.Bugs.Caching
 {
-    public class CachingOfDocumentInclude : RavenTestBase
+    public class CachingOfDocumentInclude : RavenNewTestBase
     {
         public class User
         {

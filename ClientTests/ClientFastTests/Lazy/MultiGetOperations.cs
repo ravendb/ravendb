@@ -1,10 +1,11 @@
 ﻿using System.Linq;
+using FastTests;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace NewClientTests.NewClient.Lazy
 {
-    public class MultiGetOperations : RavenTestBase
+    public class MultiGetOperations : RavenNewTestBase
     {
         [Fact]
         public void UnlessAccessedLazyLoadsAreNoOp()

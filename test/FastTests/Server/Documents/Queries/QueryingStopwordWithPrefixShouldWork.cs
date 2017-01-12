@@ -6,7 +6,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Queries
 {
-    public class QueryingStopwordWithPrefixShouldWork: NewClientTests.RavenTestBase
+    public class QueryingStopwordWithPrefixShouldWork : RavenNewTestBase
     {
         public class Foo
         {

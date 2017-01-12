@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Http;
+using FastTests;
 using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Exceptions;
@@ -11,7 +12,7 @@ using Xunit;
 
 namespace NewClientTests.NewClient.Server.Basic
 {
-    public class ServerStore : RavenTestBase
+    public class ServerStore : RavenNewTestBase
     {
         [Fact]
         public void Admin_databases_endpoint_should_refuse_document_with_lower_etag_with_concurrency_Exception()

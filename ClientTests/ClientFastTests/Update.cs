@@ -1,9 +1,10 @@
-﻿using Raven.Tests.Core.Utils.Entities;
+﻿using FastTests;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace NewClientTests.NewClient
 {
-    public class Update : RavenTestBase
+    public class Update : RavenNewTestBase
     {
         [Fact]
         public void Update_Document()

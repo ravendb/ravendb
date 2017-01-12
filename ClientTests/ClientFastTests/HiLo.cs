@@ -13,7 +13,7 @@ using Raven.NewClient.Client.Document.Async;
 
 namespace FastTests
 {
-    public class Hilo : RavenTestBase
+    public class Hilo : RavenNewTestBase
     {
         private class HiloDoc
         {

@@ -1,8 +1,9 @@
-﻿using Xunit;
+﻿using FastTests;
+using Xunit;
 
 namespace NewClientTests.NewClient.Raven.Tests.Bugs.Identifiers
 {
-    public class LongId : RavenTestBase
+    public class LongId : RavenNewTestBase
     {
         public class Entity
         {

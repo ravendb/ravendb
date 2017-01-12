@@ -1,9 +1,10 @@
-﻿using Raven.NewClient.Abstractions.Data;
+﻿using FastTests;
+using Raven.NewClient.Abstractions.Data;
 using Xunit;
 
 namespace NewClientTests.NewClient
 {
-    public class WhatChanged : RavenTestBase
+    public class WhatChanged : RavenNewTestBase
     {
         [Fact]
         public void What_Changed_New_Field()

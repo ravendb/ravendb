@@ -1,9 +1,10 @@
 ﻿using System.Threading.Tasks;
+using FastTests;
 using Xunit;
 
 namespace NewClientTests.NewClient.Raven.Tests.Bugs.Async
 {
-    public class Querying : RavenTestBase
+    public class Querying : RavenNewTestBase
     {
         [Fact]
         public async Task Can_query_using_async_session()

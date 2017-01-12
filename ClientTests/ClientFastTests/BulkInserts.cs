@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Lucene.Net.Analysis;
-using NewClientTests;
+using FastTests;
 using Raven.NewClient.Client.Indexes;
 using Xunit;
 using Raven.NewClient.Client.Commands;
@@ -11,7 +9,7 @@ using Sparrow.Json;
 
 namespace NewClientTests.NewClient.FastTests.BulkInsert
 {
-    public class BulkInserts : RavenTestBase
+    public class BulkInserts : RavenNewTestBase
     {
         [Fact]
         public async Task Simple_Bulk_Insert()

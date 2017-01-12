@@ -1,12 +1,13 @@
 ﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace NewClientTests.NewClient
 {
-    public class LoadAsync : RavenTestBase
+    public class LoadAsync : RavenNewTestBase
     {
         [Fact]
         public async Task Load_Document_By_id_Async()

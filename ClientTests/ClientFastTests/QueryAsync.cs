@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.NewClient.Client;
 using Raven.NewClient.Client.Indexes;
 using Raven.Server.Documents.Indexes;
@@ -9,7 +10,7 @@ using Xunit;
 
 namespace NewClientTests.NewClient
 {
-    public class QueryAsync : RavenTestBase
+    public class QueryAsync : RavenNewTestBase
     {
         [Fact]
         public async Task QueryAsync_Simple()

@@ -8,12 +8,13 @@ using Raven.NewClient.Client;
 using Raven.NewClient.Client.Data;
 using Xunit;
 using System.Linq;
+using FastTests;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Indexes;
 
 namespace NewClientTests.NewClient
 {
-    public class RavenDB_1466 : RavenTestBase
+    public class RavenDB_1466 : RavenNewTestBase
     {
         public enum Region
         {
@@ -144,7 +145,7 @@ namespace NewClientTests.NewClient
 
                 var multiFacetedSearchResults = session.Advanced.MultiFacetedSearch(northSalaryFacetQuery, southSalaryFacetQuery,
                                                                                     eastSalaryFacetQuery, westSalaryFacetQuery);
-                
+
                 Assert.Equal(4, multiFacetedSearchResults.Length);
 
                 AssertResults(multiFacetedSearchResults);

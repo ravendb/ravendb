@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using FastTests;
 using Xunit;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client;
@@ -11,7 +12,7 @@ using Raven.NewClient.Abstractions.Indexing;
 
 namespace NewClientTests.NewClient
 {
-    public class DataSetIndexTest : RavenTestBase
+    public class DataSetIndexTest : RavenNewTestBase
     {
         private const int MaxNumberOfItemsInDataSet = 50;
 

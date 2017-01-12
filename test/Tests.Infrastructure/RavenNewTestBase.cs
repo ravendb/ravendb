@@ -1,143 +1,40 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Extensions;
-using Raven.NewClient.Client.Http;
 using Raven.NewClient.Data.Indexes;
-using Raven.Server;
 using Raven.Server.Config;
-using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Sparrow.Collections;
-using Sparrow.Logging;
-using Sparrow.Json.Parsing;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
-
-//using JsonTextWriter = Raven.Imports.Newtonsoft.Json.JsonTextWriter;
-
-namespace NewClientTests
+namespace FastTests
 {
-    public class RavenTestBase : LinuxRaceConditionWorkAround, IDisposable
+    public class RavenNewTestBase : TestBase
     {
-        public const string ServerName = "Raven.Tests.Core.Server";
+        private static int _counter;
 
         protected readonly ConcurrentSet<DocumentStore> CreatedStores = new ConcurrentSet<DocumentStore>();
-
-        protected static readonly ConcurrentSet<string> PathsToDelete =
-            new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        private static RavenServer _globalServer;
-        private static readonly object ServerLocker = new object();
-        private RavenServer _localServer;
-
-        public void DoNotReuseServer() => _doNotReuseServer = true;
-        private bool _doNotReuseServer;
-
-        public async Task<DocumentDatabase> GetDatabase(string databaseName)
-        {
-            var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
-            return database;
-        }
-
-        public RavenServer Server
-        {
-            get
-            {
-                if (_localServer != null)
-                    return _localServer;
-
-                if (_doNotReuseServer)
-                {
-                    _localServer = CreateServer();
-                    return _localServer;
-                }
-
-                if (_globalServer != null)
-                {
-                    _localServer = _globalServer;
-                    return _localServer;
-                }
-                lock (ServerLocker)
-                {
-                    if (_globalServer == null)
-                    {
-                        Console.WriteLine("\tTo attach debugger to test process, use process id: {0}", Process.GetCurrentProcess().Id);
-                        var globalServer = CreateServer();
-                        AssemblyLoadContext.Default.Unloading += context =>
-                        {
-                            globalServer.Dispose();
-
-                            GC.Collect(2);
-                            GC.WaitForPendingFinalizers();
-
-                            var exceptionAggregator = new ExceptionAggregator("Failed to cleanup test databases");
-
-                            RavenTestHelper.DeletePaths(PathsToDelete, exceptionAggregator);
-
-                            exceptionAggregator.ThrowIfNeeded();
-                        };
-                        _globalServer = globalServer;
-                    }
-                    _localServer = _globalServer;
-                }
-                return _globalServer;
-            }
-        }
-
-        private static RavenServer CreateServer()
-        {
-            var configuration = new RavenConfiguration();
-            configuration.Initialize();
-            configuration.DebugLog.LogMode = LogMode.None;
-            configuration.Core.ServerUrl = $"http://127.0.0.1:0"; // dynamic port allocation must be specified with 127.0.0.1 rather then localhost
-            configuration.Server.Name = ServerName;
-            configuration.Core.RunInMemory = true;
-            configuration.Core.DataDirectory = Path.Combine(configuration.Core.DataDirectory, $"Tests{Interlocked.Increment(ref _serverCounter)}");
-            configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(60, TimeUnit.Seconds);
-            configuration.Storage.AllowOn32Bits = true;
-
-            IOExtensions.DeleteDirectory(configuration.Core.DataDirectory);
-
-            var server = new RavenServer(configuration);
-            server.Initialize();
-
-            // TODO: Make sure to properly handle this when this is resolved:
-            // TODO: https://github.com/dotnet/corefx/issues/5205
-            // TODO: AssemblyLoadContext.GetLoadContext(typeof(RavenTestBase).GetTypeInfo().Assembly).Unloading +=
-
-            return server;
-        }
 
         protected Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(DocumentStore store)
         {
             return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
         }
 
-        private static int _counter;
-        private static int _serverCounter;
-
         protected virtual DocumentStore GetDocumentStore([CallerMemberName] string caller = null,
             string dbSuffixIdentifier = null, string path = null,
-            Action<DatabaseDocument> modifyDatabaseDocument = null, 
+            Action<DatabaseDocument> modifyDatabaseDocument = null,
             string apiKey = null,
             bool deleteDbAfterDispose = true)
         {
@@ -218,14 +115,6 @@ namespace NewClientTests
         protected virtual void ModifyStore(DocumentStore store)
         {
 
-        }
-
-        private static string UseFiddler(string url)
-        {
-            if (Debugger.IsAttached && Process.GetProcessesByName("fiddler").Any())
-                return url.Replace("127.0.0.1", "localhost.fiddler");
-
-            return url;
         }
 
         public static void WaitForIndexing(IDocumentStore store, string dbName = null, TimeSpan? timeout = null)
@@ -316,61 +205,6 @@ namespace NewClientTests
             } while (documentStore.DatabaseCommands.Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));*/
         }
 
-        public static void OpenBrowser(string url)
-        {
-            Console.WriteLine(url);
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Process.Start(new ProcessStartInfo("cmd", $"/c start \"Stop & look at studio\" \"{url}\"")); // Works ok on windows
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                Process.Start("xdg-open", url); // Works ok on linux
-            }
-            else
-            {
-                Console.WriteLine("Do it yourself!");
-            }
-        }
-
-        protected string NewDataPath([CallerMemberName] string prefix = null, string suffix = null,
-            bool forceCreateDir = false)
-        {
-            if (suffix != null)
-                prefix += suffix;
-            var path = RavenTestHelper.NewDataPath(prefix, _serverCounter, forceCreateDir);
-
-            PathsToDelete.Add(path);
-            return path;
-        }
-
-        public virtual void Dispose()
-        {
-            GC.SuppressFinalize(this);
-
-            var exceptionAggregator = new ExceptionAggregator("Could not dispose test");
-
-            foreach (var store in CreatedStores)
-                exceptionAggregator.Execute(store.Dispose);
-            CreatedStores.Clear();
-
-            if (_localServer != null)
-            {
-                if (_doNotReuseServer)
-                {
-                    exceptionAggregator.Execute(() =>
-                    {
-                        _localServer.Dispose();
-                        _localServer = null;
-                    });
-                }
-
-                exceptionAggregator.ThrowIfNeeded();
-            }
-        }
-
-
         /// <summary>
         /// Get command for new client tests
         /// </summary>
@@ -379,7 +213,7 @@ namespace NewClientTests
         /// <param name="etag"></param>
         /// <param name="documentInfo"></param>
         /// <returns></returns>
-        public static BlittableJsonReaderObject GetCommand(IDocumentSession session, string[] ids, 
+        protected static BlittableJsonReaderObject GetCommand(IDocumentSession session, string[] ids,
             out DocumentInfo documentInfo)
         {
             var command = new GetDocumentCommand
@@ -416,7 +250,7 @@ namespace NewClientTests
         /// <param name="session"></param>
         /// <param name="entity"></param>
         /// <param name="id"></param>
-        public void PutCommand(IDocumentSession session, object entity, string id)
+        protected void PutCommand(IDocumentSession session, object entity, string id)
         {
             var documentInfo = new DocumentInfo
             {
@@ -441,6 +275,13 @@ namespace NewClientTests
                 Context = session.Advanced.Context
             };
             session.Advanced.RequestExecuter.Execute(putCommand, session.Advanced.Context);
+        }
+
+        protected override void Dispose(ExceptionAggregator exceptionAggregator)
+        {
+            foreach (var store in CreatedStores)
+                exceptionAggregator.Execute(store.Dispose);
+            CreatedStores.Clear();
         }
     }
 }

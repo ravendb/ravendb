@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
+using FastTests;
 using NewClientTests;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
@@ -11,7 +12,7 @@ using Xunit;
 
 namespace NewClientTests.NewClient.FastTests.Patching
 {
-    public class PatchAndDeleteByCollection : RavenTestBase
+    public class PatchAndDeleteByCollection : RavenNewTestBase
     {
         [Fact]
         public void CanDeleteCollection()

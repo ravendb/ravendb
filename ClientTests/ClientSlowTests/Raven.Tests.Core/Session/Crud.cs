@@ -1,6 +1,7 @@
 using System;
 using System.Dynamic;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.NewClient.Client.Exceptions;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Util;
@@ -10,7 +11,7 @@ using Xunit;
 
 namespace NewClientTests.NewClient.Raven.Tests.Core.Session
 {
-    public class Crud : RavenTestBase
+    public class Crud : RavenNewTestBase
     {
 #if DNXCORE50
         public Crud(TestServerFixture fixture)
