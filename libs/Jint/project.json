@@ -1,11 +1,17 @@
 ﻿{
-  "version": "2.8.1",
+  "version": "2.10.99",
   "frameworks": {
-    "netstandard1.6": {
+    "netstandard1.3": {
       "bin": {
-        "assembly": "netstandard1.6\\Jint.dll",
-        "pdb": "netstandard1.6\\Jint.pdb"
+        "assembly": "netstandard1.3\\Jint.dll",
+        "pdb": "netstandard1.3\\Jint.pdb"
       }
     }
+  },
+  "dependencies": {
+    "NETStandard.Library": "1.6.0",
+    "System.Diagnostics.Contracts": "4.0.1",
+    "System.Dynamic.Runtime": "4.0.11",
+    "System.Reflection.TypeExtensions": "4.1.0"
   }
 }
