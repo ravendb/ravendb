@@ -273,8 +273,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                         _reduceKeyProcessor.Reset();
 
-                        foreach (var field in accessor.PropertiesInOrder)
+
+                        var propertiesInOrder = accessor.PropertiesInOrder;
+                        int properties = propertiesInOrder.Count;
+                        for (int i = 0; i < properties; i++)
                         {
+                            var field = propertiesInOrder[i];
+
                             var value = field.Value.GetValue(document);
                             var blittableValue = TypeConverter.ToBlittableSupportedType(value);
                             mapResult[field.Key] = blittableValue;
