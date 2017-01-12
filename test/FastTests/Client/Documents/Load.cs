@@ -49,23 +49,20 @@ namespace FastTests.Client.Documents
                     session.SaveChanges();
                 }
 
-                using (var newSession = (DocumentSession)store.OpenSession())
+                using (var newSession = store.OpenSession())
                 {
-                    var bar = newSession.LoadInternal<Bar>(new[] { barId }, new[]
-                    {
-                        new KeyValuePair<string, Type>("FooId",typeof(string))
-                    });
+                    var bar = newSession.Include<Bar>(x=>x.FooId).Load(new[] {barId});
                     Assert.NotNull(bar);
-                    Assert.Equal(1, bar.Length);
-                    Assert.NotNull(bar[0]);
+                    Assert.Equal(1, bar.Count);
+                    Assert.NotNull(bar[barId]);
 
-                    var numOfRequests = newSession.NumberOfRequests;
+                    var numOfRequests = newSession.Advanced.NumberOfRequests;
 
-                    var foo = newSession.Load<Foo>((string)bar[0].FooId);
+                    var foo = newSession.Load<Foo>((string)bar[barId].FooId);
 
                     Assert.NotNull(foo);
                     Assert.Equal("Beginning", foo.Name);
-                    Assert.Equal(numOfRequests, newSession.NumberOfRequests);
+                    Assert.Equal(numOfRequests, newSession.Advanced.NumberOfRequests);
                 }
 
             }
@@ -90,22 +87,20 @@ namespace FastTests.Client.Documents
                     session.SaveChanges();
                 }
 
-                using (var newSession = (DocumentSession)store.OpenSession())
+                using (var newSession = store.OpenSession())
                 {
-                    var bar = newSession.LoadInternal<Bar>(new[] { barId }, new[]
-                    {
-                        new KeyValuePair<string, Type>("FooId",typeof(string))
-                    });
+                    var bar = newSession.Include<Bar>(x => x.FooId).Load(new[] { barId });
+
                     Assert.NotNull(bar);
-                    Assert.Equal(1, bar.Length);
-                    Assert.NotNull(bar[0]);
+                    Assert.Equal(1, bar.Count);
+                    Assert.NotNull(bar[barId]);
 
-                    var numOfRequests = newSession.NumberOfRequests;
+                    var numOfRequests = newSession.Advanced.NumberOfRequests;
 
-                    var foo = newSession.Load<Foo>((string)bar[0].FooId);
+                    var foo = newSession.Load<Foo>((string)bar[barId].FooId);
 
                     Assert.Null(foo);
-                    Assert.Equal(numOfRequests, newSession.NumberOfRequests);
+                    Assert.Equal(numOfRequests, newSession.Advanced.NumberOfRequests);
                 }
 
             }

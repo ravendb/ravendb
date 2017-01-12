@@ -17,9 +17,9 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var a = new FastTests.Server.Replication.ManualConflictResolution())
+            using (var a = new FastTests.Server.Replication.ReplicationConflictsTests())
             {
-                a.ScriptResolveToTombstone();
+                a.Conflict_then_patch_request_will_return_409_and_conflict_data();
             }
         }
     }
