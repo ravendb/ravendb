@@ -76,7 +76,7 @@ namespace FastTests
 
             var store = new DocumentStore
             {
-                Url = UseFiddler(Server.Configuration.Core.ServerUrl),
+                Url = UseFiddler(Server.WebUrls[0]),
                 DefaultDatabase = name,
                 ApiKey = apiKey
             };
