@@ -77,7 +77,7 @@ namespace Raven.NewClient.Client.Bundles.MoreLikeThis
             var inMemoryDocumentSessionOperations = ((InMemoryDocumentSessionOperations)advancedSession);
             inMemoryDocumentSessionOperations.IncrementRequestCount();
 
-            var loadOperation = new LoadOperation(inMemoryDocumentSessionOperations, null, null);
+            var loadOperation = new LoadOperation(inMemoryDocumentSessionOperations, null, null, true);
 
             var command = new MoreLikeThisCommand()
             {
@@ -86,7 +86,7 @@ namespace Raven.NewClient.Client.Bundles.MoreLikeThis
             advancedSession.RequestExecuter.Execute(command, advancedSession.Context);
 
             var result = command.Result;
-            loadOperation.SetResultWithoutIds(result);
+            loadOperation.SetResult(result);
 
             return loadOperation.GetDocuments<T>().Values.ToArray();
         }
@@ -154,7 +154,7 @@ namespace Raven.NewClient.Client.Bundles.MoreLikeThis
             var inMemoryDocumentSessionOperations = ((InMemoryDocumentSessionOperations)advancedSession);
             inMemoryDocumentSessionOperations.IncrementRequestCount();
 
-            var loadOperation = new LoadOperation(inMemoryDocumentSessionOperations, null, null);
+            var loadOperation = new LoadOperation(inMemoryDocumentSessionOperations, null, null, true);
 
             var command = new MoreLikeThisCommand()
             {
@@ -163,7 +163,7 @@ namespace Raven.NewClient.Client.Bundles.MoreLikeThis
             await advancedSession.RequestExecuter.ExecuteAsync(command, advancedSession.Context).ConfigureAwait(false);
 
             var result = command.Result;
-            loadOperation.SetResultWithoutIds(result);
+            loadOperation.SetResult(result);
 
             return loadOperation.GetDocuments<T>().Values.ToArray();
         }
