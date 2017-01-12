@@ -1,8 +1,9 @@
-﻿using Xunit;
+﻿using FastTests;
+using Xunit;
 
 namespace NewClientTests.NewClient.Raven.Tests.Bugs.Identifiers
 {
-    public class WithBase64Characters : RavenTestBase
+    public class WithBase64Characters : RavenNewTestBase
     {
         public class Entity
         {

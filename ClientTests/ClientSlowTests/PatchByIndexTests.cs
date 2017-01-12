@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.NewClient.Client;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Indexing;
@@ -12,7 +13,7 @@ using Xunit;
 
 namespace NewClientTests.NewClient.FastTests.Patching
 {
-    public class PatchByIndexTests : RavenTestBase
+    public class PatchByIndexTests : RavenNewTestBase
     {
         private class User
         {

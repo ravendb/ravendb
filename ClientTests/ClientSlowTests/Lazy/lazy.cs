@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using FastTests.Server.Basic.Entities;
 using Xunit;
 
 
 namespace NewClientTests.NewClient
 {
-    public class lazy : RavenTestBase
+    public class lazy : RavenNewTestBase
     {
         [Fact]
         public void CanLazilyLoadEntity()

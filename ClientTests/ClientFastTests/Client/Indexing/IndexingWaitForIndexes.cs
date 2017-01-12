@@ -10,7 +10,7 @@ using Xunit;
 
 namespace NewClientTests.NewClient.Client.Indexing
 {
-    public class IndexingWaitForIndexes : RavenTestBase
+    public class IndexingWaitForIndexes : RavenNewTestBase
     {
         public class User
         {

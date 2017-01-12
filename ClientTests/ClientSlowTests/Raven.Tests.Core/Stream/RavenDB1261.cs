@@ -10,13 +10,14 @@ using Xunit;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Commands;
 using Sparrow.Json;
 
 namespace NewClientTests.NewClient.Raven.Tests.Core.Stream
 {
-    public class RavenDB1261 : RavenTestBase
+    public class RavenDB1261 : RavenNewTestBase
     {
         public class Student
         {

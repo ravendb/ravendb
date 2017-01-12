@@ -9,11 +9,12 @@ using Xunit;
 using Raven.Tests.Core.Utils.Entities;
 using Raven.NewClient.Client.Bundles.Versioning;
 using System.Linq;
+using FastTests;
 using Raven.NewClient.Client.Http;
 
 namespace NewClientTests.NewClient.FastTests.Versioning
 {
-    public class Versioning : RavenTestBase
+    public class Versioning : RavenNewTestBase
     {
         [Fact]
         public async Task CanGetAllRevisionsFor()

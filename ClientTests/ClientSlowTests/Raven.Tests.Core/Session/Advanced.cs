@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FastTests;
 using NewClientTests;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Document;
@@ -12,7 +13,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace NewClientTests.NewClient.Raven.Tests.Core.Session
 {
-    public class Advanced : RavenTestBase
+    public class Advanced : RavenNewTestBase
     {
         [Fact]
         public void CanGetChangesInformation()

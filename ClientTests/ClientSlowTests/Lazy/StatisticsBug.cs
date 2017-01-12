@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Linq;
+using FastTests;
 using Xunit;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client;
 
 namespace NewClientTests.NewClient
 {
-    public class StatisticsBug : RavenTestBase
+    public class StatisticsBug : RavenNewTestBase
     {
         private class Entity
         {

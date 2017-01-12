@@ -1,10 +1,11 @@
-﻿using Raven.NewClient.Client.Document;
+﻿using FastTests;
+using Raven.NewClient.Client.Document;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace NewClientTests.NewClient
 {
-    public class CRUD : RavenTestBase
+    public class CRUD : RavenNewTestBase
     {
         protected override void ModifyStore(DocumentStore store)
         {

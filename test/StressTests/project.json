@@ -36,7 +36,7 @@
       "version": "1.1.0"
     },
     "SlowTests": "4.0.0-*",
-    "Tests.Infrastructure": "1.0.0-*",
+    "Tests.Infrastructure": "4.0.0-*",
     "Voron": "4.0.0-*",
     "xunit": "2.2.0-beta4-build3444"
   }

@@ -9,11 +9,12 @@ using Raven.NewClient.Client.Indexes;
 using Xunit;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.NewClient.Abstractions.Data;
 
 namespace NewClientTests.NewClient.Raven.Tests.Core.Stream
 {
-    public class RavenDB_3326 : RavenTestBase
+    public class RavenDB_3326 : RavenNewTestBase
     {
         [Fact]
         public void streaming_and_projections_with_property_rename()

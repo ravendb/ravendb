@@ -5,7 +5,7 @@ using Xunit;
 
 namespace FastTests.Client.Documents
 {
-    public class Load : NewClientTests.RavenTestBase
+    public class Load : RavenNewTestBase
     {
         private class Foo
         {

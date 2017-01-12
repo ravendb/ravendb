@@ -5,13 +5,14 @@
 //-----------------------------------------------------------------------
 
 using System;
+using FastTests;
 using Raven.NewClient.Abstractions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace NewClientTests.NewClient.Raven.Tests.Bugs.Metadata
 {
-    public class LastModified : RavenTestBase
+    public class LastModified : RavenNewTestBase
     {
         [Fact]
         public void CanAccessLastModifiedAsMetadata()

@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System.Linq;
+using FastTests;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client.Indexes;
 using Xunit;
@@ -13,7 +14,7 @@ using Raven.NewClient.Client.Data;
 
 namespace NewClientTests.NewClient
 {
-    public class LargeFacets : RavenTestBase
+    public class LargeFacets : RavenNewTestBase
     {
         private class Item
         {

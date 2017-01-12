@@ -10,7 +10,7 @@ using Xunit;
 
 namespace FastTests.Client.Documents
 {
-    public class BasicDocuments : NewClientTests.RavenTestBase
+    public class BasicDocuments : RavenNewTestBase
     {
         [Fact]
         public async Task CanStoreAnonymousObject()

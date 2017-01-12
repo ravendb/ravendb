@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using FastTests;
 using NewClientTests;
 using Raven.NewClient.Abstractions.Util;
 using SlowTests.Core.Utils.Entities;
@@ -9,7 +10,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace NewClientTests.NewClient.Raven.Tests.Core.Session
 {
-    public class Keys : RavenTestBase
+    public class Keys : RavenNewTestBase
     {
 #if DNXCORE50
         public Keys(TestServerFixture fixture)  

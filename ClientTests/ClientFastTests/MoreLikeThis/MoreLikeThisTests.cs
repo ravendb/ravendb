@@ -12,12 +12,13 @@ using Raven.NewClient.Client.Bundles.MoreLikeThis;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Abstractions.Data;
 using System.Linq;
+using FastTests;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 
 namespace NewClientTests.NewClient
 {
-    public class MoreLikeThisTests :  RavenTestBase
+    public class MoreLikeThisTests :  RavenNewTestBase
     {
         private class Transformer1 : AbstractTransformerCreationTask<Data>
         {

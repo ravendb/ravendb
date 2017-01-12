@@ -3,10 +3,11 @@ using Xunit;
 using System.Linq;
 using Raven.NewClient.Client;
 using System.Collections.Generic;
+using FastTests;
 
 namespace NewClientTests.NewClient
 {
-    public class MultiGetQueries : RavenTestBase
+    public class MultiGetQueries : RavenNewTestBase
     {
         private class User
         {

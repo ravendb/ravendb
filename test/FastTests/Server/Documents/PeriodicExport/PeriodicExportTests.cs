@@ -13,7 +13,6 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Smuggler;
 using Raven.Server.Documents.PeriodicExport;
-using Raven.Server.Utils;
 using Xunit;
 using System.Linq;
 using FastTests.Server.Basic.Entities;
@@ -27,12 +26,6 @@ namespace FastTests.Server.Documents.PeriodicExport
         public PeriodicExportTests()
         {
             _exportPath = NewDataPath(suffix: "ExportFolder");
-        }
-
-        public override void Dispose()
-        {
-            IOExtensions.DeleteDirectory(_exportPath);
-            base.Dispose();
         }
 
         [Fact, Trait("Category", "Smuggler")]

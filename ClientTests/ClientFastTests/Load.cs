@@ -1,11 +1,12 @@
 ﻿using System.Collections.Generic;
+using FastTests;
 using Raven.Tests.Core.Utils.Entities;
 
 using Xunit;
 
 namespace NewClientTests.NewClient
 {
-    public class Load :  RavenTestBase
+    public class Load :  RavenNewTestBase
     {
         [Fact]
         public void Load_Document_By_id()

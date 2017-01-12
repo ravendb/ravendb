@@ -1,11 +1,12 @@
 ﻿using System;
+using FastTests;
 using Raven.NewClient.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace NewClientTests.NewClient
 {
-    public class TrackEntity : RavenTestBase
+    public class TrackEntity : RavenNewTestBase
     {
         [Fact]
         public void Deleting_Entity_That_Is_Not_Tracked_Should_Throw()

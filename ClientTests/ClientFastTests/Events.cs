@@ -1,10 +1,11 @@
-﻿using Raven.NewClient.Client;
+﻿using FastTests;
+using Raven.NewClient.Client;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace NewClientTests.NewClient
 {
-    public class Events : RavenTestBase
+    public class Events : RavenNewTestBase
     {
         [Fact]
         public void Before_Store_Listerner()

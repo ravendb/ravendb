@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using FastTests;
 using Raven.NewClient.Client;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
@@ -9,7 +10,7 @@ using Sparrow.Json;
 
 namespace NewClientTests.NewClient
 {
-    public abstract class FacetTestBase : RavenTestBase
+    public abstract class FacetTestBase : RavenNewTestBase
     {
         public static void CreateCameraCostIndex(IDocumentStore store)
         {

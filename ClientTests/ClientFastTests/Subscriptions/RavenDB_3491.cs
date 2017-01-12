@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Subscriptions;
 using Raven.NewClient.Abstractions.Data;
 using Raven.Tests.Core.Utils.Entities;
@@ -10,7 +11,7 @@ using Xunit;
 
 namespace NewClientTests.NewClient.Subscriptions
 {
-    public class RavenDB_3491 : RavenTestBase
+    public class RavenDB_3491 : RavenNewTestBase
     {
         private readonly TimeSpan waitForDocTimeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(5);
 

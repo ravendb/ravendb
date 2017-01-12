@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client.Indexes;
 using Xunit;
@@ -7,7 +8,7 @@ using Xunit;
 
 namespace NewClientTests.NewClient
 {
-    public class RavenDB_2793 : RavenTestBase
+    public class RavenDB_2793 : RavenNewTestBase
     {
         private class Person
         {

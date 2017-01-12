@@ -1,9 +1,10 @@
 ﻿using System.Dynamic;
+using FastTests;
 using Xunit;
 
 namespace NewClientTests.NewClient.Raven.Tests.Bugs.Async
 {
-    public class DynamicGeneratedIds : RavenTestBase
+    public class DynamicGeneratedIds : RavenNewTestBase
     {
         [Fact]
         public void AsyncMatchesSyncGeneratedIdForDynamicBehavior()
