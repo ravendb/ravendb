@@ -178,7 +178,7 @@ namespace Raven.NewClient.Client
             return documentQuery.GetFacets(facetsList, start, pageSize);
         }
 
-        /*/// <summary>
+        /// <summary>
         /// Lazily Query the facets results for this query using the specified facet document with the given start and pageSize
         /// </summary>
         /// <param name="facetSetupDoc">Name of the FacetSetup document</param>
@@ -274,7 +274,7 @@ namespace Raven.NewClient.Client
 
             var documentSession = ((DocumentSession)documentQuery.Session);
             return documentSession.AddLazyOperation<FacetedQueryResult>(lazyOperation, null);
-        }*/
+        }
 
         /// <summary>
         /// Async Query the facets results for this query using the specified facet document with the given start and pageSize

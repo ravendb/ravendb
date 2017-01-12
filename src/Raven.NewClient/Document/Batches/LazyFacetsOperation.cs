@@ -3,8 +3,10 @@ using System.Linq;
 using System.Net.Http;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
+using Raven.NewClient.Client.Json;
 using Raven.NewClient.Client.Shard;
 using Sparrow.Json;
 
@@ -38,14 +40,9 @@ namespace Raven.NewClient.Client.Document.Batches
 
         public void HandleResponse(BlittableJsonReaderObject response)
         {
-            throw new NotImplementedException();
-            /*if (response.RequestHasErrors())
-            {
-                throw new InvalidOperationException("Got an unexpected response code for the request: " + response.Status + "\r\n" + response.Result);
-            }
-
-            var result = (RavenJObject)response.Result;
-            Result = result.JsonDeserialization<FacetedQueryResult>();*/
+            BlittableJsonReaderObject result;
+            response.TryGet("Result", out result);
+            Result = JsonDeserializationClient.FacetedQueryResult(result);
         }
     }
 }
