@@ -177,6 +177,17 @@ gulp.task('release:libs', function() {
         .pipe(gulp.dest(PATHS.releaseTargetApp));
 });
 
+gulp.task('release:copy-version', function () {
+    return gulp.src("./version.json")
+        .pipe(gulp.dest(PATHS.releaseTarget));
+});
+
+gulp.task('release:package', function () {
+    return gulp.src(PATHS.releaseTarget + "/**/*.*")
+    .pipe(plugins.zip("Raven.Studio.zip"))
+    .pipe(gulp.dest(PATHS.releaseTarget));
+});
+
 gulp.task('release:durandal', function () {
     var extraModules = [
         'transitions/fadeIn',
@@ -261,6 +272,7 @@ gulp.task('release', function (cb) {
         'build',
         [
             'release:libs',
+            'release:copy-version',
             'release:favicon',
             'release:ace-workers',
             'release:images',
@@ -270,13 +282,8 @@ gulp.task('release', function (cb) {
             'release:temp-font-awesome', //TODO: temp fix: we won't have font-awesome in final
             'release:durandal'
         ],
+        'release:package',
         cb);
-});
-
-gulp.task('release-package', ['release'], function () {
-    return gulp.src(PATHS.releaseTarget + "/**/*.*")
-    .pipe(plugins.zip("Raven.Studio.zip"))
-    .pipe(gulp.dest(PATHS.releaseTarget));
 });
 
 gulp.task('build', function (cb) {
@@ -284,40 +291,4 @@ gulp.task('build', function (cb) {
         'restore',
         'compile',
         cb);
-});
-
-gulp.task('alpha-release:_copy-version', function () {
-    return gulp.src("./version.json")
-        .pipe(gulp.dest(PATHS.releaseTarget));
-});
-
-gulp.task('alpha-release:_copy-js', function () {
-    return gulp.src('wwwroot/**/*.js')
-        //.pipe(plugins.uglify().on('error', gutil.log))
-        .pipe(gulp.dest(PATHS.releaseTarget));
-});
-
-gulp.task('alpha-release:_copy-content', function () {
-    return gulp.src('wwwroot/**/*.{css,ico,json,png,svg,html,woff,woff2,eot,ttf}')
-        .pipe(gulp.dest(PATHS.releaseTarget));
-});
-
-gulp.task('alpha-release:_package', ['alpha-release:_copy'], function () {
-    return gulp.src(PATHS.releaseTarget + "/**/*.*")
-    .pipe(plugins.zip("Raven.Studio.zip"))
-    .pipe(gulp.dest(PATHS.releaseTarget));
-});
-
-gulp.task('alpha-release:_copy', [
-        'alpha-release:_copy-content',
-        'alpha-release:_copy-js',
-        'alpha-release:_copy-version'
-]);
-
-gulp.task('alpha-release', function (cb) {
-    return runSequence(
-        'restore',
-        'clean',
-        'build',
-        'alpha-release:_package');
 });
