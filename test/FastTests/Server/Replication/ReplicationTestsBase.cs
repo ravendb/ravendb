@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
-using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
@@ -80,7 +79,6 @@ namespace FastTests.Server.Replication
                     if (doc == null)
                         return true;
                 }
-                Thread.Sleep(10);
             }
 
             return false;
@@ -102,7 +100,6 @@ namespace FastTests.Server.Replication
                     if (doc != null)
                         return true;
                 }
-                Thread.Sleep(10);
             }
 
             return false;
@@ -161,7 +158,6 @@ namespace FastTests.Server.Replication
                     if (doc != null)
                         return doc;
                 }
-                Thread.Sleep(25);
             }
 
             return default(T);

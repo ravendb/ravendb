@@ -9,6 +9,7 @@ using Sparrow.Platform;
 using System.Linq;
 using FastTests.Blittable;
 using FastTests.Issues;
+using FastTests.Server.Documents.Queries;
 using FastTests.Voron.RawData;
 
 namespace Tryouts
@@ -17,9 +18,9 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var a = new FastTests.Server.Replication.ReplicationConflictsTests())
+            using (var a = new WaitingForNonStaleResults())
             {
-                a.Conflict_then_patch_request_will_return_409_and_conflict_data();
+                a.Throws_if_exceeds_timeout();
             }
         }
     }
