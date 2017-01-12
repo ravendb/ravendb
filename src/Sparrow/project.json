@@ -20,6 +20,12 @@
         "optimize": true,
         "define": [ "MEM_GUARD" ]
       }
+    },
+    "Validate": {
+      "buildOptions": {
+        "optimize": true,
+        "define": [ "MEM_GUARD", "MEM_GUARD_STACK" ]
+      }
     }
   },
 
