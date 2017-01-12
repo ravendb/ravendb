@@ -32,6 +32,7 @@ import formatIndexCommand = require("commands/database/index/formatIndexCommand"
 import renameOrDuplicateIndexDialog = require("viewmodels/database/indexes/renameOrDuplicateIndexDialog");
 import indexFieldOptions = require("models/database/index/indexFieldOptions");
 import getIndexFieldsCommand = require("commands/database/index/getIndexFieldsCommand");
+import configurationItem = require("models/database/index/configurationItem");
 
 import eventsCollector = require("common/eventsCollector");
 
@@ -270,6 +271,22 @@ class editIndex extends viewModelBase {
         this.editedIndex().addConfigurationOption();
     }
 
+    createConfigurationOptionAutocompleter(item: configurationItem) {
+        return ko.pureComputed(() => {
+            const key = item.key();
+            const options = configurationItem.ConfigurationOptions;
+            const usedOptions = this.editedIndex().configuration().filter(f => f !== item).map(x => x.key());
+
+            const filteredOptions = _.difference(options, usedOptions);
+
+            if (key) {
+                return filteredOptions.filter(x => x.toLowerCase().includes(key.toLowerCase()));
+            } else {
+                return filteredOptions;
+            }
+        });
+    }
+
     createFieldNameAutocompleter(field: indexFieldOptions): KnockoutComputed<string[]> {
         return ko.pureComputed(() => {
             const name = field.name();
@@ -283,7 +300,6 @@ class editIndex extends viewModelBase {
             } else {
                 return filteredFieldNames;
             }
-
         });
     }
 
