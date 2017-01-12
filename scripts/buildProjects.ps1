@@ -45,7 +45,7 @@ function BuildStudio ( $srcDir, $projectDir, $version ) {
     "{ ""Version"": ""$version"" }" | Out-File $versionJsonPath -Encoding UTF8
 
 
-    & npm run gulp release-package
+    & npm run gulp release
     CheckLastExitCode
 
     cd $projectDir
