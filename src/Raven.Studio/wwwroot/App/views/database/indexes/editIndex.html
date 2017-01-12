@@ -5,7 +5,10 @@
                 <div class="col-lg-6">
                     <div class="input-group toolbar" data-bind="validationElement: editedIndex().name">
                         <div class="input-group-addon">Index name</div>
-                        <input class="form-control" data-bind="textInput: editedIndex().name">
+                        <input class="form-control" data-bind="textInput: editedIndex().name, disable: isEditingExistingIndex">
+                        <span class="input-group-btn" data-bind="visible: isEditingExistingIndex">
+                            <button class="btn btn-default btn-prerelease" disabled="disabled" type="button"><i class="icon-edit"></i> <span>Rename</span></button>
+                        </span>
                     </div>
                 </div>
             </div>
@@ -45,7 +48,9 @@
                         <pre class="form-control map" 
                              data-bind="aceEditor: { code: map, allowResize: true, getFocus: true, lang: 'ace/mode/ravenMapLinq', typeName: 'map' }"></pre>
                         
-                        <div class="bg-danger" data-bind="validationMessage: map"></div>
+                        <div data-bind="validationElement: map">
+                            <div class="help-block" data-bind="validationMessage: map"></div>
+                        </div>
                     </p>
                 </div>
                 <div class="margin-bottom">
@@ -79,7 +84,9 @@
                         <pre class="form-control map"
                              data-bind="aceEditor: { code: editedIndex().reduce, allowResize: true, getFocus: true, lang: 'ace/mode/ravenReduceLinq', typeName: 'reduce' }"></pre>
                         
-                        <div class="bg-danger" data-bind="validationMessage: editedIndex().reduce"></div>
+                        <div data-bind="validationElement: editedIndex().reduce">
+                            <div class="help-block" data-bind="validationMessage: editedIndex().reduce"></div>
+                        </div>
                     </p>
                 </div>
 
@@ -152,8 +159,8 @@
                         <div data-bind="foreach: editedIndex().configuration">
                             <div class="form-group">
                                 <label class="col-sm-2 control-label" data-bind="visible: $index() === 0">Customized options</label>
-                                <div class="col-sm-4" data-bind="css: { 'col-sm-offset-2': $index() > 0 }, validationElement: key">
-                                    <input class="form-control" placeholder="Key" data-bind="textInput: key, attr: { id: 'configOption' + $index() }">
+                                <div class="col-sm-6" data-bind="css: { 'col-sm-offset-2': $index() > 0 }, validationElement: key">
+                                    <input class="form-control" placeholder="Key" data-bind="textInput: key, attr: { id: 'configOption' + $index(), title: key }">
                                     <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#' + 'configOption' + $index(), foreach: $root.createConfigurationOptionAutocompleter($data)">
                                         <li role="presentation" data-bind="click: $parent.key.bind($parent, $data)">
                                             <a role="menuitem" tabindex="-1" href="#">
@@ -162,15 +169,18 @@
                                         </li>
                                     </ul>
                                 </div>
-                                <div class="col-sm-6" data-bind="validationElement: value">
+                                <div class="col-sm-3" data-bind="validationElement: value">
                                     <input class="form-control" placeholder="Value" data-bind="textInput: value">
+                                </div>
+                                <div class="col-sm-1">
+                                    <button class="btn btn-danger" data-bind="click: _.partial($parent.removeConfigurationOption, $data)"><i class="icon-trash"></i></button>
                                 </div>
                             </div>
                         </div>
                        
                         <div class="form-group">
                             <div class="col-sm-offset-2 col-sm-10">
-                                <button type="button" data-bind="click: addConfigurationOption" class="btn btn-info"><i class="icon-plus"></i> <span>Add</span></button>
+                                <button type="button" data-bind="click: addConfigurationOption" class="btn btn-info"><i class="icon-plus"></i> <span>Add customized option</span></button>
                             </div>
                         </div>
                     </div>

@@ -65,7 +65,7 @@ class editIndex extends viewModelBase {
     constructor() {
         super();
 
-        this.bindToCurrentInstance("removeMap", "removeField", "createFieldNameAutocompleter");
+        this.bindToCurrentInstance("removeMap", "removeField", "createFieldNameAutocompleter", "removeConfigurationOption");
       
         aceEditorBindingHandler.install();
         autoCompleteBindingHandler.install();
@@ -269,6 +269,10 @@ class editIndex extends viewModelBase {
 
     addConfigurationOption() {
         this.editedIndex().addConfigurationOption();
+    }
+
+    removeConfigurationOption(item: configurationItem) {
+        this.editedIndex().removeConfigurationOption(item);
     }
 
     createConfigurationOptionAutocompleter(item: configurationItem) {
