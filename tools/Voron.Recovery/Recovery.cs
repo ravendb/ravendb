@@ -144,7 +144,7 @@ namespace Voron.Recovery
                                 mem = PrintErrorAndAdvanceMem(message, mem, logFile);
                                 continue;
                             }
-                            if (WriteDocument((byte*) pageHeader + sizeof(PageHeader), pageHeader->OverflowSize,
+                            if (WriteDocument((byte*) pageHeader + PageHeader.SizeOf, pageHeader->OverflowSize,
                                 writer,
                                 logFile, context, startOffset))
                             {
@@ -173,7 +173,7 @@ namespace Voron.Recovery
                             continue;
                         }
 
-                        for (var pos = sizeof(PageHeader); pos < rawHeader->NextAllocation;)
+                        for (var pos = PageHeader.SizeOf; pos < rawHeader->NextAllocation;)
                         {
                             var debug = GetFilePosition(startOffset, mem);
                             var currMem = mem + pos;
