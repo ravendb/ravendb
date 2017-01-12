@@ -36,7 +36,10 @@
                    </div>
                                 <div class="input-group toolbar">
                                     <div class="input-group-addon">Index name</div>
-                                    <input class="form-control">
+                                    <input class="form-control" disabled value="Somename">
+                                    <span class="input-group-btn">
+                                        <button class="btn btn-default" type="button"><i class="icon-edit"></i> <span>Rename</span></button>
+                                    </span>
                                 </div>
                             </div>
 
@@ -63,6 +66,9 @@
                                 </div>
                             </div>
                             <p><textarea class="form-control"></textarea></p>
+                            <div class="has-error">
+                                <div class="help-block">error ocured.</div>
+                            </div>
                             <div class="margin-bottom">
                                 <button class="btn btn-info">
                                     <i class="icon-plus"></i><span>Add map</span>
@@ -423,8 +429,11 @@
                                         <div class="col-sm-4">
                                             <input class="form-control" placeholder="Key">
                                         </div>
-                                        <div class="col-sm-6">
+                                        <div class="col-sm-5">
                                             <input class="form-control" placeholder="Value">
+                                        </div>
+                                        <div class="col-sm-1">
+                                            <button class="btn btn-danger"><i class="icon-trash"></i></button>
                                         </div>
                                     </div>
                                     <div class="form-group">
@@ -432,8 +441,11 @@
                                         <div class="col-sm-4 col-sm-offset-2">
                                             <input class="form-control" placeholder="Key">
                                         </div>
-                                        <div class="col-sm-6">
+                                        <div class="col-sm-5">
                                             <input class="form-control" placeholder="Value">
+                                        </div>
+                                        <div class="col-sm-1">
+                                            <button class="btn btn-danger"><i class="icon-trash"></i></button>
                                         </div>
                                     </div>
 
