@@ -178,6 +178,10 @@ class indexDefinition {
         this.configuration.push(configurationItem.empty());
     }
 
+    removeConfigurationOption(item: configurationItem) {
+        this.configuration.remove(item);
+    }
+
     removeDefaultFieldOptions() {
         this.defaultFieldOptions(null);
 
