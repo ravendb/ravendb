@@ -204,7 +204,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        [Fact(Skip = "query with projection NotImplementedException")]
+        [Fact]
         public void LazyWithProjection()
         {
             using (var store = GetDocumentStore())

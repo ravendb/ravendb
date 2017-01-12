@@ -34,22 +34,22 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Stream
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Query<Customer>(index.IndexName);
+                    var query = session.Query<Customer>(index.IndexName)
                     //TODO - Add when we have query with projection
-                    /*.Select(r => new
+                    .Select(r => new
                     {
                         Name = r.Name,
                         OtherThanName = r.Address,
-                    });*/
+                    });
 
                     var enumerator = session.Advanced.Stream(query);
                     while (enumerator.MoveNext())
                     {
                         Assert.Equal("John", enumerator.Current.Document.Name);
                         //TODO - delete when we have query with projection 
-                        Assert.Equal("Tel Aviv", enumerator.Current.Document.Address);
+                        //Assert.Equal("Tel Aviv", enumerator.Current.Document.Address);
                         //TODO - Add when we have query with projection 
-                        //Assert.Equal("Tel Aviv", enumerator.Current.Document.OtherThanName);
+                        Assert.Equal("Tel Aviv", enumerator.Current.Document.OtherThanName);
 
                         Assert.NotNull(enumerator.Current.Key);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Metadata.IndexScore]);
@@ -77,23 +77,19 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Stream
                 using (var session = store.OpenAsyncSession())
                 {
 
-                    var query = session.Query<Customer>(index.IndexName);
-                    //TODO - Add when we have query with projection
-                       /* .Select(r => new
+                    var query = session.Query<Customer>(index.IndexName)
+                        .Select(r => new
                         {
                             Name = r.Name,
                             OtherThanName = r.Address,
-                        });*/
+                        });
 
                     var enumerator = await session.Advanced.StreamAsync(query);
 
                     while (await enumerator.MoveNextAsync())
                     {
                         Assert.Equal("John", enumerator.Current.Document.Name);
-                        //TODO - delete when we have query with projection 
-                        Assert.Equal("Tel Aviv", enumerator.Current.Document.Address);
-                        //TODO - Add when we have query with projection 
-                        //Assert.Equal("Tel Aviv", enumerator.Current.Document.OtherThanName);
+                        Assert.Equal("Tel Aviv", enumerator.Current.Document.OtherThanName);
 
                         Assert.NotNull(enumerator.Current.Key);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Metadata.IndexScore]);
