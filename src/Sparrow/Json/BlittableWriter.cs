@@ -213,12 +213,19 @@ namespace Sparrow.Json
 
         public int WritePropertyNames(int rootOffset)
         {
+            var cachedProperties = _context.CachedProperties;
+
             // Write the property names and register their positions
-            var propertyArrayOffset = new int[_context.CachedProperties.PropertiesDiscovered];
-            for (var index = 0; index < propertyArrayOffset.Length; index++)
+            var propertyArrayOffset = new int[cachedProperties.PropertiesDiscovered];
+
+            unsafe
             {
-                var val = _context.GetLazyStringForFieldWithCaching(_context.CachedProperties.GetProperty(index));
-                propertyArrayOffset[index] = WriteValue(val);
+                BlittableJsonToken _;
+                for (var index = 0; index < propertyArrayOffset.Length; index++)
+                {
+                    var str = _context.GetLazyStringForFieldWithCaching(cachedProperties.GetProperty(index));
+                    propertyArrayOffset[index] = WriteValue(str.Buffer, str.Size, str.EscapePositions, out _, UsageMode.None, null);
+                }
             }
 
             // Register the position of the properties offsets start
@@ -232,10 +239,13 @@ namespace Sparrow.Json
             WriteNumber((int)propertiesSizeMetadata, sizeof(byte));
 
             // Write property names offsets
-            foreach (int offset in propertyArrayOffset)
+            // PERF: Using for to avoid the cost of the enumerator.
+            for (int i = 0; i < propertyArrayOffset.Length; i++)
             {
+                int offset = propertyArrayOffset[i];
                 WriteNumber(propertiesStart - offset, propertyArrayOffsetValueByteSize);
             }
+
             return propertiesStart;
         }
 
@@ -410,7 +420,7 @@ namespace Sparrow.Json
 
         public unsafe int WriteValue(byte* buffer, int size, out BlittableJsonToken token, UsageMode mode, int? initialCompressedSize)
         {
-            var startPos = _position;
+            int startPos = _position;
             token = BlittableJsonToken.String;
 
             _position += WriteVariableSizeInt(size);
