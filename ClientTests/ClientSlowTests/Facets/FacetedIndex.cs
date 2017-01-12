@@ -66,7 +66,7 @@ namespace NewClientTests.NewClient
         }
 
         [Fact]
-        public void CanPerformFacetedSearch_Remotely()
+        public void CanPerformFacetedSearch()
         {
             using (var store = GetDocumentStore())
             {
@@ -75,38 +75,7 @@ namespace NewClientTests.NewClient
         }
 
         [Fact]
-        public void RemoteFacetedSearchHonorsConditionalGet()
-        {
-            using (var store = GetDocumentStore())
-            {
-                Setup(store, _stronglyTypedFacets);
-
-                //long? firstEtag;
-
-                var queryUrl = store.Url.ForDatabase(store.DefaultDatabase) + "/queries/CameraCost?facetDoc=facets%2FCameraFacets&query=Manufacturer%253A{0}&facetStart=0&facetPageSize=&op=facets";
-
-                var url = string.Format(queryUrl, "canon");
-
-                /*Assert.Equal(HttpStatusCode.OK, ConditionalGetHelper.PerformGet(store, url, null, out firstEtag));
-
-                //second request should give 304 not modified
-                Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformGet(store, url, firstEtag, out firstEtag));
-
-                //change index etag by inserting new doc
-                InsertCameraData(store, GetCameras(1));
-
-                long? secondEtag;
-
-                //changing the index should give 200 OK
-                Assert.Equal(HttpStatusCode.OK, ConditionalGetHelper.PerformGet(store, url, firstEtag, out secondEtag));
-
-                //next request should give 304 not modified
-                Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformGet(store, url, secondEtag, out secondEtag));*/
-            }
-        }
-
-        [Fact]
-        public void CanPerformFacetedSearch_Remotely_Asynchronously()
+        public void CanPerformFacetedSearch_Asynchronously()
         {
             using (var store = GetDocumentStore())
             {
@@ -115,7 +84,7 @@ namespace NewClientTests.NewClient
         }
 
         [Fact]
-        public void CanPerformFacetedSearch_Remotely_WithStronglyTypedAPI()
+        public void CanPerformFacetedSearch_WithStronglyTypedAPI()
         {
             using (var store = GetDocumentStore())
             {
@@ -124,25 +93,7 @@ namespace NewClientTests.NewClient
         }
 
         [Fact]
-        public void CanPerformFacetedSearch_Embedded()
-        {
-            using (var store = GetDocumentStore())
-            {
-                ExecuteTest(store, _stronglyTypedFacets);
-            }
-        }
-
-        [Fact]
-        public void CanPerformFacetedSearch_Embedded_WithStronglyTypedAPI()
-        {
-            using (var store = GetDocumentStore())
-            {
-                ExecuteTest(store, _stronglyTypedFacets);
-            }
-        }
-
-        [Fact]
-        public void CanPerformFacetedSearch_Remotely_Lazy()
+        public void CanPerformFacetedSearch_Lazy()
         {
             using (var store = GetDocumentStore())
             {
@@ -164,22 +115,22 @@ namespace NewClientTests.NewClient
 
                         var facetResults = s.Query<Camera>("CameraCost")
                             .Customize(x => x.WaitForNonStaleResults())
-                            .Where(exp);
-                            //.ToFacetsLazy("facets/CameraFacets");
+                            .Where(exp)
+                            .ToFacetsLazy("facets/CameraFacets");
 
-                        /*Assert.Equal(oldRequests, s.Advanced.NumberOfRequests);
+                        Assert.Equal(oldRequests, s.Advanced.NumberOfRequests);
 
                         var filteredData = _data.Where(exp.Compile()).ToList();
                         CheckFacetResultsMatchInMemoryData(facetResults.Value, filteredData);
 
-                        Assert.Equal(oldRequests + 1, s.Advanced.NumberOfRequests);*/
+                        Assert.Equal(oldRequests + 1, s.Advanced.NumberOfRequests);
                     }
                 }
             }
         }
 
         [Fact]
-        public void CanPerformFacetedSearch_Remotely_Lazy_can_work_with_others()
+        public void CanPerformFacetedSearch_Lazy_can_work_with_others()
         {
             using (var store = GetDocumentStore())
             {
@@ -196,19 +147,19 @@ namespace NewClientTests.NewClient
 
                     foreach (var exp in expressions)
                     {
-                        /*var oldRequests = s.Advanced.NumberOfRequests;
+                        var oldRequests = s.Advanced.NumberOfRequests;
                         var load = s.Advanced.Lazily.Load<Camera>(oldRequests);
                         var facetResults = s.Query<Camera>("CameraCost")
                             .Customize(x => x.WaitForNonStaleResults())
                             .Where(exp)
-                            //.ToFacetsLazy("facets/CameraFacets");
+                            .ToFacetsLazy("facets/CameraFacets");
 
                         Assert.Equal(oldRequests, s.Advanced.NumberOfRequests);
 
                         var filteredData = _data.Where(exp.Compile()).ToList();
                         CheckFacetResultsMatchInMemoryData(facetResults.Value, filteredData);
                         var forceLoading = load.Value;
-                        Assert.Equal(oldRequests + 1, s.Advanced.NumberOfRequests);*/
+                        Assert.Equal(oldRequests + 1, s.Advanced.NumberOfRequests);
                     }
                 }
             }
@@ -287,27 +238,11 @@ namespace NewClientTests.NewClient
             InsertCameraData(store, _data);
         }
 
-        private void PrintFacetResults(FacetedQueryResult facetResults)
-        {
-            foreach (var kvp in facetResults.Results)
-            {
-                /*if (kvp.Value.Values.Count() > 0)
-                {
-                    Console.WriteLine(kvp.Key + ":");
-                    foreach (var facet in kvp.Value.Values)
-                    {
-                        Console.WriteLine("    {0}: {1}", facet.Range, facet.Hits);
-                    }
-                    Console.WriteLine();
-                }*/
-            }
-        }
-
-        private void CheckFacetResultsMatchInMemoryData(
+       private void CheckFacetResultsMatchInMemoryData(
                     FacetedQueryResult facetResults,
                     List<Camera> filteredData)
         {
-            /*//Make sure we get all range values
+            //Make sure we get all range values
             Assert.Equal(filteredData.GroupBy(x => x.Manufacturer).Count(),
                         facetResults.Results["Manufacturer"].Values.Count());
 
@@ -340,7 +275,7 @@ namespace NewClientTests.NewClient
             CheckFacetCount(filteredData.Where(x => x.Megapixels >= 7.0m && x.Megapixels <= 10.0m).Count(),
                             megapixelsFacets.FirstOrDefault(x => x.Range == "[Dx7 TO Dx10]"));
             CheckFacetCount(filteredData.Where(x => x.Megapixels >= 10.0m).Count(),
-                            megapixelsFacets.FirstOrDefault(x => x.Range == "[Dx10 TO NULL]"));*/
+                            megapixelsFacets.FirstOrDefault(x => x.Range == "[Dx10 TO NULL]"));
         }
 
         private void CheckFacetCount(int expectedCount, FacetValue facets)
