@@ -17,7 +17,8 @@ var gulp = require('gulp'),
     checkAllFilesExist = require('./gulp/checkAllFilesExist'),
     gutil = require('gulp-util'),
     autoPrefixer = require('gulp-autoprefixer'),
-    fileExists = require('file-exists');
+    fileExists = require('file-exists'),
+    { getLastRecentlyModifiedFile } = require('./gulp/fsUtils');
 
 var PATHS = require('./gulp/paths');
 
@@ -57,34 +58,25 @@ gulp.task('less', function() {
 });
 
 gulp.task('generate-typings', function (cb) {
-    var debugPath = '../../tools/TypingsGenerator/bin/Debug/netcoreapp1.1/TypingsGenerator.dll';
-    var releasePath = '../../tools/TypingsGenerator/bin/Release/netcoreapp1.1/TypingsGenerator.dll';
+    const possibleTypingsGenPaths = [
+        '../../tools/TypingsGenerator/bin/Debug/netcoreapp1.1/TypingsGenerator.dll',
+        '../../tools/TypingsGenerator/bin/Release/netcoreapp1.1/TypingsGenerator.dll' ];
 
-    if (fileExists(releasePath) && fileExists(debugPath)) {
-        cb("Ambiguous TypingsGenerator lookup. Delete compiled TypingsGenerator.dll from either release or debug directory.");
+    let dllPath = getLastRecentlyModifiedFile(possibleTypingsGenPaths);
+    if (!dllPath) {
+        cb(new Error('TypingsGenerator.dll not found neither for Release nor Debug directory.'));
         return;
     }
 
-    if (fileExists(releasePath)) {
-        exec('dotnet ' + releasePath, function (err, stdout, stderr) {
-            console.log(stdout);
-            console.log(stderr);
-            cb(err);
-        });
-        return;
-    }
+    gutil.log(`Running: dotnet ${dllPath}`);
+    exec('dotnet ' + dllPath, function (err, stdout, stderr) {
+        if (err) {
+            gutil.log(stdout);
+            gutil.log(stderr);
+        }
 
-    if (fileExists(debugPath)) {
-        exec('dotnet ' + debugPath, function (err, stdout, stderr) {
-            console.log(stdout);
-            console.log(stderr);
-            cb(err);
-        });
-        return;
-    }
-
-    console.log('Could not find TypingsGenerator');
-    cb('Could not find TypingsGenerator');
+        cb(err);
+    });
 });
 
 gulp.task('compile:test', ['generate-ts'], function() {
