@@ -79,7 +79,6 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Stream
 
                         Assert.NotNull(enumerator.Current.Key);
                         Assert.NotNull(enumerator.Current.Etag);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.RavenClrType]);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.RavenEntityName]);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.RavenLastModified]);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.LastModified]);
@@ -154,7 +153,6 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Stream
                         Assert.Equal("Tel Aviv", enumerator.Current.Document.Address);
                         Assert.NotNull(enumerator.Current.Key);
                         Assert.NotNull(enumerator.Current.Etag);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.RavenClrType]);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.RavenEntityName]);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.LastModified]);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.RavenLastModified]);

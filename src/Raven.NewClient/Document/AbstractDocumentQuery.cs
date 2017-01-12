@@ -31,6 +31,7 @@ using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Util;
 using Raven.NewClient.Client.Document.Async;
 using Raven.NewClient.Client.Document.Batches;
+using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Document
 {
@@ -1769,11 +1770,11 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         /// Called externally to raise the after stream executed callback
         /// </summary>
-        public void InvokeAfterStreamExecuted(ref object result)
+        public void InvokeAfterStreamExecuted(BlittableJsonReaderObject result)
         {
             var streamExecuted = afterStreamExecutedCallback;
             if (streamExecuted != null)
-                streamExecuted(ref result);
+                streamExecuted(result);
         }
 
         #endregion

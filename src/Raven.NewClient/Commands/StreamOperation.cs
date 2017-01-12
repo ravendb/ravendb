@@ -221,6 +221,8 @@ namespace Raven.NewClient.Client.Commands
 
         private class YieldStreamResults : IAsyncEnumerator<BlittableJsonReaderObject>
         {
+            private bool complete;
+
             public YieldStreamResults(InMemoryDocumentSessionOperations session, StreamResult stream)
             {
                 _response = stream;
@@ -236,6 +238,8 @@ namespace Raven.NewClient.Client.Commands
 
             public async Task<bool> MoveNextAsync()
             {
+                if (complete)
+                    return false;
                 var state = new JsonParserState();
                 JsonOperationContext.ManagedPinnedBuffer buffer;
 
@@ -297,7 +301,8 @@ namespace Raven.NewClient.Client.Commands
                             throw new InvalidOperationException("Expected stream closing token, but got " +
                                                                 state.CurrentTokenType);
                         }
-                        return false;
+                        complete = true;
+                        return true;
                     }
 
                     await ReadNextTokenAsync(_response.Stream, parser, buffer).ConfigureAwait(false);
