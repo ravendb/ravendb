@@ -128,7 +128,8 @@ namespace Voron.Data.BTrees
             private void AllocateMorePages()
             {
                 var overflowSize = (_numberOfPagesPerChunk * Constants.Storage.PageSize) - PageHeader.SizeOf;
-                _currentPage = _parent._tx.LowLevelTransaction.AllocateOverflowRawPage(overflowSize, zeroPage: false);
+                int _;
+                _currentPage = _parent._tx.LowLevelTransaction.AllocateOverflowRawPage(overflowSize, out _, zeroPage: false);
                 _parent.State.OverflowPages += _numberOfPagesPerChunk;
                 _writePos = _currentPage.DataPointer;
                 _writePosEnd = _currentPage.Pointer + (_numberOfPagesPerChunk * Constants.Storage.PageSize);

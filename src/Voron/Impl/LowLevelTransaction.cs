@@ -282,9 +282,9 @@ namespace Voron.Impl
             Page newPage;
             if (currentPage.IsOverflow)
             {
-                newPage = AllocateOverflowRawPage(currentPage.OverflowSize, num, currentPage, zeroPage: false);
-                pageSize = Constants.Storage.PageSize *
-                           DataPager.GetNumberOfOverflowPages(currentPage.OverflowSize);
+                int numberOfAllocatedPages;
+                newPage = AllocateOverflowRawPage(currentPage.OverflowSize, out numberOfAllocatedPages, num, currentPage, zeroPage: false);
+                pageSize = Constants.Storage.PageSize * numberOfAllocatedPages;
             }
             else
             {
@@ -381,17 +381,16 @@ namespace Voron.Impl
             return AllocatePage(numberOfPages, pageNumber.Value, previousPage, zeroPage);
         }
 
-        public Page AllocateOverflowRawPage(long pageSize, long? pageNumber = null, Page? previousPage = null, bool zeroPage = true)
+        public Page AllocateOverflowRawPage(long overflowSize, out int numberOfPages, long? pageNumber = null, Page? previousPage = null, bool zeroPage = true)
         {
-            long overflowSize = 0 + pageSize;
             if (overflowSize > int.MaxValue - 1)
                 throw new InvalidOperationException($"Cannot allocate chunks bigger than { int.MaxValue / 1024 * 1024 } Mb.");
 
             Debug.Assert(overflowSize >= 0);
 
-            long numberOfPages = (overflowSize / Constants.Storage.PageSize) + (overflowSize % Constants.Storage.PageSize == 0 ? 0 : 1);
+            numberOfPages = DataPager.GetNumberOfOverflowPages(overflowSize);
 
-            var overflowPage = AllocatePage((int)numberOfPages, pageNumber, previousPage, zeroPage);
+            var overflowPage = AllocatePage(numberOfPages, pageNumber, previousPage, zeroPage);
             overflowPage.Flags = PageFlags.Overflow;
             overflowPage.OverflowSize = (int)overflowSize;
 
