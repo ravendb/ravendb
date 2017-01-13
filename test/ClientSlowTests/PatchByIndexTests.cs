@@ -100,7 +100,7 @@ namespace NewClientTests.NewClient.FastTests.Patching
                     .Operations
                     .SendAsync(new PatchByIndexOperation("TestIndex", new IndexQuery { Query = "Owner:bob" }, new PatchRequest { Script = sampleScript }));
 
-                await operation.WaitForCompletionAsync();
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
                 var getDocumentCommand = new GetDocumentCommand
                 {
@@ -187,7 +187,7 @@ namespace NewClientTests.NewClient.FastTests.Patching
                     .Operations
                     .SendAsync(new PatchByIndexOperation("TestIndex", new IndexQuery { Query = "Value:1" }, new PatchRequest { Script = @"PutDocument('NewItem/3', {'CopiedValue': this.Value });" }));
 
-                await operation.WaitForCompletionAsync();
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
                 var getDocumentCommand = new GetDocumentCommand
                 {
@@ -251,7 +251,7 @@ namespace NewClientTests.NewClient.FastTests.Patching
                     .Operations
                     .SendAsync(new PatchByIndexOperation(stats.IndexName, new IndexQuery { Query = string.Empty }, new PatchRequest { Script = "this.FullName = this.FirstName + ' ' + this.LastName;" }));
 
-                await operation.WaitForCompletionAsync();
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
                 using (var db = store.OpenAsyncSession())
                 {

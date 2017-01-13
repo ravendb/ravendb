@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -44,7 +45,7 @@ namespace NewClientTests.NewClient.Client.Indexing
 
                 var operation = store.Operations.Send(new DeleteByIndexOperation(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }));
 
-                operation.WaitForCompletion();
+                operation.WaitForCompletion(TimeSpan.FromSeconds(60));
 
                 var databaseStatistics = store.Admin.Send(new GetStatisticsOperation());
 
@@ -82,7 +83,7 @@ namespace NewClientTests.NewClient.Client.Indexing
 
                 var operation = await store.Operations.SendAsync(new DeleteByIndexOperation(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }));
 
-                await operation.WaitForCompletionAsync();
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
                 var databaseStatistics = store.Admin.Send(new GetStatisticsOperation());
 
