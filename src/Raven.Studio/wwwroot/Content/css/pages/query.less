@@ -65,6 +65,16 @@
     }
 }
 
+.results-info {
+    small::after {
+        content: " and"
+    }
+
+    small:last-child:after {
+        content: "";
+    }
+}
+
 .query-results {
     border: 1px solid @gray-darker;
     /*

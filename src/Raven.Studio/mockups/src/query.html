@@ -216,22 +216,26 @@
 
                         </div>
                     </div>
-
-                            <h2 class="pull-left-sm">
-                                Results
-                                <a href="#"><i class="icon-link"></i></a>
-                            </h2>
-
-
+                    <h2 class="pull-left-sm">
+                        Results
+                        <a href="#"><i class="icon-link"></i></a>
+                    </h2>
                 </div>
 
                 <div class="flex-window-scroll">
                     <div class="clearfix">
-                        <small class="pull-left">sorted by <strong>Name</strong>, ascending</small>
+                        <div class="results-info pull-left">
+                            <small>sorted by <strong>Name</strong> (ascending)</small>
+                            <small>transformed by <strong>PersonalNameTransformer</strong></small>
+                        </div>
                         <div class="btn-group btn-group-sm pull-right" role="group" aria-label="...">
                             <button type="button" class="btn btn-danger"><i class="icon-trash"></i> <span>Delete documents</span></button>
                             <div class="btn-group dropdown-right">
-                                <button class="btn btn-default btn-sm dropdown-toggle btn-checkable" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                <!--
+                                    @marcin Once something is selected in "Sort by" or "Transform results" those buttons should get class 'active'.
+                                    Hence the onclick handler.
+                                -->
+                                <button onclick="this.classList.toggle('active');" class="btn btn-default btn-sm dropdown-toggle btn-checkable" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                                         <i class="icon-sortby"></i><span>Sort by</span>
                                         <span class="caret"></span>
                                       </button>
@@ -239,26 +243,26 @@
                                     <div class="row row-sm margin-bottom">
                                         <div class="col-xs-5">
                                             <div class="dropdown btn-block">
-                                              <button class="btn btn-block text-left dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                                <button class="btn btn-block text-left dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                                                 First name
                                                 <span class="caret"></span>
                                               </button>
-                                              <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
-                                                <li><a href="#">Action</a></li>
-                                                <li><a href="#">Another action</a></li>
-                                              </ul>
+                                                <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+                                                    <li><a href="#">Action</a></li>
+                                                    <li><a href="#">Another action</a></li>
+                                                </ul>
                                             </div>
                                         </div>
                                         <div class="col-xs-5">
                                             <div class="dropdown btn-block">
-                                              <button class="btn btn-block text-left dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                                <button class="btn btn-block text-left dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                                                 Ascending
                                                 <span class="caret"></span>
                                               </button>
-                                              <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
-                                                <li><a href="#">Action</a></li>
-                                                <li><a href="#">Another action</a></li>
-                                              </ul>
+                                                <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+                                                    <li><a href="#">Action</a></li>
+                                                    <li><a href="#">Another action</a></li>
+                                                </ul>
                                             </div>
                                         </div>
                                         <div class="col-xs-2">
@@ -268,26 +272,26 @@
                                     <div class="row row-sm margin-bottom">
                                         <div class="col-xs-5">
                                             <div class="dropdown btn-block">
-                                              <button class="btn btn-block dropdown-toggle text-left" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                                <button class="btn btn-block dropdown-toggle text-left" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                                                 Select field
                                                 <span class="caret"></span>
                                               </button>
-                                              <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
-                                                <li><a href="#">Action</a></li>
-                                                <li><a href="#">Another action</a></li>
-                                              </ul>
+                                                <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+                                                    <li><a href="#">Action</a></li>
+                                                    <li><a href="#">Another action</a></li>
+                                                </ul>
                                             </div>
                                         </div>
                                         <div class="col-xs-5">
                                             <div class="dropdown btn-block">
-                                              <button class="btn btn-block dropdown-toggle text-left" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                                <button class="btn btn-block dropdown-toggle text-left" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                                                 Ascending
                                                 <span class="caret"></span>
                                               </button>
-                                              <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
-                                                <li><a href="#">Action</a></li>
-                                                <li><a href="#">Another action</a></li>
-                                              </ul>
+                                                <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+                                                    <li><a href="#">Action</a></li>
+                                                    <li><a href="#">Another action</a></li>
+                                                </ul>
                                             </div>
                                         </div>
                                         <div class="col-xs-2">
@@ -303,7 +307,7 @@
                                 </div>
                             </div>
                             <div class="btn-group dropdown-right">
-                                <button class="btn btn-sm btn-default dropdown-toggle btn-checkable" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                <button class="btn btn-sm btn-default dropdown-toggle btn-checkable" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" onclick="this.classList.toggle('active')">
                                     <i class="icon-transform-results"></i>
                                     <span>Transform results</span>
                                     <span class="caret"></span>
