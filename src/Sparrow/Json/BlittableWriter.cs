@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using Sparrow.Compression;
 using Sparrow.Json.Parsing;
@@ -136,8 +138,7 @@ namespace Sparrow.Json
             _position += WriteVariableSizeInt(properties.Count);
 
             // Write object metadata
-            int count = properties.Count;
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < properties.Count; i++)
             {
                 var sortedProperty = properties[i];
 
@@ -281,23 +282,25 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteNumber(int value, int sizeOfValue)
         {
-            switch (sizeOfValue)
+            // PERF: Instead of threw add this as a debug thing. We cannot afford this method not getting inlined.
+            Debug.Assert(sizeOfValue == sizeof(byte) || sizeOfValue == sizeof(short) || sizeOfValue == sizeof(int), $"Unsupported size {sizeOfValue}");
+
+            // PERF: With the current JIT at 12 of January of 2017 the switch statement dont get inlined.
+            if (sizeOfValue == sizeof(int))
             {
-                case sizeof(int):
-                    _unmanagedWriteBuffer.WriteByte((byte)value);
-                    _unmanagedWriteBuffer.WriteByte((byte)(value >> 8));
-                    _unmanagedWriteBuffer.WriteByte((byte)(value >> 16));
-                    _unmanagedWriteBuffer.WriteByte((byte)(value >> 24));
-                    break;
-                case sizeof(short):
-                    _unmanagedWriteBuffer.WriteByte((byte)value);
-                    _unmanagedWriteBuffer.WriteByte((byte)(value >> 8));
-                    break;
-                case sizeof(byte):
-                    _unmanagedWriteBuffer.WriteByte((byte)value);
-                    break;
-                default:
-                    throw new ArgumentException($"Unsupported size {sizeOfValue}");
+                _unmanagedWriteBuffer.WriteByte((byte)value);
+                _unmanagedWriteBuffer.WriteByte((byte)(value >> 8));
+                _unmanagedWriteBuffer.WriteByte((byte)(value >> 16));
+                _unmanagedWriteBuffer.WriteByte((byte)(value >> 24));
+            }
+            else if (sizeOfValue == sizeof(ushort))
+            {
+                _unmanagedWriteBuffer.WriteByte((byte) value);
+                _unmanagedWriteBuffer.WriteByte((byte) (value >> 8));
+            }
+            else
+            {
+                _unmanagedWriteBuffer.WriteByte((byte)value);
             }
         }
 
