@@ -332,12 +332,13 @@ namespace Sparrow.Json
             }
             buffer[count++] = (byte)(v);
 
-            _unmanagedWriteBuffer.Write(buffer, count);
+            if (count == 1)
+                _unmanagedWriteBuffer.WriteByte(*buffer);
+            else
+                _unmanagedWriteBuffer.Write(buffer, count);
 
             return count;
         }
-
-
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe int WriteVariableSizeInt(int value)
@@ -357,7 +358,10 @@ namespace Sparrow.Json
             }
             buffer[count++] = (byte)(v);
 
-            _unmanagedWriteBuffer.Write(buffer, count);
+            if (count == 1)
+                _unmanagedWriteBuffer.WriteByte(*buffer);
+            else
+                _unmanagedWriteBuffer.Write(buffer, count);
 
             return count;            
         }
@@ -379,14 +383,21 @@ namespace Sparrow.Json
                 v >>= 7;
             }
             buffer[count++] = (byte)(v);
-            for (int i = count - 1; i >= count / 2; i--)
-            {
-                var tmp = buffer[i];
-                buffer[i] = buffer[count - 1 - i];
-                buffer[count - 1 - i] = tmp;
-            }
 
-            _unmanagedWriteBuffer.Write(buffer, count);
+            if (count == 1)
+            {
+                _unmanagedWriteBuffer.WriteByte(*buffer);
+            }
+            else
+            {
+                for (int i = count - 1; i >= count / 2; i--)
+                {
+                    var tmp = buffer[i];
+                    buffer[i] = buffer[count - 1 - i];
+                    buffer[count - 1 - i] = tmp;
+                }
+                _unmanagedWriteBuffer.Write(buffer, count);
+            }               
 
             return count;
         }
