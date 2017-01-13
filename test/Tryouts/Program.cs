@@ -11,6 +11,7 @@ using FastTests.Blittable;
 using FastTests.Issues;
 using FastTests.Server.Documents.Queries;
 using FastTests.Voron.RawData;
+using SlowTests.Tests;
 
 namespace Tryouts
 {
@@ -18,9 +19,9 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var a = new WaitingForNonStaleResults())
+            using (var a = new NoNonDisposableTests())
             {
-                a.Throws_if_exceeds_timeout();
+                a.ShouldExist();
             }
         }
     }
