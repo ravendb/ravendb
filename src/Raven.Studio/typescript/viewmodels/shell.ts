@@ -31,7 +31,7 @@ import enableResizeBindingHandler = require("common/bindingHelpers/enableResizeB
 import helpBindingHandler = require("common/bindingHelpers/helpBindingHandler");
 import oauthContext = require("common/oauthContext");
 import messagePublisher = require("common/messagePublisher");
-import apiKeyLocalStorage = require("common/apiKeyLocalStorage");
+import apiKeyLocalStorage = require("common/storage/apiKeyLocalStorage");
 import extensions = require("common/extensions");
 import notificationCenter = require("common/notifications/notificationCenter");
 import virtualGrid = require("widgets/virtualGrid/virtualGrid");
@@ -48,7 +48,7 @@ import accessHelper = require("viewmodels/shell/accessHelper");
 import licensingStatus = require("viewmodels/common/licensingStatus");
 import enterApiKey = require("viewmodels/common/enterApiKey");
 
-import serverBuildReminder = require("common/serverBuildReminder");
+import serverBuildReminder = require("common/storage/serverBuildReminder");
 import latestBuildReminder = require("viewmodels/common/latestBuildReminder")
 
 import eventsCollector = require("common/eventsCollector");
