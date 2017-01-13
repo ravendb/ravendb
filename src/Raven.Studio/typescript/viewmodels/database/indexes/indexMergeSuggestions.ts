@@ -2,7 +2,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import getIndexMergeSuggestionsCommand = require("commands/database/debug/getIndexMergeSuggestionsCommand");
 import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
-import mergedIndexesStorage = require("common/mergedIndexesStorage");
+import mergedIndexesStorage = require("common/storage/mergedIndexesStorage");
 import indexMergeSuggestion = require("models/database/index/indexMergeSuggestion");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import changeSubscription = require('common/changeSubscription');
@@ -109,7 +109,7 @@ class indexMergeSuggestions extends viewModelBase {
 
     mergedIndexUrl(id: string) {
         var db: database = this.activeDatabase();
-        var mergedIndexName = mergedIndexesStorage.getMergedIndexName(db, id);
+        var mergedIndexName = mergedIndexesStorage.getLocalStorageKey(db, id);
 
         return this.appUrls.editIndex(mergedIndexName);
     }
