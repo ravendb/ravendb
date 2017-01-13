@@ -1,6 +1,7 @@
 import router = require("plugins/router");
 import viewModelBase = require("viewmodels/viewModelBase");
 import index = require("models/database/index/index");
+import document = require("models/database/documents/document");
 import indexDefinition = require("models/database/index/indexDefinition");
 import getIndexDefinitionCommand = require("commands/database/index/getIndexDefinitionCommand");
 import appUrl = require("common/appUrl");
@@ -33,10 +34,14 @@ import renameOrDuplicateIndexDialog = require("viewmodels/database/indexes/renam
 import indexFieldOptions = require("models/database/index/indexFieldOptions");
 import getIndexFieldsCommand = require("commands/database/index/getIndexFieldsCommand");
 import configurationItem = require("models/database/index/configurationItem");
+import getDatabaseSettingsCommand = require("commands/resources/getDatabaseSettingsCommand");
+import configuration = require("configuration");
 
 import eventsCollector = require("common/eventsCollector");
 
 class editIndex extends viewModelBase { 
+
+    static readonly DefaultIndexStoragePath = "~/{Database Name}/Indexes";
 
     isEditingExistingIndex = ko.observable<boolean>(false);
     editedIndex = ko.observable<indexDefinition>();
@@ -45,6 +50,14 @@ class editIndex extends viewModelBase {
     saveInProgress = ko.observable<boolean>(false);
 
     fieldNames = ko.observableArray<string>([]);
+    defaultIndexPath = ko.observable<string>();
+    additionalStoragePaths = ko.observableArray<string>([]);
+    selectedIndexPath = ko.pureComputed(() => {
+        const defaultPath = this.defaultIndexPath();
+        const selectedPath = this.editedIndex().indexStoragePath();
+
+        return selectedPath || defaultPath + " (default)";
+    });
 
     queryUrl = ko.observable<string>();
     termsUrl = ko.observable<string>();
@@ -154,6 +167,20 @@ class editIndex extends viewModelBase {
         //TODO: scripted index this.checkIfScriptedIndexBundleIsActive();
     }
 
+    private updateIndexPaths() {
+        new getDatabaseSettingsCommand(this.activeDatabase())
+            .execute()
+            .done((databaseDocument: document) => {
+                const settings = (<any>databaseDocument)["Settings"] as dictionary<string>;
+                const indexStoragePath = settings[configuration.indexing.indexStoragePath];
+                //TODO: don't use .string here: but additionalIndexStoragePaths - waiting for RavenDB-5665)
+                const additionalPaths = settings[configuration.indexing.string] ? settings[configuration.indexing.string].split(";") : [];
+                this.additionalStoragePaths(additionalPaths);
+                this.defaultIndexPath(indexStoragePath || editIndex.DefaultIndexStoragePath);
+            })
+            .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to load database settings.", response.responseText, response.statusText))
+    }
+
     private updateIndexFields() {
         const map = this.editedIndex().maps()[0].map();
         new getIndexFieldsCommand(this.activeDatabase(), map)
@@ -165,8 +192,7 @@ class editIndex extends viewModelBase {
 
     private initializeDirtyFlag() {
         const indexDef: indexDefinition = this.editedIndex();
-        const checkedFieldsArray: Array<KnockoutObservable<any>> = [indexDef.name, indexDef.maps, indexDef.reduce, indexDef.numberOfFields];
-
+        const checkedFieldsArray: Array<KnockoutObservable<any>> = [indexDef.name, indexDef.maps, indexDef.reduce, indexDef.numberOfFields, indexDef.indexStoragePath];
 
         const configuration = indexDef.configuration();
         if (configuration) {
@@ -315,6 +341,7 @@ class editIndex extends viewModelBase {
                 this.originalIndexName = this.editedIndex().name();
                 this.editedIndex().hasReduce(!!this.editedIndex().reduce());
                 this.updateIndexFields();
+                this.updateIndexPaths();
             })
     }
 

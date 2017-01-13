@@ -42,6 +42,7 @@ class indexDefinition {
     configuration = ko.observableArray<configurationItem>();
     maxIndexOutputsPerDocument = ko.observable<number>();
     lockMode: Raven.Abstractions.Indexing.IndexLockMode;
+    indexStoragePath = ko.observable<string>();
 
     hasReduce = ko.observable<boolean>(false);
 
@@ -71,6 +72,12 @@ class indexDefinition {
         if (existingMaxIndexOutputs) {
             this.maxIndexOutputsPerDocument(parseInt(existingMaxIndexOutputs.value()));
             this.configuration.remove(existingMaxIndexOutputs);
+        }
+
+        const existingIndexStoragePath = this.configuration().find(x => x.key() === configuration.indexing.indexStoragePath);
+        if (existingIndexStoragePath && existingIndexStoragePath.value()) {
+            this.indexStoragePath(existingIndexStoragePath.value());
+            this.configuration.remove(existingIndexStoragePath);
         }
 
         this.initValidation();
@@ -132,6 +139,10 @@ class indexDefinition {
 
         if (_.isNumber(this.maxIndexOutputsPerDocument())) {
             result[configuration.indexing.maxMapIndexOutputsPerDocument] = this.maxIndexOutputsPerDocument().toString();
+        }
+
+        if (this.indexStoragePath()) {
+            result[configuration.indexing.indexStoragePath] = this.indexStoragePath();
         }
 
         return result;

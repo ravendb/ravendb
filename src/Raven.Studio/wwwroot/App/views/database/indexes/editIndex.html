@@ -135,15 +135,15 @@
                             <label class="col-sm-2 control-label">Path</label>
                             <div class="col-sm-10">
                                 <div class="dropdown visible-block">
-                                    <button class="btn dropdown-toggle btn-prerelease btn-block text-left" type="button" id="dropdownMenu1" disabled="disabled" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                                        Path
+                                    <button class="btn dropdown-toggle btn-block text-left" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                        <span data-bind="text: $root.selectedIndexPath"></span>
                                         <span class="caret"></span>
                                     </button>
-                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
-                                        <li><a href="#">Path</a></li>
-                                        <li><a href="#">Another path</a></li>
-                                        <li><a href="#">Other path</a></li>
-
+                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenu1" data-bind="with: editedIndex()">
+                                        <li><a href="#" data-bind="click: indexStoragePath.bind(indexStoragePath, null)"><span data-bind="text: $root.defaultIndexPath()"></span> (default)</a></li>
+                                        <!-- ko foreach: $root.additionalStoragePaths -->
+                                            <li><a href="#" data-bind="text: $data, click: _.partial($parent.indexStoragePath, $data)"></a></li>
+                                        <!-- /ko -->
                                     </ul>
                                 </div>
                             </div>

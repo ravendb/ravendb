@@ -1,6 +1,7 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import document = require("models/database/documents/document");
+import endpoints = require("endpoints");
 
 class getDatabaseSettingsCommand extends commandBase {
 
@@ -17,9 +18,13 @@ class getDatabaseSettingsCommand extends commandBase {
             this.reportInfo("Fetching Database Settings for '" + this.db.name + "'");
         }
 
-        var resultsSelector = (queryResult: queryResultDto<documentDto>) => new document(queryResult);
-        var url = "/admin/databases?name=" + this.db.name;//TODO: use endpoints
-        var getTask = this.query(url, null, null, resultsSelector);
+        const resultsSelector = (queryResult: queryResultDto<documentDto>) => new document(queryResult);
+        const args = {
+            name: this.db.name
+        };
+        const url = endpoints.global.adminDatabases.adminDatabases + this.urlEncodeArgs(args);
+
+        const getTask = this.query(url, null, null, resultsSelector);
 
         if (this.reportRefreshProgress) {
             getTask.done(() => this.reportSuccess("Database Settings of '" + this.db.name + "' were successfully refreshed!"));
