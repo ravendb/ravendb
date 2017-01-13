@@ -337,6 +337,7 @@ namespace Sparrow.Json
             EnsureSingleChunk(out state.StringBuffer, out state.StringSize);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void EnsureSingleChunk(out byte* ptr, out int size)
         {
             ThrowIfDisposed();
@@ -346,6 +347,12 @@ namespace Sparrow.Json
                 size = _current.Used;
                 return;
             }
+
+            UnlikelyEnsureSingleChunk(out ptr, out size);
+        }
+
+        private unsafe void UnlikelyEnsureSingleChunk(out byte* ptr, out int size)
+        {
             // if we are here, then we have multiple chunks, we can't
             // allow a growth of the last chunk, since we'll by copying over it
             // so we force a whole new chunk
@@ -355,7 +362,7 @@ namespace Sparrow.Json
             _current = realCurrent.Previous;
             CopyTo(realCurrent.Address);
             realCurrent.Used = SizeInBytes;
-            
+
             _current = realCurrent;
             _current.PreviousHoldsNoData = true;
             ptr = _current.Address;
