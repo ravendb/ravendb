@@ -98,21 +98,21 @@ namespace Raven.Server.Documents.Patch
                 case BlittableJsonToken.Null:
                     return JsValue.Null;
                 case BlittableJsonToken.Boolean:
-                    return new JsValue((bool) value);
+                    return new JsValue((bool)value);
 
                 case BlittableJsonToken.Integer:
-                    return new JsValue((long) value);
+                    return new JsValue((long)value);
                 case BlittableJsonToken.Float:
-                    return new JsValue((double) (LazyDoubleValue) value);
+                    return new JsValue((double)(LazyDoubleValue)value);
                 case BlittableJsonToken.String:
-                    return new JsValue(((LazyStringValue) value).ToString());
+                    return new JsValue(((LazyStringValue)value).ToString());
                 case BlittableJsonToken.CompressedString:
-                    return new JsValue(((LazyCompressedStringValue) value).ToString());
+                    return new JsValue(((LazyCompressedStringValue)value).ToString());
 
                 case BlittableJsonToken.StartObject:
-                    return ToJsObject(engine, (BlittableJsonReaderObject) value, propertyKey);
+                    return ToJsObject(engine, (BlittableJsonReaderObject)value, propertyKey);
                 case BlittableJsonToken.StartArray:
-                    return ToJsArray(engine, (BlittableJsonReaderArray) value, propertyKey);
+                    return ToJsArray(engine, (BlittableJsonReaderArray)value, propertyKey);
 
                 default:
                     throw new ArgumentOutOfRangeException(token.ToString());
@@ -143,19 +143,19 @@ namespace Raven.Server.Documents.Patch
                     continue;
 
                 var value = property.Value.Value;
-                if (value.HasValue == false)
+                if (value == null)
                     continue;
 
-                if (value.Value.IsRegExp())
+                if (value.IsRegExp())
                     continue;
 
-                var recursive = jsObject == value; 
+                var recursive = jsObject == value;
                 writer.WritePropertyName(property.Key);
                 if (recursiveCall && recursive)
                     writer.WriteValueNull();
                 else
                 {
-                    ToBlittableJsonReaderValue(writer, value.Value, CreatePropertyKey(property.Key, propertyKey), recursive);
+                    ToBlittableJsonReaderValue(writer, value, CreatePropertyKey(property.Key, propertyKey), recursive);
                 }
             }
             writer.WriteObjectEnd();
@@ -223,7 +223,7 @@ namespace Raven.Server.Documents.Patch
                 if (Math.Abs(num - integer) < double.Epsilon)
                 {
                     writer.WriteValue((long)integer);
-                    return; 
+                    return;
                 }
                 writer.WriteValue(num);
                 return;
@@ -232,7 +232,7 @@ namespace Raven.Server.Documents.Patch
             {
                 writer.WriteValueNull();
                 return;
-            }  
+            }
             if (v.IsArray())
             {
                 var jsArray = v.AsArray();
@@ -243,11 +243,11 @@ namespace Raven.Server.Documents.Patch
                         continue;
 
                     var jsInstance = property.Value.Value;
-                    if (!jsInstance.HasValue)
+                    if (jsInstance == null)
                         continue;
 
-                    ToBlittableJsonReaderValue(writer, jsInstance.Value, propertyKey + "[" + property.Key + "]",
-                        recursiveCall); 
+                    ToBlittableJsonReaderValue(writer, jsInstance, propertyKey + "[" + property.Key + "]",
+                        recursiveCall);
                 }
                 writer.WriteArrayEnd();
                 return;
@@ -259,7 +259,7 @@ namespace Raven.Server.Documents.Patch
             }
             if (v.IsObject())
             {
-                ToBlittableJsonReaderObject(writer,v.AsObject(), propertyKey, recursiveCall);
+                ToBlittableJsonReaderObject(writer, v.AsObject(), propertyKey, recursiveCall);
                 return;
             }
             if (v.IsRegExp())
@@ -287,17 +287,17 @@ namespace Raven.Server.Documents.Patch
                     continue;
 
                 var value = property.Value.Value;
-                if (value.HasValue == false)
+                if (value == null)
                     continue;
 
-                if (value.Value.IsRegExp())
+                if (value.IsRegExp())
                     continue;
 
                 var recursive = jsObject == value;
                 if (recursiveCall && recursive)
                     obj[property.Key] = null;
                 else
-                    obj[property.Key] = ToBlittableValue(value.Value, CreatePropertyKey(property.Key, propertyKey), recursive);
+                    obj[property.Key] = ToBlittableValue(value, CreatePropertyKey(property.Key, propertyKey), recursive);
             }
             return obj;
         }
@@ -348,7 +348,7 @@ namespace Raven.Server.Documents.Patch
                 // If we don't have the type, assume that if the number ending with ".0" it actually an integer.
                 var integer = Math.Truncate(num);
                 if (Math.Abs(num - integer) < double.Epsilon)
-                    return (long) integer;
+                    return (long)integer;
                 return num;
             }
             if (v.IsNull() || v.IsUndefined())
@@ -364,10 +364,10 @@ namespace Raven.Server.Documents.Patch
                         continue;
 
                     var jsInstance = property.Value.Value;
-                    if (!jsInstance.HasValue)
+                    if (jsInstance == null)
                         continue;
 
-                    var ravenJToken = ToBlittableValue(jsInstance.Value, propertyKey + "[" + property.Key + "]", recursiveCall);
+                    var ravenJToken = ToBlittableValue(jsInstance, propertyKey + "[" + property.Key + "]", recursiveCall);
                     if (ravenJToken == null)
                         continue;
 
@@ -404,7 +404,7 @@ namespace Raven.Server.Documents.Patch
             if (document == null)
                 return JsValue.Null;
 
-            totalStatements += (MaxSteps/2 + (document.Data.Size*AdditionalStepsPerSize));
+            totalStatements += (MaxSteps / 2 + (document.Data.Size * AdditionalStepsPerSize));
             engine.Options.MaxStatements(totalStatements);
 
             // TODO: Make sure to add Constants.Indexing.Fields.DocumentIdFieldName to document.Data
@@ -413,24 +413,27 @@ namespace Raven.Server.Documents.Patch
 
         public virtual string PutDocument(string key, JsValue document, JsValue metadata, JsValue etagJs, Engine engine)
         {
-            if (document.IsObject() == false)
+            if (document == null || document.IsObject() == false)
             {
                 throw new InvalidOperationException(
                     $"Created document must be a valid object which is not null or empty. Document key: '{key}'.");
             }
 
             long? etag = null;
-            if (etagJs.IsNumber())
+            if (etagJs != null)
             {
-                etag = (long) etagJs.AsNumber();
-            }
-            else if(etagJs.IsNull() == false && etagJs.IsUndefined() == false && etagJs.ToString() != "None")
-            {
-                throw new InvalidOperationException($"Invalid ETag value for document '{key}'");
+                if (etagJs.IsNumber())
+                {
+                    etag = (long) etagJs.AsNumber();
+                }
+                else if (etagJs.IsNull() == false && etagJs.IsUndefined() == false && etagJs.ToString() != "None")
+                {
+                    throw new InvalidOperationException($"Invalid ETag value for document '{key}'");
+                }
             }
 
             var data = ToBlittable(document.AsObject());
-            if (metadata.IsObject())
+            if (metadata != null && metadata.IsObject())
             {
                 data["@metadata"] = ToBlittable(metadata.AsObject());
             }
