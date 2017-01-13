@@ -70,6 +70,8 @@ namespace Raven.NewClient.Operations.Databases.Indexes
 
                 Result = indexErrors;
             }
+
+            public override bool IsReadRequest => true;
         }
     }
 }

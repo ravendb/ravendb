@@ -2207,7 +2207,7 @@ namespace Raven.Client.Connection.Async
 
         public async Task<RavenJToken> GetOperationStatusAsync(long id)
         {
-            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Url + "/operations/status?id=" + id, HttpMethod.Get, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention, GetRequestTimeMetric(Url)).AddOperationHeaders(OperationsHeaders)))
+            using (var request = jsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, Url + "/operations/state?id=" + id, HttpMethod.Get, credentialsThatShouldBeUsedOnlyInOperationsWithoutReplication, convention, GetRequestTimeMetric(Url)).AddOperationHeaders(OperationsHeaders)))
             {
                 try
                 {

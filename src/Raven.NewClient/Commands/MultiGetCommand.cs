@@ -61,13 +61,10 @@ namespace Raven.NewClient.Client.Commands
 
             var sb = new StringBuilder($"{node.Url}/databases/{node.Database}/multi_get");
 
-            IsReadRequest = false;
-
             url = sb.ToString();
 
             return request;
         }
-
 
         public override void SetResponse(BlittableJsonReaderObject response)
         {
@@ -76,5 +73,7 @@ namespace Raven.NewClient.Client.Commands
 
             Result = JsonDeserializationClient.BlittableArrayResult(response);
         }
+
+        public override bool IsReadRequest => false;
     }
 }

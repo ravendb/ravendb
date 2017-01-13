@@ -57,5 +57,7 @@ namespace Raven.NewClient.Client.Commands
             
 
         }
+
+        public override bool IsReadRequest => true;
     }
 }

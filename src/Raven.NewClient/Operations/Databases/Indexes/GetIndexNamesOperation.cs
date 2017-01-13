@@ -51,6 +51,8 @@ namespace Raven.NewClient.Operations.Databases.Indexes
 
                 Result = JsonDeserializationClient.GetIndexNamesResponse(response).Results;
             }
+
+            public override bool IsReadRequest => true;
         }
     }
 }

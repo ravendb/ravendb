@@ -74,6 +74,8 @@ namespace Raven.NewClient.Operations.Databases.Indexes
 
                 Result = terms.ToArray();
             }
+
+            public override bool IsReadRequest => true;
         }
     }
 }

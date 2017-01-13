@@ -41,5 +41,7 @@ namespace Raven.NewClient.Client.Commands
 
             Result = JsonDeserializationClient.GetDocumentResult(response);
         }
+
+        public override bool IsReadRequest => true;
     }
 }

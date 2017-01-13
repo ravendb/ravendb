@@ -87,7 +87,6 @@ namespace Raven.NewClient.Operations.Databases.Documents
                     })
                 };
 
-                IsReadRequest = false;
                 return request;
             }
 
@@ -98,6 +97,8 @@ namespace Raven.NewClient.Operations.Databases.Documents
 
                 Result = JsonDeserializationClient.OperationIdResult(response);
             }
+
+            public override bool IsReadRequest => false;
         }
     }
 }

@@ -74,6 +74,8 @@ namespace Raven.NewClient.Operations.Databases.Documents
 
                 Result = JsonDeserializationClient.OperationIdResult(response);
             }
+
+            public override bool IsReadRequest => false;
         }
     }
 }

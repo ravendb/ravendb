@@ -57,7 +57,6 @@ namespace Raven.NewClient.Operations.Databases.Documents
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/collections/docs?name={_collectionName}";
-                IsReadRequest = false;
 
                 var request = new HttpRequestMessage
                 {
@@ -78,6 +77,8 @@ namespace Raven.NewClient.Operations.Databases.Documents
 
                 Result = JsonDeserializationClient.OperationIdResult(response);
             }
+
+            public override bool IsReadRequest => false;
         }
     }
 }

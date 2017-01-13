@@ -36,5 +36,7 @@ namespace Raven.NewClient.Commands
             
             Result = (OperationState)_conventions.DeserializeEntityFromBlittable(typeof(OperationState), response);
         }
+
+        public override bool IsReadRequest => true;
     }
 }
