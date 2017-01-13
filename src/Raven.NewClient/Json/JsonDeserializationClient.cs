@@ -62,7 +62,5 @@ namespace Raven.NewClient.Client.Json
         public static readonly Func<BlittableJsonReaderObject, GetIndexStatisticsResponse> GetIndexStatisticsResponse = GenerateJsonDeserializationRoutine<GetIndexStatisticsResponse>();
 
         public static readonly Func<BlittableJsonReaderObject, IndexErrors> IndexErrors = GenerateJsonDeserializationRoutine<IndexErrors>();
-
-        //public static readonly Func<BlittableJsonReaderObject, IndexPerformanceStats> IndexPerformanceStats = GenerateJsonDeserializationRoutine<IndexPerformanceStats>();
     }
 }

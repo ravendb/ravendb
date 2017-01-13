@@ -389,7 +389,7 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact(Skip = "StackOverflow")]
+        [Fact]
         public async Task Performance()
         {
             using (var store = GetDocumentStore())

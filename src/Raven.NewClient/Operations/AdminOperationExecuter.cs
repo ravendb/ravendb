@@ -43,7 +43,7 @@ namespace Raven.NewClient.Operations
 
         public async Task SendAsync(IAdminOperation operation, CancellationToken token = default(CancellationToken))
         {
-            var command = operation.GetCommand();
+            var command = operation.GetCommand(_store.Conventions);
 
             JsonOperationContext context;
             using (_requestExecuter.ContextPool.AllocateOperationContext(out context))
@@ -52,7 +52,7 @@ namespace Raven.NewClient.Operations
 
         public async Task<TResult> SendAsync<TResult>(IAdminOperation<TResult> operation, CancellationToken token = default(CancellationToken))
         {
-            var command = operation.GetCommand();
+            var command = operation.GetCommand(_store.Conventions);
 
             JsonOperationContext context;
             using (_requestExecuter.ContextPool.AllocateOperationContext(out context))

@@ -11,7 +11,7 @@ namespace Raven.NewClient.Operations.Databases.Indexes
 {
     public class GetIndexingStatusOperation : IAdminOperation<IndexingStatus>
     {
-        public RavenCommand<IndexingStatus> GetCommand()
+        public RavenCommand<IndexingStatus> GetCommand(DocumentConvention conventions)
         {
             return new GetIndexingStatusCommand();
         }

@@ -29,7 +29,7 @@ namespace Raven.NewClient.Operations.Databases.Indexes
             _pageSize = pageSize;
         }
 
-        public RavenCommand<string[]> GetCommand()
+        public RavenCommand<string[]> GetCommand(DocumentConvention conventions)
         {
             return new GetTermsCommand(_indexName, _field, _fromValue, _pageSize);
         }

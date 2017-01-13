@@ -23,7 +23,7 @@ namespace Raven.NewClient.Operations.Databases.Indexes
             _indexName = indexName;
         }
 
-        public RavenCommand<object> GetCommand()
+        public RavenCommand<object> GetCommand(DocumentConvention conventions)
         {
             return new StopIndexingCommand(_indexName);
         }

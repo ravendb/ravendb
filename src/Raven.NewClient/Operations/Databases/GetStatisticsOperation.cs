@@ -6,7 +6,7 @@ namespace Raven.NewClient.Operations.Databases
 {
     public class GetStatisticsOperation : IAdminOperation<DatabaseStatistics>
     {
-        public RavenCommand<DatabaseStatistics> GetCommand()
+        public RavenCommand<DatabaseStatistics> GetCommand(DocumentConvention conventions)
         {
             return new GetStatisticsCommand();
         }
