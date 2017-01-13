@@ -409,7 +409,11 @@ namespace Voron.Impl.Scratch
 
                 while (_recycleArea.First != null)
                 {
-                    _recycleArea.First.Value.File.Dispose();
+                    var recycledScratch = _recycleArea.First.Value;
+
+                    ScratchBufferItem _;
+                    _scratchBuffers.TryRemove(recycledScratch.Number, out _);
+                    recycledScratch.File.Dispose();
                     _recycleArea.RemoveFirst();
                 }
             }
