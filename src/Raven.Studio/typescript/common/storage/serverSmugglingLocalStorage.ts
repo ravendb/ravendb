@@ -1,18 +1,18 @@
-/// <reference path="../../typings/tsd.d.ts" />
+/// <reference path="../../../typings/tsd.d.ts" />
 
 class serverSmugglingLocalStorage {
 
-    public static localStorageName = "serverSmuggling";
+    static localStorageName = "serverSmuggling";
 
-    public static get(): serverSmugglingDto {
+    static get(): serverSmugglingDto {
         return localStorage.getObject(serverSmugglingLocalStorage.localStorageName);
     }
 
-    public static setValue(value: serverSmugglingDto) {
+    static setValue(value: serverSmugglingDto) {
         localStorage.setObject(serverSmugglingLocalStorage.localStorageName, value);
     }
 
-    public static clean() {
+    static clean() {
         localStorage.removeItem(serverSmugglingLocalStorage.localStorageName);
     }
 
