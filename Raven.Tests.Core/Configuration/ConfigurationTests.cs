@@ -237,7 +237,6 @@ namespace Raven.Tests.Core.Configuration
 
             configurationComparer.Assert(expected => expected.LowMemoryLimitForLinuxDetectionInMB.Value, actual => actual.LowMemoryForLinuxDetectionInMB);
             
-
             configurationComparer.Assert(expected => expected.TimeToWaitBeforeMarkingAutoIndexAsIdle.Value, actual => actual.TimeToWaitBeforeMarkingAutoIndexAsIdle);
             configurationComparer.Assert(expected => expected.RedirectStudioUrl.Value, actual => actual.RedirectStudioUrl);
             configurationComparer.Assert(expected => expected.ResetIndexOnUncleanShutdown.Value, actual => actual.ResetIndexOnUncleanShutdown);
@@ -340,9 +339,7 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Ignore(x => x.IgnoreSslCertificateErrors);
             configurationComparer.Ignore(x => x.AnonymousUserAccessMode);
             configurationComparer.Ignore(x => x.TransactionMode);
-
-            
-            
+            configurationComparer.Ignore(x => x.CustomMemoryCacher);
 
             Assert.NotNull(inMemoryConfiguration.OAuthTokenKey);
             Assert.Equal("/", inMemoryConfiguration.VirtualDirectory);
