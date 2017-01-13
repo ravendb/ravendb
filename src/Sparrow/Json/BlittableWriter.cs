@@ -2,12 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Text;
 using Sparrow.Compression;
 using Sparrow.Json.Parsing;
+
 using static Sparrow.Json.BlittableJsonDocumentBuilder;
 
 namespace Sparrow.Json
@@ -25,6 +24,9 @@ namespace Sparrow.Json
         public int SizeInBytes => _unmanagedWriteBuffer.SizeInBytes;
 
         private static readonly Encoding Utf8Encoding = Encoding.UTF8;
+
+        private AllocatedMemoryData _allocated;
+
 
         public unsafe BlittableJsonReaderObject CreateReader()
         {
@@ -282,7 +284,7 @@ namespace Sparrow.Json
             }
             return positionSize;
         }
-      
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteNumber(int value, int sizeOfValue)
@@ -316,9 +318,13 @@ namespace Sparrow.Json
             // https://developers.google.com/protocol-buffers/docs/encoding?csw=1#types
             // for negative values
 
-            var buffer = stackalloc byte[10];
-            var count = 0;
-            var v = (ulong)((value << 1) ^ (value >> 63));
+            if (_allocated == null)
+                _allocated = _context.GetMemory(10);
+
+            byte* buffer = _allocated.Address;
+
+            int count = 0;
+            ulong v = (ulong)((value << 1) ^ (value >> 63));
             while (v >= 0x80)
             {
                 buffer[count++] = (byte)(v | 0x80);
@@ -331,14 +337,19 @@ namespace Sparrow.Json
             return count;
         }
 
+
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe int WriteVariableSizeInt(int value)
         {
-            // assume that we don't use negative values very often
-            var buffer = stackalloc byte[5];
+            // assume that we don't use negative values very often            
+            if (_allocated == null)
+                _allocated = _context.GetMemory(10);
 
-            var count = 0;
-            var v = (uint)value;
+            byte* buffer = _allocated.Address;
+
+            int count = 0;
+            uint v = (uint)value;
             while (v >= 0x80)
             {
                 buffer[count++] = (byte)(v | 0x80);
@@ -348,16 +359,20 @@ namespace Sparrow.Json
 
             _unmanagedWriteBuffer.Write(buffer, count);
 
-            return count;
+            return count;            
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe int WriteVariableSizeIntInReverse(int value)
         {
             // assume that we don't use negative values very often
-            var buffer = stackalloc byte[5];
-            var count = 0;
-            var v = (uint)value;
+            if (_allocated == null)
+                _allocated = _context.GetMemory(10);
+
+            byte* buffer = _allocated.Address;
+
+            int count = 0;
+            uint v = (uint)value;
             while (v >= 0x80)
             {
                 buffer[count++] = (byte)(v | 0x80);
@@ -592,8 +607,12 @@ namespace Sparrow.Json
         public void Dispose()
         {
             _unmanagedWriteBuffer.Dispose();
+
             if (_compressionBuffer!= null)
                 _context.ReturnMemory(_compressionBuffer);
+            if (_allocated != null )
+                _context.ReturnMemory(_allocated);
+
             _compressionBuffer = null;
         }
     }
