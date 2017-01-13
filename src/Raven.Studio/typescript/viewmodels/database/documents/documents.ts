@@ -410,17 +410,15 @@ class documents extends viewModelBase {
     }
 
     selectCollection(collection: collection, event?: MouseEvent) {
-        if (!event || event.which !== 3) {
-            const documentsWithCollectionUrl = appUrl.forDocuments(collection.name, this.activeDatabase());
+        const documentsWithCollectionUrl = appUrl.forDocuments(collection.name, this.activeDatabase());
 
-            if (event.ctrlKey) {
-                window.open(documentsWithCollectionUrl);
-                $(document.activeElement).blur();
-            } else {
-                router.navigate(documentsWithCollectionUrl, false);
-                this.showCollectionChanged(false);
-                collection.activate();
-            }
+        if (event && event.ctrlKey) {
+            window.open(documentsWithCollectionUrl);
+            $(document.activeElement).blur();
+        } else {
+            router.navigate(documentsWithCollectionUrl, false);
+            this.showCollectionChanged(false);
+            collection.activate();
         }
     }
 

@@ -1,11 +1,12 @@
-/// <reference path="../../typings/tsd.d.ts" />
+/// <reference path="../../../typings/tsd.d.ts" />
 
 import database = require("models/resources/database");
+import verifyDocumentsIDsCommand = require("commands/database/documents/verifyDocumentsIDsCommand");
 
 class starredDocumentsStorage {
 
-    static getStarredDocuments(db: database): Array<string> {
-        const localStorageName = db.starredDocumentsLocalStorageName;
+    private static getStarredDocuments(db: database): Array<string> {
+        const localStorageName = starredDocumentsStorage.getLocalStorageKey(db.name);
         let starredDocumentsFromLocalStorage: Array<string> = this.getFromLocalStorage(localStorageName);
 
         if (starredDocumentsFromLocalStorage == null || starredDocumentsFromLocalStorage instanceof Array === false) {
@@ -16,14 +17,26 @@ class starredDocumentsStorage {
         return starredDocumentsFromLocalStorage;
     }
 
+    static getStarredDocumentsWithDocumentIdsCheck(db: database): JQueryPromise<Array<string>> {
+        const starred = starredDocumentsStorage.getStarredDocuments(db);
+        return new verifyDocumentsIDsCommand(starred, db)
+            .execute()
+            .done((verifiedIds) => {
+                const invalidIds = _.difference(starred, verifiedIds);
+                if (invalidIds.length) {
+                    starredDocumentsStorage.saveToLocalStorage(db, verifiedIds);
+                }
+            });
+    }
+
     static isStarred(db: database, documentId: string): boolean {
-        let starred = starredDocumentsStorage.getStarredDocuments(db);
+        const starred = starredDocumentsStorage.getStarredDocuments(db);
         return _.includes(starred, documentId);
     }
 
     static markDocument(db: database, documentId: string, asStarred: boolean) {
-        let starred = starredDocumentsStorage.getStarredDocuments(db);
-        let alreadyStored = _.includes(starred, documentId); 
+        const starred = starredDocumentsStorage.getStarredDocuments(db);
+        const alreadyStored = _.includes(starred, documentId); 
         if (asStarred) {
             if (!alreadyStored) {
                 let locationToInsert = _.sortedIndex(starred, documentId);
@@ -39,18 +52,29 @@ class starredDocumentsStorage {
     }
 
     private static saveToLocalStorage(db: database, starredDocuments: string[]) {
-        var localStorageName = db.starredDocumentsLocalStorageName;
+        const localStorageName = starredDocumentsStorage.getLocalStorageKey(db.name);
         localStorage.setObject(localStorageName, starredDocuments);
     }
 
+    private static getLocalStorageKey(dbName: string) {
+        return "ravenDB-starredDocuments." + dbName;
+    }
+
     private static getFromLocalStorage(localStorageName: string): string[]  {
-        var starredDocumentsFromLocalStorage: string[] = null;
+        let starredDocumentsFromLocalStorage: string[] = null;
         try {
             starredDocumentsFromLocalStorage = localStorage.getObject(localStorageName);
         } catch(err) {
             //no need to do anything
         }
         return starredDocumentsFromLocalStorage;
+    }
+
+    static onResourceDeleted(qualifer: string, name: string) {
+        if (qualifer === database.qualifier) {
+            const localStorageName = starredDocumentsStorage.getLocalStorageKey(name);
+            localStorage.removeItem(localStorageName);
+        }
     }
 }
 

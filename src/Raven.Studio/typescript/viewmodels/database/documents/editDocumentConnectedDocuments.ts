@@ -11,12 +11,12 @@ import getCollectionsStatsCommand = require("commands/database/documents/getColl
 
 import appUrl = require("common/appUrl");
 import pagedResultSet = require("common/pagedResultSet");
-import pagedResult = require("widgets/virtualGrid/pagedResult"); // Paged result for the new virtual grid.
+import pagedResult = require("widgets/virtualGrid/pagedResult");
 import virtualGrid = require("widgets/virtualGrid/virtualGrid");
 import virtualColumn = require("widgets/virtualGrid/virtualColumn");
 import hyperlinkColumn = require("widgets/virtualGrid/hyperlinkColumn");
 import documentHelpers = require("common/helpers/database/documentHelpers");
-import starredDocumentsStorage = require("common/starredDocumentsStorage");
+import starredDocumentsStorage = require("common/storage/starredDocumentsStorage");
 
 class connectedDocuments {
 
@@ -70,7 +70,7 @@ class connectedDocuments {
         const deferred = $.Deferred<pagedResult<connectedDocument>>();
 
         const relatedDocumentsCandidates: string[] = documentHelpers.findRelatedDocumentsCandidates(this.document());
-        const docIDsVerifyCommand = new verifyDocumentsIDsCommand(relatedDocumentsCandidates, this.db(), true, true);
+        const docIDsVerifyCommand = new verifyDocumentsIDsCommand(relatedDocumentsCandidates, this.db());
         docIDsVerifyCommand.execute()
             .done((verifiedIDs: string[]) => {
                 const connectedDocs: connectedDocument[] = verifiedIDs.map(id => this.docIdToConnectedDoc(id));
@@ -127,12 +127,18 @@ class connectedDocuments {
     }
 
     fetchStarredDocs(skip: number, take: number): JQueryPromise<pagedResult<connectedDocument>> {
-        const starredDocIds = starredDocumentsStorage.getStarredDocuments(this.db());
-        const starredDocs = starredDocIds.map(id => this.docIdToConnectedDoc(id));
-        return $.Deferred<pagedResult<connectedDocument>>().resolve({
-            items: starredDocs,
-            totalResultCount: starredDocs.length
-        }).promise();
+        const starredDocsTask = $.Deferred<pagedResult<connectedDocument>>();
+
+        starredDocumentsStorage.getStarredDocumentsWithDocumentIdsCheck(this.db())
+            .done((verifiedIds: string[]) => {
+                const starredDocs = verifiedIds.map(id => this.docIdToConnectedDoc(id));
+                starredDocsTask.resolve({
+                    items: starredDocs,
+                    totalResultCount: starredDocs.length
+                });
+            });
+
+        return starredDocsTask.promise();
     }
 
     emptyDocResult(): JQueryPromise<pagedResult<connectedDocument>> {

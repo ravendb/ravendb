@@ -1,23 +1,23 @@
-/// <reference path="../../typings/tsd.d.ts" />
+/// <reference path="../../../typings/tsd.d.ts" />
 
 class apiKeyLocalStorage {
 
-    public static localStorageName = "apiKey";
+    static localStorageName = "apiKey";
 
-    public static get() {
+    static get() {
         return localStorage.getObject(apiKeyLocalStorage.localStorageName);
     }
 
-    public static setValue(apiKey: string) {
+    static setValue(apiKey: string) {
         localStorage.setObject(apiKeyLocalStorage.localStorageName, apiKey);
     }
 
-    public static clean() {
+    static clean() {
         localStorage.removeItem(apiKeyLocalStorage.localStorageName);
     }
 
-    public static notifyAboutLogOut() {
-        var event: any = document.createEvent('StorageEvent');
+    static notifyAboutLogOut() {
+        const event: any = document.createEvent('StorageEvent');
         event.initStorageEvent('storage', false, false, apiKeyLocalStorage.localStorageName, null, null, null, window.localStorage);
         window.dispatchEvent(event);
     }
