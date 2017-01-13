@@ -30,6 +30,7 @@ using Raven.NewClient.Abstractions.Json;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Converters;
+using Raven.NewClient.Client.Helpers;
 using Raven.NewClient.Client.Util;
 
 using Raven.NewClient.Client.Json;
@@ -56,7 +57,7 @@ namespace Raven.NewClient.Client.Document
         private readonly IList<Tuple<Type, Func<string, object, Task<string>>>> listOfRegisteredIdConventionsAsync =
             new List<Tuple<Type, Func<string, object, Task<string>>>>();
 
-        private readonly IList<Tuple<Type, Func<ValueType, string>>> listOfRegisteredIdLoadConventions = 
+        private readonly IList<Tuple<Type, Func<ValueType, string>>> listOfRegisteredIdLoadConventions =
             new List<Tuple<Type, Func<ValueType, string>>>();
 
         public Action<object, StreamWriter> SerializeEntityToJsonStream;
@@ -104,7 +105,10 @@ namespace Raven.NewClient.Client.Document
             MaxLengthOfQueryUsingGetUrl = 1024 + 512;
             ApplyReduceFunction = DefaultApplyReduceFunction;
             //ReplicationInformerFactory = (url, jsonRequestFactory) => new ReplicationInformer(this, jsonRequestFactory);
-            CustomizeJsonSerializer = serializer => { }; // todo: remove this or merge with SerializeEntityToJsonStream
+            CustomizeJsonSerializer = serializer => // todo: remove this or merge with SerializeEntityToJsonStream
+            {
+                serializer.Binder = new ClientSerializationBinder();
+            };
             FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] { IdentityPartsSeparator }, StringSplitOptions.RemoveEmptyEntries).Last();
             ShouldAggressiveCacheTrackChanges = true;
             ShouldSaveChangesForceAggressiveCacheCheck = true;
@@ -112,12 +116,12 @@ namespace Raven.NewClient.Client.Document
             AcceptGzipContent = true;
             RequestTimeThresholdInMilliseconds = 100;
 
-            SerializeEntityToJsonStream  = (entity, streamWriter) =>
-            {
-                var jsonSerializer = CreateSerializer();
-                jsonSerializer.Serialize(streamWriter, entity);
-                streamWriter.Flush();
-            };
+            SerializeEntityToJsonStream = (entity, streamWriter) =>
+           {
+               var jsonSerializer = CreateSerializer();
+               jsonSerializer.Serialize(streamWriter, entity);
+               streamWriter.Flush();
+           };
 
             DeserializeEntityFromBlittable = new JsonNetBlittableEntitySerializer(this).EntityFromJsonStream;
         }
@@ -126,8 +130,10 @@ namespace Raven.NewClient.Client.Document
         {
             private readonly DocumentConvention _conventions;
 
-            [ThreadStatic] private static BlittableJsonReader _reader;
-            [ThreadStatic] private static JsonSerializer _serializer;
+            [ThreadStatic]
+            private static BlittableJsonReader _reader;
+            [ThreadStatic]
+            private static JsonSerializer _serializer;
 
             public JsonNetBlittableEntitySerializer(DocumentConvention conventions)
             {
@@ -136,7 +142,7 @@ namespace Raven.NewClient.Client.Document
 
             public object EntityFromJsonStream(Type type, BlittableJsonReaderObject jsonObject)
             {
-                if(_reader == null)
+                if (_reader == null)
                     _reader = new BlittableJsonReader();
                 if (_serializer == null)
                     _serializer = _conventions.CreateSerializer();
@@ -165,14 +171,14 @@ namespace Raven.NewClient.Client.Document
                 };
             }
             return compile(results).Cast<object>()
-                .Select<object,object>(result =>
-                {
-                    // we got an anonymous object and we need to get the reduce results
-                    var jTokenWriter = new JTokenWriter();
-                    var jsonSerializer = CreateSerializer();
-                    jsonSerializer.Serialize(jTokenWriter, result);
-                    return jsonSerializer.Deserialize(new JTokenReader(jTokenWriter.Token), resultType);
-                });
+                .Select<object, object>(result =>
+                 {
+                     // we got an anonymous object and we need to get the reduce results
+                     var jTokenWriter = new JTokenWriter();
+                     var jsonSerializer = CreateSerializer();
+                     jsonSerializer.Serialize(jTokenWriter, result);
+                     return jsonSerializer.Deserialize(new JTokenReader(jTokenWriter.Token), resultType);
+                 });
         }
 
         public static string DefaultTransformTypeTagNameToDocumentKeyPrefix(string typeTagName)
@@ -200,7 +206,7 @@ namespace Raven.NewClient.Client.Document
                 if (outputId != null)
                     return outputId;
             }
-            
+
 
             var converter = IdentityTypeConvertors.FirstOrDefault(x => x.CanConvertFrom(id.GetType()));
             var tag = GetTypeTagName(type);
@@ -342,31 +348,31 @@ namespace Raven.NewClient.Client.Document
             return FindTypeTagName(type) ?? DefaultTypeTagName(type);
         }
 
-       /// <summary>
-       /// If object is dynamic, try to load a tag name.
-       /// </summary>
-       /// <param name="entity">Current entity.</param>
-       /// <returns>Dynamic tag name if available.</returns>
-       public string GetDynamicTagName(object entity)
-       {
-          if (entity == null)
-          {
-             return null;
-          }
+        /// <summary>
+        /// If object is dynamic, try to load a tag name.
+        /// </summary>
+        /// <param name="entity">Current entity.</param>
+        /// <returns>Dynamic tag name if available.</returns>
+        public string GetDynamicTagName(object entity)
+        {
+            if (entity == null)
+            {
+                return null;
+            }
 
-          if (FindDynamicTagName != null && entity is IDynamicMetaObjectProvider)
-          {
-             try
-             {
-                return FindDynamicTagName(entity);
-             }
-             catch (RuntimeBinderException)
-             {
-             }
-          }
+            if (FindDynamicTagName != null && entity is IDynamicMetaObjectProvider)
+            {
+                try
+                {
+                    return FindDynamicTagName(entity);
+                }
+                catch (RuntimeBinderException)
+                {
+                }
+            }
 
-          return GetTypeTagName(entity.GetType());
-       }
+            return GetTypeTagName(entity.GetType());
+        }
 
         /// <summary>
         /// Generates the document key.
@@ -419,11 +425,11 @@ namespace Raven.NewClient.Client.Document
         /// <value>The name of the find type tag.</value>
         public Func<Type, string> FindTypeTagName { get; set; }
 
-      /// <summary>
-      /// Gets or sets the function to find the tag name if the object is dynamic.
-      /// </summary>
-      /// <value>The tag name.</value>
-      public Func<dynamic, string> FindDynamicTagName { get; set; }
+        /// <summary>
+        /// Gets or sets the function to find the tag name if the object is dynamic.
+        /// </summary>
+        /// <value>The tag name.</value>
+        public Func<dynamic, string> FindDynamicTagName { get; set; }
 
         /// <summary>
         /// Gets or sets the function to find the indexed property name
@@ -744,6 +750,26 @@ namespace Raven.NewClient.Client.Document
                 {
                     yield return propertyInfo;
                 }
+            }
+        }
+
+
+        private class ClientSerializationBinder : DefaultSerializationBinder
+        {
+            public ClientSerializationBinder()
+            {
+                DevelopmentHelper.TimeBomb();
+            }
+
+            public override Type BindToType(string assemblyName, string typeName)
+            {
+                if (string.IsNullOrWhiteSpace(assemblyName) == false)
+                    assemblyName = assemblyName.Replace("Raven.Client", "Raven.NewClient");
+
+                if (string.IsNullOrWhiteSpace(typeName) == false)
+                    typeName = typeName.Replace("Raven.Client", "Raven.NewClient.Client");
+
+                return base.BindToType(assemblyName, typeName);
             }
         }
     }

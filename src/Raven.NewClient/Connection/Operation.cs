@@ -2,44 +2,64 @@ using System;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Util;
-
 using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Exceptions;
+using Raven.NewClient.Client.Helpers;
+using Raven.NewClient.Client.Http;
+using Raven.NewClient.Commands;
+using Sparrow.Json;
 
-
-namespace Raven.NewClient.Client.Connection
+namespace Raven.NewClient.Connection
 {
     public class Operation : IObserver<OperationStatusChangeNotification>
     {
+        private readonly RequestExecuter _requestExecuter;
+        private readonly DocumentConvention _conventions;
         private readonly long _id;
         private IDisposable _subscription;
         private readonly TaskCompletionSource<IOperationResult> _result = new TaskCompletionSource<IOperationResult>();
 
         public Action<IOperationProgress> OnProgressChanged;
+        private bool _work;
+        private JsonOperationContext _context;
 
         internal long Id => _id;
 
-        public Operation(long id)
+        public Operation(RequestExecuter requestExecuter, DocumentConvention conventions, long id)
         {
-            _id = id;
+            DevelopmentHelper.TimeBomb(); // use changes API
 
-            Task.Factory.StartNew(Initialize);
+            _requestExecuter = requestExecuter;
+            _conventions = conventions;
+            _id = id;
+            _work = true;
         }
 
         private async Task Initialize()
         {
-            throw new NotImplementedException();
-            /* try
-             {
-                 await _asyncServerClient.changes.Value.ConnectionTask.ConfigureAwait(false);
-                 var observableWithTask = _asyncServerClient.changes.Value.ForOperationId(_id);
-                 _subscription = observableWithTask.Subscribe(this);
-                 await FetchOperationStatus().ConfigureAwait(false);
-             }
-             catch (Exception e)
-             {
-                 _result.TrySetException(e);
-             }*/
+            try
+            {
+                //await _asyncServerClient.changes.Value.ConnectionTask.ConfigureAwait(false);
+                //var observableWithTask = _asyncServerClient.changes.Value.ForOperationId(_id);
+                //_subscription = observableWithTask.Subscribe(this);
+                //await FetchOperationStatus().ConfigureAwait(false);
+
+                _subscription = new DisposableAction(() => _work = false);
+
+                while (_work)
+                {
+                    await FetchOperationStatus().ConfigureAwait(false);
+                    if (_work == false)
+                        break;
+
+                    await Task.Delay(500).ConfigureAwait(false);
+                }
+            }
+            catch (Exception e)
+            {
+                _result.TrySetException(e);
+            }
         }
 
         /// <summary>
@@ -50,18 +70,15 @@ namespace Raven.NewClient.Client.Connection
         /// </summary>
         private async Task FetchOperationStatus()
         {
-            throw new NotImplementedException();
-            /* var operationStatusJson = await _asyncServerClient.GetOperationStatusAsync(_id).ConfigureAwait(false);
-             var operationStatus = _asyncServerClient.convention
-                     .CreateSerializer()
-                     .Deserialize<OperationState>(new RavenJTokenReader(operationStatusJson));
-             // using deserializer from Conventions to properly handle $type mapping
+            var command = new GetOperationStateCommand(_conventions, _id);
 
-             OnNext(new OperationStatusChangeNotification
-             {
-                 OperationId = _id,
-                 State = operationStatus
-             });*/
+            await _requestExecuter.ExecuteAsync(command, _context);
+
+            OnNext(new OperationStatusChangeNotification
+            {
+                OperationId = _id,
+                State = command.Result
+            });
         }
 
         public void OnNext(OperationStatusChangeNotification notification)
@@ -103,16 +120,23 @@ namespace Raven.NewClient.Client.Connection
         {
         }
 
-        public virtual async Task<IOperationResult> WaitForCompletionAsync(TimeSpan? timeout = null)
+        public async Task<IOperationResult> WaitForCompletionAsync(TimeSpan? timeout = null)
         {
-            var completed = await _result.Task.WaitWithTimeout(timeout).ConfigureAwait(false);
-            if (completed == false)
-                throw new TimeoutException($"After {timeout}, did not get a reply for operation " + _id);
+            using (_requestExecuter.ContextPool.AllocateOperationContext(out _context))
+            {
+#pragma warning disable 4014
+                Task.Factory.StartNew(Initialize);
+#pragma warning restore 4014
 
-            return await _result.Task.ConfigureAwait(false);
+                var completed = await _result.Task.WaitWithTimeout(timeout).ConfigureAwait(false);
+                if (completed == false)
+                    throw new TimeoutException($"After {timeout}, did not get a reply for operation " + _id);
+
+                return await _result.Task.ConfigureAwait(false);
+            }
         }
 
-        public virtual IOperationResult WaitForCompletion(TimeSpan? timeout = null)
+        public IOperationResult WaitForCompletion(TimeSpan? timeout = null)
         {
             return AsyncHelpers.RunSync(() => WaitForCompletionAsync(timeout));
         }

@@ -19,6 +19,7 @@ using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document.Batches;
 using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Connection;
 
 
 namespace Raven.NewClient.Client.Document

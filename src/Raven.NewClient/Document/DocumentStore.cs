@@ -46,6 +46,8 @@ namespace Raven.NewClient.Client.Document
 
         private AdminOperationExecuter _adminOperationExecuter;
 
+        private OperationExecuter _operationExecuter;
+
         /// <summary>
         /// The current session id - only used during construction
         /// </summary>
@@ -615,7 +617,9 @@ namespace Raven.NewClient.Client.Document
 
         public DatabaseSmuggler Smuggler { get; private set; }
 
-        public AdminOperationExecuter Admin => _adminOperationExecuter ?? (_adminOperationExecuter = new AdminOperationExecuter(GetRequestExecuterForDefaultDatabase()));
+        public AdminOperationExecuter Admin => _adminOperationExecuter ?? (_adminOperationExecuter = new AdminOperationExecuter(this));
+
+        public OperationExecuter Operations => _operationExecuter ?? (_operationExecuter = new OperationExecuter(this));
 
         public override BulkInsertOperation BulkInsert(string database = null)
         {

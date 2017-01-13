@@ -1,6 +1,8 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Util;
+using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Http;
 using Sparrow.Json;
 
@@ -8,11 +10,25 @@ namespace Raven.NewClient.Operations
 {
     public class AdminOperationExecuter
     {
+        private readonly DocumentStore _store;
+        private readonly string _databaseName;
         private readonly RequestExecuter _requestExecuter;
 
-        public AdminOperationExecuter(RequestExecuter requestExecuter)
+        public AdminOperationExecuter(DocumentStore store, string databaseName = null)
         {
-            _requestExecuter = requestExecuter;
+            _store = store;
+            _databaseName = databaseName ?? store.DefaultDatabase;
+            _requestExecuter = string.Equals(_databaseName, store.DefaultDatabase, StringComparison.OrdinalIgnoreCase)
+                ? store.GetRequestExecuterForDefaultDatabase()
+                : store.GetRequestExecuter(_databaseName);
+        }
+
+        public AdminOperationExecuter ForDatabase(string databaseName)
+        {
+            if (string.Equals(_databaseName, databaseName))
+                return this;
+
+            return new AdminOperationExecuter(_store, databaseName);
         }
 
         public void Send(IAdminOperation operation)

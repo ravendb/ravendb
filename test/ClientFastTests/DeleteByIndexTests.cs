@@ -1,24 +1,19 @@
-using System;
-using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.NewClient.Client.Commands;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Data.Indexes;
 using Raven.NewClient.Client;
+using Raven.NewClient.Operations.Databases;
+using Raven.NewClient.Operations.Databases.Documents;
 
 namespace NewClientTests.NewClient.Client.Indexing
 {
     public class IndexesDeleteByIndexTests : RavenNewTestBase
     {
-
         [Fact]
         public void Delete_By_Index()
         {
@@ -26,8 +21,8 @@ namespace NewClientTests.NewClient.Client.Indexing
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User {Name = "Fitzchak"});
-                    session.Store(new User {Name = "Arek"});
+                    session.Store(new User { Name = "Fitzchak" });
+                    session.Store(new User { Name = "Arek" });
                     session.SaveChanges();
                 }
 
@@ -47,8 +42,11 @@ namespace NewClientTests.NewClient.Client.Indexing
                 JsonOperationContext context;
                 store.GetRequestExecuter(store.DefaultDatabase).ContextPool.AllocateOperationContext(out context);
 
-                DeleteByIndex(context, indexName, store);
-                var databaseStatistics = DatabaseStatistics(store, context);
+                var operation = store.Operations.Send(new DeleteByIndexOperation(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }));
+
+                operation.WaitForCompletion();
+
+                var databaseStatistics = store.Admin.Send(new GetStatisticsOperation());
 
                 Assert.Equal(1, databaseStatistics.CountOfDocuments);
             }
@@ -82,36 +80,15 @@ namespace NewClientTests.NewClient.Client.Indexing
                 JsonOperationContext context;
                 store.GetRequestExecuter(store.DefaultDatabase).ContextPool.AllocateOperationContext(out context);
 
-               
-                var deleteByIndexOperation = new DeleteByIndexOperation();
-                var command = deleteByIndexOperation.CreateRequest(indexName, new IndexQuery(),
-                    new QueryOperationOptions { AllowStale = false }, store);
+                var operation = await store.Operations.SendAsync(new DeleteByIndexOperation(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }));
 
-                if (command != null)
-                    await store.GetRequestExecuter(store.DefaultDatabase).ExecuteAsync(command, context);
-                var databaseStatistics = DatabaseStatistics(store, context);
-                
+                await operation.WaitForCompletionAsync();
+
+                var databaseStatistics = store.Admin.Send(new GetStatisticsOperation());
+
                 //TODO - after we have hilo need to be 1
                 Assert.Equal(0, databaseStatistics.CountOfDocuments);
             }
-        }
-
-        private static DatabaseStatistics DatabaseStatistics(DocumentStore store, JsonOperationContext context)
-        {
-            var getStatsCommand = new GetStatisticsCommand();
-            store.GetRequestExecuter(store.DefaultDatabase).Execute(getStatsCommand, context);
-            var databaseStatistics = getStatsCommand.Result;
-            return databaseStatistics;
-        }
-
-        private static void DeleteByIndex(JsonOperationContext context, string indexName, DocumentStore store)
-        {
-            var deleteByIndexOperation = new DeleteByIndexOperation();
-            var command = deleteByIndexOperation.CreateRequest(indexName, new IndexQuery(),
-                new QueryOperationOptions {AllowStale = false}, store);
-
-            if (command != null)
-                store.GetRequestExecuter(store.DefaultDatabase).Execute(command, context);
         }
     }
 }

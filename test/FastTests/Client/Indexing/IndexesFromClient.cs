@@ -7,8 +7,11 @@ using Raven.NewClient.Abstractions;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client;
 using Raven.NewClient.Client.Bundles.MoreLikeThis;
+using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Data.Indexes;
+using Raven.NewClient.Operations.Databases;
+using Raven.NewClient.Operations.Databases.Documents;
 using Raven.NewClient.Operations.Databases.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
@@ -439,120 +442,122 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact(Skip = "TODO")]
-        public Task DeleteByIndex()
+        [Fact]
+        public async Task DeleteByIndex()
         {
-            return Task.CompletedTask;
-            //using (var store = GetDocumentStore())
-            //{
-            //    using (var session = store.OpenAsyncSession())
-            //    {
-            //        await session.StoreAsync(new User { Name = "Fitzchak" });
-            //        await session.StoreAsync(new User { Name = "Arek" });
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" });
+                    await session.StoreAsync(new User { Name = "Arek" });
 
-            //        await session.SaveChangesAsync();
-            //    }
+                    await session.SaveChangesAsync();
+                }
 
-            //    string indexName;
-            //    using (var session = store.OpenSession())
-            //    {
-            //        RavenQueryStatistics stats;
-            //        var people = session.Query<User>()
-            //            .Customize(x => x.WaitForNonStaleResults())
-            //            .Statistics(out stats)
-            //            .Where(x => x.Name == "Arek")
-            //            .ToList();
+                string indexName;
+                using (var session = store.OpenSession())
+                {
+                    RavenQueryStatistics stats;
+                    var people = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Statistics(out stats)
+                        .Where(x => x.Name == "Arek")
+                        .ToList();
 
-            //        indexName = stats.IndexName;
-            //    }
+                    indexName = stats.IndexName;
+                }
 
-            //    var operation = await store
-            //        .AsyncDatabaseCommands
-            //        .DeleteByIndexAsync(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false })
-            //        ;
+                var operation = await store
+                    .Operations
+                    .SendAsync(new DeleteByIndexOperation(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }));
 
-            //    var deleteResult = await operation
-            //        .WaitForCompletionAsync(TimeSpan.FromSeconds(15)).ConfigureAwait(false) as BulkOperationResult;
+                var deleteResult = await operation
+                    .WaitForCompletionAsync(TimeSpan.FromSeconds(15)).ConfigureAwait(false) as BulkOperationResult;
 
-            //    Assert.Equal(2, deleteResult.Total);
+                Assert.Equal(2, deleteResult.Total);
 
-            //    var statistics = await store
-            //        .Admin
-            //        .SendAsync(new GetStatisticsOperation());
+                var statistics = await store
+                    .Admin
+                    .SendAsync(new GetStatisticsOperation());
 
-            //    Assert.Equal(1, statistics.CountOfDocuments);
-            //    var documents = store.AsyncDatabaseCommands.GetDocumentsAsync(0, 10);
-            //    Assert.Equal(1, documents.Result.Length);
-            //    Assert.Equal("Raven/Hilo/users", documents.Result[0].Key);
+                Assert.Equal(1, statistics.CountOfDocuments);
 
-            //    await store.Admin.SendAsync(new StopIndexingOperation());
+                using (var session = store.OpenAsyncSession())
+                {
+                    var hilo = await session.LoadAsync<dynamic>("Raven/Hilo/users");
+                    Assert.NotNull(hilo);
 
-            //    using (var session = store.OpenAsyncSession())
-            //    {
-            //        await session.StoreAsync(new User { Name = "Fitzchak" });
-            //        await session.StoreAsync(new User { Name = "Arek" });
+                    var stats = await store.Admin.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(1, stats.CountOfDocuments);
+                }
 
-            //        await session.SaveChangesAsync();
-            //    }
+                await store.Admin.SendAsync(new StopIndexingOperation());
 
-            //    var deleteOperation = store
-            //        .DatabaseCommands
-            //        .DeleteByIndex(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false });
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" });
+                    await session.StoreAsync(new User { Name = "Arek" });
 
-            //    var e = Assert.Throws<InvalidOperationException>(() =>
-            //    {
-            //        deleteOperation.WaitForCompletion(TimeSpan.FromSeconds(15));
-            //    });
+                    await session.SaveChangesAsync();
+                }
 
-            //    Assert.True(e.Message.Contains("Query is stale"));
-            //}
+                operation = await store
+                    .Operations
+                    .SendAsync(new DeleteByIndexOperation(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }));
+
+                var e = Assert.Throws<InvalidOperationException>(() =>
+                {
+                    operation.WaitForCompletion(TimeSpan.FromSeconds(15));
+                });
+
+                Assert.True(e.Message.Contains("Query is stale"));
+            }
         }
 
-        [Fact(Skip = "TODO")]
-        public Task UpdateByIndex()
+        [Fact]
+        public async Task UpdateByIndex()
         {
-            return Task.CompletedTask;
-            //using (var store = GetDocumentStore())
-            //{
-            //    using (var session = store.OpenAsyncSession())
-            //    {
-            //        await session.StoreAsync(new User { Name = "Fitzchak" });
-            //        await session.StoreAsync(new User { Name = "Arek" });
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" });
+                    await session.StoreAsync(new User { Name = "Arek" });
 
-            //        await session.SaveChangesAsync();
-            //    }
+                    await session.SaveChangesAsync();
+                }
 
-            //    string indexName;
-            //    using (var session = store.OpenSession())
-            //    {
-            //        RavenQueryStatistics stats;
-            //        var people = session.Query<User>()
-            //            .Customize(x => x.WaitForNonStaleResults())
-            //            .Statistics(out stats)
-            //            .Where(x => x.Name == "Arek")
-            //            .ToList();
+                string indexName;
+                using (var session = store.OpenSession())
+                {
+                    RavenQueryStatistics stats;
+                    var people = session.Query<User>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Statistics(out stats)
+                        .Where(x => x.Name == "Arek")
+                        .ToList();
 
-            //        indexName = stats.IndexName;
-            //    }
+                    indexName = stats.IndexName;
+                }
 
-            //    var operation = await store
-            //        .AsyncDatabaseCommands
-            //        .UpdateByIndexAsync(indexName, new IndexQuery(), new PatchRequest { Script = "this.LastName = 'Test';" }, new QueryOperationOptions { AllowStale = false })
-            //        ;
+                var operation = await store
+                    .Operations
+                    .SendAsync(new PatchByIndexOperation(indexName, new IndexQuery(), new PatchRequest { Script = "this.LastName = 'Test';" }, new QueryOperationOptions { AllowStale = false }));
 
-            //    await operation
-            //        .WaitForCompletionAsync(TimeSpan.FromSeconds(15))
-            //        ;
+                await operation
+                    .WaitForCompletionAsync(TimeSpan.FromSeconds(15))
+                    ;
 
-            //    using (var session = store.OpenSession())
-            //    {
-            //        var user1 = session.Load<User>("users/1");
-            //        var user2 = session.Load<User>("users/2");
+                using (var session = store.OpenSession())
+                {
+                    var user1 = session.Load<User>("users/1");
+                    var user2 = session.Load<User>("users/2");
 
-            //        Assert.Equal("Test", user1.LastName);
-            //        Assert.Equal("Test", user2.LastName);
-            //    }
-            //}
+                    Assert.Equal("Test", user1.LastName);
+                    Assert.Equal("Test", user2.LastName);
+                }
+            }
         }
 
         [Fact]

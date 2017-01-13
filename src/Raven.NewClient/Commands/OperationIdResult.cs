@@ -14,7 +14,7 @@ namespace Raven.NewClient.Client.Commands
         /// <summary>
         /// Id of patch operation.
         /// </summary>
-        public int OperationId { get; set; }
+        public long OperationId { get; set; }
 
     }
 }
