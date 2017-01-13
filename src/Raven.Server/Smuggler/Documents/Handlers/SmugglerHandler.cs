@@ -50,7 +50,10 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     throw new InvalidOperationException($"{options.FileName} is Invalid File Name");
 
                 if (string.IsNullOrEmpty(options?.TransformScript))
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
                     return;
+                }
 
                 try
                 {
