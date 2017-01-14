@@ -89,7 +89,7 @@ class connectedDocuments {
         if (!doc) {
             return this.emptyDocResult();
         }
-        
+
         // Fetch collection size.
         // Why? Because calling collection.fetchDocuments returns a pagedResultSet with .totalResultCount = 0. :-(
         const collectionName = doc.getEntityName();
@@ -126,7 +126,7 @@ class connectedDocuments {
         }).promise();
     }
 
-    fetchStarredDocs(skip: number, take: number): JQueryPromise<pagedResult<connectedDocument>> {        
+    fetchStarredDocs(skip: number, take: number): JQueryPromise<pagedResult<connectedDocument>> {
         const starredDocIds = starredDocumentsStorage.getStarredDocuments(this.db());
         const starredDocs = starredDocIds.map(id => this.docIdToConnectedDoc(id));
         return $.Deferred<pagedResult<connectedDocument>>().resolve({
@@ -171,7 +171,13 @@ class connectedDocuments {
 
     toggleStar() {
         this.currentDocumentIsStarred(!this.currentDocumentIsStarred());
-        starredDocumentsStorage.markDocument(this.db(), this.document().getId(), this.currentDocumentIsStarred());       
+        starredDocumentsStorage.markDocument(this.db(), this.document().getId(), this.currentDocumentIsStarred());
+
+        // If we're showing the starred docs, update the list.
+        if (this.isStarredActive()) {
+            const gridItemsResetState = this.currentTab; // The view has bound the grid reset items state to .currentTab observable. 
+            gridItemsResetState.valueHasMutated(); // Tell the grid the items list has changed.
+        }
     }
 
     private onDocumentLoaded(document: document) {
