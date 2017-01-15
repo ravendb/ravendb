@@ -4,13 +4,10 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Shard;
+using Raven.NewClient.Client.Json;
 using Sparrow.Json;
 
 
@@ -29,17 +26,13 @@ namespace Raven.NewClient.Client.Document.Batches
 
         public GetRequest CreateRequest()
         {
-            throw new NotImplementedException();
-
-            /*var uri = query.GetRequestUri();
-
+            var uri = query.GetRequestUri();
             var separator = uri.IndexOf('?');
-
             return new GetRequest()
             {
                 Url = uri.Substring(0, separator),
-                Query = uri.Substring(separator + 1, uri.Length - separator - 1)
-            };*/
+                Query = uri.Substring(separator, uri.Length - separator - 1)
+            };
         }
 
         public object Result { get; private set; }
@@ -48,17 +41,16 @@ namespace Raven.NewClient.Client.Document.Batches
 
         public void HandleResponse(BlittableJsonReaderObject response)
         {
-            throw new NotImplementedException();
-
-            /*var result = response.Result;
-
-            var multiLoadResult = new LoadResult
+            if (response == null)
             {
-                Includes = result.Value<RavenJArray>("Includes").Cast<RavenJObject>().ToList(),
-                Results = result.Value<RavenJArray>("Results").Cast<RavenJObject>().ToList()
-            };
-
-            HandleResponse(multiLoadResult);*/
+                Result = null;
+                return;
+            }
+            BlittableJsonReaderObject result;
+            response.TryGet("Result", out result);
+            var res = JsonDeserializationClient.GetDocumentResult(result);
+            _loadOperation.SetResult(res);
+            Result = _loadOperation.GetDocuments<T>();
         }
     }
 }
