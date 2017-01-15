@@ -74,5 +74,7 @@ namespace Raven.NewClient.Client.Commands
             }
             Result = JsonDeserializationClient.QueryResult(response);
         }
+
+        public override bool IsReadRequest => true;
     }
 }

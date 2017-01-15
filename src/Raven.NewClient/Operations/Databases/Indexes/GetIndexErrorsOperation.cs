@@ -21,7 +21,7 @@ namespace Raven.NewClient.Operations.Databases.Indexes
             _indexNames = indexNames;
         }
 
-        public RavenCommand<IndexErrors[]> GetCommand()
+        public RavenCommand<IndexErrors[]> GetCommand(DocumentConvention conventions)
         {
             return new GetIndexErrorsCommand(_indexNames);
         }
@@ -70,6 +70,8 @@ namespace Raven.NewClient.Operations.Databases.Indexes
 
                 Result = indexErrors;
             }
+
+            public override bool IsReadRequest => true;
         }
     }
 }

@@ -25,7 +25,6 @@ namespace Raven.NewClient.Client.Commands
             };
 
             url = $"{node.Url}/databases/{node.Database}/revisions?id={Uri.EscapeDataString(Key)}&start={Start.ToInvariantString()}&pageSize={PageSize.ToInvariantString()}";
-            IsReadRequest = false;
             return request;
         }
 
@@ -36,5 +35,7 @@ namespace Raven.NewClient.Client.Commands
                 throw new InvalidOperationException();
             Result = JsonDeserializationClient.BlittableArrayResult(response);
         }
+
+        public override bool IsReadRequest => true;
     }
 }

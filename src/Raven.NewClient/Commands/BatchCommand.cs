@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
-using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Json;
@@ -44,9 +43,6 @@ namespace Raven.NewClient.Client.Commands
             var sb = new StringBuilder($"{node.Url}/databases/{node.Database}/bulk_docs");
 
             AppendOptions(sb);
-
-
-            IsReadRequest = false;
 
             url = sb.ToString();
 
@@ -99,5 +95,7 @@ namespace Raven.NewClient.Client.Commands
                 }
             }
         }
+
+        public override bool IsReadRequest => false;
     }
 }

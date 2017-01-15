@@ -20,7 +20,7 @@ namespace Raven.NewClient.Operations.Databases.Indexes
             _indexName = indexName;
         }
 
-        public RavenCommand<object> GetCommand()
+        public RavenCommand<object> GetCommand(DocumentConvention conventions)
         {
             return new ResetIndexCommand(_indexName);
         }
@@ -50,6 +50,8 @@ namespace Raven.NewClient.Operations.Databases.Indexes
             public override void SetResponse(BlittableJsonReaderObject response)
             {
             }
+
+            public override bool IsReadRequest => false;
         }
     }
 }

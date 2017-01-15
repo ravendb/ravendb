@@ -35,5 +35,7 @@ namespace Raven.NewClient.Client.Commands
         {
             Result = JsonDeserializationClient.PutTransformerResult(response);
         }
+
+        public override bool IsReadRequest => false;
     }
 }

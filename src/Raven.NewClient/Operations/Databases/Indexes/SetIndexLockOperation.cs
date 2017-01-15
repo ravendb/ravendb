@@ -22,7 +22,7 @@ namespace Raven.NewClient.Operations.Databases.Indexes
             _mode = mode;
         }
 
-        public RavenCommand<object> GetCommand()
+        public RavenCommand<object> GetCommand(DocumentConvention conventions)
         {
             return new SetIndexLockCommand(_indexName, _mode);
         }
@@ -54,6 +54,8 @@ namespace Raven.NewClient.Operations.Databases.Indexes
             public override void SetResponse(BlittableJsonReaderObject response)
             {
             }
+
+            public override bool IsReadRequest => false;
         }
     }
 }

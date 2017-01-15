@@ -86,6 +86,8 @@ namespace NewClientTests.NewClient.Server.Basic
             {
                 databaseDocument.Dispose();
             }
+
+            public override bool IsReadRequest => false;
         }
 
         public class GetDatabaseDocumentTestCommand : RavenCommand<BlittableJsonReaderObject>
@@ -105,6 +107,7 @@ namespace NewClientTests.NewClient.Server.Basic
                 Result = response;
             }
 
+            public override bool IsReadRequest => true;
         }
 
         private bool HasEtagInDatabaseDocumentResponse(string url, string databaseName, JsonOperationContext context)

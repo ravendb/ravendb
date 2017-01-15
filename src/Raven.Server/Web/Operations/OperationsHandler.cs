@@ -87,8 +87,8 @@ namespace Raven.Server.Web.Operations
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/operations/status", "GET")]
-        public Task Status()
+        [RavenAction("/databases/*/operations/state", "GET")]
+        public Task State()
         {
             var id = GetLongQueryString("id");
             // ReSharper disable once PossibleInvalidOperationException

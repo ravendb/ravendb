@@ -41,5 +41,7 @@ namespace Raven.NewClient.Client.Commands
         {
             Result = JsonDeserializationClient.CreateSubscriptionResult(response);
         }
+
+        public override bool IsReadRequest => false;
     }
 }

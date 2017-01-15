@@ -20,7 +20,7 @@ namespace Raven.NewClient.Client.Commands
 
         public TResult Result;
         public int AuthenticationRetries;
-        public bool IsReadRequest = true;
+        public abstract bool IsReadRequest { get; }
         public HttpStatusCode StatusCode;
 
         public RavenCommandResponseType ResponseType { get; protected set; } = RavenCommandResponseType.Object;

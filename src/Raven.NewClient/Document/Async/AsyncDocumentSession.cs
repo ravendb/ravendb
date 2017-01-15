@@ -18,6 +18,9 @@ using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document.Batches;
 using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Linq;
+using Raven.NewClient.Connection;
+using Raven.NewClient.Operations;
+using Raven.NewClient.Operations.Databases.Documents;
 
 namespace Raven.NewClient.Client.Document.Async
 {
@@ -26,7 +29,8 @@ namespace Raven.NewClient.Client.Document.Async
     /// </summary>
     public partial class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSessionImpl, IAsyncAdvancedSessionOperations, IDocumentQueryGenerator
     {
-        private readonly AsyncDocumentKeyGeneration asyncDocumentKeyGeneration;
+        private readonly AsyncDocumentKeyGeneration _asyncDocumentKeyGeneration;
+        private readonly Lazy<OperationExecuter> _operations;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.
@@ -35,7 +39,9 @@ namespace Raven.NewClient.Client.Document.Async
             : base(dbName, documentStore, requestExecuter, id)
         {
             GenerateDocumentKeysOnStore = false;
-            asyncDocumentKeyGeneration = new AsyncDocumentKeyGeneration(this, DocumentsByEntity.TryGetValue, (key, entity, metadata) => key);
+
+            _asyncDocumentKeyGeneration = new AsyncDocumentKeyGeneration(this, DocumentsByEntity.TryGetValue, (key, entity, metadata) => key);
+            _operations = new Lazy<OperationExecuter>(() => new OperationExecuter(documentStore, requestExecuter, Context));
         }
 
         public Task<FacetedQueryResult[]> MultiFacetedSearchAsync(params FacetQuery[] queries)
@@ -79,20 +85,12 @@ namespace Raven.NewClient.Client.Document.Async
         public async Task<Operation> DeleteByIndexAsync<T>(string indexName, Expression<Func<T, bool>> expression)
         {
             var query = Query<T>(indexName).Where(expression);
-            var indexQuery = new IndexQuery()
+            var indexQuery = new IndexQuery
             {
                 Query = query.ToString()
             };
-            var deleteByIndexOperation = new DeleteByIndexOperation();
-            var command = deleteByIndexOperation.CreateRequest(indexName, indexQuery,
-                new QueryOperationOptions(), (DocumentStore)this.DocumentStore);
 
-            if (command != null)
-            {
-                await RequestExecuter.ExecuteAsync(command, Context);
-                return new Operation(command.Result.OperationId);
-            }
-            return null;
+            return await _operations.Value.SendAsync(new DeleteByIndexOperation(indexName, indexQuery));
         }
 
         /// <summary>
@@ -111,7 +109,7 @@ namespace Raven.NewClient.Client.Document.Async
 
         protected override void RememberEntityForDocumentKeyGeneration(object entity)
         {
-            asyncDocumentKeyGeneration.Add(entity);
+            _asyncDocumentKeyGeneration.Add(entity);
         }
 
         protected override Task<string> GenerateKeyAsync(object entity)
@@ -129,7 +127,7 @@ namespace Raven.NewClient.Client.Document.Async
         /// <returns></returns>
         public async Task SaveChangesAsync(CancellationToken token = default(CancellationToken))
         {
-            await asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges().WithCancellation(token).ConfigureAwait(false);
+            await _asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges().WithCancellation(token).ConfigureAwait(false);
 
             var saveChangesOperation = new BatchOperation(this);
 

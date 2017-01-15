@@ -19,7 +19,7 @@ namespace Raven.NewClient.Client.Commands
             EnsureIsNotNullOrEmpty(Id, nameof(Id));
 
             url = $"{node.Url}/databases/{node.Database}/docs?id={UrlEncode(Id)}";
-            IsReadRequest = false;
+
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Put,
@@ -29,7 +29,6 @@ namespace Raven.NewClient.Client.Commands
                 }),
             };
 
-            IsReadRequest = false;
             return request;
         }
 
@@ -37,5 +36,7 @@ namespace Raven.NewClient.Client.Commands
         {
             Result = JsonDeserializationClient.PutResult(response);
         }
+
+        public override bool IsReadRequest => false;
     }
 }

@@ -24,17 +24,19 @@ namespace Raven.NewClient.Operations.Databases.Indexes
             _indexNames = indexNames;
         }
 
-        public RavenCommand<IndexPerformanceStats[]> GetCommand()
+        public RavenCommand<IndexPerformanceStats[]> GetCommand(DocumentConvention conventions)
         {
-            return new GetIndexPerformanceStatisticsCommand(_indexNames);
+            return new GetIndexPerformanceStatisticsCommand(conventions, _indexNames);
         }
 
         private class GetIndexPerformanceStatisticsCommand : RavenCommand<IndexPerformanceStats[]>
         {
+            private readonly DocumentConvention _conventions;
             private readonly string[] _indexNames;
 
-            public GetIndexPerformanceStatisticsCommand(string[] indexNames)
+            public GetIndexPerformanceStatisticsCommand(DocumentConvention conventions, string[] indexNames)
             {
+                _conventions = conventions;
                 _indexNames = indexNames;
                 ResponseType = RavenCommandResponseType.Array;
             }
@@ -60,10 +62,9 @@ namespace Raven.NewClient.Operations.Databases.Indexes
                     ThrowInvalidResponse();
 
                 var stats = new IndexPerformanceStats[response.Length];
-                for (int i = 0; i < response.Length; i++)
+                for (var i = 0; i < response.Length; i++)
                 {
-                    throw new NotImplementedException("StackOverflow");
-                    //stats[i] = JsonDeserializationClient.IndexPerformanceStats((BlittableJsonReaderObject)response[i]);
+                    stats[i] = (IndexPerformanceStats)_conventions.DeserializeEntityFromBlittable(typeof(IndexPerformanceStats), (BlittableJsonReaderObject)response[i]);
                 }
 
                 Result = stats;
@@ -89,6 +90,8 @@ namespace Raven.NewClient.Operations.Databases.Indexes
 
                 return url;
             }
+
+            public override bool IsReadRequest => true;
         }
     }
 }

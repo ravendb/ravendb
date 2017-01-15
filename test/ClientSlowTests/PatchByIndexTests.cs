@@ -7,6 +7,7 @@ using Raven.NewClient.Client;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Client.Commands;
+using Raven.NewClient.Operations.Databases.Documents;
 using Raven.Server.Config;
 using Sparrow.Json;
 using Xunit;
@@ -95,12 +96,11 @@ namespace NewClientTests.NewClient.FastTests.Patching
                 store.OpenSession().Advanced.DocumentQuery<CustomType>("TestIndex")
                     .WaitForNonStaleResults().ToList();
 
-                var patchByIndexOperation = new PatchByIndexOperation(context);
-                var patchCommand = patchByIndexOperation.CreateRequest("TestIndex",
-                    new IndexQuery { Query = "Owner:bob" },
-                    null, new PatchRequest { Script = sampleScript }, store);
-                if (patchCommand != null)
-                    store.GetRequestExecuter(store.DefaultDatabase).Execute(patchCommand, context);
+                var operation = await store
+                    .Operations
+                    .SendAsync(new PatchByIndexOperation("TestIndex", new IndexQuery { Query = "Owner:bob" }, new PatchRequest { Script = sampleScript }));
+
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
                 var getDocumentCommand = new GetDocumentCommand
                 {
@@ -183,12 +183,11 @@ namespace NewClientTests.NewClient.FastTests.Patching
                         .ToListAsync();
                 }
 
-                var patchByIndexOperation = new PatchByIndexOperation(context);
-                var patchCommand = patchByIndexOperation.CreateRequest("TestIndex",
-                    new IndexQuery { Query = "Value:1" },
-                    null, new PatchRequest { Script = @"PutDocument('NewItem/3', {'CopiedValue': this.Value });" }, store);
-                if (patchCommand != null)
-                    store.GetRequestExecuter(store.DefaultDatabase).Execute(patchCommand, context);
+                var operation = await store
+                    .Operations
+                    .SendAsync(new PatchByIndexOperation("TestIndex", new IndexQuery { Query = "Value:1" }, new PatchRequest { Script = @"PutDocument('NewItem/3', {'CopiedValue': this.Value });" }));
+
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
                 var getDocumentCommand = new GetDocumentCommand
                 {
@@ -212,7 +211,7 @@ namespace NewClientTests.NewClient.FastTests.Patching
                 var res = (BlittableJsonReaderObject)results[0];
                 object obj;
                 res.TryGetMember("CopiedValue", out obj);
-                Assert.Equal(1, ((Int64)obj));
+                Assert.Equal(1, (long)obj);
             }
         }
 
@@ -221,8 +220,6 @@ namespace NewClientTests.NewClient.FastTests.Patching
         {
             using (var store = GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"))
             {
-
-
                 RavenQueryStatistics stats;
                 using (var session = store.OpenSession())
                 {
@@ -250,12 +247,11 @@ namespace NewClientTests.NewClient.FastTests.Patching
                 JsonOperationContext context;
                 store.GetRequestExecuter(store.DefaultDatabase).ContextPool.AllocateOperationContext(out context);
 
-                var patchByIndexOperation = new PatchByIndexOperation(context);
-                var patchCommand = patchByIndexOperation.CreateRequest(stats.IndexName,
-                    new IndexQuery { Query = string.Empty },
-                    null, new PatchRequest { Script = "this.FullName = this.FirstName + ' ' + this.LastName;" }, store);
-                if (patchCommand != null)
-                    await store.GetRequestExecuter(store.DefaultDatabase).ExecuteAsync(patchCommand, context);
+                var operation = await store
+                    .Operations
+                    .SendAsync(new PatchByIndexOperation(stats.IndexName, new IndexQuery { Query = string.Empty }, new PatchRequest { Script = "this.FullName = this.FirstName + ' ' + this.LastName;" }));
+
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
                 using (var db = store.OpenAsyncSession())
                 {

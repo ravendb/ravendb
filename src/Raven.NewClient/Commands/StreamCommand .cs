@@ -36,5 +36,7 @@ namespace Raven.NewClient.Client.Commands
                 Stream = await response.Content.ReadAsStreamAsync()
             };
         }
+
+        public override bool IsReadRequest => true;
     }
 }

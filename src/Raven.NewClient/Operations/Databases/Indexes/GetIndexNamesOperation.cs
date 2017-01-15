@@ -18,7 +18,7 @@ namespace Raven.NewClient.Operations.Databases.Indexes
             _pageSize = pageSize;
         }
 
-        public RavenCommand<string[]> GetCommand()
+        public RavenCommand<string[]> GetCommand(DocumentConvention conventions)
         {
             return new GetIndexNamesCommand(_start, _pageSize);
         }
@@ -51,6 +51,8 @@ namespace Raven.NewClient.Operations.Databases.Indexes
 
                 Result = JsonDeserializationClient.GetIndexNamesResponse(response).Results;
             }
+
+            public override bool IsReadRequest => true;
         }
     }
 }
