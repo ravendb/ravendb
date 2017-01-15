@@ -28,7 +28,7 @@ namespace Raven.NewClient.Client.Document.Batches
             return new GetRequest
             {
                 Url = "/queries/" + _query.IndexName,
-                Query = _query.GetQueryString(method),
+                Query = "?" + _query.GetQueryString(method),
                 Method = method.Method,
                 Content = method == HttpMethod.Post ? _query.GetFacetsAsJson() : null
             };
