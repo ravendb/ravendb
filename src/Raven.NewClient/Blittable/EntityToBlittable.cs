@@ -25,6 +25,9 @@ namespace Raven.NewClient.Client.Blittable
         public BlittableJsonReaderObject ConvertEntityToBlittable(object entity, DocumentInfo documentInfo)
         {
             var writer = new BlittableJsonWriter(_session.Context, documentInfo);
+
+            //writer should be disposed together with JsonOperationContext
+            _session.Context.RegisterForDispose(writer);
             var serializer = _session.Conventions.CreateSerializer();
 
             serializer.Serialize(writer, entity);
@@ -39,6 +42,9 @@ namespace Raven.NewClient.Client.Blittable
         public BlittableJsonReaderObject ConvertEntityToBlittable(object entity, DocumentConvention documentConvention, JsonOperationContext jsonOperationContext, DocumentInfo documentInfo = null)
         {
             var writer = new BlittableJsonWriter(jsonOperationContext, documentInfo);
+                        
+            //writer should be disposed together with JsonOperationContext
+            jsonOperationContext.RegisterForDispose(writer);
             var serializer = documentConvention.CreateSerializer();
 
             serializer.Serialize(writer, entity);

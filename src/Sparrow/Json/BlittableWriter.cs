@@ -30,6 +30,9 @@ namespace Sparrow.Json
             int size;
             _unmanagedWriteBuffer.EnsureSingleChunk(out ptr, out size);
             var reader = new BlittableJsonReaderObject(ptr, size, _context, (UnmanagedWriteBuffer)(object)_unmanagedWriteBuffer);
+
+            //make sure to dispose the writer later, otherwise we might leave "hanging" reference
+            _context.RegisterForDispose(_unmanagedWriteBuffer);
             _unmanagedWriteBuffer = default(TWriter);
             return reader;
         }
@@ -115,8 +118,10 @@ namespace Sparrow.Json
             _unmanagedWriteBuffer.Dispose();
         }
 
-        public void Renew()
+        public void ResetAndRenew()
         {
+            Reset();
+
             _unmanagedWriteBuffer = (TWriter)(object)_context.GetStream();
             _position = 0;
         }
@@ -209,7 +214,8 @@ namespace Sparrow.Json
             var propertyArrayOffset = new int[_context.CachedProperties.PropertiesDiscovered];
             for (var index = 0; index < propertyArrayOffset.Length; index++)
             {
-                propertyArrayOffset[index] = WriteValue(_context.GetLazyStringForFieldWithCaching(_context.CachedProperties.GetProperty(index)));
+                var val = _context.GetLazyStringForFieldWithCaching(_context.CachedProperties.GetProperty(index));
+                propertyArrayOffset[index] = WriteValue(val);
             }
 
             // Register the position of the properties offsets start
@@ -407,8 +413,8 @@ namespace Sparrow.Json
                      size - sizeof(int) * 2;
             var shouldCompress =
                 initialCompressedSize.HasValue ||
-                (((mode & UsageMode.CompressStrings) == UsageMode.CompressStrings) && (size > 128))
-                || ((mode & UsageMode.CompressSmallStrings) == UsageMode.CompressSmallStrings) && (size <= 128);
+                (mode & UsageMode.CompressStrings) == UsageMode.CompressStrings && size > 128 || 
+                (mode & UsageMode.CompressSmallStrings) == UsageMode.CompressSmallStrings && size <= 128;
 
             if (maxGoodCompressionSize > 0 && shouldCompress)
             {
@@ -424,6 +430,7 @@ namespace Sparrow.Json
                 {
                     compressionBuffer = CompressBuffer(buffer,size, maxGoodCompressionSize, out compressedSize);
                 }
+
                 if (compressedSize > 0)// only if we actually save more than space
                 {
                     token = BlittableJsonToken.CompressedString;
@@ -497,7 +504,6 @@ namespace Sparrow.Json
             if (_compressionBuffer!= null)
                 _context.ReturnMemory(_compressionBuffer);
             _compressionBuffer = null;
-
         }
     }
 }

@@ -7,7 +7,7 @@ namespace FastTests.Client.Queries
     public class AnalyzersThatRemovesStarShouldNotCutTheLastChar : RavenTestBase
     {
         [Fact]
-        void CanDoPrefixQueryOnAnalyzedFields()
+        public void CanDoPrefixQueryOnAnalyzedFields()
         {
             using (var store = GetDocumentStore())
             using (var session = store.OpenSession())

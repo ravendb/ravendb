@@ -96,13 +96,14 @@ namespace Sparrow.Json
         }
 
         public void Dispose()
-        {
+        {            
             _returnBuffer.Dispose();
             if (Used == 0)
                 return;
 
             _stream.Write(_buffer.Buffer.Array, _buffer.Buffer.Offset, Used);
             Used = 0;
+            
         }
 
         public void EnsureSingleChunk(JsonParserState state)
@@ -173,8 +174,16 @@ namespace Sparrow.Json
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ThrowIfDisposed()
+        {
+            if(_current == null)
+                throw new ObjectDisposedException(nameof(UnmanagedWriteBuffer));
+        }
+
         public void Write(byte* buffer, int length)
         {
+            ThrowIfDisposed();
             if (length == 0)
                 return;
 
@@ -230,6 +239,7 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteByte(byte data)
         {
+            ThrowIfDisposed();
             if (_current.Used == _current.Allocation.SizeInBytes)
             {
                 AllocateNextSegment(1, allowGrowth: true);
@@ -246,6 +256,8 @@ namespace Sparrow.Json
 
         public int CopyTo(byte* pointer)
         {
+            ThrowIfDisposed();
+
             var whereToWrite = pointer + _sizeInBytes;
             var cur = _current;
             var copiedBytes = 0;
@@ -264,6 +276,8 @@ namespace Sparrow.Json
 
         public void Clear()
         {
+            ThrowIfDisposed();
+
             _current.Used = 0;
             _sizeInBytes = 0;
 
@@ -272,20 +286,24 @@ namespace Sparrow.Json
 
         public void Dispose()
         {
-            while (_current != null)
-            {
+            while (_current != null && 
+                _current.Address != null) //prevent double dispose
+            {                
                 _context.ReturnMemory(_current.Allocation);
+                _current.Address = null; //precaution, to make memory issues more visible
                 _current = _current.PreviousAllocated;
             }
         }
 
         public void EnsureSingleChunk(JsonParserState state)
         {
+            ThrowIfDisposed();
             EnsureSingleChunk(out state.StringBuffer, out state.StringSize);
         }
 
         public void EnsureSingleChunk(out byte* ptr, out int size)
         {
+            ThrowIfDisposed();
             if (_current.Previous == null || _current.PreviousHoldsNoData)
             {
                 ptr = _current.Address;

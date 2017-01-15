@@ -1,15 +1,12 @@
 ﻿using System;
-using System.Threading.Tasks;
-using FastTests.Voron;
-using Voron;
-using Voron.Global;
-using Voron.Impl.Scratch;
-using Xunit;
-using Sparrow.Platform;
-using System.Linq;
-using FastTests.Blittable;
-using FastTests.Issues;
-using FastTests.Voron.RawData;
+using FastTests.Blittable.BlittableJsonWriterTests;
+using FastTests.Client.Indexing;
+using FastTests.Client.Queries;
+using FastTests.Server.Basic;
+using FastTests.Server.Documents.Indexing.MapReduce;
+using FastTests.Server.Documents.Indexing.Static;
+using FastTests.Server.Replication;
+using FastTests.Utils;
 
 namespace Tryouts
 {
@@ -17,10 +14,12 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var a = new FastTests.Server.Replication.ManualConflictResolution())
+            using (var a = new DocumentReplication())
             {
-                a.ScriptResolveToTombstone();
+                a.CanReplicateDocumentDeletion();
             }
+            GC.Collect(2);
+            GC.WaitForPendingFinalizers();
         }
     }
 }

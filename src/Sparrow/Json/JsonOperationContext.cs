@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net.WebSockets;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -9,6 +11,7 @@ using System.Threading.Tasks;
 using Sparrow.Compression;
 using Sparrow.Json.Parsing;
 using Sparrow.Platform;
+using Sparrow.Logging;
 
 namespace Sparrow.Json
 {
@@ -24,7 +27,7 @@ namespace Sparrow.Json
         private ArenaMemoryAllocator _arenaAllocatorForLongLivedValues;
         private AllocatedMemoryData _tempBuffer;
         private List<GCHandle> _pinnedObjects;
-
+        private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
         private readonly Dictionary<string, LazyStringValue> _fieldNames =
             new Dictionary<string, LazyStringValue>(StringComparer.Ordinal);
@@ -92,6 +95,8 @@ namespace Sparrow.Json
         private readonly ObjectJsonParser _objectJsonParser;
         private readonly BlittableJsonDocumentBuilder _documentBuilder;
 
+        private static readonly Logger _log = LoggingSource.Instance.GetLogger<JsonOperationContext>("JsonOperationContext");
+
         public static JsonOperationContext ShortTermSingleUse()
         {
             return new JsonOperationContext(4096, 1024);
@@ -105,7 +110,6 @@ namespace Sparrow.Json
             _arenaAllocatorForLongLivedValues = new ArenaMemoryAllocator(longLivedSize);
             Encoding = new UTF8Encoding();
             CachedProperties = new CachedProperties(this);
-
             _jsonParserState = new JsonParserState();
             _objectJsonParser = new ObjectJsonParser(_jsonParserState, this);
             _documentBuilder = new BlittableJsonDocumentBuilder(this, _jsonParserState, _objectJsonParser);
@@ -114,6 +118,12 @@ namespace Sparrow.Json
             ElectricFencedMemory.RegisterContextAllocation(this,Environment.StackTrace);
 #endif
 
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void RegisterForDispose(IDisposable disposable)
+        {
+            _disposables.Add(disposable);
         }
 
         public ReturnBuffer GetManagedBuffer(out ManagedPinnedBuffer buffer)
@@ -166,6 +176,7 @@ namespace Sparrow.Json
                 if (_tempBuffer != null && _tempBuffer.Address != null)
                 {
                     _arenaAllocator.Return(_tempBuffer);
+                    _tempBuffer = null;
                 }
                 _tempBuffer = GetMemory(Math.Max(_tempBuffer?.SizeInBytes ?? 0, requestedSize));
             }
@@ -183,9 +194,11 @@ namespace Sparrow.Json
             if (requestedSize <= 0)
                 throw new ArgumentException(nameof(requestedSize));
 
-            return longLived
-                ? _arenaAllocatorForLongLivedValues.Allocate(requestedSize)
-                : _arenaAllocator.Allocate(requestedSize);
+            var allocatedMemory = longLived
+                                        ? _arenaAllocatorForLongLivedValues.Allocate(requestedSize)
+                                        : _arenaAllocator.Allocate(requestedSize);
+
+            return allocatedMemory;
         }
 
         /// <summary>
@@ -193,7 +206,8 @@ namespace Sparrow.Json
         /// </summary>
         public UnmanagedWriteBuffer GetStream()
         {
-            return new UnmanagedWriteBuffer(this, GetMemory(InitialStreamSize));
+            var bufferMemory = GetMemory(InitialStreamSize);
+            return new UnmanagedWriteBuffer(this, bufferMemory);
         }
 
         public virtual void Dispose()
@@ -206,9 +220,10 @@ namespace Sparrow.Json
             ElectricFencedMemory.UnRegisterContextAllocation(this);
 #endif
             Reset(true);
-            
+
             _objectJsonParser.Dispose();
             _documentBuilder.Dispose();
+
             _arenaAllocator.Dispose();
             _arenaAllocatorForLongLivedValues?.Dispose();
 
@@ -229,7 +244,6 @@ namespace Sparrow.Json
                 }
             }
 
-
             _disposed = true;
         }
 
@@ -237,16 +251,17 @@ namespace Sparrow.Json
         {
             LazyStringValue value;
 
-            if (_fieldNames.TryGetValue(field, out value))
-                return value;
+            if (!_fieldNames.TryGetValue(field, out value))
+            {
+                var key = new StringSegment(field, 0, field.Length);
+                value = GetLazyString(key, longLived: true);
+                _fieldNames[field] = value;
+            }
 
-            var key = new StringSegment(field, 0, field.Length);
-            value = GetLazyString(key, longLived: true);
-            _fieldNames[field] = value;
-            
+            //sanity check, in case the 'value' is manually disposed outside of this function
+            Debug.Assert(value.IsDisposed == false);
             return value;
         }
-
         
         public LazyStringValue GetLazyString(string field)
         {
@@ -255,6 +270,18 @@ namespace Sparrow.Json
 
             return GetLazyString(field, longLived: false);
         }
+
+        //gets lazy string that is disposed together with a context
+        public LazyStringValue GetDiscardableLazyString(string field)
+        {
+            if (field == null)
+                return null;
+
+            var @string = GetLazyString(field, longLived: false);
+            RegisterForDispose(@string);
+            return @string;
+        }
+
 
         private unsafe LazyStringValue GetLazyString(StringSegment field, bool longLived)
         {
@@ -270,7 +297,7 @@ namespace Sparrow.Json
                 state.WriteEscapePositionsTo(address + actualSize);
                 var result = new LazyStringValue(field, address, actualSize, this)
                 {
-                    AllocatedMemoryData = memory,
+                    AllocatedMemoryData = memory
                 };
 
                 if (state.EscapePositions.Count > 0)
@@ -692,17 +719,24 @@ namespace Sparrow.Json
 
         protected internal virtual unsafe void Reset(bool forceReleaseLongLivedAllocator = false)
         {
+            foreach (var disposable in _disposables)
+            {
+                disposable.Dispose();
+            }
+
             if (_tempBuffer != null && _tempBuffer.Address != null)
             {
                 _arenaAllocator.Return(_tempBuffer);
-                _tempBuffer.Address = null;
+                _tempBuffer = null;
             }
 
             foreach (var builder in _liveReaders)
             {
                 builder.DisposeTrackingReference = null;
                 builder.Dispose();
-            }
+            }      
+
+            _disposables.Clear();
 
             _liveReaders.Clear();
             _arenaAllocator.ResetArena();
@@ -714,10 +748,8 @@ namespace Sparrow.Json
 
             if (_arenaAllocatorForLongLivedValues.Allocated > _initialSize || forceReleaseLongLivedAllocator)
             {
-
-                
                 foreach(var mem in _fieldNames.Values){
-                    _arenaAllocatorForLongLivedValues.Return(mem.AllocatedMemoryData);              
+                    mem.Dispose();
                 }                
                 
                 // at this point, the long lived section is far too large, this is something that can happen

@@ -69,6 +69,7 @@ namespace Raven.Client.Replication.Messages
 
             return new DynamicJsonValue
             {
+                [nameof(DatabaseId)] = DatabaseId,
                 [nameof(Outgoing)] = outgoingJson,
                 [nameof(Incoming)] = incomingJson,
                 [nameof(Offline)] = offlineJson

@@ -92,8 +92,7 @@ namespace Raven.NewClient.Client.Document
         {
             var saveChangesOperation = new BatchOperation(this);
 
-            var command = saveChangesOperation.CreateRequest();
-            if (command != null)
+            using (var command = saveChangesOperation.CreateRequest())
             {
                 RequestExecuter.Execute(command, Context);
                 saveChangesOperation.SetResult(command.Result);

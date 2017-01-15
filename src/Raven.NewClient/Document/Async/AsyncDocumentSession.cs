@@ -133,8 +133,7 @@ namespace Raven.NewClient.Client.Document.Async
 
             var saveChangesOperation = new BatchOperation(this);
 
-            var command = saveChangesOperation.CreateRequest();
-            if (command != null)
+            using (var command = saveChangesOperation.CreateRequest())
             {
                 await RequestExecuter.ExecuteAsync(command, Context, token);
                 saveChangesOperation.SetResult(command.Result);
