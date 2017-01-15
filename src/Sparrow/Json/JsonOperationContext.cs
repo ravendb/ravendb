@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Sparrow.Compression;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Platform;
 
 namespace Sparrow.Json
 {
