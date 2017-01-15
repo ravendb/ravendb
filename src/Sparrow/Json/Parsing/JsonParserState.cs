@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 
 namespace Sparrow.Json.Parsing
@@ -14,8 +13,10 @@ namespace Sparrow.Json.Parsing
 
         public readonly List<int> EscapePositions = new List<int>();
 
-        public static readonly char[] EscapeChars = { '\b', '\t', '\r', '\n', '\f', '\\', '"', };
-    
+        public static readonly char[] EscapeChars = { '\b', '\t', '\r', '\n', '\f', '\\', '"' };
+        public static readonly byte[] EscapeCharsAsBytes = { (byte)'\b', (byte)'\t', (byte)'\r', (byte)'\n', (byte)'\f', (byte)'\\', (byte)'"' };
+
+
         public int GetEscapePositionsSize()
         {
             return GetEscapePositionsSize(EscapePositions);
@@ -59,17 +60,38 @@ namespace Sparrow.Json.Parsing
             return count;
         }
 
-        public void FindEscapePositionsIn(string str)
+        public void FindEscapePositionsMaxSize(string str, out int maxSizeToBeUsedByEscapePositions)
         {
-            EscapePositions.Clear();
+            var count = 0;
             var lastEscape = 0;
             while (true)
             {
                 var curEscape = str.IndexOfAny(EscapeChars, lastEscape);
                 if (curEscape == -1)
                     break;
-                EscapePositions.Add(curEscape - lastEscape);
+
+                count++;
                 lastEscape = curEscape + 1;
+            }
+
+            maxSizeToBeUsedByEscapePositions = (count + 1) * 5; // we take 5 because that is the max number of bytes for variable size int
+        }
+
+        public void FindEscapePositionsIn(byte* str, int len)
+        {
+            EscapePositions.Clear();
+            var lastEscape = 0;
+            for (int i = 0; i < len; i++)
+            {
+                for (int j = 0; j < EscapeCharsAsBytes.Length; j++)
+                {
+                    if (str[i] == EscapeCharsAsBytes[j])
+                    {
+                        EscapePositions.Add(i - lastEscape);
+                        lastEscape = i + 1;
+                        break;
+                    }
+                }
             }
         }
 
