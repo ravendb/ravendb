@@ -1,34 +1,33 @@
-/// <reference path="../../typings/tsd.d.ts" />
+/// <reference path="../../../typings/tsd.d.ts" />
 
 class serverBuildReminder {
 
-    public static localStorageName = "LastServerBuildReminder";
+    static localStorageName = "LastServerBuildReminder";
 
-    public static get() {
+    static get() {
         return localStorage.getObject(serverBuildReminder.localStorageName);
     }
 
-    public static mute(isMuteNeeded: boolean) {
+    static mute(isMuteNeeded: boolean) {
         if (isMuteNeeded) {
             localStorage.setObject(serverBuildReminder.localStorageName, new Date());
-        }
-        else {
+        } else {
             localStorage.removeItem(serverBuildReminder.localStorageName);
         }
 
-        var event: any = document.createEvent('StorageEvent');
+        const event: any = document.createEvent('StorageEvent');
         event.initStorageEvent('storage', false, false, serverBuildReminder.localStorageName, isMuteNeeded, !isMuteNeeded, null, window.sessionStorage);
         window.dispatchEvent(event);
     }
 
-    public static isReminderNeeded(): boolean {
-        var lastBuildCheck = serverBuildReminder.get();
-        var timestamp = Date.parse(lastBuildCheck);
-        var difference = 0;
+    static isReminderNeeded(): boolean {
+        const lastBuildCheck = serverBuildReminder.get();
+        const timestamp = Date.parse(lastBuildCheck);
+        let difference = 0;
 
         if (!isNaN(timestamp)) {
-            var lastBuildCheckMoment = moment(lastBuildCheck);
-            var currentDateMoment = moment(new Date());
+            const lastBuildCheckMoment = moment(lastBuildCheck);
+            const currentDateMoment = moment(new Date());
             difference = currentDateMoment.diff(lastBuildCheckMoment, 'days', true);
         }
 

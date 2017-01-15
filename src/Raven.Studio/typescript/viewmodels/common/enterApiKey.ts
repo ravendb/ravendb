@@ -1,7 +1,7 @@
 import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import oauthContext = require("common/oauthContext");
-import apiKeyLocalStorage = require("common/apiKeyLocalStorage");
+import apiKeyLocalStorage = require("common/storage/apiKeyLocalStorage");
 
 class enterApiKey extends dialogViewModelBase {
 

@@ -29,7 +29,7 @@ class notificationCenterOperations {
     private onStorageEvent(event: JQueryEventObject) {
         const storageEvent = event.originalEvent as StorageEvent;
 
-        const rs = this.activeChangesApi().getResource();
+        const rs = this.activeChangesApi() ? this.activeChangesApi().getResource() : null;
 
         if (!this.storage.isStorageKeyMatch(rs, storageEvent)) {
             return;

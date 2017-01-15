@@ -81,7 +81,7 @@ class statusDebugIndexFields extends viewModelBase {
         eventsCollector.default.reportEvent("index-fields", "show");
 
 
-        // TODO: in v4.0 we have /studio/index-field endpoint, but please we wanted it swallows IndexCompilationException
+        // TODO: in v4.0 we have /studio/index-field endpoint, but please be warned it swallows IndexCompilationException
 
         this.result(null);
         var db = this.activeDatabase();
