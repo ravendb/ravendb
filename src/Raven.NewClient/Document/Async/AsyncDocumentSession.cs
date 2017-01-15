@@ -30,7 +30,7 @@ namespace Raven.NewClient.Client.Document.Async
     public partial class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSessionImpl, IAsyncAdvancedSessionOperations, IDocumentQueryGenerator
     {
         private readonly AsyncDocumentKeyGeneration _asyncDocumentKeyGeneration;
-        private readonly Lazy<OperationExecuter> _operations;
+        private readonly OperationExecuter _operations;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.
@@ -41,7 +41,7 @@ namespace Raven.NewClient.Client.Document.Async
             GenerateDocumentKeysOnStore = false;
 
             _asyncDocumentKeyGeneration = new AsyncDocumentKeyGeneration(this, DocumentsByEntity.TryGetValue, (key, entity, metadata) => key);
-            _operations = new Lazy<OperationExecuter>(() => new OperationExecuter(documentStore, requestExecuter, Context));
+            _operations = new OperationExecuter(documentStore, requestExecuter, Context);
         }
 
         public Task<FacetedQueryResult[]> MultiFacetedSearchAsync(params FacetQuery[] queries)
@@ -90,7 +90,7 @@ namespace Raven.NewClient.Client.Document.Async
                 Query = query.ToString()
             };
 
-            return await _operations.Value.SendAsync(new DeleteByIndexOperation(indexName, indexQuery));
+            return await _operations.SendAsync(new DeleteByIndexOperation(indexName, indexQuery));
         }
 
         /// <summary>
