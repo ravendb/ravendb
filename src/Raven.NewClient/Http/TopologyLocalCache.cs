@@ -82,7 +82,7 @@ namespace Raven.NewClient.Client.Http
                     writer.WriteEndArray();
 
                     writer.WritePropertyName(context.GetDiscardableLazyString(nameof(Topology.ReadBehavior)));
-                    writer.WriteString(context.GetLazyString(topology.ReadBehavior.ToString()));
+                    writer.WriteString(context.GetDiscardableLazyString(topology.ReadBehavior.ToString()));
 
                     writer.WritePropertyName(context.GetDiscardableLazyString(nameof(Topology.WriteBehavior)));
                     writer.WriteString(context.GetDiscardableLazyString(topology.WriteBehavior.ToString()));

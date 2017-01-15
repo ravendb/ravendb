@@ -1543,8 +1543,6 @@ namespace Raven.Server.Documents
                         context.GetTransactionMarker()
                     };
 
-                  
-
                     if (oldValue == null)
                     {
                         if (expectedEtag != null && expectedEtag != 0)

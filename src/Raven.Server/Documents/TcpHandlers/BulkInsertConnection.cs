@@ -327,7 +327,14 @@ namespace Raven.Server.Documents.TcpHandlers
                         buffer.Used = 0;
                         if (buffer.Memory.SizeInBytes >= len)
                             break;
+
+                        //if we are here, this means that the buffer that we got 
+                        //from _docsToRelease is too small,
+                        //thus discard the buffer since we don't need it and look for another
+                        TcpConnection.Context.ReturnMemory(buffer.Memory);
+                        buffer.Memory = null; //precaution
                     }
+
                     while (len > 0)
                     {
                         var read = TcpConnection.MultiDocumentParser.Read(managedBuffer, 0, Math.Min(len, managedBuffer.Length));
@@ -375,6 +382,13 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             _docsToRelease.CompleteAdding();
             foreach (var bulkInsertDoc in _docsToRelease)
+            {
+                TcpConnection.Context.ReturnMemory(bulkInsertDoc.Memory);
+            }
+
+            //dispose those too if we dispose before finishing the bulk insert
+            //(for example if we finish early because of an exception)
+            foreach (var bulkInsertDoc in _docsToWrite)
             {
                 TcpConnection.Context.ReturnMemory(bulkInsertDoc.Memory);
             }

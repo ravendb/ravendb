@@ -138,6 +138,8 @@ namespace Raven.Server.Documents
             {
                 cmd.TaskCompletionSource.TrySetResult(null);
             }
+
+            DisposeIfRelevant(cmd);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -173,10 +175,7 @@ namespace Raven.Server.Documents
                             if (sp.ElapsedMilliseconds < 150)
                                 break;
                         } while (true);
-                        tx.Commit();
-
-                        foreach(var op in pendingOps)
-                            DisposeIfRelevant(op);
+                        tx.Commit();                        
                     }
                 }
                 return true;

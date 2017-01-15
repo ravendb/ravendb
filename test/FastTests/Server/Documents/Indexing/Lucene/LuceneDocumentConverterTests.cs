@@ -455,11 +455,9 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             _docs.Add(data);
 
             //_lazyStrings.
-            var lazyStringValueRegular = _ctx.GetLazyString(id);
-            var lazyStringValueLowerCase = _ctx.GetLazyString(id.ToLowerInvariant());
+            var lazyStringValueRegular = _ctx.GetDiscardableLazyString(id);
+            var lazyStringValueLowerCase = _ctx.GetDiscardableLazyString(id.ToLowerInvariant());
 
-            _lazyStrings.Add(lazyStringValueRegular);
-            _lazyStrings.Add(lazyStringValueLowerCase);
             return new Document
             {
                 Data = data,
@@ -475,11 +473,6 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             foreach (var docReader in _docs)
             {
                 docReader.Dispose();
-            }
-
-            foreach (var lazyStringValue in _lazyStrings)
-            {
-                _ctx.ReturnMemory(lazyStringValue.AllocatedMemoryData);
             }
 
             _ctx.Dispose();

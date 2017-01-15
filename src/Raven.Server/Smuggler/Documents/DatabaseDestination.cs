@@ -186,6 +186,7 @@ namespace Raven.Server.Smuggler.Documents
                     using (_command)
                         AsyncHelpers.RunSync(() => _database.TxMerger.Enqueue(_command));
                 }
+
                 _command = null;
             }
         }
@@ -241,6 +242,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public readonly List<Document> Documents = new List<Document>();
             private IDisposable _resetContext;
+            private bool _isDisposed;
             private readonly DocumentsOperationContext _context;
 
             public MergedBatchPutCommand(DocumentDatabase database, long buildVersion)
@@ -296,6 +298,10 @@ namespace Raven.Server.Smuggler.Documents
 
             public void Dispose()
             {
+                if (_isDisposed)
+                    return;
+
+                _isDisposed = true;
                 foreach (var doc in Documents)
                     doc.Data.Dispose();
 
