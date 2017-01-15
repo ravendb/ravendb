@@ -34,5 +34,23 @@ namespace Raven.Client.Replication.Messages
     {
         public Guid DbId;
         public long Etag;
+
+        public override bool Equals(object other)
+        {
+            if (!(other is ChangeVectorEntry))
+            {
+                return false;
+            }
+            ChangeVectorEntry changeVector = (ChangeVectorEntry) other;
+            return DbId.Equals(changeVector.DbId) && Etag == changeVector.Etag;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return (DbId.GetHashCode()*397) ^ Etag.GetHashCode();
+            }
+        }
     }
 }

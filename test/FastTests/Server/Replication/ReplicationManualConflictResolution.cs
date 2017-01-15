@@ -221,6 +221,90 @@ return out;
             }
         }
 
+        [Fact]
+        public void ResolveConflictAfterSettingToLocal()
+        {
+            using (var master = GetDocumentStore())
+            using (var slave = GetDocumentStore())
+            {
+                SetupReplication(master, slave);
+                using (var session = slave.OpenSession())
+                {
+                    session.Store(new User()
+                    {
+                        Name = "Local",
+                        Age = 1
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = master.OpenSession())
+                {
+                    session.Store(new User()
+                    {
+                        Name = "Remote",
+                        Age = 2
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                var conflicts = WaitUntilHasConflict(slave, "users/1");
+                Assert.Equal(2, conflicts["users/1"].Count);
+
+                SetReplicationConflictResolution(slave,StraightforwardConflictResolution.ResolveToLocal);
+                var updated = WaitForDocument(slave, "users/1");
+                Assert.True(updated);
+
+                using (var session = slave.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+                    Assert.Equal("Local",user.Name);
+                }
+            }
+        }
+
+        [Fact]
+        public void ResolveConflictAfterSettingScript()
+        {
+            using (var master = GetDocumentStore())
+            using (var slave = GetDocumentStore())
+            {
+                SetupReplication(master, slave);
+                using (var session = slave.OpenSession())
+                {
+                    session.Store(new User()
+                    {
+                        Name = "Local",
+                        Age = 1
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = master.OpenSession())
+                {
+                    session.Store(new User()
+                    {
+                        Name = "Remote",
+                        Age = 2
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                var conflicts = WaitUntilHasConflict(slave, "users/1");
+                Assert.Equal(2, conflicts["users/1"].Count);
+
+                SetToManualResolution(slave,"return {Name:'ResolvedByScript'}");
+                var updated = WaitForDocument(slave, "users/1");
+                Assert.True(updated);
+
+                using (var session = slave.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+                    Assert.Equal("ResolvedByScript", user.Name);
+                }
+            }
+        }
+
         public bool WaitForBiggerEtag(DocumentStore store, long? etag)
         {
             var sw = Stopwatch.StartNew();
