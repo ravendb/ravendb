@@ -150,7 +150,7 @@ namespace Raven.NewClient.Client.Document
                 requests.Add(new GetRequest()
                 {
                     Url = "/queries/" + q.IndexName,
-                    Query = q.GetQueryString(method),
+                    Query = "?" + q.GetQueryString(method),
                     Method = method.Method,
                     Content = method == HttpMethod.Post ? q.GetFacetsAsJson() : null
                 });
