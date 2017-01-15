@@ -9,6 +9,7 @@ using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Linq;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 
 namespace Raven.NewClient.Client.Document
@@ -32,14 +33,14 @@ namespace Raven.NewClient.Client.Document
                 while (result.MoveNext())
                 {
                     var res = result.Current;
-                    var stremResult = CreateStreamResult<T>(res);
-
+                    query.InvokeAfterStreamExecuted(res);
+                    var stremResult = CreateStreamResult<T>(ref res);
                     yield return stremResult;
                 }
             }
         }
 
-        private StreamResult<T> CreateStreamResult<T>(BlittableJsonReaderObject res)
+        private StreamResult<T> CreateStreamResult<T>(ref BlittableJsonReaderObject res)
         {
             string key = null;
             long? etag = null;
@@ -51,6 +52,8 @@ namespace Raven.NewClient.Client.Document
                 if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
                     throw new ArgumentException();
             }
+            //TODO - Investagate why ConvertToEntity fails if we don't call ReadObject before
+            res = Context.ReadObject(res, key);
             var entity = ConvertToEntity(typeof(T), key, res);
             var stremResult = new StreamResult<T>
             {
@@ -90,7 +93,7 @@ namespace Raven.NewClient.Client.Document
                 while (result.MoveNext())
                 {
                     var res = result.Current;
-                    var stremResult = CreateStreamResult<T>(res);
+                    var stremResult = CreateStreamResult<T>(ref res);
                     yield return stremResult;
                 }
             }

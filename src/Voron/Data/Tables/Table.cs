@@ -175,7 +175,7 @@ namespace Voron.Data.Tables
                 var page = _tx.LowLevelTransaction.GetPage(id / Constants.Storage.PageSize);
                 size = page.OverflowSize;
 
-                return page.Pointer + sizeof(PageHeader);
+                return page.Pointer + PageHeader.SizeOf;
             }
 
             // here we rely on the fact that RawDataSmallSection can
@@ -222,7 +222,8 @@ namespace Voron.Data.Tables
                     page = _tx.LowLevelTransaction.ModifyPage(pageNumber);
 
                     page.OverflowSize = size;
-                    var pos = page.Pointer + sizeof(PageHeader);
+
+                    var pos = page.Pointer + PageHeader.SizeOf;
 
                     DeleteValueFromIndex(id, new TableValueReader(pos, size));
 
@@ -374,7 +375,7 @@ namespace Voron.Data.Tables
                 page.Flags = PageFlags.Overflow | PageFlags.RawData;
                 page.OverflowSize = size;
 
-                pos = page.Pointer + sizeof(PageHeader);
+                pos = page.Pointer + PageHeader.SizeOf;
 
                 builder.CopyTo(pos);
                 id = page.PageNumber * Constants.Storage.PageSize;
@@ -414,7 +415,7 @@ namespace Voron.Data.Tables
                 page.Flags = PageFlags.Overflow | PageFlags.RawData;
                 page.OverflowSize = size;
 
-                pos = page.Pointer + sizeof(PageHeader);
+                pos = page.Pointer + PageHeader.SizeOf;
 
                 id = page.PageNumber * Constants.Storage.PageSize;
             }

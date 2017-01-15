@@ -6,15 +6,12 @@ using Jint;
 using Jint.Native;
 using Jint.Parser;
 using Jint.Runtime;
-using Raven.Abstractions.Logging;
 using Raven.Server.Extensions;
-using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Voron.Exceptions;
 using Sparrow.Logging;
-using Voron;
 
 namespace Raven.Server.Documents.Patch
 {
@@ -22,9 +19,9 @@ namespace Raven.Server.Documents.Patch
     {
         protected static Logger _logger;
         private const int MaxRecursionDepth = 128;
-        private readonly int maxSteps;
-        private readonly int additionalStepsPerSize;
-        private readonly bool allowScriptsToAdjustNumberOfSteps;
+        private readonly int _maxSteps;
+        private readonly int _additionalStepsPerSize;
+        private readonly bool _allowScriptsToAdjustNumberOfSteps;
 
         private static readonly ScriptsCache ScriptsCache = new ScriptsCache();
 
@@ -34,9 +31,9 @@ namespace Raven.Server.Documents.Patch
         {
             _database = database;
             _logger = LoggingSource.Instance.GetLogger<PatchDocument>(database.Name);
-            maxSteps = database.Configuration.Patching.MaxStepsForScript;
-            additionalStepsPerSize = database.Configuration.Patching.AdditionalStepsForScriptBasedOnDocumentSize;
-            allowScriptsToAdjustNumberOfSteps = database.Configuration.Patching.AllowScriptsToAdjustNumberOfSteps;
+            _maxSteps = database.Configuration.Patching.MaxStepsForScript;
+            _additionalStepsPerSize = database.Configuration.Patching.AdditionalStepsForScriptBasedOnDocumentSize;
+            _allowScriptsToAdjustNumberOfSteps = database.Configuration.Patching.AllowScriptsToAdjustNumberOfSteps;
         }
 
         public virtual PatchResultData Apply(DocumentsOperationContext context, Document document, PatchRequest patch)
@@ -182,8 +179,8 @@ namespace Raven.Server.Documents.Patch
                 _patch = patch;
                 Scope = new PatcherOperationScope(parent._database, context, isTestOnly)
                 {
-                    AdditionalStepsPerSize = parent.additionalStepsPerSize,
-                    MaxSteps = parent.maxSteps,
+                    AdditionalStepsPerSize = parent._additionalStepsPerSize,
+                    MaxSteps = parent._maxSteps,
                 };
 
                 try
@@ -291,7 +288,7 @@ namespace Raven.Server.Documents.Patch
             int totalScriptSteps = 0;
             if (documentSize != 0)
             {
-                totalScriptSteps = maxSteps + (documentSize * additionalStepsPerSize);
+                totalScriptSteps = _maxSteps + (documentSize * _additionalStepsPerSize);
                 jintEngine.Options.MaxStatements(totalScriptSteps);
             }
 
@@ -305,7 +302,7 @@ namespace Raven.Server.Documents.Patch
 
             jintEngine.SetValue("IncreaseNumberOfAllowedStepsBy", (Action<int>)(number =>
             {
-                if (allowScriptsToAdjustNumberOfSteps == false)
+                if (_allowScriptsToAdjustNumberOfSteps == false)
                     throw new InvalidOperationException("Cannot use 'IncreaseNumberOfAllowedStepsBy' method, because `Raven/AllowScriptsToAdjustNumberOfSteps` is set to false.");
 
                 scope.MaxSteps += number;
@@ -352,7 +349,7 @@ namespace Raven.Server.Documents.Patch
             AddScript(jintEngine, "Raven.Server.Documents.Patch.ToJson.js");
             AddScript(jintEngine, "Raven.Server.Documents.Patch.RavenDB.js");
 
-            jintEngine.Options.MaxStatements(maxSteps);
+            jintEngine.Options.MaxStatements(_maxSteps);
 
             jintEngine.Execute(wrapperScript, new ParserOptions
             {
@@ -395,11 +392,10 @@ namespace Raven.Server.Documents.Patch
                 if (property.Key == "length")
                     continue;
 
-                var jsInstance = property.Value.Value;
-                if (!jsInstance.HasValue)
+                var value = property.Value.Value;
+                if (value == null)
                     continue;
 
-                var value = jsInstance.Value;
                 string output = null;
                 switch (value.Type)
                 {
@@ -427,8 +423,8 @@ namespace Raven.Server.Documents.Patch
 
         private static string GetFromResources(string resourceName)
         {
-            var assembly = typeof(PatchDocument).Assembly();
-            using (Stream stream = assembly.GetManifestResourceStream(resourceName))
+            var assembly = typeof(PatchDocument).GetTypeInfo().Assembly;
+            using (var stream = assembly.GetManifestResourceStream(resourceName))
             {
                 using (var reader = new StreamReader(stream))
                 {

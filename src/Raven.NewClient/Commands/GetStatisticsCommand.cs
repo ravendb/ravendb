@@ -21,5 +21,7 @@ namespace Raven.NewClient.Client.Commands
         {
             Result = JsonDeserializationClient.GetStatisticsResult(response);
         }
+
+        public override bool IsReadRequest => true;
     }
 }

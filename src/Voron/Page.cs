@@ -15,7 +15,7 @@ namespace Voron
         public byte* DataPointer
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return Pointer + sizeof(PageHeader); }
+            get { return Pointer + PageHeader.SizeOf; }
         }
 
         public long PageNumber

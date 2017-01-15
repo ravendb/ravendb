@@ -1,0 +1,181 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using Raven.Abstractions;
+using Raven.Client.Data;
+using Sparrow.Json.Parsing;
+
+namespace Raven.Server.Smuggler.Documents.Data
+{
+    public class SmugglerResult : SmugglerProgressBase, IOperationResult
+    {
+        private readonly List<string> _messages;
+        private readonly SmugglerProgress _progress;
+        private readonly Stopwatch _sw;
+
+        public SmugglerResult()
+        {
+            _sw = Stopwatch.StartNew();
+            _messages = new List<string>();
+            _progress = new SmugglerProgress(this);
+
+            Documents = new CountsWithSkippedCountAndLastEtag();
+            RevisionDocuments = new CountsWithLastEtag();
+            Identities = new Counts();
+            Indexes = new Counts();
+            Transformers = new Counts();
+        }
+
+        public string Message { get; private set; }
+
+        public TimeSpan Elapsed => _sw.Elapsed;
+
+        public IOperationProgress Progress => _progress;
+
+        public IReadOnlyList<string> Messages => _messages;
+
+        public void AddWarning(string message)
+        {
+            AddMessage("WARNING", message);
+        }
+
+        public void AddInfo(string message)
+        {
+            AddMessage("INFO", message);
+        }
+
+        public void AddError(string message)
+        {
+            AddMessage("ERROR", message);
+        }
+
+        internal void AddMessage(string message)
+        {
+            Message = message;
+            _messages.Add(Message);
+        }
+
+        private void AddMessage(string type, string message)
+        {
+            Message = $"[{SystemTime.UtcNow:T} {type}] {message}";
+            _messages.Add(Message);
+        }
+
+        public override DynamicJsonValue ToJson()
+        {
+            _sw.Stop();
+
+            var json = base.ToJson();
+            json[nameof(Messages)] = Messages;
+            json[nameof(Elapsed)] = Elapsed;
+
+            return json;
+        }
+
+        private class SmugglerProgress : SmugglerProgressBase, IOperationProgress
+        {
+            private readonly SmugglerResult _result;
+
+            public SmugglerProgress(SmugglerResult result)
+            {
+                _result = result;
+            }
+
+            private string Message => _result.Message;
+
+            public override CountsWithSkippedCountAndLastEtag Documents => _result.Documents;
+            public override CountsWithLastEtag RevisionDocuments => _result.RevisionDocuments;
+            public override Counts Identities => _result.Identities;
+            public override Counts Indexes => _result.Indexes;
+            public override Counts Transformers => _result.Transformers;
+
+            public override DynamicJsonValue ToJson()
+            {
+                var json = base.ToJson();
+                json[nameof(Message)] = Message;
+
+                return json;
+            }
+        }
+    }
+
+    public abstract class SmugglerProgressBase
+    {
+        public virtual CountsWithSkippedCountAndLastEtag Documents { get; set; }
+
+        public virtual CountsWithLastEtag RevisionDocuments { get; set; }
+
+        public virtual Counts Identities { get; set; }
+
+        public virtual Counts Indexes { get; set; }
+
+        public virtual Counts Transformers { get; set; }
+
+        public virtual DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue(GetType())
+            {
+                [nameof(Documents)] = Documents.ToJson(),
+                [nameof(Identities)] = Identities.ToJson(),
+                [nameof(Indexes)] = Indexes.ToJson(),
+                [nameof(RevisionDocuments)] = RevisionDocuments.ToJson(),
+                [nameof(Transformers)] = Transformers.ToJson()
+            };
+        }
+
+        public class Counts
+        {
+            public bool Skipped { get; set; }
+
+            public long ReadCount { get; set; }
+
+            public long ErroredCount { get; set; }
+
+            public virtual DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue
+                {
+                    [nameof(Skipped)] = Skipped,
+                    [nameof(ReadCount)] = ReadCount,
+                    [nameof(ErroredCount)] = ErroredCount
+                };
+            }
+
+            public override string ToString()
+            {
+                return $"Read: {ReadCount}. Errored: {ErroredCount}.";
+            }
+        }
+
+        public class CountsWithLastEtag : Counts
+        {
+            public long LastEtag { get; set; }
+
+            public override DynamicJsonValue ToJson()
+            {
+                var json = base.ToJson();
+                json[nameof(LastEtag)] = LastEtag;
+
+                return json;
+            }
+        }
+
+        public class CountsWithSkippedCountAndLastEtag : CountsWithLastEtag
+        {
+            public long SkippedCount { get; set; }
+
+            public override DynamicJsonValue ToJson()
+            {
+                var json = base.ToJson();
+                json[nameof(SkippedCount)] = SkippedCount;
+
+                return json;
+            }
+
+            public override string ToString()
+            {
+                return $"Read: {ReadCount}. Skipped: {SkippedCount}. Errored: {ErroredCount}.";
+            }
+        }
+    }
+}

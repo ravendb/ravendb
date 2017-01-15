@@ -8,7 +8,7 @@ namespace Raven.NewClient.Client.Commands
     public class GetSubscriptionsCommand : RavenCommand<GetSubscriptionsResult>
     {
         private readonly int _start;
-        private int _pageSize;
+        private readonly int _pageSize;
 
         public GetSubscriptionsCommand(int start, int pageSize)
         {
@@ -19,7 +19,6 @@ namespace Raven.NewClient.Client.Commands
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/subscriptions?start={_start}&pageSize={_pageSize}";
-            IsReadRequest = false;
 
             var request = new HttpRequestMessage
             {
@@ -37,5 +36,7 @@ namespace Raven.NewClient.Client.Commands
             }
             Result = JsonDeserializationClient.GetSubscriptionsResult(response);
         }
+
+        public override bool IsReadRequest => true;
     }
 }

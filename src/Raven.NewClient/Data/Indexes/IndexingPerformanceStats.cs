@@ -4,7 +4,12 @@ namespace Raven.NewClient.Data.Indexes
 {
     public class IndexingPerformanceStats : IndexingPerformanceBasicStats
     {
-        public IndexingPerformanceStats(TimeSpan duration) 
+        public IndexingPerformanceStats()
+        {
+            // for deserialization
+        }
+
+        public IndexingPerformanceStats(TimeSpan duration)
             : base(duration)
         {
         }
@@ -16,6 +21,11 @@ namespace Raven.NewClient.Data.Indexes
 
     public class IndexingPerformanceBasicStats
     {
+        public IndexingPerformanceBasicStats()
+        {
+            // for deserialization
+        }
+
         public IndexingPerformanceBasicStats(TimeSpan duration)
         {
             DurationInMilliseconds = Math.Round(duration.TotalMilliseconds, 2);

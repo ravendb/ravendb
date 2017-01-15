@@ -20,5 +20,7 @@ namespace Raven.NewClient.Client.Commands
         {
             Result = JsonDeserializationClient.ClusterTopology(response);
         }
+
+        public override bool IsReadRequest => true;
     }
 }

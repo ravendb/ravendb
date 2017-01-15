@@ -9,9 +9,11 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.DependencyInjection;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Client.Data;
 using Raven.Client.Json;
@@ -147,6 +149,10 @@ namespace Raven.Server
             try
             {
                 _webHost.Start();
+
+                var serverAddressesFeature = _webHost.ServerFeatures.Get<IServerAddressesFeature>();
+                WebUrls = serverAddressesFeature.Addresses.ToArray();
+
                 _tcpListenerTask = StartTcpListener();
             }
             catch (Exception e)
@@ -186,6 +192,8 @@ namespace Raven.Server
             }
         }
 
+        public string[] WebUrls { get; set; }
+
         private readonly JsonContextPool _tcpContextPool = new JsonContextPool();
 
         public class TcpListenerStatus
@@ -196,11 +204,12 @@ namespace Raven.Server
 
         private async Task<TcpListenerStatus> StartTcpListener()
         {
+            string host = "<unknown>";
+            var port = 0;
             var status = new TcpListenerStatus();
             try
             {
-                var host = new Uri(Configuration.Core.ServerUrl).DnsSafeHost;
-                var port = 0;
+                host = new Uri(Configuration.Core.ServerUrl).DnsSafeHost;
                 if (string.IsNullOrWhiteSpace(Configuration.Core.TcpServerUrl) == false)
                 {
                     short shortPort;
@@ -233,7 +242,8 @@ namespace Raven.Server
                     {
                         throw new IOException("Unable to start tcp listener on " + ipAddress + " on port " + port, ex);
                     }
-                    status.Port = ((IPEndPoint) listener.LocalEndpoint).Port;
+                    var listenerLocalEndpoint = (IPEndPoint) listener.LocalEndpoint;
+                    status.Port = listenerLocalEndpoint.Port;
 
                     for (int i = 0; i < 4; i++)
                     {
@@ -244,35 +254,19 @@ namespace Raven.Server
             }
             catch (Exception e)
             {
+                if (_tcpLogger.IsOperationsEnabled)
+                {
+                    _tcpLogger.Operations($"Failed to start tcp server on tcp://{host}:{port}, tcp listening disabled", e);
+                }
+
                 foreach (var tcpListener in status.Listeners)
                 {
                     tcpListener.Stop();
                 }
-                if (_tcpLogger.IsOperationsEnabled)
-                {
-                    _tcpLogger.Operations(
-                        $"Failed to start tcp server on {Configuration.Core.TcpServerUrl}, tcp listening disabled", e);
-                }
+               
                 throw;
             }
         }
-
-        private string FindEntryForAddress(string host)
-        {
-            switch (host)
-            {
-                case "localhost":
-                    return "localhost";
-                case "+":
-                case "*":
-                case "0.0.0.0":
-                case "::0":
-                    return Dns.GetHostName();
-                default:
-                    return host;
-            }
-        }
-
 
         private async Task<IPAddress[]> GetTcpListenAddresses(string host)
         {
@@ -303,7 +297,7 @@ namespace Raven.Server
                         if (_tcpLogger.IsOperationsEnabled)
                         {
                             _tcpLogger.Operations(
-                                $"Failed to resolve ip address to bind to for {Configuration.Core.TcpServerUrl}, tcp listening disabled",
+                                $"Failed to resolve ip address to bind to for {host}, tcp listening disabled",
                                 e);
                         }
                         throw;

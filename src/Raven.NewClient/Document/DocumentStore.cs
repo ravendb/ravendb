@@ -8,16 +8,10 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
-
-using Raven.NewClient.Abstractions.Cluster;
-using Raven.NewClient.Abstractions.Connection;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Changes;
-using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Connection.Profiling;
-using Raven.NewClient.Client.Connection.Request;
 using Raven.NewClient.Client.Extensions;
 
 using System.Threading.Tasks;
@@ -26,6 +20,7 @@ using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Metrics;
 using Raven.NewClient.Client.Smuggler;
 using Raven.NewClient.Client.Util;
+using Raven.NewClient.Operations;
 
 
 namespace Raven.NewClient.Client.Document
@@ -49,6 +44,10 @@ namespace Raven.NewClient.Client.Document
 
         private AsyncMultiDatabaseHiLoKeyGenerator _asyncMultiDbHiLo;
 
+        private AdminOperationExecuter _adminOperationExecuter;
+
+        private OperationExecuter _operationExecuter;
+
         /// <summary>
         /// The current session id - only used during construction
         /// </summary>
@@ -57,7 +56,7 @@ namespace Raven.NewClient.Client.Document
         private const int DefaultNumberOfCachedRequests = 2048;
         private int maxNumberOfCachedRequests = DefaultNumberOfCachedRequests;
         private bool aggressiveCachingUsed;
-        
+
         /// <summary>
         /// Whatever this instance has json request factory available
         /// </summary>
@@ -211,7 +210,7 @@ namespace Raven.NewClient.Client.Document
             });
         }
 
-       
+
         public override IDocumentSession OpenSession(OpenSessionOptions options)
         {
             EnsureNotClosed();
@@ -301,7 +300,7 @@ namespace Raven.NewClient.Client.Document
         public Task<string> Generate(string dbName, DocumentConvention conventions,
                                                      object entity)
         {
-           throw new NotImplementedException();
+            throw new NotImplementedException();
         }
 
         public override void InitializeProfiling()
@@ -592,7 +591,7 @@ namespace Raven.NewClient.Client.Document
             return OpenAsyncSessionInternal(new OpenSessionOptions());
         }
 
-        
+
 
 
         /// <summary>
@@ -617,6 +616,10 @@ namespace Raven.NewClient.Client.Document
         public Func<HttpMessageHandler> HttpMessageHandlerFactory { get; set; }
 
         public DatabaseSmuggler Smuggler { get; private set; }
+
+        public AdminOperationExecuter Admin => _adminOperationExecuter ?? (_adminOperationExecuter = new AdminOperationExecuter(this));
+
+        public OperationExecuter Operations => _operationExecuter ?? (_operationExecuter = new OperationExecuter(this));
 
         public override BulkInsertOperation BulkInsert(string database = null)
         {

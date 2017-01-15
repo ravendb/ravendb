@@ -15,8 +15,7 @@ using Microsoft.Extensions.Primitives;
 #endif
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Data;
-using Newtonsoft.Json;
+using Sparrow.Json.Parsing;
 
 
 namespace Raven.NewClient.Client.Data
@@ -24,7 +23,7 @@ namespace Raven.NewClient.Client.Data
     public class FacetQuery : IndexQueryBase
     {
         private IReadOnlyList<Facet> _facets;
-        private string _facetsAsJson;
+        private DynamicJsonArray _facetsAsDynamicJsonArray;
 
         /// <summary>
         /// Index name to run facet query on.
@@ -45,7 +44,7 @@ namespace Raven.NewClient.Client.Data
             set
             {
                 _facets = value;
-                _facetsAsJson = null;
+                _facetsAsDynamicJsonArray = null;
             }
         }
 
@@ -54,15 +53,15 @@ namespace Raven.NewClient.Client.Data
             if (Facets == null || Facets.Count == 0)
                 return HttpMethod.Get;
 
-            if (_facetsAsJson == null)
-                _facetsAsJson = SerializeFacetsToFacetsJsonString(Facets);
+            if (_facetsAsDynamicJsonArray == null)
+                _facetsAsDynamicJsonArray = SerializeFacetsToDynamicJsonArray(Facets);
 
-            return _facetsAsJson.Length < 32 * 1024 - 1 ? HttpMethod.Get : HttpMethod.Post;
+            return  HttpMethod.Post;
         }
 
-        public string GetFacetsAsJson()
+        public DynamicJsonArray GetFacetsAsJson()
         {
-            return _facetsAsJson ?? (_facetsAsJson = SerializeFacetsToFacetsJsonString(Facets));
+            return _facetsAsDynamicJsonArray ?? (_facetsAsDynamicJsonArray = SerializeFacetsToDynamicJsonArray(Facets));
         }
 
         public string GetQueryString(HttpMethod method)
@@ -175,24 +174,32 @@ namespace Raven.NewClient.Client.Data
             return result;
         }
 
-        private static string SerializeFacetsToFacetsJsonString(IReadOnlyList<Facet> facets)
+        private static DynamicJsonArray SerializeFacetsToDynamicJsonArray(IReadOnlyList<Facet> facets)
         {
-            /*var ravenJArray = (RavenJArray)RavenJToken.FromObject(facets, new JsonSerializer
+            var dynamicJsonArray = new DynamicJsonArray();
+
+            foreach (var facet in facets)
             {
-                NullValueHandling = NullValueHandling.Ignore,
-                DefaultValueHandling = DefaultValueHandling.Ignore,
-            });
-            foreach (var facet in ravenJArray)
-            {
-                var obj = (RavenJObject)facet;
-                if (obj.Value<string>("Name") == obj.Value<string>("DisplayName"))
-                    obj.Remove("DisplayName");
-                var jArray = obj.Value<RavenJArray>("Ranges");
-                if (jArray != null && jArray.Length == 0)
-                    obj.Remove("Ranges");
+                var rangelist = new DynamicJsonArray();
+                foreach (var range in facet.Ranges)
+                {
+                    rangelist.Add(range);
+                }
+                dynamicJsonArray.Add(new DynamicJsonValue()
+                {
+                    ["Mode"] = facet.Mode.ToString(),
+                    ["Aggregation"] = facet.Aggregation.ToString(),
+                    ["AggregationField"] = facet.AggregationField,
+                    ["AggregationType"] = facet.AggregationType,
+                    ["Name"] = facet.Name,
+                    ["DisplayName"] = facet.DisplayName,
+                    ["MaxResults"] = facet.MaxResults,
+                    ["TermSortMode"] = facet.TermSortMode.ToString(),
+                    ["IncludeRemainingTerms"] = facet.IncludeRemainingTerms,
+                    ["Ranges"] = rangelist
+                });
             }
-            return ravenJArray.ToString(Formatting.None);*/
-            throw new NotImplementedException();
+            return dynamicJsonArray;
         }
     }
 }

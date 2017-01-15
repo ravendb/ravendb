@@ -26,6 +26,6 @@ namespace Raven.NewClient.Commands
         }
 
         public override void SetResponse(BlittableJsonReaderObject response) { }
-
+        public override bool IsReadRequest => false;
     }
 }

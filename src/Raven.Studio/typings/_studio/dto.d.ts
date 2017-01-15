@@ -1,5 +1,14 @@
 /// <reference path="../tsd.d.ts"/>
 
+interface dictionary<TValue> {
+    [key: string]: TValue;
+}
+
+interface valueAndLabelItem<V, L> {
+    value: V;
+    label: L;
+}
+
 interface queryResultDto<T> {
     Results: T[];
     Includes: any[];
@@ -28,6 +37,11 @@ interface disableResourceResult {
     Success: boolean;
     Reason: string;
     Disabled: boolean;
+}
+
+interface saveIndexResult {
+    IndexId: number;
+    Index: string;
 }
 
 interface deleteResourceResult {

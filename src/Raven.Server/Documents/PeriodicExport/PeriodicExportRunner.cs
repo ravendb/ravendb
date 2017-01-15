@@ -16,10 +16,12 @@ using Raven.Server.Documents.PeriodicExport.Azure;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
+using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
 namespace Raven.Server.Documents.PeriodicExport
 {
@@ -97,7 +99,7 @@ namespace Raven.Server.Documents.PeriodicExport
 
                 if (IsValidTimespanForTimer(IncrementalInterval))
                 {
-                    var timeSinceLastExport = SystemTime.UtcNow - _status.LastExportAt ;
+                    var timeSinceLastExport = SystemTime.UtcNow - _status.LastExportAt;
                     var nextExport = timeSinceLastExport >= IncrementalInterval ? TimeSpan.Zero : IncrementalInterval - timeSinceLastExport;
 
                     _incrementalExportTimer = new Timer(TimerCallback, false, nextExport, IncrementalInterval);
@@ -248,14 +250,8 @@ namespace Raven.Server.Documents.PeriodicExport
                                 return;
                         }
 
-                        var dataExporter = new SmugglerExporter(_database)
-                        {
-                            Options = new DatabaseSmugglerOptions
-                            {
-                                RevisionDocumentsLimit = _exportLimit
-                            }
-                        };
 
+                        long? startDocsEtag = null;
                         string exportFilePath;
 
                         string fileName;
@@ -297,19 +293,31 @@ namespace Raven.Server.Documents.PeriodicExport
                                 }
                             }
 
-                            dataExporter.StartDocsEtag = _status.LastDocsEtag;
-                            if (dataExporter.StartDocsEtag == null)
-                            {
-                                IncrementalExport.ReadLastEtagsFromFile(_status.LastFullExportDirectory, context, dataExporter);
-                            }
+                            startDocsEtag = _status.LastDocsEtag ?? IncrementalExport.ReadLastEtagsFromFile(_status.LastFullExportDirectory, context);
                         }
 
-                        var exportResult = dataExporter.Export(context, exportFilePath);
+                        SmugglerResult result;
+                        using (var file = File.Open(exportFilePath, FileMode.CreateNew))
+                        {
+                            var smugglerSource = new DatabaseSource(_database, startDocsEtag ?? 0, 0);
+
+                            var smugglerDestination = new StreamDestination(file, context);
+                            var smuggler = new DatabaseSmuggler(
+                                smugglerSource,
+                                smugglerDestination,
+                                _database.Time,
+                                new DatabaseSmugglerOptions
+                                {
+                                    RevisionDocumentsLimit = _exportLimit
+                                });
+
+                            result = smuggler.Execute();
+                        }
 
                         if (fullExport == false)
                         {
                             // No-op if nothing has changed
-                            if (exportResult.LastDocsEtag == _status.LastDocsEtag)
+                            if (result.Documents.LastEtag == _status.LastDocsEtag)
                             {
                                 if (_logger.IsInfoEnabled)
                                     _logger.Info("Periodic export returned prematurely, nothing has changed since last export");
@@ -330,7 +338,7 @@ namespace Raven.Server.Documents.PeriodicExport
                             }
                         }
 
-                        _status.LastDocsEtag = exportResult.LastDocsEtag;
+                        _status.LastDocsEtag = result.Documents.LastEtag;
                         if (fullExport)
                             _status.LastFullExportAt = SystemTime.UtcNow;
                         else
@@ -358,7 +366,7 @@ namespace Raven.Server.Documents.PeriodicExport
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations("Error when performing periodic export", e);
                 _database.Alerts.AddAlert(new Alert
-                { 
+                {
                     Type = AlertType.PeriodicExport,
                     Message = "Error in Periodic Export",
                     CreatedAt = SystemTime.UtcNow,
@@ -436,7 +444,7 @@ namespace Raven.Server.Documents.PeriodicExport
                 await client.PutObject(_configuration.S3BucketName, key, fileStream, new Dictionary<string, string>
                 {
                     {"Description", GetArchiveDescription(isFullExport)}
-                }, 60*60);
+                }, 60 * 60);
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info(string.Format("Successfully uploaded export {0} to S3 bucket {1}, with key {2}", fileName, _configuration.S3BucketName, key));
@@ -454,7 +462,7 @@ namespace Raven.Server.Documents.PeriodicExport
             using (var client = new RavenAwsGlacierClient(_awsAccessKey, _awsSecretKey, _configuration.AwsRegionName ?? RavenAwsClient.DefaultRegion))
             using (var fileStream = File.OpenRead(exportPath))
             {
-                var archiveId = await client.UploadArchive(_configuration.GlacierVaultName, fileStream, fileName, 60*60);
+                var archiveId = await client.UploadArchive(_configuration.GlacierVaultName, fileStream, fileName, 60 * 60);
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Successfully uploaded export {fileName} to Glacier, archive ID: {archiveId}");
             }

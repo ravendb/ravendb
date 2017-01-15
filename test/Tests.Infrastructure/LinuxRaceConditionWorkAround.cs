@@ -1,5 +1,4 @@
 ﻿using Voron.Platform.Posix;
-using Sparrow;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
 

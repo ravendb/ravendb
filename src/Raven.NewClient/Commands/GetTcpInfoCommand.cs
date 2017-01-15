@@ -27,5 +27,7 @@ namespace Raven.NewClient.Client.Commands
             }
             Result = JsonDeserializationClient.GetTcpInfoResult(response);
         }
+
+        public override bool IsReadRequest => true;
     }
 }

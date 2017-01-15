@@ -282,6 +282,9 @@ namespace Raven.Server.Documents.Indexes
             if (_stats.MapDetails != null && name == "Map")
                 operation.MapDetails = _stats.MapDetails;
 
+            if (_stats.CommitDetails != null && name == IndexingOperation.Storage.Commit)
+                operation.CommitDetails = _stats.CommitDetails;
+
             if (_scopes != null)
             {
                 operation.Operations = _scopes

@@ -26,7 +26,8 @@ namespace SlowTests.Tests
             if (array.Length == 0)
                 return;
 
-            Assert.True(false, string.Join(Environment.NewLine, array.Select(x => x.FullName)));
+            var userMessage = string.Join(Environment.NewLine, array.Select(x => x.FullName));
+            throw new Exception(userMessage);
         }
     }
 }

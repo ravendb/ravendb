@@ -10,7 +10,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Compression;
 using Sparrow.Json.Parsing;
-using Sparrow.Platform;
 using Sparrow.Logging;
 
 namespace Sparrow.Json
@@ -262,7 +261,7 @@ namespace Sparrow.Json
             Debug.Assert(value.IsDisposed == false);
             return value;
         }
-        
+
         public LazyStringValue GetLazyString(string field)
         {
             if (field == null)
@@ -286,14 +285,19 @@ namespace Sparrow.Json
         private unsafe LazyStringValue GetLazyString(StringSegment field, bool longLived)
         {
             var state = new JsonParserState();
-            state.FindEscapePositionsIn(field);
             var maxByteCount = Encoding.GetMaxByteCount(field.Length);
-            var memory = GetMemory(maxByteCount + state.GetEscapePositionsSize(), longLived: longLived);
+
+            int escapePositionsSize = state.FindEscapePositionsMaxSize(field);
+
+            var memory = GetMemory(maxByteCount + escapePositionsSize, longLived: longLived);
 
             fixed (char* pField = field.String)
             {
                 var address = memory.Address;
                 var actualSize = Encoding.GetBytes(pField + field.Start, field.Length, address, memory.SizeInBytes);
+
+                state.FindEscapePositionsIn(address, actualSize, escapePositionsSize);
+
                 state.WriteEscapePositionsTo(address + actualSize);
                 var result = new LazyStringValue(field, address, actualSize, this)
                 {
@@ -544,7 +548,7 @@ namespace Sparrow.Json
                 {
                     _prevCall = ParseToMemoryAsync(debugTag);
                 }
-                if(_waitableTasks == null)
+                if (_waitableTasks == null)
                     _waitableTasks = new Task[2];
                 _waitableTasks[0] = _prevCall;
                 _waitableTasks[1] = interruptEvent.WaitAsync();
@@ -711,7 +715,7 @@ namespace Sparrow.Json
                 _arenaAllocatorForLongLivedValues = new ArenaMemoryAllocator(_longLivedSize);
                 CachedProperties = new CachedProperties(this);
             }
-            
+
             if (_tempBuffer != null)
                 GetNativeTempBuffer(_tempBuffer.SizeInBytes);
 
@@ -746,7 +750,9 @@ namespace Sparrow.Json
             // We don't reset _arenaAllocatorForLongLivedValues. It's used as a cache buffer for long lived strings like field names.
             // When a context is re-used, the buffer containing those field names was not reset and the strings are still valid and alive.
 
-            if (_arenaAllocatorForLongLivedValues.Allocated > _initialSize || forceReleaseLongLivedAllocator)
+            var allocatorForLongLivedValues = _arenaAllocatorForLongLivedValues;
+            if (allocatorForLongLivedValues != null && 
+                (allocatorForLongLivedValues.Allocated > _initialSize || forceReleaseLongLivedAllocator))
             {
                 foreach(var mem in _fieldNames.Values){
                     mem.Dispose();
@@ -756,10 +762,8 @@ namespace Sparrow.Json
                 // if we have dynamic properties. A back of the envelope calculation gives us roughly 32K 
                 // property names before this kicks in, which is a true abuse of the system. In this case, 
                 // in order to avoid unlimited growth, we'll reset the long lived section
-                _arenaAllocatorForLongLivedValues.Dispose();
+                allocatorForLongLivedValues.Dispose();
                 _arenaAllocatorForLongLivedValues = null;
-
-               
 
                 _fieldNames.Clear();
                 CachedProperties = null; // need to release this so can be collected

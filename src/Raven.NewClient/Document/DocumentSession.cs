@@ -4,21 +4,25 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Raven.NewClient.Client.Connection;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document.Batches;
 using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Linq;
 using System.Linq;
+using System.Net.Http;
 using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Json;
+using Raven.NewClient.Connection;
+using Raven.NewClient.Operations;
+using Raven.NewClient.Operations.Databases.Documents;
 using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Document
@@ -28,6 +32,8 @@ namespace Raven.NewClient.Client.Document
     /// </summary>
     public partial class DocumentSession : InMemoryDocumentSessionOperations, IDocumentQueryGenerator, ISyncAdvancedSessionOperation, IDocumentSessionImpl
     {
+        private OperationExecuter _operations;
+
         /// <summary>
         /// Get the accessor for advanced operations
         /// </summary>
@@ -53,9 +59,8 @@ namespace Raven.NewClient.Client.Document
         public DocumentSession(string dbName, DocumentStore documentStore, Guid id, RequestExecuter requestExecuter)
             : base(dbName, documentStore, requestExecuter, id)
         {
-            
         }
-        
+
         #region DeleteByIndex
 
         public Operation DeleteByIndex<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new()
@@ -67,21 +72,15 @@ namespace Raven.NewClient.Client.Document
         public Operation DeleteByIndex<T>(string indexName, Expression<Func<T, bool>> expression)
         {
             var query = Query<T>(indexName).Where(expression);
-            var indexQuery = new IndexQuery()
+            var indexQuery = new IndexQuery
             {
                 Query = query.ToString()
             };
+            if(_operations == null)
+                _operations = new OperationExecuter(_documentStore, _requestExecuter, Context);
 
-            var deleteByIndexOperation = new DeleteByIndexOperation();
-            var command = deleteByIndexOperation.CreateRequest(indexName, indexQuery,
-                new QueryOperationOptions(), (DocumentStore)this.DocumentStore);
 
-            if (command != null)
-            {
-                RequestExecuter.Execute(command, Context);
-                return new Operation(command.Result.OperationId);
-            }
-            return null;
+            return _operations.Send(new DeleteByIndexOperation(indexName, indexQuery));
         }
 
         #endregion
@@ -134,10 +133,34 @@ namespace Raven.NewClient.Client.Document
 
             return RequestExecuter.UrlFor(document.Id);
         }
-         
+
         public FacetedQueryResult[] MultiFacetedSearch(params FacetQuery[] queries)
         {
-            throw new NotImplementedException();
+            IncrementRequestCount();
+            var requests = new List<GetRequest>();
+            var results = new List<FacetedQueryResult>();
+            foreach (var q in queries)
+            {
+                var method = q.CalculateHttpMethod();
+                requests.Add(new GetRequest()
+                {
+                    Url = "/queries/" + q.IndexName,
+                    Query = "?" + q.GetQueryString(method),
+                    Method = method.Method,
+                    Content = method == HttpMethod.Post ? q.GetFacetsAsJson() : null
+                });
+            }
+            var multiGetOperation = new MultiGetOperation(this);
+            var command = multiGetOperation.CreateRequest(requests);
+            RequestExecuter.Execute(command, Context);
+            foreach (var result in command.Result.Results)
+            {
+                var facetResult = (BlittableJsonReaderObject)result;
+                BlittableJsonReaderObject res;
+                facetResult.TryGet("Result", out res);
+                results.Add(JsonDeserializationClient.FacetedQueryResult(res));
+            }
+            return results.ToArray();
         }
 
         /// <summary>
@@ -205,7 +228,7 @@ namespace Raven.NewClient.Client.Document
             RequestExecuter.Execute(multiGetCommand, Context);
             var responses = multiGetCommand.Result;
 
-            for ( var i = 0; i < pendingLazyOperations.Count; i++)
+            for (var i = 0; i < pendingLazyOperations.Count; i++)
             {
                 long totalTime;
                 string tempReqTime;

@@ -10,12 +10,18 @@ class copyToClipboard {
             // Select it
             dummy.select();
             // Copy its contents
-            document.execCommand("copy");
+            const success = document.execCommand("copy");
+
+            if (success) {
+                messagePublisher.reportSuccess(successMessage);
+            } else {
+                messagePublisher.reportWarning("Unable to copy to clipboard");
+            }
+        } catch (err) {
+            messagePublisher.reportWarning("Unable to copy to clipboard", err);
         } finally {
             // Remove it as its not needed anymore
             document.body.removeChild(dummy);
-
-            messagePublisher.reportSuccess(successMessage);
         }
     }
 }

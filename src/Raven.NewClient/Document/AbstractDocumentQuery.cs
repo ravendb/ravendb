@@ -31,6 +31,7 @@ using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Util;
 using Raven.NewClient.Client.Document.Async;
 using Raven.NewClient.Client.Document.Batches;
+using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Document
 {
@@ -570,39 +571,55 @@ namespace Raven.NewClient.Client.Document
             var q = GetIndexQuery(false);
             var query = FacetQuery.Create(indexName, q, facetSetupDoc, null, facetStart, facetPageSize);
 
-            // TODO iftah
-            return null;
-            //return DatabaseCommands.GetFacets(query);
+            var command = new GetFacetsCommand()
+            {
+                Query = query,
+                Context = theSession.Context
+            };
+            theSession.RequestExecuter.Execute(command, theSession.Context);
+            return command.Result;
         }
 
         public FacetedQueryResult GetFacets(List<Facet> facets, int facetStart, int? facetPageSize)
         {
             var q = GetIndexQuery(false);
             var query = FacetQuery.Create(indexName, q, null, facets, facetStart, facetPageSize);
-            
-            // TODO iftah
-            return null;
-            //return DatabaseCommands.GetFacets(query);
+
+            var command = new GetFacetsCommand()
+            {
+                Query = query,
+                Context = theSession.Context
+            };
+            theSession.RequestExecuter.Execute(command, theSession.Context);
+            return command.Result;
         }
 
-        public Task<FacetedQueryResult> GetFacetsAsync(string facetSetupDoc, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
+        public async Task<FacetedQueryResult> GetFacetsAsync(string facetSetupDoc, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
         {
             var q = GetIndexQuery(true);
             var query = FacetQuery.Create(indexName, q, facetSetupDoc, null, facetStart, facetPageSize);
-            
-            // TODO iftah
-            return null;
-            //return AsyncDatabaseCommands.GetFacetsAsync(query, token);
+
+            var command = new GetFacetsCommand()
+            {
+                Query = query
+            };
+            await theSession.RequestExecuter.ExecuteAsync(command, theSession.Context, token).ConfigureAwait(false);
+
+            return command.Result;
         }
 
-        public Task<FacetedQueryResult> GetFacetsAsync(List<Facet> facets, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
+        public async Task<FacetedQueryResult> GetFacetsAsync(List<Facet> facets, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
         {
             var q = GetIndexQuery(true);
             var query = FacetQuery.Create(indexName, q, null, facets, facetStart, facetPageSize);
 
-            // TODO iftah
-            return null;
-            //return AsyncDatabaseCommands.GetFacetsAsync(query, token);
+            var command = new GetFacetsCommand()
+            {
+                Query = query
+            };
+            await theSession.RequestExecuter.ExecuteAsync(command, theSession.Context, token).ConfigureAwait(false);
+
+            return command.Result;
         }
 
         /// <summary>
@@ -1753,11 +1770,11 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         /// Called externally to raise the after stream executed callback
         /// </summary>
-        public void InvokeAfterStreamExecuted(ref object result)
+        public void InvokeAfterStreamExecuted(BlittableJsonReaderObject result)
         {
             var streamExecuted = afterStreamExecutedCallback;
             if (streamExecuted != null)
-                streamExecuted(ref result);
+                streamExecuted(result);
         }
 
         #endregion

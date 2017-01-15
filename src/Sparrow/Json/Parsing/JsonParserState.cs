@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 
 namespace Sparrow.Json.Parsing
@@ -14,8 +13,10 @@ namespace Sparrow.Json.Parsing
 
         public readonly List<int> EscapePositions = new List<int>();
 
-        public static readonly char[] EscapeChars = { '\b', '\t', '\r', '\n', '\f', '\\', '"', };
-    
+        public static readonly char[] EscapeChars = { '\b', '\t', '\r', '\n', '\f', '\\', '"' };
+        public static readonly byte[] EscapeCharsAsBytes = { (byte)'\b', (byte)'\t', (byte)'\r', (byte)'\n', (byte)'\f', (byte)'\\', (byte)'"' };
+
+
         public int GetEscapePositionsSize()
         {
             return GetEscapePositionsSize(EscapePositions);
@@ -59,17 +60,48 @@ namespace Sparrow.Json.Parsing
             return count;
         }
 
-        public void FindEscapePositionsIn(string str)
+        public int FindEscapePositionsMaxSize(string str)
         {
-            EscapePositions.Clear();
+            var count = 0;
             var lastEscape = 0;
             while (true)
             {
                 var curEscape = str.IndexOfAny(EscapeChars, lastEscape);
                 if (curEscape == -1)
                     break;
-                EscapePositions.Add(curEscape - lastEscape);
+
+                count++;
                 lastEscape = curEscape + 1;
+            }
+
+            // we take 5 because that is the max number of bytes for variable size int
+            // plus 1 for the actual number of positions
+
+            // NOTE: this is used by FindEscapePositionsIn, change only if you also modify FindEscapePositionsIn
+            return (count + 1) * 5; 
+        }
+
+        public void FindEscapePositionsIn(byte* str, int len, int previousComputedMaxSize)
+        {
+            EscapePositions.Clear();
+            if (previousComputedMaxSize == 5)
+            {
+                // if the value is 5, then we got no escape positions, see: FindEscapePositionsMaxSize
+                // and we don't have to do any work
+                return;
+            }
+            var lastEscape = 0;
+            for (int i = 0; i < len; i++)
+            {
+                for (int j = 0; j < EscapeCharsAsBytes.Length; j++)
+                {
+                    if (str[i] == EscapeCharsAsBytes[j])
+                    {
+                        EscapePositions.Add(i - lastEscape);
+                        lastEscape = i + 1;
+                        break;
+                    }
+                }
             }
         }
 

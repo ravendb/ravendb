@@ -116,13 +116,13 @@ namespace Raven.Server.Documents.Queries
             return await index.FacetedQuery(query, facetsEtag, _documentsContext, token);
         }
 
-        public TermsQueryResult ExecuteGetTermsQuery(string indexName, string field, string fromValue, long? existingResultEtag, int pageSize, DocumentsOperationContext context, OperationCancelToken token)
+        public TermsQueryResultServerSide ExecuteGetTermsQuery(string indexName, string field, string fromValue, long? existingResultEtag, int pageSize, DocumentsOperationContext context, OperationCancelToken token)
         {
             var index = GetIndex(indexName);
 
             var etag = index.GetIndexEtag();
             if (etag == existingResultEtag)
-                return TermsQueryResult.NotModifiedResult;
+                return TermsQueryResultServerSide.NotModifiedResult;
 
             return index.GetTerms(field, fromValue, pageSize, context, token);
         }

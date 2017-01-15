@@ -210,7 +210,7 @@ namespace Raven.NewClient.Client.Document
         public Lazy<Dictionary<string, TResult>> MoreLikeThis<TResult>(MoreLikeThisQuery query)
         {
             //TODO - DisableAllCaching
-            var loadOperation = new LoadOperation(this);
+            var loadOperation = new LoadOperation(this, null, null, true);
             var lazyOp = new LazyMoreLikeThisOperation<TResult>(loadOperation, query);
             return AddLazyOperation<Dictionary<string, TResult>>(lazyOp, null);
         }

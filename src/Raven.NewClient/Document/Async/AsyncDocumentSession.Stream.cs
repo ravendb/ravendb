@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Linq;
 using Sparrow.Json;
-
+using Raven.NewClient.Client.Blittable;
 
 namespace Raven.NewClient.Client.Document.Async
 {
@@ -19,12 +20,14 @@ namespace Raven.NewClient.Client.Document.Async
         {
             protected readonly AsyncDocumentSession Parent;
             protected readonly IAsyncEnumerator<BlittableJsonReaderObject> Enumerator;
+            private IAsyncDocumentQuery<T> query;
             protected CancellationToken token;
 
-            public YieldStream(AsyncDocumentSession parent, IAsyncEnumerator<BlittableJsonReaderObject> enumerator, CancellationToken token)
+            public YieldStream(AsyncDocumentSession parent, IAsyncDocumentQuery<T> query, IAsyncEnumerator<BlittableJsonReaderObject> enumerator, CancellationToken token)
             {
                 this.Parent = parent;
                 this.Enumerator = enumerator;
+                this.query = query;
             }
 
             public void Dispose()
@@ -38,11 +41,43 @@ namespace Raven.NewClient.Client.Document.Async
                 {
                     return false;
                 }
-
+                SetCurrent();
                 return true;
             }
 
-            public StreamResult<T> Current { get; }
+            protected void SetCurrent()
+            {
+                var x = Enumerator.Current;
+                query?.InvokeAfterStreamExecuted(x);
+                Current = CreateStreamResult<T>(x);
+            }
+
+            private StreamResult<T> CreateStreamResult<T>(BlittableJsonReaderObject res)
+            {
+                string key = null;
+                long? etag = null;
+                BlittableJsonReaderObject metadata;
+                if (res.TryGet(Constants.Metadata.Key, out metadata))
+                {
+                    if (metadata.TryGet(Constants.Metadata.Id, out key) == false)
+                        throw new ArgumentException();
+                    if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
+                        throw new ArgumentException();
+                }
+                //TODO - Investagate why ConvertToEntity fails if we don't call ReadObject before
+                res = Parent.Context.ReadObject(res, key);
+                var entity = Parent.ConvertToEntity(typeof(T), key, res);
+                var stremResult = new StreamResult<T>
+                {
+                    Etag = etag,
+                    Key = key,
+                    Document = (T)entity,
+                    Metadata = new MetadataAsDictionary(metadata)
+                };
+                return stremResult;
+            }
+
+            public StreamResult<T> Current { get; protected set; }
         }
 
         public async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, CancellationToken token = default(CancellationToken))
@@ -54,7 +89,7 @@ namespace Raven.NewClient.Client.Document.Async
 
             var queryOperation = ((AsyncDocumentQuery<T>)query).InitializeQueryOperation();
             queryOperation.DisableEntitiesTracking = true;
-            return new YieldStream<T>(this, result, token);
+            return new YieldStream<T>(this, query, result, token);
         }
 
         public async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, CancellationToken token = default(CancellationToken))
@@ -85,7 +120,7 @@ namespace Raven.NewClient.Client.Document.Async
                 transformerParameters);
             await RequestExecuter.ExecuteAsync(command, Context, token).ConfigureAwait(false);
             var result = streamOperation.SetResultAsync(command.Result);
-            return new YieldStream<T>(this, result, token);
+            return new YieldStream<T>(this, null, result, token);
         }
     }
 }

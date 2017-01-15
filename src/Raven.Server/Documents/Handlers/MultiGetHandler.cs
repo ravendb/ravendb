@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
-using Raven.Client.Data;
 using Raven.Server.Routing;
 using Raven.Server.Web;
 using Sparrow.Json;
@@ -54,13 +53,13 @@ namespace Raven.Server.Documents.Handlers
                         writer.WriteStartObject();
 
                         string method, url, query;
-                        if (request.TryGet(nameof(GetRequest.Url), out url) == false || request.TryGet(nameof(GetRequest.Query), out query) == false)
+                        if (request.TryGet("Url", out url) == false || request.TryGet("Query", out query) == false)
                         {
                             writer.WriteEndObject();
                             continue;
                         }
 
-                        if (request.TryGet(nameof(GetRequest.Method), out method) == false)
+                        if (request.TryGet("Method", out method) == false)
                             method = HttpMethod.Get.Method;
 
                         httpContext.Request.Method = method;
@@ -88,7 +87,7 @@ namespace Raven.Server.Documents.Handlers
                         httpContext.Response.Headers.Clear();
                         httpContext.Request.QueryString = new QueryString(query);
                         BlittableJsonReaderObject headers;
-                        if (request.TryGet(nameof(GetRequest.Headers), out headers))
+                        if (request.TryGet("Headers", out headers))
                         {
                             foreach (var header in headers.GetPropertyNames())
                             {
@@ -103,12 +102,36 @@ namespace Raven.Server.Documents.Handlers
                             }
                         }
 
-                        string content;
-                        if (method == HttpMethod.Post.Method && request.TryGet(nameof(GetRequest.Content), out content))
+                        object content;
+                        if (method == HttpMethod.Post.Method && request.TryGet("Content", out content))
                         {
-                            var requestBody = GetRequestBody(content);
-                            HttpContext.Response.RegisterForDispose(requestBody);
-                            httpContext.Request.Body = requestBody;
+                            //TODO - remove "if" when deleting the old client and 
+                            //change object content to BlittableJsonReaderArray content.
+                            if (content is LazyStringValue)
+                            {
+                                var requestBody = GetRequestBody(content.ToString());
+                                HttpContext.Response.RegisterForDispose(requestBody);
+                                httpContext.Request.Body = requestBody;
+                            }
+                            else
+                            {
+                                var requestBody = new MemoryStream();
+                                var contentWriter = new BlittableJsonTextWriter(context, requestBody);
+                                contentWriter.WriteStartArray();
+                                bool first = true;
+                                foreach (var obj in (BlittableJsonReaderArray)content)
+                                {
+                                    if (!(first))
+                                        contentWriter.WriteComma();
+                                    first = false;
+                                    context.Write(contentWriter, (BlittableJsonReaderObject)obj);
+                                }
+                                contentWriter.WriteEndArray();
+                                contentWriter.Flush();
+                                HttpContext.Response.RegisterForDispose(requestBody);
+                                httpContext.Request.Body = requestBody;
+                                httpContext.Request.Body.Position = 0;
+                            }
                         }
 
                         await requestHandler(new RequestHandlerContext

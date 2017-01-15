@@ -301,7 +301,7 @@ namespace Raven.Server.Json
                 writer.WriteEndObject();
         }
 
-        public static void WriteTermsQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, TermsQueryResult queryResult)
+        public static void WriteTermsQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, TermsQueryResultServerSide queryResult)
         {
             writer.WriteStartObject();
 

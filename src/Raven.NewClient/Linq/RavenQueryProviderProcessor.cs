@@ -14,13 +14,11 @@ using System.Text.RegularExpressions;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Indexing;
-using Raven.NewClient.Client.Linq;
-using Newtonsoft.Json;
-using Raven.NewClient.Client.Commands;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 
 namespace Raven.NewClient.Client.Linq
@@ -1992,65 +1990,53 @@ The recommended method is to use full text search (mark the field as Analyzed an
             var executeQuery = GetQueryResult(finalQuery);
 
             var queryResult = finalQuery.QueryResult;
-            if (afterQueryExecuted != null)
-            {
-                afterQueryExecuted(queryResult);
-            }
+            afterQueryExecuted?.Invoke(queryResult);
             return executeQuery;
         }
 
         public void RenameResults(QueryResult queryResult)
         {
-            /*for (int index = 0; index < queryResult.Results.Items.Count(); index++)
+            for (int index = 0; index < queryResult.Results.Items.Count(); index++)
             {
-                var result = queryResult.Results[index];
-                var safeToModify = (RavenJObject)result.CreateSnapshot();
-
-                if (!RenameSingleResult(ref safeToModify))
-                    continue;
-                safeToModify.EnsureCannotBeChangeAndEnableSnapshotting();
-                queryResult.Results[index] = safeToModify;
-            }*/
-            throw new NotImplementedException();
+                var result = (BlittableJsonReaderObject)queryResult.Results[index];
+                RenameSingleResult(result);
+            }
         }
         
-        public bool RenameSingleResult(ref object doc)
+        public bool RenameSingleResult(BlittableJsonReaderObject doc)
         {
-            /*var changed = false;
-            var values = new Dictionary<string, RavenJToken>();
+            var changed = false;
+            var values = new Dictionary<string, object>();
             foreach (var renamedField in FieldsToRename.Select(x => x.OriginalField).Distinct())
             {
-                RavenJToken value;
-                if (doc.TryGetValue(renamedField, out value) == false)
+                if (doc.Modifications == null)
+                    doc.Modifications = new DynamicJsonValue(doc);
+
+                object value;
+                if (doc.TryGetMember(renamedField, out value) == false)
                     continue;
                 values[renamedField] = value;
-                if (FieldsToFetch.Contains(renamedField) == false)
+                if (FieldsToFetch.Contains(renamedField))
                 {
-                    doc.Remove(renamedField);	
+                    doc.Modifications.Remove(renamedField);
                 }
             }
             foreach (var rename in FieldsToRename)
             {
-                RavenJToken val;
+                object val;
                 if (values.TryGetValue(rename.OriginalField, out val) == false)
                     continue;
                 changed = true;
-                var ravenJObject = val as RavenJObject;
-                if (rename.NewField == null && ravenJObject != null)
+                if (rename.NewField != null)
                 {
-                    doc = ravenJObject;
-                }
-                else if (rename.NewField != null)
-                {
-                    doc[rename.NewField] = val;
+                    doc.Modifications[rename.NewField] = val;
                 }
                 else
                 {
-                    doc[rename.OriginalField] = val;
+                    doc.Modifications[rename.OriginalField] = val;
                 }
             }
-            return changed;*/
-            throw new NotImplementedException();
+            return changed;
         }
 
         private object GetQueryResult<TProjection>(IDocumentQuery<TProjection> finalQuery)

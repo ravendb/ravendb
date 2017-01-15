@@ -1,4 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
+using Sparrow;
 using Voron.Global;
 
 namespace Voron.Data.Fixed
@@ -6,16 +7,22 @@ namespace Voron.Data.Fixed
     public unsafe class FixedSizeTreePage
     {
         private readonly byte* _ptr;
+        private readonly int _entrySize;
         private readonly int _pageSize;
 
         public int LastMatch;
         public int LastSearchPosition;
         public bool Dirty;
 
-        public FixedSizeTreePage(byte* b, int pageSize)
+        public FixedSizeTreePage(byte* b, int entrySize, int pageSize)
         {
             _ptr = b;
             _pageSize = pageSize;
+
+            if (IsBranch)
+                _entrySize = FixedSizeTree.BranchEntrySize;
+            else
+                _entrySize = entrySize;
         }
 
         private FixedSizeTreePageHeader* Header
@@ -113,6 +120,61 @@ namespace Voron.Data.Fixed
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set { Header->Flags = value; }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void SetKey(long key, int position)
+        {
+            GetEntry(position)->Key = key;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal long GetKey(int position)
+        {
+            return GetEntry(Pointer + StartPosition, position, _entrySize)->Key;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal FixedSizeTreeEntry* GetEntry(int position)
+        {
+            return GetEntry(Pointer + StartPosition, position, _entrySize);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static FixedSizeTreeEntry* GetEntry(byte* p, int position, int size)
+        {
+            return (FixedSizeTreeEntry*)(p + position * size);
+        }
+
+        public void ResetStartPosition()
+        {
+            if (StartPosition == Constants.FixedSizeTree.PageHeaderSize)
+                return;
+
+            // we need to move it back, then add the new item
+            UnmanagedMemory.Move(Pointer + Constants.FixedSizeTree.PageHeaderSize,
+                Pointer + StartPosition,
+                NumberOfEntries * (IsLeaf ? _entrySize : FixedSizeTree.BranchEntrySize));
+
+            StartPosition = Constants.FixedSizeTree.PageHeaderSize;
+        }
+
+        public void RemoveEntry(int pos)
+        {
+            System.Diagnostics.Debug.Assert(pos >= 0 && pos < NumberOfEntries);
+            NumberOfEntries--;
+
+            var size = (ushort)_entrySize;
+            if (pos == 0)
+            {
+                // optimized, just move the start position
+                StartPosition += size;
+                return;
+            }
+            // have to move the memory
+            UnmanagedMemory.Move(Pointer + StartPosition + (pos * size),
+                   Pointer + StartPosition + ((pos + 1) * size),
+                   (NumberOfEntries - pos) * size);
         }
     }
 }

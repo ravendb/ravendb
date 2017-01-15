@@ -14,6 +14,7 @@ system.debug(true);
 type dbCreator = (db: new (dto: Raven.Client.Data.DatabaseInfo) => any) => any;
 
 type viewmodelTestOpts<T> = {
+    viewmodelConstructorArgs?: any[],
     initViewmodel?: (vm: T) => void;
     afterAttach?: (vm: T) => void;
     afterCtr?: (vm: T) => void;
@@ -179,7 +180,9 @@ class Utils {
         var testPromise = new Promise<void>((resolve, reject) => {
             Utils.injector.
                 require([Utils.viewModelPrefix + viewModelName], (viewModelCtr: new () => T) => {
-                    var vm = new viewModelCtr();
+                    var vm = _.isUndefined(opts.viewmodelConstructorArgs) ?
+                        new viewModelCtr() :
+                        new (Function.prototype.bind.apply(viewModelCtr, opts.viewmodelConstructorArgs));
 
                     if (opts.afterCtr) {
                         opts.afterCtr(vm);

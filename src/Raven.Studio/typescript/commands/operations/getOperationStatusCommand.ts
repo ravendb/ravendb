@@ -13,7 +13,7 @@ class getOperationStatusCommand extends commandBase {
     }
 
     execute(): JQueryPromise<Raven.Client.Data.OperationState> {
-        const url = endpoints.databases.operations.operationsStatus;
+        const url = endpoints.databases.operations.operationsState;
 
         const args = {
             id: this.operationId

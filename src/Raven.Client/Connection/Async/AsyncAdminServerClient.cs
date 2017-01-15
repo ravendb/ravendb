@@ -137,7 +137,7 @@ namespace Raven.Client.Connection.Async
 
         public Task<BuildNumber> GetBuildNumberAsync(CancellationToken token = default(CancellationToken))
         {
-            return innerAsyncServerClient.GetBuildNumberAsync(token);
+            return adminRequest.GetBuildNumberAsync(token);
         }
 
         public Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0, CancellationToken token = default(CancellationToken))

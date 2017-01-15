@@ -33,5 +33,7 @@ namespace Raven.NewClient.Commands
         {
             Result = JsonDeserializationClient.HiLoResult(response);
         }
+
+        public override bool IsReadRequest => true;
     }
 }

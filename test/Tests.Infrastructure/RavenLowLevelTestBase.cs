@@ -5,13 +5,10 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-using Raven.Abstractions;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Utils;
-using Raven.Server.Utils.Metrics;
-using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;

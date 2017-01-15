@@ -1,6 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import app = require("durandal/app");
-import tempStatDialog = require("viewmodels/database/status/indexing/tempStatDialog");
+import indexPerformanceDetails = require("viewmodels/database/indexes/indexPerformanceDetails");
 import getIndexesPerformance = require("commands/database/debug/getIndexesPerformance");
 import fileDownloader = require("common/fileDownloader");
 import graphHelper = require("common/helpers/graph/graphHelper");
@@ -789,12 +789,7 @@ class metrics extends viewModelBase {
     }
 
     private showDialog(element: Raven.Client.Data.Indexes.IndexingPerformanceOperation) {
-        const dialog = new tempStatDialog(element, (key, value) => {
-            if (key === "Operations") {
-                return undefined;
-            }
-            return value;
-        });
+        const dialog = new indexPerformanceDetails(element);
 
         this.dialogVisible = true;
         app.showBootstrapDialog(dialog)

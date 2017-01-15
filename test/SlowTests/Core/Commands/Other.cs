@@ -18,7 +18,7 @@ namespace SlowTests.Core.Commands
 {
     public class Other : RavenTestBase
     {
-        [Fact(Skip = "Missing endpoint: /build/version")]
+        [Fact]
         public async Task CanGetBuildNumber()
         {
             using (var store = GetDocumentStore())
@@ -42,17 +42,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact(Skip = "Missing endpoint: /build/version")]
-        public async Task CanGetBuildVersion()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var build = await store.AsyncDatabaseCommands.GlobalAdmin.GetBuildNumberAsync();
-                Assert.NotNull(build);
-            }
-        }
-
-        [Fact(Skip = "Missing endpoint: /databases")]
+        [Fact]
         public async Task CanGetAListOfDatabasesAsync()
         {
             using (var store = GetDocumentStore())
@@ -62,7 +52,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact(Skip = "Missing feature: /docs/startsWith")]
+        [Fact]
         public void CanSwitchDatabases()
         {
             using (var store1 = GetDocumentStore(dbSuffixIdentifier: "store1"))
@@ -85,18 +75,13 @@ namespace SlowTests.Core.Commands
                     }),
                     new RavenJObject());
 
-                var doc = store1.DatabaseCommands.ForDatabase("store2").Get("items/2");
+                var doc = store1.DatabaseCommands.ForDatabase(store2.DefaultDatabase).Get("items/2");
                 Assert.NotNull(doc);
                 Assert.Equal("For store2", doc.DataAsJson.Value<string>("Name"));
 
-                doc = store1.DatabaseCommands.ForDatabase("store1").Get("items/1");
+                doc = store1.DatabaseCommands.ForDatabase(store1.DefaultDatabase).Get("items/1");
                 Assert.NotNull(doc);
                 Assert.Equal("For store1", doc.DataAsJson.Value<string>("Name"));
-
-                var docs = store1.DatabaseCommands.ForSystemDatabase().StartsWith("Raven/Databases/", "store*", 0, 20);
-                Assert.Equal(2, docs.Length);
-                Assert.NotNull(docs[0].DataAsJson.Value<RavenJObject>("Settings"));
-                Assert.NotNull(docs[1].DataAsJson.Value<RavenJObject>("Settings"));
             }
         }
 
