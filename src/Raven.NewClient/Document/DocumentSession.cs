@@ -32,7 +32,7 @@ namespace Raven.NewClient.Client.Document
     /// </summary>
     public partial class DocumentSession : InMemoryDocumentSessionOperations, IDocumentQueryGenerator, ISyncAdvancedSessionOperation, IDocumentSessionImpl
     {
-        private readonly OperationExecuter _operations;
+        private OperationExecuter _operations;
 
         /// <summary>
         /// Get the accessor for advanced operations
@@ -59,7 +59,6 @@ namespace Raven.NewClient.Client.Document
         public DocumentSession(string dbName, DocumentStore documentStore, Guid id, RequestExecuter requestExecuter)
             : base(dbName, documentStore, requestExecuter, id)
         {
-            _operations = new OperationExecuter(documentStore, requestExecuter, Context);
         }
 
         #region DeleteByIndex
@@ -77,6 +76,9 @@ namespace Raven.NewClient.Client.Document
             {
                 Query = query.ToString()
             };
+            if(_operations == null)
+                _operations = new OperationExecuter(_documentStore, _requestExecuter, Context);
+
 
             return _operations.Send(new DeleteByIndexOperation(indexName, indexQuery));
         }

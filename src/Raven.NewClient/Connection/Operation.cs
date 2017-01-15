@@ -17,7 +17,6 @@ namespace Raven.NewClient.Connection
         private readonly RequestExecuter _requestExecuter;
         private readonly DocumentConvention _conventions;
         private readonly long _id;
-        private IDisposable _subscription;
         private readonly TaskCompletionSource<IOperationResult> _result = new TaskCompletionSource<IOperationResult>();
 
         public Action<IOperationProgress> OnProgressChanged;
@@ -44,8 +43,6 @@ namespace Raven.NewClient.Connection
                 //var observableWithTask = _asyncServerClient.changes.Value.ForOperationId(_id);
                 //_subscription = observableWithTask.Subscribe(this);
                 //await FetchOperationStatus().ConfigureAwait(false);
-
-                _subscription = new DisposableAction(() => _work = false);
 
                 while (_work)
                 {
@@ -94,11 +91,11 @@ namespace Raven.NewClient.Connection
                     }
                     break;
                 case OperationStatus.Completed:
-                    _subscription.Dispose();
+                    _work = false;
                     _result.TrySetResult(notification.State.Result);
                     break;
                 case OperationStatus.Faulted:
-                    _subscription.Dispose();
+                    _work = false;
                     var exceptionResult = notification.State.Result as OperationExceptionResult;
                     if (exceptionResult?.StatusCode == 409)
                         _result.TrySetException(new DocumentInConflictException(exceptionResult.Message));
@@ -106,7 +103,7 @@ namespace Raven.NewClient.Connection
                         _result.TrySetException(new InvalidOperationException(exceptionResult?.Message));
                     break;
                 case OperationStatus.Canceled:
-                    _subscription.Dispose();
+                    _work = false;
                     _result.TrySetCanceled();
                     break;
             }

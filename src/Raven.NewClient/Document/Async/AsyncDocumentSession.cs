@@ -29,8 +29,8 @@ namespace Raven.NewClient.Client.Document.Async
     /// </summary>
     public partial class AsyncDocumentSession : InMemoryDocumentSessionOperations, IAsyncDocumentSessionImpl, IAsyncAdvancedSessionOperations, IDocumentQueryGenerator
     {
-        private readonly AsyncDocumentKeyGeneration _asyncDocumentKeyGeneration;
-        private readonly OperationExecuter _operations;
+        private AsyncDocumentKeyGeneration _asyncDocumentKeyGeneration;
+        private OperationExecuter _operations;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncDocumentSession"/> class.
@@ -39,9 +39,6 @@ namespace Raven.NewClient.Client.Document.Async
             : base(dbName, documentStore, requestExecuter, id)
         {
             GenerateDocumentKeysOnStore = false;
-
-            _asyncDocumentKeyGeneration = new AsyncDocumentKeyGeneration(this, DocumentsByEntity.TryGetValue, (key, entity, metadata) => key);
-            _operations = new OperationExecuter(documentStore, requestExecuter, Context);
         }
 
         public Task<FacetedQueryResult[]> MultiFacetedSearchAsync(params FacetQuery[] queries)
@@ -89,6 +86,8 @@ namespace Raven.NewClient.Client.Document.Async
             {
                 Query = query.ToString()
             };
+            if(_operations == null)
+                _operations = new OperationExecuter(_documentStore, _requestExecuter, Context);
 
             return await _operations.SendAsync(new DeleteByIndexOperation(indexName, indexQuery));
         }
@@ -109,7 +108,15 @@ namespace Raven.NewClient.Client.Document.Async
 
         protected override void RememberEntityForDocumentKeyGeneration(object entity)
         {
+            EnsureAsyncDocumentKeyGeneration();
             _asyncDocumentKeyGeneration.Add(entity);
+        }
+
+        private void EnsureAsyncDocumentKeyGeneration()
+        {
+            if (_asyncDocumentKeyGeneration != null) return;
+            _asyncDocumentKeyGeneration = new AsyncDocumentKeyGeneration(this, DocumentsByEntity.TryGetValue,
+                (key, entity, metadata) => key);
         }
 
         protected override Task<string> GenerateKeyAsync(object entity)
@@ -127,7 +134,10 @@ namespace Raven.NewClient.Client.Document.Async
         /// <returns></returns>
         public async Task SaveChangesAsync(CancellationToken token = default(CancellationToken))
         {
-            await _asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges().WithCancellation(token).ConfigureAwait(false);
+            if (_asyncDocumentKeyGeneration != null)
+            {
+                await _asyncDocumentKeyGeneration.GenerateDocumentKeysForSaveChanges().WithCancellation(token).ConfigureAwait(false);
+            }
 
             var saveChangesOperation = new BatchOperation(this);
 

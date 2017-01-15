@@ -133,7 +133,7 @@ namespace Raven.NewClient.Client.Http
         {
             var choosenNode = ChooseNodeForRequest(command);
 
-            await ExecuteAsync(choosenNode, context, command, token);
+            await ExecuteAsync(choosenNode, context, command, token).ConfigureAwait(false);
         }
 
         public async Task ExecuteAsync<TResult>(ChoosenNode choosenNode, JsonOperationContext context, RavenCommand<TResult> command, CancellationToken token = default(CancellationToken))
@@ -192,14 +192,14 @@ namespace Raven.NewClient.Client.Http
                 }
                 if (response.IsSuccessStatusCode == false)
                 {
-                    if (await HandleUnsuccessfulResponse(choosenNode, context, command, response, url))
+                    if (await HandleUnsuccessfulResponse(choosenNode, context, command, response, url).ConfigureAwait(false))
                         return;
                 }
 
                 if (response.Content.Headers.ContentLength.HasValue && response.Content.Headers.ContentLength == 0)
                     return;
 
-                await command.ProcessResponse(context, _cache, response, url);
+                await command.ProcessResponse(context, _cache, response, url).ConfigureAwait(false);
             }
         }
 

@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Util;
+using Raven.NewClient.Client;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Http;
 using Raven.NewClient.Connection;
@@ -11,12 +12,12 @@ namespace Raven.NewClient.Operations
 {
     public class OperationExecuter
     {
-        private readonly DocumentStore _store;
+        private readonly DocumentStoreBase _store;
         private readonly string _databaseName;
         private readonly RequestExecuter _requestExecuter;
         private readonly JsonOperationContext _context;
 
-        public OperationExecuter(DocumentStore store, string databaseName = null)
+        public OperationExecuter(DocumentStoreBase store, string databaseName = null)
         {
             _store = store;
             _databaseName = databaseName ?? store.DefaultDatabase;
@@ -25,7 +26,7 @@ namespace Raven.NewClient.Operations
                 : store.GetRequestExecuter(_databaseName);
         }
 
-        internal OperationExecuter(DocumentStore store, RequestExecuter requestExecuter, JsonOperationContext context)
+        internal OperationExecuter(DocumentStoreBase store, RequestExecuter requestExecuter, JsonOperationContext context)
         {
             _store = store;
             _requestExecuter = requestExecuter;
