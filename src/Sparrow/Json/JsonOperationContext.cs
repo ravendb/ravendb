@@ -712,22 +712,20 @@ namespace Sparrow.Json
             // We don't reset _arenaAllocatorForLongLivedValues. It's used as a cache buffer for long lived strings like field names.
             // When a context is re-used, the buffer containing those field names was not reset and the strings are still valid and alive.
 
-            if (_arenaAllocatorForLongLivedValues.Allocated > _initialSize || forceReleaseLongLivedAllocator)
+            var allocatorForLongLivedValues = _arenaAllocatorForLongLivedValues;
+            if (allocatorForLongLivedValues != null && 
+                (allocatorForLongLivedValues.Allocated > _initialSize || forceReleaseLongLivedAllocator))
             {
-
-                
                 foreach(var mem in _fieldNames.Values){
-                    _arenaAllocatorForLongLivedValues.Return(mem.AllocatedMemoryData);              
+                    allocatorForLongLivedValues.Return(mem.AllocatedMemoryData);              
                 }                
                 
                 // at this point, the long lived section is far too large, this is something that can happen
                 // if we have dynamic properties. A back of the envelope calculation gives us roughly 32K 
                 // property names before this kicks in, which is a true abuse of the system. In this case, 
                 // in order to avoid unlimited growth, we'll reset the long lived section
-                _arenaAllocatorForLongLivedValues.Dispose();
+                allocatorForLongLivedValues.Dispose();
                 _arenaAllocatorForLongLivedValues = null;
-
-               
 
                 _fieldNames.Clear();
                 CachedProperties = null; // need to release this so can be collected
