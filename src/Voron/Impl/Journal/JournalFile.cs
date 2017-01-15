@@ -128,7 +128,6 @@ namespace Voron.Impl.Journal
 
             Debug.Assert(pages.NumberOf4Kbs > 0);
 
-            _unusedPagesHashSetPool.Clear();
             UpdatePageTranslationTable(tx, _unusedPagesHashSetPool, ptt);
 
             lock (_locker)
