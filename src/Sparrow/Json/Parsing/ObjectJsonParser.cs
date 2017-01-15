@@ -432,8 +432,7 @@ namespace Sparrow.Json.Parsing
 
             int byteCount = Encoding.UTF8.GetMaxByteCount(str.Length);
 
-            int escapePositionsSize;
-            _state.FindEscapePositionsMaxSize(str, out escapePositionsSize);
+            int escapePositionsSize = _state.FindEscapePositionsMaxSize(str);
 
             var size = byteCount + escapePositionsSize;
 
@@ -442,7 +441,7 @@ namespace Sparrow.Json.Parsing
             fixed (char* pChars = str)
             {
                 _state.StringSize = Utf8Encoding.GetBytes(pChars, str.Length, _state.StringBuffer, byteCount);
-                _state.FindEscapePositionsIn(_state.StringBuffer, _state.StringSize);
+                _state.FindEscapePositionsIn(_state.StringBuffer, _state.StringSize, escapePositionsSize);
 
                 var escapePos = _state.StringBuffer + _state.StringSize;
                 _state.WriteEscapePositionsTo(escapePos);

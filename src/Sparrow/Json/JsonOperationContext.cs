@@ -260,8 +260,7 @@ namespace Sparrow.Json
             var state = new JsonParserState();
             var maxByteCount = Encoding.GetMaxByteCount(field.Length);
 
-            int escapePositionsSize;
-            state.FindEscapePositionsMaxSize(field, out escapePositionsSize);
+            int escapePositionsSize = state.FindEscapePositionsMaxSize(field);
 
             var memory = GetMemory(maxByteCount + escapePositionsSize, longLived: longLived);
 
@@ -270,7 +269,7 @@ namespace Sparrow.Json
                 var address = memory.Address;
                 var actualSize = Encoding.GetBytes(pField + field.Start, field.Length, address, memory.SizeInBytes);
 
-                state.FindEscapePositionsIn(address, actualSize);
+                state.FindEscapePositionsIn(address, actualSize, escapePositionsSize);
 
                 state.WriteEscapePositionsTo(address + actualSize);
                 var result = new LazyStringValue(field, address, actualSize, this)

@@ -99,8 +99,7 @@ namespace Raven.Server.Documents
 
             keySize = JsonParserState.VariableSizeIntSize(str.Length);
 
-            int escapePositionsSize;
-            _jsonParserState.FindEscapePositionsMaxSize(str, out escapePositionsSize);
+            int escapePositionsSize = _jsonParserState.FindEscapePositionsMaxSize(str);
 
             var buffer = context.GetNativeTempBuffer(
                 str.Length // lower key
@@ -112,7 +111,7 @@ namespace Raven.Server.Documents
             {
                 int size = Encoding.UTF8.GetMaxByteCount(str.Length);
                 var strSize = Encoding.UTF8.GetBytes(pChars, str.Length, buffer, size);
-                _jsonParserState.FindEscapePositionsIn(buffer, strSize);
+                _jsonParserState.FindEscapePositionsIn(buffer, strSize, escapePositionsSize);
             }
 
             for (var i = 0; i < str.Length; i++)
@@ -152,8 +151,7 @@ namespace Raven.Server.Documents
             var byteCount = Utf8.GetMaxByteCount(str.Length);
             var maxKeyLenSize = JsonParserState.VariableSizeIntSize(byteCount);
 
-            int escapePositionsSize;
-            _jsonParserState.FindEscapePositionsMaxSize(str, out escapePositionsSize);
+            int escapePositionsSize = _jsonParserState.FindEscapePositionsMaxSize(str);
 
             var buffer = context.GetNativeTempBuffer(
                 sizeof(char) * str.Length // for the lower calls
@@ -165,7 +163,7 @@ namespace Raven.Server.Documents
             fixed (char* pChars = str)
             {
                 var size = Utf8.GetBytes(pChars, str.Length, buffer, byteCount);
-                _jsonParserState.FindEscapePositionsIn(buffer, size);
+                _jsonParserState.FindEscapePositionsIn(buffer, size, escapePositionsSize);
 
                 var destChars = (char*)buffer;
                 for (var i = 0; i < str.Length; i++)

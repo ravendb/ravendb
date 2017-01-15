@@ -60,7 +60,7 @@ namespace Sparrow.Json.Parsing
             return count;
         }
 
-        public void FindEscapePositionsMaxSize(string str, out int maxSizeToBeUsedByEscapePositions)
+        public int FindEscapePositionsMaxSize(string str)
         {
             var count = 0;
             var lastEscape = 0;
@@ -74,12 +74,22 @@ namespace Sparrow.Json.Parsing
                 lastEscape = curEscape + 1;
             }
 
-            maxSizeToBeUsedByEscapePositions = (count + 1) * 5; // we take 5 because that is the max number of bytes for variable size int
+            // we take 5 because that is the max number of bytes for variable size int
+            // plus 1 for the actual number of positions
+
+            // NOTE: this is used by FindEscapePositionsIn, change only if you also modify FindEscapePositionsIn
+            return (count + 1) * 5; 
         }
 
-        public void FindEscapePositionsIn(byte* str, int len)
+        public void FindEscapePositionsIn(byte* str, int len, int previousComputedMaxSize)
         {
             EscapePositions.Clear();
+            if (previousComputedMaxSize == 5)
+            {
+                // if the value is 5, then we got no escape positions, see: FindEscapePositionsMaxSize
+                // and we don't have to do any work
+                return;
+            }
             var lastEscape = 0;
             for (int i = 0; i < len; i++)
             {
