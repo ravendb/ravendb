@@ -54,7 +54,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private bool TryGetByName(string name, out object result)
         {
-            if (name == Constants.Indexing.Fields.DocumentIdFieldName || name == "Id")
+            // Using ordinal ignore case versions to avoid the cast of calling String.Equals with non interned values.
+            if (string.Compare(name, Constants.Indexing.Fields.DocumentIdFieldName, StringComparison.Ordinal) == 0 || 
+                string.Compare(name, "Id", StringComparison.Ordinal) == 0 )
             {
                 if (BlittableJson.TryGetMember(name, out result))
                     return true;
@@ -86,7 +88,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
             }
 
-            if (result == null && name == "HasValue")
+            if (result == null && string.Compare(name, "HasValue", StringComparison.Ordinal) == 0 )
             {
                 result = getResult;
                 return true;
@@ -106,7 +108,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             result = TypeConverter.ToDynamicType(result);
 
-            if (name == Constants.Metadata.Key)
+            if (string.Compare(name,Constants.Metadata.Key, StringComparison.Ordinal) == 0)
             {
                 ((DynamicBlittableJson) result)._doc = _doc;
             }
@@ -118,7 +120,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             get
             {
-                if (Constants.Headers.LastModified.Equals(key, StringComparison.OrdinalIgnoreCase)) // TODO - avoid two headers for last doc modification
+                if (string.Compare(Constants.Headers.LastModified, key, StringComparison.Ordinal) == 0) // TODO - avoid two headers for last doc modification
                     key = Constants.Headers.RavenLastModified;
 
                 object result;
