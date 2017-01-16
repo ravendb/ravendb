@@ -351,7 +351,7 @@ namespace Sparrow.Json
             UnlikelyEnsureSingleChunk(out ptr, out size);
         }
 
-        private void UnlikelyEnsureSingleChunk(out byte* ptr, out int size)
+        private unsafe void UnlikelyEnsureSingleChunk(out byte* ptr, out int size)
         {
             // if we are here, then we have multiple chunks, we can't
             // allow a growth of the last chunk, since we'll by copying over it
