@@ -11,8 +11,9 @@ function getTransformersMenuItem(appUrls: computedAppUrls) {
             route: 'databases/transformers',
             moduleId: 'viewmodels/database/transformers/transformers',
             css: 'icon-list',
-            nav: true,
-            dynamicHash: appUrls.transformers
+            nav: false,
+            dynamicHash: appUrls.transformers,
+            itemRouteToHighlight: 'databases/transformers'
         }),
         new leafMenuItem({
             route: 'databases/transformers/edit(/:transformerName)',
@@ -24,5 +25,7 @@ function getTransformersMenuItem(appUrls: computedAppUrls) {
         })
     ];
 
-    return new intermediateMenuItem("Transformers", transformersChildren, 'icon-etl');
+    return new intermediateMenuItem("Transformers", transformersChildren, 'icon-etl', {
+        dynamicHash: appUrls.transformers
+    });
 }

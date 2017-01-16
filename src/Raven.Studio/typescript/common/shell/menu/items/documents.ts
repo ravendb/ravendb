@@ -7,11 +7,11 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
     let documentsChildren = [
         new leafMenuItem({
             title: "Documents",
-            nav: true,
+            nav: false,
             route: "databases/documents",
             moduleId: "viewmodels/database/documents/documents",
-            dynamicHash: appUrls.documents,
-            css: 'icon-documents'
+            css: 'icon-documents',
+            dynamicHash: appUrls.documents
         }),
 /* TODO:
         new leafMenuItem({
