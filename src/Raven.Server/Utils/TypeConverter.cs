@@ -306,6 +306,12 @@ namespace Raven.Server.Utils
             return PropertyAccessorCache.GetOrAdd(type, PropertyAccessor.Create);
         }
 
+        public static PropertyAccessor GetPropertyAccessorForMapReduceOutput(object value, HashSet<string> groupByFields)
+        {
+            var type = value.GetType();
+            return PropertyAccessorCache.GetOrAdd(type, x => PropertyAccessor.CreateMapReduceOutputAccessor(x, groupByFields));
+        }
+
         public static bool ShouldTreatAsEnumerable(object item)
         {
             if (item == null || item is DynamicNullObject)
