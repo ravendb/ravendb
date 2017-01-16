@@ -265,9 +265,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                         if (_parent._isMultiMap == false)
                             accessor = _parent._propertyAccessor ??
-                                       (_parent._propertyAccessor = PropertyAccessor.Create(document.GetType()));
+                                       (_parent._propertyAccessor = PropertyAccessor.CreateMapReduceOutputAccessor(document.GetType(), _groupByFields));
                         else
-                            accessor = TypeConverter.GetPropertyAccessor(document);
+                            accessor = TypeConverter.GetPropertyAccessorForMapReduceOutput(document, _groupByFields);
 
                         var mapResult = new DynamicJsonValue();
 
@@ -279,7 +279,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                             var blittableValue = TypeConverter.ToBlittableSupportedType(value);
                             mapResult[field.Key] = blittableValue;
 
-                            if (_groupByFields.Contains(field.Key))
+                            if (field.Value.IsGroupByField)
                             {
                                 _reduceKeyProcessor.Process(_parent._indexContext.Allocator, blittableValue);
                             }
