@@ -64,7 +64,7 @@ class editDocument extends viewModelBase {
     private changeNotification: changeSubscription;
 
     connectedDocuments = new connectedDocuments(this.document, this.activeDatabase, (docId) => this.loadDocument(docId));
-    
+
     isSaveEnabled: KnockoutComputed<boolean>;
     documentSize: KnockoutComputed<string>;
     editedDocId: KnockoutComputed<string>;
@@ -118,13 +118,7 @@ class editDocument extends viewModelBase {
         // preload json newline friendly mode to avoid issues with document save
         (ace as any).config.loadModule("ace/mode/json_newline_friendly");
 
-        this.$docEditor.on('DynamicHeightSet', () => this.docEditor.resize());
         this.focusOnEditor();
-    }
-
-    detached() {
-        super.detached();
-        this.$docEditor.off('DynamicHeightSet');
     }
 
     private activateById(id: string) {
