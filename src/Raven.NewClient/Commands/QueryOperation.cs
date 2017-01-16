@@ -57,16 +57,7 @@ namespace Raven.NewClient.Client.Commands
             _session.IncrementRequestCount();
             LogQuery();
 
-            return new QueryCommand
-            {
-                Index = _indexName,
-                IndexQuery = _indexQuery,
-                Convention = _session.Conventions,
-                Includes = _includes,
-                MetadataOnly = _metadataOnly,
-                IndexEntriesOnly = _indexEntriesOnly,
-                Context = _session.Context
-            };
+            return new QueryCommand(_session.Conventions, _session.Context, _indexName, _indexQuery, _includes, _metadataOnly, _indexEntriesOnly);
         }
 
         public void SetResult(QueryResult queryResult)

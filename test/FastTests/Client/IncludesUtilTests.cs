@@ -1,32 +1,30 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using Raven.Json.Linq;
 using Xunit;
 using System;
-using Raven.Abstractions.Util;
+using Raven.NewClient.Abstractions.Util;
+using Raven.NewClient.Client.Blittable;
+using Raven.NewClient.Client.Document;
+using Sparrow.Json;
 
 namespace FastTests.Client
 {
-    public class IncludesUtilTests : RavenTestBase
+    public class IncludesUtilTests : RavenNewTestBase
     {
         [Fact]
-        public async Task include_with_prefix()
+        public void include_with_prefix()
         {
-            using (var store = GetDocumentStore())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                var order = RavenJObject.FromObject(new Order()
+                var entityToBlittable = new EntityToBlittable(null);
+                var json = entityToBlittable.ConvertEntityToBlittable(new Order
                 {
                     CustomerId = "1",
                     Number = "abc"
-                });
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(order, "orders/1");
-                    await session.SaveChangesAsync();
-                }
+                }, new DocumentConvention(), context);
 
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludesUtil.Include(order, "CustomerId(customer/)", customerId =>
+                IncludesUtil.Include(json, "CustomerId(customer/)", customerId =>
                 {
                     if (customerId == null)
                         return false;
@@ -39,23 +37,19 @@ namespace FastTests.Client
         }
 
         [Fact]
-        public async Task include_with_suffix()
+        public void include_with_suffix()
         {
-            using (var store = GetDocumentStore())
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                var order = RavenJObject.FromObject(new Order()
+                var entityToBlittable = new EntityToBlittable(null);
+                var json = entityToBlittable.ConvertEntityToBlittable(new Order
                 {
                     CustomerId = "1",
                     Number = "abc"
-                });
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(order, "orders/1");
-                    await session.SaveChangesAsync();
-                }
+                }, new DocumentConvention(), context);
 
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludesUtil.Include(order, "CustomerId[{0}/customer]", customerId =>
+                IncludesUtil.Include(json, "CustomerId[{0}/customer]", customerId =>
                 {
                     if (customerId == null)
                         return false;

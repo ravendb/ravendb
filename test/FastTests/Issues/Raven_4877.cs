@@ -1,11 +1,11 @@
 ﻿using System.Linq;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Linq;
 using Xunit;
 
 namespace FastTests.Issues
 {
-    public class RavenDB_4877 : RavenTestBase
+    public class RavenDB_4877 : RavenNewTestBase
     {
         private class User
         {
