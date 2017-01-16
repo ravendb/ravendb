@@ -4,57 +4,57 @@ using Xunit;
 
 namespace FastTests.Server.Basic
 {
-    public class CanParseNestedBooleanQueries : RavenTestBase
+    public class CanParseNestedBooleanQueries : RavenNewTestBase
     {
-        private static LuceneASTQueryConfiguration config = new LuceneASTQueryConfiguration
+        private static readonly LuceneASTQueryConfiguration Config = new LuceneASTQueryConfiguration
         {
-            Analayzer = new RavenPerFieldAnalyzerWrapper( new LowerCaseKeywordAnalyzer()),
+            Analayzer = new RavenPerFieldAnalyzerWrapper(new LowerCaseKeywordAnalyzer()),
             DefaultOperator = Raven.Client.Data.QueryOperator.Or,
             FieldName = "foo"
         };
 
         [Fact]
-        void CanParseThreeTermsWithDiffrentOperators()
+        public void CanParseThreeTermsWithDiffrentOperators()
         {
             var parser = new LuceneQueryParser();
             parser.Parse("foo:a AND foo:b foo:c");
-            var query = parser.LuceneAST.ToQuery(config);
+            var query = parser.LuceneAST.ToQuery(Config);
             Assert.Equal("+foo:a +foo:b foo:c", query.ToString());
         }
 
         [Fact]
-        void CanParseThreeTermsWithDiffrentOperators2()
+        public void CanParseThreeTermsWithDiffrentOperators2()
         {
             var parser = new LuceneQueryParser();
             parser.Parse("foo:a AND foo:b foo:-c");
-            var query = parser.LuceneAST.ToQuery(config);
+            var query = parser.LuceneAST.ToQuery(Config);
             Assert.Equal("+foo:a +foo:b foo:c", query.ToString());
         }
 
         [Fact]
-        void CanParseParenthesisInsideNextedBooleanQuery()
+        public void CanParseParenthesisInsideNextedBooleanQuery()
         {
             var parser = new LuceneQueryParser();
             parser.Parse("foo:a AND foo:(b -d) foo:-c");
-            var query = parser.LuceneAST.ToQuery(config);
+            var query = parser.LuceneAST.ToQuery(Config);
             Assert.Equal("+foo:a +(foo:b -foo:d) foo:c", query.ToString());
         }
 
         [Fact]
-        void CanParseParenthesisInsideNextedBooleanQuery2()
+        public void CanParseParenthesisInsideNextedBooleanQuery2()
         {
             var parser = new LuceneQueryParser();
             parser.Parse("foo:a AND (foo:b -d) foo:-c");
-            var query = parser.LuceneAST.ToQuery(config);
+            var query = parser.LuceneAST.ToQuery(Config);
             Assert.Equal("+foo:a +(foo:b -foo:d) foo:c", query.ToString());
         }
 
         [Fact]
-        void CanParseComplexedBooleanQuery()
+        public void CanParseComplexedBooleanQuery()
         {
             var parser = new LuceneQueryParser();
             parser.Parse("(foo:a foo:b) (foo:b +d) AND (foo:(e -c) OR g)");
-            var query = parser.LuceneAST.ToQuery(config);
+            var query = parser.LuceneAST.ToQuery(Config);
             Assert.Equal("(foo:a foo:b) +(foo:b +foo:d) +((foo:e -foo:c) foo:g)", query.ToString());
         }
     }
