@@ -15,7 +15,7 @@
             </ul>
         </div>
         <div class="btn-group">
-            <button data-bind="enable: savedPatches().length && !$root.isPatchingInProgress()" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Load a saved patch"><i class="fa fa-arrow-up"></i> Load <span class="caret"></span></button>
+            <button data-bind="enable: savedPatches().length && !$root.isPatchingInProgress()" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Load a saved patch"> Load <span class="caret"></span></button>
             <ul class="dropdown-menu" role="menu" data-bind="foreach: savedPatches">
                 <li>
                     <a href="#" data-bind="click: $root.usePatch.bind($root, $data)">
@@ -23,7 +23,7 @@
                     </a>
                 </li>
             </ul>
-            <button class="btn btn-default" title="Save the current patch" data-bind="click: savePatch, enable: patchDocument().script() && !$root.isPatchingInProgress()"><i class="fa fa-save"></i> Save</button>
+            <button class="btn btn-default" title="Save the current patch" data-bind="click: savePatch, enable: patchDocument().script() && !$root.isPatchingInProgress()"><i class="icon-save"></i> <span>Save</span></button>
         </div>
 
         <div class="btn-group">
@@ -49,20 +49,20 @@
 
         <div class="btn-group">
             <!-- TODO: enable: isExecuteAllowed() && !$root.isPatchingInProgress() && !$root.isMapReduceIndexSelected() -->
-            <button class="btn btn-default btn-prerelease" disabled title="Test the patch script on the selected document (Alt+T)" data-bind="click: testPatch" accesskey="T"><i class="fa fa-question-circle"></i> Test</button>
+            <button class="btn btn-default btn-prerelease" disabled title="Test the patch script on the selected document (Alt+T)" data-bind="click: testPatch" accesskey="T"> Test</button>
         </div>
 
         <div class="btn-group" data-bind="visible: patchDocument() && patchDocument().isDocumentPatch()">
             <button class="btn btn-primary" title="Execute Patch (Alt+P)" accesskey="P" data-bind="click: executePatchOnSingle, enable: isExecuteAllowed() && !$root.isPatchingInProgress()">
-                <i class="fa fa-play"></i> Patch
+                 Patch
             </button>
         </div>
         <div class="btn-group" data-bind="visible: (!!patchDocument()) && (patchDocument().isCollectionPatch() || patchDocument().isIndexPatch())">
             <button class="btn btn-primary" title="Patch the selected documents (Alt+S)" accesskey="S" data-bind="click: executePatchOnSelected, enable: isExecuteAllowed() && !$root.isPatchingInProgress() && !$root.isMapReduceIndexSelected()">
-                <i class="fa fa-play"></i> Patch Selected
+                 Patch Selected
             </button>
             <button class="btn btn-primary" title="Patch all matching documents (Alt+A)" data-bind="click: executePatchOnAll, enable: patchDocument().script() && !$root.isPatchingInProgress()" accesskey="A">
-                <i class="fa fa-forward"></i> Patch All
+                 Patch All
             </button>
         </div>
         <button data-bind="visible: patchOperationId(), enable: !patchKillInProgress(), click: $root.killPatch.bind($root)" class="btn btn-primary btn-group">
@@ -193,7 +193,7 @@
                         </tbody>
                     </table>
                     <button type="button" class="btn btn-default" data-bind="click: createParameter, disable: $root.isPatchingInProgress()" title="Add a parameter">
-                        <i class="fa fa-plus"></i> Add parameter
+                        <i class="icon-plus"></i> Add parameter
                     </button>
                 </div>
             </div>

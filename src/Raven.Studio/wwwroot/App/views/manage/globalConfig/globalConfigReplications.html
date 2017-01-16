@@ -14,10 +14,10 @@
     <div class="panel panel-default" data-bind="visible: !$root.settingsAccess.isForbidden() && $root.canUseGlobalConfigurations()">
         <div class="panel-heading">
             <button type="submit" class="btn btn-primary" data-bind="enable: isSetupSaveEnabled() || isConfigSaveEnabled(), visible: activated()" title="Save changes (Alt+S)" accesskey="S">
-                <i class="fa fa-save"></i>
+                <i class="icon-save"></i>
             </button>
             <button type="button" class="btn btn-default" data-bind="click: $root.activateConfig.bind($root), visible: !activated(), disable: $root.settingsAccess.isReadOnly()">
-                <i class="fa fa-plus"></i> Create global configuration for Replication
+                <i class="icon-plus"></i> Create global configuration for Replication
             </button>
             <button type="button" class="btn btn-danger" data-bind="click: $root.disactivateConfig.bind($root), visible: activated(), disable: $root.settingsAccess.isReadOnly()">
                 <i class="fa fa-trash"></i> Remove global configuration for Replication
@@ -112,7 +112,7 @@
                     <label class="col-sm-3 control-label">Replication destinations</label>
                     <div class="col-sm-9">
                         <button type="button" class="btn btn-default" data-bind="click: createNewDestination, disable: $root.settingsAccess.isReadOnly()" title="Add a replication destination (Alt+N)" accesskey="N">
-                            <i class="fa fa-plus"></i> Add destination
+                            <i class="icon-plus"></i> Add destination
                         </button>
                         <br />
                         <br />

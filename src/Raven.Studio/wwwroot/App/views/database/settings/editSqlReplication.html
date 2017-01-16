@@ -6,10 +6,10 @@
         <div class="btn-toolbar edit-sql-replication-actions">
             <div class="btn-group">
                 <button type="submit" class="btn btn-primary" data-bind="enable: $root.isSaveEnabled()" title="Save the index (Alt+S)" accesskey="S">
-                    <i class="fa fa-save"></i>
+                    <i class="icon-save"></i>
                 </button>
                 <button class="btn btn-default" title="Refresh from server, discarding any unsaved changes" data-bind="click: refreshSqlReplication">
-                    <i class="fa fa-refresh"></i>
+                    Refresh
                 </button>
             </div>
             <div class="btn-group tools">
@@ -35,10 +35,10 @@
             </div>
             <div class="btn-group">
                 <button class="btn btn-warning" title="Reset SQL Replication" data-bind="click: resetSqlReplication">
-                    <span class="glyphicon glyphicon-retweet"></span>
+                    <span class="icon-restore"></span>
                 </button>
                 <button class="btn btn-danger" title="Delete SQL Replication" data-bind="click: deleteSqlReplication">
-                    <i class="fa fa-trash-o"></i>
+                    <i class="icon-trash"></i>
                 </button>
             </div>
         </div>
@@ -75,7 +75,7 @@
                                 <td>Insert only</td>
                                 <td class="narrowest-column">
                                     <button type="button" class="btn btn-default" data-bind="click: addNewTable" title="Add new table">
-                                        <i class="fa fa-plus"></i>
+                                        <i class="icon-plus"></i>
                                     </button>
                                 </td>
                             </tr>

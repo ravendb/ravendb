@@ -6,11 +6,11 @@
     <div class="panel panel-default" data-bind="visible: !settingsAccess.isForbidden()">
         <div class="panel-heading">
             <div class="btn-group">
-                <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled" title="Save changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
+                <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled" title="Save changes (Alt+S)" accesskey="S"><i class="icon-save"></i></button>
             </div>
             <div class="btn-group">
                 <button type="button" class="btn btn-default" data-bind="click: createNewApiKey, disable: settingsAccess.isReadOnly" title="Create a new API Key (Alt+N)" accesskey="N">
-                    <i class="fa fa-plus"></i> Create a new API Key
+                    <i class="icon-plus"></i> Create a new API Key
                 </button>
             </div>
             <div class="btn-group">
@@ -91,7 +91,7 @@
                             <div class="col-sm-9">
                                 
                                 <button type="button" class="btn btn-default" data-bind="click: addEmptyDatabase, visible: databases().length == 0" title="Add Resource">
-                                    <i class="fa fa-plus"></i> Add Resource
+                                    <i class="icon-plus"></i> Add Resource
                                 </button>
                                 <table class="table table-striped table-hover">
                                     <thead>
@@ -100,7 +100,7 @@
                                         <td>Type</td>
                                         <td>
                                             <button type="button" style="display: inline-block; font-size: 14px;" class="close" title="Add resource" data-bind="click: addEmptyDatabase, visible: !$root.settingsAccess.isReadOnly()">
-                                                <i class="fa fa-plus"></i>
+                                                <i class="icon-plus"></i>
                                             </button>
                                         </td>
                                     </tr>
