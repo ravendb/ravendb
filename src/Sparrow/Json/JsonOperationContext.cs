@@ -167,7 +167,7 @@ namespace Sparrow.Json
         }
 
         /// <summary>
-        /// Returns a singleton memory buffer to work with, be aware, this buffer is not thread safe and/or shareable.
+        /// Returns memory buffer to work with, be aware, this buffer is not thread safe
         /// </summary>
         /// <param name="requestedSize"></param>
         /// <returns></returns>

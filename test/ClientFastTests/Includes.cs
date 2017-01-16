@@ -72,7 +72,7 @@ namespace NewClientTests.NewClient
                 using (var session = store.OpenSession())
                 {
                     var orders = session.Query<Order>()
-                        .Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Include(x => x.CustomerId)
                         .ToList();
 

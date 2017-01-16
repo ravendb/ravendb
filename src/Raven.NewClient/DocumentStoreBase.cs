@@ -28,8 +28,6 @@ namespace Raven.NewClient.Client
         {
             InitializeEncryptor();
 
-            LastEtagHolder = new GlobalLastEtagHolder();
-            
             AsyncSubscriptions = new AsyncDocumentSubscriptions(this);
             Subscriptions = new DocumentSubscriptions(this);
         }
@@ -211,16 +209,6 @@ namespace Raven.NewClient.Client
 
         protected bool initialized;
 
-
-        ///<summary>
-        /// Gets the etag of the last document written by any session belonging to this 
-        /// document store
-        ///</summary>
-        public virtual long? GetLastWrittenEtag()
-        {
-            return LastEtagHolder.GetLastWrittenEtag();
-        }
-
         public abstract BulkInsertOperation BulkInsert(string database = null);
 
         public IAsyncReliableSubscriptions AsyncSubscriptions { get; private set; }
@@ -255,8 +243,6 @@ namespace Raven.NewClient.Client
         public event EventHandler<BeforeQueryExecutedEventArgs> OnBeforeQueryExecuted;
 
         protected readonly ProfilingContext profilingContext = new ProfilingContext();
-
-        public ILastEtagHolder LastEtagHolder { get; set; }
 
         /// <summary>
         ///  Get the profiling information for the given id

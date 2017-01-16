@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastTests.Subscriptions;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Document;
+using Raven.NewClient.Operations.Databases;
 using Xunit;
 
 namespace NewClientTests.NewClient.Subscriptions
@@ -18,7 +19,7 @@ namespace NewClientTests.NewClient.Subscriptions
             {
                 await CreateDocuments(store, 1);
 
-                var lastEtag = store.GetLastWrittenEtag() ?? 0;
+                var lastEtag = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastDocEtag ?? 0;
                 await CreateDocuments(store, 5);
 
                 var subscriptionCriteria = new SubscriptionCriteria

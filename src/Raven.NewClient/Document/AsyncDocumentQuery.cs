@@ -668,30 +668,6 @@ namespace Raven.NewClient.Client.Document
         }
 
         /// <summary>
-        /// Instructs the query to wait for non stale results as of the last write made by any session belonging to the 
-        /// current document store.
-        /// This ensures that you'll always get the most relevant results for your scenarios using simple indexes (map only or dynamic queries).
-        /// However, when used to query map/reduce indexes, it does NOT guarantee that the document that this etag belong to is actually considered for the results. 
-        /// </summary>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WaitForNonStaleResultsAsOfLastWrite()
-        {
-            WaitForNonStaleResultsAsOfLastWrite();
-            return this;
-        }
-
-        /// <summary>
-        /// Instructs the query to wait for non stale results as of the last write made by any session belonging to the 
-        /// current document store.
-        /// This ensures that you'll always get the most relevant results for your scenarios using simple indexes (map only or dynamic queries).
-        /// However, when used to query map/reduce indexes, it does NOT guarantee that the document that this etag belong to is actually considered for the results. 
-        /// </summary>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WaitForNonStaleResultsAsOfLastWrite(TimeSpan waitTimeout)
-        {
-            WaitForNonStaleResultsAsOfLastWrite(waitTimeout);
-            return this;
-        }
-
-        /// <summary>
         /// EXPERT ONLY: Instructs the query to wait for non stale results.
         /// This shouldn't be used outside of unit tests unless you are well aware of the implications
         /// </summary>
