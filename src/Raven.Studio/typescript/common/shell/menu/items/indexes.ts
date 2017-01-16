@@ -8,7 +8,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
     let indexesChildren = [
         new leafMenuItem({
             title: "List of indexes",
-            nav: true,
+            nav: false,
             route: "databases/indexes",
             moduleId: "viewmodels/database/indexes/indexes",
             css: 'icon-indexing',
@@ -73,5 +73,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
         })
     ];
 
-    return new intermediateMenuItem("Indexes", indexesChildren, 'icon-indexing');
+    return new intermediateMenuItem("Indexes", indexesChildren, 'icon-indexing', {
+        dynamicHash: appUrls.indexes
+    });
 }

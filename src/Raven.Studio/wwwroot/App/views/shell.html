@@ -99,8 +99,8 @@
 </nav>
 
 <script type="text/html" id="leafMenuItem">
-    <li data-bind="with: item, css: { 'active': menu.activeItem() === item }">
-        <a data-bind="click: $parent.menu.navigate.bind($parent.menu), visible: nav === true, attr: { href: path }">
+    <li data-bind="with: item">
+        <a data-bind="click: $parent.menu.navigate.bind($parent.menu), visible: nav === true, attr: { href: path }, css: { 'active': $parent.menu.activeItem() === $data }">
             <i data-bind="css: css"></i>
             <span data-bind="text: title"></span>
         </a>
@@ -117,7 +117,14 @@
             <h2>
                 <a class="back" title="back"
                    data-bind="click: menu.back.bind(menu)"></a>
-                <!-- ko text: item.title --><!-- /ko -->
+
+                <!-- ko if: item.path -->
+                <a class="title" data-bind="text: item.title, attr: { href: item.path }, click: menu.navigate.bind(menu)"></a> 
+                <!-- /ko -->
+
+                <!-- ko if: !item.path() -->
+                    <!-- ko text: item.title --><!-- /ko -->
+                <!-- /ko -->
             </h2>
 
             <ul data-bind="foreach: item.children">
@@ -125,16 +132,18 @@
                 <!-- /ko -->
             </ul>
         </div>
-
+    </li>
 </script>
 
 <script type="text/html" id="separatorMenuItem">
-    <!-- ko if: !!item.title -->
-    <h3 data-bind="text: item.title"></h3>
-    <!-- /ko -->
-    <!-- ko if: !item.title -->
-    <hr />
-    <!-- /ko -->
+    <li>
+        <!-- ko if: !!item.title -->
+        <h3 data-bind="text: item.title"></h3>
+        <!-- /ko -->
+        <!-- ko if: !item.title -->
+        <hr />
+        <!-- /ko -->
+    </li>
 </script>
 
 <nav id="main-menu" class="main-menu"
