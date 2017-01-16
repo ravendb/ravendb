@@ -99,7 +99,9 @@ namespace Raven.Server.Documents.Replication
 
                 try
                 {
-                    tcpConnectionOptions?.Dispose();
+                    tcpConnectionOptions.Dispose();
+                    tcpConnectionOptions.MultiDocumentParser?.Dispose();
+                    tcpConnectionOptions.ReturnContext?.Dispose();
                 }
                 catch
                 {
@@ -163,6 +165,8 @@ namespace Raven.Server.Documents.Replication
                 try
                 {
                     tcpConnectionOptions.Dispose();
+                    tcpConnectionOptions.MultiDocumentParser?.Dispose();
+                    tcpConnectionOptions.ReturnContext?.Dispose();
                 }
 
                 catch (Exception)

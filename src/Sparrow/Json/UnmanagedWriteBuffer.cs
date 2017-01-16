@@ -145,7 +145,6 @@ namespace Sparrow.Json
         {
             public Segment Previous;
             public Segment PreviousAllocated;
-            public bool PreviousHoldsNoData;
             public AllocatedMemoryData Allocation;
             public byte* Address;
             public int Used;
@@ -158,8 +157,6 @@ namespace Sparrow.Json
                     var prev = Previous;
                     while (prev != null)
                     {
-                        if (prev.PreviousHoldsNoData)
-                            break;
                         count++;
                         prev = prev.Previous;
                     }
@@ -309,8 +306,6 @@ namespace Sparrow.Json
                 whereToWrite -= cur.Used;
                 copiedBytes += cur.Used;
                 Memory.Copy(whereToWrite, cur.Address, cur.Used);
-                if (cur.PreviousHoldsNoData)
-                    break;
                 cur = cur.Previous;
             }
             Debug.Assert(copiedBytes == _sizeInBytes);
@@ -333,6 +328,7 @@ namespace Sparrow.Json
 
         public void Dispose()
         {
+            var start = _current;
             while (_current != null &&
                 _current.Address != null) //prevent double dispose
             {
@@ -340,6 +336,7 @@ namespace Sparrow.Json
                 _current.Address = null; //precaution, to make memory issues more visible
                 _current = _current.PreviousAllocated;
             }
+            GC.KeepAlive(start);
         }
 
         public void EnsureSingleChunk(JsonParserState state)
@@ -357,7 +354,7 @@ namespace Sparrow.Json
                 ptr = null;
                 return;
             }
-            if (_current.Previous == null || _current.PreviousHoldsNoData)
+            if (_current.Previous == null)
             {
                 ptr = _current.Address;
                 size = _current.Used;
@@ -380,7 +377,7 @@ namespace Sparrow.Json
             realCurrent.Used = SizeInBytes;
 
             _current = realCurrent;
-            _current.PreviousHoldsNoData = true;
+            _current.Previous = null;
             ptr = _current.Address;
             size = _current.Used;
         }
