@@ -14,9 +14,9 @@
         </div>
         <div class="panel panel-default" data-bind="visible: $root.canUseGlobalConfigurations()">
             <div class="panel-heading">
-                <button type="submit" class="btn btn-primary" title="Save Changes(Alt+S)" data-bind="enable: $root.isSaveEnabled(), visible: activated()" accesskey="S"><i class="fa fa-save"></i></button>
+                <button type="submit" class="btn btn-primary" title="Save Changes(Alt+S)" data-bind="enable: $root.isSaveEnabled(), visible: activated()" accesskey="S"><i class="icon-save"></i></button>
                 <button type="button" class="btn btn-default" data-bind="click: $root.activateConfig.bind($root), visible: !activated(), disable: $root.settingsAccess.isReadOnly()">
-                    <i class="fa fa-plus"></i> Create global configuration for Quotas
+                    <i class="icon-plus"></i> Create global configuration for Quotas
                 </button>
                 <button type="button" class="btn btn-danger" data-bind="click: $root.disactivateConfig.bind($root), visible: activated(), disable: $root.settingsAccess.isReadOnly()">
                     <i class="fa fa-trash"></i> Remove global configuration for Quotas

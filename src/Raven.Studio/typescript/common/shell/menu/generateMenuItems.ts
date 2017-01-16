@@ -57,7 +57,6 @@ function generateActiveDatabaseMenuItems() {
         getDocumentsMenuItem(appUrls),
         getIndexesMenuItem(appUrls),
         getTransformersMenuItem(appUrls),
-        new separatorMenuItem('Manage'),
         getTasksMenuItem(appUrls),
         getSettingsMenuItem(appUrls),
         getStatsMenuItem(appUrls),

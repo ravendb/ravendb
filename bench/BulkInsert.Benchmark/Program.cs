@@ -110,7 +110,7 @@ namespace BulkInsert.Benchmark
                 for (long i = 0; i < numberOfDocuments; i++)
                 {
                     if (i % (numberOfDocuments / 5) == 0)
-                        Console.WriteLine($"{SystemTime.UtcNow.ToString("G")} : Progress {i:##,###} out of {numberOfDocuments} ...");
+                        Console.WriteLine($"{SystemTime.UtcNow:G} : Progress {i:##,###} out of {numberOfDocuments} ...");
 
                     var entity = new DocEntity
                     {

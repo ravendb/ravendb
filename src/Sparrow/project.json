@@ -20,10 +20,17 @@
         "optimize": true,
         "define": [ "MEM_GUARD" ]
       }
+    },
+    "Validate": {
+      "buildOptions": {
+        "optimize": true,
+        "define": [ "MEM_GUARD", "MEM_GUARD_STACK" ]
+      }
     }
   },
 
   "dependencies": {
+    "DotNetCross.Memory.Unsafe": "0.2.3.4",
     "System.Runtime.InteropServices.RuntimeInformation": "4.3.0"
   },
 

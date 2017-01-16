@@ -159,7 +159,9 @@ class menu {
     }
 
     private setActiveMenuItem() {
-        for (let item of this.itemsFlattened()) {
+        let flattenedItems = this.itemsFlattened();
+        for (let i = 0; i++; i < flattenedItems.length) {
+            let item = flattenedItems[i];
             if (item.type === 'intermediate') {
                 (item as intermediateMenuItem).isOpen(false);
             }
@@ -173,19 +175,15 @@ class menu {
             return;
         }
 
-        let item = this.routeToItemCache().get(matchingRoute);
-
-        if (item.nav) {
-            // Highlight/Activate current item
-            this.activeItem(item);
-        } else if (item.itemRouteToHighlight) {
+        let itemMatchingRoute = this.routeToItemCache().get(matchingRoute);
+        if (itemMatchingRoute.itemRouteToHighlight) {
                 // Highlight/Activate a different menu item
                 const matchingRoute = this.registeredRoutes()
-                                          .find(routeRegex => routeRegex.test(item.itemRouteToHighlight));
+                    .find(routeRegex => routeRegex.test(itemMatchingRoute.itemRouteToHighlight));
                 let itemToActivate = this.routeToItemCache().get(matchingRoute);
-                if (itemToActivate.nav) {
-                    this.activeItem(itemToActivate);
-                }
+                this.activeItem(itemToActivate);
+        } else {
+            this.activeItem(itemMatchingRoute);
         }
 
         this.setLevelToActiveItem();

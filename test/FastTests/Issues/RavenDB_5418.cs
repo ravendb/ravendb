@@ -2,18 +2,19 @@
 
 namespace FastTests.Issues
 {
-    public class RavenDB_5418 : RavenTestBase
+    public class RavenDB_5418 : RavenNewTestBase
     {
-        public class Order
+        private class Order
         {
         }
 
-        public class Employee
+        private class Employee
         {
-            
         }
 
-        public class Company { }
+        private class Company
+        {
+        }
 
         [Fact]
         public void WillNotCorruptStat()

@@ -4,15 +4,11 @@ import router = require("plugins/router");
 import document = require("models/database/documents/document");
 import documentMetadata = require("models/database/documents/documentMetadata");
 import collection = require("models/database/documents/collection");
-import querySort = require("models/database/query/querySort");
-
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import resolveMergeCommand = require("commands/database/studio/resolveMergeCommand");
 import getDocumentsFromCollectionCommand = require("commands/database/documents/getDocumentsFromCollectionCommand");
 import generateClassCommand = require("commands/database/documents/generateClassCommand");
-
-import pagedList = require("common/pagedList");
 import appUrl = require("common/appUrl");
 import jsonUtil = require("common/jsonUtil");
 import pagedResultSet = require("common/pagedResultSet");
@@ -43,9 +39,14 @@ class editDocument extends viewModelBase {
     isCreatingNewDocument = ko.observable(false);
     collectionForNewDocument = ko.observable<string>();
     provideCustomNameForNewDocument = ko.observable(false);
-    userIdHasFocus = ko.observable<boolean>(false);
-    userSpecifiedId = ko.observable("");
-    userSpecifiedIdCustomValidityError: KnockoutComputed<string>;
+    userIdHasFocus = ko.observable<boolean>(false);   
+    userSpecifiedId = ko.observable<string>("");
+
+    globalValidationGroup = ko.validatedObservable({
+        userDocumentId: this.userSpecifiedId,
+        userDocumentText: this.documentText
+    });
+
     private docEditor: AceAjax.Editor;
     entityName = ko.observable<string>("");
 
@@ -63,7 +64,7 @@ class editDocument extends viewModelBase {
     private changeNotification: changeSubscription;
 
     connectedDocuments = new connectedDocuments(this.document, this.activeDatabase, (docId) => this.loadDocument(docId));
-    
+
     isSaveEnabled: KnockoutComputed<boolean>;
     documentSize: KnockoutComputed<string>;
     editedDocId: KnockoutComputed<string>;
@@ -73,6 +74,7 @@ class editDocument extends viewModelBase {
         super();
         aceEditorBindingHandler.install();
         this.initializeObservables();
+        this.initValidation();
     }
 
     canActivate(args: any) {
@@ -87,16 +89,7 @@ class editDocument extends viewModelBase {
 
     activate(navigationArgs: { list: string, database: string, item: string, id: string, new: string, index: string }) {
         super.activate(navigationArgs);
-        this.updateHelpLink('M72H1R');
-
-        this.dirtyFlag = new ko.DirtyFlag([this.documentText, this.userSpecifiedId], false, jsonUtil.newLineNormalizingHashFunction);
-
-        this.isSaveEnabled = ko.pureComputed(() => {
-            const dirty = this.dirtyFlag().isDirty();
-            const isSaving = this.isSaving();
-
-            return dirty && !isSaving;
-        });
+        this.updateHelpLink('M72H1R');        
 
         if (navigationArgs && navigationArgs.id) {
             ko.postbox.publish("SetRawJSONUrl", appUrl.forDocumentRawData(this.activeDatabase(), navigationArgs.id));
@@ -125,13 +118,7 @@ class editDocument extends viewModelBase {
         // preload json newline friendly mode to avoid issues with document save
         (ace as any).config.loadModule("ace/mode/json_newline_friendly");
 
-        this.$docEditor.on('DynamicHeightSet', () => this.docEditor.resize());
         this.focusOnEditor();
-    }
-
-    detached() {
-        super.detached();
-        this.$docEditor.off('DynamicHeightSet');
     }
 
     private activateById(id: string) {
@@ -166,11 +153,32 @@ class editDocument extends viewModelBase {
         this.addNotification(this.changeNotification);
     }
 
-    private initializeObservables(): void {
-        this.userSpecifiedIdCustomValidityError = ko.computed(() => {
-            const documentId = this.userSpecifiedId();
-            return documentId.includes("\\") ? "Document name cannot contain '\\'" : "";
+    private initValidation() {      
+        const rg1 = /^[^\\]*$/; // forbidden character - backslash
+        this.userSpecifiedId.extend({           
+            validation: [
+                {
+                    validator: (val: string) => rg1.test(val),
+                    message: "Can't use backslash in document name"
+                }]
         });
+
+        this.documentText.extend({
+            required: true
+        });
+    }
+
+    private initializeObservables(): void {
+        
+        this.dirtyFlag = new ko.DirtyFlag([this.documentText, this.userSpecifiedId], false, jsonUtil.newLineNormalizingHashFunction); 
+          
+        this.isSaveEnabled = ko.pureComputed(() => {            
+            if (this.isSaving() ||
+                (!this.dirtyFlag().isDirty() && this.metadata().etag()) ) {
+                return false;
+            }
+            return true;
+        });         
 
         this.document.subscribe(doc => {
             if (doc) {
@@ -342,9 +350,11 @@ class editDocument extends viewModelBase {
         this.metadata().ravenLastModified(null);
     }
 
-    saveDocument() {
-        eventsCollector.default.reportEvent("document", "save");
-        this.saveInternal(this.userSpecifiedId(), false);
+    saveDocument() {       
+        if (this.isValid(this.globalValidationGroup)) {
+            eventsCollector.default.reportEvent("document", "save");
+            this.saveInternal(this.userSpecifiedId(), false);
+        }
     }
 
     private saveInternal(documentId: string, eraseEtag: boolean) {

@@ -1,15 +1,16 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexing;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace FastTests.Client.Queries
 {
-    public class FullTextSearchOnTags : RavenTestBase
+    public class FullTextSearchOnTags : RavenNewTestBase
     {
-        public class Image
+        private class Image
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -31,10 +32,10 @@ namespace FastTests.Client.Queries
                     session.SaveChanges();
                 }
 
-                store.DatabaseCommands.PutIndex("test", new IndexDefinition
+                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
                 {
-                    Maps = { "from doc in docs.Images select new { doc.Tags }"},
-                });
+                    Maps = { "from doc in docs.Images select new { doc.Tags }" }
+                }));
 
                 using (var session = store.OpenSession())
                 {
@@ -67,10 +68,10 @@ namespace FastTests.Client.Queries
                     session.SaveChanges();
                 }
 
-                store.DatabaseCommands.PutIndex("test", new IndexDefinition
+                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
                 {
-                    Maps = { "from doc in docs.Images select new { doc.Tags,doc.Name }"},
-                });
+                    Maps = { "from doc in docs.Images select new { doc.Tags,doc.Name }" }
+                }));
 
                 using (var session = store.OpenSession())
                 {
@@ -106,10 +107,10 @@ namespace FastTests.Client.Queries
                     session.SaveChanges();
                 }
 
-                store.DatabaseCommands.PutIndex("test", new IndexDefinition
+                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
                 {
-                    Maps = { "from doc in docs.Images select new { doc.Tags }"},
-                });
+                    Maps = { "from doc in docs.Images select new { doc.Tags }" }
+                }));
 
                 using (var session = store.OpenSession())
                 {
@@ -224,13 +225,13 @@ namespace FastTests.Client.Queries
                 {
                     session.Store(new Image
                     {
-                        Tags = new string[] { "cats" },
+                        Tags = new[] { "cats" },
                         Name = "User"
                     });
 
                     session.Store(new Image
                     {
-                        Tags = new string[] { "dogs" },
+                        Tags = new[] { "dogs" },
                         Name = "User"
                     });
                     session.SaveChanges();
@@ -292,11 +293,10 @@ namespace FastTests.Client.Queries
         {
             using (var store = GetDocumentStore())
             {
-
-                store.DatabaseCommands.PutIndex("test", new IndexDefinition
+                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
                 {
-                    Maps = { "from doc in docs.Images select new { doc.Tags }"},
-                });
+                    Maps = { "from doc in docs.Images select new { doc.Tags }" }
+                }));
 
                 using (var session = store.OpenSession())
                 {
@@ -352,10 +352,10 @@ namespace FastTests.Client.Queries
                     session.SaveChanges();
                 }
 
-                store.DatabaseCommands.PutIndex("test", new IndexDefinition
+                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
                 {
-                    Maps = { "from doc in docs.Images select new { doc.Tags, doc.Users }"},
-                });
+                    Maps = { "from doc in docs.Images select new { doc.Tags, doc.Users }" }
+                }));
 
                 using (var session = store.OpenSession())
                 {
@@ -384,14 +384,14 @@ namespace FastTests.Client.Queries
                     session.SaveChanges();
                 }
 
-                store.DatabaseCommands.PutIndex("test", new IndexDefinition
+                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
                 {
-                    Maps = { "from doc in docs.Images select new { doc.Tags, doc.Users }"},
+                    Maps = { "from doc in docs.Images select new { doc.Tags, doc.Users }" },
                     Fields = new Dictionary<string, IndexFieldOptions>
                     {
                         { "Tags", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed,Suggestions = true} }
                     }
-                });
+                }));
 
                 using (var session = store.OpenSession())
                 {
@@ -420,15 +420,14 @@ namespace FastTests.Client.Queries
                     session.SaveChanges();
                 }
 
-                store.DatabaseCommands.PutIndex("test", new IndexDefinition
+                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
                 {
-                    Maps = { "from doc in docs.Images select new { doc.Name }"},
+                    Maps = { "from doc in docs.Images select new { doc.Name }" },
                     Fields = new Dictionary<string, IndexFieldOptions>
                     {
                         { "Name", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed } }
                     }
-
-                });
+                }));
 
                 using (var session = store.OpenSession())
                 {
@@ -455,15 +454,14 @@ namespace FastTests.Client.Queries
                     session.SaveChanges();
                 }
 
-                store.DatabaseCommands.PutIndex("test", new IndexDefinition
+                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
                 {
-                    Maps = { "from doc in docs.Images select new { doc.Name }"},
+                    Maps = { "from doc in docs.Images select new { doc.Name }" },
                     Fields = new Dictionary<string, IndexFieldOptions>
                     {
                         { "Name", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed } }
-                    },
-
-                });
+                    }
+                }));
 
                 using (var session = store.OpenSession())
                 {
@@ -473,7 +471,7 @@ namespace FastTests.Client.Queries
                         .Search(x => x.Name, "Photo", options: SearchOptions.And)
                         .Where(x => x.Id == "1")
                         .ToList();
-                    WaitForUserToContinueTheTest(store);
+
                     Assert.NotEmpty(images);
                     Assert.True(images.Count == 1);
                 }

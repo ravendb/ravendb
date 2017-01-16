@@ -1,17 +1,13 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Threading;
+﻿using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
 using FastTests.Server.Documents.Notifications;
-using Raven.Abstractions.Data;
+using Raven.NewClient.Abstractions.Data;
 using Xunit;
-using Xunit.Extensions;
 
 namespace FastTests.Client.Subscriptions
 {
-    public class RavenDB_3082 : RavenTestBase
+    public class RavenDB_3082 : RavenNewTestBase
     {
         [Fact]
         public async Task StronglyTypedDataSubscriptions()

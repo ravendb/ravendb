@@ -147,3 +147,20 @@ select option {
 .messageBox {
     background-color: black;
 }
+
+
+
+/* TODO temporary styles for marking font-awesome icons with empty rectangle - in other case it might be hard for developers to know there is a font to update */
+.fa {
+  display: inline-block;
+  font-size: inherit;
+  text-rendering: auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  
+}
+.fa:before {
+    content: "\f009"; /* fake content for better indication of missing icon */
+}
+
+

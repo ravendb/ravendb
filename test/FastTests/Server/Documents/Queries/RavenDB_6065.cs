@@ -1,9 +1,8 @@
 ﻿using System.Linq;
-using FastTests;
 using Raven.Client.Data;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace FastTests.Server.Documents.Queries
 {
     public class DocumentQueryWithDefaultOperator : RavenTestBase
     {

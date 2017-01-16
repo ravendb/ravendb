@@ -9,13 +9,13 @@
     <form data-bind="submit: saveChanges, visible: !isForbidden()">
         <div class="panel panel-default">
             <div class="panel-heading">
-                <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled, visible: isEditingEnabled" title="Save Changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
-                <button type="button" class="btn btn-default" data-bind="click: editDatabaseSettings, visible: !isEditingEnabled()" title="Edit Database Settings"><i class="fa fa-pencil"></i></button>
+                <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled, visible: isEditingEnabled" title="Save Changes (Alt+S)" accesskey="S"><i class="icon-save"></i></button>
+                <button type="button" class="btn btn-default" data-bind="click: editDatabaseSettings, visible: !isEditingEnabled()" title="Edit Database Settings"><i class="icon-edit"></i></button>
                 <button type="button" class="btn btn-default" data-bind="click: refreshFromServer" title="Refresh from server, discarding any unsaved changes">
-                    <i class="fa fa-refresh"></i>
+                    Refresh
                 </button>
                 <button type="button" class="btn btn-default" data-bind="click: formatDocument" title="Format document (Alt+[)" accesskey="[">
-                    <i class="fa fa-align-justify"></i>
+                    <i class="icon-indent"></i>
                 </button>
             </div>
             <div class="panel-body">

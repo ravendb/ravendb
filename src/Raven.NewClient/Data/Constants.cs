@@ -12,6 +12,24 @@ namespace Raven.NewClient.Abstractions.Data
             //InResourceKeyVerificationDocumentContents.EnsureCannotBeChangeAndEnableSnapshotting();
         }
 
+        public class Json
+        {
+            private Json()
+            {
+            }
+
+            public class Fields
+            {
+                private Fields()
+                {
+                }
+
+                public const string Type = "$type";
+
+                public const string Values = "$values";
+            }
+        }
+
         public class Configuration
         {
             private Configuration()

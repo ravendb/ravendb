@@ -20,7 +20,7 @@ namespace Raven.NewClient.Operations.Databases.Indexes
             _indexName = indexName;
         }
 
-        public RavenCommand<object> GetCommand(DocumentConvention conventions)
+        public RavenCommand<object> GetCommand(DocumentConvention conventions, JsonOperationContext context)
         {
             return new ResetIndexCommand(_indexName);
         }

@@ -1,16 +1,13 @@
 ﻿using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Data.Indexes;
-using Raven.Client.Data.Queries;
-using Raven.Client.Indexing;
-using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Auto;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Data.Indexes;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace FastTests.Client.Indexing
 {
-    public class StaticIndexesFromClient : RavenTestBase
+    public class StaticIndexesFromClient : RavenNewTestBase
     {
         [Fact]
         public async Task CanPut()
@@ -32,12 +29,12 @@ namespace FastTests.Client.Indexing
                 };
 
                 await store
-                    .AsyncDatabaseCommands
-                    .PutIndexAsync("Users_ByName", input);
+                    .Admin
+                    .SendAsync(new PutIndexOperation("Users_ByName", input));
 
                 var output = await store
-                    .AsyncDatabaseCommands
-                    .GetIndexAsync("Users_ByName");
+                    .Admin
+                    .SendAsync(new GetIndexOperation("Users_ByName"));
 
                 Assert.Equal(1, output.IndexId);
                 Assert.True(input.Equals(output, compareIndexIds: false, ignoreFormatting: false));
