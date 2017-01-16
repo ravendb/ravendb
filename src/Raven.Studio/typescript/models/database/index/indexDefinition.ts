@@ -84,8 +84,15 @@ class indexDefinition {
     }
 
     private initValidation() {
+
+        const rg1 = /^[^\\]*$/; // forbidden character - backslash
         this.name.extend({
-            required: true
+            required: true,
+            validation: [
+                {
+                    validator: (val: string) => rg1.test(val),
+                    message: "Can't use backslash in index name"
+                }]
         });
 
         this.reduce.extend({

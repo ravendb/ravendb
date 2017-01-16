@@ -14,6 +14,7 @@ using FastTests;
 using FastTests.Server.Basic.Entities;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Linq.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Sparrow.Json;
 
 namespace NewClientTests.NewClient.Raven.Tests.Core.Stream
@@ -98,14 +99,10 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Stream
 
                     var indexDef = new IndexDefinitionBuilder<MyClass>()
                     {
-                        Map = docs => from doc in docs select new {Index = doc.Index}
+                        Map = docs => from doc in docs select new { Index = doc.Index }
                     };
-                    ;
 
-                    var putIndexOperation = new PutIndexOperation(context);
-                    var indexCommand = putIndexOperation.CreateRequest(store.Conventions, "MyClass/ByIndex", indexDef.ToIndexDefinition(store.Conventions, true));
-                    if (indexCommand != null)
-                        store.GetRequestExecuter(store.DefaultDatabase).Execute(indexCommand, context);
+                    store.Admin.Send(new PutIndexOperation("MyClass/ByIndex", indexDef.ToIndexDefinition(store.Conventions, true)));
 
                     WaitForIndexing(store);
 

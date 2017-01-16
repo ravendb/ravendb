@@ -3,8 +3,8 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Documents.Notifications;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions.Subscriptions;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Exceptions.Subscriptions;
 using Xunit;
 using Sparrow;
 

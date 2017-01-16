@@ -24,7 +24,7 @@ namespace Raven.NewClient.Operations.Databases.Indexes
             _indexNames = indexNames;
         }
 
-        public RavenCommand<IndexPerformanceStats[]> GetCommand(DocumentConvention conventions)
+        public RavenCommand<IndexPerformanceStats[]> GetCommand(DocumentConvention conventions, JsonOperationContext context)
         {
             return new GetIndexPerformanceStatisticsCommand(conventions, _indexNames);
         }

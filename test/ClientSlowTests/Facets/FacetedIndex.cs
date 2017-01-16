@@ -8,14 +8,13 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq.Expressions;
-using System.Net;
 using Raven.NewClient.Client;
 using Raven.NewClient.Client.Data;
 using Xunit;
 using System.Linq;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Client.Connection;
+using Raven.NewClient.Client.Document;
 
 namespace NewClientTests.NewClient
 {
@@ -165,7 +164,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        private void ExecuteTest(IDocumentStore store, List<Facet> facetsToUse)
+        private void ExecuteTest(DocumentStore store, List<Facet> facetsToUse)
         {
             Setup(store, facetsToUse);
 
@@ -194,7 +193,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        private void  ExecuteTestAsynchronously(IDocumentStore store, List<Facet> facetsToUse)
+        private void ExecuteTestAsynchronously(DocumentStore store, List<Facet> facetsToUse)
         {
             Setup(store, facetsToUse);
 
@@ -224,7 +223,7 @@ namespace NewClientTests.NewClient
             }
         }
 
-        private void Setup(IDocumentStore store, List<Facet> facetsToUse)
+        private void Setup(DocumentStore store, List<Facet> facetsToUse)
         {
             using (var s = store.OpenSession())
             {
@@ -238,9 +237,9 @@ namespace NewClientTests.NewClient
             InsertCameraData(store, _data);
         }
 
-       private void CheckFacetResultsMatchInMemoryData(
-                    FacetedQueryResult facetResults,
-                    List<Camera> filteredData)
+        private void CheckFacetResultsMatchInMemoryData(
+                     FacetedQueryResult facetResults,
+                     List<Camera> filteredData)
         {
             //Make sure we get all range values
             Assert.Equal(filteredData.GroupBy(x => x.Manufacturer).Count(),

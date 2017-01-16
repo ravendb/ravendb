@@ -2,14 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using FastTests.Voron.Util;
 using Sparrow.Platform.Posix;
 using Sparrow.Platform.Win32;
 using Xunit;
 using Voron;
 using Voron.Global;
 using Voron.Platform.Posix;
-using Voron.Platform.Win32;
-using Voron.Tests;
 
 namespace FastTests.Voron.Storage
 {

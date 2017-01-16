@@ -5,16 +5,14 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
 using FastTests.Server.Documents.Notifications;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Json.Linq;
+using Raven.NewClient.Abstractions.Data;
 using Xunit;
 
 namespace FastTests.Client.Subscriptions
 {
-    public class RavenDB_3491 : RavenTestBase
+    public class RavenDB_3491 : RavenNewTestBase
     {
-        private readonly TimeSpan waitForDocTimeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(5);
+        private readonly TimeSpan _waitForDocTimeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(15);
 
         [Fact]
         public async Task SubscribtionWithEtag()
@@ -42,7 +40,7 @@ namespace FastTests.Client.Subscriptions
                         Collection = "Users"
                     }, user2Etag ?? 0);
 
-                    var users = new List<RavenJObject>();
+                    var users = new List<dynamic>();
 
                     using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions
                     {
@@ -50,7 +48,7 @@ namespace FastTests.Client.Subscriptions
                     }))
                     {
 
-                        var docs = new BlockingCollection<RavenJObject>();
+                        var docs = new BlockingCollection<dynamic>();
                         var keys = new BlockingCollection<string>();
                         var ages = new BlockingCollection<int>();
 
@@ -62,35 +60,35 @@ namespace FastTests.Client.Subscriptions
                         await subscription.StartAsync();
 
 
-                        RavenJObject doc;
-                        Assert.True(docs.TryTake(out doc, waitForDocTimeout));
+                        dynamic doc;
+                        Assert.True(docs.TryTake(out doc, _waitForDocTimeout));
                         users.Add(doc);
-                        Assert.True(docs.TryTake(out doc, waitForDocTimeout));
+                        Assert.True(docs.TryTake(out doc, _waitForDocTimeout));
                         users.Add(doc);
-                        Assert.True(docs.TryTake(out doc, waitForDocTimeout));
+                        Assert.True(docs.TryTake(out doc, _waitForDocTimeout));
                         users.Add(doc);
                         var cnt = users.Count;
                         Assert.Equal(3, cnt);
 
 
                         string key;
-                        Assert.True(keys.TryTake(out key, waitForDocTimeout));
+                        Assert.True(keys.TryTake(out key, _waitForDocTimeout));
                         Assert.Equal("users/3", key);
 
-                        Assert.True(keys.TryTake(out key, waitForDocTimeout));
+                        Assert.True(keys.TryTake(out key, _waitForDocTimeout));
                         Assert.Equal("users/4", key);
 
-                        Assert.True(keys.TryTake(out key, waitForDocTimeout));
+                        Assert.True(keys.TryTake(out key, _waitForDocTimeout));
                         Assert.Equal("users/5", key);
 
                         int age;
-                        Assert.True(ages.TryTake(out age, waitForDocTimeout));
+                        Assert.True(ages.TryTake(out age, _waitForDocTimeout));
                         Assert.Equal(30, age);
 
-                        Assert.True(ages.TryTake(out age, waitForDocTimeout));
+                        Assert.True(ages.TryTake(out age, _waitForDocTimeout));
                         Assert.Equal(29, age);
 
-                        Assert.True(ages.TryTake(out age, waitForDocTimeout));
+                        Assert.True(ages.TryTake(out age, _waitForDocTimeout));
                         Assert.Equal(34, age);
                     }
                 }
@@ -140,34 +138,34 @@ namespace FastTests.Client.Subscriptions
                         await subscription.StartAsync();
 
                         User doc;
-                        Assert.True(docs.TryTake(out doc, waitForDocTimeout));
+                        Assert.True(docs.TryTake(out doc, _waitForDocTimeout));
                         users.Add(doc);
-                        Assert.True(docs.TryTake(out doc, waitForDocTimeout));
+                        Assert.True(docs.TryTake(out doc, _waitForDocTimeout));
                         users.Add(doc);
-                        Assert.True(docs.TryTake(out doc, waitForDocTimeout));
+                        Assert.True(docs.TryTake(out doc, _waitForDocTimeout));
                         users.Add(doc);
                         var cnt = users.Count;
                         Assert.Equal(3, cnt);
 
 
                         string key;
-                        Assert.True(keys.TryTake(out key, waitForDocTimeout));
+                        Assert.True(keys.TryTake(out key, _waitForDocTimeout));
                         Assert.Equal("users/3", key);
 
-                        Assert.True(keys.TryTake(out key, waitForDocTimeout));
+                        Assert.True(keys.TryTake(out key, _waitForDocTimeout));
                         Assert.Equal("users/4", key);
 
-                        Assert.True(keys.TryTake(out key, waitForDocTimeout));
+                        Assert.True(keys.TryTake(out key, _waitForDocTimeout));
                         Assert.Equal("users/5", key);
 
                         int age;
-                        Assert.True(ages.TryTake(out age, waitForDocTimeout));
+                        Assert.True(ages.TryTake(out age, _waitForDocTimeout));
                         Assert.Equal(30, age);
 
-                        Assert.True(ages.TryTake(out age, waitForDocTimeout));
+                        Assert.True(ages.TryTake(out age, _waitForDocTimeout));
                         Assert.Equal(29, age);
 
-                        Assert.True(ages.TryTake(out age, waitForDocTimeout));
+                        Assert.True(ages.TryTake(out age, _waitForDocTimeout));
                         Assert.Equal(34, age);
                     }
                 }
@@ -202,14 +200,14 @@ namespace FastTests.Client.Subscriptions
                     }, user2Etag ?? 0);
 
 
-                    var users = new List<RavenJObject>();
+                    var users = new List<dynamic>();
 
                     using (var subscription = store.AsyncSubscriptions.Open(new SubscriptionConnectionOptions
                     {
                         SubscriptionId = subscriptionId
                     }))
                     {
-                        var docs = new BlockingCollection<RavenJObject>();
+                        var docs = new BlockingCollection<dynamic>();
                         var keys = new BlockingCollection<string>();
                         var ages = new BlockingCollection<int>();
 
@@ -220,34 +218,34 @@ namespace FastTests.Client.Subscriptions
 
                         await subscription.StartAsync();
 
-                        RavenJObject doc;
-                        Assert.True(docs.TryTake(out doc, waitForDocTimeout));
+                        dynamic doc;
+                        Assert.True(docs.TryTake(out doc, _waitForDocTimeout));
                         users.Add(doc);
-                        Assert.True(docs.TryTake(out doc, waitForDocTimeout));
+                        Assert.True(docs.TryTake(out doc, _waitForDocTimeout));
                         users.Add(doc);
-                        Assert.True(docs.TryTake(out doc, waitForDocTimeout));
+                        Assert.True(docs.TryTake(out doc, _waitForDocTimeout));
                         users.Add(doc);
                         var cnt = users.Count;
                         Assert.Equal(3, cnt);
 
                         string key;
-                        Assert.True(keys.TryTake(out key, waitForDocTimeout));
+                        Assert.True(keys.TryTake(out key, _waitForDocTimeout));
                         Assert.Equal("users/3", key);
 
-                        Assert.True(keys.TryTake(out key, waitForDocTimeout));
+                        Assert.True(keys.TryTake(out key, _waitForDocTimeout));
                         Assert.Equal("users/4", key);
 
-                        Assert.True(keys.TryTake(out key, waitForDocTimeout));
+                        Assert.True(keys.TryTake(out key, _waitForDocTimeout));
                         Assert.Equal("users/5", key);
 
                         int age;
-                        Assert.True(ages.TryTake(out age, waitForDocTimeout));
+                        Assert.True(ages.TryTake(out age, _waitForDocTimeout));
                         Assert.Equal(30, age);
 
-                        Assert.True(ages.TryTake(out age, waitForDocTimeout));
+                        Assert.True(ages.TryTake(out age, _waitForDocTimeout));
                         Assert.Equal(29, age);
 
-                        Assert.True(ages.TryTake(out age, waitForDocTimeout));
+                        Assert.True(ages.TryTake(out age, _waitForDocTimeout));
                         Assert.Equal(34, age);
                     }
                 }
@@ -258,13 +256,13 @@ namespace FastTests.Client.Subscriptions
                 }))
                 {
 
-                    var docs = new BlockingCollection<RavenJObject>();
+                    var docs = new BlockingCollection<dynamic>();
 
                     subscription.Subscribe(o => docs.Add(o));
 
                     await subscription.StartAsync();
 
-                    RavenJObject item;
+                    dynamic item;
                     var tryTake = docs.TryTake(out item, TimeSpan.FromMilliseconds(250));
                     Assert.False(tryTake);
                 }
