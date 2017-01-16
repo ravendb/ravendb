@@ -17,7 +17,6 @@ namespace Raven.NewClient.Client.Commands
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/subscriptions?id={_id}";
-            IsReadRequest = false;
 
             var request = new HttpRequestMessage
             {
@@ -35,5 +34,7 @@ namespace Raven.NewClient.Client.Commands
             }
             Result = JsonDeserializationClient.CreateSubscriptionResult(response);
         }
+
+        public override bool IsReadRequest => false;
     }
 }

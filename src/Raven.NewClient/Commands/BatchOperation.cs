@@ -38,7 +38,6 @@ namespace Raven.NewClient.Client.Commands
                 Commands = result.Commands,
                 Context = _session.Context,
                 Options = result?.Options,
-                IsReadRequest = false
             };
         }
 

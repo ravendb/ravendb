@@ -10,7 +10,7 @@ namespace Raven.Abstractions.Data
     /// </summary>
     public class SuggestionQuery
     {
-        public static float DefaultAccuracy = 0.5f;
+        public static double DefaultAccuracy = 0.5;
 
         public static int DefaultMaxSuggestions = 15;
 

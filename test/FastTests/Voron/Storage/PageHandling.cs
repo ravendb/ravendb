@@ -15,7 +15,8 @@ namespace FastTests.Voron.Storage
             long pageNumber;
             using (var tx = Env.WriteTransaction())
             {
-                var page = tx.LowLevelTransaction.AllocateOverflowRawPage(16000);
+                int _;
+                var page = tx.LowLevelTransaction.AllocateOverflowRawPage(16000, out _);
                 page.DataPointer[15999] = 255;
 
                 pageNumber = page.PageNumber;
@@ -49,7 +50,8 @@ namespace FastTests.Voron.Storage
         {
             using (var tx = Env.WriteTransaction())
             {
-                var allocatedPage = tx.LowLevelTransaction.AllocateOverflowRawPage(16000);
+                int _;
+                var allocatedPage = tx.LowLevelTransaction.AllocateOverflowRawPage(16000, out _);
                 Memory.SetInline(allocatedPage.DataPointer, 0xFF, 16000);
 
                 long pageNumber = allocatedPage.PageNumber;
@@ -76,7 +78,8 @@ namespace FastTests.Voron.Storage
             long pageNumber;
             using (var tx = Env.WriteTransaction())
             {
-                var page = tx.LowLevelTransaction.AllocateOverflowRawPage(16000);
+                int _;
+                var page = tx.LowLevelTransaction.AllocateOverflowRawPage(16000, out _);
                 pageNumber = page.PageNumber;
 
                 var r1 = tx.LowLevelTransaction.GetPage(pageNumber);

@@ -6,14 +6,14 @@ using Raven.NewClient.Abstractions.Data;
 
 namespace Raven.NewClient.Client.Data.Queries
 {
-    public class MoreLikeThisQuery //: MoreLikeThisQuery<Dictionary<string, RavenJToken>>
+    public class MoreLikeThisQuery : MoreLikeThisQuery<Dictionary<string, object>>
     {
-        /*protected override void CreateRequestUri(StringBuilder uri)
+        protected override void CreateRequestUri(StringBuilder uri)
         {
             base.CreateRequestUri(uri);
 
             TransformerParameters.ApplyIfNotNull(tp => uri.AppendFormat("&tp-{0}={1}", tp.Key, tp.Value));
-        }*/
+        }
     }
 
     public abstract class MoreLikeThisQuery<T>

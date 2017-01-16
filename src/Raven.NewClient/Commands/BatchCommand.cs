@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
-using System.Runtime.InteropServices.ComTypes;
 using System.Text;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Json;
 using Sparrow.Json;
@@ -11,7 +11,7 @@ using Raven.NewClient.Client.Http;
 
 namespace Raven.NewClient.Client.Commands
 {
-    public class BatchCommand : RavenCommand<BlittableArrayResult>
+    public class BatchCommand : RavenCommand<BlittableArrayResult>, IDisposable
     {
         public JsonOperationContext Context;
         public List<DynamicJsonValue> Commands;
@@ -44,9 +44,6 @@ namespace Raven.NewClient.Client.Commands
             var sb = new StringBuilder($"{node.Url}/databases/{node.Database}/bulk_docs");
 
             AppendOptions(sb);
-
-
-            IsReadRequest = false;
 
             url = sb.ToString();
 
@@ -97,6 +94,17 @@ namespace Raven.NewClient.Client.Commands
                         sb.Append("&waitForSpecificIndexs=").Append(specificIndex);
                     }
                 }
+            }
+        }
+
+        public override bool IsReadRequest => false;
+
+        public void Dispose()
+        {
+            foreach (var cmd in Commands)
+            {
+                var disposable = cmd[Constants.Command.Document] as IDisposable;
+                disposable?.Dispose();
             }
         }
     }

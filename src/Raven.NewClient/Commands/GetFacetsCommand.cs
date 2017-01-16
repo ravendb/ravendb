@@ -24,6 +24,7 @@ namespace Raven.NewClient.Client.Commands
             if (string.IsNullOrWhiteSpace(Query.FacetSetupDoc) == false && Query.Facets != null && Query.Facets.Count > 0)
                 throw new InvalidOperationException($"You cannot specify both '{nameof(FacetQuery.FacetSetupDoc)}' and '{nameof(FacetQuery.Facets)}'.");
 
+            //TODO - EFRAT
             var method = Query.CalculateHttpMethod();
 
             var request = new HttpRequestMessage
@@ -56,5 +57,7 @@ namespace Raven.NewClient.Client.Commands
             
 
         }
+
+        public override bool IsReadRequest => true;
     }
 }

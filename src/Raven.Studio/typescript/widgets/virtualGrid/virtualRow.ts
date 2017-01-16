@@ -9,7 +9,7 @@ class VirtualRow {
     readonly element: JQuery;
     private _top = -9999;
     private _index = -1;
-    private even = true;
+    private even: boolean | null = null;
 
     public static readonly height = 36;
 
@@ -65,10 +65,15 @@ class VirtualRow {
             }
 
             // Update the "even" status. Used for striping the virtual rows.
-            const hasChangedEven = this.even !== (rowIndex % 2 === 0);
+            const newEvenState = rowIndex % 2 === 0;
+            const hasChangedEven = this.even !== newEvenState;
             if (hasChangedEven) {
-                this.element.toggleClass("even");
-                this.even = !this.even;
+                this.even = newEvenState;
+                if (this.even) {
+                    this.element.addClass("even");
+                } else {
+                    this.element.removeClass("even");
+                }
             }
 
             // Move it to its proper position.
@@ -82,7 +87,7 @@ class VirtualRow {
         this.isItemSelected = false;
         this.setElementTop(-9999);
         this._index = -1;
-        this.even = true;
+        this.even = null;
         this.element.text("");
     }
 

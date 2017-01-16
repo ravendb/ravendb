@@ -1,5 +1,5 @@
-using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace Sparrow.Json.Parsing
 {
@@ -14,25 +14,28 @@ namespace Sparrow.Json.Parsing
 
         public readonly List<int> EscapePositions = new List<int>();
 
-        public static readonly char[] EscapeChars = { '\b', '\t', '\r', '\n', '\f', '\\', '"', };
-    
+        public static readonly char[] EscapeChars = { '\b', '\t', '\r', '\n', '\f', '\\', '"' };
+        public static readonly byte[] EscapeCharsAsBytes = { (byte)'\b', (byte)'\t', (byte)'\r', (byte)'\n', (byte)'\f', (byte)'\\', (byte)'"' };
+
+
         public int GetEscapePositionsSize()
         {
             return GetEscapePositionsSize(EscapePositions);
         }
 
-        public static int GetEscapePositionsSize(List<int> escapePosiitons)
+        public static int GetEscapePositionsSize(List<int> escapePositions)
         {
-            int size = VariableSizeIntSize(escapePosiitons.Count);
-            // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (int pos in escapePosiitons)
+            int size = VariableSizeIntSize(escapePositions.Count);
+
+            // PERF: Using a for in this way will evict the bounds-check and also avoid the cost of using an struct enumerator. 
+            for (int i = 0; i < escapePositions.Count; i++)
             {
-                size += VariableSizeIntSize(pos);
+                size += VariableSizeIntSize(escapePositions[i]);
             }
             return size;
         }
 
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteVariableSizeInt(ref byte* dest, int value)
         {
             // assume that we don't use negative values very often
@@ -45,6 +48,7 @@ namespace Sparrow.Json.Parsing
             *dest++ = (byte)(v);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int VariableSizeIntSize(int value)
         {
             int count = 0;
@@ -59,27 +63,60 @@ namespace Sparrow.Json.Parsing
             return count;
         }
 
-        public void FindEscapePositionsIn(string str)
+        public int FindEscapePositionsMaxSize(string str)
         {
-            EscapePositions.Clear();
+            var count = 0;
             var lastEscape = 0;
             while (true)
             {
                 var curEscape = str.IndexOfAny(EscapeChars, lastEscape);
                 if (curEscape == -1)
                     break;
-                EscapePositions.Add(curEscape - lastEscape);
+
+                count++;
                 lastEscape = curEscape + 1;
+            }
+
+            // we take 5 because that is the max number of bytes for variable size int
+            // plus 1 for the actual number of positions
+
+            // NOTE: this is used by FindEscapePositionsIn, change only if you also modify FindEscapePositionsIn
+            return (count + 1) * 5; 
+        }
+
+        public void FindEscapePositionsIn(byte* str, int len, int previousComputedMaxSize)
+        {
+            EscapePositions.Clear();
+            if (previousComputedMaxSize == 5)
+            {
+                // if the value is 5, then we got no escape positions, see: FindEscapePositionsMaxSize
+                // and we don't have to do any work
+                return;
+            }
+            var lastEscape = 0;
+            for (int i = 0; i < len; i++)
+            {
+                for (int j = 0; j < EscapeCharsAsBytes.Length; j++)
+                {
+                    if (str[i] == EscapeCharsAsBytes[j])
+                    {
+                        EscapePositions.Add(i - lastEscape);
+                        lastEscape = i + 1;
+                        break;
+                    }
+                }
             }
         }
 
         public void WriteEscapePositionsTo(byte* buffer)
         {
-            WriteVariableSizeInt(ref buffer, EscapePositions.Count);
-            foreach (int pos in EscapePositions)
-            {
-                WriteVariableSizeInt(ref buffer, pos);
-            }
+            var escapePositions = EscapePositions;
+
+            WriteVariableSizeInt(ref buffer, escapePositions.Count);
+
+            // PERF: Using a for in this way will evict the bounds-check and also avoid the cost of using an struct enumerator. 
+            for (int i = 0; i < escapePositions.Count; i++)
+                WriteVariableSizeInt(ref buffer, escapePositions[i]);
         }
 
         public void Reset()

@@ -36,5 +36,7 @@ namespace Raven.NewClient.Client.Commands
 
             Result = JsonDeserializationClient.BlittableArrayResult(response);
         }
+
+        public override bool IsReadRequest => true;
     }
 }

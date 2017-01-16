@@ -385,7 +385,10 @@ namespace Raven.NewClient.Client.Linq
             }).ToArray();
 
             if (renamedFields.Length > 0)
+            {
+                result.AfterQueryExecuted(processor.RenameResults);
                 result.AfterStreamExecuted(processor.RenameSingleResult);
+            }
             return result;
         }
     }

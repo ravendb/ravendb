@@ -115,8 +115,10 @@ class extensions {
                 var interceptor = ko.computed({
                     read: underlyingObservable,
                     write: (value: any) => {
-                        if (!isNaN(value)) {
+                        if (value && !isNaN(value)) {
                             underlyingObservable(parseFloat(value));
+                        } else {
+                            underlyingObservable(undefined);
                         }
                     },
                     disposeWhenNodeIsRemoved: element

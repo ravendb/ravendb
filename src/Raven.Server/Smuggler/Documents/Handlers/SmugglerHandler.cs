@@ -6,7 +6,6 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -17,7 +16,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Jint;
-using Jint.Parser.Ast;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
@@ -52,7 +50,10 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     throw new InvalidOperationException($"{options.FileName} is Invalid File Name");
 
                 if (string.IsNullOrEmpty(options?.TransformScript))
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
                     return;
+                }
 
                 try
                 {
@@ -82,7 +83,6 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         {
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
-            using (context.OpenReadTransaction())
             {
                 var operationId = GetIntValueQueryString("operationId", required: false);
 
@@ -91,10 +91,9 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var blittableJson = await context.ReadForMemoryAsync(stream, "DownloadOptions");
                 var options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
 
-                var exporter = new SmugglerExporter(Database, options);
                 var token = CreateOperationToken();
 
-                var fileName = exporter.Options.FileName;
+                var fileName = options.FileName;
                 if (string.IsNullOrEmpty(fileName))
                 {
                     fileName = $"Dump of {context.DocumentDatabase.Name} {SystemTime.UtcNow.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)}";
@@ -108,11 +107,10 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     try
                     {
                         await
-                            Database.Operations.AddOperation("Export database: " + Database.Name,
+                            Database.Operations.AddOperation(
+                                "Export database: " + Database.Name,
                                 DatabaseOperations.PendingOperationType.DatabaseExport,
-                                onProgress =>
-                                    Task.Run(() => ExportDatabaseInternal(context, exporter, onProgress, token),
-                                        token.Token), operationId.Value, token);
+                                onProgress => Task.Run(() => ExportDatabaseInternal(options, onProgress, context, token), token.Token), operationId.Value, token);
                     }
                     catch (Exception)
                     {
@@ -122,7 +120,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 }
                 else
                 {
-                    ExportDatabaseInternal(context, exporter, null, token);
+                    ExportDatabaseInternal(options, null, context, token);
                 }
             }
         }
@@ -142,11 +140,14 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             return new MemoryStream(Encoding.UTF8.GetBytes(value[0]));
         }
 
-        private IOperationResult ExportDatabaseInternal(DocumentsOperationContext context, SmugglerExporter exporter, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        private IOperationResult ExportDatabaseInternal(DatabaseSmugglerOptions options, Action<IOperationProgress> onProgress, JsonOperationContext context, OperationCancelToken token)
         {
             try
             {
-                return exporter.Export(context, ResponseBodyStream(), onProgress);
+                var source = new DatabaseSource(Database, 0, 0);
+                var destination = new StreamDestination(ResponseBodyStream(), context);
+                var smuggler = new DatabaseSmuggler(source, destination, Database.Time, options, onProgress: onProgress);
+                return smuggler.Execute();
             }
             finally
             {
@@ -157,8 +158,6 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         [RavenAction("/databases/*/smuggler/import-s3-dir", "GET")]
         public async Task PostImportFromS3Directory()
         {
-            var sp = Stopwatch.StartNew();
-
             var url = GetQueryStringValueAndAssertIfSingleAndNotEmpty("url");
             using (var httpClient = new HttpClient())
             {
@@ -179,28 +178,28 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                 var files = new BlockingCollection<Func<Task<Stream>>>(new ConcurrentQueue<Func<Task<Stream>>>(urls));
                 files.CompleteAdding();
-                await BulkImport(files, sp, Path.GetTempPath());
+                await BulkImport(files, Path.GetTempPath());
             }
         }
 
         [RavenAction("/databases/*/smuggler/import-dir", "GET")]
         public async Task PostImportDirectory()
         {
-            var sp = Stopwatch.StartNew();
-
             var directory = GetQueryStringValueAndAssertIfSingleAndNotEmpty("dir");
             var files = new BlockingCollection<Func<Task<Stream>>>(new ConcurrentQueue<Func<Task<Stream>>>(
                     Directory.GetFiles(directory, "*.dump")
                         .Select(x => (Func<Task<Stream>>)(() => Task.FromResult<Stream>(File.OpenRead(x)))))
             );
             files.CompleteAdding();
-            await BulkImport(files, sp, directory);
+            await BulkImport(files, directory);
         }
 
-        private async Task BulkImport(BlockingCollection<Func<Task<Stream>>> files, Stopwatch sp, string directory)
+        private async Task BulkImport(BlockingCollection<Func<Task<Stream>>> files, string directory)
         {
-            var results = new ConcurrentQueue<ImportResult>();
+            var results = new ConcurrentQueue<SmugglerResult>();
             var tasks = new Task[Environment.ProcessorCount];
+
+            var finalResult = new SmugglerResult();
 
             for (int i = 0; i < tasks.Length; i++)
             {
@@ -219,36 +218,53 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                             continue;
                         }
                         using (ContextPool.AllocateOperationContext(out context))
-                        using (Stream file = await getFile())
+                        using (var file = await getFile())
                         using (var stream = new GZipStream(file, CompressionMode.Decompress))
                         {
-                            var importer = new SmugglerImporter(Database);
-                            var result = await importer.Import(context, stream);
+                            var source = new StreamSource(stream, context);
+                            var destination = new DatabaseDestination(Database);
+
+                            var smuggler = new DatabaseSmuggler(source, destination, Database.Time);
+
+                            var result = smuggler.Execute();
                             results.Enqueue(result);
                         }
                     }
                 });
             }
-            await Task.WhenAll(tasks);
 
-            var finalResult = new ImportResult();
-            ImportResult importResult;
+            await Task.WhenAll(tasks);
+            
+            SmugglerResult importResult;
             while (results.TryDequeue(out importResult))
             {
-                finalResult.DocumentsCount += importResult.DocumentsCount;
-                finalResult.IdentitiesCount += importResult.IdentitiesCount;
-                finalResult.IndexesCount += importResult.IndexesCount;
-                finalResult.RevisionDocumentsCount += importResult.RevisionDocumentsCount;
-                finalResult.TransformersCount += importResult.TransformersCount;
-                finalResult.Warnings.AddRange(importResult.Warnings);
+                finalResult.Documents.SkippedCount += importResult.Documents.SkippedCount;
+                finalResult.Documents.ReadCount += importResult.Documents.ReadCount;
+                finalResult.Documents.ErroredCount += importResult.Documents.ErroredCount;
+                finalResult.Documents.LastEtag = Math.Max(finalResult.Documents.LastEtag, importResult.Documents.LastEtag);
+
+                finalResult.RevisionDocuments.ReadCount += importResult.RevisionDocuments.ReadCount;
+                finalResult.RevisionDocuments.ErroredCount += importResult.RevisionDocuments.ErroredCount;
+                finalResult.RevisionDocuments.LastEtag = Math.Max(finalResult.RevisionDocuments.LastEtag, importResult.RevisionDocuments.LastEtag);
+
+                finalResult.Identities.ReadCount += importResult.Identities.ReadCount;
+                finalResult.Identities.ErroredCount += importResult.Identities.ErroredCount;
+
+                finalResult.Transformers.ReadCount += importResult.Transformers.ReadCount;
+                finalResult.Transformers.ErroredCount += importResult.Transformers.ErroredCount;
+
+                finalResult.Indexes.ReadCount += importResult.Indexes.ReadCount;
+                finalResult.Indexes.ErroredCount += importResult.Indexes.ErroredCount;
+
+                foreach (var message in importResult.Messages)
+                    finalResult.AddMessage(message);
             }
-            sp.Stop();
 
             DocumentsOperationContext finalContext;
             using (ContextPool.AllocateOperationContext(out finalContext))
             {
                 var memoryStream = new MemoryStream();
-                WriteImportResult(finalContext, sp, finalResult, memoryStream);
+                WriteImportResult(finalContext, finalResult, memoryStream);
                 memoryStream.Position = 0;
                 try
                 {
@@ -265,8 +281,6 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 memoryStream.CopyTo(ResponseBodyStream());
             }
         }
-
-
 
         [RavenAction("/databases/*/smuggler/import", "GET")]
         public Task GetImport()
@@ -291,11 +305,14 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 using (tuple.Item2)
                 using (var stream = new GZipStream(tuple.Item1, CompressionMode.Decompress))
                 {
-                    var sp = Stopwatch.StartNew();
-                    var importer = new SmugglerImporter(Database, options);
-                    var result = await importer.Import(context, stream);
-                    sp.Stop();
-                    WriteImportResult(context, sp, result, ResponseBodyStream());
+                    var source = new StreamSource(stream, context);
+                    var destination = new DatabaseDestination(Database);
+
+                    var smuggler = new DatabaseSmuggler(source, destination, Database.Time, options);
+
+                    var result = smuggler.Execute();
+
+                    WriteImportResult(context, result, ResponseBodyStream());
                 }
             }
         }
@@ -320,11 +337,10 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     }
                 }
 
-                var operationId = GetLongQueryString("operationId", required: true) ?? -1;
+                var operationId = GetLongQueryString("operationId") ?? -1;
                 var token = CreateOperationToken();
-                var sp = Stopwatch.StartNew();
 
-                var result = new ImportResult();
+                var result = new SmugglerResult();
                 await Database.Operations.AddOperation("Import to: " + Database.Name,
                     DatabaseOperations.PendingOperationType.DatabaseImport,
                     onProgress =>
@@ -337,7 +353,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                     MediaTypeHeaderValue.Parse(HttpContext.Request.ContentType),
                                     MultipartRequestHelper.MultipartBoundaryLengthLimit);
                                 var reader = new MultipartReader(boundary, HttpContext.Request.Body);
-                                DatabaseSmugglerOptions smugglerOptions = null;
+                                DatabaseSmugglerOptions options = null;
 
                                 while (true)
                                 {
@@ -359,7 +375,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                             continue;
 
                                         var blittableJson = await context.ReadForMemoryAsync(section.Body, "importOptions");
-                                        smugglerOptions = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
+                                        options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
                                         continue;
                                     }
 
@@ -367,21 +383,12 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                         continue;
 
                                     var stream = new GZipStream(section.Body, CompressionMode.Decompress);
-                                    var fileImport =
-                                        await DoImportInternal(context, stream, smugglerOptions, onProgress).ConfigureAwait(false);
-                                    result.DocumentsCount += fileImport.DocumentsCount;
-                                    result.Warnings.AddRange(fileImport.Warnings);
-                                    result.IdentitiesCount += fileImport.IdentitiesCount;
-                                    result.Message = fileImport.Message;
-                                    result.RevisionDocumentsCount += fileImport.RevisionDocumentsCount;
-                                    result.IndexesCount += fileImport.IndexesCount;
-                                    result.TransformersCount += fileImport.TransformersCount;
+                                    DoImportInternal(context, stream, options, result, onProgress);
                                 }
                             }
                             catch (Exception e)
                             {
-                                result.Message = $"Error occured during export. Exception: {e.Message}";
-                                result.Exception = e.ToString();
+                                result.AddError($"Error occured during export. Exception: {e.Message}");
                                 throw;
                             }
 
@@ -389,25 +396,24 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                         });
                     }, operationId, token).ConfigureAwait(false);
 
-                WriteImportResult(context, sp, result, ResponseBodyStream());
+                WriteImportResult(context, result, ResponseBodyStream());
             }
         }
 
-        private async Task<ImportResult> DoImportInternal(DocumentsOperationContext context, Stream stream,
-            DatabaseSmugglerOptions smugglerOptions, Action<IOperationProgress> onProgress)
+        private void DoImportInternal(JsonOperationContext context, Stream stream, DatabaseSmugglerOptions options, SmugglerResult result, Action<IOperationProgress> onProgress)
         {
             try
             {
-                var importer = new SmugglerImporter(Database, smugglerOptions);
+                var source = new StreamSource(stream, context);
+                var destination = new DatabaseDestination(Database);
+                var smuggler = new DatabaseSmuggler(source, destination, Database.Time, options, result, onProgress);
 
-                return await importer.Import(context, stream, onProgress);
+                smuggler.Execute();
             }
             finally
             {
                 stream.Dispose();
-
             }
-
         }
 
         private async Task<Tuple<Stream, IDisposable>> GetImportStream()
@@ -429,13 +435,11 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         }
 
 
-        private void WriteImportResult(DocumentsOperationContext context, Stopwatch sp, ImportResult result, Stream stream)
+        private static void WriteImportResult(JsonOperationContext context, SmugglerResult result, Stream stream)
         {
             using (var writer = new BlittableJsonTextWriter(context, stream))
             {
                 var json = result.ToJson();
-                json["ElapsedMilliseconds"] = sp.ElapsedMilliseconds;
-                json["Elapsed"] = sp.Elapsed.ToString();
                 context.Write(writer, json);
             }
         }

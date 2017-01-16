@@ -25,7 +25,7 @@ namespace Raven.Server.Documents
 
             var buffer = context.GetNativeTempBuffer(
                 byteCount // this buffer is allocated to also serve the GetSliceFromUnicodeKey
-                + sizeof(char)*key.Length);
+                + sizeof(char) * key.Length);
 
 
             if (key.Length > 512)
@@ -38,12 +38,12 @@ namespace Raven.Server.Documents
                 if (ch > 127) // not ASCII, use slower mode
                     goto UnlikelyUnicode;
                 if ((ch >= 65) && (ch <= 90))
-                    buffer[i] = (byte) (ch | 0x20);
+                    buffer[i] = (byte)(ch | 0x20);
                 else
-                    buffer[i] = (byte) ch;
+                    buffer[i] = (byte)ch;
             }
 
-            return Slice.External(context.Allocator, buffer, (ushort) key.Length, out keySlice);
+            return Slice.External(context.Allocator, buffer, (ushort)key.Length, out keySlice);
 
             UnlikelyUnicode:
             return GetSliceFromUnicodeKey(context, key, out keySlice, buffer, byteCount);
@@ -58,25 +58,25 @@ namespace Raven.Server.Documents
         {
             fixed (char* pChars = key)
             {
-                var destChars = (char*) buffer;
+                var destChars = (char*)buffer;
                 for (var i = 0; i < key.Length; i++)
                     destChars[i] = char.ToLowerInvariant(pChars[i]);
 
-                var keyBytes = buffer + key.Length*sizeof(char);
+                var keyBytes = buffer + key.Length * sizeof(char);
 
                 var size = Utf8.GetBytes(destChars, key.Length, keyBytes, byteCount);
 
                 if (size > 512)
                     ThrowKeyTooBig(key);
 
-                return Slice.External(context.Allocator, keyBytes, (ushort) size, out keySlice);
+                return Slice.External(context.Allocator, keyBytes, (ushort)size, out keySlice);
             }
         }
 
 
         public static void GetLowerKeySliceAndStorageKey(JsonOperationContext context, string str, out byte* lowerKey,
             out int lowerSize,
-            out byte* key, 
+            out byte* key,
             out int keySize)
         {
             // Because we need to also store escape positions for the key when we store it
@@ -98,24 +98,33 @@ namespace Raven.Server.Documents
             _jsonParserState.Reset();
 
             keySize = JsonParserState.VariableSizeIntSize(str.Length);
-            _jsonParserState.FindEscapePositionsIn(str);
-            var escapePositionsSize = _jsonParserState.GetEscapePositionsSize();
+
+            int escapePositionsSize = _jsonParserState.FindEscapePositionsMaxSize(str);
+
             var buffer = context.GetNativeTempBuffer(
                 str.Length // lower key
                 + keySize // the size of var int for the len of the key
                 + str.Length // actual key
                 + escapePositionsSize);
+
+            fixed (char* pChars = str)
+            {
+                int size = Encoding.UTF8.GetMaxByteCount(str.Length);
+                var strSize = Encoding.UTF8.GetBytes(pChars, str.Length, buffer, size);
+                _jsonParserState.FindEscapePositionsIn(buffer, strSize, escapePositionsSize);
+            }
+
             for (var i = 0; i < str.Length; i++)
             {
                 var ch = str[i];
                 if (ch > 127) // not ASCII, use slower mode
                     goto UnlikelyUnicode;
                 if ((ch >= 65) && (ch <= 90))
-                    buffer[i] = (byte) (ch | 0x20);
+                    buffer[i] = (byte)(ch | 0x20);
                 else
-                    buffer[i] = (byte) ch;
+                    buffer[i] = (byte)ch;
 
-                buffer[i + keySize + str.Length] = (byte) ch;
+                buffer[i + keySize + str.Length] = (byte)ch;
             }
 
             var writePos = buffer + str.Length;
@@ -140,11 +149,12 @@ namespace Raven.Server.Documents
             // See comment in GetLowerKeySliceAndStorageKey for the format
             _jsonParserState.Reset();
             var byteCount = Utf8.GetMaxByteCount(str.Length);
-            _jsonParserState.FindEscapePositionsIn(str);
             var maxKeyLenSize = JsonParserState.VariableSizeIntSize(byteCount);
-            var escapePositionsSize = _jsonParserState.GetEscapePositionsSize();
+
+            int escapePositionsSize = _jsonParserState.FindEscapePositionsMaxSize(str);
+
             var buffer = context.GetNativeTempBuffer(
-                sizeof(char)*str.Length // for the lower calls
+                sizeof(char) * str.Length // for the lower calls
                 + byteCount // lower key
                 + maxKeyLenSize // the size of var int for the len of the key
                 + byteCount // actual key
@@ -152,18 +162,21 @@ namespace Raven.Server.Documents
 
             fixed (char* pChars = str)
             {
-                var destChars = (char*) buffer;
+                var size = Utf8.GetBytes(pChars, str.Length, buffer, byteCount);
+                _jsonParserState.FindEscapePositionsIn(buffer, size, escapePositionsSize);
+
+                var destChars = (char*)buffer;
                 for (var i = 0; i < str.Length; i++)
                     destChars[i] = char.ToLowerInvariant(pChars[i]);
 
-                lowerKey = buffer + str.Length*sizeof(char);
+                lowerKey = buffer + str.Length * sizeof(char);
 
                 lowerSize = Utf8.GetBytes(destChars, str.Length, lowerKey, byteCount);
 
                 if (lowerSize > 512)
                     ThrowKeyTooBig(str);
 
-                key = buffer + str.Length*sizeof(char) + byteCount;
+                key = buffer + str.Length * sizeof(char) + byteCount;
                 var writePos = key;
                 keySize = Utf8.GetBytes(pChars, str.Length, writePos + maxKeyLenSize, byteCount);
 

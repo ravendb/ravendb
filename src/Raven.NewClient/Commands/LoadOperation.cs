@@ -15,14 +15,15 @@ namespace Raven.NewClient.Client.Commands
         private string[] _ids;
         private string[] _includes;
         private readonly List<string> _idsToCheckOnServer = new List<string>();
-
-        public LoadOperation(InMemoryDocumentSessionOperations session, string[] ids = null, string[] includes = null)
+        private bool _withoutIds;
+        public LoadOperation(InMemoryDocumentSessionOperations session, string[] ids = null, string[] includes = null, bool withoutIds = false)
         {
             _session = session;
             if (ids != null)
                 _ids = ids;
             if (includes != null)
                 _includes = includes;
+            _withoutIds = withoutIds;
         }
 
         public GetDocumentCommand CreateRequest()
@@ -110,12 +111,17 @@ namespace Raven.NewClient.Client.Commands
 
         public void SetResult(GetDocumentResult result)
         {
+            var ids = new List<string>();
+            var includes = new List<string>();
             if (result.Includes != null)
             {
                 foreach (BlittableJsonReaderObject include in result.Includes)
                 {
                     var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(include);
                     _session.includedDocumentsByKey[newDocumentInfo.Id] = newDocumentInfo;
+                    if(_withoutIds)
+                        includes.Add(newDocumentInfo.Id);
+
                 }
             }
 
@@ -123,6 +129,13 @@ namespace Raven.NewClient.Client.Commands
             {
                 var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(document);
                 _session.DocumentsById[newDocumentInfo.Id] = newDocumentInfo;
+                if (_withoutIds)
+                    ids.Add(newDocumentInfo.Id);
+            }
+            if (_withoutIds)
+            {
+                _ids = ids.ToArray();
+                _includes = includes.ToArray();
             }
 
             if (_includes != null && _includes.Length > 0)

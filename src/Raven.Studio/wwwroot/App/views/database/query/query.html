@@ -48,7 +48,7 @@
 
     <div class="btn-toolbar" role="toolbar">
         <div class="btn-group">
-            <button class="btn btn-primary" title="Run the query (Alt+R)" data-bind="enable: hasSelectedIndex, click: runQuery"><i class="fa fa-play"></i></button>
+            <button class="btn btn-primary" title="Run the query (Alt+R)" data-bind="enable: hasSelectedIndex, click: runQuery"><i class="icon-query"></i></button>
             <button class="btn btn-default" data-bind="enable: hasSelectedIndex, click: toggleCacheEnable, attr: { title:isCacheDisable() ? 'Enable Cache' : 'Disable Cache' }" style="display: none"> <!-- TODO: hidden for prerelease -->
                 <span data-bind="text: isCacheDisable() ? 'Cache Disabled' : 'Cache Enabled'"></span>
             </button>
@@ -56,7 +56,7 @@
         <div class="btn-group">
             <div class="btn-group">
                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Add a transformer or sorting option to the query (Alt+A)" accesskey="A" data-trigger="hover" data-placement="bottom" data-bind="enable: hasSelectedIndex">
-                    <i class="fa fa-plus"></i> Add <span class="caret"></span>
+                    <i class="icon-plus"></i> Add <span class="caret"></span>
                 </button>
                 <ul class="dropdown-menu" role="menu">
                     <li data-bind="visible: selectedIndex() !== 'All Documents'"><a href="#" data-bind="click: addSortBy" accesskey="O" title="Add a field to sort by (Alt+O)">Sort By</a></li>
@@ -65,7 +65,7 @@
             </div>
             <div class="btn-group">
                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Configure advanced query options" data-bind="enable: hasSelectedIndex">
-                    <i class="fa fa-cog"></i> <span class="caret"></span>
+                    Configure <span class="caret"></span>
                 </button>
                 <ul class="dropdown-menu" role="menu">
                     <li style="padding-left: 20px;">
@@ -78,19 +78,19 @@
                     <li><a href="#"><label class="btn btn-default" data-bind="click: toggleIndexEntries, css: { active: indexEntries }" title="Show the raw index entries instead of matching documents">Index Entries</label></a></li>
                 </ul>
             </div>
-            <a class="btn btn-default" data-bind="attr: { href: editIndexUrl }, visible: hasEditableIndex" title="Edit the index (F2)"><i class="fa fa-pencil"></i></a>
+            <a class="btn btn-default" data-bind="attr: { href: editIndexUrl }, visible: hasEditableIndex" title="Edit the index (F2)"><i class="icon-edit"></i></a>
             <button type="button" class="btn btn-default" data-bind="click: selectColumns" title="Choose columns...">
                 <i class="fa fa-table"></i>
             </button>
             <!-- TODO: visible: isStaticIndexSelected-->
             <button data-bind="visible: false, click: exportCsv" class="btn btn-default" title="Export CSV">
-                <i class="fa fa-file-excel-o"></i>
+                Export csv
             </button>
             <a class="btn btn-default" data-bind="attr: { href: visualizerUrl }, visible: isIndexMapReduce" title="Map-Reduce visualizer">
-                <i class="fa fa-sitemap"></i>
+                <i class="icon-map-reduce-visualizer"></i>
             </a>
             <a class="btn btn-default" data-bind="attr: { href: indexPerfStatsUrl }" title="Indexing performance statistics">
-                <i class="fa fa-line-chart" />
+                <i class="icon-index-batch-size" />
             </a>
         </div>
         <div class="btn-group">
@@ -136,8 +136,8 @@
         </div>
 
         <div class="btn-group" title="Delete all documents matching the query (map index only)">
-            <button class=" btn btn-danger" data-bind="enable: enableDeleteButton, click: deleteDocsMatchingQuery">
-                <i class="fa fa-trash-o"></i>
+            <button class="btn btn-danger" data-bind="enable: enableDeleteButton, click: deleteDocsMatchingQuery">
+                <i class="icon-trash"></i>
             </button>
         </div>
     </div>

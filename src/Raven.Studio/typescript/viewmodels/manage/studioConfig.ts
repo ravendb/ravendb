@@ -3,12 +3,12 @@ import database = require("models/resources/database");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import appUrl = require("common/appUrl");
 import documentClass = require("models/database/documents/document");
-import serverBuildReminder = require("common/serverBuildReminder");
+import serverBuildReminder = require("common/storage/serverBuildReminder");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import environmentColor = require("models/resources/environmentColor");
 import shell = require("viewmodels/shell");
 import accessHelper = require("viewmodels/shell/accessHelper");
-import numberFormattingStorage = require("common/numberFormattingStorage");
+import numberFormattingStorage = require("common/storage/numberFormattingStorage");
 import eventsCollector = require("common/eventsCollector");
 
 class studioConfig extends viewModelBase {

@@ -66,23 +66,28 @@ namespace FastTests.Server.Documents.Queries
         }
 
         [Fact]
-        public async Task Throws_if_exceeds_timeout()
+        public void Throws_if_exceeds_timeout()
         {
             using (var store = GetDocumentStore())
             {
                 store.DatabaseCommands.Admin.StopIndexing();
 
-                using (var session = store.OpenAsyncSession())
+                using (var session = store.OpenSession())
                 {
-                    await session.StoreAsync(new Address());
-                    await session.StoreAsync(new Address());
+                    session.Store(new Address());
+                    session.Store(new Address());
 
-                    await session.SaveChangesAsync();
+                    session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    Assert.Throws<TimeoutException>(() => session.Query<Address>().Customize(x => x.WaitForNonStaleResultsAsOfNow(TimeSpan.FromSeconds(1))).OrderBy(x => x.City).ToList());
+                    Assert.Throws<TimeoutException>(() =>
+                        session.Query<Address>()
+                        .Customize(x => x.WaitForNonStaleResultsAsOfNow(TimeSpan.FromMilliseconds(1)))
+                        .OrderBy(x => x.City)
+                        .ToList()
+                    );
                 }
             }
         }

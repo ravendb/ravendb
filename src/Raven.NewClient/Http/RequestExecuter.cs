@@ -10,8 +10,6 @@ using System.Net.Http.Headers;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml;
-using Newtonsoft.Json;
 using Raven.NewClient.Abstractions.Connection;
 using Raven.NewClient.Client.Connection;
 using Sparrow.Json;
@@ -20,7 +18,6 @@ using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Exceptions;
 using Sparrow.Logging;
-using Raven.NewClient.Client.Connection;
 
 namespace Raven.NewClient.Client.Http
 {
@@ -136,7 +133,7 @@ namespace Raven.NewClient.Client.Http
         {
             var choosenNode = ChooseNodeForRequest(command);
 
-            await ExecuteAsync(choosenNode, context, command, token);
+            await ExecuteAsync(choosenNode, context, command, token).ConfigureAwait(false);
         }
 
         public async Task ExecuteAsync<TResult>(ChoosenNode choosenNode, JsonOperationContext context, RavenCommand<TResult> command, CancellationToken token = default(CancellationToken))
@@ -195,14 +192,14 @@ namespace Raven.NewClient.Client.Http
                 }
                 if (response.IsSuccessStatusCode == false)
                 {
-                    if (await HandleUnsuccessfulResponse(choosenNode, context, command, response, url))
+                    if (await HandleUnsuccessfulResponse(choosenNode, context, command, response, url).ConfigureAwait(false))
                         return;
                 }
 
                 if (response.Content.Headers.ContentLength.HasValue && response.Content.Headers.ContentLength == 0)
                     return;
 
-                await command.ProcessResponse(context, _cache, response, url);
+                await command.ProcessResponse(context, _cache, response, url).ConfigureAwait(false);
             }
         }
 
@@ -242,7 +239,10 @@ namespace Raven.NewClient.Client.Http
             switch (response.StatusCode)
             {
                 case HttpStatusCode.NotFound:
-                    command.SetResponse(null);
+                    if (command.ResponseType == RavenCommandResponseType.Object)
+                        command.SetResponse((BlittableJsonReaderObject)null);
+                    else
+                        command.SetResponse((BlittableJsonReaderArray)null);
                     return true;
                 case HttpStatusCode.Unauthorized:
                 case HttpStatusCode.PreconditionFailed:

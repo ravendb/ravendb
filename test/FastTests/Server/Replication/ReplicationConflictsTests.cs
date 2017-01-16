@@ -303,7 +303,7 @@ namespace FastTests.Server.Replication
         //TODO: this probably needs to be refactored when operations related functionality is finished
         protected async Task AssertOperationFaultsAsync(DocumentStore store, int operationId)
         {
-            var url = $"{store.Url}/databases/{store.DefaultDatabase}/operations/status?id={operationId}";
+            var url = $"{store.Url}/databases/{store.DefaultDatabase}/operations/state?id={operationId}";
             var sw = Stopwatch.StartNew();
             RavenJToken response = null;
             while (sw.ElapsedMilliseconds < 10000 || response?.Value<string>("Status") != "Faulted")

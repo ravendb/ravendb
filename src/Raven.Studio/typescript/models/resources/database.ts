@@ -4,12 +4,6 @@ import resource = require("models/resources/resource");
 import license = require("models/auth/license");
 
 class database extends resource {
-    //TODO: remove local storage name props from this class
-    recentQueriesLocalStorageName: string;
-    recentPatchesLocalStorageName: string;
-    mergedIndexLocalStoragePrefix: string;
-    starredDocumentsLocalStorageName: string;
-
     static readonly type = "database";
     static readonly qualifier = "db";
 
@@ -29,10 +23,7 @@ class database extends resource {
             return true;
         });*/
         const dbName = dbInfo.Name;
-        this.recentQueriesLocalStorageName = "ravenDB-recentQueries." + dbName;
-        this.recentPatchesLocalStorageName = "ravenDB-recentPatches." + dbName;
-        this.mergedIndexLocalStoragePrefix = "ravenDB-mergedIndex." + dbName;
-        this.starredDocumentsLocalStorageName = "ravenDB-starredDocuments." + dbName;
+        
     }
 
     private attributeValue(attributes: any, bundleName: string) {

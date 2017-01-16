@@ -34,7 +34,7 @@ namespace Raven.NewClient.Client.Document
     /// </summary>
     public abstract class InMemoryDocumentSessionOperations : IDisposable
     {
-        private readonly RequestExecuter _requestExecuter;
+        protected readonly RequestExecuter _requestExecuter;
         private readonly IDisposable _releaseOperationContext;
         private readonly JsonOperationContext _context;
         private static readonly ILog log = LogManager.GetLogger(typeof(InMemoryDocumentSessionOperations));
@@ -84,7 +84,7 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         protected internal readonly Dictionary<object, DocumentInfo> DocumentsByEntity = new Dictionary<object, DocumentInfo>(ObjectReferenceEqualityComparer<object>.Default);
 
-        private readonly DocumentStoreBase _documentStore;
+        protected readonly DocumentStoreBase _documentStore;
 
         public string DatabaseName { get; }
 
@@ -159,9 +159,9 @@ namespace Raven.NewClient.Client.Document
             Guid id)
         {
             Id = id;
-            this.DatabaseName = databaseName;
-            this._documentStore = documentStore;
-            this._requestExecuter = requestExecuter;
+            DatabaseName = databaseName;
+            _documentStore = documentStore;
+            _requestExecuter = requestExecuter;
             _releaseOperationContext = requestExecuter.ContextPool.AllocateOperationContext(out _context);
             UseOptimisticConcurrency = documentStore.Conventions.DefaultUseOptimisticConcurrency;
             MaxNumberOfRequestsPerSession = documentStore.Conventions.MaxNumberOfRequestsPerSession;

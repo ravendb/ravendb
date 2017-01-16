@@ -1,7 +1,7 @@
 using Raven.NewClient.Client.Commands;
+using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Document
 {
-    //TODO
-    public delegate bool AfterStreamExecutedDelegate(ref object document);
+    public delegate bool AfterStreamExecutedDelegate(BlittableJsonReaderObject document);
 }

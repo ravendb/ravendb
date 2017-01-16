@@ -24,12 +24,13 @@ class editTransformer extends viewModelBase {
     isSaveEnabled: KnockoutComputed<boolean>;
     loadedTransformerName = ko.observable<string>();
 
+    globalValidationGroup: KnockoutValidationGroup;
+
     constructor() {
         super();
 
         aceEditorBindingHandler.install();
         this.appUrls = appUrl.forCurrentDatabase();
-        this.transformerName = ko.computed(() => (!!this.editedTransformer() && this.isEditingExistingTransformer()) ? this.editedTransformer().name() : null);
     }
 
     canActivate(transformerToEditName: string): JQueryPromise<canActivateResultDto> {
@@ -57,8 +58,8 @@ class editTransformer extends viewModelBase {
             this.editedTransformer(transformer.empty());
         }
 
-        this.dirtyFlag = new ko.DirtyFlag([this.editedTransformer().name, this.editedTransformer().transformResults], false, jsonUtil.newLineNormalizingHashFunction);
-        this.isSaveEnabled = ko.computed(() => !!this.editedTransformer().name() && this.dirtyFlag().isDirty());
+        this.initializeObservables();
+        this.initValidation();
     }
 
     attached() {
@@ -98,27 +99,30 @@ class editTransformer extends viewModelBase {
     }
 
     saveTransformer() {
-        eventsCollector.default.reportEvent("transformer", "save");
 
-        if (this.isEditingExistingTransformer() && this.editedTransformer().nameChanged()) {
-            var db = this.activeDatabase();
-            var saveTransformerWithNewNameViewModel = new saveTransformerWithNewNameConfirm(this.editedTransformer(), db);
-            saveTransformerWithNewNameViewModel.saveTask.done(() => {
-                this.dirtyFlag().reset(); // Resync Changes
-                this.updateUrl(this.editedTransformer().name());
-            });
-            dialog.show(saveTransformerWithNewNameViewModel);
-        } else {
-            this.editedTransformer().name(this.editedTransformer().name().trim());
-            new saveTransformerCommand(this.editedTransformer(), this.activeDatabase())
-                .execute()
-                .done(() => {
-                    this.dirtyFlag().reset();
-                    if (!this.isEditingExistingTransformer()) {
-                        this.isEditingExistingTransformer(true);
-                        this.updateUrl(this.editedTransformer().name());
-                    }
+        if (this.isValid(this.globalValidationGroup)) {
+            eventsCollector.default.reportEvent("transformer", "save");
+
+            if (this.isEditingExistingTransformer() && this.editedTransformer().nameChanged()) {
+                var db = this.activeDatabase();
+                var saveTransformerWithNewNameViewModel = new saveTransformerWithNewNameConfirm(this.editedTransformer(), db);
+                saveTransformerWithNewNameViewModel.saveTask.done(() => {
+                    this.dirtyFlag().reset(); // Resync Changes
+                    this.updateUrl(this.editedTransformer().name());
                 });
+                dialog.show(saveTransformerWithNewNameViewModel);
+            } else {
+                this.editedTransformer().name(this.editedTransformer().name().trim());
+                new saveTransformerCommand(this.editedTransformer(), this.activeDatabase())
+                    .execute()
+                    .done(() => {
+                        this.dirtyFlag().reset();
+                        if (!this.isEditingExistingTransformer()) {
+                            this.isEditingExistingTransformer(true);
+                            this.updateUrl(this.editedTransformer().name());
+                        }
+                    });
+            }
         }
     }
 
@@ -133,9 +137,11 @@ class editTransformer extends viewModelBase {
         canContinue
             .done(() => {
                 var transformerName = this.loadedTransformerName();
-                this.fetchTransformerToEdit(transformerName)
-                    .always(() => this.dirtyFlag().reset())
-                    .done((trans: Raven.Abstractions.Indexing.TransformerDefinition) => this.editedTransformer(new transformer(trans)))
+                this.fetchTransformerToEdit(transformerName)                    
+                    .done((trans: Raven.Abstractions.Indexing.TransformerDefinition) => {
+                        this.editedTransformer(new transformer(trans));
+                        this.dirtyFlag().reset();
+                    })
                     .fail(() => {
                         messagePublisher.reportError("Could not find " + transformerName + " transformer");
                         this.navigate(appUrl.forTransformers(this.activeDatabase()));
@@ -173,6 +179,40 @@ class editTransformer extends viewModelBase {
             });
             dialog.show(deleteViewmodel);
         }
+    }
+
+    private initValidation() {
+        const rg1 = /^[^\\]*$/; // forbidden character - backslash
+        this.editedTransformer().name.extend({
+            required: true,
+            validation: [
+                {
+                    validator: (val: string) => rg1.test(val),
+                    message: "Can't use backslash in transformer name"
+                }]
+        });
+
+        this.editedTransformer().transformResults.extend({
+            required: true           
+        });
+    }
+
+    private initializeObservables() {
+
+        this.globalValidationGroup = ko.validatedObservable({
+            userTransformerName: this.editedTransformer().name,
+            userTransformerContent: this.editedTransformer().transformResults
+        });
+
+        this.transformerName = ko.computed(() => (!!this.editedTransformer() && this.isEditingExistingTransformer()) ? this.editedTransformer().name() : null);
+        this.dirtyFlag = new ko.DirtyFlag([this.editedTransformer().name, this.editedTransformer().transformResults], false, jsonUtil.newLineNormalizingHashFunction);
+        
+        this.isSaveEnabled = ko.pureComputed(() => {
+            if ((!this.dirtyFlag().isDirty()) && (this.isEditingExistingTransformer())) {
+                return false;
+            }
+            return true;
+        });  
     }
 }
 

@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Raven.Abstractions.Data;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
@@ -6,6 +9,26 @@ using Voron;
 
 namespace Raven.Server.Documents
 {
+    public class CollectionNameComparer : IEqualityComparer<CollectionName>
+    {
+        public static readonly CollectionNameComparer Instance = new CollectionNameComparer();
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Equals(CollectionName x, CollectionName y)
+        {
+            if (x == y) return true;
+            if (x == null || y == null) return false;
+            return string.Equals(x.Name, y.Name, StringComparison.OrdinalIgnoreCase);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int GetHashCode(CollectionName obj)
+        {
+            return obj.Name != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Name) : 0;
+        }
+    }
+
     public class CollectionName
     {
         public const string EmptyCollection = "@empty";

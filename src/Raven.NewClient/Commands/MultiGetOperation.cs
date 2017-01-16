@@ -29,7 +29,6 @@ namespace Raven.NewClient.Client.Commands
             {
                 GetCommands = requests,
                 Context = _session.Context,
-                IsReadRequest = false
             };
         }
 

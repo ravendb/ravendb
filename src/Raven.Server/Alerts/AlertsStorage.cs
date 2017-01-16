@@ -93,7 +93,7 @@ namespace Raven.Server.Alerts
             }
 
 
-            using (var id = context.GetLazyString(alertId))
+            var id = context.GetDiscardableLazyString(alertId);
             using (var json = context.ReadObject(alertAsJson, "Alert", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
             {
                 var tvb = new TableValueBuilder

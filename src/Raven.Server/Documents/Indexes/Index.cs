@@ -1573,7 +1573,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public virtual TermsQueryResult GetTerms(string field, string fromValue, int pageSize,
+        public virtual TermsQueryResultServerSide GetTerms(string field, string fromValue, int pageSize,
             DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             AssertIndexState();
@@ -1582,7 +1582,7 @@ namespace Raven.Server.Documents.Indexes
             using (_contextPool.AllocateOperationContext(out indexContext))
             using (var tx = indexContext.OpenReadTransaction())
             {
-                var result = new TermsQueryResult
+                var result = new TermsQueryResultServerSide
                 {
                     IndexName = Name,
                     ResultEtag =

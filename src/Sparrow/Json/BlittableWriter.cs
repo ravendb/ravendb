@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
-using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Sparrow.Compression;
 using Sparrow.Json.Parsing;
+
 using static Sparrow.Json.BlittableJsonDocumentBuilder;
 
 namespace Sparrow.Json
@@ -24,12 +25,18 @@ namespace Sparrow.Json
 
         private static readonly Encoding Utf8Encoding = Encoding.UTF8;
 
+        private AllocatedMemoryData _allocated;
+
+
         public unsafe BlittableJsonReaderObject CreateReader()
         {
             byte* ptr;
             int size;
             _unmanagedWriteBuffer.EnsureSingleChunk(out ptr, out size);
             var reader = new BlittableJsonReaderObject(ptr, size, _context, (UnmanagedWriteBuffer)(object)_unmanagedWriteBuffer);
+
+            //make sure to dispose the writer later, otherwise we might leave "hanging" reference
+            _context.RegisterForDispose(_unmanagedWriteBuffer);
             _unmanagedWriteBuffer = default(TWriter);
             return reader;
         }
@@ -115,8 +122,10 @@ namespace Sparrow.Json
             _unmanagedWriteBuffer.Dispose();
         }
 
-        public void Renew()
+        public void ResetAndRenew()
         {
+            Reset();
+
             _unmanagedWriteBuffer = (TWriter)(object)_context.GetStream();
             _position = 0;
         }
@@ -136,8 +145,10 @@ namespace Sparrow.Json
             _position += WriteVariableSizeInt(properties.Count);
 
             // Write object metadata
-            foreach (var sortedProperty in properties)
+            for (int i = 0; i < properties.Count; i++)
             {
+                var sortedProperty = properties[i];
+
                 WriteNumber(objectMetadataStart - sortedProperty.Position, positionSize);
                 WriteNumber(sortedProperty.PropertyId, propertyIdSize);
                 _unmanagedWriteBuffer.WriteByte(sortedProperty.Type);
@@ -205,11 +216,19 @@ namespace Sparrow.Json
 
         public int WritePropertyNames(int rootOffset)
         {
+            var cachedProperties = _context.CachedProperties;
+
             // Write the property names and register their positions
-            var propertyArrayOffset = new int[_context.CachedProperties.PropertiesDiscovered];
-            for (var index = 0; index < propertyArrayOffset.Length; index++)
+            var propertyArrayOffset = new int[cachedProperties.PropertiesDiscovered];
+
+            unsafe
             {
-                propertyArrayOffset[index] = WriteValue(_context.GetLazyStringForFieldWithCaching(_context.CachedProperties.GetProperty(index)));
+                BlittableJsonToken _;
+                for (var index = 0; index < propertyArrayOffset.Length; index++)
+                {
+                    var str = _context.GetLazyStringForFieldWithCaching(cachedProperties.GetProperty(index));
+                    propertyArrayOffset[index] = WriteValue(str.Buffer, str.Size, str.EscapePositions, out _, UsageMode.None, null);
+                }
             }
 
             // Register the position of the properties offsets start
@@ -223,10 +242,13 @@ namespace Sparrow.Json
             WriteNumber((int)propertiesSizeMetadata, sizeof(byte));
 
             // Write property names offsets
-            foreach (int offset in propertyArrayOffset)
+            // PERF: Using for to avoid the cost of the enumerator.
+            for (int i = 0; i < propertyArrayOffset.Length; i++)
             {
+                int offset = propertyArrayOffset[i];
                 WriteNumber(propertiesStart - offset, propertyArrayOffsetValueByteSize);
             }
+
             return propertiesStart;
         }
 
@@ -262,85 +284,121 @@ namespace Sparrow.Json
             }
             return positionSize;
         }
-      
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteNumber(int value, int sizeOfValue)
         {
-            switch (sizeOfValue)
+            // PERF: Instead of threw add this as a debug thing. We cannot afford this method not getting inlined.
+            Debug.Assert(sizeOfValue == sizeof(byte) || sizeOfValue == sizeof(short) || sizeOfValue == sizeof(int), $"Unsupported size {sizeOfValue}");
+
+            // PERF: With the current JIT at 12 of January of 2017 the switch statement dont get inlined.
+            if (sizeOfValue == sizeof(int))
             {
-                case sizeof(int):
-                    _unmanagedWriteBuffer.WriteByte((byte)value);
-                    _unmanagedWriteBuffer.WriteByte((byte)(value >> 8));
-                    _unmanagedWriteBuffer.WriteByte((byte)(value >> 16));
-                    _unmanagedWriteBuffer.WriteByte((byte)(value >> 24));
-                    break;
-                case sizeof(short):
-                    _unmanagedWriteBuffer.WriteByte((byte)value);
-                    _unmanagedWriteBuffer.WriteByte((byte)(value >> 8));
-                    break;
-                case sizeof(byte):
-                    _unmanagedWriteBuffer.WriteByte((byte)value);
-                    break;
-                default:
-                    throw new ArgumentException($"Unsupported size {sizeOfValue}");
+                _unmanagedWriteBuffer.WriteByte((byte)value);
+                _unmanagedWriteBuffer.WriteByte((byte)(value >> 8));
+                _unmanagedWriteBuffer.WriteByte((byte)(value >> 16));
+                _unmanagedWriteBuffer.WriteByte((byte)(value >> 24));
+            }
+            else if (sizeOfValue == sizeof(ushort))
+            {
+                _unmanagedWriteBuffer.WriteByte((byte) value);
+                _unmanagedWriteBuffer.WriteByte((byte) (value >> 8));
+            }
+            else
+            {
+                _unmanagedWriteBuffer.WriteByte((byte)value);
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe int WriteVariableSizeLong(long value)
         {
             // see zig zap trick here:
             // https://developers.google.com/protocol-buffers/docs/encoding?csw=1#types
             // for negative values
 
-            var buffer = stackalloc byte[10];
-            var count = 0;
-            var v = (ulong)((value << 1) ^ (value >> 63));
+            if (_allocated == null)
+                _allocated = _context.GetMemory(10);
+
+            byte* buffer = _allocated.Address;
+
+            int count = 0;
+            ulong v = (ulong)((value << 1) ^ (value >> 63));
             while (v >= 0x80)
             {
                 buffer[count++] = (byte)(v | 0x80);
                 v >>= 7;
             }
             buffer[count++] = (byte)(v);
-            _unmanagedWriteBuffer.Write(buffer, count);
+
+            if (count == 1)
+                _unmanagedWriteBuffer.WriteByte(*buffer);
+            else
+                _unmanagedWriteBuffer.Write(buffer, count);
+
             return count;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe int WriteVariableSizeInt(int value)
         {
-            // assume that we don't use negative values very often
-            var buffer = stackalloc byte[5];
-            var count = 0;
-            var v = (uint)value;
+            // assume that we don't use negative values very often            
+            if (_allocated == null)
+                _allocated = _context.GetMemory(10);
+
+            byte* buffer = _allocated.Address;
+
+            int count = 0;
+            uint v = (uint)value;
             while (v >= 0x80)
             {
                 buffer[count++] = (byte)(v | 0x80);
                 v >>= 7;
             }
             buffer[count++] = (byte)(v);
-            _unmanagedWriteBuffer.Write(buffer, count);
-            return count;
+
+            if (count == 1)
+                _unmanagedWriteBuffer.WriteByte(*buffer);
+            else
+                _unmanagedWriteBuffer.Write(buffer, count);
+
+            return count;            
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe int WriteVariableSizeIntInReverse(int value)
         {
             // assume that we don't use negative values very often
-            var buffer = stackalloc byte[5];
-            var count = 0;
-            var v = (uint)value;
+            if (_allocated == null)
+                _allocated = _context.GetMemory(10);
+
+            byte* buffer = _allocated.Address;
+
+            int count = 0;
+            uint v = (uint)value;
             while (v >= 0x80)
             {
                 buffer[count++] = (byte)(v | 0x80);
                 v >>= 7;
             }
             buffer[count++] = (byte)(v);
-            for (int i = count - 1; i >= count / 2; i--)
+
+            if (count == 1)
             {
-                var tmp = buffer[i];
-                buffer[i] = buffer[count - 1 - i];
-                buffer[count - 1 - i] = tmp;
+                _unmanagedWriteBuffer.WriteByte(*buffer);
             }
-            _unmanagedWriteBuffer.Write(buffer, count);
+            else
+            {
+                for (int i = count - 1; i >= count / 2; i--)
+                {
+                    var tmp = buffer[i];
+                    buffer[i] = buffer[count - 1 - i];
+                    buffer[count - 1 - i] = tmp;
+                }
+                _unmanagedWriteBuffer.Write(buffer, count);
+            }               
+
             return count;
         }
 
@@ -389,28 +447,110 @@ namespace Sparrow.Json
             return WriteValue(str.Buffer, str.Size,str.EscapePositions,out token, mode,initialCompressedSize);
         }
 
-        public unsafe int WriteValue(byte* buffer, int size, out BlittableJsonToken token,
-            UsageMode mode, int? initialCompressedSize)
+        public unsafe int WriteValue(byte* buffer, int size, out BlittableJsonToken token, UsageMode mode, int? initialCompressedSize)
         {
-            return WriteValue(buffer, size, null, out token, mode, initialCompressedSize);
+            int startPos = _position;
+            token = BlittableJsonToken.String;
+
+            _position += WriteVariableSizeInt(size);
+
+            // if we are more than this size, we want to abort the compression early and just use
+            // the verbatim string
+            int maxGoodCompressionSize = size - sizeof(int) * 2;
+            if (maxGoodCompressionSize > 0)
+            {
+                size = TryCompressValue(ref buffer, size, ref token, mode, initialCompressedSize, maxGoodCompressionSize);
+            }
+
+            _unmanagedWriteBuffer.Write(buffer, size);
+            _position += size;
+
+            _position += WriteVariableSizeInt(0);
+            return startPos;
         }
-        public unsafe int WriteValue(byte* buffer, int size, ICollection<int> escapePositions, out BlittableJsonToken token, UsageMode mode, int? initialCompressedSize)
+
+        public unsafe int WriteValue(byte* buffer, int size, List<int> escapePositions, out BlittableJsonToken token, UsageMode mode, int? initialCompressedSize)
         {
             var startPos = _position;
             token = BlittableJsonToken.String;
 
             _position += WriteVariableSizeInt(size);
-            
-            var maxGoodCompressionSize =
-                     // if we are more than this size, we want to abort the compression early and just use
-                     // the verbatim string
-                     size - sizeof(int) * 2;
-            var shouldCompress =
-                initialCompressedSize.HasValue ||
-                (((mode & UsageMode.CompressStrings) == UsageMode.CompressStrings) && (size > 128))
-                || ((mode & UsageMode.CompressSmallStrings) == UsageMode.CompressSmallStrings) && (size <= 128);
 
-            if (maxGoodCompressionSize > 0 && shouldCompress)
+            // if we are more than this size, we want to abort the compression early and just use
+            // the verbatim string
+            int maxGoodCompressionSize = size - sizeof(int) * 2;
+            if (maxGoodCompressionSize > 0)
+            {
+                size = TryCompressValue(ref buffer, size, ref token, mode, initialCompressedSize, maxGoodCompressionSize);
+            }
+
+            _unmanagedWriteBuffer.Write(buffer, size);
+            _position += size;
+
+            if (escapePositions == null)
+            {
+                _position += WriteVariableSizeInt(0);
+                return startPos;
+            }
+
+            // we write the number of the escape sequences required
+            // and then we write the distance to the _next_ escape sequence
+            _position += WriteVariableSizeInt(escapePositions.Count);
+
+            // PERF: Use indexer to avoid the allocation and overhead of the foreach. 
+            int count = escapePositions.Count;
+            for (int i = 0; i < count; i++)
+                _position += WriteVariableSizeInt(escapePositions[i]);
+
+            return startPos;
+        }
+
+        public unsafe int WriteValue(byte* buffer, int size, int[] escapePositions, out BlittableJsonToken token, UsageMode mode, int? initialCompressedSize)
+        {
+            var startPos = _position;
+            token = BlittableJsonToken.String;
+
+            _position += WriteVariableSizeInt(size);
+
+            // if we are more than this size, we want to abort the compression early and just use
+            // the verbatim string
+            int maxGoodCompressionSize = size - sizeof(int) * 2;
+            if (maxGoodCompressionSize > 0)
+            {
+                size = TryCompressValue(ref buffer, size, ref token, mode, initialCompressedSize, maxGoodCompressionSize);
+            }
+
+            _unmanagedWriteBuffer.Write(buffer, size);
+            _position += size;
+
+            if (escapePositions == null)
+            {
+                _position += WriteVariableSizeInt(0);
+                return startPos;
+            }
+
+            // we write the number of the escape sequences required
+            // and then we write the distance to the _next_ escape sequence
+            _position += WriteVariableSizeInt(escapePositions.Length);
+
+            // PERF: Use indexer to avoid the allocation and overhead of the foreach. 
+            int count = escapePositions.Length;
+            for (int i = 0; i < count; i++)
+                _position += WriteVariableSizeInt(escapePositions[i]);
+
+            return startPos;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private unsafe int TryCompressValue(ref byte* buffer, int size, ref BlittableJsonToken token, UsageMode mode,
+            int? initialCompressedSize, int maxGoodCompressionSize)
+        {
+            bool shouldCompress = initialCompressedSize.HasValue ||
+                                  (((mode & UsageMode.CompressStrings) == UsageMode.CompressStrings) && (size > 128))
+                                  ||
+                                  ((mode & UsageMode.CompressSmallStrings) == UsageMode.CompressSmallStrings) && (size <= 128);
+
+            if (shouldCompress)
             {
                 int compressedSize;
                 byte* compressionBuffer;
@@ -422,9 +562,9 @@ namespace Sparrow.Json
                 }
                 else
                 {
-                    compressionBuffer = CompressBuffer(buffer,size, maxGoodCompressionSize, out compressedSize);
+                    compressionBuffer = CompressBuffer(buffer, size, maxGoodCompressionSize, out compressedSize);
                 }
-                if (compressedSize > 0)// only if we actually save more than space
+                if (compressedSize > 0) // only if we actually save more than space
                 {
                     token = BlittableJsonToken.CompressedString;
                     buffer = compressionBuffer;
@@ -432,23 +572,7 @@ namespace Sparrow.Json
                     _position += WriteVariableSizeInt(compressedSize);
                 }
             }
-
-            _unmanagedWriteBuffer.Write(buffer, size);
-            _position += size;
-
-            if (escapePositions == null)
-            {
-                _position += WriteVariableSizeInt(0);
-                return startPos;
-            }
-            // we write the number of the escape sequences required
-            // and then we write the distance to the _next_ escape sequence
-            _position += WriteVariableSizeInt(escapePositions.Count);
-            foreach (int escapePos in escapePositions)
-            {
-                _position += WriteVariableSizeInt(escapePos);
-            }
-            return startPos;
+            return size;
         }
 
         private unsafe byte* CompressBuffer(byte* buffer, int size, int maxGoodCompressionSize, out int compressedSize)
@@ -494,10 +618,13 @@ namespace Sparrow.Json
         public void Dispose()
         {
             _unmanagedWriteBuffer.Dispose();
+
             if (_compressionBuffer!= null)
                 _context.ReturnMemory(_compressionBuffer);
-            _compressionBuffer = null;
+            if (_allocated != null )
+                _context.ReturnMemory(_allocated);
 
+            _compressionBuffer = null;
         }
     }
 }

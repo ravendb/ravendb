@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             throw new InvalidOperationException(string.Format("The {0} property was not found", name));
         }
 
-        private PropertyAccessor(Type type)
+        private PropertyAccessor(Type type, HashSet<string> groupByFields = null)
         {
             var isValueType = type.GetTypeInfo().IsValueType;
             foreach (var prop in type.GetProperties())
@@ -38,6 +38,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 var getMethod = isValueType
                     ? (Accessor)CreateGetMethodForValueType(prop, type)
                     : CreateGetMethodForClass(prop, type);
+
+                if (groupByFields != null && groupByFields.Contains(prop.Name))
+                    getMethod.IsGroupByField = true;
 
                 Properties.Add(prop.Name, getMethod);
                 PropertiesInOrder.Add(new KeyValuePair<string, Accessor>(prop.Name, getMethod));
@@ -111,6 +114,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         public abstract class Accessor
         {
             public abstract object GetValue(object target);
+
+            public bool IsGroupByField;
+        }
+
+        internal static PropertyAccessor CreateMapReduceOutputAccessor(Type type, HashSet<string> _groupByFields)
+        {
+            return new PropertyAccessor(type, _groupByFields);
         }
     }
 }

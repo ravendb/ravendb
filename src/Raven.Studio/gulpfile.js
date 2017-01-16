@@ -17,7 +17,8 @@ var gulp = require('gulp'),
     checkAllFilesExist = require('./gulp/checkAllFilesExist'),
     gutil = require('gulp-util'),
     autoPrefixer = require('gulp-autoprefixer'),
-    fileExists = require('file-exists');
+    fileExists = require('file-exists'),
+    fsUtils = require('./gulp/fsUtils');
 
 var PATHS = require('./gulp/paths');
 
@@ -57,34 +58,25 @@ gulp.task('less', function() {
 });
 
 gulp.task('generate-typings', function (cb) {
-    var debugPath = '../../tools/TypingsGenerator/bin/Debug/netcoreapp1.1/TypingsGenerator.dll';
-    var releasePath = '../../tools/TypingsGenerator/bin/Release/netcoreapp1.1/TypingsGenerator.dll';
+    var possibleTypingsGenPaths = [
+        '../../tools/TypingsGenerator/bin/Debug/netcoreapp1.1/TypingsGenerator.dll',
+        '../../tools/TypingsGenerator/bin/Release/netcoreapp1.1/TypingsGenerator.dll' ];
 
-    if (fileExists(releasePath) && fileExists(debugPath)) {
-        cb("Ambiguous TypingsGenerator lookup. Delete compiled TypingsGenerator.dll from either release or debug directory.");
+    var dllPath = fsUtils.getLastRecentlyModifiedFile(possibleTypingsGenPaths);
+    if (!dllPath) {
+        cb(new Error('TypingsGenerator.dll not found neither for Release nor Debug directory.'));
         return;
     }
 
-    if (fileExists(releasePath)) {
-        exec('dotnet ' + releasePath, function (err, stdout, stderr) {
-            console.log(stdout);
-            console.log(stderr);
-            cb(err);
-        });
-        return;
-    }
+    gutil.log(`Running: dotnet ${dllPath}`);
+    exec('dotnet ' + dllPath, function (err, stdout, stderr) {
+        if (err) {
+            gutil.log(stdout);
+            gutil.log(stderr);
+        }
 
-    if (fileExists(debugPath)) {
-        exec('dotnet ' + debugPath, function (err, stdout, stderr) {
-            console.log(stdout);
-            console.log(stderr);
-            cb(err);
-        });
-        return;
-    }
-
-    console.log('Could not find TypingsGenerator');
-    cb('Could not find TypingsGenerator');
+        cb(err);
+    });
 });
 
 gulp.task('compile:test', ['generate-ts'], function() {
@@ -145,12 +137,6 @@ gulp.task('release:fonts', function() {
        .pipe(gulp.dest(path.join(PATHS.releaseTargetContentCss, 'fonts')));
 });
 
-//TODO: delete this task once we remove font awesome
-gulp.task('release:temp-font-awesome', function () {
-    return gulp.src('wwwroot/lib/font-awesome/fonts/**/*')
-       .pipe(gulp.dest(path.join(PATHS.releaseTargetContent, 'fonts')));
-});
-
 gulp.task('release:html', function() {
     return gulp.src('wwwroot/index.html')
         .pipe(plugins.processhtml())
@@ -183,6 +169,17 @@ gulp.task('release:libs', function() {
         .pipe(plugins.concat('external-libs.js'))
         .pipe(plugins.uglify())
         .pipe(gulp.dest(PATHS.releaseTargetApp));
+});
+
+gulp.task('release:copy-version', function () {
+    return gulp.src("./version.json")
+        .pipe(gulp.dest(PATHS.releaseTarget));
+});
+
+gulp.task('release:package', function () {
+    return gulp.src(PATHS.releaseTarget + "/**/*.*")
+    .pipe(plugins.zip("Raven.Studio.zip"))
+    .pipe(gulp.dest(PATHS.releaseTarget));
 });
 
 gulp.task('release:durandal', function () {
@@ -269,22 +266,17 @@ gulp.task('release', function (cb) {
         'build',
         [
             'release:libs',
+            'release:copy-version',
             'release:favicon',
             'release:ace-workers',
             'release:images',
             'release:html',
             'release:css',
             'release:fonts',
-            'release:temp-font-awesome', //TODO: temp fix: we won't have font-awesome in final
             'release:durandal'
         ],
+        'release:package',
         cb);
-});
-
-gulp.task('release-package', ['release'], function () {
-    return gulp.src(PATHS.releaseTarget + "/**/*.*")
-    .pipe(plugins.zip("Raven.Studio.zip"))
-    .pipe(gulp.dest(PATHS.releaseTarget));
 });
 
 gulp.task('build', function (cb) {
@@ -292,40 +284,4 @@ gulp.task('build', function (cb) {
         'restore',
         'compile',
         cb);
-});
-
-gulp.task('alpha-release:_copy-version', function () {
-    return gulp.src("./version.json")
-        .pipe(gulp.dest(PATHS.releaseTarget));
-});
-
-gulp.task('alpha-release:_copy-js', function () {
-    return gulp.src('wwwroot/**/*.js')
-        //.pipe(plugins.uglify().on('error', gutil.log))
-        .pipe(gulp.dest(PATHS.releaseTarget));
-});
-
-gulp.task('alpha-release:_copy-content', function () {
-    return gulp.src('wwwroot/**/*.{css,ico,json,png,svg,html,woff,woff2,eot,ttf}')
-        .pipe(gulp.dest(PATHS.releaseTarget));
-});
-
-gulp.task('alpha-release:_package', ['alpha-release:_copy'], function () {
-    return gulp.src(PATHS.releaseTarget + "/**/*.*")
-    .pipe(plugins.zip("Raven.Studio.zip"))
-    .pipe(gulp.dest(PATHS.releaseTarget));
-});
-
-gulp.task('alpha-release:_copy', [
-        'alpha-release:_copy-content',
-        'alpha-release:_copy-js',
-        'alpha-release:_copy-version'
-]);
-
-gulp.task('alpha-release', function (cb) {
-    return runSequence(
-        'restore',
-        'clean',
-        'build',
-        'alpha-release:_package');
 });

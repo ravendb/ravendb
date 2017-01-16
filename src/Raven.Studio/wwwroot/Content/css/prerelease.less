@@ -64,3 +64,12 @@
         color: @gray-light;
     }
 }
+
+.toggle-prerelease {
+   label {
+       &:before, &:after {
+           .bg-prerelease;
+           box-shadow: none !important;
+       }
+   }
+}

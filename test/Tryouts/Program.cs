@@ -9,7 +9,9 @@ using Sparrow.Platform;
 using System.Linq;
 using FastTests.Blittable;
 using FastTests.Issues;
+using FastTests.Server.Documents.Queries;
 using FastTests.Voron.RawData;
+using SlowTests.Tests;
 
 namespace Tryouts
 {
@@ -17,9 +19,13 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var a = new FastTests.Server.Replication.ManualConflictResolution())
+            for (int i = 0; i < 1000; i++)
             {
-                a.ScriptResolveToTombstone();
+                var a = new UnmanagedStreamTests();
+                a.BulkWriteDescendingSizeTest();
+                GC.Collect(2);
+                GC.WaitForPendingFinalizers();
+                Console.WriteLine(i);
             }
         }
     }

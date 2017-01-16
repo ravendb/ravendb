@@ -51,7 +51,7 @@ namespace Sparrow.Json
             Reset();
             _debugTag = debugTag;
             _mode = mode;
-            _writer.Renew();
+            _writer.ResetAndRenew();
         }
 
         public virtual void ReadArrayDocument()
@@ -352,6 +352,7 @@ namespace Sparrow.Json
             public int PropertyId;
             public byte Type;
         }
+
         [Flags]
         public enum UsageMode
         {

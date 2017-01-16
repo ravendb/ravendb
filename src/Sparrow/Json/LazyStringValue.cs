@@ -8,13 +8,35 @@ using Sparrow.Binary;
 
 namespace Sparrow.Json
 {
+    public class LazyStringValueComparer : IEqualityComparer<LazyStringValue>
+    {
+        public static readonly LazyStringValueComparer Instance = new LazyStringValueComparer();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Equals(LazyStringValue x, LazyStringValue y)
+        {
+            if (x == y) return true;
+            if (x == null || y == null) return false;
+            return x.CompareTo(y) == 0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int GetHashCode(LazyStringValue obj)
+        {
+            unsafe
+            {
+                return (int)Hashing.XXHash32.CalculateInline(obj.Buffer, obj.Size);
+            }            
+        }
+    }
+
     public unsafe class LazyStringValue : IComparable<string>, IEquatable<string>,
         IComparable<LazyStringValue>, IEquatable<LazyStringValue>, IDisposable, IComparable
     {
         private readonly JsonOperationContext _context;
         private string _string;
 
-        private readonly byte* _buffer;
+        private byte* _buffer;
         public byte this[int index] => Buffer[index];
         public byte* Buffer => _buffer;
 
@@ -53,11 +75,13 @@ namespace Sparrow.Json
             _string = str;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Equals(string other)
         {
             return CompareTo(other) == 0;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Equals(LazyStringValue other)
         {
             return CompareTo(other) == 0;
@@ -65,6 +89,9 @@ namespace Sparrow.Json
 
         public int CompareTo(string other)
         {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
+
             if (_string != null)
                 return String.Compare(_string, other, StringComparison.Ordinal);
 
@@ -81,21 +108,30 @@ namespace Sparrow.Json
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int CompareTo(LazyStringValue other)
         {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
             if (other.Buffer == Buffer && other.Size == Size)
                 return 0;
             return Compare(other.Buffer, other.Size);
         }
-        
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Compare(byte* other, int otherSize)
         {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
             var result = Memory.CompareInline(Buffer, other, Math.Min(Size, otherSize));
             return result == 0 ? Size - otherSize : result;
         }
 
         public static bool operator ==(LazyStringValue self, LazyStringValue str)
         {
+            if (self?.IsDisposed ?? false)
+                self.ThrowAlreadyDisposed();
+
             if (ReferenceEquals(self, null) && ReferenceEquals(str,null))
                 return true;
             if (ReferenceEquals(self, null) || ReferenceEquals(str,null))
@@ -105,11 +141,15 @@ namespace Sparrow.Json
 
         public static bool operator !=(LazyStringValue self, LazyStringValue str)
         {
+            if (self?.IsDisposed ?? false)
+                self.ThrowAlreadyDisposed();
             return !(self == str);
         }
 
         public static bool operator ==(LazyStringValue self, string str)
         {
+            if (self?.IsDisposed ?? false)
+                self.ThrowAlreadyDisposed();
             if (ReferenceEquals(self, null) && str == null)
                 return true;
             if (ReferenceEquals(self, null) || str == null)
@@ -119,22 +159,28 @@ namespace Sparrow.Json
 
         public static bool operator !=(LazyStringValue self, string str)
         {
+            if (self?.IsDisposed ?? false)
+                self.ThrowAlreadyDisposed();
             return !(self == str);
         }
 
         public static implicit operator string(LazyStringValue self)
-        {
+        {            
             if (self == null)
                 return null;
 
-            if (self._string == null)
-                self._string = self._context.Encoding.GetString(self._buffer, self._size);
+            if (self.IsDisposed)
+                self.ThrowAlreadyDisposed();
 
-            return self._string;
+            return self._string ?? 
+                (self._string = self._context.Encoding.GetString(self._buffer, self._size));
         }
 
         public override bool Equals(object obj)
         {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
+
             if (ReferenceEquals(obj, null))
                 return false;
 
@@ -150,6 +196,8 @@ namespace Sparrow.Json
 
         public override int GetHashCode()
         {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
             return (int)Hashing.XXHash32.CalculateInline(Buffer, Size);
         }
         
@@ -160,6 +208,9 @@ namespace Sparrow.Json
 
         public int CompareTo(object obj)
         {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
+
             if (obj == null)
                 return 1;
 
@@ -176,17 +227,33 @@ namespace Sparrow.Json
             throw new NotSupportedException($"Cannot compare LazyStringValue to object of type {obj.GetType().Name}");
         }
 
+        public bool IsDisposed => AllocatedMemoryData == null && _buffer == null;        
+
+        private void ThrowAlreadyDisposed()
+        {
+           throw new ObjectDisposedException(nameof(LazyStringValue));
+        }
+
         public void Dispose()
         {
             if (AllocatedMemoryData != null)
             {
                 _context.ReturnMemory(AllocatedMemoryData);
                 AllocatedMemoryData = null;
+                _buffer = null;
+                _string = null;
+            }
+            else if (_buffer != null)
+            {
+                _buffer = null;
+                _string = null;
             }
         }
 
         public bool Contains(string value)
         {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
             if (_string != null)
                 return _string.Contains(value);
 
@@ -195,6 +262,8 @@ namespace Sparrow.Json
 
         public bool EndsWith(string value)
         {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
             if (_string != null)
                 return _string.EndsWith(value);
 
@@ -213,6 +282,8 @@ namespace Sparrow.Json
 
         public bool EndsWith(LazyStringValue value)
         {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
             if (value.Size > Size)
                 return false;
 
@@ -249,6 +320,8 @@ namespace Sparrow.Json
 
         public int IndexOf(char value, int startIndex, int count)
         {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
             if (_string != null)
                 return _string.IndexOf(value, startIndex, count);
 
@@ -291,6 +364,8 @@ namespace Sparrow.Json
 
         public int IndexOfAny(char[] anyOf, int startIndex, int count)
         {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
             if (_string != null)
                 return _string.IndexOfAny(anyOf, startIndex, count);
 
@@ -328,6 +403,8 @@ namespace Sparrow.Json
 
         public int LastIndexOf(char value, int startIndex, int count)
         {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
             if (_string != null)
                 return _string.LastIndexOf(value, startIndex, count);
 
@@ -373,6 +450,8 @@ namespace Sparrow.Json
 
         public int LastIndexOfAny(char[] anyOf, int startIndex, int count)
         {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
             if (_string != null)
                 return _string.LastIndexOfAny(anyOf, startIndex, count);
 
@@ -469,6 +548,8 @@ namespace Sparrow.Json
 
         public bool StartsWith(string value)
         {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
             if (_string != null)
                 return _string.StartsWith(value);
 
@@ -487,6 +568,8 @@ namespace Sparrow.Json
 
         public bool StartsWith(LazyStringValue value)
         {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
             if (value.Size > Size)
                 return false;
 
@@ -555,6 +638,8 @@ namespace Sparrow.Json
 
         public string Reverse()
         {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
             var maxCharCount = _context.Encoding.GetMaxCharCount(Length);
             if(LazyStringTempBuffer == null || LazyStringTempBuffer.Length < maxCharCount)
                 LazyStringTempBuffer = new char[Bits.NextPowerOf2(maxCharCount)];

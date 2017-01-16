@@ -176,10 +176,10 @@ namespace Sparrow.Json
                 return;
             }
 
-            UnlikedlyWriteEscapeSequences(str, numberOfEscapeSequences, escapeSequencePos, strBuffer, size);
+            UnlikelyWriteEscapeSequences(str, numberOfEscapeSequences, escapeSequencePos, strBuffer, size);
         }
 
-        private unsafe void UnlikedlyWriteEscapeSequences(LazyStringValue str, int numberOfEscapeSequences, int escapeSequencePos,
+        private unsafe void UnlikelyWriteEscapeSequences(LazyStringValue str, int numberOfEscapeSequences, int escapeSequencePos,
             byte* strBuffer, int size)
         {
             while (numberOfEscapeSequences > 0)

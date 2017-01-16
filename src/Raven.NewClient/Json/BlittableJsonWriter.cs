@@ -16,9 +16,9 @@ namespace Raven.NewClient.Client.Json
         public BlittableJsonWriter(JsonOperationContext context, DocumentInfo documentInfo = null, 
             BlittableJsonDocumentBuilder.UsageMode? mode = null, BlittableWriter<UnmanagedWriteBuffer> writer = null)
         {
-            _manualBlittalbeJsonDocumentBuilder = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(context, mode, writer);
-            _manualBlittalbeJsonDocumentBuilder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
-            _manualBlittalbeJsonDocumentBuilder.StartWriteObjectDocument();
+            _manualBlittalbeJsonDocumentBuilder = new ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer>(context, mode ?? BlittableJsonDocumentBuilder.UsageMode.None, writer);
+            _manualBlittalbeJsonDocumentBuilder.Reset(mode ?? BlittableJsonDocumentBuilder.UsageMode.None);            
+            _manualBlittalbeJsonDocumentBuilder.StartWriteObjectDocument();        
             _documentInfo = documentInfo;
             _first = true;
         }

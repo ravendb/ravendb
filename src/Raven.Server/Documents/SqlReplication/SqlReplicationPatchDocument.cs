@@ -67,8 +67,8 @@ namespace Raven.Server.Documents.SqlReplication
         {
             if (tableName == null)
                 throw new ArgumentException("tableName parameter is mandatory");
-           /* if (colsAsObject == null)
-                throw new ArgumentException("cols parameter is mandatory");*/
+            if (colsAsObject == null)
+                throw new ArgumentException("cols parameter is mandatory");
 
             var itemToReplicates = scriptResult.Data.GetOrAdd(tableName);
             var dynamicJsonValue = scope.ToBlittable(colsAsObject.AsObject());

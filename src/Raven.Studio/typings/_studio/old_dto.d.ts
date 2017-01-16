@@ -10,10 +10,6 @@ interface documentDto extends metadataAwareDto {
 interface conflictsInfoDto extends indexResultsDto<conflictDto> {
 }
 
-interface dictionary<TValue> {
-    [key: string]: TValue;
-}
-
 interface metadataAwareDto {
     '@metadata'?: documentMetadataDto;
 }
@@ -301,26 +297,6 @@ interface documentCountDto {
     Type: string;
     IsEtl: boolean;
 }
-
-/*
- * Represents a spatial field of an index. Shows up in the Edit Index view when the index has spatial fields defined.
-*/
-interface spatialIndexFieldDto {
-    Type: string;
-    Strategy: string;
-    MaxTreeLevel: number;
-    MinX: number;
-    MaxX: number;
-    MinY: number;
-    MaxY: number;
-    Units: string;
-}
-
-interface spatialIndexSuggestionDto {
-    Distance: string;
-    Accuracy: number;
-}
-
 
 interface indexResultsDto<T extends metadataAwareDto> {
     DurationMilliseconds: number;

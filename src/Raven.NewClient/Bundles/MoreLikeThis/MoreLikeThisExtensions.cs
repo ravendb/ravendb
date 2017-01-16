@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
@@ -11,7 +13,7 @@ namespace Raven.NewClient.Client.Bundles.MoreLikeThis
 {
     public static class MoreLikeThisExtensions
     {
-        /*public static T[] MoreLikeThis<T, TIndexCreator>(this ISyncAdvancedSessionOperation advancedSession, string documentId) where TIndexCreator : AbstractIndexCreationTask, new()
+        public static T[] MoreLikeThis<T, TIndexCreator>(this ISyncAdvancedSessionOperation advancedSession, string documentId) where TIndexCreator : AbstractIndexCreationTask, new()
         {
             var indexCreator = new TIndexCreator();
             return MoreLikeThis<T>(advancedSession, indexCreator.IndexName, null, new MoreLikeThisQuery
@@ -57,44 +59,36 @@ namespace Raven.NewClient.Client.Bundles.MoreLikeThis
 
         public static T[] MoreLikeThis<T>(this ISyncAdvancedSessionOperation advancedSession, string index, string transformer, string documentId)
         {
-            return MoreLikeThis<T>(advancedSession, index, transformer, new MoreLikeThisQuery
-            {
-                DocumentId = documentId
-            });
+             return MoreLikeThis<T>(advancedSession, index, transformer, new MoreLikeThisQuery
+             {
+                 DocumentId = documentId
+             });
         }
 
         public static T[] MoreLikeThis<T>(this ISyncAdvancedSessionOperation advancedSession, string index, string transformer, MoreLikeThisQuery parameters)
         {
-            throw new NotImplementedException();
-            /*if (string.IsNullOrEmpty(index))
+            if (string.IsNullOrEmpty(index))
                 throw new ArgumentException("Index name cannot be null or empty", "index");
 
             parameters.IndexName = index;
             parameters.Transformer = transformer;
 
             // /morelikethis/(index-name)/(ravendb-document-id)?fields=(fields)
-            var cmd = ((DocumentSession)advancedSession).DatabaseCommands;
-
             var inMemoryDocumentSessionOperations = ((InMemoryDocumentSessionOperations)advancedSession);
             inMemoryDocumentSessionOperations.IncrementRequestCount();
 
-            var loadOperation = new LoadOperation(inMemoryDocumentSessionOperations, cmd.DisableAllCaching, null, null);
-            LoadResult loadResult;
-            do
-            {
-                loadOperation.LogOperation();
-                using (loadOperation.EnterLoadContext())
-                {
-                    var result = cmd.MoreLikeThis(parameters);
-                    loadResult = new LoadResult
-                    {
-                        Includes = result.Includes,
-                        Results = result.Results
-                    };
-                }
-            } while (loadOperation.SetResult(loadResult));
+            var loadOperation = new LoadOperation(inMemoryDocumentSessionOperations, null, null, true);
 
-            return loadOperation.Complete<T>();#1#
+            var command = new MoreLikeThisCommand()
+            {
+                Query = parameters
+            };
+            advancedSession.RequestExecuter.Execute(command, advancedSession.Context);
+
+            var result = command.Result;
+            loadOperation.SetResult(result);
+
+            return loadOperation.GetDocuments<T>().Values.ToArray();
         }
 
         public static Task<T[]> MoreLikeThisAsync<T, TIndexCreator>(this IAsyncAdvancedSessionOperations advancedSession, string documentId) where TIndexCreator : AbstractIndexCreationTask, new()
@@ -151,36 +145,27 @@ namespace Raven.NewClient.Client.Bundles.MoreLikeThis
 
         public static async Task<T[]> MoreLikeThisAsync<T>(this IAsyncAdvancedSessionOperations advancedSession, string index, string transformer, MoreLikeThisQuery parameters)
         {
-            throw new NotImplementedException();
-            /*if (string.IsNullOrEmpty(index))
+            if (string.IsNullOrEmpty(index))
                 throw new ArgumentException("Index name cannot be null or empty", "index");
 
             parameters.IndexName = index;
             parameters.Transformer = transformer;
 
-            // /morelikethis/(index-name)/(ravendb-document-id)?fields=(fields)
-            var cmd = ((AsyncDocumentSession)advancedSession).AsyncDatabaseCommands;
-
             var inMemoryDocumentSessionOperations = ((InMemoryDocumentSessionOperations)advancedSession);
             inMemoryDocumentSessionOperations.IncrementRequestCount();
 
-            var loadOperation = new LoadOperation(inMemoryDocumentSessionOperations, cmd.DisableAllCaching, null, null);
-            LoadResult loadResult;
-            do
-            {
-                loadOperation.LogOperation();
-                using (loadOperation.EnterLoadContext())
-                {
-                    var result = await cmd.MoreLikeThisAsync(parameters).ConfigureAwait(false);
-                    loadResult = new LoadResult
-                    {
-                        Includes = result.Includes,
-                        Results = result.Results
-                    };
-                }
-            } while (loadOperation.SetResult(loadResult));
+            var loadOperation = new LoadOperation(inMemoryDocumentSessionOperations, null, null, true);
 
-            return loadOperation.Complete<T>();#1#
-        }*/
+            var command = new MoreLikeThisCommand()
+            {
+                Query = parameters
+            };
+            await advancedSession.RequestExecuter.ExecuteAsync(command, advancedSession.Context).ConfigureAwait(false);
+
+            var result = command.Result;
+            loadOperation.SetResult(result);
+
+            return loadOperation.GetDocuments<T>().Values.ToArray();
+        }
     }
 }

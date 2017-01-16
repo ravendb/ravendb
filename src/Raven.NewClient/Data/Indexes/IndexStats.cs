@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Indexing;
 
 namespace Raven.NewClient.Data.Indexes
 {

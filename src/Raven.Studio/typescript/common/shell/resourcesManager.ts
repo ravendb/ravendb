@@ -15,6 +15,10 @@ import appUrl = require("common/appUrl");
 import messagePublisher = require("common/messagePublisher");
 import activeResourceTracker = require("common/shell/activeResourceTracker");
 import resourceInfo = require("models/resources/info/resourceInfo");
+import mergedIndexesStorage = require("common/storage/mergedIndexesStorage");
+import recentPatchesStorage = require("common/storage/recentPatchesStorage");
+import recentQueriesStorage = require("common/storage/recentQueriesStorage");
+import starredDocumentsStorage = require("common/storage/starredDocumentsStorage");
 
 class resourcesManager {
 
@@ -28,6 +32,18 @@ class resourcesManager {
     private resourceToActivate = ko.observable<string>();
 
     resources = ko.observableArray<resource>([]);
+
+    onResourceDeletedCallbacks = [
+        (q, n) => mergedIndexesStorage.onResourceDeleted(q, n),
+        (q, n) => recentPatchesStorage.onResourceDeleted(q, n),
+        (q, n) => recentQueriesStorage.onResourceDeleted(q, n),
+        (q, n) => starredDocumentsStorage.onResourceDeleted(q, n)
+    ] as Array<(qualifier: string, name: string) => void>;
+
+    onIndexDeletedCallback = [
+        (db, indexName) => recentPatchesStorage.onIndexDeleted(db, indexName),
+        (db, indexName) => recentQueriesStorage.onIndexDeleted(db, indexName)
+    ] as Array<(dbName: string, indexName: string) => void>;
 
     databases = ko.computed<database[]>(() => this.resources().filter(x => x instanceof database) as database[]);
     fileSystems = ko.computed<filesystem[]>(() => this.resources().filter(x => x instanceof filesystem) as filesystem[]);
@@ -177,6 +193,7 @@ class resourcesManager {
         //TODO: this.fecthStudioConfigForDatabase(db);
 
         this.changesContext.updateChangesApi(db, (changes: changesApi) => {
+            changes.watchAllIndexes(e => this.onIndexNofitication(db, e));
             /* TODO
             changes.watchAllDocs(() => this.refreshResources()); //TODO: use cooldown - and move to footer?
             changes.watchAllIndexes(() => this.fetchDbStats(db)),
@@ -193,6 +210,14 @@ class resourcesManager {
             //TODO: watchFsFolders("", () => this.fetchFsStats(fs))
             return [] as changeSubscription[];
         });
+    }
+
+    private onIndexNofitication(db: database, notification: Raven.Abstractions.Data.IndexChangeNotification) {
+        if (notification.Type === "IndexRemoved") {
+            this.onIndexDeletedCallback.forEach(callback => {
+                callback(db.name, notification.Name);
+            });
+        }
     }
 
     private reloadDataAfterReconnection(rs: resource) {
@@ -299,8 +324,8 @@ class resourcesManager {
     private onResourceUpdateReceivedViaChangesApi(event: Raven.Server.Alerts.GlobalAlertNotification) {
         let resource = this.getResourceByQualifiedName(event.Id);
         if (event.Operation === "Delete" && resource) {
-            changesContext.default.disconnectIfCurrent(resource, "ResourceDeleted");
-            this.resources.remove(resource);
+            
+            this.onResourceDeleted(resource);
 
         } else if (event.Operation === "Write") {
             const [prefix, name] = event.Id.split("/", 2);
@@ -327,6 +352,15 @@ class resourcesManager {
                     }
                 });
         }
+    }
+
+    private onResourceDeleted(rs: resource) {
+        changesContext.default.disconnectIfCurrent(rs, "ResourceDeleted");
+        this.resources.remove(rs);
+
+        this.onResourceDeletedCallbacks.forEach(callback => {
+            callback(rs.qualifier, rs.name);
+        });
     }
     
     /*TODO

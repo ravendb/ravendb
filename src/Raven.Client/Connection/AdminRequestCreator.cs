@@ -46,7 +46,7 @@ namespace Raven.Client.Connection
         {
             var deleteUrl = "/admin/databases?name=" + Uri.EscapeDataString(databaseName);
 
-            if(hardDelete)
+            if (hardDelete)
                 deleteUrl += "&hard-delete=true";
             else
                 deleteUrl += "&hard-delete=false";
@@ -75,7 +75,7 @@ namespace Raven.Client.Connection
             if (maxNumberOfParallelIndexTasks.HasValue)
             {
                 throw new NotImplementedException();
-               // url += "?concurrency=" + maxNumberOfParallelIndexTasks.Value;
+                // url += "?concurrency=" + maxNumberOfParallelIndexTasks.Value;
             }
 
             return createReplicationAwareRequest(serverUrl, url, HttpMethods.Post);
@@ -114,7 +114,7 @@ namespace Raven.Client.Connection
                 return createRequestForSystemDatabase("/admin/backup", HttpMethods.Post);
             }
             return createRequestForSystemDatabase("/databases/" + databaseName + "/admin/backup?incremental=" + incremental, HttpMethods.Post);
-            
+
         }
 
         public HttpJsonRequest CreateRestoreRequest()
@@ -160,7 +160,7 @@ namespace Raven.Client.Connection
         /// <summary>
         /// Gets the list of databases from the server asynchronously
         /// </summary>
-        public async Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0, CancellationToken token = default (CancellationToken))
+        public async Task<string[]> GetDatabaseNamesAsync(int pageSize, int start = 0, CancellationToken token = default(CancellationToken))
         {
             using (var requestForSystemDatabase = createRequestForSystemDatabase(string.Format(CultureInfo.InvariantCulture, "/resources?namesOnly=true&pageSize={0}&start={1}", pageSize, start), HttpMethods.Get))
             {
@@ -170,6 +170,15 @@ namespace Raven.Client.Connection
                 return array
                     .Select(x => x.Value<string>())
                     .ToArray();
+            }
+        }
+
+        public async Task<BuildNumber> GetBuildNumberAsync(CancellationToken token = default(CancellationToken))
+        {
+            using (var requestForSystemDatabase = createRequestForSystemDatabase("/build/version", HttpMethods.Get))
+            {
+                var json = await requestForSystemDatabase.ReadResponseJsonAsync().WithCancellation(token).ConfigureAwait(false);
+                return json.JsonDeserialization<BuildNumber>();
             }
         }
     }

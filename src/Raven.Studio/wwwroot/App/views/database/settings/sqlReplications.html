@@ -5,10 +5,10 @@
     <div class="panel panel-default" id="sqlReplicationsForm">
         <div class="panel-heading">
             <a class="btn btn-default" data-bind="attr: {href:getSqlReplicationUrl('')}" title="New SQL Replication (Alt+N)" accesskey="N">
-                <i class="fa fa-plus"></i> New SQL replication
+                <i class="icon-plus"></i> New SQL replication
             </a>
             <a class="btn btn-default" data-bind="attr: {href:getSqlReplicationConnectionStringsUrl()}" accesskey="M" title="Manage SQL connection strings (Alt+M)">
-                <i class="fa fa-database"></i> Manage connection strings
+                 Manage connection strings
             </a>
             <div class="btn-group">
                 <button type="button" class="btn btn-default" title="Disable All SQL Replications" data-bind="disable: areAllSqlReplicationsDisabled, click: $root.toggleDisable.bind($root, true), visible: replications().length > 0">

@@ -3,10 +3,12 @@ using System.IO.Compression;
 using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
+using Raven.Client.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
+using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
 namespace Raven.Server.Web.Studio
 {
@@ -14,7 +16,7 @@ namespace Raven.Server.Web.Studio
     {
 
         [RavenAction("/databases/*/studio/sample-data", "POST")]
-        public async Task PostCreateSampleData()
+        public Task PostCreateSampleData()
         {
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -34,13 +36,17 @@ namespace Raven.Server.Web.Studio
                 {
                     using (var stream = new GZipStream(sampleData, CompressionMode.Decompress))
                     {
-                        var importer = new SmugglerImporter(Database);
+                        var source = new StreamSource(stream, context);
+                        var destination = new DatabaseDestination(Database);
 
-                        await importer.Import(context, stream);
+                        var smuggler = new DatabaseSmuggler(source, destination, Database.Time);
+
+                        smuggler.Execute();
                     }
                 }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
+                return Task.CompletedTask;
             }
         }
 
