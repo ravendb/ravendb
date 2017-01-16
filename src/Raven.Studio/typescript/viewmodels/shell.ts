@@ -53,6 +53,9 @@ import latestBuildReminder = require("viewmodels/common/latestBuildReminder")
 
 import eventsCollector = require("common/eventsCollector");
 
+import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
+import requestExecution = require("common/notifications/requestExecution");
+
 //TODO: extract cluster related logic to separate class
 //TODO: extract api key related logic to separate class 
 class shell extends viewModelBase {
@@ -89,8 +92,12 @@ class shell extends viewModelBase {
     displayUsageStatsInfo = ko.observable<boolean>(false);
     trackingTask = $.Deferred();
 
+    studioLoadingFakeRequest: requestExecution;
+
     constructor() {
         super();
+
+        this.studioLoadingFakeRequest = protractedCommandsDetector.instance.requestStarted(0);
 
         this.preLoadRecentErrorsView();
         extensions.install();
@@ -190,6 +197,9 @@ class shell extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
         $("#body").removeClass('loading-active');
+
+        this.studioLoadingFakeRequest.markCompleted();
+        this.studioLoadingFakeRequest = null;
 
         this.initializeShellComponents();
 
