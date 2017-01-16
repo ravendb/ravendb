@@ -188,12 +188,6 @@ namespace Raven.NewClient.Client
         /// </summary>
         string Url { get; }
 
-        ///<summary>
-        /// Gets the etag of the last document written by any session belonging to this 
-        /// document store
-        ///</summary>
-        long? GetLastWrittenEtag();
-
         BulkInsertOperation BulkInsert(string database = null);
 
         /// <summary>
