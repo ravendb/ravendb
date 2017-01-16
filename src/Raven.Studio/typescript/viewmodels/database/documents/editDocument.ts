@@ -164,8 +164,9 @@ class editDocument extends viewModelBase {
         });
 
         this.documentText.extend({
-            required: true
-        });
+            required: true,
+            validJson: true
+        });        
     }
 
     private initializeObservables(): void {
@@ -173,10 +174,14 @@ class editDocument extends viewModelBase {
         this.dirtyFlag = new ko.DirtyFlag([this.documentText, this.userSpecifiedId], false, jsonUtil.newLineNormalizingHashFunction); 
           
         this.isSaveEnabled = ko.pureComputed(() => {            
-            if (this.isSaving() ||
-                (!this.dirtyFlag().isDirty() && this.metadata().etag()) ) {
+            const isSaving = this.isSaving();
+            const isDirty = this.dirtyFlag().isDirty();           
+            const etag = this.metadata().etag();
+
+            if (isSaving || (!isDirty && etag)) {
                 return false;
             }
+
             return true;
         });         
 
