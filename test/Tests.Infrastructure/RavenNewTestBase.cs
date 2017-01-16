@@ -10,6 +10,7 @@ using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Data.Indexes;
+using Raven.NewClient.Operations.Databases;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
@@ -76,12 +77,8 @@ namespace FastTests
             ModifyStore(store);
             store.Initialize();
 
-            var createDatabaseOperation = new CreateDatabaseOperation(context);
-            var command = createDatabaseOperation.CreateRequest(store, doc);
-            if (command != null)
-            {
-                store.GetRequestExecuter(name).Execute(command, context);
-            }
+            store.Admin.Send(new CreateDatabaseOperation(doc));
+
             store.AfterDispose += (sender, args) =>
             {
                 var databaseTask = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name);
