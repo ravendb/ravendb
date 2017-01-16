@@ -2,27 +2,21 @@
 using System.Collections.Generic;
 using FastTests;
 using Raven.NewClient.Client;
-using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Indexing;
-using Sparrow.Json;
+using Raven.NewClient.Operations.Databases.Indexes;
 
 namespace NewClientTests.NewClient
 {
     public abstract class FacetTestBase : RavenNewTestBase
     {
-        public static void CreateCameraCostIndex(IDocumentStore store)
+        public static void CreateCameraCostIndex(DocumentStore store)
         {
             var index = new CameraCostIndex();
 
-            JsonOperationContext context;
-            store.GetRequestExecuterForDefaultDatabase().ContextPool.AllocateOperationContext(out context);
-
-            var putIndexOperation = new PutIndexOperation(context);
-            var indexCommand = putIndexOperation.CreateRequest(store.Conventions, index.IndexName, index.CreateIndexDefinition());
-            if (indexCommand != null)
-                store.GetRequestExecuter(store.DefaultDatabase).Execute(indexCommand, context);
+            store.Admin.Send(new PutIndexOperation(index.IndexName, index.CreateIndexDefinition()));
         }
 
         public class CameraCostIndex : AbstractIndexCreationTask
