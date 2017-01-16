@@ -65,16 +65,14 @@
                 <div class="col-md-6">
                     <div class="documentId">
                         <div data-bind="if: isCreatingNewDocument()">
-                            <div class="input-group">
+                            <div class="input-group" data-bind="validationElement: userSpecifiedId">
                                 <div class="input-group-addon">key</div>
-                                <input type="text"
+                                <input class="form-control"
                                        name="documentId"
                                        id="documentIdInput"
                                        placeholder="&lt;auto-generated&gt;"
-                                       class="obj-name"
-                                       data-bind="textInput: $root.userSpecifiedId, attr: { disabled: $root.isBusy }, customValidity: userSpecifiedIdCustomValidityError, hasFocus: userIdHasFocus()" />
+                                       data-bind="textInput: userSpecifiedId, attr: { disabled: $root.isBusy }, hasFocus: userIdHasFocus()">
                             </div>
-
                         </div>
                         <div data-bind="if: !isCreatingNewDocument()">
                             <a class="reset-color btn-toggle markFavourite" data-bind="click: connectedDocuments.toggleStar">
@@ -138,7 +136,10 @@
             </div>
         </div>
         <div class="flex-window-scroll">
-            <pre id="docEditor" class="form-control" data-bind="aceEditor: { code: documentText, fontSize:'16px', lang: 'ace/mode/json'}, attr: { disabled: isBusy }, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 20 }"></pre>
+            <pre id="docEditor" class="form-control" data-bind="aceEditor: { code: documentText, fontSize:'16px', lang: 'ace/mode/json'}, attr: { disabled: isBusy }, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 50 }"></pre>
+            <div data-bind="validationElement: documentText">
+                 <div class="help-block" data-bind="validationMessage: documentText"></div>
+            </div>
         </div>
     </div>
 </form>
