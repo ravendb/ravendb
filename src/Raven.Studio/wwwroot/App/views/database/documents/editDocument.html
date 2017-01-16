@@ -60,7 +60,7 @@
     </div>
 
     <div class="flex-window absolute-fill">
-        <div class="flex-winddow-head">
+        <div class="flex-window-head">
             <div class="row">
                 <div class="col-md-6">
                     <div class="documentId">
@@ -136,10 +136,11 @@
             </div>
         </div>
         <div class="flex-window-scroll">
-            <pre id="docEditor" class="form-control" data-bind="aceEditor: { code: documentText, fontSize:'16px', lang: 'ace/mode/json'}, attr: { disabled: isBusy }, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 50 }"></pre>
-            <div data-bind="validationElement: documentText">
-                 <div class="help-block" data-bind="validationMessage: documentText"></div>
-            </div>
+            <pre id="docEditor" class="form-control" 
+                 data-bind="aceEditor: { code: documentText, fontSize:'16px', lang: 'ace/mode/json'}, attr: { disabled: isBusy }"></pre>
+        </div>
+        <div data-bind="validationElement: documentText">
+            <div class="help-block" data-bind="validationMessage: documentText"></div>
         </div>
     </div>
 </form>
