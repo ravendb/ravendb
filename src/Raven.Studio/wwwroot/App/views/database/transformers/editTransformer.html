@@ -1,7 +1,7 @@
 <section id="editTransformerContainer">
     <div class="btn-toolbar">
         <div class="btn-group">
-            <button class="btn btn-primary" data-bind="click: saveTransformer, enable: $root.isSaveEnabled()" title="Save the transformer (Alt+S)" accesskey="S">
+            <button class="btn btn-primary" data-bind="click: saveTransformer, enable: isSaveEnabled, css: { 'btn-spinner': isSaving }" title="Save the transformer (Alt+S)" accesskey="S">
                 <i class="icon-save"></i>
                 <span>Save</span>
             </button>
