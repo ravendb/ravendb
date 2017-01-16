@@ -26,11 +26,11 @@ namespace FastTests.Client
                 }
 
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludesUtil.Include(order, "CustomerId(customer/)", CustomerId =>
+                IncludesUtil.Include(order, "CustomerId(customer/)", customerId =>
                 {
-                    if (CustomerId == null)
+                    if (customerId == null)
                         return false;
-                    ids.Add(CustomerId);
+                    ids.Add(customerId);
                     return true;
                 });
 
@@ -55,11 +55,11 @@ namespace FastTests.Client
                 }
 
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludesUtil.Include(order, "CustomerId[{0}/customer]", CustomerId =>
+                IncludesUtil.Include(order, "CustomerId[{0}/customer]", customerId =>
                 {
-                    if (CustomerId == null)
+                    if (customerId == null)
                         return false;
-                    ids.Add(CustomerId);
+                    ids.Add(customerId);
                     return true;
                 });
 
@@ -67,7 +67,7 @@ namespace FastTests.Client
             }
         }
 
-        public class Order
+        private class Order
         {
             public string Number { get; set; }
             public string CustomerId { get; set; }

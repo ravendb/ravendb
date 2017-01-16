@@ -8,6 +8,7 @@ using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Operations.Databases.Documents;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Raven.Server.Config;
 using Sparrow.Json;
 using Xunit;
@@ -79,68 +80,65 @@ namespace NewClientTests.NewClient.FastTests.Patching
                     await session.StoreAsync(item1);
                     await session.StoreAsync(item2);
                     await session.SaveChangesAsync();
-
                 }
 
+                store.Admin.Send(new PutIndexOperation("TestIndex", new IndexDefinition
+                {
+                    Maps = { @"from doc in docs.CustomTypes select new { doc.Owner }" }
+                }));
+
                 JsonOperationContext context;
-                store.GetRequestExecuter(store.DefaultDatabase).ContextPool.AllocateOperationContext(out context);
-
-                var putIndexOperation = new PutIndexOperation(context);
-                var indexCommand = putIndexOperation.CreateRequest(store.Conventions, "TestIndex", new IndexDefinition
-                { Maps = { @"from doc in docs.CustomTypes 
-                                     select new { doc.Owner }" } });
-                if (indexCommand != null)
-                    store.GetRequestExecuter(store.DefaultDatabase).Execute(indexCommand, context);
-
-                WaitForIndexing(store);
-                store.OpenSession().Advanced.DocumentQuery<CustomType>("TestIndex")
-                    .WaitForNonStaleResults().ToList();
-
-                var operation = await store
-                    .Operations
-                    .SendAsync(new PatchByIndexOperation("TestIndex", new IndexQuery { Query = "Owner:bob" }, new PatchRequest { Script = sampleScript }));
-
-                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
-
-                var getDocumentCommand = new GetDocumentCommand
+                using (store.GetRequestExecuter(store.DefaultDatabase).ContextPool.AllocateOperationContext(out context))
                 {
-                    Ids = new[] { item1.Id },
-                    Context = context
-                };
-                store.GetRequestExecuter(store.DefaultDatabase).Execute(getDocumentCommand, context);
 
-                var results = getDocumentCommand.Result.Results;
-                Assert.Equal(1, results.Length);
-                var res = (BlittableJsonReaderObject)results[0];
-                object obj;
-                res.TryGetMember("Comments", out obj);
-                Assert.Equal(2, ((BlittableJsonReaderArray)obj).Length);
-                Assert.Equal("one test", ((BlittableJsonReaderArray)obj).GetStringByIndex(0));
-                Assert.Equal("two", ((BlittableJsonReaderArray)obj).GetStringByIndex(1));
-                res.TryGetMember("Value", out obj);
-                Assert.Equal(12144, ((Int64)obj));
-                res.TryGetMember("newValue", out obj);
-                Assert.Equal("err!!", obj.ToString());
+                    WaitForIndexing(store);
+                    store.OpenSession().Advanced.DocumentQuery<CustomType>("TestIndex")
+                        .WaitForNonStaleResults().ToList();
 
+                    var operation = await store
+                        .Operations
+                        .SendAsync(new PatchByIndexOperation("TestIndex", new IndexQuery { Query = "Owner:bob" }, new PatchRequest { Script = sampleScript }));
 
-                getDocumentCommand = new GetDocumentCommand
-                {
-                    Ids = new[] { item2.Id },
-                    Context = context
-                };
-                store.GetRequestExecuter(store.DefaultDatabase).Execute(getDocumentCommand, context);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
-                results = getDocumentCommand.Result.Results;
-                Assert.Equal(1, results.Length);
-                res = (BlittableJsonReaderObject)results[0];
-                res.TryGetMember("Comments", out obj);
-                Assert.Equal(3, ((BlittableJsonReaderArray)obj).Length);
-                Assert.Equal("one", ((BlittableJsonReaderArray)obj).GetStringByIndex(0));
-                Assert.Equal("two", ((BlittableJsonReaderArray)obj).GetStringByIndex(1));
-                Assert.Equal("seven", ((BlittableJsonReaderArray)obj).GetStringByIndex(2));
-                res.TryGetMember("Value", out obj);
-                Assert.Equal(9999, ((Int64)obj));
+                    var getDocumentCommand = new GetDocumentCommand
+                    {
+                        Ids = new[] { item1.Id },
+                        Context = context
+                    };
+                    store.GetRequestExecuter(store.DefaultDatabase).Execute(getDocumentCommand, context);
 
+                    var results = getDocumentCommand.Result.Results;
+                    Assert.Equal(1, results.Length);
+                    var res = (BlittableJsonReaderObject)results[0];
+                    object obj;
+                    res.TryGetMember("Comments", out obj);
+                    Assert.Equal(2, ((BlittableJsonReaderArray)obj).Length);
+                    Assert.Equal("one test", ((BlittableJsonReaderArray)obj).GetStringByIndex(0));
+                    Assert.Equal("two", ((BlittableJsonReaderArray)obj).GetStringByIndex(1));
+                    res.TryGetMember("Value", out obj);
+                    Assert.Equal(12144, ((Int64)obj));
+                    res.TryGetMember("newValue", out obj);
+                    Assert.Equal("err!!", obj.ToString());
+
+                    getDocumentCommand = new GetDocumentCommand
+                    {
+                        Ids = new[] { item2.Id },
+                        Context = context
+                    };
+                    store.GetRequestExecuter(store.DefaultDatabase).Execute(getDocumentCommand, context);
+
+                    results = getDocumentCommand.Result.Results;
+                    Assert.Equal(1, results.Length);
+                    res = (BlittableJsonReaderObject)results[0];
+                    res.TryGetMember("Comments", out obj);
+                    Assert.Equal(3, ((BlittableJsonReaderArray)obj).Length);
+                    Assert.Equal("one", ((BlittableJsonReaderArray)obj).GetStringByIndex(0));
+                    Assert.Equal("two", ((BlittableJsonReaderArray)obj).GetStringByIndex(1));
+                    Assert.Equal("seven", ((BlittableJsonReaderArray)obj).GetStringByIndex(2));
+                    res.TryGetMember("Value", out obj);
+                    Assert.Equal(9999, (long)obj);
+                }
             }
         }
 
@@ -165,53 +163,50 @@ namespace NewClientTests.NewClient.FastTests.Patching
                 }
 
                 JsonOperationContext context;
-                store.GetRequestExecuter(store.DefaultDatabase).ContextPool.AllocateOperationContext(out context);
-
-                var putIndexOperation = new PutIndexOperation(context);
-                var indexCommand = putIndexOperation.CreateRequest(store.Conventions, "TestIndex", new IndexDefinition
-                { Maps = { @"from doc in docs.CustomTypes 
-                                     select new { doc.Value }" } });
-                if (indexCommand != null)
-                    store.GetRequestExecuter(store.DefaultDatabase).Execute(indexCommand, context);
-
-
-
-                using (var session = store.OpenAsyncSession())
+                using (store.GetRequestExecuter(store.DefaultDatabase).ContextPool.AllocateOperationContext(out context))
                 {
-                    await session.Advanced.AsyncDocumentQuery<CustomType>("TestIndex")
-                        .WaitForNonStaleResults()
-                        .ToListAsync();
+                    store.Admin.Send(new PutIndexOperation("TestIndex", new IndexDefinition
+                    {
+                        Maps = { @"from doc in docs.CustomTypes select new { doc.Value }" }
+                    }));
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.Advanced.AsyncDocumentQuery<CustomType>("TestIndex")
+                            .WaitForNonStaleResults()
+                            .ToListAsync();
+                    }
+
+                    var operation = await store
+                        .Operations
+                        .SendAsync(new PatchByIndexOperation("TestIndex", new IndexQuery { Query = "Value:1" }, new PatchRequest { Script = @"PutDocument('NewItem/3', {'CopiedValue': this.Value });" }));
+
+                    await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
+
+                    var getDocumentCommand = new GetDocumentCommand
+                    {
+                        Ids = new[] { "Item/1", "Item/2" },
+                        Context = context
+                    };
+                    store.GetRequestExecuter(store.DefaultDatabase).Execute(getDocumentCommand, context);
+
+                    var results = getDocumentCommand.Result.Results;
+                    Assert.Equal(2, results.Length);
+
+                    getDocumentCommand = new GetDocumentCommand
+                    {
+                        Ids = new[] { "NewItem/3" },
+                        Context = context
+                    };
+                    store.GetRequestExecuter(store.DefaultDatabase).Execute(getDocumentCommand, context);
+
+                    results = getDocumentCommand.Result.Results;
+                    Assert.Equal(1, results.Length);
+                    var res = (BlittableJsonReaderObject)results[0];
+                    object obj;
+                    res.TryGetMember("CopiedValue", out obj);
+                    Assert.Equal(1, (long)obj);
                 }
-
-                var operation = await store
-                    .Operations
-                    .SendAsync(new PatchByIndexOperation("TestIndex", new IndexQuery { Query = "Value:1" }, new PatchRequest { Script = @"PutDocument('NewItem/3', {'CopiedValue': this.Value });" }));
-
-                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
-
-                var getDocumentCommand = new GetDocumentCommand
-                {
-                    Ids = new[] { "Item/1", "Item/2" },
-                    Context = context
-                };
-                store.GetRequestExecuter(store.DefaultDatabase).Execute(getDocumentCommand, context);
-
-                var results = getDocumentCommand.Result.Results;
-                Assert.Equal(2, results.Length);
-
-                getDocumentCommand = new GetDocumentCommand
-                {
-                    Ids = new[] { "NewItem/3" },
-                    Context = context
-                };
-                store.GetRequestExecuter(store.DefaultDatabase).Execute(getDocumentCommand, context);
-
-                results = getDocumentCommand.Result.Results;
-                Assert.Equal(1, results.Length);
-                var res = (BlittableJsonReaderObject)results[0];
-                object obj;
-                res.TryGetMember("CopiedValue", out obj);
-                Assert.Equal(1, (long)obj);
             }
         }
 
