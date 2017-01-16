@@ -116,14 +116,14 @@ namespace Sparrow.Json
         }
 
         public void Dispose()
-        {            
+        {
             _returnBuffer.Dispose();
             if (Used == 0)
                 return;
 
             _stream.Write(_buffer.Buffer.Array, _buffer.Buffer.Offset, Used);
             Used = 0;
-            
+
         }
 
         public void EnsureSingleChunk(JsonParserState state)
@@ -176,7 +176,7 @@ namespace Sparrow.Json
         internal UnmanagedWriteBuffer(JsonOperationContext context, AllocatedMemoryData allocatedMemoryData)
         {
             _context = context;
-            _sizeInBytes=0;
+            _sizeInBytes = 0;
             _current = new Segment
             {
                 Address = allocatedMemoryData.Address,
@@ -195,16 +195,18 @@ namespace Sparrow.Json
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void ThrowIfDisposed()
+        private static void ThrowOnDisposed()
         {
-            if(_current == null)
-                throw new ObjectDisposedException(nameof(UnmanagedWriteBuffer));
+            throw new ObjectDisposedException(nameof(UnmanagedWriteBuffer));
         }
 
         public void Write(byte* buffer, int length)
         {
-            ThrowIfDisposed();
+            if (_current == null)
+            {
+                ThrowOnDisposed();
+                return;
+            }
             if (length == 0)
                 return;
 
@@ -229,7 +231,7 @@ namespace Sparrow.Json
                 // Create next, bigger segment if needed
                 if (_current.Allocation.SizeInBytes == _current.Used)
                 {
-                    AllocateNextSegment(lengthLeft, allowGrowth:true);
+                    AllocateNextSegment(lengthLeft, allowGrowth: true);
                 }
 
                 var bytesToWrite = Math.Min(lengthLeft, _current.Allocation.SizeInBytes - _current.Used);
@@ -250,13 +252,13 @@ namespace Sparrow.Json
             // grow by doubling segment size until we get to 1 MB, then just use 1 MB segments
             // otherwise a document with 17 MB will waste 15 MB and require very big allocations
             var nextSegmentSize = Math.Max(Bits.NextPowerOf2(required), _current.Allocation.SizeInBytes * 2);
-            const int oneMb = 1024*1024;
+            const int oneMb = 1024 * 1024;
             if (nextSegmentSize > oneMb && required <= oneMb)
             {
                 nextSegmentSize = oneMb;
             }
 
-            if (allowGrowth && 
+            if (allowGrowth &&
                 // we successfully grew the allocation, nothing to do
                 _context.GrowAllocation(_current.Allocation, nextSegmentSize))
                 return;
@@ -275,24 +277,29 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteByte(byte data)
         {
-            ThrowIfDisposed();
+            if (_current == null)
+            {
+                ThrowOnDisposed();
+                return;
+            }
             if (_current.Used == _current.Allocation.SizeInBytes)
             {
                 AllocateNextSegment(1, allowGrowth: true);
             }
             _sizeInBytes++;
-            *(_current.Address+ _current.Used) = data;
+            *(_current.Address + _current.Used) = data;
             _current.Used++;
         }
 
         public int CopyTo(IntPtr pointer)
         {
-            return CopyTo((byte*) pointer);
+            return CopyTo((byte*)pointer);
         }
 
         public int CopyTo(byte* pointer)
         {
-            ThrowIfDisposed();
+            if (_current == null)
+                ThrowOnDisposed();
 
             var whereToWrite = pointer + _sizeInBytes;
             var cur = _current;
@@ -312,7 +319,11 @@ namespace Sparrow.Json
 
         public void Clear()
         {
-            ThrowIfDisposed();
+            if (_current == null)
+            {
+                ThrowOnDisposed();
+                return;
+            }
 
             _current.Used = 0;
             _sizeInBytes = 0;
@@ -322,9 +333,9 @@ namespace Sparrow.Json
 
         public void Dispose()
         {
-            while (_current != null && 
+            while (_current != null &&
                 _current.Address != null) //prevent double dispose
-            {                
+            {
                 _context.ReturnMemory(_current.Allocation);
                 _current.Address = null; //precaution, to make memory issues more visible
                 _current = _current.PreviousAllocated;
@@ -333,14 +344,19 @@ namespace Sparrow.Json
 
         public void EnsureSingleChunk(JsonParserState state)
         {
-            ThrowIfDisposed();
             EnsureSingleChunk(out state.StringBuffer, out state.StringSize);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void EnsureSingleChunk(out byte* ptr, out int size)
         {
-            ThrowIfDisposed();
+            if (_current == null)
+            {
+                ThrowOnDisposed();
+                size = 0;
+                ptr = null;
+                return;
+            }
             if (_current.Previous == null || _current.PreviousHoldsNoData)
             {
                 ptr = _current.Address;
