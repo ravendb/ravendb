@@ -13,9 +13,9 @@
     </div>
     <div class="panel panel-default panel-wo-margin" data-bind="visible: !$root.settingsAccess.isForbidden() && $root.canUseGlobalConfigurations()">
         <div class="panel-heading">
-            <button type="submit" class="btn btn-primary" data-bind="click: saveChanges, enable: isSaveEnabled, visible: activated()" title="Save Changes (Alt+S)" accesskey="S"><i class="fa fa-save"></i></button>
+            <button type="submit" class="btn btn-primary" data-bind="click: saveChanges, enable: isSaveEnabled, visible: activated()" title="Save Changes (Alt+S)" accesskey="S"><i class="icon-save"></i></button>
             <button type="button" class="btn btn-default" data-bind="click: $root.activateConfig.bind($root), visible: !activated(), disable: $root.settingsAccess.isReadOnly()">
-                <i class="fa fa-plus"></i> Create global configuration for Custom Functions
+                <i class="icon-plus"></i> Create global configuration for Custom Functions
             </button>
             <button type="button" class="btn btn-danger" data-bind="click: $root.disactivateConfig.bind($root), visible: activated(), disable: $root.settingsAccess.isReadOnly()">
                 <i class="fa fa-trash"></i> Remove global configuration for Custom Functions

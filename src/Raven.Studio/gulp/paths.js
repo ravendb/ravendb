@@ -41,7 +41,6 @@ var paths = {
         'wwwroot/lib/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.css',
         'wwwroot/lib/bootstrap-select/dist/css/bootstrap-select.css',
         'wwwroot/lib/bootstrap-multiselect/dist/css/bootstrap-multiselect.css',
-        'wwwroot/lib/font-awesome/css/font-awesome.css', /* TODO: remove in future */
         'wwwroot/lib/Durandal/css/durandal.css',
         //'wwwroot/lib/jquery-ui/themes/base-wo-comments/all.css',
         //'wwwroot/lib/jquery.dynatree/dist/skin/ui.dynatree.css',

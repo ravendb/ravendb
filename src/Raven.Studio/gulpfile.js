@@ -137,12 +137,6 @@ gulp.task('release:fonts', function() {
        .pipe(gulp.dest(path.join(PATHS.releaseTargetContentCss, 'fonts')));
 });
 
-//TODO: delete this task once we remove font awesome
-gulp.task('release:temp-font-awesome', function () {
-    return gulp.src('wwwroot/lib/font-awesome/fonts/**/*')
-       .pipe(gulp.dest(path.join(PATHS.releaseTargetContent, 'fonts')));
-});
-
 gulp.task('release:html', function() {
     return gulp.src('wwwroot/index.html')
         .pipe(plugins.processhtml())
@@ -279,7 +273,6 @@ gulp.task('release', function (cb) {
             'release:html',
             'release:css',
             'release:fonts',
-            'release:temp-font-awesome', //TODO: temp fix: we won't have font-awesome in final
             'release:durandal'
         ],
         'release:package',

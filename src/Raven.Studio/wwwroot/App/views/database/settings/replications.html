@@ -7,7 +7,7 @@
         <div class="panel panel-default" data-bind="if: replicationEnabled(), visible: replicationEnabled()">
             <div class="panel-heading">
                 <button type="submit" class="btn btn-primary" data-bind="enable: isSetupSaveEnabled() || isConfigSaveEnabled()" title="Save changes (Alt+S)" accesskey="S">
-                    <i class="fa fa-save"></i>
+                    <i class="icon-save"></i>
                 </button>
             </div>
             <div class="panel-body">
@@ -94,7 +94,7 @@
                     <label class="col-sm-2 control-label">Replication destinations</label>
                     <div class="col-sm-10">
                         <button type="button" class="btn btn-default" data-bind="click: createNewDestination" title="Add a replication destination (Alt+N)" accesskey="N">
-                            <i class="fa fa-plus"></i> Add destination
+                            <i class="icon-plus"></i> Add destination
                         </button>
                         <br />
                         <br />
@@ -280,7 +280,7 @@
             
         <div class="panel-heading">
             <button data-bind="click: saveServerPrefixForHiLo, enable: isServerPrefixForHiLoSaveEnabled" type="submit" class="btn btn-primary" title="Save changes">
-                <i class="fa fa-save"></i>
+                <i class="icon-save"></i>
             </button>
             <span style="margin-left: 5px;">
                     Server HiLo prefix
