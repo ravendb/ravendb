@@ -181,7 +181,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             {
                 LazyStringValue lazyStringValue;
                 if (valueType == ValueType.LazyCompressedString)
-                    lazyStringValue = ((LazyCompressedStringValue)value).ToLazyStringValue();
+                    lazyStringValue = ((LazyCompressedStringValue)value).ToDiscardableLazyStringValue();
                 else
                     lazyStringValue = (LazyStringValue)value;
 
