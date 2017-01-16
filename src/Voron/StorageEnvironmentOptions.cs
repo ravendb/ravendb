@@ -27,7 +27,7 @@ namespace Voron
 
         public event EventHandler<RecoveryErrorEventArgs> OnRecoveryError;
         public event EventHandler<NonDurabalitySupportEventArgs> OnNonDurabaleFileSystemError;
-        private static int _reuseCounter;
+        private static long _reuseCounter;
         public abstract override string ToString();
 
         public void InvokeRecoveryError(object sender, string message, Exception e)
@@ -199,11 +199,21 @@ namespace Voron
 
                 var dirInfo = new DirectoryInfo(_journalPath);
                 var journalsForReuse = dirInfo.GetFiles("*.pending-recycle").Select(x => x.Name).ToList();
-
                 var fileInfoList = new List<Tuple<string, DateTime>>();
                 foreach (var reuseFileNameIter in journalsForReuse)
                 {
-                    var reuseFileName = dirInfo.ToString() + reuseFileNameIter;
+                    try
+                    {
+                        var reuseNameWithoutExt = Path.GetFileNameWithoutExtension(reuseFileNameIter);
+                        var reuseNum = long.Parse(reuseNameWithoutExt);
+                        if (reuseNum > _reuseCounter)
+                            _reuseCounter = reuseNum;
+                    }
+                    catch
+                    {
+                        // ignore
+                    }
+                    var reuseFileName = dirInfo + reuseFileNameIter;
                     try
                     {
                         var fileModifiedDate = new FileInfo(reuseFileName).CreationTimeUtc;
