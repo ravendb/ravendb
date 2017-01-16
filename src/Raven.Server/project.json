@@ -13,7 +13,6 @@
     "emitEntryPoint": true,
     "warningsAsErrors": true,
     "define": [ "PORTABLE" ],
-    "debugType": "portable",
     "compile": {
       "include": [ "**/*.cs", "../CommonAssemblyInfo.cs", "../../Imports/metrics.net/Src/Metrics/**/*.cs" ]
     },
@@ -30,7 +29,8 @@
   "configurations": {
     "Release": {
       "buildOptions": {
-        "optimize": true
+        "optimize": true,
+        "debugType": "portable"
       }
     }
   },
