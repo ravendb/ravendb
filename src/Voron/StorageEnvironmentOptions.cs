@@ -215,7 +215,6 @@ namespace Voron
                     {
                         if (_log.IsInfoEnabled)
                             _log.Info("On Storage Environment Options : Can't store journal for reuse : " + reusableFile, ex);
-
                         TryDelete(reusableFile);
                     }
                 }
@@ -264,8 +263,8 @@ namespace Voron
 
                 var name = JournalName(journalNumber);
                 var path = Path.Combine(_journalPath, name);
-
-                AttemptToReuseJournal(path);
+                if (File.Exists(path) == false)
+                    AttemptToReuseJournal(path);
 
                 var result = _journals.GetOrAdd(name, _ => new Lazy<IJournalWriter>(() =>
                 {
@@ -323,6 +322,10 @@ namespace Voron
                     while (_journalsForReuse.Count > 0)
                     {
                         if ((lastModifed - _journalsForReuse.Keys[0]).TotalHours < 72)
+                        {
+                            break;
+                        }
+                        if ((DateTime.UtcNow - _journalsForReuse.Keys[0]).TotalHours < 72)
                         {
                             break;
                         }
