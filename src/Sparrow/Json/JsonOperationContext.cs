@@ -164,9 +164,16 @@ namespace Sparrow.Json
                 //_parent disposal sets _managedBuffers to null,
                 //throwing ObjectDisposedException() to make it more visible
                 if (_parent._disposed)
-                    throw new ObjectDisposedException("ReturnBuffer should not be disposed after it's parent operation context was disposed");
+                    ThrowParentWasDisposed();
+
                 _parent._managedBuffers.Push(_buffer);
                 _buffer = null;
+            }
+
+            private static void ThrowParentWasDisposed()
+            {
+                throw new ObjectDisposedException(
+                    "ReturnBuffer should not be disposed after it's parent operation context was disposed");
             }
         }
 

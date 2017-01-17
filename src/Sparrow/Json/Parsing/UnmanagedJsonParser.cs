@@ -12,7 +12,7 @@ namespace Sparrow.Json.Parsing
         public static readonly byte[] Utf8Preamble = Encoding.UTF8.GetPreamble();
 
         private readonly string _debugTag;
-        private UnmanagedWriteBuffer _stringBuffer;
+        private UnmanagedWriteBuffer _unmanagedWriteBuffer;
         private string _doubleStringBuffer;
         private int _currentStrStart;
         private readonly JsonOperationContext _ctx;
@@ -41,7 +41,7 @@ namespace Sparrow.Json.Parsing
             _ctx = ctx;
             _state = state;
             _debugTag = debugTag;
-            _stringBuffer = ctx.GetStream();
+            _unmanagedWriteBuffer = ctx.GetStream();
         }
 
         public void SetBuffer(JsonOperationContext.ManagedPinnedBuffer inputBuffer, int size)
@@ -76,8 +76,8 @@ namespace Sparrow.Json.Parsing
         public void NewDocument()
         {
             _maybeBeforePreamble = true;
-            _stringBuffer.Dispose();
-            _stringBuffer = _ctx.GetStream();
+            _unmanagedWriteBuffer.Dispose();
+            _unmanagedWriteBuffer = _ctx.GetStream();
         }
 
         public bool Read()
@@ -199,7 +199,7 @@ namespace Sparrow.Json.Parsing
                     case (byte)'"':
                     case (byte)'\'':
                         _state.EscapePositions.Clear();
-                        _stringBuffer.Clear();
+                        _unmanagedWriteBuffer.Clear();
                         _prevEscapePosition = 0;
                         _currentQuote = b;
                         _state.CurrentTokenType = JsonParserToken.String;
@@ -208,7 +208,7 @@ namespace Sparrow.Json.Parsing
                             _state.Continuation = JsonParserTokenContinuation.PartialString;
                             return false;
                         }
-                        _stringBuffer.EnsureSingleChunk(_state);
+                        _unmanagedWriteBuffer.EnsureSingleChunk(_state);
                         return true;
                     case (byte)'{':
                         _state.CurrentTokenType = JsonParserToken.StartObject;
@@ -236,7 +236,7 @@ namespace Sparrow.Json.Parsing
                     case (byte)'9':
                     case (byte)'-': // negative number
 
-                        _stringBuffer.Clear();
+                        _unmanagedWriteBuffer.Clear();
                         _state.EscapePositions.Clear();
                         _state.Long = 0;
                         _zeroPrefix = b == '0';
@@ -254,7 +254,7 @@ namespace Sparrow.Json.Parsing
                             return false;
                         }
                         if (_state.CurrentTokenType == JsonParserToken.Float)
-                            _stringBuffer.EnsureSingleChunk(_state);
+                            _unmanagedWriteBuffer.EnsureSingleChunk(_state);
                         return true;
 
                     default:
@@ -275,7 +275,7 @@ namespace Sparrow.Json.Parsing
 
                     _state.Continuation = JsonParserTokenContinuation.None;
                     _state.CurrentTokenType = JsonParserToken.Float;
-                    _stringBuffer.EnsureSingleChunk(_state);
+                    _unmanagedWriteBuffer.EnsureSingleChunk(_state);
 
                     read = true;
                     return true;
@@ -286,7 +286,7 @@ namespace Sparrow.Json.Parsing
                         return true;
 
                     if (_state.CurrentTokenType == JsonParserToken.Float)
-                        _stringBuffer.EnsureSingleChunk(_state);
+                        _unmanagedWriteBuffer.EnsureSingleChunk(_state);
 
                     _state.Continuation = JsonParserTokenContinuation.None;
 
@@ -308,7 +308,7 @@ namespace Sparrow.Json.Parsing
                     if (ParseString() == false)
                         return true;
 
-                    _stringBuffer.EnsureSingleChunk(_state);
+                    _unmanagedWriteBuffer.EnsureSingleChunk(_state);
                     _state.CurrentTokenType = JsonParserToken.String;
                     _state.Continuation = JsonParserTokenContinuation.None;
   
@@ -417,7 +417,7 @@ namespace Sparrow.Json.Parsing
                             case (byte)',':
                             case (byte)']':
                             case (byte)'}':
-                                if (_zeroPrefix && _stringBuffer.SizeInBytes != 1)
+                                if (_zeroPrefix && _unmanagedWriteBuffer.SizeInBytes != 1)
                                     throw CreateException("Invalid number with zero prefix");
                                 if (_isNegative)
                                     _state.Long *= -1;
@@ -428,7 +428,7 @@ namespace Sparrow.Json.Parsing
                                 throw CreateException("Number cannot end with char with: '" + (char)b + "' (" + b + ")");
                         }
                 }
-                _stringBuffer.WriteByte(b);
+                _unmanagedWriteBuffer.WriteByte(b);
 
             }
         }
@@ -460,14 +460,14 @@ namespace Sparrow.Json.Parsing
                     {
                         if (b == _currentQuote)
                         {
-                            _stringBuffer.Write(_inputBuffer + _currentStrStart, _pos - _currentStrStart - 1
+                            _unmanagedWriteBuffer.Write(_inputBuffer + _currentStrStart, _pos - _currentStrStart - 1
                                 /*don't include the last quote*/);
                             return true;
                         }
                         if (b == (byte) '\\')
                         {
                             _escapeMode = true;
-                            _stringBuffer.Write(_inputBuffer + _currentStrStart, _pos - _currentStrStart - 1
+                            _unmanagedWriteBuffer.Write(_inputBuffer + _currentStrStart, _pos - _currentStrStart - 1
                                 /*don't include the escape */);
                             _currentStrStart = _pos;
                         }
@@ -479,31 +479,31 @@ namespace Sparrow.Json.Parsing
                         _charPos++;
                         if (b != (byte) 'u' && b != (byte) '/')
                         {
-                            _state.EscapePositions.Add(_stringBuffer.SizeInBytes - _prevEscapePosition);
-                            _prevEscapePosition = _stringBuffer.SizeInBytes + 1;
+                            _state.EscapePositions.Add(_unmanagedWriteBuffer.SizeInBytes - _prevEscapePosition);
+                            _prevEscapePosition = _unmanagedWriteBuffer.SizeInBytes + 1;
                         }
 
                         switch (b)
                         {
                             case (byte) 'r':
-                                _stringBuffer.WriteByte((byte) '\r');
+                                _unmanagedWriteBuffer.WriteByte((byte) '\r');
                                 break;
                             case (byte) 'n':
-                                _stringBuffer.WriteByte((byte) '\n');
+                                _unmanagedWriteBuffer.WriteByte((byte) '\n');
                                 break;
                             case (byte) 'b':
-                                _stringBuffer.WriteByte((byte) '\b');
+                                _unmanagedWriteBuffer.WriteByte((byte) '\b');
                                 break;
                             case (byte) 'f':
-                                _stringBuffer.WriteByte((byte) '\f');
+                                _unmanagedWriteBuffer.WriteByte((byte) '\f');
                                 break;
                             case (byte) 't':
-                                _stringBuffer.WriteByte((byte) '\t');
+                                _unmanagedWriteBuffer.WriteByte((byte) '\t');
                                 break;
                             case (byte) '"':
                             case (byte) '\\':
                             case (byte) '/':
-                                _stringBuffer.WriteByte(b);
+                                _unmanagedWriteBuffer.WriteByte(b);
                                 break;
                             case (byte) '\r': // line continuation, skip
                                 // flush the buffer, but skip the \,\r chars
@@ -533,7 +533,7 @@ namespace Sparrow.Json.Parsing
                     }
                 }
                 // copy the buffer to the native code, then refill
-                _stringBuffer.Write(_inputBuffer + _currentStrStart, _pos - _currentStrStart);
+                _unmanagedWriteBuffer.Write(_inputBuffer + _currentStrStart, _pos - _currentStrStart);
                 if (_pos >= _bufSize)
                     return false;
             }
@@ -585,26 +585,26 @@ namespace Sparrow.Json.Parsing
                 throw new FormatException("Could not convert value " + val + " to char", e);
             }
             var byteCount = Encoding.UTF8.GetBytes(chars, 1, smallBuffer, 8);
-            _stringBuffer.Write(smallBuffer, byteCount);
+            _unmanagedWriteBuffer.Write(smallBuffer, byteCount);
         }
 
 
         public void ValidateFloat()
         {
-            if (_stringBuffer.SizeInBytes > 100)
-                throw CreateException("Too many characters in double: " + _stringBuffer.SizeInBytes);
+            if (_unmanagedWriteBuffer.SizeInBytes > 100)
+                throw CreateException("Too many characters in double: " + _unmanagedWriteBuffer.SizeInBytes);
 
-            if (_doubleStringBuffer == null || _stringBuffer.SizeInBytes > _doubleStringBuffer.Length)
-                _doubleStringBuffer = new string(' ', _stringBuffer.SizeInBytes);
+            if (_doubleStringBuffer == null || _unmanagedWriteBuffer.SizeInBytes > _doubleStringBuffer.Length)
+                _doubleStringBuffer = new string(' ', _unmanagedWriteBuffer.SizeInBytes);
           
-            var tmpBuff = stackalloc byte[_stringBuffer.SizeInBytes];
+            var tmpBuff = stackalloc byte[_unmanagedWriteBuffer.SizeInBytes];
             // here we assume a clear char <- -> byte conversion, we only support
             // utf8, and those cleanly transfer
             fixed (char* pChars = _doubleStringBuffer)
             {
                 int i = 0;
-                _stringBuffer.CopyTo(tmpBuff);
-                for (; i < _stringBuffer.SizeInBytes; i++)
+                _unmanagedWriteBuffer.CopyTo(tmpBuff);
+                for (; i < _unmanagedWriteBuffer.SizeInBytes; i++)
                 {
                     pChars[i] = (char)tmpBuff[i];
                 }
@@ -635,7 +635,7 @@ namespace Sparrow.Json.Parsing
 
         public void Dispose()
         {
-            _stringBuffer.Dispose();
+            _unmanagedWriteBuffer.Dispose();
         }
 
         public int ReadBuffer(byte[] buffer, int offset, int count)
@@ -664,16 +664,15 @@ namespace Sparrow.Json.Parsing
 
         public void ResetStream()
         {
-            _stringBuffer.Dispose();
+            _unmanagedWriteBuffer.Dispose();
         }
 
         public void SetStream()
         {
             //precaution: do not lose the previous instance
-            if (_stringBuffer.IsDisposed == false)
-                _ctx.RegisterForDispose(_stringBuffer); 
+            _ctx.RegisterForDispose(_unmanagedWriteBuffer);
 
-            _stringBuffer = _ctx.GetStream();
+            _unmanagedWriteBuffer = _ctx.GetStream();
         }
     }
 }

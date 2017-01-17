@@ -226,7 +226,6 @@ namespace Raven.Server.Documents.Versioning
             try
             {
                 prefixKeyMem = context.Allocator.Allocate(loweredKey.Size + 1);
-
                 loweredKey.CopyTo(0, prefixKeyMem.Ptr, 0, loweredKey.Size);
                 prefixKeyMem.Ptr[loweredKey.Size] = (byte) 30; // the record separator                
                 var prefixSlice = new Slice(SliceOptions.Key, prefixKeyMem);
@@ -235,7 +234,8 @@ namespace Raven.Server.Documents.Versioning
             }
             finally
             {
-                context.Allocator.Release(ref prefixKeyMem);
+                if (prefixKeyMem.HasValue)
+                    context.Allocator.Release(ref prefixKeyMem);
             }
         }
 
