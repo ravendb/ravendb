@@ -332,6 +332,7 @@ namespace Raven.Server.Smuggler.Documents
                 var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "import/object", _parser, _state);
 
                 ReadObject(builder);
+                context.RegisterForDispose(builder);
 
                 yield return builder;
             }

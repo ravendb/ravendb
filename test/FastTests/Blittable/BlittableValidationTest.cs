@@ -658,14 +658,16 @@ namespace FastTests.Blittable
                     fixed (byte* pBuffer = buffer)
                     {
                         parser.SetBuffer(pBuffer, buffer.Length);
-                        var writer = new BlittableJsonDocumentBuilder(ctx,
+                        using (var writer = new BlittableJsonDocumentBuilder(ctx,
                             BlittableJsonDocumentBuilder.UsageMode.None,
-                            "test", parser, state);
-                        writer.ReadObjectDocument();
-                        var x = writer.Read();
-                        writer.FinalizeDocument();
-                        using (var reader = writer.CreateReader())
-                            reader.BlittableValidation();
+                            "test", parser, state))
+                        {
+                            writer.ReadObjectDocument();
+                            writer.Read();
+                            writer.FinalizeDocument();
+                            using (var reader = writer.CreateReader())
+                                reader.BlittableValidation();
+                        }
                     }
                 }
             }

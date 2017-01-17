@@ -11,7 +11,7 @@ namespace Sparrow.Json
 
         protected readonly JsonOperationContext _context;
         private UsageMode _mode;
-        private  IJsonParser _reader;
+        private readonly IJsonParser _reader;
         private readonly BlittableWriter<UnmanagedWriteBuffer> _writer;
         private readonly JsonParserState _state;
         
