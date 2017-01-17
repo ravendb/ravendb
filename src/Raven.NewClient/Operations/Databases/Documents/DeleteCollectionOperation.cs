@@ -8,11 +8,11 @@ using Sparrow.Json;
 
 namespace Raven.NewClient.Operations.Databases.Documents
 {
-    public class DeleteByCollectionOperation : IOperation
+    public class DeleteCollectionOperation : IOperation<OperationIdResult>
     {
         private readonly string _collectionName;
 
-        public DeleteByCollectionOperation(string collectionName)
+        public DeleteCollectionOperation(string collectionName)
         {
             if (collectionName == null)
                 throw new ArgumentNullException(nameof(collectionName));
@@ -22,14 +22,14 @@ namespace Raven.NewClient.Operations.Databases.Documents
 
         public RavenCommand<OperationIdResult> GetCommand(DocumentConvention conventions, JsonOperationContext context)
         {
-            return new DeleteByCollectionCommand(_collectionName);
+            return new DeleteCollectionCommand(_collectionName);
         }
 
-        private class DeleteByCollectionCommand : RavenCommand<OperationIdResult>
+        private class DeleteCollectionCommand : RavenCommand<OperationIdResult>
         {
             private readonly string _collectionName;
 
-            public DeleteByCollectionCommand(string collectionName)
+            public DeleteCollectionCommand(string collectionName)
             {
                 if (collectionName == null)
                     throw new ArgumentNullException(nameof(collectionName));

@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.NewClient.Operations.Databases.Documents
 {
-    public class DeleteByIndexOperation : IOperation
+    public class DeleteByIndexOperation : IOperation<OperationIdResult>
     {
         private readonly string _indexName;
         private readonly IndexQuery _queryToDelete;

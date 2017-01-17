@@ -234,7 +234,7 @@ namespace Raven.NewClient.Client.Json
             var str = ReadAsString();
             if (str == null)
                 return null;
-            return DateTime.ParseExact(str, "o", CultureInfo.InvariantCulture);
+            return DateTimeOffset.ParseExact(str, "o", CultureInfo.InvariantCulture);
         }
     }
 

@@ -23,7 +23,7 @@ namespace FastTests.Server.Basic
                     await session.SaveChangesAsync();
                 }
 
-                var operation = await store.Operations.SendAsync(new DeleteByCollectionOperation("Users"));
+                var operation = await store.Operations.SendAsync(new DeleteCollectionOperation("Users"));
                 await operation.WaitForCompletionAsync();
 
                 var stats = await store.Admin.SendAsync(new GetStatisticsOperation());

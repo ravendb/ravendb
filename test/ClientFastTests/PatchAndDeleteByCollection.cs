@@ -25,7 +25,7 @@ namespace NewClientTests.NewClient.FastTests.Patching
                     x.SaveChanges();
                 }
 
-                var operation = store.Operations.Send(new DeleteByCollectionOperation("users"));
+                var operation = store.Operations.Send(new DeleteCollectionOperation("users"));
                 operation.WaitForCompletion(TimeSpan.FromSeconds(60));
 
                 var stats = store.Admin.Send(new GetStatisticsOperation());
@@ -48,7 +48,7 @@ namespace NewClientTests.NewClient.FastTests.Patching
                     x.SaveChanges();
                 }
 
-                var operation = store.Operations.Send(new PatchByCollectionOperation("users", new PatchRequest { Script = " this.Name = __document_id;" }));
+                var operation = store.Operations.Send(new PatchCollectionOperation("users", new PatchRequest { Script = " this.Name = __document_id;" }));
                 operation.WaitForCompletion(TimeSpan.FromSeconds(60));
 
                 var stats = store.Admin.Send(new GetStatisticsOperation());

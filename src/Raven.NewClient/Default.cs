@@ -1,5 +1,4 @@
 using Newtonsoft.Json;
-using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Json;
 
 namespace Raven.NewClient.Abstractions
@@ -7,8 +6,7 @@ namespace Raven.NewClient.Abstractions
     public static class Default
     {
 
-        public static readonly string[] OnlyDateTimeFormat = new[]
-        {
+        public static readonly string[] OnlyDateTimeFormat = {
             "yyyy'-'MM'-'dd'T'HH':'mm':'ss",
             "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff",
             "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff'Z'"
@@ -17,8 +15,7 @@ namespace Raven.NewClient.Abstractions
         /// <remarks>
         /// 'r' format is used on the in metadata, because it's delivered as http header. 
         /// </remarks>
-        public static readonly string[] DateTimeFormatsToRead = new[]
-        {
+        public static readonly string[] DateTimeFormatsToRead = {
             "o", 
             "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff", 
             "yyyy-MM-ddTHH:mm:ss.fffffffzzz", 

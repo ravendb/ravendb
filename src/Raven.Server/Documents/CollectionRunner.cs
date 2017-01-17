@@ -1,12 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Raven.Client.Data;
 using Raven.Client.Data.Collection;
-using Raven.Client.Data.Queries;
 using Raven.Client.Util.RateLimiting;
-using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
@@ -32,10 +28,10 @@ namespace Raven.Server.Documents
 
         public IOperationResult ExecutePatch(string collectionName, CollectionOperationOptions options, PatchRequest patch, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(collectionName, options, _context, onProgress, key => _database.Patch.Apply(context, key, null, patch, null), token);
+            return ExecuteOperation(collectionName, options, _context, onProgress, key => _database.Patch.Apply(context, key, etag: null, patch: patch, patchIfMissing: null, skipPatchIfEtagMismatch: false, debugMode: false), token);
         }
 
-        private IOperationResult ExecuteOperation(string collectionName, CollectionOperationOptions options, DocumentsOperationContext context, 
+        private IOperationResult ExecuteOperation(string collectionName, CollectionOperationOptions options, DocumentsOperationContext context,
              Action<DeterminateProgress> onProgress, Action<string> action, OperationCancelToken token)
         {
             const int batchSize = 1024;
@@ -66,9 +62,9 @@ namespace Raven.Server.Documents
                     {
                         var documents = _database.DocumentsStorage.GetDocumentsFrom(context, collectionName, startEtag, 0, batchSize).ToList();
                         foreach (var document in documents)
-                        {                                
+                        {
                             cancellationToken.ThrowIfCancellationRequested();
-                            
+
                             if (document.Etag > lastEtag)// we don't want to go over the documents that we have patched
                             {
                                 done = true;
@@ -92,14 +88,14 @@ namespace Raven.Server.Documents
                         tx.Commit();
 
                         onProgress(progress);
- 
+
                         if (wait)
                             rateGate.WaitToProceed();
                         if (done || documents.Count == 0)
                             break;
-                    }                        
+                    }
                 }
-            }            
+            }
 
             return new BulkOperationResult
             {
