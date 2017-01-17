@@ -8,7 +8,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
     let indexesChildren = [
         new leafMenuItem({
             title: "List of indexes",
-            nav: false,
+            nav: true,
             route: "databases/indexes",
             moduleId: "viewmodels/database/indexes/indexes",
             css: 'icon-indexing',

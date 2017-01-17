@@ -1,4 +1,5 @@
-﻿
+﻿/// <reference path="../../../../typings/tsd.d.ts" />
+
 import appUrl = require("common/appUrl");
 import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
@@ -11,7 +12,7 @@ import getResourcesMenuItem = require("common/shell/menu/items/resources");
 import getStatsMenuItem = require("common/shell/menu/items/stats");
 import getSettingsMenuItem = require("common/shell/menu/items/settings");
 import getTasksMenuItem = require("common/shell/menu/items/tasks");
-import getTransformersMenuItem = require("common/shell/menu/items/transformers");
+import getTransformersMenuItems = require("common/shell/menu/items/transformers");
 import getIndexesMenuItem = require("common/shell/menu/items/indexes");
 import getDocumentsMenuItem = require("common/shell/menu/items/documents");
 
@@ -53,10 +54,11 @@ function generateNoActiveResourceMenuItems() {
 
 function generateActiveDatabaseMenuItems() {
     let appUrls = appUrl.forCurrentDatabase();
+    let transformersItems = getTransformersMenuItems(appUrls);
     return [
         getDocumentsMenuItem(appUrls),
         getIndexesMenuItem(appUrls),
-        getTransformersMenuItem(appUrls),
+        ...transformersItems,
         getTasksMenuItem(appUrls),
         getSettingsMenuItem(appUrls),
         getStatsMenuItem(appUrls),

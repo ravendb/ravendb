@@ -23,6 +23,7 @@ class editTransformer extends viewModelBase {
     transformerName: KnockoutComputed<string>;
     isSaveEnabled: KnockoutComputed<boolean>;
     loadedTransformerName = ko.observable<string>();
+    isSaving = ko.observable<boolean>(false);
 
     globalValidationGroup: KnockoutValidationGroup;
 
@@ -101,6 +102,7 @@ class editTransformer extends viewModelBase {
     saveTransformer() {
 
         if (this.isValid(this.globalValidationGroup)) {
+            this.isSaving(true);
             eventsCollector.default.reportEvent("transformer", "save");
 
             if (this.isEditingExistingTransformer() && this.editedTransformer().nameChanged()) {
@@ -121,7 +123,8 @@ class editTransformer extends viewModelBase {
                             this.isEditingExistingTransformer(true);
                             this.updateUrl(this.editedTransformer().name());
                         }
-                    });
+                     })
+                    .always(() => this.isSaving(false));                    
             }
         }
     }
@@ -208,7 +211,7 @@ class editTransformer extends viewModelBase {
         this.dirtyFlag = new ko.DirtyFlag([this.editedTransformer().name, this.editedTransformer().transformResults], false, jsonUtil.newLineNormalizingHashFunction);
         
         this.isSaveEnabled = ko.pureComputed(() => {
-            if ((!this.dirtyFlag().isDirty()) && (this.isEditingExistingTransformer())) {
+            if (!this.dirtyFlag().isDirty() && this.isEditingExistingTransformer()) {
                 return false;
             }
             return true;

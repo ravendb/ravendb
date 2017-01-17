@@ -85,6 +85,9 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 case "Sum":
                 case "Average":
                     return Visit(ModifyLambdaForNumerics(node));
+                case "Max":
+                case "Min":
+                    return Visit(ModifyLambdaForMinMax(node));
                 case "Any":
                 case "All":
                 case "First":
@@ -99,6 +102,22 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             }
 
             return node;
+        }
+
+        private static SyntaxNode ModifyLambdaForMinMax(LambdaExpressionSyntax node)
+        {
+            var lambda = node as SimpleLambdaExpressionSyntax;
+            if (lambda == null)
+                throw new InvalidOperationException($"Invalid lambda expression: {node}");
+
+            var alreadyCasted = GetAsCastExpression(lambda.Body);
+
+            if (alreadyCasted != null)
+            {
+                return SyntaxFactory.ParseExpression($"(Func<dynamic, {alreadyCasted.Type}>)({lambda})");
+            }
+
+            return SyntaxFactory.ParseExpression($"(Func<dynamic, IComparable>)({lambda})");
         }
 
         private static SyntaxNode ModifyLambdaForBools(LambdaExpressionSyntax node)

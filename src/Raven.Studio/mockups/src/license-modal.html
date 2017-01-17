@@ -9,27 +9,6 @@
         <div class="content-container-margin">
             <h1>Style quide and components</h1>
             <hr />
-
-            <h2>Pages</h2>
-            <hr/>
-            <div class="row">
-                <div class="col-sm-4">
-                    <div class="panel">
-                        <div class="panel-body">
-                            <ul>
-                                {{#each pages}}
-                                <li>
-                                    <a href="{{pagePrefix}}{{this}}">{{this}}</a>
-                                </li>
-                                {{/each}}
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-
-
             <h2>Panels</h2>
             <div class="row">
                 <div class="col-sm-4">
@@ -1653,6 +1632,10 @@
 
         {{> modals/includeAll }}
         {{> scripts }}
+
+        <script>
+        $('#licenseModal').modal('show')
+        </script>
 <div class="prerelease-alert bg-prerelease"><i class="icon-hammer-driver pull-left"></i>
     <p>CAUTION: This is a pre-release version of RavenDB 4.0<br/>
     <small>it is not intended for business use.</small></p></div>
