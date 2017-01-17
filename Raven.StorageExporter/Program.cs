@@ -126,9 +126,20 @@ namespace Raven.StorageExporter
                         configuration.Encryption = encryption;
                         currArgPos += 4;
                         break;
-                    default:
-                        ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Red, "Unidentified argument {0}.\n");
+                    case "-JournalsPath":
+                        if (Directory.Exists(args[currArgPos + 1]) == false)
+                        {
+                            ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Red, "Specfied journals directory does not exist: {0}).\n", args[currArgPos + 1]);
+                            return false;
+                        }
+
+                        configuration.JournalsPath = args[currArgPos + 1];
+                        currArgPos += 2;
+
                         break;
+                    default:
+                        ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Red, "Unidentified argument {0}.\n", args[currArgPos]);
+                        return false;
                 }
             }
             return true;
@@ -155,6 +166,7 @@ Parameters:
  -DocumentsStartEtag <Etag> : The document etag to start the export from (default is Etag.Empty).
  --Compression : Indicates that the database has the compression bundle.
  -Encryption <Encryption Key> <Algorithm Type> <Prefered Encryption Key Bits Size>: Encryption bundle key, algorithm type and bits size.
+ -JournalsPath <Path> : The custom path to Voron journal files or Esent logs 
  ");
             Console.WriteLine();
         }
