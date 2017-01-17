@@ -1,17 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Dynamic;
 using System.Linq;
 using System.Net;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Exceptions;
 using Raven.Server.Extensions;
+using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -23,7 +20,6 @@ using Voron.Exceptions;
 using Voron.Impl;
 using Sparrow;
 using Sparrow.Binary;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron.Util;
 
@@ -49,6 +45,8 @@ namespace Raven.Server.Documents
         private readonly DocumentDatabase _documentDatabase;
 
         private Dictionary<string, CollectionName> _collectionsCache;
+
+        public int NextPage;
 
         static DocumentsStorage()
         {
@@ -342,34 +340,50 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string prefix, string matches, string exclude, int start, int take)
         {
+            int docCount = 0;
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+            var originalTake = take;
+            var originalstart = start;
 
             Slice prefixSlice;
             using (DocumentKeyWorker.GetSliceFromKey(context, prefix, out prefixSlice))
             {
-                
                 // ReSharper disable once LoopCanBeConvertedToQuery
                 foreach (var result in table.SeekByPrimaryKey(prefixSlice, startsWith: true))
                 {
-                    var document = TableValueToDocument(context, result);
-                    string documentKey = document.Key;
-                    if (documentKey.StartsWith(prefix, StringComparison.CurrentCultureIgnoreCase) == false)
-                        break;
-
-                    if (!WildcardMatcher.Matches(matches, documentKey) ||
-                        WildcardMatcher.MatchesExclusion(exclude, documentKey))
-                        continue;
-
                     if (start > 0)
                     {
                         start--;
                         continue;
                     }
+                    docCount++;
+                    var document = TableValueToDocument(context, result);
+                    string documentKey = document.Key;
+                    if (documentKey.StartsWith(prefix, StringComparison.CurrentCultureIgnoreCase) == false)
+                        break;
+
+                    var keyTest = documentKey.Substring(prefix.Length);
+                    if (!WildcardMatcher.Matches(matches, keyTest) ||
+                        WildcardMatcher.MatchesExclusion(exclude, keyTest))
+                        continue;
+
                     if (take-- <= 0)
+                    {
+                        if (docCount >= originalTake)
+                            NextPage = (originalstart + docCount - 1);
+                        else
+                            NextPage = (originalstart);
+
                         yield break;
+                    }
                     yield return document;
                 }
             }
+
+            if (docCount >= originalTake)
+                NextPage = (originalstart + docCount);
+            else
+                NextPage = (originalstart);
         }
 
         public IEnumerable<Document> GetDocumentsInReverseEtagOrder(DocumentsOperationContext context, int start, int take)
