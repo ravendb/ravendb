@@ -41,9 +41,14 @@ namespace Voron.Platform.Win32
             if (_handle.IsInvalid)
                 throw new IOException("When opening file " + filename, new Win32Exception(Marshal.GetLastWin32Error()));
 
-            Win32NativeFileMethods.SetFileLength(_handle, journalSize);
+            var length = new FileInfo(filename).Length;
+            if (length < journalSize)
+            {
+                Win32NativeFileMethods.SetFileLength(_handle, journalSize);
+                length = journalSize;
+            }
 
-            NumberOfAllocated4Kb = (int) (journalSize/(4*Constants.Size.Kilobyte));
+            NumberOfAllocated4Kb = (int) (length / (4*Constants.Size.Kilobyte));
 
             _nativeOverlapped = (NativeOverlapped*) NativeMemory.AllocateMemory(sizeof (NativeOverlapped));
 
@@ -167,14 +172,7 @@ namespace Voron.Platform.Win32
            
             if (DeleteOnClose)
             {
-                try
-                {
-                    File.Delete(_filename);
-                }
-                catch (Exception)
-                {
-                    // if we can't delete, nothing that we can do here.
-                }
+                _options.TryStoreJournalForReuse(_filename);
             }
         }
 
