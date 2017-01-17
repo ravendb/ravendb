@@ -1,24 +1,18 @@
 @controls-width: 130px;
 
-.query-settings {
+.patch-settings {
     width: @controls-width;
 }
 
-.query-container {
+.patch-container {
+    position: relative;
     display: flex;
 
-    .query-error {
-        display: none;
-        .help-block {
-            margin-bottom: 0;
-        }
-    }
-
-    .query-main {
+    .patch-main {
         width:100%;
-        position: relative;
+
     }
-    .query-controls {
+    .patch-controls, .query-controls, .test-controls {
         margin-left:@line-height-computed/2;
         flex-basis: @controls-width;
         flex-shrink: 0;
@@ -29,12 +23,16 @@
             flex-grow: 100;
         }
 
-        .statistics {
+        .statistics, .test-close {
             align-self: flex-end;
         }
     }
 
-    .add-filter {
+    .test-controls {
+        display: none;
+    }
+
+    .test-container {
         display: none;
         .slidein-style;
         padding: @grid-gutter-width/2;
@@ -44,49 +42,46 @@
         width: 100%;
         position: absolute;
         top: 100%;
+        margin-top:@grid-gutter-width/2;
     }
 }
 
-.results-error {
-    position: absolute;
-    bottom: 0;
-    width: 100%;
-    .help-block {
-        margin-bottom: 0;
-    }
-    z-index: 1000;
-}
-
-.show-add-filter {
-    .query-error {
-        position: absolute;
-        bottom:100%;
-        width:100%;
-        display: block;
-        z-index: 1049;
-
-    }
+.show-test {
 
     .backdrop {
         .backdrop.show;
     }
 
-    .query-title, .run-query {
+    .patch-title {
         position: relative;
         z-index: 1049;
     }
 
-    .query-source {
+    .patch-controls {
+        display: none;
+    }
+
+    .test-controls {
+        display: flex;
+        position: relative;
+        z-index: 1050;
+    }
+
+    .patch-source {
         border-color: @brand-primary;
         background-color: @gray-base;
         position: relative;
         z-index: 1051;
         .shadow-style;
     }
-    .add-filter {
+
+    #test-container {
         z-index: 1052;
-        display: block;
+        position: relative;
+        //display: block;
         .shadow-style;
+        margin-top: @grid-gutter-width/2;
+        margin-bottom: @grid-gutter-width;
     }
 }
 
@@ -100,7 +95,7 @@
     }
 }
 
-.query-results {
+.patch-results {
     border: 1px solid @gray-darker;
     /*
     position: absolute;

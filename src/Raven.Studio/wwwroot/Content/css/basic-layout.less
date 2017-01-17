@@ -521,11 +521,11 @@ body.show-top-alert {
     padding-bottom: @grid-gutter-width / 2;
     padding-top: @grid-gutter-width / 2;
     overflow-y: auto;
-    -webkit-transition: left @menu-transition-ease;
-    -moz-transition: left @menu-transition-ease;
-    -ms-transition: left @menu-transition-ease;
-    -o-transition: left @menu-transition-ease;
-    transition: left @menu-transition-ease;
+    -webkit-transition: all @menu-transition-ease;
+    -moz-transition: all @menu-transition-ease;
+    -ms-transition: all @menu-transition-ease;
+    -o-transition: all @menu-transition-ease;
+    transition: all @menu-transition-ease;
 
     @media (min-width:@screen-md) {
         top: @navbar-height;
@@ -539,13 +539,6 @@ body.show-top-alert {
     .content-container-margin {
         min-height: 100%;
         position: relative;
-        /*margin-top: @grid-gutter-width / 2;
-        margin-bottom: @grid-gutter-width / 2;
-
-        @media(min-width:@screen-md) {
-            margin-top: @grid-gutter-width;
-            margin-bottom: @grid-gutter-width;
-        }*/
     }
 }
 
@@ -560,7 +553,22 @@ body.show-top-alert {
 .enable-right-options-panel {
     padding-right: @menu-width + @grid-gutter-width;
 
+    &.panel-hide {
+        padding-right: @grid-gutter-width;
+
+        #right-options-panel {
+            transform: translateX(100%);
+        }
+    }
+
+
+
     #right-options-panel {
+        -webkit-transition: transform @menu-transition-ease;
+        -moz-transition: transform @menu-transition-ease;
+        -ms-transition: transform @menu-transition-ease;
+        -o-transition: transform @menu-transition-ease;
+        transition: transform @menu-transition-ease;
         position: fixed;
         width: @menu-width;
         top: @navbar-height-xs;
@@ -921,7 +929,6 @@ body.show-top-alert {
 
             .level-1:not(:hover) {
                 transform: translateX(@menu-width - 55);
-
                 a {
                     opacity: 0;
                     transition-delay: 0;
@@ -936,6 +943,7 @@ body.show-top-alert {
                 a {
                     transition-delay: 0;
                     opacity: 1;
+
                 }
             }
         }

@@ -39,18 +39,23 @@ namespace Voron.Platform.Posix
                 PosixHelper.ThrowLastError(err, "when opening " + filename);
             }
 
-            int result;
-            if ((options.SafePosixOpenFlags & PerPlatformValues.OpenFlags.O_DIRECT) == 0)
+            var length = new FileInfo(filename).Length;
+            if (length < journalSize)
             {
-                // fallocate doesn't supported, we'll use lseek instead
-                result = Syscall.AllocateUsingLseek(_fd, journalSize);
+                length = journalSize;
+                int result;
+                if ((options.SafePosixOpenFlags & PerPlatformValues.OpenFlags.O_DIRECT) == 0)
+                {
+                    // fallocate doesn't supported, we'll use lseek instead
+                    result = Syscall.AllocateUsingLseek(_fd, journalSize);
+                }
+                else
+                {
+                    result = Syscall.posix_fallocate(_fd, IntPtr.Zero, (UIntPtr) journalSize);
+                }
+                if (result != 0)
+                    PosixHelper.ThrowLastError(result, "when allocating " + filename);
             }
-            else
-            {
-                result = Syscall.posix_fallocate(_fd, IntPtr.Zero, (UIntPtr) journalSize);
-            }
-            if (result != 0)
-                PosixHelper.ThrowLastError(result, "when allocating " + filename);
 
             if (PosixHelper.CheckSyncDirectoryAllowed(_filename) && PosixHelper.SyncDirectory(filename) == -1)
             {
@@ -58,7 +63,7 @@ namespace Voron.Platform.Posix
                 PosixHelper.ThrowLastError(err, "when syncing dir for on " + filename);
             }
 
-            NumberOfAllocated4Kb = (int) (journalSize/(4*Constants.Size.Kilobyte));
+            NumberOfAllocated4Kb = (int) (length / (4*Constants.Size.Kilobyte));
         }
 
         public void Dispose()
@@ -75,14 +80,7 @@ namespace Voron.Platform.Posix
             _fd = -1;
             if (DeleteOnClose)
             {
-                try
-                {
-                    File.Delete(_filename);
-                }
-                catch (Exception)
-                {
-                    // nothing to do here
-                }
+                _options.TryStoreJournalForReuse(_filename);
             }
         }
 
