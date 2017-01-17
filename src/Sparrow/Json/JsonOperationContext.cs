@@ -532,7 +532,6 @@ namespace Sparrow.Json
 
             private Task<BlittableJsonReaderObject> _prevCall;
             private Task[] _waitableTasks;
-            private bool _disabled;
 
             public async Task<BlittableJsonReaderObject> InterruptibleParseToMemoryAsync(string debugTag, AsyncManualResetEvent interruptEvent)
             {
