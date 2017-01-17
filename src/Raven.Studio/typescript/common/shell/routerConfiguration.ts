@@ -10,7 +10,7 @@ import getStatsMenuItem = require("common/shell/menu/items/stats");
 import getSettingsMenuItem = require("common/shell/menu/items/settings");
 import getTasksMenuItem = require("common/shell/menu/items/tasks");
 import getIndexesMenuItem = require("common/shell/menu/items/indexes");
-import getTransformersMenuItem = require("common/shell/menu/items/transformers");
+import getTransformersMenuItems = require("common/shell/menu/items/transformers");
 import getDocumentsMenuItem = require("common/shell/menu/items/documents");
 
 export = getRouterConfiguration();
@@ -60,7 +60,7 @@ function generateAllMenuItems() {
     return [
         getDocumentsMenuItem(appUrls),
         getIndexesMenuItem(appUrls),
-        getTransformersMenuItem(appUrls),
+        ...getTransformersMenuItems(appUrls),
         getTasksMenuItem(appUrls),
         getSettingsMenuItem(appUrls),
         getStatsMenuItem(appUrls),
