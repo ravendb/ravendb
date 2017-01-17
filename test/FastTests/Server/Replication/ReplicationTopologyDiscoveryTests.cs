@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Abstractions.Connection;
@@ -216,6 +218,13 @@ namespace FastTests.Server.Replication
                     Assert.Equal(BDocumentDatabase.DbId.ToString(),outgoingOfA.First().DbId);
 
                     B.Dispose();
+                    var sw = Stopwatch.StartNew();
+                    while (ADocumentDatabase.DocumentReplicationLoader.OutgoingHandlers.Any())
+                    {
+                        Console.WriteLine("Waiting.. " + sw.ElapsedMilliseconds);
+                        Thread.Sleep(200);
+                    }
+                        
                     B = null;
 
                     topologyInfo = await GetFullTopology(A);
