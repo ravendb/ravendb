@@ -4,6 +4,7 @@ using Raven.NewClient.Abstractions.Data;
 using Sparrow.Json;
 using Raven.NewClient.Client.Document;
 using Raven.Abstractions.Extensions;
+using Raven.NewClient.Abstractions;
 
 namespace Raven.NewClient.Client.Json
 {
@@ -176,7 +177,7 @@ namespace Raven.NewClient.Client.Json
 
         public override void WriteValue(DateTimeOffset value)
         {
-            var s = value.ToString("o");
+            var s = value.ToString(Default.DateTimeOffsetFormatsToWrite);
             _manualBlittalbeJsonDocumentBuilder.WriteValue(s);
         }
 
@@ -236,7 +237,7 @@ namespace Raven.NewClient.Client.Json
 
         public override void WriteValue(DateTimeOffset? value)
         {
-            if (value != null) _manualBlittalbeJsonDocumentBuilder.WriteValue(value.Value.ToString("o"));
+            if (value != null) _manualBlittalbeJsonDocumentBuilder.WriteValue(value.Value.ToString(Default.DateTimeOffsetFormatsToWrite));
             else _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
         }
 

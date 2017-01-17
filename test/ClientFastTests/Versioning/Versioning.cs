@@ -19,7 +19,7 @@ namespace NewClientTests.NewClient.FastTests.Versioning
         [Fact]
         public async Task CanGetAllRevisionsFor()
         {
-            var company = new Company {Name = "Company Name"};
+            var company = new Company { Name = "Company Name" };
             using (var store = GetDocumentStore())
             {
                 await VersioningHelper.SetupVersioning(store);
@@ -121,7 +121,7 @@ namespace NewClientTests.NewClient.FastTests.Versioning
         {
             var path = NewDataPath();
             var company = new Company { Name = "Company Name" };
-            using (var store = GetDocumentStore(path: path, deleteDbAfterDispose: false))
+            using (var store = GetDocumentStore(path: path))
             {
                 await VersioningHelper.SetupVersioning(store);
                 using (var session = store.OpenAsyncSession())
@@ -152,7 +152,7 @@ namespace NewClientTests.NewClient.FastTests.Versioning
         [Fact]
         public async Task WillCreateRevisionIfExplicitlyRequested()
         {
-            var product = new Product {Description = "A fine document db", Quantity = 5};
+            var product = new Product { Description = "A fine document db", Quantity = 5 };
             using (var store = GetDocumentStore())
             {
                 await VersioningHelper.SetupVersioning(store);
@@ -186,7 +186,7 @@ namespace NewClientTests.NewClient.FastTests.Versioning
         [Fact]
         public async Task WillDeleteOldRevisions()
         {
-            var company = new Company {Name = "Company #1"};
+            var company = new Company { Name = "Company #1" };
             using (var store = GetDocumentStore())
             {
                 await VersioningHelper.SetupVersioning(store);
@@ -220,8 +220,8 @@ namespace NewClientTests.NewClient.FastTests.Versioning
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var company = new Company {Name = "Hibernaitng Rhinos "};
-                    var user = new User {Name = "Fitzchak "};
+                    var company = new Company { Name = "Hibernaitng Rhinos " };
+                    var user = new User { Name = "Fitzchak " };
                     await session.StoreAsync(company);
                     await session.StoreAsync(user);
                     await session.SaveChangesAsync();
@@ -260,8 +260,8 @@ namespace NewClientTests.NewClient.FastTests.Versioning
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new Company {Name = "New Company"}, "companies/1");
-                    await session.StoreAsync(new User {Name = "New User"}, "users/1");
+                    await session.StoreAsync(new Company { Name = "New Company" }, "companies/1");
+                    await session.StoreAsync(new User { Name = "New User" }, "users/1");
                     await session.SaveChangesAsync();
                 }
                 using (var session = store.OpenAsyncSession())

@@ -5,7 +5,7 @@ using Xunit;
 
 namespace FastTests.Server.Basic
 {
-    public class RavenDB5743 : RavenTestBase
+    public class RavenDB5743 : RavenNewTestBase
     {
         [Fact]
         public async Task WillFilterMetadataPropertiesStartingWithAt()
@@ -23,7 +23,9 @@ namespace FastTests.Server.Basic
                 using (var session = store.OpenAsyncSession())
                 {
                     var company3 = await session.LoadAsync<Company>(company.Id);
-                    Assert.Null(session.Advanced.GetMetadataFor(company3).Value<string>("@foo"));
+                    var metadata = session.Advanced.GetMetadataFor(company3);
+
+                    Assert.False(metadata.ContainsKey("@foo"));
                 }
             }
         }

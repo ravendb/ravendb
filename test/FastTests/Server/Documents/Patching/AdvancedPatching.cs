@@ -2,20 +2,22 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Data;
-using Raven.Client.Indexing;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Commands;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Http;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases;
+using Raven.NewClient.Operations.Databases.Documents;
+using Raven.NewClient.Operations.Databases.Indexes;
+using Sparrow.Json;
 using Xunit;
 
 namespace FastTests.Server.Documents.Patching
 {
-    public class AdvancedPatching : RavenTestBase
+    public class AdvancedPatching : RavenNewTestBase
     {
-        class CustomType
+        private class CustomType
         {
             public string Id { get; set; }
             public string Owner { get; set; }
@@ -30,11 +32,11 @@ namespace FastTests.Server.Documents.Patching
             Id = "someId",
             Owner = "bob",
             Value = 12143,
-            Comments = new List<string>(new[] {"one", "two", "seven"})
+            Comments = new List<string>(new[] { "one", "two", "seven" })
         };
 
         //splice(2, 1) will remove 1 elements from position 2 onwards (zero-based)
-        string sampleScript = @"
+        private const string SampleScript = @"
     this.Comments.splice(2, 1);
     this.Id = 'Something new'; 
     this.Value++; 
@@ -54,19 +56,23 @@ namespace FastTests.Server.Documents.Patching
                     await session.SaveChangesAsync();
                 }
 
-                await store.AsyncDatabaseCommands.PatchAsync("someId", new PatchRequest
+                await store.Operations.SendAsync(new PatchOperation("someId", null, new PatchRequest
                 {
-                    Script = sampleScript
-                });
+                    Script = SampleScript
+                }));
 
-                var resultDoc = await store.AsyncDatabaseCommands.GetAsync("someId");
-                var result = JsonConvert.DeserializeObject<CustomType>(resultDoc.DataAsJson.ToString());
-                Assert.Equal("Something new", result.Id);
-                Assert.Equal(2, result.Comments.Count);
-                Assert.Equal("one test", result.Comments[0]);
-                Assert.Equal("two", result.Comments[1]);
-                Assert.Equal(12144, result.Value);
-                Assert.Equal("err!!", resultDoc.DataAsJson["newValue"]);
+                using (var commands = store.Commands())
+                {
+                    var resultDoc = await commands.GetAsync("someId");
+                    var result = (CustomType)store.Conventions.DeserializeEntityFromBlittable(typeof(CustomType), resultDoc.BlittableJson);
+
+                    Assert.Equal("Something new", result.Id);
+                    Assert.Equal(2, result.Comments.Count);
+                    Assert.Equal("one test", result.Comments[0]);
+                    Assert.Equal("two", result.Comments[1]);
+                    Assert.Equal(12144, result.Value);
+                    Assert.Equal("err!!", resultDoc["newValue"].ToString());
+                }
             }
         }
 
@@ -75,20 +81,25 @@ namespace FastTests.Server.Documents.Patching
         {
             using (var store = GetDocumentStore())
             {
-                await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.Parse("{\"Email\":null}"), null);
-
-                const string email = "somebody@somewhere.com";
-                await store.AsyncDatabaseCommands.PatchAsync("doc", new PatchRequest
+                using (var commands = store.Commands())
                 {
-                    Script = "this.Email = data.Email;",
-                    Values =
-                    {
-                        {"data", new {Email = email}}
-                    },
-                });
+                    await commands.PutAsync("doc", null, new { Email = (string)null }, null);
 
-                var resultDoc = await store.AsyncDatabaseCommands.GetAsync("doc");
-                Assert.Equal(resultDoc.DataAsJson["Email"].Value<string>(), email);
+                    const string email = "somebody@somewhere.com";
+                    await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
+                    {
+                        Script = "this.Email = data.Email;",
+                        Values =
+                        {
+                            {"data", new { Email = email }}
+                        }
+                    }));
+
+                    dynamic doc = await commands.GetAsync("doc");
+                    string docEmail = doc.Email;
+
+                    Assert.Equal(email, docEmail);
+                }
             }
         }
 
@@ -97,15 +108,20 @@ namespace FastTests.Server.Documents.Patching
         {
             using (var store = GetDocumentStore())
             {
-                await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.Parse("{\"Email\":' somebody@somewhere.com '}"), null);
-
-                await store.AsyncDatabaseCommands.PatchAsync("doc", new PatchRequest
+                using (var commands = store.Commands())
                 {
-                    Script = "this.Email = this.Email.trim();",
-                });
+                    await commands.PutAsync("doc", null, new { Email = " somebody@somewhere.com " }, null);
 
-                var resultDoc = await store.AsyncDatabaseCommands.GetAsync("doc");
-                Assert.Equal(resultDoc.DataAsJson["Email"].Value<string>(), "somebody@somewhere.com");
+                    await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
+                    {
+                        Script = "this.Email = this.Email.trim();"
+                    }));
+
+                    dynamic doc = await commands.GetAsync("doc");
+                    string docEmail = doc.Email;
+
+                    Assert.Equal("somebody@somewhere.com", docEmail);
+                }
             }
         }
 
@@ -114,15 +130,20 @@ namespace FastTests.Server.Documents.Patching
         {
             using (var store = GetDocumentStore())
             {
-                await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.Parse("{\"Email\":' somebody@somewhere.com '}"), null);
-
-                await store.AsyncDatabaseCommands.PatchAsync("doc", new PatchRequest
+                using (var commands = store.Commands())
                 {
-                    Script = "this.Age =  Math.floor(1.6);",
-                });
+                    await commands.PutAsync("doc", null, new { Email = " somebody@somewhere.com " }, null);
 
-                var resultDoc = await store.AsyncDatabaseCommands.GetAsync("doc");
-                Assert.Equal(resultDoc.DataAsJson["Age"].Value<int>(), 1);
+                    await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
+                    {
+                        Script = "this.Age =  Math.floor(1.6);"
+                    }));
+
+                    dynamic doc = await commands.GetAsync("doc");
+                    var age = (int)doc.Age;
+
+                    Assert.Equal(1, age);
+                }
             }
         }
 
@@ -131,17 +152,21 @@ namespace FastTests.Server.Documents.Patching
         {
             using (var store = GetDocumentStore())
             {
-                await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.Parse("{\"Email\":'somebody@somewhere.com'}"), null);
-
-                await store.AsyncDatabaseCommands.PatchAsync("doc", new PatchRequest
+                using (var commands = store.Commands())
                 {
-                    Script = "this.Parts = this.Email.split('@');",
-                });
+                    await commands.PutAsync("doc", null, new { Email = "somebody@somewhere.com" }, null);
 
-                var resultDoc = await store.AsyncDatabaseCommands.GetAsync("doc");
-                var parts = resultDoc.DataAsJson["Parts"].Value<RavenJArray>();
-                Assert.Equal(parts[0], "somebody");
-                Assert.Equal(parts[1], "somewhere.com");
+                    await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
+                    {
+                        Script = "this.Parts = this.Email.split('@');"
+                    }));
+
+                    dynamic doc = await commands.GetAsync("doc");
+                    string[] parts = doc.Parts;
+
+                    Assert.Equal(parts[0], "somebody");
+                    Assert.Equal(parts[1], "somewhere.com");
+                }
             }
         }
 
@@ -150,20 +175,25 @@ namespace FastTests.Server.Documents.Patching
         {
             using (var store = GetDocumentStore())
             {
-                await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.Parse("{\"Contact\":null}"), null);
-
-                const string email = "somebody@somewhere.com";
-                await store.AsyncDatabaseCommands.PatchAsync("doc", new PatchRequest
+                using (var commands = store.Commands())
                 {
-                    Script = "this.Contact = contact.Email;",
-                    Values =
-                    {
-                        {"contact", new {Email = email}}
-                    }
-                });
+                    await commands.PutAsync("doc", null, new { Contact = (string)null }, null);
 
-                var resultDoc = await store.AsyncDatabaseCommands.GetAsync("doc");
-                Assert.Equal(resultDoc.DataAsJson["Contact"], email);
+                    const string email = "somebody@somewhere.com";
+                    await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
+                    {
+                        Script = "this.Contact = contact.Email;",
+                        Values =
+                        {
+                            {"contact", new {Email = email}}
+                        }
+                    }));
+
+                    dynamic doc = await commands.GetAsync("doc");
+                    var docEmail = doc.Contact.ToString();
+
+                    Assert.Equal(email, docEmail);
+                }
             }
         }
 
@@ -172,20 +202,25 @@ namespace FastTests.Server.Documents.Patching
         {
             using (var store = GetDocumentStore())
             {
-                await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.Parse("{\"Contact\":null}"), null);
-
-                const string email = "somebody@somewhere.com";
-                await store.AsyncDatabaseCommands.PatchAsync("doc", new PatchRequest
+                using (var commands = store.Commands())
                 {
-                    Script = "this.Emails = _.times(3, function(i) { return contact.Email + i; });",
-                    Values =
-                    {
-                        {"contact", new {Email = email}}
-                    }
-                });
+                    await commands.PutAsync("doc", null, new { Contact = (string)null }, null);
 
-                var resultDoc = await store.AsyncDatabaseCommands.GetAsync("doc");
-                Assert.Equal(new[] {"somebody@somewhere.com0", "somebody@somewhere.com1", "somebody@somewhere.com2"}, resultDoc.DataAsJson.Value<RavenJArray>("Emails").Select(x => x.Value<string>()));
+                    const string email = "somebody@somewhere.com";
+                    await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
+                    {
+                        Script = "this.Emails = _.times(3, function(i) { return contact.Email + i; });",
+                        Values =
+                        {
+                            {"contact", new {Email = email}}
+                        }
+                    }));
+
+                    dynamic doc = await commands.GetAsync("doc");
+                    string[] emails = doc.Emails;
+
+                    Assert.Equal(new[] { "somebody@somewhere.com0", "somebody@somewhere.com1", "somebody@somewhere.com2" }, emails);
+                }
             }
         }
 
@@ -194,21 +229,24 @@ namespace FastTests.Server.Documents.Patching
         {
             using (var store = GetDocumentStore())
             {
-                await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.FromObject(_test), null);
-
-                var variable = new {NewComment = "New Comment"};
-                await store.AsyncDatabaseCommands.PatchAsync("doc", new PatchRequest
+                using (var commands = store.Commands())
                 {
-                    Script = "this.Comments[0] = variable.NewComment;",
-                    Values =
-                    {
-                        {"variable", RavenJObject.FromObject(variable)}
-                    }
-                });
+                    await commands.PutAsync("doc", null, _test, null);
 
-                var resultDoc = await store.AsyncDatabaseCommands.GetAsync("doc");
-                var result = JsonConvert.DeserializeObject<CustomType>(resultDoc.DataAsJson.ToString());
-                Assert.Equal(variable.NewComment, result.Comments[0]);
+                    var variable = new { NewComment = "New Comment" };
+                    await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
+                    {
+                        Script = "this.Comments[0] = variable.NewComment;",
+                        Values =
+                        {
+                            {"variable", new { NewComment = "New Comment" }}
+                        }
+                    }));
+
+                    var doc = await commands.GetAsync("doc");
+                    var result = (CustomType)store.Conventions.DeserializeEntityFromBlittable(typeof(CustomType), doc.BlittableJson);
+                    Assert.Equal(variable.NewComment, result.Comments[0]);
+                }
             }
         }
 
@@ -217,16 +255,19 @@ namespace FastTests.Server.Documents.Patching
         {
             using (var store = GetDocumentStore())
             {
-                await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.FromObject(_test), null);
-
-                await store.AsyncDatabaseCommands.PatchAsync("doc", new PatchRequest
+                using (var commands = store.Commands())
                 {
-                    Script = "this.Comments.Remove('two');",
-                });
+                    await commands.PutAsync("doc", null, _test, null);
 
-                var resultDoc = await store.AsyncDatabaseCommands.GetAsync("doc");
-                var result = JsonConvert.DeserializeObject<CustomType>(resultDoc.DataAsJson.ToString());
-                Assert.Equal(new[] {"one", "seven"}.ToList(), result.Comments);
+                    await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
+                    {
+                        Script = "this.Comments.Remove('two');"
+                    }));
+
+                    var doc = await commands.GetAsync("doc");
+                    var result = (CustomType)store.Conventions.DeserializeEntityFromBlittable(typeof(CustomType), doc.BlittableJson);
+                    Assert.Equal(new[] { "one", "seven" }.ToList(), result.Comments);
+                }
             }
         }
 
@@ -235,16 +276,19 @@ namespace FastTests.Server.Documents.Patching
         {
             using (var store = GetDocumentStore())
             {
-                await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.FromObject(_test), null);
-
-                await store.AsyncDatabaseCommands.PatchAsync("doc", new PatchRequest
+                using (var commands = store.Commands())
                 {
-                    Script = "this.Comments.RemoveWhere(function(el) {return el == 'seven';});",
-                });
+                    await commands.PutAsync("doc", null, _test, null);
 
-                var resultDoc = await store.AsyncDatabaseCommands.GetAsync("doc");
-                var result = JsonConvert.DeserializeObject<CustomType>(resultDoc.DataAsJson.ToString());
-                Assert.Equal(new[] {"one", "two"}.ToList(), result.Comments);
+                    await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
+                    {
+                        Script = "this.Comments.RemoveWhere(function(el) {return el == 'seven';});",
+                    }));
+
+                    var doc = await commands.GetAsync("doc");
+                    var result = (CustomType)store.Conventions.DeserializeEntityFromBlittable(typeof(CustomType), doc.BlittableJson);
+                    Assert.Equal(new[] { "one", "two" }.ToList(), result.Comments);
+                }
             }
         }
 
@@ -253,19 +297,23 @@ namespace FastTests.Server.Documents.Patching
         {
             using (var store = GetDocumentStore())
             {
-                await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.FromObject(_test), null);
-
-                await store.AsyncDatabaseCommands.PatchAsync("doc", new PatchRequest
+                using (var commands = store.Commands())
                 {
-                    Script = "this.TheName = Name",
-                    Values =
-                    {
-                        {"Name", "ayende"}
-                    }
-                });
+                    await commands.PutAsync("doc", null, _test, null);
 
-                var resultDoc = await store.AsyncDatabaseCommands.GetAsync("doc");
-                Assert.Equal("ayende", resultDoc.DataAsJson.Value<string>("TheName"));
+                    await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
+                    {
+                        Script = "this.TheName = Name",
+                        Values =
+                        {
+                            {"Name", "ayende"}
+                        }
+                    }));
+
+                    dynamic doc = await commands.GetAsync("doc");
+                    var docName = doc.TheName.ToString();
+                    Assert.Equal("ayende", docName);
+                }
             }
         }
 
@@ -274,18 +322,21 @@ namespace FastTests.Server.Documents.Patching
         {
             using (var store = GetDocumentStore())
             {
-                await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.FromObject(_test), null);
-
-                var parseException = await Assert.ThrowsAsync<ErrorResponseException>(async () =>
+                using (var commands = store.Commands())
                 {
-                    await store.AsyncDatabaseCommands.PatchAsync("doc", new PatchRequest
-                    {
-                        Script = "this.Id = 'Something",
-                    });
-                });
+                    await commands.PutAsync("doc", null, _test, null);
 
-                Assert.Contains("Raven.Server.Documents.Patch.ParseException: Could not parse: " + Environment.NewLine 
-                                + "this.Id = 'Something", parseException.Message);
+                    var parseException = await Assert.ThrowsAsync<InternalServerErrorException>(async () =>
+                    {
+                        await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
+                        {
+                            Script = "this.Id = 'Something",
+                        }));
+                    });
+
+                    Assert.Contains("Raven.Server.Documents.Patch.ParseException: Could not parse: " + Environment.NewLine
+                                    + "this.Id = 'Something", parseException.Message);
+                }
             }
         }
 
@@ -294,21 +345,24 @@ namespace FastTests.Server.Documents.Patching
         {
             using (var store = GetDocumentStore())
             {
-                await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.FromObject(_test), null);
-
-                var invalidOperationException = await Assert.ThrowsAsync<ErrorResponseException>(async () =>
+                using (var commands = store.Commands())
                 {
-                    await store.AsyncDatabaseCommands.PatchAsync("doc", new PatchRequest
-                    {
-                        Script = "throw 'problem'",
-                    });
-                });
+                    await commands.PutAsync("doc", null, _test, null);
 
-                Assert.Contains("System.InvalidOperationException: Unable to execute JavaScript: " + Environment.NewLine
-                                + "throw 'problem'" + Environment.NewLine
-                                + Environment.NewLine
-                                + "Error: " + Environment.NewLine
-                                + "problem", invalidOperationException.Message);
+                    var invalidOperationException = await Assert.ThrowsAsync<InternalServerErrorException>(async () =>
+                    {
+                        await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
+                        {
+                            Script = "throw 'problem'",
+                        }));
+                    });
+
+                    Assert.Contains("System.InvalidOperationException: Unable to execute JavaScript: " + Environment.NewLine
+                                    + "throw 'problem'" + Environment.NewLine
+                                    + Environment.NewLine
+                                    + "Error: " + Environment.NewLine
+                                    + "problem", invalidOperationException.Message);
+                }
             }
         }
 
@@ -317,14 +371,31 @@ namespace FastTests.Server.Documents.Patching
         {
             using (var store = GetDocumentStore())
             {
-                await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.FromObject(_test), null);
-
-                var result = await store.AsyncDatabaseCommands.PatchAsync("doc", new PatchRequest
+                using (var commands = store.Commands())
                 {
-                    Script = "output(this.Id)",
-                });
+                    await commands.PutAsync("doc", null, _test, null);
 
-                Assert.Equal("someId", result.Value<RavenJArray>("Debug")[0]);
+                    var command = new PatchOperation.PatchCommand(
+                        store.Conventions,
+                        commands.Context,
+                        "doc",
+                        null,
+                        new PatchRequest
+                        {
+                            Script = "output(this.Id)",
+                        },
+                        patchIfMissing: null,
+                        skipPatchIfEtagMismatch: false,
+                        returnDebugInformation: true);
+
+                    await commands.RequestExecuter.ExecuteAsync(command, commands.Context);
+
+                    var result = command.Result;
+                    var array = (BlittableJsonReaderArray)result.Debug["Info"];
+                    var someId = array[0].ToString();
+
+                    Assert.Equal("someId", someId);
+                }
             }
         }
 
@@ -333,18 +404,21 @@ namespace FastTests.Server.Documents.Patching
         {
             using (var store = GetDocumentStore())
             {
-                await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.FromObject(_test), null);
-
-                var exception = await Assert.ThrowsAsync<ErrorResponseException>(async () =>
+                using (var commands = store.Commands())
                 {
-                    await store.AsyncDatabaseCommands.PatchAsync("doc", new PatchRequest
-                    {
-                        Script = "while(true) {}",
-                    });
-                });
+                    await commands.PutAsync("doc", null, _test, null);
 
-                Assert.Contains("Unable to execute JavaScript", exception.Message);
-                Assert.Contains("The maximum number of statements executed have been reached.", exception.Message);
+                    var exception = await Assert.ThrowsAsync<InternalServerErrorException>(async () =>
+                    {
+                        await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
+                        {
+                            Script = "while(true) {}",
+                        }));
+                    });
+
+                    Assert.Contains("Unable to execute JavaScript", exception.Message);
+                    Assert.Contains("The maximum number of statements executed have been reached.", exception.Message);
+                }
             }
         }
 
@@ -353,22 +427,33 @@ namespace FastTests.Server.Documents.Patching
         {
             using (var store = GetDocumentStore())
             {
-                var date = DateTime.UtcNow;
-                var dateOffset = DateTime.Now.AddMilliseconds(100);
-                var testObject = new CustomType {Date = date, DateOffset = dateOffset};
-                await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.FromObject(testObject), null);
-
-                await store.AsyncDatabaseCommands.PatchAsync("doc", new PatchRequest
+                using (var commands = store.Commands())
                 {
-                    Script = @"
+                    var date = DateTime.UtcNow;
+                    var dateOffset = DateTime.Now.AddMilliseconds(100);
+                    var testObject = new CustomType { Date = date, DateOffset = dateOffset };
+
+                    await commands.PutAsync("doc", null, testObject, null);
+
+                    await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
+                    {
+                        Script = @"
 this.DateOutput = new Date(this.Date).toISOString();
 this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
 ",
-                });
+                    }));
 
-                var resultDoc = await store.AsyncDatabaseCommands.GetAsync("doc");
-                Assert.Equal(date.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"), resultDoc.DataAsJson.Value<string>("DateOutput"));
-                Assert.Equal(dateOffset.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ"), resultDoc.DataAsJson.Value<string>("DateOffsetOutput"));
+                    var doc = await commands.GetAsync("doc");
+
+                    string dateOutput;
+                    doc.BlittableJson.TryGet("DateOutput", out dateOutput);
+
+                    string dateOffsetOutput;
+                    doc.BlittableJson.TryGet("DateOffsetOutput", out dateOffsetOutput);
+
+                    Assert.Equal(date.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"), dateOutput);
+                    Assert.Equal(dateOffset.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ"), dateOffsetOutput);
+                }
             }
         }
 
@@ -379,53 +464,65 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new CustomType {Value = 2});
-                    await session.StoreAsync(new CustomType {Value = 1});
+                    await session.StoreAsync(new CustomType { Value = 2 });
+                    await session.StoreAsync(new CustomType { Value = 1 });
                     await session.SaveChangesAsync();
                 }
 
-                await store.AsyncDatabaseCommands.PatchAsync("CustomTypes/1", new PatchRequest
+                await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
                 {
                     Script = @"
- var another = LoadDocument(anotherId);
- this.Value = another.Value;
- ",
+var another = LoadDocument(anotherId);
+this.Value = another.Value;
+",
                     Values =
                     {
                         {"anotherId", "CustomTypes/2"}
                     }
-                });
+                }));
 
-                var resultDoc = await store.AsyncDatabaseCommands.GetAsync("CustomTypes/1");
-                var result = JsonConvert.DeserializeObject<CustomType>(resultDoc.DataAsJson.ToString());
-                Assert.Equal(1, result.Value);
+                using (var commands = store.Commands())
+                {
+                    var doc = await commands.GetAsync("CustomTypes/1");
+
+                    var result = (CustomType)store.Conventions.DeserializeEntityFromBlittable(typeof(CustomType), doc.BlittableJson);
+                    Assert.Equal(1, result.Value);
+                }
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6124")]
         public async Task CanPatchMetadata()
         {
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new CustomType {Value = 2});
-                    await session.StoreAsync(new CustomType {Value = 1});
+                    await session.StoreAsync(new CustomType { Value = 2 });
+                    await session.StoreAsync(new CustomType { Value = 1 });
                     await session.SaveChangesAsync();
                 }
 
-                await store.AsyncDatabaseCommands.PatchAsync("CustomTypes/1", new PatchRequest
+                await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
                 {
                     Script = @"
- this.Owner = this['@metadata']['Raven-Clr-Type'];
- this['@metadata']['Raven-Python-Type'] = 'Your.CustomType';
- ",
-                });
+        this.Owner = this['@metadata']['Raven-Clr-Type'];
+        this['@metadata']['Raven-Python-Type'] = 'Your.CustomType';
+        ",
+                }));
 
-                var resultDoc = await store.AsyncDatabaseCommands.GetAsync("CustomTypes/1");
-                var result = JsonConvert.DeserializeObject<CustomType>(resultDoc.DataAsJson.ToString());
-                Assert.Equal(resultDoc.Metadata["Raven-Clr-Type"], result.Owner);
-                Assert.Equal("Your.CustomType", resultDoc.Metadata["Raven-Python-Type"]);
+                using (var commands = store.Commands())
+                {
+                    dynamic doc = await commands.GetAsync("CustomTypes/1");
+                    dynamic metadata = doc[Constants.Metadata.Key];
+                    var clrType = metadata["Raven-Clr-Type"].ToString();
+                    var pythonType = metadata["Raven-Python-Type"].ToString();
+
+                    var result = (CustomType)store.Conventions.DeserializeEntityFromBlittable(typeof(CustomType), doc.BlittableJson);
+
+                    Assert.Equal(clrType, result.Owner);
+                    Assert.Equal("Your.CustomType", pythonType);
+                }
             }
         }
 
@@ -436,30 +533,37 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new {Name = "Ayende"}, "products/1");
+                    await session.StoreAsync(new { Name = "Ayende" }, "products/1");
                     await session.SaveChangesAsync();
                 }
 
-                await store.AsyncDatabaseCommands.PatchAsync("products/1", new PatchRequest
+                await store.Operations.SendAsync(new PatchOperation("products/1", null, new PatchRequest
                 {
                     Script = "this.Test = 'a';",
-                });
+                }));
 
-                var resultDoc = await store.AsyncDatabaseCommands.GetAsync("products/1");
-                Assert.Equal("Ayende", resultDoc.DataAsJson.Value<string>("Name"));
-                Assert.Equal("a", resultDoc.DataAsJson.Value<string>("Test"));
+                using (var commands = store.Commands())
+                {
+                    dynamic doc = await commands.GetAsync("products/1");
+                    var name = doc.Name.ToString();
+                    var test = doc.Test.ToString();
+
+                    Assert.Equal("Ayende", name);
+                    Assert.Equal("a", test);
+                }
             }
         }
+
 
         [Fact]
         public async Task WillNotErrorOnMissingDocument()
         {
             using (var store = GetDocumentStore())
             {
-                await store.AsyncDatabaseCommands.PatchAsync("products/1", new PatchRequest
+                await store.Operations.SendAsync(new PatchOperation("products/1", null, new PatchRequest
                 {
                     Script = "this.Test = 'a';",
-                });
+                }));
             }
         }
 
@@ -470,21 +574,28 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new CustomType {Value = 10});
+                    await session.StoreAsync(new CustomType { Value = 10 });
                     await session.SaveChangesAsync();
                 }
 
-                await store.AsyncDatabaseCommands.PatchAsync("CustomTypes/1", new PatchRequest
+                await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
                 {
                     Script = @"PutDocument(
- 'NewTypes/1', 
- { 'CopiedValue':  this.Value },
- {'CreatedBy': 'JS_Script'});",
-                });
+        'NewTypes/1', 
+        { 'CopiedValue':  this.Value },
+        {'CreatedBy': 'JS_Script'});",
+                }));
 
-                var resultDoc = await store.AsyncDatabaseCommands.GetAsync("NewTypes/1");
-                Assert.Equal(10, resultDoc.DataAsJson.Value<int>("CopiedValue"));
-                Assert.Equal("JS_Script", resultDoc.Metadata.Value<string>("CreatedBy"));
+                using (var commands = store.Commands())
+                {
+                    dynamic doc = await commands.GetAsync("NewTypes/1");
+                    dynamic metadata = doc[Constants.Metadata.Key];
+                    var copiedValue = (int)doc.CopiedValue;
+                    var createdBy = metadata.CreatedBy.ToString();
+
+                    Assert.Equal(10, copiedValue);
+                    Assert.Equal("JS_Script", createdBy);
+                }
             }
         }
 
@@ -495,26 +606,33 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new CustomType {Value = 10});
+                    await session.StoreAsync(new CustomType { Value = 10 });
                     await session.SaveChangesAsync();
                 }
 
-                await store.AsyncDatabaseCommands.PatchAsync("CustomTypes/1", new PatchRequest
+                await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
                 {
                     Script = @"PutDocument(
- 'NewTypes/1', 
- { 'CopiedValue':this.Value },
- {'CreatedBy': 'JS_Script'});
+        'NewTypes/1', 
+        { 'CopiedValue':this.Value },
+        {'CreatedBy': 'JS_Script'});
 
- PutDocument(
- 'NewTypes/1', 
- { 'CopiedValue': this.Value },
- {'CreatedBy': 'JS_Script 2'});",
-                });
+        PutDocument(
+        'NewTypes/1', 
+        { 'CopiedValue': this.Value },
+        {'CreatedBy': 'JS_Script 2'});",
+                }));
 
-                var resultDoc = await store.AsyncDatabaseCommands.GetAsync("NewTypes/1");
-                Assert.Equal(10, resultDoc.DataAsJson.Value<int>("CopiedValue"));
-                Assert.Equal("JS_Script 2", resultDoc.Metadata.Value<string>("CreatedBy"));
+                using (var commands = store.Commands())
+                {
+                    dynamic doc = await commands.GetAsync("NewTypes/1");
+                    dynamic metadata = doc[Constants.Metadata.Key];
+                    var copiedValue = (int)doc.CopiedValue;
+                    var createdBy = metadata.CreatedBy.ToString();
+
+                    Assert.Equal(10, copiedValue);
+                    Assert.Equal("JS_Script 2", createdBy);
+                }
             }
         }
 
@@ -525,24 +643,27 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new CustomType {Id = "Items/1", Value = 10, Comments = new List<string>(new[] {"one", "two", "three"})});
+                    await session.StoreAsync(new CustomType { Id = "Items/1", Value = 10, Comments = new List<string>(new[] { "one", "two", "three" }) });
                     await session.SaveChangesAsync();
                 }
 
-                await store.AsyncDatabaseCommands.PatchAsync("Items/1", new PatchRequest
+                await store.Operations.SendAsync(new PatchOperation("Items/1", null, new PatchRequest
                 {
                     Script = @"_.forEach(this.Comments, function(comment){
-                                 PutDocument('Comments/', { 'Comment':comment });
-                             })",
-                });
+                                     PutDocument('Comments/', { 'Comment':comment });
+                                 })",
+                }));
 
-                var resultDocs = await store.AsyncDatabaseCommands.GetDocumentsAsync(0, 10);
-                Assert.Equal(4, resultDocs.Length);
+                using (var commands = store.Commands())
+                {
+                    var docs = await commands.GetAsync(0, 10);
+                    Assert.Equal(4, docs.Length);
 
-                var docs = await store.AsyncDatabaseCommands.GetAsync(new[] {"Comments/1", "Comments/2", "Comments/3"}, null);
-                Assert.Equal("one", docs.Results[0].Value<string>("Comment"));
-                Assert.Equal("two", docs.Results[1].Value<string>("Comment"));
-                Assert.Equal("three", docs.Results[2].Value<string>("Comment"));
+                    docs = await commands.GetAsync(new[] { "Comments/1", "Comments/2", "Comments/3" });
+                    Assert.Equal("one", docs.ElementAt(0).Comment.ToString());
+                    Assert.Equal("two", docs.ElementAt(1).Comment.ToString());
+                    Assert.Equal("three", docs.ElementAt(2).Comment.ToString());
+                }
             }
         }
 
@@ -557,17 +678,19 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
                     await session.SaveChangesAsync();
                 }
 
-                await store.AsyncDatabaseCommands.PatchAsync("CustomTypes/1", new PatchRequest
+                await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
                 {
                     Script = @"PutDocument(null, { 'Property': 'Value'});",
-                });
+                }));
 
-                await store.AsyncDatabaseCommands.PatchAsync("CustomTypes/1", new PatchRequest
+                await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
                 {
                     Script = @"PutDocument('    ', { 'Property': 'Value'});",
-                });
+                }));
 
-                Assert.Equal(3, store.DatabaseCommands.GetStatistics().CountOfDocuments);
+                var stats = await store.Admin.SendAsync(new GetStatisticsOperation());
+
+                Assert.Equal(3, stats.CountOfDocuments);
             }
         }
 
@@ -576,15 +699,19 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
         {
             using (var store = GetDocumentStore())
             {
-                await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.FromObject(_test), null);
-
-                var exception = await Assert.ThrowsAsync<ErrorResponseException>(async () =>
+                using (var commands = store.Commands())
                 {
-                    await store.AsyncDatabaseCommands.PatchAsync("doc", new PatchRequest
+                    await commands.PutAsync("doc", null, _test, null);
+                }
+
+                var exception = await Assert.ThrowsAsync<InternalServerErrorException>(async () =>
+                {
+                    await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
                     {
                         Script = @"PutDocument('Items/1', { Property: 1}, null, 'invalid-etag');",
-                    });
+                    }));
                 });
+
                 Assert.Contains("Invalid ETag value for document 'Items/1'", exception.Message);
             }
         }
@@ -596,20 +723,21 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new CustomType {Value = 10});
+                    await session.StoreAsync(new CustomType { Value = 10 });
                     await session.SaveChangesAsync();
                 }
 
-                var exception = await Assert.ThrowsAsync<ErrorResponseException>(async () =>
+                var exception = await Assert.ThrowsAsync<InternalServerErrorException>(async () =>
                 {
-                    await store.AsyncDatabaseCommands.PatchAsync("CustomTypes/1", new PatchRequest
+                    await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
                     {
                         Script = @"PutDocument(
- 'Items/1', 
- { 'Property':'Value'},
- {}, 123456789 );",
-                    });
+    'Items/1', 
+    { 'Property':'Value'},
+    {}, 123456789 );",
+                    }));
                 });
+
                 Assert.Contains("Document Items/1 does not exists, but Put was called with etag 123456789. Optimistic concurrency violation, transaction will be aborted.", exception.Message);
             }
         }
@@ -621,17 +749,20 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new CustomType {Value = 10});
+                    await session.StoreAsync(new CustomType { Value = 10 });
                     await session.SaveChangesAsync();
                 }
 
-                await store.AsyncDatabaseCommands.PatchAsync("CustomTypes/1", new PatchRequest
+                await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
                 {
                     Script = @"PutDocument('NewTypes/1', { }, { });",
-                });
+                }));
 
-                var resultDoc = await store.AsyncDatabaseCommands.GetAsync("NewTypes/1");
-                Assert.Equal(0, resultDoc.DataAsJson.Keys.Count);
+                using (var commands = store.Commands())
+                {
+                    var doc = await commands.GetAsync("NewTypes/1");
+                    Assert.Equal(0 + 1, doc.BlittableJson.Count); // +1 @metadata
+                }
             }
         }
 
@@ -640,14 +771,17 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
         {
             using (var store = GetDocumentStore())
             {
-                await store.AsyncDatabaseCommands.PutAsync("doc", null, RavenJObject.FromObject(_test), null);
-
-                var exception = await Assert.ThrowsAsync<ErrorResponseException>(async () =>
+                using (var commands = store.Commands())
                 {
-                    await store.AsyncDatabaseCommands.PatchAsync("doc", new PatchRequest
+                    await commands.PutAsync("doc", null, _test, null);
+                }
+
+                var exception = await Assert.ThrowsAsync<InternalServerErrorException>(async () =>
+                {
+                    await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
                     {
                         Script = @"PutDocument('Items/1', null);",
-                    });
+                    }));
                 });
                 Assert.Contains("Created document must be a valid object which is not null or empty. Document key: 'Items/1'", exception.Message);
             }
@@ -673,11 +807,11 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
                     await session.SaveChangesAsync();
                 }
 
-                store.DatabaseCommands.PutIndex("TestIndex", new IndexDefinition
+                store.Admin.Send(new PutIndexOperation("TestIndex", new IndexDefinition
                 {
                     Maps = { @"from doc in docs.CustomTypes 
                             select new { doc.Value }" }
-                });
+                }));
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -686,16 +820,19 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
                         .ToListAsync();
                 }
 
-                var operation = await store.AsyncDatabaseCommands.UpdateByIndexAsync("TestIndex",
-                    new IndexQuery {Query = "Value:1"},
-                    new PatchRequest {Script = @"PutDocument('NewItem/3', {'CopiedValue': this.Value });"});
+                var operation = await store.Operations.SendAsync(new PatchByIndexOperation("TestIndex",
+                    new IndexQuery { Query = "Value:1" },
+                    new PatchRequest { Script = @"PutDocument('NewItem/3', {'CopiedValue': this.Value });" }));
                 await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
 
-                var documents = await store.AsyncDatabaseCommands.GetDocumentsAsync(0, 10);
-                Assert.Equal(3, documents.Length);
+                using (var commands = store.Commands())
+                {
+                    var documents = await commands.GetAsync(0, 10);
+                    Assert.Equal(3, documents.Length);
 
-                var jsonDocument = store.DatabaseCommands.Get("NewItem/3");
-                Assert.Equal(1, jsonDocument.DataAsJson.Value<int>("CopiedValue"));
+                    dynamic jsonDocument = await commands.GetAsync("NewItem/3");
+                    Assert.Equal(1, (int)jsonDocument.CopiedValue);
+                }
             }
         }
 
@@ -714,19 +851,22 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
                     await session.SaveChangesAsync();
                 }
 
-                await store.AsyncDatabaseCommands.PatchAsync("Item/1", new PatchRequest
+                await store.Operations.SendAsync(new PatchOperation("Item/1", null, new PatchRequest
                 {
                     Script = "this.Test = this",
-                });
+                }));
 
-                var resultDoc = await store.AsyncDatabaseCommands.GetAsync("Item/1");
-                Assert.Equal("1", resultDoc.DataAsJson["Value"]);
+                using (var commands = store.Commands())
+                {
+                    dynamic resultDoc = await commands.GetAsync("Item/1");
+                    Assert.Equal("1", resultDoc.Value.ToString());
 
-                var patchedField = (RavenJObject) resultDoc.DataAsJson["Test"];
-                Assert.Equal("1", patchedField["Value"]);
+                    var patchedField = resultDoc.Test;
+                    Assert.Equal("1", patchedField.Value.ToString());
 
-                patchedField = patchedField["Test"] as RavenJObject;
-                Assert.Null(patchedField);
+                    patchedField = patchedField.Test;
+                    Assert.True(patchedField == null);
+                }
             }
         }
 
@@ -741,20 +881,24 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
                     await session.SaveChangesAsync();
                 }
 
-                await store.AsyncDatabaseCommands.PatchAsync(_test.Id, new PatchRequest
+                await store.Operations.SendAsync(new PatchOperation(_test.Id, null, new PatchRequest
                 {
-                    Script = sampleScript,
-                });
+                    Script = SampleScript,
+                }));
 
-                var resultDoc = await store.AsyncDatabaseCommands.GetAsync(_test.Id);
-                var result = JsonConvert.DeserializeObject<CustomType>(resultDoc.DataAsJson.ToString());
+                using (var commands = store.Commands())
+                {
+                    dynamic resultDoc = await commands.GetAsync(_test.Id);
+                    var metadata = resultDoc[Constants.Metadata.Key];
+                    var result = (CustomType)store.Conventions.DeserializeEntityFromBlittable(typeof(CustomType), resultDoc.BlittableJson);
 
-                Assert.NotEqual("Something new", resultDoc.Metadata["@id"]);
-                Assert.Equal(2, result.Comments.Count);
-                Assert.Equal("one test", result.Comments[0]);
-                Assert.Equal("two", result.Comments[1]);
-                Assert.Equal(12144, result.Value);
-                Assert.Equal("err!!", resultDoc.DataAsJson["newValue"]);
+                    Assert.NotEqual("Something new", metadata[Constants.Metadata.Id].ToString());
+                    Assert.Equal(2, result.Comments.Count);
+                    Assert.Equal("one test", result.Comments[0]);
+                    Assert.Equal("two", result.Comments[1]);
+                    Assert.Equal(12144, result.Value);
+                    Assert.Equal("err!!", resultDoc.newValue.ToString());
+                }
             }
         }
 
@@ -784,39 +928,70 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
                     await session.StoreAsync(item2);
                     await session.SaveChangesAsync();
                 }
-                
-                store.DatabaseCommands.PutIndex("TestIndex",
+
+                store.Admin.Send(new PutIndexOperation("TestIndex",
                     new IndexDefinition
                     {
                         Maps = { @"from doc in docs.CustomTypes 
                                      select new { doc.Owner }" }
-                    });
+                    }));
 
-                WaitForUserToContinueTheTest(store);
+                WaitForIndexing(store);
 
-                store.OpenSession().Advanced.DocumentQuery<CustomType>("TestIndex")
-                    .WaitForNonStaleResults().ToList();
+                var operation = store.Operations.Send(new PatchByIndexOperation("TestIndex",
+                    new IndexQuery { Query = "Owner:Bob" },
+                    new PatchRequest { Script = SampleScript }));
 
-                store.DatabaseCommands.UpdateByIndex("TestIndex",
-                    new IndexQuery {Query = "Owner:Bob"},
-                    new PatchRequest {Script = sampleScript})
-                    .WaitForCompletion(TimeSpan.FromSeconds(15));
+                operation.WaitForCompletion(TimeSpan.FromSeconds(15));
 
-                var item1ResultJson = store.DatabaseCommands.Get(item1.Id).DataAsJson;
-                var item1Result = JsonConvert.DeserializeObject<CustomType>(item1ResultJson.ToString());
-                Assert.Equal(2, item1Result.Comments.Count);
-                Assert.Equal("one test", item1Result.Comments[0]);
-                Assert.Equal("two", item1Result.Comments[1]);
-                Assert.Equal(12144, item1Result.Value);
-                Assert.Equal("err!!", item1ResultJson["newValue"]);
+                using (var commands = store.Commands())
+                {
+                    dynamic item1ResultJson = await commands.GetAsync(item1.Id);
+                    var item1Result = (CustomType)store.Conventions.DeserializeEntityFromBlittable(typeof(CustomType), item1ResultJson.BlittableJson);
 
-                var item2ResultJson = store.DatabaseCommands.Get(item2.Id).DataAsJson;
-                var item2Result = JsonConvert.DeserializeObject<CustomType>(item2ResultJson.ToString());
-                Assert.Equal(9999, item2Result.Value);
-                Assert.Equal(3, item2Result.Comments.Count);
-                Assert.Equal("one", item2Result.Comments[0]);
-                Assert.Equal("two", item2Result.Comments[1]);
-                Assert.Equal("seven", item2Result.Comments[2]);
+                    Assert.Equal(2, item1Result.Comments.Count);
+                    Assert.Equal("one test", item1Result.Comments[0]);
+                    Assert.Equal("two", item1Result.Comments[1]);
+                    Assert.Equal(12144, item1Result.Value);
+                    Assert.Equal("err!!", item1ResultJson.newValue.ToString());
+
+                    dynamic item2ResultJson = await commands.GetAsync(item2.Id);
+                    var item2Result = (CustomType)store.Conventions.DeserializeEntityFromBlittable(typeof(CustomType), item2ResultJson.BlittableJson);
+
+                    Assert.Equal(9999, item2Result.Value);
+                    Assert.Equal(3, item2Result.Comments.Count);
+                    Assert.Equal("one", item2Result.Comments[0]);
+                    Assert.Equal("two", item2Result.Comments[1]);
+                    Assert.Equal("seven", item2Result.Comments[2]);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanDeserializeModifiedDocument()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var commands = store.Commands())
+                {
+                    await commands.PutAsync("doc", null, new CustomType { Owner = "somebody@somewhere.com" }, null);
+
+                    var result = await store.Operations.SendAsync<CustomType>(new PatchOperation("doc", null, new PatchRequest
+                    {
+                        Script = "this.Owner = '123';"
+                    }));
+
+                    Assert.Equal(PatchStatus.Patched, result.Status);
+                    Assert.Equal("123", result.Document.Owner);
+
+                    result = await store.Operations.SendAsync<CustomType>(new PatchOperation("doc", null, new PatchRequest
+                    {
+                        Script = "this.Owner = '123';" // not-modified
+                    }));
+
+                    Assert.Equal(PatchStatus.NotModified, result.Status);
+                    Assert.Equal("123", result.Document.Owner);
+                }
             }
         }
     }

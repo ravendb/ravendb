@@ -184,6 +184,8 @@ namespace Raven.NewClient.Client.Http
                     }
                 }
 
+                command.StatusCode = response.StatusCode;
+
                 if (response.StatusCode == HttpStatusCode.NotModified)
                 {
                     cachedItem.NotModified();

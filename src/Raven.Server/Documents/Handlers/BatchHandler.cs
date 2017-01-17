@@ -28,9 +28,8 @@ namespace Raven.Server.Documents.Handlers
             public string Key;
             public BlittableJsonReaderObject Document;
             public PatchRequest Patch;
-            public BlittableJsonReaderObject AdditionalData;
+            public PatchRequest PatchIfMissing;
             public long? Etag;
-            public bool IsDebugMode;
         }
 
         [RavenAction("/databases/*/bulk_docs", "POST")]
@@ -75,7 +74,6 @@ namespace Raven.Server.Documents.Handlers
 
                         // optional
                         cmd.TryGet(nameof(CommandData.Etag), out parsedCommands[i].Etag);
-                        cmd.TryGet(nameof(CommandData.AdditionalData), out parsedCommands[i].AdditionalData);
 
                         // We have to do additional processing on the documents
                         // in particular, prepare them for disk by compressing strings, validating floats, etc
@@ -98,14 +96,17 @@ namespace Raven.Server.Documents.Handlers
                                     BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                                 break;
                             case "PATCH":
-                                cmd.TryGet(nameof(PatchCommandData.DebugMode), out parsedCommands[i].IsDebugMode);
-
                                 BlittableJsonReaderObject patch;
                                 if (cmd.TryGet(nameof(PatchCommandData.Patch), out patch) == false)
-                                    throw new InvalidDataException(
-                                        $"Missing '{nameof(PatchCommandData.Patch)}' property");
+                                    throw new InvalidDataException($"Missing '{nameof(PatchCommandData.Patch)}' property");
 
                                 parsedCommands[i].Patch = PatchRequest.Parse(patch);
+
+                                BlittableJsonReaderObject patchIfMissing;
+                                if (cmd.TryGet(nameof(PatchCommandData.Patch), out patchIfMissing))
+                                {
+                                    parsedCommands[i].PatchIfMissing = PatchRequest.Parse(patchIfMissing);
+                                }
                                 break;
                         }
                     }
@@ -133,7 +134,7 @@ namespace Raven.Server.Documents.Handlers
                         }
                         catch (ConcurrencyException)
                         {
-                            HttpContext.Response.StatusCode = (int) HttpStatusCode.Conflict;
+                            HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
                             throw;
                         }
 
@@ -150,7 +151,7 @@ namespace Raven.Server.Documents.Handlers
                                     mergedCmd.ModifiedCollections);
                         }
 
-                        HttpContext.Response.StatusCode = (int) HttpStatusCode.Created;
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
                         using (var writer = new BlittableJsonTextWriter(readBatchCommandContext, ResponseBodyStream()))
                         {
@@ -166,7 +167,7 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task WaitForReplicationAsync(TimeSpan waitForReplicasTimeout, MergedBatchCommand mergedCmd)
         {
-       
+
 
             int numberOfReplicasToWaitFor;
             var numberOfReplicasStr = GetStringQueryString("numberOfReplicasToWaitFor", required: false) ?? "1";
@@ -324,7 +325,6 @@ namespace Raven.Server.Documents.Handlers
                                 ["Key"] = putResult.Key,
                                 ["Etag"] = putResult.Etag,
                                 ["Method"] = "PUT",
-                                ["AdditionalData"] = cmd.AdditionalData,
                                 ["Metadata"] = metadata
                             });
                             break;
@@ -332,34 +332,21 @@ namespace Raven.Server.Documents.Handlers
                             // TODO: Move this code out of the merged transaction
                             // TODO: We should have an object that handles this externally, 
                             // TODO: and apply it there
-                            var patchResult = Database.Patch.Apply(context, cmd.Key, cmd.Etag, cmd.Patch, null,
-                                cmd.IsDebugMode);
-                            var additionalData = new DynamicJsonValue
-                            {
-                                ["Debug"] = patchResult.DebugInfo,
-                            };
 
-                            if (cmd.Document != null)
-                            {
-                                context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Key, cmd.Document.Size);
-                            }
-                            if (cmd.IsDebugMode)
-                            {
-                                additionalData["Document"] = patchResult.ModifiedDocument;
-                                additionalData["Actions"] = patchResult.DebugActions;
-                            }
+                            var patchResult = Database.Patch.Apply(context, cmd.Key, cmd.Etag, cmd.Patch, cmd.PatchIfMissing, skipPatchIfEtagMismatch: false, debugMode: false);
+                            if (patchResult.ModifiedDocument != null)
+                                context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Key, patchResult.ModifiedDocument.Size);
                             if (patchResult.Etag != null)
                                 LastEtag = patchResult.Etag.Value;
                             if (patchResult.Collection != null)
-                                ModifiedCollections?.Add(patchResult.Collection.Name);
+                                ModifiedCollections?.Add(patchResult.Collection);
 
                             Reply.Add(new DynamicJsonValue
                             {
                                 ["Key"] = cmd.Key,
                                 ["Etag"] = patchResult.Etag,
                                 ["Method"] = "PATCH",
-                                ["AdditionalData"] = additionalData,
-                                ["PatchResult"] = patchResult.PatchResult.ToString(),
+                                ["Status"] = patchResult.Status.ToString(),
                             });
                             break;
                         case "DELETE":
@@ -373,7 +360,6 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 ["Key"] = cmd.Key,
                                 ["Method"] = "DELETE",
-                                ["AdditionalData"] = cmd.AdditionalData,
                                 ["Deleted"] = deleted != null
                             });
                             break;
@@ -386,7 +372,6 @@ namespace Raven.Server.Documents.Handlers
                 foreach (var cmd in ParsedCommands)
                 {
                     cmd.Document?.Dispose();
-                    cmd.AdditionalData?.Dispose();
                 }
             }
         }

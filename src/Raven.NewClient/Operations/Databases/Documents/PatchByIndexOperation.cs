@@ -12,7 +12,7 @@ using Sparrow.Json;
 
 namespace Raven.NewClient.Operations.Databases.Documents
 {
-    public class PatchByIndexOperation : IOperation
+    public class PatchByIndexOperation : IOperation<OperationIdResult>
     {
         private readonly string _indexName;
         private readonly IndexQuery _queryToUpdate;

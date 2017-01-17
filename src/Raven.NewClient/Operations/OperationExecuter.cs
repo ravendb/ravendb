@@ -1,16 +1,11 @@
 ﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client;
-using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Http;
-using Raven.NewClient.Connection;
 using Sparrow.Json;
 
 namespace Raven.NewClient.Operations
 {
-    public class OperationExecuter
+    public partial class OperationExecuter
     {
         private readonly DocumentStoreBase _store;
         private readonly string _databaseName;
@@ -41,35 +36,13 @@ namespace Raven.NewClient.Operations
             return new OperationExecuter(_store, databaseName);
         }
 
-        public Operation Send(IOperation operation)
+        private IDisposable GetContext(out JsonOperationContext context)
         {
-            return AsyncHelpers.RunSync(() => SendAsync(operation));
-        }
+            if (_context == null)
+                return _requestExecuter.ContextPool.AllocateOperationContext(out context);
 
-        public async Task<Operation> SendAsync(IOperation operation, CancellationToken token = default(CancellationToken))
-        {
-            IDisposable releaseContext = null;
-            try
-            {
-                JsonOperationContext context;
-                if (_context != null)
-                {
-                    context = _context;
-                }
-                else
-                {
-                    releaseContext = _requestExecuter.ContextPool.AllocateOperationContext(out context);
-                }
-
-                var command = operation.GetCommand(_store.Conventions, context);
-
-                await _requestExecuter.ExecuteAsync(command, context, token).ConfigureAwait(false);
-                return new Operation(_requestExecuter, _store.Conventions, command.Result.OperationId);
-            }
-            finally
-            {
-                releaseContext?.Dispose();
-            }
+            context = _context;
+            return null;
         }
     }
 }

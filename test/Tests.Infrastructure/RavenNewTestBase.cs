@@ -33,23 +33,30 @@ namespace FastTests
             return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
         }
 
-        protected virtual DocumentStore GetDocumentStore([CallerMemberName] string caller = null,
-            string dbSuffixIdentifier = null, string path = null,
+        protected virtual DocumentStore GetDocumentStore(
+            [CallerMemberName] string caller = null,
+            string dbSuffixIdentifier = null,
+            string path = null,
             Action<DatabaseDocument> modifyDatabaseDocument = null,
-            string apiKey = null,
-            bool deleteDbAfterDispose = true)
+            Func<string, string> modifyName = null,
+            string apiKey = null)
         {
             var name = caller != null ? $"{caller}_{Interlocked.Increment(ref _counter)}" : Guid.NewGuid().ToString("N");
 
             if (dbSuffixIdentifier != null)
                 name = $"{name}_{dbSuffixIdentifier}";
 
+            if (modifyName != null)
+                name = modifyName(name);
+
+            var hardDelete = true;
             var runInMemory = true;
 
             if (path == null)
                 path = NewDataPath(name);
             else
             {
+                hardDelete = false;
                 runInMemory = false;
             }
 
@@ -78,32 +85,19 @@ namespace FastTests
             store.Initialize();
 
             store.Admin.Send(new CreateDatabaseOperation(doc));
-
             store.AfterDispose += (sender, args) =>
             {
-                var databaseTask = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name);
-                if (databaseTask != null && databaseTask.IsCompleted == false)
-                    databaseTask.Wait(); // if we are disposing store before database had chance to load then we need to wait
+                if (CreatedStores.TryRemove(store) == false)
+                    return; // can happen if we are wrapping the store inside sharded one
 
-
-                Server.ServerStore.DatabasesLandlord.UnloadAndLock(name, () =>
+                if (Server.Disposed == false)
                 {
-                    if (deleteDbAfterDispose)
-                    {
-                        var dbId = Constants.Database.Prefix + name;
-                        using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
-                        using (var tx = context.OpenWriteTransaction())
-                        {
-                            Server.ServerStore.Delete(context, dbId);
-                            tx.Commit();
-                        }
+                    var databaseTask = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name);
+                    if (databaseTask != null && databaseTask.IsCompleted == false)
+                        databaseTask.Wait(); // if we are disposing store before database had chance to load then we need to wait
 
-                        if (databaseTask != null)
-                            DatabaseHelper.DeleteDatabaseFiles(databaseTask.Result.Configuration);
-                    }
-                });
-
-                CreatedStores.TryRemove(store);
+                    store.Admin.Send(new DeleteDatabaseOperation(name, hardDelete));
+                }
             };
             CreatedStores.Add(store);
             return store;
