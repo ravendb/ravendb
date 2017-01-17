@@ -1163,7 +1163,7 @@ namespace Voron.Impl.Journal
             txHeader->CompressedSize = compressedLen;
             txHeader->UncompressedSize = totalSizeWritten;
             txHeader->PageCount = numberOfPages;
-            txHeader->Hash = Hashing.XXHash64.Calculate(compressionBuffer, (ulong)compressedLen);
+            txHeader->Hash = Hashing.XXHash64.Calculate(compressionBuffer, (ulong)compressedLen, (ulong)txHeader->TransactionId);
 
             var prepreToWriteToJournal = new CompressedPagesResult
             {

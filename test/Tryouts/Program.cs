@@ -19,9 +19,9 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var a = new FastTests.Client.Subscriptions.Subscriptions())
+            using (var a = new FastTests.Voron.Compaction.StorageCompactionTests())
             {
-                a.SubscriptionStrategyConnectIfFree().Wait();
+                a.ShouldOccupyLessSpace();
             }
         }
     }
