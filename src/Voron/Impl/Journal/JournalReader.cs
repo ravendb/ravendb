@@ -43,15 +43,14 @@ namespace Voron.Impl.Journal
 
         public TransactionHeader* LastTransactionHeader { get; private set; }
 
-        public bool ReadOneTransactionToDataFile(StorageEnvironmentOptions options, bool checkCrc = true)
+        public bool ReadOneTransactionToDataFile(StorageEnvironmentOptions options)
         {
             if (_readAt4Kb >= _journalPagerNumberOfAllocated4Kb)
                 return false;
 
             TransactionHeader* current;
-            if (!TryReadAndValidateHeader(options, out current))
+            if(TryReadAndValidateHeader(options, out current) == false)
                 return false;
-
 
             var transactionSizeIn4Kb =
                 (current->CompressedSize + sizeof(TransactionHeader))/ (4*Constants.Size.Kilobyte) +
@@ -64,9 +63,6 @@ namespace Voron.Impl.Journal
                 LastTransactionHeader = current;
                 return true; // skipping
             }
-
-            if (checkCrc && !ValidatePagesHash(options, current))
-                return false;
 
             _readAt4Kb += transactionSizeIn4Kb;
             var numberOfPages = GetNumberOfPagesFor(current->UncompressedSize);
@@ -151,7 +147,7 @@ namespace Voron.Impl.Journal
             if (_readAt4Kb > _journalPagerNumberOfAllocated4Kb)
             {
                 current = null;
-                return false;
+                return false; // end of jouranl
             }
 
             const int pageTo4KbRatio = Constants.Storage.PageSize / (4 * Constants.Size.Kilobyte);
@@ -161,42 +157,71 @@ namespace Voron.Impl.Journal
             current = (TransactionHeader*)
                 (_journalPager.AcquirePagePointer(this, pageNumber) + positionInsidePage);
 
+            // due to the reuse of journals we no longer can assume we have zeros in the end of the journal
+            // we might have there random garbage or old transactions we can ignore, so we have the following scenarios:
+            // * TxId <= current Id      ::  we can ignore old transaction of the reused journal and continue
+            // * TxId == current Id + 1  ::  valid, but if hash is invalid. Transaction hasn't been committed
+            // * TxId >  current Id + 1  ::  if hash is invalid we can ignore reused/random, but if hash valid then we might missed TXs 
+
             if (current->HeaderMarker != Constants.TransactionHeaderMarker)
             {
                 // not a transaction page, 
 
-                // if the header marker is zero, we are probably in the area at the end of the log file, and have no additional log records
+                // if the header marker is zero or garbage, we are probably in the area at the end of the log file, and have no additional log records
                 // to read from it. This can happen if the next transaction was too big to fit in the current log file. We stop reading
-                // this log file and move to the next one. 
+                // this log file and move to the next one, or it might have happened becuase of reuse of journal file 
 
-                RequireHeaderUpdate = current->HeaderMarker != 0;
-                if (RequireHeaderUpdate)
-                {
-                    options.InvokeRecoveryError(this, "Transaction " + current->TransactionId + " header marker was set to garbage value, file is probably corrupted", null);
-                }
+                // note : we might encounter a "valid" TransactionHeaderMarker which is still garbage, so we will test that later on
 
+                RequireHeaderUpdate = false;
                 return false;
             }
 
-            ValidateHeader(current, LastTransactionHeader);
+            if (current->TransactionId < 0)
+                return false;
 
             current = EnsureTransactionMapped(current, pageNumber, positionInsidePage);
+            bool hashIsValid = ValidatePagesHash(options, current);
 
-            if ((current->TxMarker & TransactionMarker.Commit) != TransactionMarker.Commit)
+            if (LastTransactionHeader == null)
+                return hashIsValid;
+
+            var txIdDiff = current->TransactionId - LastTransactionHeader->TransactionId;
+
+            // 1 is a first storage transaction which does not increment transaction counter after commit
+            if (current->TransactionId != 1)
             {
-                // uncommitted transaction, probably
-                RequireHeaderUpdate = true;
-                options.InvokeRecoveryError(this, "Transaction " + current->TransactionId + " was not committed", null);
-                return false;
+                if (txIdDiff < 0)
+                    return false;
+
+                if (txIdDiff > 1 || txIdDiff == 0)
+                {
+                    if (hashIsValid)
+                    {
+                        // TxId is bigger then the last one by nore the '1' but has valid hash which mean we lost transactions in the middle
+                        throw new InvalidDataException(
+                            $"Transaction has Valid(!) hash, however Trasaction Id = {current->TransactionId} is invalid. Journal file might be corrupted");
+                    }
+                }
+
+                // if (txIdDiff == 1) :
+                if (current->LastPageNumber <= 0)
+                    throw new InvalidDataException("Last page number after committed transaction must be greater than 0");
             }
 
-            return true;
+            if (hashIsValid == false)
+            {
+                RequireHeaderUpdate = true;
+                options.InvokeRecoveryError(this, "Transaction " + current->TransactionId + " was not committed",
+                    null);
+            }
+
+            return hashIsValid;
         }
 
         private TransactionHeader* EnsureTransactionMapped(TransactionHeader* current, long pageNumber, long positionInsidePage)
         {
             // we need to translate the 4kb position to the position by page size
-
 
             var numberOfPages = GetNumberOfPagesFor(sizeof(TransactionHeader) + current->CompressedSize);
             _journalPager.EnsureMapped(this, pageNumber, numberOfPages);
@@ -204,31 +229,9 @@ namespace Voron.Impl.Journal
             var pageHeader = _journalPager.AcquirePagePointer(this, pageNumber)
                              + positionInsidePage;
 
-            current = (TransactionHeader*) pageHeader;
-            return current;
+            return (TransactionHeader*)pageHeader;
         }
 
-        private void ValidateHeader(TransactionHeader* current, TransactionHeader* previous)
-        {
-            if (current->TransactionId < 0)
-                throw new InvalidDataException("Transaction id cannot be less than 0 (llt: " + current->TransactionId +
-                                               " )");
-            if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->LastPageNumber < 0)
-                throw new InvalidDataException("Last page number after committed transaction must be greater than 0");
-            if (current->TxMarker.HasFlag(TransactionMarker.Commit) && current->PageCount > 0 && current->Hash == 0)
-                throw new InvalidDataException("Committed and not empty transaction hash can't be equal to 0");
-            if (current->CompressedSize <= 0)
-                throw new InvalidDataException("Compression error in transaction.");
-
-            if (previous == null)
-                return;
-
-            if (current->TransactionId != 1 &&
-                // 1 is a first storage transaction which does not increment transaction counter after commit
-                current->TransactionId - previous->TransactionId != 1)
-                throw new InvalidDataException("Unexpected transaction id. Expected: " + (previous->TransactionId + 1) +
-                                               ", got:" + current->TransactionId);
-        }
 
         private bool ValidatePagesHash(StorageEnvironmentOptions options, TransactionHeader* current)
         {
@@ -250,7 +253,7 @@ namespace Voron.Impl.Journal
                 return false;
             }
 
-            ulong hash = Hashing.XXHash64.Calculate(dataPtr, (ulong)current->CompressedSize);
+            ulong hash = Hashing.XXHash64.Calculate(dataPtr, (ulong)current->CompressedSize, (ulong)current->TransactionId);
             if (hash != current->Hash)
             {
                 RequireHeaderUpdate = true;
