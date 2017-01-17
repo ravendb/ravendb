@@ -1,4 +1,6 @@
-﻿import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
+﻿/// <reference path="../../../../typings/tsd.d.ts" />
+
+import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 
 class leafMenuItem implements menuItem {
     title: string;

@@ -118,13 +118,7 @@
                 <a class="back" title="back"
                    data-bind="click: menu.back.bind(menu)"></a>
 
-                <!-- ko if: item.path -->
-                <a class="title" data-bind="text: item.title, attr: { href: item.path }, click: menu.navigate.bind(menu)"></a> 
-                <!-- /ko -->
-
-                <!-- ko if: !item.path() -->
-                    <!-- ko text: item.title --><!-- /ko -->
-                <!-- /ko -->
+                <!-- ko text: item.title --><!-- /ko -->
             </h2>
 
             <ul data-bind="foreach: item.children">
@@ -136,7 +130,7 @@
 </script>
 
 <script type="text/html" id="separatorMenuItem">
-    <li>
+    <li class="separator">
         <!-- ko if: !!item.title -->
         <h3 data-bind="text: item.title"></h3>
         <!-- /ko -->
