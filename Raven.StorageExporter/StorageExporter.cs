@@ -20,10 +20,10 @@ using Raven.Database.Util;
 
 namespace Raven.StorageExporter
 {
-    public class StorageExporter
+    public class StorageExporter : IDisposable
     {
         public StorageExporter(string databaseBaseDirectory, string databaseOutputFile, 
-            int batchSize, Etag documentsStartEtag, bool hasCompression, EncryptionConfiguration encryption)
+            int batchSize, Etag documentsStartEtag, bool hasCompression, EncryptionConfiguration encryption, string journalsPath)
         {
             HasCompression = hasCompression;
             Encryption = encryption;
@@ -37,6 +37,14 @@ namespace Raven.StorageExporter
                 {
                     PreventSchemaUpdate = true,
                     SkipConsistencyCheck = true,
+                    Voron =
+                    {
+                        JournalsStoragePath = journalsPath
+                    },
+                    Esent =
+                    {
+                        JournalsStoragePath = journalsPath
+                    }
                 }
             };
             CreateTransactionalStorage(ravenConfiguration);
@@ -435,5 +443,11 @@ namespace Raven.StorageExporter
         private readonly string outputDirectory;
         private ITransactionalStorage storage;
         private readonly int batchSize;
+
+        public void Dispose()
+        {
+            if (storage != null)
+                storage.Dispose();
+        }
     }
 }
