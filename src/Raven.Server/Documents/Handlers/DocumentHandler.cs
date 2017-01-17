@@ -131,10 +131,10 @@ namespace Raven.Server.Documents.Handlers
             }
             else if (HttpContext.Request.Query.ContainsKey("startsWith"))
             {
-                documents = Database.DocumentsStorage.GetDocumentsStartingWith(context,
+               documents = Database.DocumentsStorage.GetDocumentsStartingWith(context,
                     HttpContext.Request.Query["startsWith"],
                     HttpContext.Request.Query["matches"],
-                    HttpContext.Request.Query["excludes"],
+                    HttpContext.Request.Query["exclude"],
                     start,
                     pageSize
                 );
@@ -163,6 +163,9 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteDocuments(context, documents, metadataOnly);
                 }
 
+                writer.WriteComma();
+                writer.WritePropertyName("NextPageStart");
+                writer.WriteInteger(Database.DocumentsStorage.NextPage);
                 writer.WriteEndObject();
             }
         }

@@ -168,7 +168,7 @@ namespace Raven.NewClient.Client.Document.Batches
         ///     skip document fetching until given key is found and return documents after that key (default:
         ///     null)
         /// </param>
-        Lazy<IDictionary<string, TResult>> LoadStartingWith<TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null);
+        Lazy<TResult[]> LoadStartingWith<TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null);
 
         Lazy<Dictionary<string, TResult>> MoreLikeThis<TResult>(MoreLikeThisQuery query);
     }
