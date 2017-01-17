@@ -796,7 +796,6 @@ body.show-top-alert {
             position: relative;
             content: '';
             display: block;
-            border-bottom: 1px solid @gray-dark;
             margin-top: -6px;
             margin-bottom: 6px;
         }
@@ -821,6 +820,13 @@ body.show-top-alert {
             background-color: @gray-dark;
         }
     }
+
+    li + li.separator h3 {
+        &:before {
+            border-bottom: 1px solid @gray-dark;
+        }
+    }
+
 
     .level {
         right: 0;
@@ -902,9 +908,11 @@ body.show-top-alert {
             transition: all 0s;
             transition-delay: 0s;
         }
+
         &:hover {
             .level-1 {
                 transition-delay: .35s;
+
                 a {
                     transition: opacity 0s;
                     transition-delay: .35s;
@@ -912,21 +920,22 @@ body.show-top-alert {
             }
 
             .level-1:not(:hover) {
-                transform: translateX(@menu-width - 55);   
+                transform: translateX(@menu-width - 55);
+
                 a {
-                    opacity:0; 
-                    transition-delay: 0;             
-                }             
+                    opacity: 0;
+                    transition-delay: 0;
+                }
             }
 
             a.active:hover + .level-1 {
-                animation:none;
+                animation: none;
                 transform: translateX(0);
                 transition-delay: .4s;
 
                 a {
-                    transition-delay: 0;  
-                    opacity:1;
+                    transition-delay: 0;
+                    opacity: 1;
                 }
             }
         }
@@ -1001,8 +1010,10 @@ body.show-top-alert {
     &[data-level="2"] {
         .level-0 {
             & > ul {
-                & > h3 {
-                    color: rgba(0,0,0,0);
+                & > li {
+                    & > h3 {
+                        color: rgba(0,0,0,0);
+                    }
                 }
             }
         }
@@ -1024,114 +1035,4 @@ body.show-top-alert {
 }
 
 @media (min-width:@screen-md) {
-    /*
-    .menu-collapse {
-        #main-menu {
-            width: @menu-width-collapsed / 3;
-
-            &[data-level="1"] {
-                width: @menu-width-collapsed / 3 * 2;
-            }
-
-            &[data-level="2"] {
-                width: @menu-width-collapsed;
-
-                .level {
-                    width: @menu-width-collapsed / 3 * 2;
-
-                    .level {
-                        width: @menu-width-collapsed / 3;
-                    }
-                }
-            }
-
-            a {
-                padding-top: 3px !important;
-                padding-bottom: 3px !important;
-                position: relative;
-                text-indent: -9999px;
-                width: @menu-width-collapsed / 3;
-
-                span {
-                    text-indent: 0;
-                    position: absolute;
-                    left: 12px;
-                    top: 10px;
-                }
-
-                &:after {
-                    opacity: 0;
-                }
-            }
-
-            .level-0 h3 {
-                text-indent: -9999px;
-                padding-left: 10px;
-                padding-right: 10px;
-
-                &:after {
-                    display: block;
-                    position: relative;
-                    top: -5px;
-                    content: '';
-                    border-top: 1px solid @gray;
-                }
-            }
-
-            .level-1 {
-                a {
-                    line-height: 22px;
-
-                    span {
-                        top: 6px;
-                    }
-                }
-
-                h2 {
-                    display: none;
-                }
-            }
-
-            .level {
-                width: @menu-width-collapsed / 3;
-
-                .level {
-                    width: 30px @menu-width-collapsed /3;
-                }
-            }
-        }
-
-        .navbar-header {
-            width: @menu-width-collapsed;
-
-            .navbar-brand {
-                opacity: 0;
-            }
-
-            .menu-collapse-button {
-                right: 35px;
-
-                &:before {
-                    content: '\e914';
-                }
-            }
-        }
-
-        .inputs-container {
-            margin-left: @menu-width-collapsed;
-        }
-
-        .content-container {
-            left: @menu-width-collapsed;
-        }
-    }
-    */
 }
-
-/*  DELETE IF NOTHING BREAKS
-    .border {
-        margin: @grid-gutter-width/2 0;
-        padding: @grid-gutter-width/2;
-        border: 1px solid @gray;
-    }
-*/
