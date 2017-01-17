@@ -64,7 +64,7 @@ namespace FastTests.Server.Documents.Patching
                 using (var commands = store.Commands())
                 {
                     var resultDoc = await commands.GetAsync("someId");
-                    var result = (CustomType)store.Conventions.DeserializeEntityFromBlittable(typeof(CustomType), resultDoc.BlittableJson);
+                    var result = commands.Deserialize<CustomType>(resultDoc.BlittableJson);
 
                     Assert.Equal("Something new", result.Id);
                     Assert.Equal(2, result.Comments.Count);
@@ -244,7 +244,7 @@ namespace FastTests.Server.Documents.Patching
                     }));
 
                     var doc = await commands.GetAsync("doc");
-                    var result = (CustomType)store.Conventions.DeserializeEntityFromBlittable(typeof(CustomType), doc.BlittableJson);
+                    var result = commands.Deserialize<CustomType>(doc.BlittableJson);
                     Assert.Equal(variable.NewComment, result.Comments[0]);
                 }
             }
@@ -265,7 +265,7 @@ namespace FastTests.Server.Documents.Patching
                     }));
 
                     var doc = await commands.GetAsync("doc");
-                    var result = (CustomType)store.Conventions.DeserializeEntityFromBlittable(typeof(CustomType), doc.BlittableJson);
+                    var result = commands.Deserialize<CustomType>(doc.BlittableJson);
                     Assert.Equal(new[] { "one", "seven" }.ToList(), result.Comments);
                 }
             }
@@ -286,7 +286,7 @@ namespace FastTests.Server.Documents.Patching
                     }));
 
                     var doc = await commands.GetAsync("doc");
-                    var result = (CustomType)store.Conventions.DeserializeEntityFromBlittable(typeof(CustomType), doc.BlittableJson);
+                    var result = commands.Deserialize<CustomType>(doc.BlittableJson);
                     Assert.Equal(new[] { "one", "two" }.ToList(), result.Comments);
                 }
             }
@@ -485,7 +485,7 @@ this.Value = another.Value;
                 {
                     var doc = await commands.GetAsync("CustomTypes/1");
 
-                    var result = (CustomType)store.Conventions.DeserializeEntityFromBlittable(typeof(CustomType), doc.BlittableJson);
+                    var result = commands.Deserialize<CustomType>(doc.BlittableJson);
                     Assert.Equal(1, result.Value);
                 }
             }
@@ -518,7 +518,7 @@ this.Value = another.Value;
                     var clrType = metadata["Raven-Clr-Type"].ToString();
                     var pythonType = metadata["Raven-Python-Type"].ToString();
 
-                    var result = (CustomType)store.Conventions.DeserializeEntityFromBlittable(typeof(CustomType), doc.BlittableJson);
+                    var result = commands.Deserialize<CustomType>(doc.BlittableJson);
 
                     Assert.Equal(clrType, result.Owner);
                     Assert.Equal("Your.CustomType", pythonType);
@@ -890,7 +890,7 @@ this.Value = another.Value;
                 {
                     dynamic resultDoc = await commands.GetAsync(_test.Id);
                     var metadata = resultDoc[Constants.Metadata.Key];
-                    var result = (CustomType)store.Conventions.DeserializeEntityFromBlittable(typeof(CustomType), resultDoc.BlittableJson);
+                    var result = commands.Deserialize<CustomType>(resultDoc.BlittableJson);
 
                     Assert.NotEqual("Something new", metadata[Constants.Metadata.Id].ToString());
                     Assert.Equal(2, result.Comments.Count);
@@ -947,7 +947,7 @@ this.Value = another.Value;
                 using (var commands = store.Commands())
                 {
                     dynamic item1ResultJson = await commands.GetAsync(item1.Id);
-                    var item1Result = (CustomType)store.Conventions.DeserializeEntityFromBlittable(typeof(CustomType), item1ResultJson.BlittableJson);
+                    var item1Result = commands.Deserialize<CustomType>(item1ResultJson.BlittableJson);
 
                     Assert.Equal(2, item1Result.Comments.Count);
                     Assert.Equal("one test", item1Result.Comments[0]);
@@ -956,7 +956,7 @@ this.Value = another.Value;
                     Assert.Equal("err!!", item1ResultJson.newValue.ToString());
 
                     dynamic item2ResultJson = await commands.GetAsync(item2.Id);
-                    var item2Result = (CustomType)store.Conventions.DeserializeEntityFromBlittable(typeof(CustomType), item2ResultJson.BlittableJson);
+                    var item2Result = commands.Deserialize<CustomType>(item2ResultJson.BlittableJson);
 
                     Assert.Equal(9999, item2Result.Value);
                     Assert.Equal(3, item2Result.Comments.Count);

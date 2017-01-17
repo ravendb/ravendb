@@ -41,6 +41,11 @@ namespace FastTests
                 _returnContext = RequestExecuter.ContextPool.AllocateOperationContext(out Context);
             }
 
+            public TEntity Deserialize<TEntity>(BlittableJsonReaderObject json)
+            {
+                return (TEntity)_store.Conventions.DeserializeEntityFromBlittable(typeof(TEntity), json);
+            }
+
             public async Task<PutResult> PutAsync(string id, long? etag, object data, IDictionary<string, string> metadata)
             {
                 if (id == null)
