@@ -222,12 +222,21 @@ namespace Raven.Server.Documents.Versioning
                 return;
 
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, RevisionDocuments);
-            var prefixKeyMem = context.Allocator.Allocate(loweredKey.Size + 1);
-            loweredKey.CopyTo(0, prefixKeyMem.Ptr, 0, loweredKey.Size);
-            prefixKeyMem.Ptr[loweredKey.Size] = (byte)30; // the record separator
-            var prefixSlice = new Slice(SliceOptions.Key, prefixKeyMem);
-            table.DeleteForwardFrom(DocsSchema.Indexes[KeyAndEtagSlice], prefixSlice, long.MaxValue);
-            DeleteCountOfRevisions(context, prefixSlice);
+            var prefixKeyMem = default(ByteString);
+            try
+            {
+                prefixKeyMem = context.Allocator.Allocate(loweredKey.Size + 1);
+
+                loweredKey.CopyTo(0, prefixKeyMem.Ptr, 0, loweredKey.Size);
+                prefixKeyMem.Ptr[loweredKey.Size] = (byte) 30; // the record separator                
+                var prefixSlice = new Slice(SliceOptions.Key, prefixKeyMem);
+                table.DeleteForwardFrom(DocsSchema.Indexes[KeyAndEtagSlice], prefixSlice, long.MaxValue);
+                DeleteCountOfRevisions(context, prefixSlice);
+            }
+            finally
+            {
+                context.Allocator.Release(ref prefixKeyMem);
+            }
         }
 
         public IEnumerable<Document> GetRevisions(DocumentsOperationContext context, string key, int start, int take)

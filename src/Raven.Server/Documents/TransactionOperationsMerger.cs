@@ -53,6 +53,7 @@ namespace Raven.Server.Documents
             /// need it afterward).
             /// </summary>
             public bool ShouldDisposeAfterCommit  = true;
+            public bool HasExecuted;
 
             public abstract void Execute(DocumentsOperationContext context, RavenTransaction tx);
             public TaskCompletionSource<object> TaskCompletionSource = new TaskCompletionSource<object>();
@@ -130,6 +131,8 @@ namespace Raven.Server.Documents
         private void DoCommandNotification(object op)
         {
             var cmd = (MergedTransactionCommand)op;
+            DisposeIfRelevant(cmd);
+
             if (cmd.Exception != null)
             {
                 cmd.TaskCompletionSource.TrySetException(cmd.Exception);
@@ -139,7 +142,6 @@ namespace Raven.Server.Documents
                 cmd.TaskCompletionSource.TrySetResult(null);
             }
 
-            DisposeIfRelevant(cmd);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -150,6 +152,8 @@ namespace Raven.Server.Documents
             {
                 disposable.Dispose();
             }
+
+            op.HasExecuted = true;
         }
 
         private bool MergeTransactionsOnce(List<MergedTransactionCommand> pendingOps)
@@ -168,6 +172,10 @@ namespace Raven.Server.Documents
                             if (_operations.TryDequeue(out op) == false)
                                 break;
                             pendingOps.Add(op);
+
+                            if(op.HasExecuted) //precaution, at this point should never be true
+                                throw new ObjectDisposedException(nameof(MergedTransactionCommand));
+
                             op.Execute(context, tx);
 
                             if (pendingOps.Count % 128 != 0)

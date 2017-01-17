@@ -61,6 +61,7 @@ namespace Raven.Server.Documents.TcpHandlers
             MetricsScheduler.Instance.StopTickingMetric(_bytesReceivedMetric);
 
             DocumentDatabase?.RunningTcpConnections.TryRemove(this);
+            MultiDocumentParser.Dispose();
 
             foreach (var disposable in DisposeOnConnectionClose)
             {

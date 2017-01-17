@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -122,6 +123,9 @@ namespace Sparrow.Json
 
         public void RegisterForDispose(IDisposable disposable)
         {
+            if (disposable == null) //precaution
+                return;
+
             _disposables.Add(disposable);
         }
 
@@ -494,7 +498,7 @@ namespace Sparrow.Json
                 // here we "leak" the memory used by the array, in practice this is used
                 // in short scoped context, so we don't care
                 var arrayReader = builder.CreateArrayReader();
-                this.RegisterLiveReader(arrayReader.Parent);
+                RegisterLiveReader(arrayReader.Parent);
                 return Tuple.Create(arrayReader, (IDisposable) arrayReader.Parent);
             }
         }
@@ -528,6 +532,7 @@ namespace Sparrow.Json
 
             private Task<BlittableJsonReaderObject> _prevCall;
             private Task[] _waitableTasks;
+            private bool _disabled;
 
             public async Task<BlittableJsonReaderObject> InterruptibleParseToMemoryAsync(string debugTag, AsyncManualResetEvent interruptEvent)
             {
@@ -716,8 +721,10 @@ namespace Sparrow.Json
                 disposable.Dispose();
             }
 
-            foreach (var memoryData in _disposableAllocatedMemory)
+            //note: this setup does not prevent "double" returns            
+            for (var i = _disposableAllocatedMemory.Count - 1; i >= 0; i--)
             {
+                var memoryData = _disposableAllocatedMemory[i];
                 _arenaAllocator.Return(memoryData);
             }
 

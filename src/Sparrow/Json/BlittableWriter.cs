@@ -33,7 +33,9 @@ namespace Sparrow.Json
             _unmanagedWriteBuffer.EnsureSingleChunk(out ptr, out size);
             var reader = new BlittableJsonReaderObject(ptr, size, _context, (UnmanagedWriteBuffer)(object)_unmanagedWriteBuffer);
 
-            //make sure to dispose the writer later, otherwise we might leave "hanging" reference
+            //Make sure to dispose the writer later, otherwise we might leave "hanging" reference.
+            //We do not dispose this immediately since the blittable json returned from this method
+            //depends on the memory allocated inside of _unmanagedWriteBuffer.
             _context.RegisterForDispose(_unmanagedWriteBuffer);
             _unmanagedWriteBuffer = default(TWriter);
             return reader;
@@ -119,12 +121,12 @@ namespace Sparrow.Json
         {
             _unmanagedWriteBuffer.Dispose();
         }
-
+      
         public void ResetAndRenew()
         {
-            Reset();
-
-            _unmanagedWriteBuffer = (TWriter)(object)_context.GetStream();
+            //don't dispose immediately the write buffer, since some object may depend on it
+            _context.RegisterForDispose(_unmanagedWriteBuffer);
+            _unmanagedWriteBuffer = (TWriter) (object) _context.GetStream();
             _position = 0;
         }
 
@@ -607,6 +609,7 @@ namespace Sparrow.Json
             _unmanagedWriteBuffer.Dispose();
             if (_compressionBuffer!= null)
                 _context.ReturnMemory(_compressionBuffer);
+
             _compressionBuffer = null;
         }
     }

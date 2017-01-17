@@ -1477,6 +1477,20 @@ namespace Raven.Server.Documents
             }
 
             var collectionName = ExtractCollectionName(context, key, document);
+            var newEtag = ++_lastEtag;
+            var newEtagBigEndian = Bits.SwapBytes(newEtag);
+            int flags = 0;
+            if (collectionName.IsSystem == false)
+            {
+                bool hasVersion =
+                    _documentDatabase.BundleLoader.VersioningStorage?.PutFromDocument(context, collectionName,
+                        key, newEtagBigEndian, document) ?? false;
+                if (hasVersion)
+                {
+                    flags = (int)DocumentFlags.Versioned;
+                }
+            }
+
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
             if (string.IsNullOrWhiteSpace(key))
@@ -1500,8 +1514,6 @@ namespace Raven.Server.Documents
             // delete a tombstone if it exists
             DeleteTombstoneIfNeeded(context, collectionName, lowerKey, lowerSize);
 
-            var newEtag = ++_lastEtag;
-            var newEtagBigEndian = Bits.SwapBytes(newEtag);
 
             var lastModifiedTicks = DateTime.UtcNow.Ticks;
 
@@ -1519,18 +1531,6 @@ namespace Raven.Server.Documents
 
                 fixed (ChangeVectorEntry* pChangeVector = changeVector)
                 {
-                    int flags = 0;
-                    if (collectionName.IsSystem == false)
-                    {
-                        bool hasVersion =
-                            _documentDatabase.BundleLoader.VersioningStorage?.PutFromDocument(context, collectionName,
-                                key, newEtagBigEndian, document) ?? false;
-                        if (hasVersion)
-                        {
-                            flags = (int)DocumentFlags.Versioned;
-                        }
-                    }
-
                     var tbv = new TableValueBuilder
                     {
                         {lowerKey, lowerSize}, 

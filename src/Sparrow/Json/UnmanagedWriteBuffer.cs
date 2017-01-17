@@ -202,6 +202,8 @@ namespace Sparrow.Json
                 throw new ObjectDisposedException(nameof(UnmanagedWriteBuffer));
         }
 
+        public bool IsDisposed => _current == null;
+
         public void Write(byte* buffer, int length)
         {
             ThrowIfDisposed();
