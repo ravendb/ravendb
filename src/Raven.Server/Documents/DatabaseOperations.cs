@@ -40,7 +40,7 @@ namespace Raven.Server.Documents
                 var task = state.Task;
                 if (task.IsCompleted)
                 {
-                    if (state.Dismissed || state.Description.EndTime < twoDaysAgo)
+                    if (state.Description.EndTime < twoDaysAgo)
                     {
                         PendingOperation value;
                         _pendingOperations.TryRemove(taskAndState.Key, out value);
@@ -71,13 +71,6 @@ namespace Raven.Server.Documents
             {
                 operation.Token.Cancel();
             }
-        }
-
-        public void DismissOperation(long id)
-        {
-            var operation = GetOperation(id);
-            if (operation != null)
-                operation.Dismissed = true;
         }
 
         public PendingOperation GetOperation(long id)
@@ -222,9 +215,8 @@ namespace Raven.Server.Documents
             public OperationCancelToken Token;
 
             public PendingOperationDescription Description;
-            public OperationState State;
 
-            public bool Dismissed; // TODO arek : delete
+            public OperationState State;
 
             public bool Killable => Token != null;
 
@@ -232,11 +224,10 @@ namespace Raven.Server.Documents
             {
                 return new DynamicJsonValue
                 {
-                    ["Id"] = Id,
-                    ["Description"] = Description.ToJson(),
-                    ["Killable"] = Killable,
-                    ["State"] = State.ToJson(),
-                    ["Dismissed"] = Dismissed
+                    [nameof(Id)] = Id,
+                    [nameof(Description)] = Description.ToJson(),
+                    [nameof(Killable)] = Killable,
+                    [nameof(State)] = State.ToJson()
                 };
             }
         }

@@ -39,16 +39,6 @@ namespace Raven.Server.Web.Operations
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/operation/dismiss", "GET")]
-        public Task Dismiss()
-        {
-            var id = GetLongQueryString("id");
-            // ReSharper disable once PossibleInvalidOperationException
-            Database.Operations.DismissOperation(id.Value);
-
-            return Task.CompletedTask;
-        }
-
         [RavenAction("/databases/*/operations", "GET")]
         public Task GetAll()
         {
