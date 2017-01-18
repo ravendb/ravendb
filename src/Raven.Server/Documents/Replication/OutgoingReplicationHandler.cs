@@ -65,8 +65,6 @@ namespace Raven.Server.Documents.Replication
 
         public event Action<OutgoingReplicationHandler> SuccessfulTwoWaysCommunication;
 
-        public event Action<OutgoingReplicationHandler> Shutdown;
-
         public OutgoingReplicationHandler(
             DocumentDatabase database,
             ReplicationDestination destination)
@@ -263,11 +261,11 @@ namespace Raven.Server.Documents.Replication
                     }
                 }
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException e)
             {
                 if (_log.IsInfoEnabled)
                     _log.Info($"Operation canceled on replication thread ({FromToString}). Stopped the thread.");
-                Shutdown?.Invoke(this);
+                Failed?.Invoke(this, e);
             }
             catch (IOException e)
             {
@@ -280,7 +278,7 @@ namespace Raven.Server.Documents.Replication
                     else
                         _log.Info($"IOException was thrown from the connection to remote node ({FromToString}).", e);
                 }
-                Shutdown?.Invoke(this);
+                Failed?.Invoke(this, e);
             }
             catch (Exception e)
             {

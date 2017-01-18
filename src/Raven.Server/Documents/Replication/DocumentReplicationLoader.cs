@@ -339,7 +339,6 @@ namespace Raven.Server.Documents.Replication
         {
             var outgoingReplication = new OutgoingReplicationHandler(_database, destination);
             outgoingReplication.Failed += OnOutgoingSendingFailed;
-            outgoingReplication.Shutdown += OnOutgoingSendingShutdown;
             outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
             _outgoing.TryAdd(outgoingReplication); // can't fail, this is a brand new instance
             _outgoingFailureInfo.TryAdd(destination, new ConnectionShutdownInfo
@@ -368,7 +367,6 @@ namespace Raven.Server.Documents.Replication
             using (instance)
             {
                 instance.Failed -= OnOutgoingSendingFailed;
-                instance.Shutdown -= OnOutgoingSendingShutdown;
                 instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
 
                 _outgoing.TryRemove(instance);
@@ -388,32 +386,6 @@ namespace Raven.Server.Documents.Replication
                 if (_log.IsInfoEnabled)
                     _log.Info($"Document replication connection ({instance.Destination}) failed, and the connection will be retried later.",
                         e);
-            }
-        }
-
-        private void OnOutgoingSendingShutdown(OutgoingReplicationHandler instance)
-        {
-            using (instance)
-            {
-                instance.Failed -= OnOutgoingSendingFailed;
-                instance.Shutdown -= OnOutgoingSendingShutdown;
-                instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
-
-                _outgoing.TryRemove(instance);
-
-                ConnectionShutdownInfo shutdownInfo;
-                if (_outgoingFailureInfo.TryGetValue(instance.Destination, out shutdownInfo) == false)
-                    return;
-
-                shutdownInfo.DestinationDbId = instance.DestinationDbId;
-                shutdownInfo.LastHeartbeatTicks = instance.LastHeartbeatTicks;
-                shutdownInfo.LastAcceptedDocumentEtag = instance.LastAcceptedDocumentEtag;
-                shutdownInfo.LastSentIndexOrTransformerEtag = instance._lastSentIndexOrTransformerEtag;
-
-                _reconnectQueue.Add(shutdownInfo);
-
-                if (_log.IsInfoEnabled)
-                    _log.Info($"Document replication connection ({instance.Destination}) has shut down because the remote node is not active, will retry to connect later.");
             }
         }
 
@@ -455,7 +427,6 @@ namespace Raven.Server.Documents.Replication
             foreach (var instance in _outgoing)
             {
                 instance.Failed -= OnOutgoingSendingFailed;
-                instance.Shutdown -= OnOutgoingSendingShutdown;
                 instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
                 instance.Dispose();
             }
