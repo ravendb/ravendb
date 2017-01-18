@@ -7,8 +7,9 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using Raven.Abstractions;
-using Raven.Abstractions.Logging;
-using Raven.Server.Alerts;
+using Raven.Server.NotificationCenter.Actions.Database;
+using Raven.Server.NotificationCenter.Actions.Details;
+using Raven.Server.NotificationCenter.Alerts;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -54,19 +55,14 @@ namespace Raven.Server.Documents.SqlReplication
             }
             catch (Exception e)
             {
-                database.Alerts.AddAlert(new Alert
-                {
-                    Type = AlertType.SqlReplicationConnectionError,
-                    Message = "Sql Replication could not open connection",
-                    Content = new ExceptionAlertContent
-                    {
-                        Message = "Sql Replication could not open connection to " + _connection.ConnectionString,
-                        Exception = e.ToString()
-                    },
-                    CreatedAt = SystemTime.UtcNow,
-                    Key = _connection.ConnectionString,
-                    Severity = AlertSeverity.Error
-                });
+                database.NotificationCenter.Add(RaiseAlert.Create(
+                    SqlReplication.AlertTitle,
+                    $"Sql Replication could not open connection to {_connection.ConnectionString}",
+                    DatabaseAlertType.SqlReplicationConnectionError,
+                    AlertSeverity.Error,
+                    key: _connection.ConnectionString,
+                    details: new ExceptionDetails(e)));
+
                 throw;
             }
 
@@ -100,22 +96,17 @@ namespace Raven.Server.Documents.SqlReplication
             }
             catch (Exception e)
             {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Could not find provider factory {_predefinedSqlConnection.FactoryName} to replicate to sql for {configuration.Name}, ignoring", e);
+                var message = $"Could not find provider factory {_predefinedSqlConnection.FactoryName} to replicate to sql for {configuration.Name}, ignoring.";
 
-                _database.Alerts.AddAlert(new Alert
-                {
-                    Type = AlertType.SqlReplicationProviderError,
-                    CreatedAt = SystemTime.UtcNow,
-                    Message = "Sql Replication could not find factory provider",
-                    Key = configuration.Name,
-                    Content = new ExceptionAlertContent
-                    {
-                        Message = $"Could not find factory provider {_predefinedSqlConnection.FactoryName} to replicate to sql for {configuration.Name}, ignoring",
-                        Exception = e.ToString()
-                    },
-                    Severity = AlertSeverity.Error
-                });
+                if (_logger.IsInfoEnabled)
+                    _logger.Info(message, e);
+
+                _database.NotificationCenter.Add(RaiseAlert.Create(
+                    SqlReplication.AlertTitle,
+                    message,
+                    DatabaseAlertType.SqlReplicationProviderError,
+                    AlertSeverity.Error,
+                    details: new ExceptionDetails(e)));
 
                 throw;
             }
@@ -331,20 +322,11 @@ namespace Raven.Server.Documents.SqlReplication
 
         private void HandleSlowSql(long elapsedMiliseconds, string stmt)
         {
-            var message = $"Slow SQL detected. Execution took: {elapsedMiliseconds}ms, statement: {stmt}";
+            var message = $"[{_sqlReplication.Configuration.Name}] Slow SQL detected. Execution took: {elapsedMiliseconds}ms, statement: {stmt}";
             if (_logger.IsInfoEnabled)
                 _logger.Info(message);
-            _database.Alerts.AddAlert(new Alert
-            {
-                Type = AlertType.SqlReplicationSlowSql,
-                Severity = AlertSeverity.Warning,
-                Message = "Slow SQL statement",
-                CreatedAt = SystemTime.UtcNow,
-                Content = new ExceptionAlertContent
-                {
-                    Message = message
-                }
-            });
+
+            _database.NotificationCenter.Add(RaiseAlert.Create(SqlReplication.AlertTitle, message, DatabaseAlertType.SqlReplicationSlowSql, AlertSeverity.Warning));
         }
 
         private string GetTableNameString(string tableName)

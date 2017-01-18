@@ -1,9 +1,8 @@
 ﻿using System;
 using System.IO;
-using Raven.Server.Alerts;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Transformers;
-using Raven.Server.ServerWide;
+using Raven.Server.NotificationCenter.Alerts;
 using Raven.Server.ServerWide.Context;
 using Voron;
 
@@ -21,16 +20,17 @@ namespace Raven.Server.Documents
 
         public StorageEnvironment Environment { get; }
 
-        public ConfigurationStorage(DocumentDatabase db, ServerStore serverStore)
+        public ConfigurationStorage(DocumentDatabase db)
         {
             var options = db.Configuration.Core.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly(Path.Combine(db.Configuration.Core.DataDirectory, "Configuration"))
                 : StorageEnvironmentOptions.ForPath(Path.Combine(db.Configuration.Core.DataDirectory, "Configuration"));
 
             options.SchemaVersion = 1;
+
             Environment = new StorageEnvironment(options);
 
-            AlertsStorage = new AlertsStorage(db.Name, serverStore);
+            AlertsStorage = new AlertsStorage(db.Name);
 
             IndexesEtagsStorage = new IndexesEtagsStorage(db.Name);
         }

@@ -150,7 +150,7 @@ namespace Raven.Server.Documents
                     operationState.Result = taskResult.Result;
                     operationState.Status = OperationStatus.Completed;
                 }
-
+                //TODO arek: NotificationCenter add operation
                 RaiseNotifications(notification);
             });
 
@@ -224,7 +224,7 @@ namespace Raven.Server.Documents
             public PendingOperationDescription Description;
             public OperationState State;
 
-            public bool Dismissed;
+            public bool Dismissed; // TODO arek : delete
 
             public bool Killable => Token != null;
 

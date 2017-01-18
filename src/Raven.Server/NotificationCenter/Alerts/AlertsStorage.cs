@@ -1,15 +1,17 @@
-﻿using Raven.Server.ServerWide;
+﻿using System;
+using System.Collections.Generic;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Voron;
 using Voron.Data.Tables;
 
-namespace Raven.Server.Alerts
+namespace Raven.Server.NotificationCenter.Alerts
 {
     public class AlertsStorage
     {
-        private readonly ServerStore _store;
         protected readonly Logger Logger;
 
         private StorageEnvironment _environment;
@@ -18,10 +20,10 @@ namespace Raven.Server.Alerts
 
         private readonly TableSchema _alertsSchema = new TableSchema();
 
-        public AlertsStorage(string resourceName, ServerStore store)
+        public AlertsStorage(string resourceName)
         {
-            _store = store;
             Logger = LoggingSource.Instance.GetLogger<AlertsStorage>(resourceName);
+
             _alertsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
                 StartIndex = 0,
@@ -42,13 +44,10 @@ namespace Raven.Server.Alerts
 
                 tx.Commit();
             }
-
-           
         }
 
-        public void AddAlert(Alert alert)
+        public void AddAlert(IAlert alert)
         {
-            //TODO: send notification
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Saving alert '{alert.Id}'.");
 
@@ -62,19 +61,15 @@ namespace Raven.Server.Alerts
             }
         }
 
-        public unsafe void AddAlert(Alert alert, TransactionOperationContext context, RavenTransaction tx)
+        public unsafe void AddAlert(IAlert alert, TransactionOperationContext context, RavenTransaction tx)
         {
-            _store?.TrackChangeAfterTransactionCommit(context, "AlertRaised", alert.Key);
-
             var table = tx.InnerTransaction.OpenTable(_alertsSchema, AlertsSchema.AlertsTree);
 
-            var alertId = alert.Id;
-
-            var alertAsJson = alert.ToJson();
+            var alertDjv = alert.ToJson();
 
             // if previous alert has dismissed until value pass this value to newly saved alert
             Slice slice;
-            using (Slice.From(tx.InnerTransaction.Allocator, alertId, out slice))
+            using (Slice.From(tx.InnerTransaction.Allocator, alert.Id, out slice))
             {
                 TableValueReader existingTvr;
                 if (table.ReadByKey(slice, out existingTvr))
@@ -86,19 +81,19 @@ namespace Raven.Server.Alerts
                         if (dismissedUntilValue != null)
                         {
                             var dismissedUntil = (LazyStringValue) dismissedUntilValue;
-                            alertAsJson[nameof(alert.DismissedUntil)] = dismissedUntil;
+                            alertDjv[nameof(alert.DismissedUntil)] = dismissedUntil;
                         }
                     }
                 }
             }
 
+            var lazyStringId = context.GetDiscardableLazyString(alert.Id);
 
-            var id = context.GetDiscardableLazyString(alertId);
-            using (var json = context.ReadObject(alertAsJson, "Alert", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+            using (var json = context.ReadObject(alertDjv, "alert", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
             {
                 var tvb = new TableValueBuilder
                 {
-                    {id.Buffer, id.Size},
+                    {lazyStringId.Buffer, lazyStringId.Size},
                     {json.BasePointer, json.Size}
                 };
 
@@ -106,47 +101,43 @@ namespace Raven.Server.Alerts
             }
         }
 
-        public void WriteAlerts(BlittableJsonTextWriter writer)
+        public IDisposable ReadAlerts(out IEnumerable<BlittableJsonReaderObject> alerts)
         {
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
-            using (var tx = context.OpenReadTransaction())
+            using (var scope = new DisposeableScope())
             {
-                var table = tx.InnerTransaction.OpenTable(_alertsSchema, AlertsSchema.AlertsTree);
+                TransactionOperationContext context;
 
-                writer.WriteStartArray();
+                scope.EnsureDispose(_contextPool.AllocateOperationContext(out context));
+                scope.EnsureDispose(context.OpenReadTransaction());
 
-                var first = true;
+                alerts = ReadAlertsInternal(context);
 
-                foreach (var alertsTvr in table.SeekByPrimaryKey(Slices.BeforeAllKeys))
-                {
-                    if (first == false)
-                        writer.WriteComma();
-
-                    first = false;
-
-                    var alert = Read(context, ref alertsTvr.Reader);
-                    writer.WriteObject(alert);
-                }
-
-                writer.WriteEndArray();
+                return scope.Delay();
             }
         }
 
-        public void DeleteAlert(AlertType type, string key)
+        private IEnumerable<BlittableJsonReaderObject> ReadAlertsInternal(TransactionOperationContext context)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(_alertsSchema, AlertsSchema.AlertsTree);
+
+            foreach (var alertsTvr in table.SeekByPrimaryKey(Slices.BeforeAllKeys))
+            {
+                yield return Read(context, alertsTvr);
+            }
+        }
+
+        public void DeleteAlert(DatabaseAlertType type, string key)
         {
             if (Logger.IsInfoEnabled)
-                Logger.Info($"Deleteing alert '{type}'.");
+                Logger.Info($"Deleting alert '{type}'.");
 
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenWriteTransaction())
             {
-                _store?.TrackChangeAfterTransactionCommit(context, "AlertDeleted", key);
-
                 var table = tx.InnerTransaction.OpenTable(_alertsSchema, AlertsSchema.AlertsTree);
 
-                var alertId = Alert.CreateId(type, key);
+                var alertId = AlertUtil.CreateId(type, key); // TODO arek
 
                 Slice alertSlice;
                 using (Slice.From(tx.InnerTransaction.Allocator, alertId, out alertSlice))

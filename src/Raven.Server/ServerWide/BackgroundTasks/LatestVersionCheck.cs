@@ -5,8 +5,10 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Sparrow.Logging;
 using Raven.Abstractions.Util;
-using Raven.Server.Alerts;
 using Raven.Server.Json;
+using Raven.Server.NotificationCenter.Actions.Details;
+using Raven.Server.NotificationCenter.Actions.Server;
+using Raven.Server.NotificationCenter.Alerts;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -55,18 +57,12 @@ namespace Raven.Server.ServerWide.BackgroundTasks
                         latestVersionInfo?.BuildNumber > ServerVersion.Build)
                     {
                         var severityInfo = DetermineSeverity(latestVersionInfo);
+                        
+                        var alert = RaiseServerAlert.Create("RavenDB update available", $"Version {latestVersionInfo.Version} is avaiable",
+                            ServerAlertType.NewServerVersionAvailable, severityInfo,
+                            details: new NewVersionAvailableDetails(latestVersionInfo));
 
-                        _serverStore.Alerts.AddAlert(new Alert
-                        {
-                            Type = AlertType.NewServerVersionAvailable,
-                            Severity = severityInfo,
-                            Key = nameof(AlertType.NewServerVersionAvailable),
-                            Content = new NewVersionAvailableAlertContent
-                            {
-                                VersionInfo = latestVersionInfo
-                            },
-                            Message = FormatMessage(latestVersionInfo),
-                        });
+                        _serverStore.NotificationCenter.Add(alert);
                     }
                 }
             }
@@ -75,13 +71,6 @@ namespace Raven.Server.ServerWide.BackgroundTasks
                 if (_logger.IsInfoEnabled)
                     _logger.Info("Error getting latest version info.", err);
             }
-        }
-
-        private static string FormatMessage(VersionInfo latestVersionInfo)
-        {
-            return $@"
-            <h3>New version!</h3>
-            <p>{latestVersionInfo.Version} is available now.</p>";
         }
 
         private static AlertSeverity DetermineSeverity(VersionInfo latestVersionInfo)
@@ -113,22 +102,6 @@ namespace Raven.Server.ServerWide.BackgroundTasks
             public string BuildType { get; set; }
 
             public DateTime PublishedAt { get; set; }
-        }
-
-        public class NewVersionAvailableAlertContent : IAlertContent
-        {
-            public VersionInfo VersionInfo { get; set; }
-            public DynamicJsonValue ToJson()
-            {
-                return new DynamicJsonValue(GetType())
-                {
-                    [nameof(VersionInfo.Version)] = VersionInfo.Version,
-                    [nameof(VersionInfo.BuildNumber)] = VersionInfo.BuildNumber,
-                    [nameof(VersionInfo.BuildType)] = VersionInfo.BuildType,
-                    [nameof(VersionInfo.PublishedAt)] = VersionInfo.PublishedAt
-                };
-            }
-
         }
     }
 }

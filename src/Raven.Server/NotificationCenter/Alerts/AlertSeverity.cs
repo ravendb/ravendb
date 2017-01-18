@@ -1,4 +1,4 @@
-﻿namespace Raven.Server.Alerts
+﻿namespace Raven.Server.NotificationCenter.Alerts
 {
     public enum AlertSeverity
     {

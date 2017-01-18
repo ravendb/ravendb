@@ -10,10 +10,12 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Smuggler;
-using Raven.Server.Alerts;
 using Raven.Server.Documents.PeriodicExport.Aws;
 using Raven.Server.Documents.PeriodicExport.Azure;
 using Raven.Server.Json;
+using Raven.Server.NotificationCenter.Actions.Database;
+using Raven.Server.NotificationCenter.Actions.Details;
+using Raven.Server.NotificationCenter.Alerts;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -363,20 +365,16 @@ namespace Raven.Server.Documents.PeriodicExport
             catch (Exception e)
             {
                 _exportLimit = 100;
+                var message = "Error when performing periodic export";
+
                 if (_logger.IsOperationsEnabled)
-                    _logger.Operations("Error when performing periodic export", e);
-                _database.Alerts.AddAlert(new Alert
-                {
-                    Type = AlertType.PeriodicExport,
-                    Message = "Error in Periodic Export",
-                    CreatedAt = SystemTime.UtcNow,
-                    Severity = AlertSeverity.Error,
-                    Content = new ExceptionAlertContent
-                    {
-                        Message = e.Message,
-                        Exception = e.ToString()
-                    }
-                });
+                    _logger.Operations(message, e);
+
+                _database.NotificationCenter.Add(RaiseAlert.Create("Periodic Export",
+                    message,
+                    DatabaseAlertType.PeriodicExport,
+                    AlertSeverity.Error,
+                    details: new ExceptionDetails(e)));
             }
         }
 

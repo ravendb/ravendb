@@ -6,6 +6,7 @@ using Raven.Client.Document;
 using Raven.Json.Linq;
 using Raven.Server.Alerts;
 using Raven.Server.Documents;
+using Raven.Server.NotificationCenter.Alerts;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Xunit;
@@ -46,9 +47,9 @@ namespace FastTests.Server.Documents.Alerts
                 Assert.Equal(alert.Severity, loadedAlert.Severity);
                 Assert.Equal(alert.Read, loadedAlert.Read);
                 Assert.Equal(alert.Key, loadedAlert.Key);
-                Assert.IsType<ExceptionAlertContent>(loadedAlert.Content);
-                var loadedContent = loadedAlert.Content as ExceptionAlertContent;
-                var content = alert.Content as ExceptionAlertContent;
+                Assert.IsType<ExceptionActionDetails>(loadedAlert.Content);
+                var loadedContent = loadedAlert.Content as ExceptionActionDetails;
+                var content = alert.Content as ExceptionActionDetails;
                 Assert.Equal(content.Message, loadedContent.Message);
                 Assert.Equal(content.Exception, loadedContent.Exception);
                 Assert.Equal(alert.CreatedAt, loadedAlert.CreatedAt);
@@ -158,12 +159,12 @@ namespace FastTests.Server.Documents.Alerts
         {
             var alert = new Alert
             {
-                Type = (AlertType)0, // use any type
+                Type = (DatabaseAlertType)0, // use any type
                 Message = "Alert #1",
                 Severity = AlertSeverity.Info,
                 Read = false,
                 Key = null,
-                Content = new ExceptionAlertContent
+                Content = new ExceptionActionDetails
                 {
                     Message = "Error message",
                     Exception = "Stack goes here"

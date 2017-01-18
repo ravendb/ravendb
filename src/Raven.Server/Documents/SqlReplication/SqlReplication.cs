@@ -6,9 +6,10 @@ using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.NewClient.Client.Exceptions.Patching;
-using Raven.Server.Alerts;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
+using Raven.Server.NotificationCenter.Actions.Database;
+using Raven.Server.NotificationCenter.Alerts;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -21,6 +22,8 @@ namespace Raven.Server.Documents.SqlReplication
 {
     public class SqlReplication : IDisposable
     {
+        public const string AlertTitle = "SQL Replication";
+
         public readonly SqlReplicationConfiguration Configuration;
         public readonly SqlReplicationStatistics Statistics;
 
@@ -264,38 +267,32 @@ namespace Raven.Server.Documents.SqlReplication
                     }
                 }
 
+                var message =
+                    $"Could not find connection string named '{Configuration.ConnectionStringName}' for sql replication config: " +
+                    $"{Configuration.Name}, ignoring sql replication setting.";
+
                 if (writeToLog)
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Could not find connection string named '" + Configuration.ConnectionStringName
-                            + "' for sql replication config: " + Configuration.Name + ", ignoring sql replication setting.");
-                Statistics.LastAlert = new Alert
                 {
-                    CreatedAt = SystemTime.UtcNow,
-                    Type = AlertType.SqlReplicationConnectionStringMissing,
-                    Severity = AlertSeverity.Error,
-                    Message = "Could not start replication",
-                    Content = new ExceptionAlertContent
-                    {
-                        Message = $"Could not find connection string named '{Configuration.ConnectionStringName}' for sql replication config: {Configuration.Name}, ignoring sql replication setting.",
-                    }
-                };
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info(message);
+                }
+
+                Statistics.LastAlert = RaiseAlert.Create(AlertTitle, message, DatabaseAlertType.SqlReplicationConnectionStringMissing, AlertSeverity.Error);
+
                 return false;
             }
 
+            var emptyConnectionStringMsg =
+                $"Connection string name cannot be empty for sql replication config: {Configuration.Name}, ignoring sql replication setting.";
+
             if (writeToLog)
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Connection string name cannot be empty for sql replication config: " + Configuration.ConnectionStringName + ", ignoring sql replication setting.");
-            Statistics.LastAlert = new Alert
             {
-                Type = AlertType.SqlReplicationConnectionStringMissing,
-                CreatedAt = SystemTime.UtcNow,
-                Severity = AlertSeverity.Error,
-                Message = "Could not start replication",
-                Content = new ExceptionAlertContent
-                {
-                    Message = $"Connection string name cannot be empty for sql replication config: {Configuration.Name}, ignoring sql replication setting."
-                }
-            };
+                if (_logger.IsInfoEnabled)
+                    _logger.Info(emptyConnectionStringMsg);
+            }
+
+            Statistics.LastAlert = RaiseAlert.Create(AlertTitle, emptyConnectionStringMsg, DatabaseAlertType.SqlReplicationConnectionStringMissing, AlertSeverity.Error);
+
             return false;
         }
 
@@ -304,19 +301,12 @@ namespace Raven.Server.Documents.SqlReplication
             if (string.IsNullOrWhiteSpace(Configuration.Name) == false)
                 return true;
 
+            var message = $"Could not find name for sql replication document {Configuration.Name}, ignoring";
+
             if (_logger.IsInfoEnabled)
-                _logger.Info($"Could not find name for sql replication document {Configuration.Name}, ignoring");
-            Statistics.LastAlert = new Alert
-            {
-                Type = AlertType.SqlReplicationConnectionStringMissing,
-                Severity = AlertSeverity.Error,
-                Message = "Could not start replication",
-                CreatedAt = DateTime.UtcNow,
-                Content = new ExceptionAlertContent
-                {
-                    Message = $"Could not find name for sql replication document {Configuration.Name}, ignoring"
-                }
-            };
+                _logger.Info(message);
+
+            Statistics.LastAlert = RaiseAlert.Create(AlertTitle, message, DatabaseAlertType.SqlReplicationConnectionStringMissing, AlertSeverity.Error);
             return false;
         }
 

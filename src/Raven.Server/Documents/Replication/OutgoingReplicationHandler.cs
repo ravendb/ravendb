@@ -22,12 +22,16 @@ using Raven.Json.Linq;
 using Raven.NewClient.Client.Exceptions.Database;
 using Raven.Server.Alerts;
 using Raven.Server.Extensions;
+using Raven.Server.NotificationCenter.Actions.Database;
+using Raven.Server.NotificationCenter.Alerts;
 using Sparrow;
 
 namespace Raven.Server.Documents.Replication
 {
     public class OutgoingReplicationHandler : IDisposable
     {
+        public const string AlertTitle = "Replication";
+
         internal readonly DocumentDatabase _database;
         internal readonly ReplicationDestination _destination;
         private readonly Logger _log;
