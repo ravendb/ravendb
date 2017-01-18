@@ -1,13 +1,14 @@
-﻿using System.Diagnostics;
+﻿using System;
 using System.Linq;
-using System.Net.Http;
-using System.Threading;
 using FastTests.Server.Basic.Entities;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Operations.Databases;
+using Raven.NewClient.Operations.Databases.Documents;
 using Xunit;
 
 namespace FastTests.Server.Documents.Patching
 {
-    public class PatchAndDeleteByCollection : RavenTestBase
+    public class PatchAndDeleteByCollection : RavenNewTestBase
     {
         [Fact]
         public void CanDeleteCollection()
@@ -22,20 +23,12 @@ namespace FastTests.Server.Documents.Patching
                     }
                     x.SaveChanges();
                 }
-                store.DatabaseCommands.CreateRequest("/collections/docs?name=users", HttpMethod.Delete).ExecuteRequest();
-                var sp = Stopwatch.StartNew();
 
-                var timeout = Debugger.IsAttached ? 60 * 10000 : 10000;
+                var operation = store.Operations.Send(new DeleteCollectionOperation("users"));
+                operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 
-                while (sp.ElapsedMilliseconds < timeout)
-                {
-                    var databaseStatistics = store.DatabaseCommands.GetStatistics();
-                    if (databaseStatistics.CountOfDocuments == 0)
-                        return;
-
-                    Thread.Sleep(25);
-                }
-                Assert.False(true, "There are still documents after 1 second");
+                var stats = store.Admin.Send(new GetStatisticsOperation());
+                Assert.Equal(0, stats.CountOfDocuments);
             }
         }
 
@@ -52,33 +45,25 @@ namespace FastTests.Server.Documents.Patching
                     }
                     x.SaveChanges();
                 }
-                var httpJsonRequest = store.DatabaseCommands.CreateRequest("/collections/docs?name=users", new HttpMethod("PATCH"));
-                httpJsonRequest.WriteAsync(@"
-{
-    'Script': 'this.Name = __document_id'
-}
-").Wait();
-                httpJsonRequest.ExecuteRequest();
-                var sp = Stopwatch.StartNew();
 
-                var timeout = Debugger.IsAttached ? 60 * 10000 : 10000;
-
-                while (sp.ElapsedMilliseconds < timeout)
+                var operation = store.Operations.Send(new PatchCollectionOperation("users", new PatchRequest
                 {
-                    var databaseStatistics = store.DatabaseCommands.GetStatistics();
-                    if (databaseStatistics.LastDocEtag >= 200)
-                        break;
-                    Thread.Sleep(25);
-                }
-                Assert.Equal(100, store.DatabaseCommands.GetStatistics().CountOfDocuments);
+                    Script = "this.Name = __document_id"
+                }));
+                operation.WaitForCompletion(TimeSpan.FromSeconds(30));
+
+                var stats = store.Admin.Send(new GetStatisticsOperation());
+                Assert.True(stats.LastDocEtag >= 200);
+                Assert.Equal(100, stats.CountOfDocuments);
+
                 using (var x = store.OpenSession())
                 {
                     var users = x.Load<User>(Enumerable.Range(1, 100).Select(i => "users/" + i));
-                    Assert.Equal(100, users.Length);
+                    Assert.Equal(100, users.Count);
 
                     foreach (var user in users)
                     {
-                        Assert.NotNull(user.Name);
+                        Assert.NotNull(user.Value.Name);
                     }
                 }
             }

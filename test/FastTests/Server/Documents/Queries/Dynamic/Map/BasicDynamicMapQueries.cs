@@ -2,13 +2,14 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
-using Raven.Client;
+using Raven.NewClient.Client;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.Map
 {
     [SuppressMessage("ReSharper", "ConsiderUsingConfigureAwait")]
-    public class BasicDynamicMapQueries : RavenTestBase
+    public class BasicDynamicMapQueries : RavenNewTestBase
     {
         [Fact]
         public async Task String_where_clause()
@@ -149,9 +150,9 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new Order { ShipTo = new Address { Country = "Poland"} }, "orders/1");
-                    await session.StoreAsync(new Order { ShipTo = new Address { Country = "Israel"} }, "orders/2");
-                    await session.StoreAsync(new Order { ShipTo = new Address { Country = "USA"} }, "orders/3");
+                    await session.StoreAsync(new Order { ShipTo = new Address { Country = "Poland" } }, "orders/1");
+                    await session.StoreAsync(new Order { ShipTo = new Address { Country = "Israel" } }, "orders/2");
+                    await session.StoreAsync(new Order { ShipTo = new Address { Country = "USA" } }, "orders/3");
                     await session.StoreAsync(new Order { ShipTo = new Address { Country = "Canada" } }, "orders/4");
                     await session.SaveChangesAsync();
                 }
@@ -172,7 +173,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                     Assert.Equal("orders/2", orders[2].Id);
                     Assert.Equal("orders/4", orders[3].Id);
 
-                    var indexes = store.DatabaseCommands.GetIndexes(0, 10).OrderBy(x => x.IndexId).ToList();
+                    var indexes = store.Admin.Send(new GetIndexesOperation(0, 10)).OrderBy(x => x.IndexId).ToList();
 
                     Assert.Equal(1, indexes.Count);
                     Assert.Equal("Auto/Orders/ByShipTo_CountrySortByShipTo_Country", indexes[0].Name);
@@ -210,7 +211,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                     Assert.Equal("orders/2", orders[2].Id);
                     Assert.Equal("orders/4", orders[3].Id);
 
-                    var indexes = store.DatabaseCommands.GetIndexes(0, 10).OrderBy(x => x.IndexId).ToList();
+                    var indexes = store.Admin.Send(new GetIndexesOperation(0, 10)).OrderBy(x => x.IndexId).ToList();
 
                     Assert.Equal(1, indexes.Count);
                     Assert.Equal("Auto/Orders/ByShipTo_ZipCodeSortByShipTo_ZipCode", indexes[0].Name);
@@ -277,7 +278,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                     Assert.Equal("users/1", users[0].Id);
                     Assert.Equal("users/3", users[1].Id);
 
-                    var indexes = store.DatabaseCommands.GetIndexes(0, 10).OrderBy(x => x.IndexId).ToList();
+                    var indexes = store.Admin.Send(new GetIndexesOperation(0, 10)).OrderBy(x => x.IndexId).ToList();
 
                     Assert.Equal("Auto/Users/ByNameSortByName", indexes[0].Name);
                     Assert.Equal("Auto/Users/ByAgeAndNameSortByAgeName", indexes[1].Name);

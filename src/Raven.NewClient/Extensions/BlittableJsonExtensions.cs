@@ -8,13 +8,9 @@ namespace Raven.NewClient.Extensions
     {
         public static BlittableJsonReaderObject GetMetadata(this BlittableJsonReaderObject document)
         {
-            object metadataObj;
-            if (document.TryGetMember(Constants.Metadata.Key, out metadataObj) == false)
+            BlittableJsonReaderObject metadata;
+            if (document.TryGet(Constants.Metadata.Key, out metadata) == false || metadata == null)
                 throw new InvalidOperationException($"Document does not contain '{Constants.Metadata.Key}' field.");
-
-            var metadata = metadataObj as BlittableJsonReaderObject;
-            if (metadata == null)
-                throw new InvalidOperationException($"Field {Constants.Metadata.Key} is null or not an JSON object.");
 
             return metadata;
         }
@@ -26,6 +22,11 @@ namespace Raven.NewClient.Extensions
                 throw new InvalidOperationException($"Metadata does not contain '{Constants.Metadata.Id}' field.");
 
             return id;
+        }
+
+        public static bool TryGetId(this BlittableJsonReaderObject metadata, out string id)
+        {
+            return metadata.TryGet(Constants.Metadata.Id, out id) && id != null;
         }
     }
 }
