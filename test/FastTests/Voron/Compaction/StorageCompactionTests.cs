@@ -323,7 +323,7 @@ namespace FastTests.Voron.Compaction
         {
             var files = d.GetFiles();
             var size = files
-                .Where(x=>Path.GetExtension(x.Name) != ".pending-recycle")
+                .Where(x=>Path.GetFileNameWithoutExtension(x.Name) != "pending-recycle")
                 .Sum(x => x.Length);
 
             var directories = d.GetDirectories();

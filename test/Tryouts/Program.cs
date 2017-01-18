@@ -19,9 +19,9 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var a = new FastTests.Voron.Compaction.StorageCompactionTests())
+            using (var a = new FastTests.Voron.Bugs.FlushingToDataFile())
             {
-                a.ShouldOccupyLessSpace();
+                a.FlushingOperationShouldHaveOwnScratchPagerStateReference();
             }
         }
     }

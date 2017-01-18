@@ -644,7 +644,7 @@ namespace Voron.Impl.Journal
 
             private void QueueDataFileSync()
             {
-                if (_waj.CurrentFile.Number != _lastSyncJournalId)
+                if (_waj.CurrentFile != null && _waj.CurrentFile.Number != _lastSyncJournalId)
                 {
                     // if we aren't on the same journal, we have to force the sync, to avoid having lots of journals around
                     _waj._env.ForceSyncDataFile();
