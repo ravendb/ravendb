@@ -1,7 +1,6 @@
 ﻿using System;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Data;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Queries;
@@ -10,7 +9,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.Map
 {
-    public class CreationOfAutoMapIndexDefinition
+    public class CreationOfAutoMapIndexDefinition : NoDisposalNeeded
     {
         private DynamicQueryMapping _sut;
 
@@ -142,7 +141,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 Query = "Name:A*",
                 SortedFields = new[]
                 {
-                    new SortedField("Age_Range"), 
+                    new SortedField("Age_Range"),
                 },
             });
 
