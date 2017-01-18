@@ -57,7 +57,13 @@ namespace Raven.Server.Documents.Queries.Dynamic
             if (index == null)
             {
                 using (var result = new StreamDocumentQueryResult(response, writer, _context))
+                {
+                    _context.OpenReadTransaction();
+
+                    FillCountOfResultsAndIndexEtag(result, collection);
+
                     ExecuteCollectionQuery(result, query, collection);
+                }
 
                 return Task.CompletedTask;
             }
@@ -72,6 +78,17 @@ namespace Raven.Server.Documents.Queries.Dynamic
             if (index == null)
             {
                 var result = new DocumentQueryResult();
+                _context.OpenReadTransaction();
+
+                FillCountOfResultsAndIndexEtag(result, collection);
+
+                if (existingResultEtag.HasValue)
+                {
+                    if (result.ResultEtag == existingResultEtag)
+                        return new CompletedTask<DocumentQueryResult>(DocumentQueryResult.NotModifiedResult);
+                }
+
+
                 ExecuteCollectionQuery(result, query, collection);
                 return new CompletedTask<DocumentQueryResult>(result);
             }
@@ -108,21 +125,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
             // we optimize for empty queries without sorting options
             resultToFill.IndexName = isAllDocsCollection ? "AllDocs" : collection;
             resultToFill.IsStale = false;
-            resultToFill.ResultEtag = Environment.TickCount;
             resultToFill.LastQueryTime = DateTime.MinValue;
             resultToFill.IndexTimestamp = DateTime.MinValue;
-
-            _context.OpenReadTransaction();
-
-            if (isAllDocsCollection)
-            {
-                resultToFill.TotalResults = (int)_documents.GetNumberOfDocuments(_context);
-            }
-            else
-            {
-                var collectionStats = _documents.GetCollection(collection, _context);
-                resultToFill.TotalResults = (int)collectionStats.Count;
-            }
 
             var includeDocumentsCommand = new IncludeDocumentsCommand(_documents, _context, query.Includes);
 
@@ -162,6 +166,31 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
 
             includeDocumentsCommand.Fill(resultToFill.Includes);
+        }
+
+        private unsafe void FillCountOfResultsAndIndexEtag(QueryResultServerSide resultToFill, string collection)
+        {
+            var buffer = stackalloc long[3];
+
+            if (collection == Constants.Indexing.AllDocumentsCollection)
+            {
+                var numberOfDocuments = _documents.GetNumberOfDocuments(_context);
+                buffer[0] = DocumentsStorage.ReadLastDocumentEtag(_context.Transaction.InnerTransaction);
+                buffer[1] = DocumentsStorage.ReadLastTombstoneEtag(_context.Transaction.InnerTransaction);
+                buffer[2] = numberOfDocuments;
+                resultToFill.TotalResults = (int) numberOfDocuments;
+            }
+            else
+            {
+                var collectionStats = _documents.GetCollection(collection, _context);
+                resultToFill.TotalResults = (int) collectionStats.Count;
+
+                buffer[0] = _documents.GetLastDocumentEtag(_context, collection);
+                buffer[1] = _documents.GetLastTombstoneEtag(_context, collection);
+                buffer[2] = collectionStats.Count;
+            }
+
+            resultToFill.ResultEtag = (long) Hashing.XXHash64.Calculate((byte*) buffer, sizeof(long) * 3);
         }
 
         private Index MatchIndex(string dynamicIndexName, IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound, out string collection)
