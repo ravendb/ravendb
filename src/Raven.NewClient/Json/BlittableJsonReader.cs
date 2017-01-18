@@ -120,7 +120,7 @@ namespace Raven.NewClient.Client.Json
                 return BlittableJsonToken.Null;
             if (val is int || val is long)
                 return BlittableJsonToken.Integer;
-            if (val is float || val is double || val is decimal)
+            if (val is float || val is double || val is decimal || val is LazyDoubleValue)
                 return BlittableJsonToken.Float;
             if (val is IEnumerable)
                 return BlittableJsonToken.StartArray;
