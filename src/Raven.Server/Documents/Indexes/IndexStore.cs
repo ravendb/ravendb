@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Indexes
 
                 if (_documentDatabase.Configuration.Indexing.RunInMemory == false)
                 {
-                    InitializePath(_documentDatabase.Configuration.Indexing.IndexStoragePath);
+                    InitializePath(_documentDatabase.Configuration.Indexing.StoragePath);
 
                     if (_documentDatabase.Configuration.Indexing.AdditionalIndexStoragePaths != null)
                     {
@@ -375,12 +375,28 @@ namespace Raven.Server.Documents.Indexes
                     Etag = tombstoneEtag
                 });
 
-                if (_documentDatabase.Configuration.Indexing.RunInMemory)
+                if (index.Configuration.RunInMemory)
                     return;
 
-                var path = Path.Combine(_documentDatabase.Configuration.Indexing.IndexStoragePath,
-                    index.GetIndexNameSafeForFileSystem());
-                IOExtensions.DeleteDirectory(path);
+                var name = index.GetIndexNameSafeForFileSystem();
+
+                var indexPath = Path.Combine(index.Configuration.StoragePath, name);
+
+                var indexTempPath = index.Configuration.TempPath != null
+                    ? Path.Combine(index.Configuration.TempPath, name)
+                    : null;
+
+                var journalPath = index.Configuration.JournalsStoragePath != null
+                    ? Path.Combine(index.Configuration.JournalsStoragePath, name)
+                    : null;
+
+                IOExtensions.DeleteDirectory(indexPath);
+
+                if (indexTempPath != null)
+                    IOExtensions.DeleteDirectory(indexTempPath);
+
+                if (journalPath != null)
+                    IOExtensions.DeleteDirectory(journalPath);
             }
         }
 
@@ -503,7 +519,7 @@ namespace Raven.Server.Documents.Indexes
 
             lock (_locker)
             {
-                OpenIndexesFromDirectory(_documentDatabase.Configuration.Indexing.IndexStoragePath);
+                OpenIndexesFromDirectory(_documentDatabase.Configuration.Indexing.StoragePath);
 
                 if (_documentDatabase.Configuration.Indexing.AdditionalIndexStoragePaths != null)
                 {

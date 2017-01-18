@@ -32,8 +32,14 @@ namespace Raven.Server.Web.System
 
             IOExtensions.DeleteDirectory(configuration.Core.DataDirectory);
 
-            if (configuration.Indexing.IndexStoragePath != null)
-                IOExtensions.DeleteDirectory(configuration.Indexing.IndexStoragePath);
+            if (configuration.Storage.TempPath != null)
+                IOExtensions.DeleteDirectory(configuration.Storage.TempPath);
+
+            if (configuration.Storage.JournalsStoragePath != null)
+                IOExtensions.DeleteDirectory(configuration.Storage.JournalsStoragePath);
+
+            if (configuration.Indexing.StoragePath != null)
+                IOExtensions.DeleteDirectory(configuration.Indexing.StoragePath);
 
             if (configuration.Indexing.AdditionalIndexStoragePaths != null)
             {
@@ -41,8 +47,11 @@ namespace Raven.Server.Web.System
                     IOExtensions.DeleteDirectory(path);
             }
 
-            if (configuration.Storage.JournalsStoragePath != null)
-                IOExtensions.DeleteDirectory(configuration.Storage.JournalsStoragePath);
+            if (configuration.Indexing.TempPath != null)
+                IOExtensions.DeleteDirectory(configuration.Indexing.TempPath);
+
+            if (configuration.Indexing.JournalsStoragePath != null)
+                IOExtensions.DeleteDirectory(configuration.Indexing.JournalsStoragePath);
         }
     }
 }

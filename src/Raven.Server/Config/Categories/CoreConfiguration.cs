@@ -11,8 +11,8 @@ namespace Raven.Server.Config.Categories
 {
     public class CoreConfiguration : ConfigurationCategory
     {
-        private string workingDirectory;
-        private string dataDirectory;
+        private string _workingDirectory;
+        private string _dataDirectory;
 
         [Description("The maximum allowed page size for queries")]
         [DefaultValue(1024)]
@@ -54,8 +54,8 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Raven/WorkingDir")]
         public string WorkingDirectory
         {
-            get { return workingDirectory; }
-            set { workingDirectory = CalculateWorkingDirectory(value); }
+            get { return _workingDirectory; }
+            set { _workingDirectory = CalculateWorkingDirectory(value); }
         }
 
         [Description("The directory for the RavenDB database. You can use the ~\\ prefix to refer to RavenDB's base directory.")]
@@ -63,8 +63,8 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Raven/DataDir")]
         public string DataDirectory
         {
-            get { return dataDirectory; }
-            set { dataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(WorkingDirectory, value); }
+            get { return _dataDirectory; }
+            set { _dataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(WorkingDirectory, value); }
         }
 
         [Description("The time to wait before canceling a database operation such as load (many) or query")]

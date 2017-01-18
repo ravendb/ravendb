@@ -12,6 +12,8 @@ namespace Raven.Server.Documents.Indexes.Configuration
     {
         private bool? _runInMemory;
         private string _indexStoragePath;
+        private string _tempPath;
+        private string _journalsStoragePath;
 
         private readonly RavenConfiguration _databaseConfiguration;
 
@@ -27,19 +29,19 @@ namespace Raven.Server.Documents.Indexes.Configuration
 
         private void Validate()
         {
-            if (string.Equals(IndexStoragePath, _databaseConfiguration.Indexing.IndexStoragePath, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(StoragePath, _databaseConfiguration.Indexing.StoragePath, StringComparison.OrdinalIgnoreCase))
                 return;
 
             if (_databaseConfiguration.Indexing.AdditionalIndexStoragePaths != null)
             {
                 foreach (var path in _databaseConfiguration.Indexing.AdditionalIndexStoragePaths)
                 {
-                    if (string.Equals(IndexStoragePath, path, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(StoragePath, path, StringComparison.OrdinalIgnoreCase))
                         return;
                 }
             }
 
-            throw new InvalidOperationException($"Given index path ('{IndexStoragePath}') is not defined in '{Constants.Configuration.Indexing.StoragePath}' or '{Constants.Configuration.Indexing.AdditionalIndexStoragePaths}'");
+            throw new InvalidOperationException($"Given index path ('{StoragePath}') is not defined in '{Constants.Configuration.Indexing.StoragePath}' or '{Constants.Configuration.Indexing.AdditionalIndexStoragePaths}'");
         }
 
         public override bool Disabled => _databaseConfiguration.Indexing.Disabled;
@@ -57,12 +59,12 @@ namespace Raven.Server.Documents.Indexes.Configuration
             protected set { _runInMemory = value; }
         }
 
-        public override string IndexStoragePath
+        public override string StoragePath
         {
             get
             {
                 if (string.IsNullOrEmpty(_indexStoragePath))
-                    _indexStoragePath = _databaseConfiguration.Indexing.IndexStoragePath;
+                    _indexStoragePath = _databaseConfiguration.Indexing.StoragePath;
                 return _indexStoragePath;
             }
 
@@ -75,6 +77,48 @@ namespace Raven.Server.Documents.Indexes.Configuration
                 }
 
                 _indexStoragePath = AddDatabaseNameToPathIfNeeded(value.ToFullPath());
+            }
+        }
+
+        public override string TempPath
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(_tempPath))
+                    _tempPath = _databaseConfiguration.Indexing.TempPath;
+                return _tempPath;
+            }
+
+            protected set
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    _tempPath = null;
+                    return;
+                }
+
+                _tempPath = AddDatabaseNameToPathIfNeeded(value.ToFullPath());
+            }
+        }
+
+        public override string JournalsStoragePath
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(_journalsStoragePath))
+                    _journalsStoragePath = _databaseConfiguration.Indexing.JournalsStoragePath;
+                return _journalsStoragePath;
+            }
+
+            protected set
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    _journalsStoragePath = null;
+                    return;
+                }
+
+                _journalsStoragePath = AddDatabaseNameToPathIfNeeded(value.ToFullPath());
             }
         }
 
