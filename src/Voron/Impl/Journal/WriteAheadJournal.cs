@@ -917,7 +917,7 @@ namespace Voron.Impl.Journal
             public void SetLastReadTxHeader(JournalFile file, long maxTransactionId, TransactionHeader* lastReadTxHeader)
             {
                 var readTxHeader = stackalloc TransactionHeader[1];
-
+                lastReadTxHeader->TransactionId = -1;
                 long txPos = 0;
                 while (true)
                 {
@@ -927,6 +927,10 @@ namespace Voron.Impl.Journal
                         break;
                     if (readTxHeader->TransactionId > maxTransactionId)
                         break;
+                    if (lastReadTxHeader->TransactionId > readTxHeader->TransactionId)
+                        // we got to a trasaction that is smaller than the previous one, this is very 
+                        // likely a reused jouranl with old transaction, which we can ignore
+                        break; 
 
                     *lastReadTxHeader = *readTxHeader;
 
