@@ -794,17 +794,15 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         public Lazy<Task<int>> CountLazilyAsync(CancellationToken token = default (CancellationToken))
         {
-            throw new NotImplementedException();
-            /*if (queryOperation == null)
+            if (queryOperation == null)
             {
-                ExecuteBeforeQueryListeners();
-                Take(0);
+               Take(0);
                 queryOperation = InitializeQueryOperation();
             }
 
-            var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, AsyncDatabaseCommands.OperationsHeaders);
+            var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback);
 
-            return ((AsyncDocumentSession)theSession).AddLazyCountOperation(lazyQueryOperation,token);*/
+            return ((AsyncDocumentSession)theSession).AddLazyCountOperation(lazyQueryOperation,token);
         }
 
         /// <summary>

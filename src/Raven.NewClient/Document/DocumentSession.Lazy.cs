@@ -238,5 +238,17 @@ namespace Raven.NewClient.Client.Document
             return AddLazyOperation(lazyOp, onEval);
         }
 
+        internal Lazy<int> AddLazyCountOperation(ILazyOperation operation)
+        {
+            pendingLazyOperations.Add(operation);
+            var lazyValue = new Lazy<int>(() =>
+            {
+                ExecuteAllPendingLazyOperations();
+                return operation.QueryResult.TotalResults;
+            });
+
+            return lazyValue;
+        }
+
     }
 }

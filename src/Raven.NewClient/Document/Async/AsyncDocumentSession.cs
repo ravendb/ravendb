@@ -124,9 +124,9 @@ namespace Raven.NewClient.Client.Document.Async
             return Conventions.GenerateDocumentKeyAsync(DatabaseName, entity);
         }
 
-        public IAsyncEagerSessionOperations Eagerly { get; }
+        public IAsyncEagerSessionOperations Eagerly => this;
 
-        public IAsyncLazySessionOperations Lazily { get; }
+        public IAsyncLazySessionOperations Lazily => this;
 
         /// <summary>
         /// Begins the async save changes operation
