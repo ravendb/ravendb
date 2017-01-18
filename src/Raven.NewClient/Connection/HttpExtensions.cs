@@ -4,8 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
-using System.Collections.Specialized;
-using System.Net;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using Raven.NewClient.Abstractions.Data;
 
@@ -13,25 +13,18 @@ namespace Raven.NewClient.Client.Connection
 {
     public static class HttpExtensions
     {
-        public static long? GetEtagHeader(this NameValueCollection headers)
-        {
-            return EtagHeaderToEtag(headers[Constants.MetadataEtagField]);
-        }
-
         public static long? GetEtagHeader(this HttpResponseMessage response)
         {
-            return EtagHeaderToEtag(response.Headers.ETag.Tag);
-        }
+            IEnumerable<string> values;
+            if (response.Headers.TryGetValues(Constants.MetadataEtagField, out values) == false || values == null)
+                return null;
 
-        public static long? GetEtagHeader(this GetResponse response)
-        {
-            return EtagHeaderToEtag(response.Headers[Constants.MetadataEtagField]);
-        }
+            var value = values.FirstOrDefault();
+            if (value == null)
+                return null;
 
-        /*public static long? GetEtagHeader(this HttpJsonRequest request)
-        {
-            return EtagHeaderToEtag(request.ResponseHeaders[Constants.MetadataEtagField]);
-        }*/
+            return EtagHeaderToEtag(value);
+        }
 
         internal static long EtagHeaderToEtag(string responseHeader)
         {

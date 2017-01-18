@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Commands;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Http;
 using Raven.Server.Documents.Indexes.Static;
@@ -47,12 +48,12 @@ namespace FastTests
                 return (TEntity)_store.Conventions.DeserializeEntityFromBlittable(typeof(TEntity), json);
             }
 
-            public PutResult Put(string id, long? etag, object data, IDictionary<string, string> metadata)
+            public PutResult Put(string id, long? etag, object data, Dictionary<string, string> metadata)
             {
                 return AsyncHelpers.RunSync(() => PutAsync(id, etag, data, metadata));
             }
 
-            public async Task<PutResult> PutAsync(string id, long? etag, object data, IDictionary<string, string> metadata)
+            public async Task<PutResult> PutAsync(string id, long? etag, object data, Dictionary<string, string> metadata)
             {
                 if (id == null)
                     throw new ArgumentNullException(nameof(id));
@@ -65,11 +66,14 @@ namespace FastTests
                     ETag = etag
                 };
 
-                if (metadata != null)
-                    documentInfo.MetadataInstance = metadata;
-
                 using (var session = _store.OpenSession())
                 {
+                    if (metadata != null)
+                    {
+                        documentInfo.Metadata = session.Advanced.EntityToBlittable.ConvertEntityToBlittable(metadata, session.Advanced.DocumentStore.Conventions, session.Advanced.Context);
+                        documentInfo.MetadataInstance = metadata;
+                    }
+
                     var document = session.Advanced.EntityToBlittable.ConvertEntityToBlittable(data, documentInfo);
 
                     var command = new PutDocumentCommand
@@ -136,6 +140,20 @@ namespace FastTests
                 await RequestExecuter.ExecuteAsync(command, Context);
 
                 return new DynamicArray(command.Result.Results);
+            }
+
+            public QueryResult Query(string indexName, IndexQuery query)
+            {
+                return AsyncHelpers.RunSync(() => QueryAsync(indexName, query));
+            }
+
+            public async Task<QueryResult> QueryAsync(string indexName, IndexQuery query)
+            {
+                var command = new QueryCommand(_store.Conventions, Context, indexName, query);
+
+                await RequestExecuter.ExecuteAsync(command, Context);
+
+                return command.Result;
             }
 
             public void Dispose()

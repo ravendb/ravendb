@@ -94,7 +94,16 @@ namespace Raven.NewClient.Client.Commands
                 Result = null;
                 return;
             }
+
             Result = JsonDeserializationClient.QueryResult(response);
+        }
+
+        public override void ResponseWasFromCache()
+        {
+            if (Result == null)
+                return;
+
+            Result.DurationMilliseconds = -1;
         }
 
         public override bool IsReadRequest => true;
