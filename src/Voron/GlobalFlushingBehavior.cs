@@ -35,7 +35,6 @@ namespace Voron
         private class MountPointInfo
         {
             public readonly ConcurrentQueue<StorageEnvironment> StorageEnvironments = new ConcurrentQueue<StorageEnvironment>();
-            public long LastSyncTimeInMountPointInTicks = DateTime.MinValue.Ticks;
         }
 
         public bool HasLowNumberOfFlushingResources => _concurrentFlushes.CurrentCount <= _lowNumberOfFlushingResources;
@@ -96,7 +95,13 @@ namespace Voron
 
             foreach (var mountPoint in _mountPoints)
             {
-                var lastSync = new DateTime(Volatile.Read(ref mountPoint.Value.LastSyncTimeInMountPointInTicks));
+                var lastSyncTicks = DateTime.MaxValue.Ticks;
+                foreach (var env in mountPoint.Value.StorageEnvironments)
+                {
+                    var lastEnvSync = Volatile.Read(ref env.LastSyncTimeInTicks);
+                    lastSyncTicks = Math.Min(lastSyncTicks, lastEnvSync);
+                }
+                var lastSync = new DateTime(lastSyncTicks);
                 if (DateTime.UtcNow - lastSync < TimeSpan.FromMinutes(1))
                     continue;
 
@@ -142,10 +147,11 @@ namespace Voron
             while (mountPointInfo.StorageEnvironments.TryDequeue(out env))
             {
                 SyncEnvironment(env);
+
+                // we have mutliple threads racing for this value, no a concern, the last one wins is probably
+                // going to be the latest, or close enough that we don't care
+                Volatile.Write(ref env.LastSyncTimeInTicks, DateTime.UtcNow.Ticks);
             }
-            // we have mutliple threads racing for this value, no a concern, the last one wins is probably
-            // going to be the latest, or close enough that we don't care
-            Volatile.Write(ref mountPointInfo.LastSyncTimeInMountPointInTicks, DateTime.UtcNow.Ticks);
         }
 
         private void SyncEnvironment(object state)

@@ -77,6 +77,9 @@ namespace Voron
         private readonly ScratchBufferPool _scratchBufferPool;
         private EndOfDiskSpaceEvent _endOfDiskSpace;
         internal int SizeOfUnflushedTransactionsInJournalFile;
+
+        public long LastSyncTimeInTicks = DateTime.MinValue.Ticks;
+
         internal DateTime LastFlushTime;
 
         private long _lastWorkTimeTicks;
@@ -102,8 +105,6 @@ namespace Voron
                 _dataPager = options.DataPager;
                 _freeSpaceHandling = new FreeSpaceHandling();
                 _headerAccessor = new HeaderAccessor(this);
-
-                _options.DeleteAllTempBuffers();
 
                 _decompressionBuffers = new DecompressionBuffersPool(options);
                 var isNew = _headerAccessor.Initialize();
@@ -455,7 +456,7 @@ namespace Voron
                         ThrowOnTimeoutWaitingForWriteTxLock(wait);
                     }
                     _currentTransactionHolder = NativeMemory.ThreadAllocations.Value;
-                    _writeTransactionRunning.SetByAsyncCompletion();
+                    _writeTransactionRunning.SetInAsyncMannerFireAndForget();
 
                     _lastWorkTimeTicks = DateTime.UtcNow.Ticks;
 

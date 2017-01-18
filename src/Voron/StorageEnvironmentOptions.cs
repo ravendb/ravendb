@@ -130,7 +130,7 @@ namespace Voron
 
             MaxScratchBufferSize = 256*Constants.Size.Megabyte;
 
-            MaxNumberOfPagesInJournalBeforeFlush = 8192; // 32 MB when 4Kb             
+            MaxNumberOfPagesInJournalBeforeFlush = (32*Constants.Size.Megabyte)/Constants.Storage.PageSize;
 
             IdleFlushTimeout = 5000; // 5 seconds
 
@@ -197,9 +197,16 @@ namespace Voron
                     //return new SparseMemoryMappedPager(this, FilePath, InitialFileSize);
                 });
 
+                GatherRecyclableJournalFiles();
+
+                DeleteAllTempBuffers();
+            }
+
+            private void GatherRecyclableJournalFiles()
+            {
                 foreach (var reusableFile in GetReusableFiles())
                 {
-                    var reuseNameWithoutExt = Path.GetFileNameWithoutExtension(reusableFile);
+                    var reuseNameWithoutExt = Path.GetExtension(reusableFile).Substring(1);
 
                     long reuseNum;
                     if (long.TryParse(reuseNameWithoutExt, out reuseNum))
@@ -224,7 +231,7 @@ namespace Voron
             {
                 try
                 {
-                    return Directory.GetFiles(_journalPath, "*.pending-recycle");
+                    return Directory.GetFiles(_journalPath, "pending-recycle.*");
                 }
                 catch (Exception)
                 {
@@ -264,7 +271,7 @@ namespace Voron
                 var name = JournalName(journalNumber);
                 var path = Path.Combine(_journalPath, name);
                 if (File.Exists(path) == false)
-                    AttemptToReuseJournal(path);
+                    AttemptToReuseJournal(path, journalSize);
 
                 var result = _journals.GetOrAdd(name, _ => new Lazy<IJournalWriter>(() =>
                 {
@@ -291,7 +298,7 @@ namespace Voron
                 return result.Value;
             }
 
-            private void AttemptToReuseJournal(string desiredPath)
+            private void AttemptToReuseJournal(string desiredPath, long journalNumber)
             {
                 lock (_journalsForReuse)
                 {
@@ -321,18 +328,38 @@ namespace Voron
 
                     while (_journalsForReuse.Count > 0)
                     {
-                        if ((lastModifed - _journalsForReuse.Keys[0]).TotalHours < 72)
+                        try
                         {
-                            break;
-                        }
-                        if ((DateTime.UtcNow - _journalsForReuse.Keys[0]).TotalHours < 72)
-                        {
-                            break;
-                        }
-                        var oldFile = _journalsForReuse.Values[0];
-                        _journalsForReuse.RemoveAt(0);
+                            var fileInfo = new FileInfo(_journalsForReuse.Values[0]);
+                            if (fileInfo.Exists == false)
+                            {
+                                _journalsForReuse.RemoveAt(0);
+                                continue;
+                            }
 
-                        TryDelete(oldFile);
+                            if ((lastModifed - fileInfo.LastWriteTimeUtc).TotalHours > 72)
+                            {
+                                _journalsForReuse.RemoveAt(0);
+                                TryDelete(fileInfo.FullName);
+                                continue;
+                            }
+
+                            if (fileInfo.Length < journalNumber)
+                            {
+                                _journalsForReuse.RemoveAt(0);
+                                TryDelete(fileInfo.FullName);
+
+                                continue;
+                            }
+
+                        }
+                        catch (IOException)
+                        {
+                            // explicitly ignoring any such file errors
+                            _journalsForReuse.RemoveAt(0);
+                            TryDelete(_journalsForReuse.Values[0]);
+                        }
+                        break;
                     }
 
                 }
@@ -404,7 +431,7 @@ namespace Voron
                     Win32Helper.WriteFileHeader(header, path);
             }
 
-            public override void DeleteAllTempBuffers()
+            public void DeleteAllTempBuffers()
             {
                 if (Directory.Exists(TempPath) == false)
                     return;
@@ -578,11 +605,6 @@ namespace Voron
                 Memory.Copy((byte*)ptr, (byte*)header, sizeof(FileHeader));
             }
 
-            public override void DeleteAllTempBuffers()
-            {
-                //no-op
-            }
-
             public override AbstractPager CreateScratchPager(string name, long intialSize)
             {
                 var guid = Guid.NewGuid();
@@ -622,7 +644,7 @@ namespace Voron
 
         public static string PendingRecycleName(long number)
         {
-            return string.Format("{0:D19}.pending-recycle", number);
+            return string.Format("pending-recycle.{0:D19}", number);
         }
 
         public static string JournalRecoveryName(long number)
@@ -642,8 +664,6 @@ namespace Voron
         public abstract unsafe bool ReadHeader(string filename, FileHeader* header);
 
         public abstract unsafe void WriteHeader(string filename, FileHeader* header);
-
-        public abstract void DeleteAllTempBuffers();
 
         public abstract AbstractPager CreateScratchPager(string name, long initialSize);
 
