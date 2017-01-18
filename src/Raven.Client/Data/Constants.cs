@@ -236,6 +236,8 @@ namespace Raven.Abstractions.Data
 
         //Replications
 
+        public const string RavenReplicationConflictCollection = "Raven/Replication/Conflicts";
+
         public const string RavenReplicationSourcesBasePath = "Raven/Replication/Sources";
 
         public const string RavenReplicationDestinations = "Raven/Replication/Destinations";

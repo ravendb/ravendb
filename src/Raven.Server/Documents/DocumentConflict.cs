@@ -1,5 +1,8 @@
-﻿using Raven.Client.Replication.Messages;
+﻿using System.Text;
+using Raven.Client.Replication.Messages;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Voron;
 
 namespace Raven.Server.Documents
 {
@@ -10,7 +13,8 @@ namespace Raven.Server.Documents
         public BlittableJsonReaderObject Doc;
         public long StorageId;
         public ChangeVectorEntry[] ChangeVector;
-
+        public long InsertedEtag; // the etag of the current db when this conflict was added
+        
         public static implicit operator DocumentConflict(Document doc)
         {
             return new DocumentConflict

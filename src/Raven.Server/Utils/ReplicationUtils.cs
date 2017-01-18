@@ -287,30 +287,46 @@ namespace Raven.Server.Utils
 
         public static ChangeVectorEntry[] MergeVectors(ChangeVectorEntry[] vectorA, ChangeVectorEntry[] vectorB)
         {
-            var merged = new ChangeVectorEntry[Math.Max(vectorA.Length, vectorB.Length)];
-            var inx = 0;
-            foreach (var entryA in vectorA)
+            Array.Sort(vectorA);
+            Array.Sort(vectorB);
+            int ia = 0, ib = 0;
+            var merged = new List<ChangeVectorEntry>();
+            while(ia < vectorA.Length && ib < vectorB.Length)
             {
-                var etagA = entryA.Etag;
-                ChangeVectorEntry first = new ChangeVectorEntry();
-                foreach (var e in vectorB)
+                int res = vectorA[ia].CompareTo(vectorB[ib]);
+                if (res == 0)
                 {
-                    if (e.DbId == entryA.DbId)
+                    merged.Add(new ChangeVectorEntry
                     {
-                        first = e;
-                        break;
-                    }
+                        DbId = vectorA[ia].DbId,
+                        Etag = Math.Max(vectorA[ia].Etag, vectorB[ib].Etag)
+                    });
+                    ia++;
+                    ib++;
                 }
-                var etagB = first.Etag;
-
-                merged[inx++] = new ChangeVectorEntry
+                else if (res > 0)
                 {
-                    DbId = entryA.DbId,
-                    Etag = Math.Max(etagA, etagB)
-                };
+                    merged.Add(vectorA[ia]);
+                    ia++;
+                }
+                else
+                {
+                    merged.Add(vectorB[ib]);
+                    ib++;
+                }
             }
-            return merged;
+            for (; ia < vectorA.Length; ia++)
+            {
+                merged.Add(vectorA[ia]);
+            }
+            for (; ib < vectorB.Length; ib++)
+            {
+                merged.Add(vectorB[ib]);
+            }
+            return merged.ToArray();
         }
+
+
 
         public static ChangeVectorEntry[] MergeVectors(IReadOnlyList<ChangeVectorEntry[]> changeVectors)
         {

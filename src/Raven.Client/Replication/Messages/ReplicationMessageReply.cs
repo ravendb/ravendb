@@ -1,4 +1,5 @@
 ﻿using System;
+using Sparrow.Json;
 
 namespace Raven.Client.Replication.Messages
 {
@@ -30,9 +31,27 @@ namespace Raven.Client.Replication.Messages
         public string DatabaseId { get; set; }
     }
 
-    public struct ChangeVectorEntry
+    public struct ChangeVectorEntry : IComparable
     {
         public Guid DbId;
         public long Etag;
+
+        public bool Equals(ChangeVectorEntry other)
+        {
+            return DbId.Equals(other.DbId) && Etag == other.Etag;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return (DbId.GetHashCode()*397) ^ Etag.GetHashCode();
+            }
+        }
+
+        public int CompareTo(object obj)
+        {
+            return String.CompareOrdinal(DbId.ToString(), ((ChangeVectorEntry) obj).DbId.ToString());
+        }
     }
 }

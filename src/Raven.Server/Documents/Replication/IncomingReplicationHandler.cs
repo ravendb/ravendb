@@ -268,7 +268,7 @@ namespace Raven.Server.Documents.Replication
             int itemCount;
             if (!message.TryGet(nameof(ReplicationMessageHeader.ItemCount), out itemCount))
                 throw new InvalidDataException("Expected the 'ItemCount' field, but had no numeric field of this value, this is likely a bug");
-
+            
             ReceiveSingleDocumentsBatch(itemCount, lastDocumentEtag);
             OnDocumentsReceived(this);
         }
@@ -602,8 +602,15 @@ namespace Raven.Server.Documents.Replication
                                 doc.DocumentSize, _documentsContext);
                             json.BlittableValidation();
                         }
+                        
                         ChangeVectorEntry[] conflictingVector;
                         var conflictStatus = GetConflictStatusForDocument(_documentsContext, doc.Id, _tempReplicatedChangeVector, out conflictingVector);
+
+                        if (doc.Collection?.Contains(Constants.RavenReplicationConflictCollection) == true)
+                        {
+                            _database.DocumentsStorage.AddConflict(_documentsContext, doc.Id, json, _tempReplicatedChangeVector);
+                            continue;
+                        }
 
                         switch (conflictStatus)
                         {
@@ -988,10 +995,23 @@ namespace Raven.Server.Documents.Replication
             {
                 _tempReplicatedChangeVector = new ChangeVectorEntry[doc.ChangeVectorCount];
             }
+            long etag;
+
+            if (doc.IsConflictDoc)
+            {
+                var source = new Guid(ConnectionInfo.SourceDatabaseId);
+
+                if (maxReceivedChangeVectorByDatabase.TryGetValue(source, out etag) == false ||
+                    etag > doc.Etag)
+                {
+                    maxReceivedChangeVectorByDatabase[source] = doc.Etag;
+                }
+            }
+
             for (int i = 0; i < doc.ChangeVectorCount; i++)
             {
                 _tempReplicatedChangeVector[i] = ((ChangeVectorEntry*)(buffer + doc.Position))[i];
-                long etag;
+
                 if (maxReceivedChangeVectorByDatabase.TryGetValue(_tempReplicatedChangeVector[i].DbId, out etag) == false ||
                     etag > _tempReplicatedChangeVector[i].Etag)
                 {
@@ -1076,6 +1096,8 @@ namespace Raven.Server.Documents.Replication
             public short TransactionMarker;
             public int DocumentSize;
             public string Collection;
+            public bool IsConflictDoc;
+            public long Etag;
         }
 
         public struct ReplicationIndexOrTransformerPositions
@@ -1110,6 +1132,9 @@ namespace Raven.Server.Documents.Replication
                     _multiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(ChangeVectorEntry) * curDoc.ChangeVectorCount);
                     writeBuffer.Write(_tempBuffer, 0, sizeof(ChangeVectorEntry) * curDoc.ChangeVectorCount);
 
+                    _multiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(long));
+                    curDoc.Etag = *(long*)pTemp;
+
                     _multiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(short));
                     curDoc.TransactionMarker = *(short*)pTemp;
 
@@ -1117,8 +1142,6 @@ namespace Raven.Server.Documents.Replication
                     var keySize = *(int*)pTemp;
                     _multiDocumentParser.ReadExactly(_tempBuffer, 0, keySize);
                     curDoc.Id = Encoding.UTF8.GetString(_tempBuffer, 0, keySize);
-
-                
 
                     _multiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(int));
                     var documentSize = curDoc.DocumentSize = *(int*)pTemp;
@@ -1133,14 +1156,18 @@ namespace Raven.Server.Documents.Replication
                             documentSize -= read;
                         }
                     }
-                    else
+                  
+                    //read the collection
+                    _multiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(int));
+                    var collectionSize = *(int*)pTemp;
+                    if (collectionSize != -1)
                     {
-                        //read the collection of the tombstone
-                        _multiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(int));
-                        var collectionSize = *(int*)pTemp;
                         _multiDocumentParser.ReadExactly(_tempBuffer, 0, collectionSize);
                         curDoc.Collection = Encoding.UTF8.GetString(_tempBuffer, 0, collectionSize);
                     }
+                    curDoc.IsConflictDoc = collectionSize != -1 &&
+                                           String.Compare(curDoc.Collection, Constants.RavenReplicationConflictCollection, StringComparison.Ordinal) ==
+                                           0;
                     _replicatedDocs.Add(curDoc);
                 }
             }
