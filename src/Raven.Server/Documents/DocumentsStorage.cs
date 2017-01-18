@@ -214,7 +214,11 @@ namespace Raven.Server.Documents
 
             var options = _documentDatabase.Configuration.Core.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly(_documentDatabase.Configuration.Core.DataDirectory)
-                : StorageEnvironmentOptions.ForPath(_documentDatabase.Configuration.Core.DataDirectory);
+                : StorageEnvironmentOptions.ForPath(
+                    _documentDatabase.Configuration.Core.DataDirectory,
+                    _documentDatabase.Configuration.Storage.TempPath,
+                    _documentDatabase.Configuration.Storage.JournalsStoragePath
+                    );
 
             try
             {
@@ -1479,13 +1483,19 @@ namespace Raven.Server.Documents
             var collectionName = ExtractCollectionName(context, key, document);
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
+            bool knownNewKey = false;
+
             if (string.IsNullOrWhiteSpace(key))
+            {
                 key = Guid.NewGuid().ToString();
+                knownNewKey = true;
+            }
 
             if (key[key.Length - 1] == '/')
             {
                 int tries;
                 key = GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, table, context, out tries);
+                knownNewKey = true;
             }
 
             byte* lowerKey;
@@ -1497,8 +1507,11 @@ namespace Raven.Server.Documents
             if (_hasConflicts != 0)
                 changeVector = MergeConflictChangeVectorIfNeededAndDeleteConflicts(changeVector, context, key);
 
-            // delete a tombstone if it exists
-            DeleteTombstoneIfNeeded(context, collectionName, lowerKey, lowerSize);
+            // delete a tombstone if it exists, if it known that it is a new key, no need, so we can skip it
+            if (knownNewKey == false)
+            {
+                DeleteTombstoneIfNeeded(context, collectionName, lowerKey, lowerSize);
+            }
 
             var newEtag = ++_lastEtag;
             var newEtagBigEndian = Bits.SwapBytes(newEtag);
@@ -1508,7 +1521,11 @@ namespace Raven.Server.Documents
             Slice keySlice;
             using (Slice.External(context.Allocator, lowerKey, (ushort)lowerSize, out keySlice))
             {
-                var oldValue = table.ReadByKey(keySlice);
+                TableValueReader oldValue = null;
+                if (knownNewKey == false)
+                {
+                    oldValue = table.ReadByKey(keySlice);
+                }
 
                 if (changeVector == null)
                 {
@@ -1685,21 +1702,12 @@ namespace Raven.Server.Documents
             long newEtag,
             ChangeVectorEntry[] existing = null)
         {
+            if (_hasConflicts == 0)
+                return MergeVectorsWithoutConflicts(newEtag, existing);
+
             var conflictChangeVectors = DeleteConflictsFor(context, loweredKey);
             if (conflictChangeVectors.Count == 0)
-            {
-                if (existing != null)
-                    return ReplicationUtils.UpdateChangeVectorWithNewEtag(Environment.DbId, newEtag, existing);
-
-                return new[]
-                {
-                    new ChangeVectorEntry
-                    {
-                        Etag = newEtag,
-                        DbId = Environment.DbId
-                    }
-                };
-            }
+                return MergeVectorsWithoutConflicts(newEtag, existing);
 
             // need to merge the conflict change vectors
             var maxEtags = new Dictionary<Guid, long>
@@ -1728,6 +1736,21 @@ namespace Raven.Server.Documents
                 index++;
             }
             return changeVector;
+        }
+
+        private ChangeVectorEntry[] MergeVectorsWithoutConflicts(long newEtag, ChangeVectorEntry[] existing)
+        {
+            if (existing != null)
+                return ReplicationUtils.UpdateChangeVectorWithNewEtag(Environment.DbId, newEtag, existing);
+
+            return new[]
+            {
+                new ChangeVectorEntry
+                {
+                    Etag = newEtag,
+                    DbId = Environment.DbId
+                }
+            };
         }
 
         public IEnumerable<KeyValuePair<string, long>> GetIdentities(DocumentsOperationContext context)
