@@ -190,6 +190,7 @@ namespace Raven.NewClient.Client.Http
                 {
                     cachedItem.NotModified();
                     command.SetResponse(cachedValue);
+                    command.ResponseWasFromCache();
                     return;
                 }
                 if (response.IsSuccessStatusCode == false)

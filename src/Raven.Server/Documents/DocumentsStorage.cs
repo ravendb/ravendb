@@ -1877,19 +1877,19 @@ namespace Raven.Server.Documents
             return fst.NumberOfEntries;
         }
 
-        public class CollectionStat
+        public class CollectionStats
         {
             public string Name;
             public long Count;
         }
 
-        public IEnumerable<CollectionStat> GetCollections(DocumentsOperationContext context)
+        public IEnumerable<CollectionStats> GetCollections(DocumentsOperationContext context)
         {
             foreach (var kvp in _collectionsCache)
             {
                 var collectionTable = context.Transaction.InnerTransaction.OpenTable(DocsSchema, kvp.Value.GetTableName(CollectionTableType.Documents));
 
-                yield return new CollectionStat
+                yield return new CollectionStats
                 {
                     Name = kvp.Key,
                     Count = collectionTable.NumberOfEntries
@@ -1897,12 +1897,12 @@ namespace Raven.Server.Documents
             }
         }
 
-        public CollectionStat GetCollection(string collection, DocumentsOperationContext context)
+        public CollectionStats GetCollection(string collection, DocumentsOperationContext context)
         {
             var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
             {
-                return new CollectionStat
+                return new CollectionStats
                 {
                     Name = collection,
                     Count = 0
@@ -1915,14 +1915,14 @@ namespace Raven.Server.Documents
 
             if (collectionTable == null)
             {
-                return new CollectionStat
+                return new CollectionStats
                 {
                     Name = collection,
                     Count = 0
                 };
             }
 
-            return new CollectionStat
+            return new CollectionStats
             {
                 Name = collectionName.Name,
                 Count = collectionTable.NumberOfEntries
