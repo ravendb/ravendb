@@ -16,7 +16,7 @@ namespace Sparrow.Json
         /// Use this overload only if you are certain that you are goint to dispose of the LazyStringValue by yourself
         /// </summary>
         /// <returns></returns>
-        public LazyStringValue ToLazyStringValue()
+        private LazyStringValue ToLazyStringValue()
         {
             var allocatedUncompressedData = DecompressToAllocatedMemoryData();
 
