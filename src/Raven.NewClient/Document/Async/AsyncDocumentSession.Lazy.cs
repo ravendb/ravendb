@@ -15,7 +15,10 @@ using Raven.NewClient.Client.Linq;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Document.Batches;
 using System.Diagnostics;
+using Raven.NewClient.Client.Commands;
+using Raven.NewClient.Client.Commands.Lazy;
 using Raven.NewClient.Client.Data.Queries;
+using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Document.Async
 {
@@ -52,7 +55,7 @@ namespace Raven.NewClient.Client.Document.Async
                     if (t.Exception != null)
                         throw new InvalidOperationException("Could not perform lazy count", t.Exception);
                     return operation.QueryResult.TotalResults;
-                }));
+                }, token));
 
             return lazyValue;
         }
@@ -95,127 +98,201 @@ namespace Raven.NewClient.Client.Document.Async
 
         private async Task<bool> ExecuteLazyOperationsSingleStep(ResponseTimeInformation responseTimeInformation)
         {
-            throw new NotImplementedException();
-            /*var disposables = pendingLazyOperations.Select(x => x.EnterContext()).Where(x => x != null).ToList();
-            try
-            {
-                var requests = pendingLazyOperations.Select(x => x.CreateRequest()).ToArray();
-                var responses = await AsyncDatabaseCommands.MultiGetAsync(requests).ConfigureAwait(false);
+            var requests = pendingLazyOperations.Select(x => x.CreateRequest()).ToList();
+            var multiGetOperation = new MultiGetOperation(this);
+            var multiGetCommand = multiGetOperation.CreateRequest(requests);
+            await RequestExecuter.ExecuteAsync(multiGetCommand, Context).ConfigureAwait(false);
+            var responses = multiGetCommand.Result;
 
-                for (int i = 0; i < pendingLazyOperations.Count; i++)
+            for (var i = 0; i < pendingLazyOperations.Count; i++)
+            { 
+                long totalTime;
+                string tempReqTime;
+                var response = (BlittableJsonReaderObject)responses.Results[i];
+                BlittableJsonReaderObject headers;
+                response.TryGet("Headers", out headers);
+                headers.TryGet(Constants.Headers.RequestTime, out tempReqTime);
+
+                long.TryParse(tempReqTime, out totalTime);
+
+                responseTimeInformation.DurationBreakdown.Add(new ResponseTimeItem
                 {
-                    long totalTime;
-                    long.TryParse(responses[i].Headers[Constants.Headers.RequestTime], out totalTime);
+                    Url = requests[i].UrlAndQuery,
+                    Duration = TimeSpan.FromMilliseconds(totalTime)
+                });
 
-                    responseTimeInformation.DurationBreakdown.Add(new ResponseTimeItem
-                    {
-                        Url = requests[i].UrlAndQuery,
-                        Duration = TimeSpan.FromMilliseconds(totalTime)
-                    });
-                    if (responses[i].RequestHasErrors())
-                    {
-                        throw new InvalidOperationException("Got an error from server, status code: " + responses[i].Status +
-                                                            Environment.NewLine + responses[i].Result);
-                    }
-                    pendingLazyOperations[i].HandleResponse(responses[i]);
-                    if (pendingLazyOperations[i].RequiresRetry)
-                    {
-                        return true;
-                    }
+                long status;
+                response.TryGet("Status", out status);
+                switch (status)
+                {
+                    case 0:   // aggressively cached
+                    case 200: // known non error values
+                    case 201:
+                    case 203:
+                    case 204:
+                    case 304:
+                    case 404:
+                        break;
+                    default:
+                        throw new InvalidOperationException("Got an error from server, status code: " + (int)status +
+                                                        Environment.NewLine + response);
                 }
-                return false;
+
+                pendingLazyOperations[i].HandleResponse(response);
+                if (pendingLazyOperations[i].RequiresRetry)
+                {
+                    return true;
+                }
             }
-            finally
-            {
-                foreach (var disposable in disposables)
-                {
-                    disposable.Dispose();
-                }
-            }*/
+            return false;
         }
 
-        public Lazy<Task<TResult>> LoadAsync<TResult>(string id, Action<TResult> onEval, CancellationToken token = new CancellationToken())
+        /// <summary>
+        /// Begin a load while including the specified path 
+        /// </summary>
+        /// <param name="path">The path.</param>
+        IAsyncLazyLoaderWithInclude<T> IAsyncLazySessionOperations.Include<T>(Expression<Func<T, object>> path)
         {
-            throw new NotImplementedException();
+            return new AsyncLazyMultiLoaderWithInclude<T>(this).Include(path);
         }
 
-        Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TResult>(ValueType id, CancellationToken token)
+        /// <summary>
+        /// Begin a load while including the specified path 
+        /// </summary>
+        /// <param name="path">The path.</param>
+        IAsyncLazyLoaderWithInclude<object> IAsyncLazySessionOperations.Include(string path)
         {
-            throw new NotImplementedException();
+            return new AsyncLazyMultiLoaderWithInclude<object>(this).Include(path);
         }
 
-        public Lazy<Task<TResult>> LoadAsync<TResult>(ValueType id, Action<TResult> onEval, CancellationToken token = new CancellationToken())
+        /// <summary>
+        /// Loads the specified ids.
+        /// </summary>
+        /// <param name="token">The cancellation token.</param>
+        /// <param name="ids">The ids of the documents to load.</param>
+        Lazy<Task<Dictionary<string, T>>> IAsyncLazySessionOperations.LoadAsync<T>(IEnumerable<string> ids, CancellationToken token)
         {
-            throw new NotImplementedException();
+            return Lazily.LoadAsync<T>(ids, null, token);
         }
 
-        public Lazy<Task<TResult>> LoadAsync<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null, Action<TResult> onEval = null,
-            CancellationToken token = new CancellationToken())
+        Lazy<Task<T>> IAsyncLazySessionOperations.LoadAsync<T>(string id, CancellationToken token)
         {
-            throw new NotImplementedException();
+            return Lazily.LoadAsync(id, (Action<T>)null, token);
         }
 
-        Lazy<Task<Dictionary<string, TResult>>> IAsyncLazySessionOperations.LoadAsync<TResult>(CancellationToken token, params ValueType[] ids)
+        /// <summary>
+        /// Loads the specified entities with the specified id after applying
+        /// conventions on the provided id to get the real document id.
+        /// </summary>
+        /// <remarks>
+        /// This method allows you to call:
+        /// Load{Post}(1)
+        /// And that call will internally be translated to 
+        /// Load{Post}("posts/1");
+        /// 
+        /// Or whatever your conventions specify.
+        /// </remarks>
+        Lazy<Task<T>> IAsyncLazySessionOperations.LoadAsync<T>(ValueType id, Action<T> onEval, CancellationToken token)
         {
-            throw new NotImplementedException();
+            var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
+            return Lazily.LoadAsync(documentKey, onEval, token);
         }
 
-        Lazy<Task<Dictionary<string, TResult>>> IAsyncLazySessionOperations.LoadAsync<TResult>(IEnumerable<ValueType> ids, CancellationToken token)
+        Lazy<Task<Dictionary<string, T>>> IAsyncLazySessionOperations.LoadAsync<T>(CancellationToken token, params ValueType[] ids)
         {
-            throw new NotImplementedException();
+            var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+            return Lazily.LoadAsync<T>(documentKeys, null, token);
         }
 
-        public Lazy<Task<Dictionary<string, TResult>>> LoadAsync<TResult>(IEnumerable<ValueType> ids, Action<Dictionary<string, TResult>> onEval, CancellationToken token = new CancellationToken())
+        /// <summary>
+        /// Loads the specified ids.
+        /// </summary>
+        /// <param name="token">The cancellation token.</param>
+        /// <param name="ids">The ids of the documents to load.</param>
+        Lazy<Task<Dictionary<string, T>>> IAsyncLazySessionOperations.LoadAsync<T>(IEnumerable<ValueType> ids, CancellationToken token)
         {
-            throw new NotImplementedException();
+            var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+            return Lazily.LoadAsync<T>(documentKeys, null, token);
         }
 
-        public Lazy<Task<TResult>> LoadAsync<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure = null, Action<TResult> onEval = null,
-            CancellationToken token = new CancellationToken()) where TTransformer : AbstractTransformerCreationTask, new()
+        Lazy<Task<Dictionary<string, T>>> IAsyncLazySessionOperations.LoadAsync<T>(IEnumerable<ValueType> ids, Action<Dictionary<string, T>> onEval, CancellationToken token)
         {
-            throw new NotImplementedException();
+            var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
+            return LazyAsyncLoadInternal(documentKeys.ToArray(), new string[0], onEval, token);
         }
 
-        public Lazy<Task<Dictionary<string, TResult>>> MoreLikeThisAsync<TResult>(MoreLikeThisQuery query, CancellationToken token = new CancellationToken())
+        Lazy<Task<T>> IAsyncLazySessionOperations.LoadAsync<T>(ValueType id, CancellationToken token)
         {
-            throw new NotImplementedException();
+            return Lazily.LoadAsync(id, (Action<T>)null, token);
         }
 
-        Lazy<Task<Dictionary<string, TResult>>> IAsyncLazySessionOperations.LoadStartingWithAsync<TResult>(string keyPrefix, string matches, int start, int pageSize,
+        /// <summary>
+        /// Loads the specified ids and a function to call when it is evaluated
+        /// </summary>
+        public Lazy<Task<Dictionary<string, T>>> LoadAsync<T>(IEnumerable<string> ids, Action<Dictionary<string, T>> onEval, CancellationToken token = new CancellationToken())
+        {
+            return LazyAsyncLoadInternal(ids.ToArray(), new string[0], onEval, token);
+        }
+
+        /// <summary>
+        /// Loads the specified id and a function to call when it is evaluated
+        /// </summary>
+        public Lazy<Task<T>> LoadAsync<T>(string id, Action<T> onEval, CancellationToken token = new CancellationToken())
+        {
+            if (IsLoaded(id))
+                return new Lazy<Task<T>>(() => LoadAsync<T>(id, token));
+
+            var lazyLoadOperation = new LazyLoadOperation<T>(new LoadOperation(this, new[] { id }), id);
+            return AddLazyOperation(lazyLoadOperation, onEval, token);
+        }
+
+        public Lazy<Task<Dictionary<string, T>>> MoreLikeThisAsync<T>(MoreLikeThisQuery query, CancellationToken token = new CancellationToken())
+        {
+            var loadOperation = new LoadOperation(this, null, null);
+            var lazyOp = new LazyMoreLikeThisOperation<T>(loadOperation, query);
+            return AddLazyOperation<Dictionary<string, T>>(lazyOp, null, token);
+        }
+
+        public Lazy<Task<Dictionary<string, T>>> LazyAsyncLoadInternal<T>(string[] ids, string[] includes, Action<Dictionary<string, T>> onEval, CancellationToken token = default(CancellationToken))
+        {
+            var loadOperation = new LoadOperation(this, ids, includes);
+            var lazyOp = new LazyLoadOperation<T>(loadOperation, ids, includes);
+            return AddLazyOperation(lazyOp, onEval, token);
+        }
+
+        Lazy<Task<T[]>> IAsyncLazySessionOperations.LoadStartingWithAsync<T>(string keyPrefix, string matches, int start, int pageSize,
             string exclude, RavenPagingInformation pagingInformation, string skipAfter,
             CancellationToken token)
         {
-            throw new NotImplementedException();
+            var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, pagingInformation, skipAfter);
+
+            return AddLazyOperation<T[]>(operation, null, token);
         }
 
-        IAsyncLazyLoaderWithInclude<TResult> IAsyncLazySessionOperations.Include<TResult>(Expression<Func<TResult, object>> path)
+        Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure = null, Action<TResult> onEval = null,
+            CancellationToken token = new CancellationToken())
         {
-            throw new NotImplementedException();
+            return Lazily.LoadAsync(id, typeof(TTransformer), configure, onEval, token);
         }
 
-        Lazy<Task<Dictionary<string, TResult>>> IAsyncLazySessionOperations.LoadAsync<TResult>(IEnumerable<string> ids, CancellationToken token)
+        Lazy<Task<T>> IAsyncLazySessionOperations.LoadAsync<T>(string id, Type transformerType, Action<ILoadConfiguration> configure = null, Action<T> onEval = null,
+            CancellationToken token = new CancellationToken())
         {
-            throw new NotImplementedException();
-        }
+            var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
+            var ids = new[] { id };
 
-        public Lazy<Task<Dictionary<string, TResult>>> LoadAsync<TResult>(IEnumerable<string> ids, Action<Dictionary<string, TResult>> onEval, CancellationToken token = new CancellationToken())
-        {
-            throw new NotImplementedException();
-        }
+            var configuration = new RavenLoadConfiguration();
+            if (configure != null)
+                configure(configuration);
 
-        IAsyncLazyLoaderWithInclude<object> IAsyncLazySessionOperations.Include(string path)
-        {
-            throw new NotImplementedException();
-        }
+            var lazyLoadOperation = new LazyTransformerLoadOperation<T>(
+                ids,
+                transformer,
+                configuration.TransformerParameters,
+                new LoadTransformerOperation(this),
+                singleResult: true);
 
-        Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TResult>(string id, CancellationToken token)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Lazy<Task<Dictionary<string, T>>> LazyAsyncLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<Dictionary<string, T>> onEval, CancellationToken token = default (CancellationToken))
-        {
-            throw new NotImplementedException();
+            return AddLazyOperation(lazyLoadOperation, onEval, token);
         }
     }
 }

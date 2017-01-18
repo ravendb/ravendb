@@ -163,6 +163,73 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Stream
             }
         }
 
+        [Fact]
+        public void load_lazily_returns_metadata()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var index = new Customers_ByName();
+                index.Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Customer { Name = "John", Address = "Tel Aviv" });
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var customerLazy = session.Advanced.Lazily.Load<Customer>("customers/1");
+                    var customer = customerLazy.Value;
+                    Assert.NotNull(customer);
+                    Assert.NotNull(customer.Id);
+                    Assert.Equal(customer.Name, "John");
+                    Assert.Equal(customer.Address, "Tel Aviv");
+
+                    var metadata = session.Advanced.GetMetadataFor(customer);
+                    Assert.NotNull(metadata["@etag"]);
+                    Assert.NotNull(metadata[Constants.Headers.RavenEntityName]);
+                    Assert.NotNull(metadata[Constants.Headers.LastModified]);
+                    Assert.NotNull(metadata[Constants.Headers.RavenLastModified]);
+                }
+            }
+        }
+
+        [Fact]
+        public void load_lazily_returns_metadata_async()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var index = new Customers_ByName();
+                index.Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Customer { Name = "John", Address = "Tel Aviv" });
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var customerLazy = session.Advanced.Lazily.LoadAsync<Customer>("customers/1");
+                    var customer = customerLazy.Value.Result;
+                    Assert.NotNull(customer);
+                    Assert.NotNull(customer.Id);
+                    Assert.Equal(customer.Name, "John");
+                    Assert.Equal(customer.Address, "Tel Aviv");
+
+                    var metadata = session.Advanced.GetMetadataFor(customer);
+                    Assert.NotNull(metadata["@etag"]);
+                    Assert.NotNull(metadata[Constants.Headers.RavenEntityName]);
+                    Assert.NotNull(metadata[Constants.Headers.LastModified]);
+                    Assert.NotNull(metadata[Constants.Headers.RavenLastModified]);
+                }
+            }
+        }
         public class Customer
         {
             public string Id { get; set; }

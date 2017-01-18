@@ -20,11 +20,11 @@ namespace Raven.NewClient.Client.Document
     {
         DocumentConvention Conventions { get; }
 
-        Task<Dictionary<string, T>> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, CancellationToken token = default (CancellationToken));
+        Task<Dictionary<string, T>> LoadAsyncInternal<T>(string[] ids, string[] includes, CancellationToken token = default (CancellationToken));
 
-        Task<T[]> LoadUsingTransformerInternalAsync<T>(string[] ids, KeyValuePair<string, Type>[] includes, string transformer, Dictionary<string, object> transformerParameters = null, CancellationToken token = default (CancellationToken));
+        Task<T[]> LoadUsingTransformerInternalAsync<T>(string[] ids, string[] includes, string transformer, Dictionary<string, object> transformerParameters = null, CancellationToken token = default (CancellationToken));
 
-        Lazy<Task<Dictionary<string, T>>> LazyAsyncLoadInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes, Action<Dictionary<string, T>> onEval, CancellationToken token = default (CancellationToken));
+        Lazy<Task<Dictionary<string, T>>> LazyAsyncLoadInternal<T>(string[] ids, string[] includes, Action<Dictionary<string, T>> onEval, CancellationToken token = default (CancellationToken));
 
     }
 }
