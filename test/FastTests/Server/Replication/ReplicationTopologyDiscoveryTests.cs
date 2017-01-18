@@ -218,13 +218,6 @@ namespace FastTests.Server.Replication
                     Assert.Equal(BDocumentDatabase.DbId.ToString(),outgoingOfA.First().DbId);
 
                     B.Dispose();
-                    var sw = Stopwatch.StartNew();
-                    while (ADocumentDatabase.DocumentReplicationLoader.OutgoingHandlers.Any())
-                    {
-                        Console.WriteLine("Waiting.. " + sw.ElapsedMilliseconds);
-                        Thread.Sleep(200);
-                    }
-                        
                     B = null;
 
                     topologyInfo = await GetFullTopology(A);
