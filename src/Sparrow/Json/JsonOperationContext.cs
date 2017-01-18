@@ -697,13 +697,13 @@ namespace Sparrow.Json
 
             public void Reset()
             {
-                Parser.ResetStream();
-                _writer.Reset();
+                //Parser.ResetStream();
+                //_writer.Reset();
             }
 
             public void Renew()
             {
-                Parser.SetStream();
+                //Parser.SetStream();
             }
         }
 
@@ -939,8 +939,8 @@ namespace Sparrow.Json
 
         public void ReturnMemory(AllocatedMemoryData allocation)
         {
-            if (_generation != allocation.ContextGeneration)
-                ThrowUseAfterFree();
+            //if (_generation != allocation.ContextGeneration)
+            //    ThrowUseAfterFree();
 
             _arenaAllocator.Return(allocation);
         }
