@@ -26,7 +26,7 @@
 
     <DirectoryRef Id="INSTALLFOLDER">
 
-      <Component Id="DefaultWebSiteApplicationPool_New" Guid="{5358DD73-9D8D-43BF-9248-2040CFC41F61}" KeyPath="yes">
+      <Component Id="DefaultWebSiteApplicationPool_New" Guid="{5358DD73-9D8D-43BF-9248-2040CFC41F61}" KeyPath="yes" Win64="yes">
         <Condition>
           <![CDATA[NOT CUSTOM_APPLICATION_POOL AND WEBSITE_TYPE = "NEW"]]>
         </Condition>
@@ -42,7 +42,7 @@
         </iis:WebVirtualDir>
       </Component>
 
-      <Component Id="UseExistingApplicationPool_New" Guid="{609F969B-8184-417B-9D05-5EE8A7692481}" KeyPath="yes">
+      <Component Id="UseExistingApplicationPool_New" Guid="{609F969B-8184-417B-9D05-5EE8A7692481}" KeyPath="yes" Win64="yes">
         <Condition><![CDATA[CUSTOM_APPLICATION_POOL AND APPLICATION_POOL_TYPE = "EXISTING" AND WEBSITE_TYPE = "NEW"]]></Condition>
         <iis:WebAppPool Id="AppPool1_New"
                         Name="[WEB_APP_POOL_NAME]"
