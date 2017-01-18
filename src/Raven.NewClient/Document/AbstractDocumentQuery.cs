@@ -719,17 +719,16 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         public virtual Lazy<int> CountLazily()
         {
-            throw new NotImplementedException();
 
-           /* if (queryOperation == null)
+            if (queryOperation == null)
             {
                 Take(0);
                 queryOperation = InitializeQueryOperation();
             }
 
-            var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, GetOperationHeaders());
+            var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback);
 
-            return ((DocumentSession)theSession).AddLazyCountOperation(lazyQueryOperation);*/
+            return ((DocumentSession)theSession).AddLazyCountOperation(lazyQueryOperation);
         }
 
         /// <summary>
