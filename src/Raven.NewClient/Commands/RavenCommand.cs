@@ -33,6 +33,10 @@ namespace Raven.NewClient.Client.Commands
             throw new NotSupportedException($"When {nameof(ResponseType)} is set to Array then please override this method to handle the response.");
         }
 
+        public virtual void ResponseWasFromCache()
+        {
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected string UrlEncode(string value)
         {
@@ -60,14 +64,10 @@ namespace Raven.NewClient.Client.Commands
                     // we intentionally don't dispose the reader here, we'll be using it
                     // in the command, any associated memory will be released on context reset
                     var json = await context.ReadForMemoryAsync(stream, "response/object");
-                    if (response.Headers.ETag != null)
-                    {
-                        long? etag = response.GetEtagHeader();
-                        if (etag != null)
-                        {
-                            cache.Set(url, (long)etag, json);
-                        }
-                    }
+                    var etag = response.GetEtagHeader();
+                    if (etag.HasValue)
+                        cache.Set(url, etag.Value, json);
+
                     SetResponse(json);
                     return;
                 }

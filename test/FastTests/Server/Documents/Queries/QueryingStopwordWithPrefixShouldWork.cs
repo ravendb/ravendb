@@ -8,12 +8,12 @@ namespace FastTests.Server.Documents.Queries
 {
     public class QueryingStopwordWithPrefixShouldWork : RavenNewTestBase
     {
-        public class Foo
+        private class Foo
         {
             public string Bar { get; set; }
         }
 
-        public class FooByBar : AbstractIndexCreationTask<Foo>
+        private class FooByBar : AbstractIndexCreationTask<Foo>
         {
             public FooByBar()
             {

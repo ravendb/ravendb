@@ -2,13 +2,13 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
-using Raven.Client.Data;
+using Raven.NewClient.Client.Data;
 using Xunit;
 
 namespace FastTests.Server.Documents.Queries
 {
     [SuppressMessage("ReSharper", "ConsiderUsingConfigureAwait")]
-    public class NotModifiedQueryResults : RavenTestBase
+    public class NotModifiedQueryResults : RavenNewTestBase
     {
         [Fact]
         public async Task Returns_correct_results_from_cache_if_server_response_was_not_modified()
@@ -24,22 +24,25 @@ namespace FastTests.Server.Documents.Queries
                     await session.SaveChangesAsync();
                 }
 
-                var users = store.DatabaseCommands.Query("dynamic/Users", new IndexQuery()
+                using (var commands = store.Commands())
                 {
-                    Query = "Name:Arek",
-                    WaitForNonStaleResultsTimeout = TimeSpan.FromMinutes(1)
-                });
+                    var users = commands.Query("dynamic/Users", new IndexQuery()
+                    {
+                        Query = "Name:Arek",
+                        WaitForNonStaleResultsTimeout = TimeSpan.FromMinutes(1)
+                    });
 
-                Assert.Equal(2, users.Results.Count);
+                    Assert.Equal(2, users.Results.Length);
 
-                users = store.DatabaseCommands.Query("dynamic/Users", new IndexQuery()
-                {
-                    Query = "Name:Arek",
-                    WaitForNonStaleResultsTimeout = TimeSpan.FromMinutes(1)
-                });
+                    users = commands.Query("dynamic/Users", new IndexQuery()
+                    {
+                        Query = "Name:Arek",
+                        WaitForNonStaleResultsTimeout = TimeSpan.FromMinutes(1)
+                    });
 
-                Assert.Equal(-1, users.DurationMilliseconds); // taken from cache
-                Assert.Equal(2, users.Results.Count);
+                    Assert.Equal(-1, users.DurationMilliseconds); // taken from cache
+                    Assert.Equal(2, users.Results.Length);
+                }
             }
         }
     }
