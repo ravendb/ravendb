@@ -141,7 +141,8 @@ namespace Raven.Server.Documents
         {
             string collectionName;
             BlittableJsonReaderObject metadata;
-            if (document == null || document.TryGet(Constants.Metadata.Key, out metadata) == false ||
+            if (document == null || 
+                document.TryGet(Constants.Metadata.Key, out metadata) == false ||
                 metadata.TryGet(Constants.Headers.RavenEntityName, out collectionName) == false)
             {
                 collectionName = EmptyCollection;

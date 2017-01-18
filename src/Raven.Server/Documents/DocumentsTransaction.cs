@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -31,16 +33,24 @@ namespace Raven.Server.Documents
         {
             if (_context.Transaction != this)
                 throw new InvalidOperationException("There is a different transaction in context.");
-            
+
 
             _context.Transaction = null;
             base.Dispose();
 
-            if(InnerTransaction.LowLevelTransaction.Committed)
+            if (InnerTransaction.LowLevelTransaction.Committed)
                 AfterCommit();
         }
 
         private void AfterCommit()
+        {
+            if (ThreadPool.QueueUserWorkItem(state => ((DocumentsTransaction)state).RaiseNotifications(), this) == false)
+            {
+                RaiseNotifications(); // raise immediately
+            }
+        }
+
+        private void RaiseNotifications()
         {
             foreach (var notification in _afterCommitNotifications)
             {

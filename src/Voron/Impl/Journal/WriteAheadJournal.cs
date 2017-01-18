@@ -426,6 +426,7 @@ namespace Voron.Impl.Journal
 
             private long _lastFlushedTransactionId;
             private long _lastFlushedJournalId;
+            private long _lastSyncJournalId;
             private JournalFile _lastFlushedJournal;
             private bool _ignoreLockAlreadyTaken;
             private long _totalWrittenButUnsyncedBytes;
@@ -643,17 +644,17 @@ namespace Voron.Impl.Journal
 
             private void QueueDataFileSync()
             {
-                if (_totalWrittenButUnsyncedBytes < 512 * Constants.Size.Megabyte)
-                    return;
-
-                if (DateTime.UtcNow - _lastSyncTime < TimeSpan.FromMinutes(3))
-                    return;
-
-                // if we aren't on the same journal, we have to force the sync, to avoid
-                // having lots of journals around
-                if (_waj.CurrentFile != _lastFlushedJournal)
+                if (_waj.CurrentFile.Number != _lastSyncJournalId)
+                {
+                    // if we aren't on the same journal, we have to force the sync, to avoid having lots of journals around
                     _waj._env.ForceSyncDataFile();
-                else
+                    return;
+                }
+
+                if (_totalWrittenButUnsyncedBytes > 512*Constants.Size.Megabyte)
+                    _waj._env.QueueForSyncDataFile();
+
+                if (DateTime.UtcNow - _lastSyncTime > TimeSpan.FromMinutes(3))
                     _waj._env.QueueForSyncDataFile();
             }
 
@@ -762,6 +763,7 @@ namespace Voron.Impl.Journal
 
                         _lastFlushedJournal = null;
                         _lastSyncTime = DateTime.UtcNow;
+                        _lastSyncJournalId = lastSyncedJournal;
 
                         foreach (var toDelete in _journalsToDelete)
                         {
@@ -1043,9 +1045,9 @@ namespace Voron.Impl.Journal
                     _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, tx);
                     CurrentFile = NextFile(journalEntry.NumberOf4Kbs);
                 }
-                
+
                 CurrentFile.Write(tx, journalEntry, _lazyTransactionBuffer, pageCount);
-                
+
                 if (CurrentFile.Available4Kbs == 0)
                 {
                     _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, tx);
