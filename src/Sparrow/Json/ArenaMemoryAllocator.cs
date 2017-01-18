@@ -246,7 +246,6 @@ namespace Sparrow.Json
                 }
                 // we have fragmentation, let us try to heal it 
                 _fragements.Add((long)allocation.Address, allocation);
-                allocation.FreedBy = Environment.StackTrace;
                 return;
             }
             // since the returned allocation is at the end of the arena, we can just move

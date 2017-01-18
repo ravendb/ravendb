@@ -227,7 +227,7 @@ namespace Sparrow.Json
             throw new NotSupportedException($"Cannot compare LazyStringValue to object of type {obj.GetType().Name}");
         }
 
-        public bool IsDisposed { get; private set; } //d => AllocatedMemoryData == null && _buffer == null;        
+        public bool IsDisposed { get; private set; }
 
         private void ThrowAlreadyDisposed()
         {

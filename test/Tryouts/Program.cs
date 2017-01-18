@@ -19,9 +19,9 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var a = new FastTests.Voron.Bugs.FlushingToDataFile())
+            using (var a = new FastTests.Server.Replication.ReplicationTombstoneTests())
             {
-                a.FlushingOperationShouldHaveOwnScratchPagerStateReference();
+                a.Tombstones_replication_should_delete_document_at_multiple_destinations_fan();
             }
         }
     }

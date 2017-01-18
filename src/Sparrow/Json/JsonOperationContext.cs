@@ -792,12 +792,9 @@ namespace Sparrow.Json
             }
             _arenaAllocator.ResetArena();
 
-            _lastResetStack = Environment.StackTrace;
             _generation++;
-            GC.KeepAlive(_lastResetStack);
         }
 
-        private string _lastResetStack;
         public void Write(Stream stream, BlittableJsonReaderObject json)
         {
             using (var writer = new BlittableJsonTextWriter(this, stream))
