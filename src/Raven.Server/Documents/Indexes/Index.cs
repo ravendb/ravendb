@@ -256,18 +256,10 @@ namespace Raven.Server.Documents.Indexes
 
                 var indexPath = Path.Combine(configuration.IndexStoragePath,
                     GetIndexNameSafeForFileSystem());
-                var indexTempPath = documentDatabase.Configuration.Storage.TempPath == null
-                    ? null
-                    : Path.Combine(documentDatabase.Configuration.Storage.TempPath, GetIndexNameSafeForFileSystem());
-
-                var journalPath = documentDatabase.Configuration.Storage.JournalsStoragePath == null
-                    ? null
-                    : Path.Combine(documentDatabase.Configuration.Storage.JournalsStoragePath,
-                        GetIndexNameSafeForFileSystem());
 
                 var options = configuration.RunInMemory
                     ? StorageEnvironmentOptions.CreateMemoryOnly(indexPath)
-                    : StorageEnvironmentOptions.ForPath(indexPath, indexTempPath, journalPath );
+                    : StorageEnvironmentOptions.ForPath(indexPath);
 
                 options.SchemaVersion = 1;
                 try
