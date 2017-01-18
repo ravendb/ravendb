@@ -222,17 +222,17 @@ namespace Voron.Impl.Paging
             }
 
             TimeSpan timeSinceLastIncrease = (now - _lastIncrease);
-            if (timeSinceLastIncrease.TotalSeconds < 30)
+            if (timeSinceLastIncrease.TotalMinutes < 3)
             {
                 _increaseSize = Math.Min(_increaseSize * 2, MaxIncreaseSize);
             }
-            else if (timeSinceLastIncrease.TotalMinutes > 2)
+            else if (timeSinceLastIncrease.TotalMinutes > 15)
             {
                 _increaseSize = Math.Max(MinIncreaseSize, _increaseSize / 2);
             }
 
             _lastIncrease = now;
-            // At any rate, we won't do an increase by over 25% of current size, to prevent huge empty spaces
+            // At any rate, we won't do an increase by over 50% of current size, to prevent huge empty spaces
             // 
             // The reasoning behind this is that we want to make sure that we increase in size very slowly at first
             // because users tend to be sensitive to a lot of "wasted" space. 
@@ -240,7 +240,7 @@ namespace Voron.Impl.Paging
             // the file size increases, we will reserve more & more from the OS.
             // This also plays avoids "I added 300 records and the file size is 64MB" problems that occur when we are too
             // eager to reserve space
-            var actualIncrease = Math.Min(_increaseSize, current / 4);
+            var actualIncrease = Math.Min(_increaseSize, current / 2);
 
             // we then want to get the next power of two number, to get pretty file size
             return current + Bits.NextPowerOf2(actualIncrease);

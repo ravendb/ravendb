@@ -22,6 +22,8 @@ namespace Raven.Server.Documents
         private readonly CancellationToken _shutdown;
         private bool _runTransactions = true;
         private readonly ConcurrentQueue<MergedTransactionCommand> _operations = new ConcurrentQueue<MergedTransactionCommand>();
+
+        private readonly ConcurrentQueue<List<MergedTransactionCommand>> _opsBuffers = new ConcurrentQueue<List<MergedTransactionCommand>>();
         private readonly ManualResetEventSlim _waitHandle = new ManualResetEventSlim(false);
         private ExceptionDispatchInfo _edi;
         private readonly Logger _log;
@@ -52,7 +54,7 @@ namespace Raven.Server.Documents
             /// Setting this to false will cause it to skip that (in case you still
             /// need it afterward).
             /// </summary>
-            public bool ShouldDisposeAfterCommit  = true;
+            public bool ShouldDisposeAfterCommit = true;
 
             public abstract void Execute(DocumentsOperationContext context, RavenTransaction tx);
             public TaskCompletionSource<object> TaskCompletionSource = new TaskCompletionSource<object>();
@@ -77,7 +79,6 @@ namespace Raven.Server.Documents
         {
             try
             {
-                var pendingOps = new List<MergedTransactionCommand>();
                 while (_runTransactions)
                 {
                     if (_operations.Count == 0)
@@ -86,14 +87,12 @@ namespace Raven.Server.Documents
                         _waitHandle.Reset();
                     }
 
+                    var pendingOps = GetBufferForPendingOps();
                     try
                     {
                         if (MergeTransactionsOnce(pendingOps))
                         {
-                            foreach (var op in pendingOps)
-                            {
-                                NotifyOnThreadPool(op);
-                            }
+                            NotifyOnThreadPool(pendingOps);
                         }
                     }
                     catch (Exception e)
@@ -101,12 +100,8 @@ namespace Raven.Server.Documents
                         foreach (var op in pendingOps)
                         {
                             op.Exception = e;
-                            NotifyOnThreadPool(op);
                         }
-                    }
-                    finally
-                    {                        
-                        pendingOps.Clear();
+                        NotifyOnThreadPool(pendingOps);
                     }
                 }
 
@@ -127,9 +122,34 @@ namespace Raven.Server.Documents
             }
         }
 
+        private List<MergedTransactionCommand> GetBufferForPendingOps()
+        {
+            List<MergedTransactionCommand> pendingOps;
+            if (_opsBuffers.TryDequeue(out pendingOps) == false)
+            {
+                return new List<MergedTransactionCommand>();
+            }
+            return pendingOps;
+        }
+
+        private void DoCommandsNotification(object cmds)
+        {
+            var pendingOperations = (List<MergedTransactionCommand>)cmds;
+            foreach (var op in pendingOperations)
+            {
+                DoCommandNotification(op);
+            }
+            pendingOperations.Clear();
+            _opsBuffers.Enqueue(pendingOperations);
+        }
+
         private void DoCommandNotification(object op)
         {
-            var cmd = (MergedTransactionCommand)op;
+            DoCommandNotification((MergedTransactionCommand)op);
+        }
+
+        private void DoCommandNotification(MergedTransactionCommand cmd)
+        {
             if (cmd.Exception != null)
             {
                 cmd.TaskCompletionSource.TrySetException(cmd.Exception);
@@ -156,6 +176,7 @@ namespace Raven.Server.Documents
         {
             try
             {
+                const int maxTimeToWait = 150;
                 DocumentsOperationContext context;
                 using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
                 {
@@ -168,14 +189,15 @@ namespace Raven.Server.Documents
                             if (_operations.TryDequeue(out op) == false)
                                 break;
                             pendingOps.Add(op);
+
                             op.Execute(context, tx);
 
                             if (pendingOps.Count % 128 != 0)
                                 continue;
-                            if (sp.ElapsedMilliseconds < 150)
+                            if (sp.ElapsedMilliseconds < maxTimeToWait)
                                 break;
                         } while (true);
-                        tx.Commit();                        
+                        tx.Commit();
                     }
                 }
                 return true;
@@ -185,7 +207,7 @@ namespace Raven.Server.Documents
                 if (pendingOps.Count == 1)
                 {
                     pendingOps[0].Exception = e;
-                    NotifyOnThreadPool(pendingOps[0]);
+                    NotifyOnThreadPool(pendingOps);
                     return false;
                 }
                 if (_log.IsInfoEnabled)
@@ -206,28 +228,47 @@ namespace Raven.Server.Documents
             }
         }
 
+
+        private void NotifyOnThreadPool(List<MergedTransactionCommand> cmds)
+        {
+            if (ThreadPool.QueueUserWorkItem(DoCommandsNotification, cmds) == false)
+            {
+                // if we can't schedule it, run it inline
+                DoCommandsNotification(cmds);
+            }
+        }
+
+
         private void RunEachOperationIndependently(List<MergedTransactionCommand> pendingOps)
         {
-            foreach (var op in pendingOps)
+            try
             {
-                try
+                foreach (var op in pendingOps)
                 {
-                    DocumentsOperationContext context;
-                    using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                    try
                     {
-                        using (var tx = context.OpenWriteTransaction())
+                        DocumentsOperationContext context;
+                        using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
                         {
-                            op.Execute(context, tx);
-                            tx.Commit();
+                            using (var tx = context.OpenWriteTransaction())
+                            {
+                                op.Execute(context, tx);
+                                tx.Commit();
+                            }
                         }
+                        DoCommandNotification(op);
                     }
-                    DoCommandNotification(op);
+                    catch (Exception e)
+                    {
+                        op.Exception = e;
+                        NotifyOnThreadPool(op);
+                    }
                 }
-                catch (Exception e)
-                {
-                    op.Exception = e;
-                    NotifyOnThreadPool(op);
-                }
+            }
+            finally
+            {
+                pendingOps.Clear();
+                _opsBuffers.Enqueue(pendingOps);
             }
         }
 
