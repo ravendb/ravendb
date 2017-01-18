@@ -264,12 +264,12 @@ namespace Raven.NewClient.Client.Json
 
         public override void WriteValue(char value)
         {
-            _manualBlittalbeJsonDocumentBuilder.WriteValue(value);
+            _manualBlittalbeJsonDocumentBuilder.WriteValue(value.ToString());
         }
 
         public override void WriteValue(char? value)
         {
-            if (value != null) _manualBlittalbeJsonDocumentBuilder.WriteValue(value.Value);
+            if (value != null) _manualBlittalbeJsonDocumentBuilder.WriteValue(value.Value.ToString());
             else _manualBlittalbeJsonDocumentBuilder.WriteValueNull();
         }
 

@@ -1,18 +1,17 @@
 ﻿using System.Linq;
-using Raven.Client.Data;
+using Raven.NewClient.Client.Data;
 using Xunit;
 
 namespace FastTests.Server.Documents.Queries
 {
-    public class DocumentQueryWithDefaultOperator : RavenTestBase
+    public class DocumentQueryWithDefaultOperator : RavenNewTestBase
     {
-        public class Person
+        private class Person
         {
             public string Name { get; set; }
             public char Gender { get; set; }
             public int Age { get; set; }
         }
-
 
         [Fact]
         public void QueryWithOrOperators()
@@ -46,6 +45,5 @@ namespace FastTests.Server.Documents.Queries
                 }
             }
         }
-
     }
 }
