@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Operations.Databases.Documents;
 using Sparrow.Json;
@@ -9,6 +10,11 @@ namespace Raven.NewClient.Operations
 {
     public partial class OperationExecuter
     {
+        public PatchStatus Send(PatchOperation operation)
+        {
+            return AsyncHelpers.RunSync(() => SendAsync(operation));
+        }
+
         public async Task<PatchStatus> SendAsync(PatchOperation operation, CancellationToken token = default(CancellationToken))
         {
             JsonOperationContext context;
@@ -26,6 +32,11 @@ namespace Raven.NewClient.Operations
 
                 return command.Result.Status;
             }
+        }
+
+        public PatchOperation.Result<TEntity> Send<TEntity>(PatchOperation operation)
+        {
+            return AsyncHelpers.RunSync(() => SendAsync<TEntity>(operation));
         }
 
         public async Task<PatchOperation.Result<TEntity>> SendAsync<TEntity>(PatchOperation operation, CancellationToken token = default(CancellationToken))

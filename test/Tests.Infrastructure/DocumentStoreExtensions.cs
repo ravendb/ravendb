@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Document;
@@ -46,6 +47,11 @@ namespace FastTests
                 return (TEntity)_store.Conventions.DeserializeEntityFromBlittable(typeof(TEntity), json);
             }
 
+            public PutResult Put(string id, long? etag, object data, IDictionary<string, string> metadata)
+            {
+                return AsyncHelpers.RunSync(() => PutAsync(id, etag, data, metadata));
+            }
+
             public async Task<PutResult> PutAsync(string id, long? etag, object data, IDictionary<string, string> metadata)
             {
                 if (id == null)
@@ -78,6 +84,11 @@ namespace FastTests
 
                     return command.Result;
                 }
+            }
+
+            public DynamicBlittableJson Get(string id)
+            {
+                return AsyncHelpers.RunSync(() => GetAsync(id));
             }
 
             public async Task<DynamicBlittableJson> GetAsync(string id)

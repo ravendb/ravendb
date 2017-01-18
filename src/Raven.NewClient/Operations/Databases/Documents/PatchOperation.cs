@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Commands;
@@ -25,9 +26,8 @@ namespace Raven.NewClient.Operations.Databases.Documents
         private readonly PatchRequest _patch;
         private readonly PatchRequest _patchIfMissing;
         private readonly bool _skipPatchIfEtagMismatch;
-        private readonly bool _returnDebugInformation;
 
-        public PatchOperation(string id, long? etag, PatchRequest patch, PatchRequest patchIfMissing = null, bool skipPatchIfEtagMismatch = false, bool returnDebugInformation = false)
+        public PatchOperation(string id, long? etag, PatchRequest patch, PatchRequest patchIfMissing = null, bool skipPatchIfEtagMismatch = false)
         {
             if (id == null)
                 throw new ArgumentNullException(nameof(id));
@@ -43,12 +43,11 @@ namespace Raven.NewClient.Operations.Databases.Documents
             _patch = patch;
             _patchIfMissing = patchIfMissing;
             _skipPatchIfEtagMismatch = skipPatchIfEtagMismatch;
-            _returnDebugInformation = returnDebugInformation;
         }
 
         public RavenCommand<PatchResult> GetCommand(DocumentConvention conventions, JsonOperationContext context)
         {
-            return new PatchCommand(conventions, context, _id, _etag, _patch, _patchIfMissing, _skipPatchIfEtagMismatch, _returnDebugInformation);
+            return new PatchCommand(conventions, context, _id, _etag, _patch, _patchIfMissing, _skipPatchIfEtagMismatch, returnDebugInformation: false);
         }
 
         public class PatchCommand : RavenCommand<PatchResult>
@@ -107,6 +106,9 @@ namespace Raven.NewClient.Operations.Databases.Documents
                         _context.Write(stream, _patch);
                     })
                 };
+
+                if (_etag.HasValue)
+                    request.Headers.TryAddWithoutValidation("If-Match", _etag.ToString());
 
                 return request;
             }
