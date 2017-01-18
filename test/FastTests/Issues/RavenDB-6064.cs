@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace FastTests.Issues
 {
-    public class RavenDB_6064 : RavenTestBase
+    public class RavenDB_6064_2 : RavenTestBase
     {
         public class User
         {

@@ -21,7 +21,7 @@ namespace Tryouts
         {
             using (var a = new FastTests.Server.Replication.ReplicationTombstoneTests())
             {
-                a.Tombstones_replication_should_delete_document_at_multiple_destinations_fan();
+                a.Tombstones_replication_should_delete_document_at_destination();
             }
         }
     }
