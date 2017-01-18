@@ -268,7 +268,19 @@ namespace Sparrow.Json
                         }
                         else
                         {
-                            obj = (T)Convert.ChangeType(result, type);
+                            var lazyCompressStringValue = result as LazyCompressedStringValue;
+                            if (lazyCompressStringValue != null)
+                            {
+                                if (typeof(T) == typeof(LazyStringValue))
+                                {
+                                    obj = (T) (object) lazyCompressStringValue.ToLazyStringValue();
+                                }
+                                obj = (T)Convert.ChangeType(lazyCompressStringValue.ToString(), type);
+                            }
+                            else
+                            {
+                                obj = (T)Convert.ChangeType(result, type);
+                            }
                         }
                     }
                 }
