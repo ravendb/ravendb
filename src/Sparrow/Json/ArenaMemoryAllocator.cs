@@ -239,6 +239,11 @@ namespace Sparrow.Json
                 {
                     _fragements = new SortedList<long, AllocatedMemoryData>();
                 }
+                AllocatedMemoryData data;
+                if (_fragements.TryGetValue((long) allocation.Address, out data))
+                {
+                    Console.WriteLine(data.FreedBy);
+                }
                 // we have fragmentation, let us try to heal it 
                 _fragements.Add((long)allocation.Address, allocation);
                 return;
@@ -276,6 +281,7 @@ namespace Sparrow.Json
     {
         public byte* Address;
         public int SizeInBytes;
+        public int ContextGeneration;
         public NativeMemory.ThreadStats AllocatingThread;
 #if MEM_GUARD
         ~AllocatedMemoryData(){
@@ -291,7 +297,7 @@ namespace Sparrow.Json
 
 #if MEM_GUARD_STACK
         public string AllocatedBy = Environment.StackTrace;
-        public string FreedBy ;
 #endif
+        public string FreedBy ;
     }
 }

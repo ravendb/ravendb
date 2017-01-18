@@ -19,9 +19,9 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var a = new RavenDB_6064())
+            using (var a = new FastTests.Server.Replication.ReplicationTombstoneTests())
             {
-                a.CanIndexWithThreeCompressedProperties();
+                a.Tombstones_replication_should_delete_document_at_multiple_destinations_fan();
             }
         }
     }

@@ -227,7 +227,7 @@ namespace Sparrow.Json
             throw new NotSupportedException($"Cannot compare LazyStringValue to object of type {obj.GetType().Name}");
         }
 
-        public bool IsDisposed => AllocatedMemoryData == null && _buffer == null;        
+        public bool IsDisposed { get; private set; }
 
         private void ThrowAlreadyDisposed()
         {
@@ -236,18 +236,14 @@ namespace Sparrow.Json
 
         public void Dispose()
         {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
+
             if (AllocatedMemoryData != null)
             {
                 _context.ReturnMemory(AllocatedMemoryData);
-                AllocatedMemoryData = null;
-                _buffer = null;
-                _string = null;
             }
-            else if (_buffer != null)
-            {
-                _buffer = null;
-                _string = null;
-            }
+            IsDisposed = true;
         }
 
         public bool Contains(string value)

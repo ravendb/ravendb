@@ -440,6 +440,10 @@ namespace Raven.Server.Documents.TcpHandlers
                 finally
                 {
                     tcpConnectionOptions.Dispose();
+
+                    tcpConnectionOptions.MultiDocumentParser?.Dispose();
+                    tcpConnectionOptions.ReturnContext?.Dispose();
+
                     // Thread is going to die, let us release those resources early, instead of waiting for finalizer
                     ByteStringMemoryCache.Clean();
                     tcpConnectionOptions.DocumentDatabase.DocumentsStorage.ContextPool.Clean();

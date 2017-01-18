@@ -273,7 +273,7 @@ namespace Sparrow.Json
                             {
                                 if (typeof(T) == typeof(LazyStringValue))
                                 {
-                                    obj = (T) (object) lazyCompressStringValue.ToLazyStringValue();
+                                    obj = (T) (object) lazyCompressStringValue.ToDiscardableLazyStringValue();
                                 }
                                 obj = (T)Convert.ChangeType(lazyCompressStringValue.ToString(), type);
                             }

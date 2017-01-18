@@ -21,6 +21,7 @@ namespace Sparrow.Json
     /// </summary>
     public class JsonOperationContext : IDisposable
     {
+        private int _generation;
         private const int InitialStreamSize = 4096;
         private readonly int _initialSize;
         private readonly int _longLivedSize;
@@ -212,6 +213,8 @@ namespace Sparrow.Json
             var allocatedMemory = longLived
                                         ? _arenaAllocatorForLongLivedValues.Allocate(requestedSize)
                                         : _arenaAllocator.Allocate(requestedSize);
+
+            allocatedMemory.ContextGeneration = _generation;
 
             return allocatedMemory;
         }
@@ -691,6 +694,17 @@ namespace Sparrow.Json
                 _parser?.Dispose();
                 _writer?.Dispose();
             }
+
+            public void Reset()
+            {
+                Parser.ResetStream();
+                _writer.Reset();
+            }
+
+            public void Renew()
+            {
+                Parser.SetStream();
+            }
         }
 
         internal void ReaderDisposed(LinkedListNode<BlittableJsonReaderObject> disposedNode)
@@ -749,7 +763,6 @@ namespace Sparrow.Json
             _disposables.Clear();
             _disposableAllocatedMemory.Clear();
             _liveReaders.Clear();
-            _arenaAllocator.ResetArena();
 
             _documentBuilder.Reset();
 
@@ -760,7 +773,10 @@ namespace Sparrow.Json
             if (allocatorForLongLivedValues != null && 
                 (allocatorForLongLivedValues.Allocated > _initialSize || forceReleaseLongLivedAllocator))
             {
-                foreach(var mem in _fieldNames.Values){
+                foreach(var mem in _fieldNames.Values)
+                {
+                    _arenaAllocatorForLongLivedValues.Return(mem.AllocatedMemoryData);
+                    mem.AllocatedMemoryData = null;
                     mem.Dispose();
                 }                
                 
@@ -774,6 +790,9 @@ namespace Sparrow.Json
                 _fieldNames.Clear();
                 CachedProperties = null; // need to release this so can be collected
             }
+            _arenaAllocator.ResetArena();
+
+            _generation++;
         }
 
         public void Write(Stream stream, BlittableJsonReaderObject json)
@@ -920,7 +939,16 @@ namespace Sparrow.Json
 
         public void ReturnMemory(AllocatedMemoryData allocation)
         {
+            if (_generation != allocation.ContextGeneration)
+                ThrowUseAfterFree();
+
             _arenaAllocator.Return(allocation);
+        }
+
+        private static void ThrowUseAfterFree()
+        {
+            throw new InvalidOperationException(
+                "UseAfterFree detected! Attempt to return memory from previous generation, Reset has already been called and the memory reused!");
         }
 
         public IntPtr PinObjectAndGetAddress(object obj)

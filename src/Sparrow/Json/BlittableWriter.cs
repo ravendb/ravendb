@@ -120,6 +120,11 @@ namespace Sparrow.Json
         public void Reset()
         {
             _unmanagedWriteBuffer.Dispose();
+            if (_compressionBuffer != null)
+            {
+                _context.ReturnMemory(_compressionBuffer);
+                _compressionBuffer = null;
+            }
         }
 
         public void ResetAndRenew()
@@ -578,7 +583,6 @@ namespace Sparrow.Json
             return (int)Math.Log(size, 2);
         }
 
-
         private unsafe byte* GetCompressionBuffer(int minSize)
         {
             // enlarge buffer if needed
@@ -589,6 +593,7 @@ namespace Sparrow.Json
                     _context.ReturnMemory(_compressionBuffer);
                 _compressionBuffer = _context.GetMemory(minSize);
             }
+         
             return _compressionBuffer.Address;
         }
 

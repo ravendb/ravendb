@@ -219,16 +219,16 @@ namespace FastTests.Server.Replication
 
                     session.SaveChanges();
                 }
+                
+                Assert.NotNull(WaitForDocumentToReplicate<User>(store1, "users/1", 15000));
+                Assert.NotNull(WaitForDocumentToReplicate<User>(store1, "users/2", 15000));
+                Assert.NotNull(WaitForDocumentToReplicate<User>(store1, "users/3", 15000));
+                Assert.NotNull(WaitForDocumentToReplicate<User>(store1, "users/4", 15000));
 
-                WaitForDocumentToReplicate<User>(store1, "users/1", 15000);
-                WaitForDocumentToReplicate<User>(store1, "users/2", 15000);
-                WaitForDocumentToReplicate<User>(store1, "users/3", 15000);
-                WaitForDocumentToReplicate<User>(store1, "users/4", 15000);
-
-                WaitForDocumentToReplicate<User>(store2, "users/1", 15000);
-                WaitForDocumentToReplicate<User>(store2, "users/2", 15000);
-                WaitForDocumentToReplicate<User>(store2, "users/3", 15000);
-                WaitForDocumentToReplicate<User>(store2, "users/4", 15000);
+                Assert.NotNull(WaitForDocumentToReplicate<User>(store2, "users/1", 15000));
+                Assert.NotNull(WaitForDocumentToReplicate<User>(store2, "users/2", 15000));
+                Assert.NotNull(WaitForDocumentToReplicate<User>(store2, "users/3", 15000));
+                Assert.NotNull(WaitForDocumentToReplicate<User>(store2, "users/4", 15000));
 
                 using (var session = store1.OpenSession())
                 {

@@ -11,9 +11,30 @@ namespace Sparrow.Json
         public readonly int CompressedSize;
         public string String;
 
-        public LazyStringValue ToLazyStringValue()
+        /// <summary>
+        /// Returns uncompressed data in form of LazyStringValue
+        /// Use this overload only if you are certain that you are goint to dispose of the LazyStringValue by yourself
+        /// </summary>
+        /// <returns></returns>
+        private LazyStringValue ToLazyStringValue()
         {
-            return new LazyStringValue(null, DecompressToTempBuffer(), UncompressedSize, _context);
+            var allocatedUncompressedData = DecompressToAllocatedMemoryData();
+
+            var lazyStringValue = new LazyStringValue(null, allocatedUncompressedData.Address, UncompressedSize, _context);
+
+            lazyStringValue.AllocatedMemoryData = allocatedUncompressedData;
+            return lazyStringValue;
+        }
+
+        /// <summary>
+        /// Returns uncompressed data in form of LazyStringValue
+        /// </summary>
+        /// <returns></returns>
+        public LazyStringValue ToDiscardableLazyStringValue()
+        {
+            var lazyString = ToLazyStringValue();
+            _context.RegisterForDispose(lazyString);
+            return lazyString;
         }
 
         public LazyCompressedStringValue(string str, byte* buffer, int uncompressedSize, int compressedSize, JsonOperationContext context)
@@ -44,16 +65,21 @@ namespace Sparrow.Json
 
         public byte* DecompressToTempBuffer()
         {
-            var escapeSequencePos = CompressedSize;
-            var numberOfEscapeSequences = BlittableJsonReaderBase.ReadVariableSizeInt(Buffer, ref escapeSequencePos);
-            while (numberOfEscapeSequences > 0)
-            {
-                numberOfEscapeSequences--;
-                BlittableJsonReaderBase.ReadVariableSizeInt(Buffer, ref escapeSequencePos);
-            }
-
-            var sizeOfEscapePositions = escapeSequencePos - CompressedSize;
+            var sizeOfEscapePositions = GetSizeOfEscapePositions();
             var tempBuffer = _context.GetNativeTempBuffer(UncompressedSize + sizeOfEscapePositions);
+            return DecompressToBuffer(tempBuffer, sizeOfEscapePositions);
+        }
+
+        public AllocatedMemoryData DecompressToAllocatedMemoryData()
+        {
+            var sizeOfEscapePositions = GetSizeOfEscapePositions();
+            var allocatedBuffer = _context.GetMemory(UncompressedSize + sizeOfEscapePositions);
+            DecompressToBuffer(allocatedBuffer.Address, sizeOfEscapePositions);
+            return allocatedBuffer;
+        }
+
+        private byte* DecompressToBuffer(byte* tempBuffer, int sizeOfEscapePositions)
+        {
             int uncompressedSize;
 
             if (UncompressedSize > 128)
@@ -75,8 +101,22 @@ namespace Sparrow.Json
             if (uncompressedSize != UncompressedSize)
                 throw new FormatException("Wrong size detected on decompression");
 
-            Memory.Copy(tempBuffer + uncompressedSize, Buffer+CompressedSize, sizeOfEscapePositions);
+            Memory.Copy(tempBuffer + uncompressedSize, Buffer + CompressedSize, sizeOfEscapePositions);
             return tempBuffer;
+        }
+
+        private unsafe int GetSizeOfEscapePositions()
+        {
+            var escapeSequencePos = CompressedSize;
+            var numberOfEscapeSequences = BlittableJsonReaderBase.ReadVariableSizeInt(Buffer, ref escapeSequencePos);
+            while (numberOfEscapeSequences > 0)
+            {
+                numberOfEscapeSequences--;
+                BlittableJsonReaderBase.ReadVariableSizeInt(Buffer, ref escapeSequencePos);
+            }
+
+            var sizeOfEscapePositions = escapeSequencePos - CompressedSize;
+            return sizeOfEscapePositions;
         }
 
         public override string ToString()
