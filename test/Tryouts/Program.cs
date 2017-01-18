@@ -19,9 +19,9 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var a = new FastTests.Voron.Bugs.FlushingToDataFile())
+            using (var a = new RavenDB_6064())
             {
-                a.FlushingOperationShouldHaveOwnScratchPagerStateReference();
+                a.CanIndexWithThreeCompressedProperties();
             }
         }
     }
