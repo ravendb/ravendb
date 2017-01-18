@@ -155,6 +155,7 @@ namespace FastTests.Server.Replication
                 using (var session = slave.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
+                    Assert.NotNull(user);
                     Assert.Equal("1st", user.Name);
                 }
             }

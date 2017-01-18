@@ -65,6 +65,8 @@ namespace Raven.Server.Documents.Replication
 
         public event Action<OutgoingReplicationHandler> SuccessfulTwoWaysCommunication;
 
+        public event Action<OutgoingReplicationHandler> Shutdown;
+
         public OutgoingReplicationHandler(
             DocumentDatabase database,
             ReplicationDestination destination)
@@ -215,7 +217,9 @@ namespace Raven.Server.Documents.Replication
 
                             while (_cts.IsCancellationRequested == false)
                             {
+                                _parser.Reset();
                                 _documentsContext.ResetAndRenew();                                
+                                _parser.Renew();
                                 long currentEtag;
 
                                 Debug.Assert(_database.IndexMetadataPersistence.IsInitialized);
@@ -243,8 +247,10 @@ namespace Raven.Server.Documents.Replication
                                 //if this returns false, this means either timeout or canceled token is activated                    
                                 while (WaitForChanges(_minimalHeartbeatInterval, _cts.Token) == false)
                                 {
+                                    _parser.Reset();
                                     _configurationContext.ResetAndRenew();
                                     _documentsContext.ResetAndRenew();
+                                    _parser.Renew();
                                     using (_documentsContext.OpenReadTransaction())
                                     using (_configurationContext.OpenReadTransaction())
                                     {
@@ -261,6 +267,7 @@ namespace Raven.Server.Documents.Replication
             {
                 if (_log.IsInfoEnabled)
                     _log.Info($"Operation canceled on replication thread ({FromToString}). Stopped the thread.");
+                Shutdown?.Invoke(this);
             }
             catch (IOException e)
             {
@@ -273,6 +280,7 @@ namespace Raven.Server.Documents.Replication
                     else
                         _log.Info($"IOException was thrown from the connection to remote node ({FromToString}).", e);
                 }
+                Shutdown?.Invoke(this);
             }
             catch (Exception e)
             {
@@ -401,13 +409,16 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private readonly AsyncManualResetEvent _neverSetEvent = new AsyncManualResetEvent();
+        private readonly AsyncManualResetEvent _connectionDisposed = new AsyncManualResetEvent();
         internal Tuple<ReplicationMessageReply.ReplyType, ReplicationMessageReply> HandleServerResponse()
         {
             while (true)
             {
-                using (var replicationBatchReplyMessage = _parser.InterruptibleParseToMemory("replication acknowledge message", _neverSetEvent))
+                using (var replicationBatchReplyMessage = _parser.InterruptibleParseToMemory("replication acknowledge message", _connectionDisposed))
                 {
+                    if (replicationBatchReplyMessage == null)
+                        ThrowConnectionClosed();
+
                     var replicationBatchReply = HandleServerResponse(replicationBatchReplyMessage, allowNotify: false);
                     if(replicationBatchReply == null)
                         continue;
@@ -420,6 +431,11 @@ namespace Raven.Server.Documents.Replication
                             : null);
                 }
             }
+        }
+
+        private static void ThrowConnectionClosed()
+        {
+            throw new OperationCanceledException("The connection has been closed by the Dispose method");
         }
 
         internal ReplicationMessageReply HandleServerResponse(BlittableJsonReaderObject replicationBatchReplyMessage, bool allowNotify)
@@ -543,6 +559,8 @@ namespace Raven.Server.Documents.Replication
                 _tcpClient?.Dispose();
             }
             catch (Exception) { }
+            
+            _connectionDisposed.Set();
 
             if (_sendingThread != Thread.CurrentThread)
             {

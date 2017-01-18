@@ -124,8 +124,10 @@ namespace Raven.Server.Documents.Replication
                 {
                     while (!_cts.IsCancellationRequested)
                     {
+                        _multiDocumentParser.Reset();
                         _documentsContext.ResetAndRenew();
                         _configurationContext.ResetAndRenew();
+                        _multiDocumentParser.Renew();
                         try
                         {
                             using (var msg = _multiDocumentParser.InterruptibleParseToMemory(
@@ -1175,10 +1177,16 @@ namespace Raven.Server.Documents.Replication
                 // do nothing
             }
 
+            _replicationFromAnotherSource.Set();
+
             if (_incomingThread != Thread.CurrentThread)
             {
                 _incomingThread?.Join();
             }
+
+            _connectionOptions.MultiDocumentParser?.Dispose();
+            _connectionOptions.ReturnContext?.Dispose();
+
             _incomingThread = null;
             foreach (var disposable in _disposables)
             {

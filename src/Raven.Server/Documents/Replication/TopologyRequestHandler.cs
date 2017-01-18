@@ -18,6 +18,7 @@ namespace Raven.Server.Documents.Replication
         public void AcceptIncomingConnectionAndRespond(TcpConnectionOptions tcp)
         {
             DocumentsOperationContext context;
+            using (tcp.ReturnContext)
             using (tcp)
             using (var multiDocumentParser = tcp.MultiDocumentParser)
             using (tcp.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
@@ -45,7 +46,7 @@ namespace Raven.Server.Documents.Replication
                 using (context.OpenReadTransaction())
                 {
                     var configurationDocument = tcp.DocumentDatabase.DocumentsStorage.Get(context, Constants.Replication.DocumentReplicationConfiguration);
-                    if(configurationDocument != null)
+                    if (configurationDocument != null)
                         replicationDocument = JsonDeserializationServer.ReplicationDocument(configurationDocument.Data);
 
                     //This is the case where we don't have real replication topology.
@@ -60,7 +61,7 @@ namespace Raven.Server.Documents.Replication
                             {
                                 { tcp.DocumentDatabase.DbId.ToString(), localNodeTopologyInfo }
                             }
-                        };                        
+                        };
                         ReplicationUtils.GetLocalIncomingTopology(tcp.DocumentDatabase.DocumentReplicationLoader, localNodeTopologyInfo);
                         WriteDiscoveryResponse(tcp, context, topology, null, TopologyDiscoveryResponseHeader.Status.Ok);
 
@@ -84,13 +85,13 @@ namespace Raven.Server.Documents.Replication
                         foreach (var nodeInfo in discoveryTask.Result.NodesById)
                             topology.NodesById[nodeInfo.Key] = nodeInfo.Value;
 
-                        WriteDiscoveryResponse(tcp, context, topology, null , TopologyDiscoveryResponseHeader.Status.Ok);
+                        WriteDiscoveryResponse(tcp, context, topology, null, TopologyDiscoveryResponseHeader.Status.Ok);
                     }
                     catch (Exception e)
                     {
                         var topology = GetFullTopologyWithLocalNodes(localDbId, localTopology);
                         WriteDiscoveryResponse(
-                            tcp, 
+                            tcp,
                             context,
                             topology,
                             e.ToString(),

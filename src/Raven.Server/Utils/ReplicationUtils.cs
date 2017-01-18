@@ -39,7 +39,7 @@ namespace Raven.Server.Utils
             foreach (var destination in replicationDocument.Destinations)
             {
                 OutgoingReplicationHandler outgoingHandler;
-                DocumentReplicationLoader.ConnectionFailureInfo connectionFailureInfo;
+                DocumentReplicationLoader.ConnectionShutdownInfo connectionFailureInfo;
 
                 if (TryGetActiveDestination(destination, replicationLoader.OutgoingHandlers, out outgoingHandler))
                 {

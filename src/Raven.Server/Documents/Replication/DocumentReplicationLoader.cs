@@ -28,13 +28,13 @@ namespace Raven.Server.Documents.Replication
 
         private readonly Timer _reconnectAttemptTimer;
         private readonly ConcurrentSet<OutgoingReplicationHandler> _outgoing = new ConcurrentSet<OutgoingReplicationHandler>();
-        private readonly ConcurrentDictionary<ReplicationDestination, ConnectionFailureInfo> _outgoingFailureInfo = new ConcurrentDictionary<ReplicationDestination, ConnectionFailureInfo>();
+        private readonly ConcurrentDictionary<ReplicationDestination, ConnectionShutdownInfo> _outgoingFailureInfo = new ConcurrentDictionary<ReplicationDestination, ConnectionShutdownInfo>();
 
         private readonly ConcurrentDictionary<string, IncomingReplicationHandler> _incoming = new ConcurrentDictionary<string, IncomingReplicationHandler>();
         private readonly ConcurrentDictionary<IncomingConnectionInfo, DateTime> _incomingLastActivityTime = new ConcurrentDictionary<IncomingConnectionInfo, DateTime>();
         private readonly ConcurrentDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>> _incomingRejectionStats = new ConcurrentDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>>();
 
-        private readonly ConcurrentSet<ConnectionFailureInfo> _reconnectQueue = new ConcurrentSet<ConnectionFailureInfo>();
+        private readonly ConcurrentSet<ConnectionShutdownInfo> _reconnectQueue = new ConcurrentSet<ConnectionShutdownInfo>();
         internal Dictionary<string, ScriptResolver> ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
         private readonly Logger _log;
         private ReplicationDocument _replicationDocument;
@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Replication
                 null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
         }
 
-        public IReadOnlyDictionary<ReplicationDestination, ConnectionFailureInfo> OutgoingFailureInfo => _outgoingFailureInfo;
+        public IReadOnlyDictionary<ReplicationDestination, ConnectionShutdownInfo> OutgoingFailureInfo => _outgoingFailureInfo;
         public IReadOnlyDictionary<IncomingConnectionInfo, DateTime> IncomingLastActivityTime => _incomingLastActivityTime;
         public IReadOnlyDictionary<IncomingConnectionInfo, ConcurrentQueue<IncomingConnectionRejectionInfo>> IncomingRejectionStats => _incomingRejectionStats;
         public IEnumerable<ReplicationDestination> ReconnectQueue => _reconnectQueue.Select(x => x.Destination);
@@ -99,7 +99,9 @@ namespace Raven.Server.Documents.Replication
 
                 try
                 {
-                    tcpConnectionOptions?.Dispose();
+                    tcpConnectionOptions.Dispose();
+                    tcpConnectionOptions.MultiDocumentParser?.Dispose();
+                    tcpConnectionOptions.ReturnContext?.Dispose();
                 }
                 catch
                 {
@@ -163,6 +165,8 @@ namespace Raven.Server.Documents.Replication
                 try
                 {
                     tcpConnectionOptions.Dispose();
+                    tcpConnectionOptions.MultiDocumentParser?.Dispose();
+                    tcpConnectionOptions.ReturnContext?.Dispose();
                 }
 
                 catch (Exception)
@@ -335,9 +339,10 @@ namespace Raven.Server.Documents.Replication
         {
             var outgoingReplication = new OutgoingReplicationHandler(_database, destination);
             outgoingReplication.Failed += OnOutgoingSendingFailed;
+            outgoingReplication.Shutdown += OnOutgoingSendingShutdown;
             outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
             _outgoing.TryAdd(outgoingReplication); // can't fail, this is a brand new instance
-            _outgoingFailureInfo.TryAdd(destination, new ConnectionFailureInfo
+            _outgoingFailureInfo.TryAdd(destination, new ConnectionShutdownInfo
             {
                 Destination = destination
             });
@@ -362,9 +367,13 @@ namespace Raven.Server.Documents.Replication
         {
             using (instance)
             {
+                instance.Failed -= OnOutgoingSendingFailed;
+                instance.Shutdown -= OnOutgoingSendingShutdown;
+                instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
+
                 _outgoing.TryRemove(instance);
 
-                ConnectionFailureInfo failureInfo;
+                ConnectionShutdownInfo failureInfo;
                 if (_outgoingFailureInfo.TryGetValue(instance.Destination, out failureInfo) == false)
                     return;
 
@@ -382,9 +391,35 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
+        private void OnOutgoingSendingShutdown(OutgoingReplicationHandler instance)
+        {
+            using (instance)
+            {
+                instance.Failed -= OnOutgoingSendingFailed;
+                instance.Shutdown -= OnOutgoingSendingShutdown;
+                instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
+
+                _outgoing.TryRemove(instance);
+
+                ConnectionShutdownInfo shutdownInfo;
+                if (_outgoingFailureInfo.TryGetValue(instance.Destination, out shutdownInfo) == false)
+                    return;
+
+                shutdownInfo.DestinationDbId = instance.DestinationDbId;
+                shutdownInfo.LastHeartbeatTicks = instance.LastHeartbeatTicks;
+                shutdownInfo.LastAcceptedDocumentEtag = instance.LastAcceptedDocumentEtag;
+                shutdownInfo.LastSentIndexOrTransformerEtag = instance._lastSentIndexOrTransformerEtag;
+
+                _reconnectQueue.Add(shutdownInfo);
+
+                if (_log.IsInfoEnabled)
+                    _log.Info($"Document replication connection ({instance.Destination}) has shut down because the remote node is not active, will retry to connect later.");
+            }
+        }
+
         private void OnOutgoingSendingSucceeded(OutgoingReplicationHandler instance)
         {
-            ConnectionFailureInfo failureInfo;
+            ConnectionShutdownInfo failureInfo;
             if (_outgoingFailureInfo.TryGetValue(instance.Destination, out failureInfo))
                 failureInfo.Reset();
             TaskCompletionSource<object> result;
@@ -420,6 +455,7 @@ namespace Raven.Server.Documents.Replication
             foreach (var instance in _outgoing)
             {
                 instance.Failed -= OnOutgoingSendingFailed;
+                instance.Shutdown -= OnOutgoingSendingShutdown;
                 instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
                 instance.Dispose();
             }
@@ -477,7 +513,7 @@ namespace Raven.Server.Documents.Replication
             public DateTime When { get; } = DateTime.UtcNow;
         }
 
-        public class ConnectionFailureInfo
+        public class ConnectionShutdownInfo
         {
             public string DestinationDbId;
 
