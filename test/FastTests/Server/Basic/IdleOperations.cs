@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Linq;
-using Raven.Client.Extensions;
+using Raven.NewClient.Client.Extensions;
+using Raven.NewClient.Operations.Databases;
 using Xunit;
 
 namespace FastTests.Server.Basic
 {
-    public class IdleOperations : RavenTestBase
+    public class IdleOperations : RavenNewTestBase
     {
         private class Product
         {
@@ -44,7 +45,7 @@ namespace FastTests.Server.Basic
                 {
                     ProductName = "coffee"
                 }, "products/1");
-                
+
                 session.SaveChanges();
 
                 var newWorkTime = db.GetAllStoragesEnvironment().Max(env => env.Environment.LastWorkTime);
@@ -64,15 +65,16 @@ namespace FastTests.Server.Basic
             {
                 for (var i = 0; i < 10; i++)
                 {
-                    var doc = MultiDatabase.CreateDatabaseDocument("IdleOperations_CleanupResources_DB_" + i);
+                    var name = "IdleOperations_CleanupResources_DB_" + i;
+                    var doc = MultiDatabase.CreateDatabaseDocument(name);
 
-                    store.DatabaseCommands.GlobalAdmin.CreateDatabase(doc);
+                    store.Admin.Send(new CreateDatabaseOperation(doc));
 
                     var documentDatabase = landlord.TryGetOrCreateResourceStore("IdleOperations_CleanupResources_DB_" + i).Result;
 
                     documentDatabase.Configuration.Core.RunInMemory = false;
 
-                    if ((i%2) == 0)
+                    if (i % 2 == 0)
                     {
                         documentDatabase.ResetIdleTime();
 

@@ -52,53 +52,34 @@ namespace Raven.NewClient.Operations
 
         public async Task SendAsync(IAdminOperation operation, CancellationToken token = default(CancellationToken))
         {
-            IDisposable releaseContext = null;
-            try
+            JsonOperationContext context;
+            using (GetContext(out context))
             {
-                JsonOperationContext context;
-                if (_context != null)
-                {
-                    context = _context;
-                }
-                else
-                {
-                    releaseContext = _requestExecuter.ContextPool.AllocateOperationContext(out context);
-                }
-
                 var command = operation.GetCommand(_store.Conventions, context);
 
                 await _requestExecuter.ExecuteAsync(command, context, token).ConfigureAwait(false);
-            }
-            finally
-            {
-                releaseContext?.Dispose();
             }
         }
 
         public async Task<TResult> SendAsync<TResult>(IAdminOperation<TResult> operation, CancellationToken token = default(CancellationToken))
         {
-            IDisposable releaseContext = null;
-            try
+            JsonOperationContext context;
+            using (GetContext(out context))
             {
-                JsonOperationContext context;
-                if (_context != null)
-                {
-                    context = _context;
-                }
-                else
-                {
-                    releaseContext = _requestExecuter.ContextPool.AllocateOperationContext(out context);
-                }
-
                 var command = operation.GetCommand(_store.Conventions, context);
 
                 await _requestExecuter.ExecuteAsync(command, context, token).ConfigureAwait(false);
                 return command.Result;
             }
-            finally
-            {
-                releaseContext?.Dispose();
-            }
+        }
+
+        private IDisposable GetContext(out JsonOperationContext context)
+        {
+            if (_context == null)
+                return _requestExecuter.ContextPool.AllocateOperationContext(out context);
+
+            context = _context;
+            return null;
         }
     }
 }
