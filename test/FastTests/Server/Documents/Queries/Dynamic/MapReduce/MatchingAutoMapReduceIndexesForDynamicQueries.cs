@@ -1,12 +1,10 @@
 ﻿using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Data;
 using Raven.Client.Indexing;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
-using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
@@ -29,7 +27,10 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public void Failure_match_if_there_is_no_index()
         {
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide { Query = "", DynamicMapReduceFields = new []
+            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
+            {
+                Query = "",
+                DynamicMapReduceFields = new[]
             {
                 new DynamicMapReduceField
                 {
@@ -41,7 +42,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                     Name = "Count",
                     OperationType = FieldMapReduceOperation.Count
                 }
-            }});
+            }
+            });
 
             var result = _sut.Match(dynamicQuery);
 
@@ -90,10 +92,10 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                         IsGroupBy = true
                     }
                 },
-                SortedFields = new []
+                SortedFields = new[]
                 {
                     new SortedField("Count_Range"),
-                    new SortedField("Location"),  
+                    new SortedField("Location"),
                 }
             });
 
@@ -122,7 +124,10 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
             add_index(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide { Query = "Location:Poland", DynamicMapReduceFields = new []
+            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
+            {
+                Query = "Location:Poland",
+                DynamicMapReduceFields = new[]
             {
                 new DynamicMapReduceField
                 {
@@ -134,7 +139,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                     Name = "Location",
                     IsGroupBy = true
                 }
-            }});
+            }
+            });
 
             var result = _sut.Match(dynamicQuery);
 
@@ -401,7 +407,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public void Failure_when_sort_options_do_not_match()
         {
-            var definition = new AutoMapReduceIndexDefinition(new []{ "LineItems" }, new[]
+            var definition = new AutoMapReduceIndexDefinition(new[] { "LineItems" }, new[]
             {
                 new IndexField
                 {
@@ -411,7 +417,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                     MapReduceOperation = FieldMapReduceOperation.Sum,
                     SortOption = SortOptions.String
                 },
-            }, new []
+            }, new[]
             {
                 new IndexField
                 {
