@@ -531,8 +531,8 @@ namespace Raven.Client.Connection.Async
                     Patch = patch,
                 }
             }, token).ConfigureAwait(false);
-            if (!ignoreMissing && batchResults[0].PatchResult != null &&
-                batchResults[0].PatchResult == PatchResult.DocumentDoesNotExists)
+            if (!ignoreMissing && batchResults[0].PatchStatus != null &&
+                batchResults[0].PatchStatus == PatchStatus.DocumentDoesNotExist)
                 throw new DocumentDoesNotExistException("Document with key " + key + " does not exist.");
             return batchResults[0].AdditionalData;
         }

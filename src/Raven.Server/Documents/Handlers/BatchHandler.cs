@@ -5,6 +5,7 @@ using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Commands;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
@@ -346,7 +347,7 @@ namespace Raven.Server.Documents.Handlers
                                 ["Key"] = cmd.Key,
                                 ["Etag"] = patchResult.Etag,
                                 ["Method"] = "PATCH",
-                                ["Status"] = patchResult.Status.ToString(),
+                                [nameof(BatchResult.PatchStatus)] = patchResult.Status.ToString(),
                             });
                             break;
                         case "DELETE":

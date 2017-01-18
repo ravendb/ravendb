@@ -18,7 +18,7 @@ namespace Raven.NewClient.Client.Commands
         /// </summary>
         DocumentDoesNotExist,
         /// <summary>
-        /// The document did not exist, but patchIfMissing was pecified and new document was created
+        /// The document did not exist, but patchIfMissing was specified and new document was created
         /// </summary>
         Created,
         /// <summary>
@@ -41,7 +41,7 @@ namespace Raven.NewClient.Client.Commands
         /// Result of patch operation:
         /// <para>- DocumentDoesNotExists - document does not exists, operation was a no-op,</para>
         /// <para>- Patched - document was properly patched,</para>
-        /// <para>- Tested - document was properly tested,</para>
+        /// <para>- Created - document did not exist, but patchIfMissing was specified and new document was created,</para>
         /// <para>- Skipped - document was not patched, because skipPatchIfEtagMismatch was set and the etag did not match,</para>
         /// <para>- NotModified - neither document body not metadata was changed during patch operation</para>
         /// </summary>
