@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Util;
 using Sparrow.Json;
 using Raven.NewClient.Client.Document;
@@ -21,7 +23,7 @@ namespace Raven.NewClient.Client.Blittable
         }
 
         public readonly Dictionary<object, Dictionary<string, object>> MissingDictionary = new Dictionary<object, Dictionary<string, object>>(ObjectReferenceEqualityComparer<object>.Default);
-        
+
         public BlittableJsonReaderObject ConvertEntityToBlittable(object entity, DocumentInfo documentInfo)
         {
             var writer = new BlittableJsonWriter(_session.Context, documentInfo);
@@ -33,8 +35,10 @@ namespace Raven.NewClient.Client.Blittable
             serializer.Serialize(writer, entity);
             writer.FinalizeDocument();
             var reader = writer.CreateReader();
+            var type = entity.GetType();
 
-            RemoveIdentityProperty(reader, entity.GetType(), _session.Conventions);
+            RemoveIdentityProperty(reader, type, _session.Conventions);
+            SimplifyJson(reader);
 
             return reader;
         }
@@ -42,7 +46,7 @@ namespace Raven.NewClient.Client.Blittable
         public BlittableJsonReaderObject ConvertEntityToBlittable(object entity, DocumentConvention documentConvention, JsonOperationContext jsonOperationContext, DocumentInfo documentInfo = null)
         {
             var writer = new BlittableJsonWriter(jsonOperationContext, documentInfo);
-                        
+
             //writer should be disposed together with JsonOperationContext
             jsonOperationContext.RegisterForDispose(writer);
             var serializer = documentConvention.CreateSerializer();
@@ -50,22 +54,12 @@ namespace Raven.NewClient.Client.Blittable
             serializer.Serialize(writer, entity);
             writer.FinalizeDocument();
             var reader = writer.CreateReader();
+            var type = entity.GetType();
 
-            RemoveIdentityProperty(reader, entity.GetType(), documentConvention);
+            RemoveIdentityProperty(reader, type, documentConvention);
+            SimplifyJson(reader);
 
             return reader;
-        }
-
-        private void RemoveIdentityProperty(BlittableJsonReaderObject document, Type entityType, DocumentConvention conventions)
-        {
-            var identityProperty = conventions.GetIdentityProperty(entityType);
-            if (identityProperty != null)
-            {
-                if (document.Modifications == null)
-                    document.Modifications = new DynamicJsonValue(document);
-
-                document.Modifications.Remove(identityProperty.Name);
-            }
         }
 
         /// <summary>
@@ -146,6 +140,90 @@ namespace Raven.NewClient.Client.Blittable
                     ex);
             }
         }
-       
+
+        private static void RemoveIdentityProperty(BlittableJsonReaderObject document, Type entityType, DocumentConvention conventions)
+        {
+            var identityProperty = conventions.GetIdentityProperty(entityType);
+            if (identityProperty != null)
+            {
+                if (document.Modifications == null)
+                    document.Modifications = new DynamicJsonValue(document);
+
+                document.Modifications.Remove(identityProperty.Name);
+            }
+        }
+
+        private static void SimplifyJson(BlittableJsonReaderObject document)
+        {
+            foreach (var propertyName in document.GetPropertyNames())
+            {
+                var propertyValue = document[propertyName];
+
+                var propertyArray = propertyValue as BlittableJsonReaderArray;
+                if (propertyArray != null)
+                {
+                    SimplifyJson(propertyArray);
+                    continue;
+                }
+
+                var propertyObject = propertyValue as BlittableJsonReaderObject;
+                if (propertyObject == null)
+                    continue;
+
+                string type;
+                if (propertyObject.TryGet(Constants.Json.Fields.Type, out type) == false)
+                {
+                    SimplifyJson(propertyObject);
+                    continue;
+                }
+
+                if (ShouldSimplifyJsonBasedOnType(type) == false)
+                    continue;
+
+                if (document.Modifications == null)
+                    document.Modifications = new DynamicJsonValue(document);
+
+                BlittableJsonReaderArray values;
+                if (propertyObject.TryGet(Constants.Json.Fields.Values, out values) == false)
+                {
+                    if (propertyObject.Modifications == null)
+                        propertyObject.Modifications = new DynamicJsonValue(propertyObject);
+
+                    propertyObject.Modifications.Remove(Constants.Json.Fields.Type);
+                    continue;
+                }
+
+                document.Modifications[propertyName] = values;
+
+                SimplifyJson(values);
+            }
+        }
+
+        private static void SimplifyJson(BlittableJsonReaderArray array)
+        {
+            foreach (var item in array)
+            {
+                var itemObject = item as BlittableJsonReaderObject;
+                if (itemObject == null)
+                    continue;
+
+                SimplifyJson(itemObject);
+            }
+        }
+
+        private static readonly Regex ArrayEndRegex = new Regex(@"\[\], [\w\.-]+$", RegexOptions.Compiled);
+
+        private static bool ShouldSimplifyJsonBasedOnType(string typeValue)
+        {
+            if (typeValue == null)
+                return false;
+            if (typeValue.StartsWith("System.Collections.Generic.List`1[["))
+                return true;
+            if (typeValue.StartsWith("System.Collections.Generic.Dictionary`2[["))
+                return true;
+            if (ArrayEndRegex.IsMatch(typeValue)) // array
+                return true;
+            return false;
+        }
     }
 }

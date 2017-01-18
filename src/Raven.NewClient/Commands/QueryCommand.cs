@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -14,51 +15,72 @@ namespace Raven.NewClient.Client.Commands
 {
     public class QueryCommand : RavenCommand<QueryResult>
     {
-        public string Index;
-        public IndexQuery IndexQuery;
-        public DocumentConvention Convention;
-        public HashSet<string> Includes;
-        public bool MetadataOnly;
-        public bool IndexEntriesOnly;
-        public JsonOperationContext Context;
-        
+        private readonly DocumentConvention _conventions;
+        private readonly JsonOperationContext _context;
+        private readonly string _indexName;
+        private readonly IndexQuery _indexQuery;
+        private readonly HashSet<string> _includes;
+        private readonly bool _metadataOnly;
+        private readonly bool _indexEntriesOnly;
+
+        public QueryCommand(DocumentConvention conventions, JsonOperationContext context, string indexName, IndexQuery indexQuery, HashSet<string> includes = null, bool metadataOnly = false, bool indexEntriesOnly = false)
+        {
+            if (conventions == null)
+                throw new ArgumentNullException(nameof(conventions));
+            if (context == null)
+                throw new ArgumentNullException(nameof(context));
+            if (indexName == null)
+                throw new ArgumentNullException(nameof(indexName));
+            if (indexQuery == null)
+                throw new ArgumentNullException(nameof(indexQuery));
+
+            _conventions = conventions;
+            _context = context;
+            _indexName = indexName;
+            _indexQuery = indexQuery;
+            _includes = includes;
+            _metadataOnly = metadataOnly;
+            _indexEntriesOnly = indexEntriesOnly;
+        }
+
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            var method = (IndexQuery.Query == null || IndexQuery.Query.Length <= Convention.MaxLengthOfQueryUsingGetUrl)
-                ? HttpMethod.Get : HttpMethod.Post;
+            var method = _indexQuery.Query == null || _indexQuery.Query.Length <= _conventions.MaxLengthOfQueryUsingGetUrl
+                ? HttpMethod.Get
+                : HttpMethod.Post;
 
             var request = new HttpRequestMessage
             {
                 Method = method
             };
-            
+
             if (method == HttpMethod.Post)
             {
                 request.Content = new BlittableJsonContent(stream =>
                 {
-                    using (var writer = new BlittableJsonTextWriter(Context, stream))
+                    using (var writer = new BlittableJsonTextWriter(_context, stream))
                     {
                         writer.WriteStartObject();
                         writer.WritePropertyName("Query");
-                        writer.WriteString(IndexQuery.Query);
+                        writer.WriteString(_indexQuery.Query);
                         writer.WriteEndObject();
                     }
                 });
             }
 
-            var indexQueryUrl = IndexQuery.GetIndexQueryUrl(Index, "queries", includeQuery: method == HttpMethod.Get);
+            var indexQueryUrl = _indexQuery.GetIndexQueryUrl(_indexName, "queries", includeQuery: method == HttpMethod.Get);
 
             EnsureIsNotNullOrEmpty(indexQueryUrl, "index");
 
             var pathBuilder = new StringBuilder(indexQueryUrl);
 
-            if (MetadataOnly)
+            if (_metadataOnly)
                 pathBuilder.Append("&metadata-only=true");
-            if (IndexEntriesOnly)
+            if (_indexEntriesOnly)
                 pathBuilder.Append("&debug=entries");
-            if (Includes != null && Includes.Count > 0)
+            if (_includes != null && _includes.Count > 0)
             {
-                pathBuilder.Append("&").Append(string.Join("&", Includes.Select(x => "include=" + x).ToArray()));
+                pathBuilder.Append("&").Append(string.Join("&", _includes.Select(x => "include=" + x).ToArray()));
             }
 
             url = $"{node.Url}/databases/{node.Database}/" + pathBuilder;
@@ -72,7 +94,16 @@ namespace Raven.NewClient.Client.Commands
                 Result = null;
                 return;
             }
+
             Result = JsonDeserializationClient.QueryResult(response);
+        }
+
+        public override void ResponseWasFromCache()
+        {
+            if (Result == null)
+                return;
+
+            Result.DurationMilliseconds = -1;
         }
 
         public override bool IsReadRequest => true;

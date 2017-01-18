@@ -438,18 +438,18 @@ namespace Raven.Server.Documents.Patch
                 data["@metadata"] = ToBlittable(metadata.AsObject());
             }
 
+            var dataReader = _context.ReadObject(data, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+            var put = _database.DocumentsStorage.Put(_context, key, etag, dataReader);
+
             if (DebugMode)
             {
                 DebugActions.PutDocument.Add(new DynamicJsonValue
                 {
                     ["Key"] = key,
                     ["Etag"] = etag,
-                    ["Data"] = data,
+                    ["Data"] = dataReader
                 });
             }
-
-            var dataReader = _context.ReadObject(data, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-            var put = _database.DocumentsStorage.Put(_context, key, etag, dataReader);
 
             return put.Key;
         }

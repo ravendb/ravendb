@@ -1,10 +1,12 @@
 ﻿using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
+using Raven.NewClient.Operations.Databases;
+using Raven.NewClient.Operations.Databases.Documents;
 using Xunit;
 
 namespace FastTests.Server.Basic
 {
-    public class CollectionTests : RavenTestBase
+    public class CollectionTests : RavenNewTestBase
     {
         [Fact]
         public async Task CanDeleteCollection()
@@ -13,18 +15,20 @@ namespace FastTests.Server.Basic
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    for (int i = 1; i <= 10; i++)
+                    for (var i = 1; i <= 10; i++)
                     {
-                        await session.StoreAsync(new User { Name = "User " + i },"users/"+i);
+                        await session.StoreAsync(new User { Name = "User " + i }, "users/" + i);
                     }
+
                     await session.SaveChangesAsync();
                 }
 
-                var operation = await store.AsyncDatabaseCommands.DeleteCollectionAsync("Users");
+                var operation = await store.Operations.SendAsync(new DeleteCollectionOperation("Users"));
                 await operation.WaitForCompletionAsync();
 
+                var stats = await store.Admin.SendAsync(new GetStatisticsOperation());
 
-                Assert.Equal(0, store.DatabaseCommands.GetStatistics().CountOfDocuments);
+                Assert.Equal(0, stats.CountOfDocuments);
             }
         }
     }

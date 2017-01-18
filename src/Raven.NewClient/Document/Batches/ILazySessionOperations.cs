@@ -168,7 +168,7 @@ namespace Raven.NewClient.Client.Document.Batches
         ///     skip document fetching until given key is found and return documents after that key (default:
         ///     null)
         /// </param>
-        Lazy<IDictionary<string, TResult>> LoadStartingWith<TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null);
+        Lazy<TResult[]> LoadStartingWith<TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null);
 
         Lazy<Dictionary<string, TResult>> MoreLikeThis<TResult>(MoreLikeThisQuery query);
     }
@@ -251,7 +251,7 @@ namespace Raven.NewClient.Client.Document.Batches
         ///     <para>LoadAsync&lt;Post&gt;("posts/1");</para>
         ///     <para>Or whatever your conventions specify.</para>
         /// </summary>
-        Lazy<Task<Dictionary<string, TResult>>> LoadAsync<TResult>(CancellationToken token = default (CancellationToken),params ValueType[] ids);
+        Lazy<Task<Dictionary<string, TResult>>> LoadAsync<TResult>(CancellationToken token = default(CancellationToken), params ValueType[] ids);
 
         /// <summary>
         ///     Loads the specified entity with the specified ids after applying
@@ -317,7 +317,7 @@ namespace Raven.NewClient.Client.Document.Batches
         ///     null)
         /// </param>
         /// <param name="token">The cancellation token.</param>
-        Lazy<Task<Dictionary<string, TResult>>> LoadStartingWithAsync<TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null, CancellationToken token = default (CancellationToken));
+        Lazy<Task<TResult[]>> LoadStartingWithAsync<TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null, CancellationToken token = default (CancellationToken));
 
         Lazy<Task<Dictionary<string, TResult>>> MoreLikeThisAsync<TResult>(MoreLikeThisQuery query, CancellationToken token = default (CancellationToken));
     }

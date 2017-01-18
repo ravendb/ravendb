@@ -402,13 +402,10 @@ namespace Voron.Impl
             if (_disposed)
                 throw new ObjectDisposedException("Transaction");
 
-            if (_env.Options.MaxStorageSize.HasValue) // check against quota
-            {
-                var maxAvailablePageNumber = _env.Options.MaxStorageSize / Constants.Storage.PageSize;
+            var maxAvailablePageNumber = _env.Options.MaxStorageSize / Constants.Storage.PageSize;
 
-                if (pageNumber > maxAvailablePageNumber)
-                    ThrowQuotaExceededException(pageNumber, maxAvailablePageNumber);
-            }
+            if (pageNumber > maxAvailablePageNumber)
+                ThrowQuotaExceededException(pageNumber, maxAvailablePageNumber);
 
 
             Debug.Assert(pageNumber < State.NextPageNumber);

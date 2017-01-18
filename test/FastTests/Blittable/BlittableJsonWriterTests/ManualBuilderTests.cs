@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Xunit;
 
 namespace FastTests.Blittable.BlittableJsonWriterTests
@@ -822,9 +823,10 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     var lsvStringBytes = Encoding.UTF8.GetBytes(lsvString);
                     fixed (byte* b = lsvStringBytes)
                     {
+                        var escapePositionsMaxSize = JsonParserState.FindEscapePositionsMaxSize(lsvString);
                         var lsv = new LazyStringValue(null,b,lsvStringBytes.Length,context);
                         var escapePositions = new List<int>();
-                        BlittableWriter<UnmanagedWriteBuffer>.FillBufferWithEscapePositions(lsvString, escapePositions);
+                        JsonParserState.FindEscapePositionsIn(escapePositions, b, lsvStringBytes.Length, escapePositionsMaxSize);
                         lsv.EscapePositions = escapePositions.ToArray();
 
                         builder.WritePropertyName("LSVString");

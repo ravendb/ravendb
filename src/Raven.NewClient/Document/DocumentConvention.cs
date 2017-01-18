@@ -22,13 +22,10 @@ using Raven.NewClient.Abstractions.Replication;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Utilities;
 using Newtonsoft.Json.Serialization;
-using Raven.NewClient.Abstractions;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Json;
 using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Converters;
 using Raven.NewClient.Client.Helpers;
 using Raven.NewClient.Client.Util;
@@ -551,19 +548,20 @@ namespace Raven.NewClient.Client.Document
             CustomizeJsonSerializer(jsonSerializer);
             //TODO - EFRAT
             jsonSerializer.Converters.Add(new StringEnumConverter());
+            jsonSerializer.Converters.Add(new JsonDateTimeISO8601Converter());
             // TODO: Iftah
-            /*var convertersToUse = SaveEnumsAsIntegers ? DefaultConvertersEnumsAsIntegers : DefaultConverters;
-            if (jsonSerializer.Converters.Count == 0)
-            {
-                jsonSerializer.Converters = convertersToUse;
-            }
-            else
-            {
-                for (int i = convertersToUse.Count - 1; i >= 0; i--)
-                {
-                    jsonSerializer.Converters.Insert(0, convertersToUse[i]);
-                }
-            }*/
+            //var convertersToUse = SaveEnumsAsIntegers ? DefaultConvertersEnumsAsIntegers : DefaultConverters;
+            //if (jsonSerializer.Converters.Count == 0)
+            //{
+            //    jsonSerializer.Converters = convertersToUse;
+            //}
+            //else
+            //{
+            //    for (int i = convertersToUse.Count - 1; i >= 0; i--)
+            //    {
+            //        jsonSerializer.Converters.Insert(0, convertersToUse[i]);
+            //    }
+            //}
             return jsonSerializer;
         }
 
@@ -752,7 +750,6 @@ namespace Raven.NewClient.Client.Document
                 }
             }
         }
-
 
         private class ClientSerializationBinder : DefaultSerializationBinder
         {

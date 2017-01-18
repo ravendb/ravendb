@@ -1,11 +1,14 @@
 ﻿using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
-using Raven.Json.Linq;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Commands;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Xunit;
 
 namespace FastTests.Server.Basic
 {
-    public class Crud : RavenTestBase
+    public class Crud : RavenNewTestBase
     {
         [Fact]
         public async Task CanSaveAndLoad()
@@ -34,18 +37,54 @@ namespace FastTests.Server.Basic
         }
 
         [Fact]
-        public async Task CanOverwriteDocumentWithSmallerValue()
+        public void CanOverwriteDocumentWithSmallerValue()
         {
             using (var store = GetDocumentStore())
             {
-                await store.AsyncDatabaseCommands.PutAsync("users/1", null, RavenJObject.FromObject(new User {Name = "Fitzchak", LastName = "Very big value here, so can reproduce the issue"}),
-                    RavenJObject.FromObject(new
+                var requestExecuter = store.GetRequestExecuterForDefaultDatabase();
+
+                JsonOperationContext context;
+                using (requestExecuter.ContextPool.AllocateOperationContext(out context))
+                {
+                    var djv = new DynamicJsonValue
                     {
-                        SomeMoreData = "Make this object bigger",
-                        SomeMoreData2 = "Make this object bigger",
-                        SomeMoreData3 = "Make this object bigger",
-                    }));
-                await store.AsyncDatabaseCommands.PutAsync("users/1", null, RavenJObject.FromObject(new User {Name = "Fitzchak" }), null);
+                        ["Name"] = "Fitzchak",
+                        ["LastName"] = "Very big value here, so can reproduce the issue",
+                        [Constants.Metadata.Key] = new DynamicJsonValue
+                        {
+                            ["SomeMoreData"] = "Make this object bigger",
+                            ["SomeMoreData2"] = "Make this object bigger",
+                            ["SomeMoreData3"] = "Make this object bigger"
+                        }
+                    };
+
+                    var json = context.ReadObject(djv, "users/1");
+
+                    var putCommand = new PutDocumentCommand
+                    {
+                        Context = context,
+                        Id = "users/1",
+                        Document = json
+                    };
+
+                    requestExecuter.Execute(putCommand, context);
+
+                    djv = new DynamicJsonValue
+                    {
+                        ["Name"] = "Fitzchak"
+                    };
+
+                    json = context.ReadObject(djv, "users/1");
+
+                    putCommand = new PutDocumentCommand
+                    {
+                        Context = context,
+                        Id = "users/1",
+                        Document = json
+                    };
+
+                    requestExecuter.Execute(putCommand, context);
+                }
             }
         }
     }

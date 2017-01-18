@@ -6,8 +6,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-// ReSharper disable once CheckNamespace
-namespace Voron.Tests
+namespace FastTests.Voron.Util
 {
     /// <summary>
     /// Extensions for working with streams

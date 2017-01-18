@@ -124,10 +124,12 @@
                         <div class="col-sm-10">
                             <div class="query-container">
                                 <div class="query-main">
-                                    <textarea
-                                        onfocus="document.getElementsByTagName('body')[0].classList.add('show-add-filter')"
-                                        onblur="document.getElementsByTagName('body')[0].classList.remove('show-add-filter')"
-                                        class="form-control query-source" rows="6"></textarea>
+                                    <div class="has-warning query-error">
+                                        <div class="help-block">
+                                            <i class="icon-warning"></i> <span>The Query contains <strong>*.*</strong>. Did you intend to use <strong>*:*</strong> ?</span>
+                                        </div>
+                                    </div>
+                                    <textarea onfocus="document.getElementsByTagName('body')[0].classList.add('show-add-filter')" onblur="document.getElementsByTagName('body')[0].classList.remove('show-add-filter')" class="form-control query-source" rows="6"></textarea>
                                     <div class="add-filter">
                                         <div class="row flex-row">
                                             <div class="col-sm-9">
@@ -203,7 +205,7 @@
                                     </div>
                                 </div>
                                 <div class="query-controls">
-                                    <button class="btn btn-primary btn-block btn-lg text-center">
+                                    <button class="btn btn-primary btn-block btn-lg text-center run-query">
                                                 <i class="icon-play2 icon-lg"></i><br/>
                                                 <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
                                     </button>
@@ -211,277 +213,319 @@
                                                 <i class="icon-plus"></i><span>Add filter</span>
                                             </button>
                                     <div class="flex-separator"></div>
-                                    <button class="btn btn-default statistics btn-block text-center">
-                                                <i class="icon-stats"></i><span>Statistics</span>
-                                    </button>
+
                                 </div>
                             </div>
 
                         </div>
                     </div>
+
                     <h2 class="pull-left-sm">
                         Results
                         <a href="#"><i class="icon-link"></i></a>
                     </h2>
+
                 </div>
 
-                <div class="flex-window-scroll">
-                    <div class="clearfix">
-                        <div class="results-info pull-left">
-                            <small>sorted by <strong>Name</strong> (ascending)</small>
-                            <small>transformed by <strong>PersonalNameTransformer</strong></small>
-                        </div>
-                        <div class="btn-group btn-group-sm pull-right" role="group" aria-label="...">
-                            <button type="button" class="btn btn-danger"><i class="icon-trash"></i> <span>Delete documents</span></button>
-                            <div class="btn-group dropdown-right">
-                                <!--
+                <div class="flex-window-scroll flex-window stretch">
+                    <div class="flex-window-head">
+                        <div class="clearfix">
+                            <div class="results-info pull-left">
+                                <small>sorted by <strong>Name</strong> (ascending)</small>
+                                <small>transformed by <strong>PersonalNameTransformer</strong></small>
+                            </div>
+                            <div class="btn-group btn-group-sm pull-right" role="group" aria-label="...">
+                                <button type="button" class="btn btn-danger"><i class="icon-trash"></i> <span>Delete documents</span></button>
+                                <div class="btn-group dropdown-right">
+                                    <!--
                                     @marcin Once something is selected in "Sort by" or "Transform results" those buttons should get class 'active'.
                                     Hence the onclick handler.
                                 -->
-                                <button onclick="this.classList.toggle('active');" class="btn btn-default btn-sm dropdown-toggle btn-checkable" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                                        <i class="icon-sortby"></i><span>Sort by</span>
-                                        <span class="caret"></span>
-                                      </button>
-                                <div class="dropdown-menu settings-menu padding padding-sm">
-                                    <div class="row row-sm margin-bottom">
-                                        <div class="col-xs-5">
-                                            <div class="dropdown btn-block">
-                                                <button class="btn btn-block text-left dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                    <button onclick="this.classList.toggle('active');" class="btn btn-default btn-sm dropdown-toggle btn-checkable" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                    <i class="icon-sortby"></i><span>Sort by</span>
+                                    <span class="caret"></span>
+                                </button>
+                                    <div class="dropdown-menu settings-menu padding padding-sm">
+                                        <div class="row row-sm margin-bottom">
+                                            <div class="col-xs-5">
+                                                <div class="dropdown btn-block">
+                                                    <button class="btn btn-block text-left dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                                                 First name
                                                 <span class="caret"></span>
                                               </button>
-                                                <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
-                                                    <li><a href="#">Action</a></li>
-                                                    <li><a href="#">Another action</a></li>
-                                                </ul>
+                                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+                                                        <li><a href="#">Action</a></li>
+                                                        <li><a href="#">Another action</a></li>
+                                                    </ul>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div class="col-xs-5">
-                                            <div class="dropdown btn-block">
-                                                <button class="btn btn-block text-left dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                            <div class="col-xs-5">
+                                                <div class="dropdown btn-block">
+                                                    <button class="btn btn-block text-left dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                                                 Ascending
                                                 <span class="caret"></span>
                                               </button>
-                                                <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
-                                                    <li><a href="#">Action</a></li>
-                                                    <li><a href="#">Another action</a></li>
-                                                </ul>
+                                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+                                                        <li><a href="#">Action</a></li>
+                                                        <li><a href="#">Another action</a></li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            <div class="col-xs-2">
+                                                <button class="btn btn-block"><i class="icon-trash"></i></button>
                                             </div>
                                         </div>
-                                        <div class="col-xs-2">
-                                            <button class="btn btn-block"><i class="icon-trash"></i></button>
-                                        </div>
-                                    </div>
-                                    <div class="row row-sm margin-bottom">
-                                        <div class="col-xs-5">
-                                            <div class="dropdown btn-block">
-                                                <button class="btn btn-block dropdown-toggle text-left" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                        <div class="row row-sm margin-bottom">
+                                            <div class="col-xs-5">
+                                                <div class="dropdown btn-block">
+                                                    <button class="btn btn-block dropdown-toggle text-left" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                                                 Select field
                                                 <span class="caret"></span>
                                               </button>
-                                                <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
-                                                    <li><a href="#">Action</a></li>
-                                                    <li><a href="#">Another action</a></li>
-                                                </ul>
+                                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+                                                        <li><a href="#">Action</a></li>
+                                                        <li><a href="#">Another action</a></li>
+                                                    </ul>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div class="col-xs-5">
-                                            <div class="dropdown btn-block">
-                                                <button class="btn btn-block dropdown-toggle text-left" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                            <div class="col-xs-5">
+                                                <div class="dropdown btn-block">
+                                                    <button class="btn btn-block dropdown-toggle text-left" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                                                 Ascending
                                                 <span class="caret"></span>
                                               </button>
-                                                <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
-                                                    <li><a href="#">Action</a></li>
-                                                    <li><a href="#">Another action</a></li>
-                                                </ul>
+                                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+                                                        <li><a href="#">Action</a></li>
+                                                        <li><a href="#">Another action</a></li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            <div class="col-xs-2">
+                                                <button class="btn btn-block"><i class="icon-trash"></i></button>
                                             </div>
                                         </div>
-                                        <div class="col-xs-2">
-                                            <button class="btn btn-block"><i class="icon-trash"></i></button>
+                                        <div class="row row-sm">
+                                            <div class="col-xs-12 text-right">
+                                                <button class="btn btn-primary"><a class="icon-plus"></a><span>Add</span></button>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="row row-sm">
-                                        <div class="col-xs-12 text-right">
-                                            <button class="btn btn-primary"><a class="icon-plus"></a><span>Add</span></button>
-                                        </div>
-                                    </div>
 
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="btn-group dropdown-right">
-                                <button class="btn btn-sm btn-default dropdown-toggle btn-checkable" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" onclick="this.classList.toggle('active')">
+                                <div class="btn-group dropdown-right">
+                                    <button class="btn btn-sm btn-default dropdown-toggle btn-checkable" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" onclick="this.classList.toggle('active')">
                                     <i class="icon-transform-results"></i>
                                     <span>Transform results</span>
                                     <span class="caret"></span>
                                 </button>
-                                <ul class="dropdown-menu" role="menu">
-                                    <li><a>Do not use transformer</a></li>
-                                    <li><a>Orders/Company</a></li>
-                                    <li><a>PersonalNameTransformer</a></li>
-                                    <li><a>ProductSummaryTransformer</a></li>
-                                </ul>
-                            </div>
-                            <button type="button" class="btn btn-default"><i class="icon-csv-export"></i> <span>Export CSV</span></button>
+                                    <ul class="dropdown-menu settings-menu padding padding-sm" role="menu">
+                                        <div class="row row-sm margin-bottom">
+                                            <div class="col-xs-12">
+                                                <div class="dropdown btn-block">
+                                                    <button class="btn btn-block text-left dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                                PersonalNameTransformer
+                                                <span class="caret"></span>
+                                              </button>
+                                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+                                                        <li><a href="#">Do not use transformer</a></li>
+                                                        <li><a href="#">PersonalNameTransformer</a></li>
+                                                        <li><a href="#">ProductSummaryTransformer</a></li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
 
-                            <div class="btn-group dropdown-right">
-                                <button class="btn btn-default btn-sm dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                        <div class="row row-sm margin-bottom">
+                                            <div class="col-xs-6">
+                                                <div class="control-label">Name</div>
+                                            </div>
+                                            <div class="col-xs-6">
+                                                <input type="text" class="form-control" placeholder="value">
+                                            </div>
+                                        </div>
+                                        <div class="row row-sm margin-bottom">
+                                            <div class="col-xs-6">
+                                                <div class="control-label">Other parameter</div>
+                                            </div>
+                                            <div class="col-xs-6">
+                                                <input type="text" class="form-control" placeholder="value">
+                                            </div>
+                                        </div>
+                                        <button class="btn btn-success pull-right"><i class="icon-check"></i> <span>Apply</span></button>
+                                    </ul>
+                                </div>
+
+                                <button type="button" class="btn btn-default"><i class="icon-csv-export"></i> <span>Export CSV</span></button>
+                                <button class="btn btn-default statistics">
+                                            <i class="icon-stats"></i><span>Statistics</span>
+                                </button>
+                                <div class="btn-group dropdown-right">
+                                    <button class="btn btn-default btn-sm dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                                         <i class="icon-table"></i><span>Display</span>
                                         <span class="caret"></span>
                                       </button>
-                                <div class="dropdown-menu settings-menu">
-                                    <div class="settings-item">
-                                        <div class="col-xs-7">
-                                            <div class="control-label">Cache enabled</div>
-                                        </div>
-                                        <div class="col-xs-5">
-                                            <div class="toggle">
-                                                <input type="checkbox" class="styled" id="singletoggle1" value="option1" aria-label="Single toggle One">
-                                                <label></label>
+                                    <div class="dropdown-menu settings-menu">
+                                        <div class="settings-item">
+                                            <div class="col-xs-7">
+                                                <div class="control-label">Cache enabled</div>
+                                            </div>
+                                            <div class="col-xs-5">
+                                                <div class="toggle">
+                                                    <input type="checkbox" class="styled" id="singletoggle1" value="option1" aria-label="Single toggle One">
+                                                    <label></label>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div class="settings-item">
-                                        <div class="col-xs-7 settings-item-label">
-                                            <div class="control-label">Default operator</div>
-                                        </div>
-                                        <div class="col-xs-5">
-                                            <div class="radio radio-inline">
-                                                <input type="radio" id="inlineRadio1" value="AND" name="radioInline" checked="">
-                                                <label for="inlineRadio1"> AND </label>
+                                        <div class="settings-item">
+                                            <div class="col-xs-7 settings-item-label">
+                                                <div class="control-label">Default operator</div>
                                             </div>
-                                            <div class="radio radio-inline">
-                                                <input type="radio" id="inlineRadio2" value="OR" name="radioInline" checked="">
-                                                <label for="inlineRadio2"> OR </label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="settings-item">
-                                        <div class="col-xs-7 settings-item-label">
-                                            <div class="control-label">
-                                                Show fields from matching index entries instead of matching documents
+                                            <div class="col-xs-5">
+                                                <div class="radio radio-inline">
+                                                    <input type="radio" id="inlineRadio1" value="AND" name="radioInline" checked="">
+                                                    <label for="inlineRadio1"> AND </label>
+                                                </div>
+                                                <div class="radio radio-inline">
+                                                    <input type="radio" id="inlineRadio2" value="OR" name="radioInline" checked="">
+                                                    <label for="inlineRadio2"> OR </label>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div class="col-xs-5">
-                                            <div class="toggle">
-                                                <input type="checkbox" class="styled" id="singletoggle1" value="option1" aria-label="Single toggle One">
-                                                <label></label>
+                                        <div class="settings-item">
+                                            <div class="col-xs-7 settings-item-label">
+                                                <div class="control-label">
+                                                    Show fields from matching index entries instead of matching documents
+                                                </div>
+                                            </div>
+                                            <div class="col-xs-5">
+                                                <div class="toggle">
+                                                    <input type="checkbox" class="styled" id="singletoggle1" value="option1" aria-label="Single toggle One">
+                                                    <label></label>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div class="settings-item">
-                                        <div class="col-xs-7 settings-item-label">
-                                            <div class="control-label">Show the raw index entries instead of matching documents</div>
-                                        </div>
-                                        <div class="col-xs-5">
-                                            <div class="toggle">
-                                                <input type="checkbox" class="styled" id="singletoggle1" value="option1" aria-label="Single toggle One">
-                                                <label></label>
+                                        <div class="settings-item">
+                                            <div class="col-xs-7 settings-item-label">
+                                                <div class="control-label">Show the raw index entries instead of matching documents</div>
+                                            </div>
+                                            <div class="col-xs-5">
+                                                <div class="toggle">
+                                                    <input type="checkbox" class="styled" id="singletoggle1" value="option1" aria-label="Single toggle One">
+                                                    <label></label>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+
                         </div>
                     </div>
-                    <div class="panel">
-                        <div class="panel-body">
-                            <table class="table table-condensed query-results">
-                                <thead>
-                                    <tr>
-                                        <th><i class="icon-arrow-filled-down"></i> <span>Name</span></th>
-                                        <th><span>Age</span></th>
-                                        <th><span>Nickname</span></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>Velerie Liberty</td>
-                                        <td>40</td>
-                                        <td>Peldi</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Giacomo Guilizzoni</td>
-                                        <td>38</td>
-                                        <td></td>
-                                    </tr>
-                                    <tr>
-                                        <td>Marco Botton</td>
-                                        <td>41</td>
-                                        <td>Val</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Velerie Liberty</td>
-                                        <td>40</td>
-                                        <td>Peldi</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Giacomo Guilizzoni</td>
-                                        <td>38</td>
-                                        <td></td>
-                                    </tr>
-                                    <tr>
-                                        <td>Marco Botton</td>
-                                        <td>41</td>
-                                        <td>Val</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Velerie Liberty</td>
-                                        <td>40</td>
-                                        <td>Peldi</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Giacomo Guilizzoni</td>
-                                        <td>38</td>
-                                        <td></td>
-                                    </tr>
-                                    <tr>
-                                        <td>Marco Botton</td>
-                                        <td>41</td>
-                                        <td>Val</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Marco Botton</td>
-                                        <td>41</td>
-                                        <td>Val</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Velerie Liberty</td>
-                                        <td>40</td>
-                                        <td>Peldi</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Giacomo Guilizzoni</td>
-                                        <td>38</td>
-                                        <td></td>
-                                    </tr>
-                                    <tr>
-                                        <td>Marco Botton</td>
-                                        <td>41</td>
-                                        <td>Val</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Marco Botton</td>
-                                        <td>41</td>
-                                        <td>Val</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Velerie Liberty</td>
-                                        <td>40</td>
-                                        <td>Peldi</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Giacomo Guilizzoni</td>
-                                        <td>38</td>
-                                        <td></td>
-                                    </tr>
-                                    <tr>
-                                        <td>Marco Botton</td>
-                                        <td>41</td>
-                                        <td>Val</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                    <div class="panel flex-window-scroll">
+                        <div class="has-error results-error">
+                            <div class="help-block">
+                                <i class="icon-danger"></i><span>Index is stale, possibly not all results are displayed.</span>
+                            </div>
+                        </div>
+                        <div class="scroll-stretch">
+                            <div class="panel-body">
+                                <table class="table table-condensed query-results">
+                                    <thead>
+                                        <tr>
+                                            <th><i class="icon-arrow-filled-down"></i> <span>Name</span></th>
+                                            <th><span>Age</span></th>
+                                            <th><span>Nickname</span></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Velerie Liberty</td>
+                                            <td>40</td>
+                                            <td>Peldi</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Giacomo Guilizzoni</td>
+                                            <td>38</td>
+                                            <td></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Marco Botton</td>
+                                            <td>41</td>
+                                            <td>Val</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Velerie Liberty</td>
+                                            <td>40</td>
+                                            <td>Peldi</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Giacomo Guilizzoni</td>
+                                            <td>38</td>
+                                            <td></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Marco Botton</td>
+                                            <td>41</td>
+                                            <td>Val</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Velerie Liberty</td>
+                                            <td>40</td>
+                                            <td>Peldi</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Giacomo Guilizzoni</td>
+                                            <td>38</td>
+                                            <td></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Marco Botton</td>
+                                            <td>41</td>
+                                            <td>Val</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Marco Botton</td>
+                                            <td>41</td>
+                                            <td>Val</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Velerie Liberty</td>
+                                            <td>40</td>
+                                            <td>Peldi</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Giacomo Guilizzoni</td>
+                                            <td>38</td>
+                                            <td></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Marco Botton</td>
+                                            <td>41</td>
+                                            <td>Val</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Marco Botton</td>
+                                            <td>41</td>
+                                            <td>Val</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Velerie Liberty</td>
+                                            <td>40</td>
+                                            <td>Peldi</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Giacomo Guilizzoni</td>
+                                            <td>38</td>
+                                            <td></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Marco Botton</td>
+                                            <td>41</td>
+                                            <td>Val</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>

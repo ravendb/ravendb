@@ -118,9 +118,9 @@ namespace Raven.Server.Documents.Replication
             IsIncomingReplicationThread = true;
             try
             {
+                // _multiDocumentParser will be disposed when TcpConnectionOptions is disposed
                 using (_stream)
                 using (var writer = new BlittableJsonTextWriter(_documentsContext, _stream))
-                using (_multiDocumentParser)
                 {
                     while (!_cts.IsCancellationRequested)
                     {
@@ -149,10 +149,10 @@ namespace Raven.Server.Documents.Replication
                         {
                             if (_log.IsInfoEnabled)
                             {
-                                if(e.InnerException is SocketException)
+                                if (e.InnerException is SocketException)
                                     _log.Info("Failed to read data from incoming connection. The incoming connection will be closed and re-created.", e);
                                 else
-                                    _log.Info("Received unexpected exception while receiving replication batch. This is not supposed to happen.",e);
+                                    _log.Info("Received unexpected exception while receiving replication batch. This is not supposed to happen.", e);
                             }
 
                             throw;

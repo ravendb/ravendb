@@ -31,7 +31,8 @@ namespace Raven.NewClient.Client.Extensions
 
         internal static void AssertValidName(string name)
         {
-            if (name == null) throw new ArgumentNullException("name");
+            if (name == null)
+                throw new ArgumentNullException(nameof(name));
 
             if (name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("<system> is not valid name. We don't have system database anymore.");

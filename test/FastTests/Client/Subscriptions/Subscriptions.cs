@@ -3,8 +3,9 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Documents.Notifications;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Exceptions.Subscriptions;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Exceptions.Subscriptions;
+using Raven.NewClient.Operations.Databases;
 using Xunit;
 using Sparrow;
 
@@ -40,7 +41,7 @@ namespace FastTests.Client.Subscriptions
             {
                 await CreateDocuments(store, 1);
 
-                var lastEtag = store.GetLastWrittenEtag() ?? 0;
+                var lastEtag = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastDocEtag ?? 0;
                 await CreateDocuments(store, 5);
 
                 var subscriptionCriteria = new SubscriptionCriteria
@@ -77,7 +78,7 @@ namespace FastTests.Client.Subscriptions
             {
                 await CreateDocuments(store, 1);
 
-                var lastEtag = store.GetLastWrittenEtag() ?? 0;
+                var lastEtag = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastDocEtag ?? 0;
                 await CreateDocuments(store, 5);
 
                 var subscriptionCriteria = new SubscriptionCriteria
@@ -148,7 +149,7 @@ namespace FastTests.Client.Subscriptions
             {
                 await CreateDocuments(store, 1);
 
-                var lastEtag = store.GetLastWrittenEtag() ?? 0;
+                var lastEtag = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastDocEtag ?? 0;
                 await CreateDocuments(store, 5);
 
                 var subscriptionCriteria = new SubscriptionCriteria
@@ -234,7 +235,7 @@ namespace FastTests.Client.Subscriptions
             {
                 await CreateDocuments(store, 1);
 
-                var lastEtag = store.GetLastWrittenEtag() ?? 0;
+                var lastEtag = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastDocEtag ?? 0;
                 await CreateDocuments(store, 5);
 
                 var subscriptionCriteria = new SubscriptionCriteria

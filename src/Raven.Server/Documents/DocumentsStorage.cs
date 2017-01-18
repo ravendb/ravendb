@@ -1,18 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Dynamic;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Exceptions;
 using Raven.Server.Extensions;
+using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -24,7 +21,6 @@ using Voron.Exceptions;
 using Voron.Impl;
 using Sparrow;
 using Sparrow.Binary;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron.Util;
 
@@ -52,6 +48,7 @@ namespace Raven.Server.Documents
 
         private Dictionary<string, CollectionName> _collectionsCache;
 
+		public int NextPage;
         public enum ConflictsTable
         {
             LoweredKey = 0,
@@ -60,9 +57,7 @@ namespace Raven.Server.Documents
             Data = 3,
             Etag = 4,
             MyChangeVector = 5
-        }
-
-        static DocumentsStorage()
+        }        static DocumentsStorage()
         {
             Slice.From(StorageEnvironment.LabelsContext, "AllTombstonesEtags", ByteStringType.Immutable, out AllTombstonesEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "LastEtag", ByteStringType.Immutable, out LastEtagSlice);
@@ -235,7 +230,11 @@ namespace Raven.Server.Documents
 
             var options = _documentDatabase.Configuration.Core.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly(_documentDatabase.Configuration.Core.DataDirectory)
-                : StorageEnvironmentOptions.ForPath(_documentDatabase.Configuration.Core.DataDirectory);
+                : StorageEnvironmentOptions.ForPath(
+                    _documentDatabase.Configuration.Core.DataDirectory,
+                    _documentDatabase.Configuration.Storage.TempPath,
+                    _documentDatabase.Configuration.Storage.JournalsStoragePath
+                    );
 
             try
             {
@@ -363,34 +362,50 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string prefix, string matches, string exclude, int start, int take)
         {
+            int docCount = 0;
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+            var originalTake = take;
+            var originalstart = start;
 
             Slice prefixSlice;
             using (DocumentKeyWorker.GetSliceFromKey(context, prefix, out prefixSlice))
             {
-                
                 // ReSharper disable once LoopCanBeConvertedToQuery
                 foreach (var result in table.SeekByPrimaryKey(prefixSlice, startsWith: true))
                 {
-                    var document = TableValueToDocument(context, result);
-                    string documentKey = document.Key;
-                    if (documentKey.StartsWith(prefix, StringComparison.CurrentCultureIgnoreCase) == false)
-                        break;
-
-                    if (!WildcardMatcher.Matches(matches, documentKey) ||
-                        WildcardMatcher.MatchesExclusion(exclude, documentKey))
-                        continue;
-
                     if (start > 0)
                     {
                         start--;
                         continue;
                     }
+                    docCount++;
+                    var document = TableValueToDocument(context, result);
+                    string documentKey = document.Key;
+                    if (documentKey.StartsWith(prefix, StringComparison.CurrentCultureIgnoreCase) == false)
+                        break;
+
+                    var keyTest = documentKey.Substring(prefix.Length);
+                    if (!WildcardMatcher.Matches(matches, keyTest) ||
+                        WildcardMatcher.MatchesExclusion(exclude, keyTest))
+                        continue;
+
                     if (take-- <= 0)
+                    {
+                        if (docCount >= originalTake)
+                            NextPage = (originalstart + docCount - 1);
+                        else
+                            NextPage = (originalstart);
+
                         yield break;
+                    }
                     yield return document;
                 }
             }
+
+            if (docCount >= originalTake)
+                NextPage = (originalstart + docCount);
+            else
+                NextPage = (originalstart);
         }
 
         public IEnumerable<Document> GetDocumentsInReverseEtagOrder(DocumentsOperationContext context, int start, int take)
@@ -1513,15 +1528,35 @@ namespace Raven.Server.Documents
             }
 
             var collectionName = ExtractCollectionName(context, key, document);
+            var newEtag = ++_lastEtag;
+            var newEtagBigEndian = Bits.SwapBytes(newEtag);
+            int flags = 0;
+            if (collectionName.IsSystem == false)
+            {
+                bool hasVersion =
+                    _documentDatabase.BundleLoader.VersioningStorage?.PutFromDocument(context, collectionName,
+                        key, newEtagBigEndian, document) ?? false;
+                if (hasVersion)
+                {
+                    flags = (int)DocumentFlags.Versioned;
+                }
+            }
+
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
+            bool knownNewKey = false;
+
             if (string.IsNullOrWhiteSpace(key))
+            {
                 key = Guid.NewGuid().ToString();
+                knownNewKey = true;
+            }
 
             if (key[key.Length - 1] == '/')
             {
                 int tries;
                 key = GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, table, context, out tries);
+                knownNewKey = true;
             }
 
             byte* lowerKey;
@@ -1533,18 +1568,23 @@ namespace Raven.Server.Documents
             if (_hasConflicts != 0)
                 changeVector = MergeConflictChangeVectorIfNeededAndDeleteConflicts(changeVector, context, key);
 
-            // delete a tombstone if it exists
-            DeleteTombstoneIfNeeded(context, collectionName, lowerKey, lowerSize);
+            // delete a tombstone if it exists, if it known that it is a new key, no need, so we can skip it
+            if (knownNewKey == false)
+            {
+                DeleteTombstoneIfNeeded(context, collectionName, lowerKey, lowerSize);
+            }
 
-            var newEtag = ++_lastEtag;
-            var newEtagBigEndian = Bits.SwapBytes(newEtag);
 
             var lastModifiedTicks = DateTime.UtcNow.Ticks;
 
             Slice keySlice;
             using (Slice.External(context.Allocator, lowerKey, (ushort)lowerSize, out keySlice))
             {
-                var oldValue = table.ReadByKey(keySlice);
+                TableValueReader oldValue = null;
+                if (knownNewKey == false)
+                {
+                    oldValue = table.ReadByKey(keySlice);
+                }
 
                 if (changeVector == null)
                 {
@@ -1555,18 +1595,6 @@ namespace Raven.Server.Documents
 
                 fixed (ChangeVectorEntry* pChangeVector = changeVector)
                 {
-                    int flags = 0;
-                    if (collectionName.IsSystem == false)
-                    {
-                        bool hasVersion =
-                            _documentDatabase.BundleLoader.VersioningStorage?.PutFromDocument(context, collectionName,
-                                key, newEtagBigEndian, document) ?? false;
-                        if (hasVersion)
-                        {
-                            flags = (int)DocumentFlags.Versioned;
-                        }
-                    }
-
                     var tbv = new TableValueBuilder
                     {
                         {lowerKey, lowerSize}, 
@@ -1725,21 +1753,12 @@ namespace Raven.Server.Documents
             long newEtag,
             ChangeVectorEntry[] existing = null)
         {
+            if (_hasConflicts == 0)
+                return MergeVectorsWithoutConflicts(newEtag, existing);
+
             var conflictChangeVectors = DeleteConflictsFor(context, loweredKey);
             if (conflictChangeVectors.Count == 0)
-            {
-                if (existing != null)
-                    return ReplicationUtils.UpdateChangeVectorWithNewEtag(Environment.DbId, newEtag, existing);
-
-                return new[]
-                {
-                    new ChangeVectorEntry
-                    {
-                        Etag = newEtag,
-                        DbId = Environment.DbId
-                    }
-                };
-            }
+                return MergeVectorsWithoutConflicts(newEtag, existing);
 
             // need to merge the conflict change vectors
             var maxEtags = new Dictionary<Guid, long>
@@ -1768,6 +1787,21 @@ namespace Raven.Server.Documents
                 index++;
             }
             return changeVector;
+        }
+
+        private ChangeVectorEntry[] MergeVectorsWithoutConflicts(long newEtag, ChangeVectorEntry[] existing)
+        {
+            if (existing != null)
+                return ReplicationUtils.UpdateChangeVectorWithNewEtag(Environment.DbId, newEtag, existing);
+
+            return new[]
+            {
+                new ChangeVectorEntry
+                {
+                    Etag = newEtag,
+                    DbId = Environment.DbId
+                }
+            };
         }
 
         public IEnumerable<KeyValuePair<string, long>> GetIdentities(DocumentsOperationContext context)
@@ -1903,19 +1937,19 @@ namespace Raven.Server.Documents
             return fst.NumberOfEntries;
         }
 
-        public class CollectionStat
+        public class CollectionStats
         {
             public string Name;
             public long Count;
         }
 
-        public IEnumerable<CollectionStat> GetCollections(DocumentsOperationContext context)
+        public IEnumerable<CollectionStats> GetCollections(DocumentsOperationContext context)
         {
             foreach (var kvp in _collectionsCache)
             {
                 var collectionTable = context.Transaction.InnerTransaction.OpenTable(DocsSchema, kvp.Value.GetTableName(CollectionTableType.Documents));
 
-                yield return new CollectionStat
+                yield return new CollectionStats
                 {
                     Name = kvp.Key,
                     Count = collectionTable.NumberOfEntries
@@ -1923,12 +1957,12 @@ namespace Raven.Server.Documents
             }
         }
 
-        public CollectionStat GetCollection(string collection, DocumentsOperationContext context)
+        public CollectionStats GetCollection(string collection, DocumentsOperationContext context)
         {
             var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
             {
-                return new CollectionStat
+                return new CollectionStats
                 {
                     Name = collection,
                     Count = 0
@@ -1941,14 +1975,14 @@ namespace Raven.Server.Documents
 
             if (collectionTable == null)
             {
-                return new CollectionStat
+                return new CollectionStats
                 {
                     Name = collection,
                     Count = 0
                 };
             }
 
-            return new CollectionStat
+            return new CollectionStats
             {
                 Name = collectionName.Name,
                 Count = collectionTable.NumberOfEntries

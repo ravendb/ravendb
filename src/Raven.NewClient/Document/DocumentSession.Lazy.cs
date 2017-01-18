@@ -199,11 +199,11 @@ namespace Raven.NewClient.Client.Document
             return AddLazyOperation<TResult[]>(lazyLoadOperation, null);
         }
 
-        Lazy<IDictionary<string, T>> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter)
+        Lazy<T[]> ILazySessionOperations.LoadStartingWith<T>(string keyPrefix, string matches, int start, int pageSize, string exclude, RavenPagingInformation pagingInformation, string skipAfter)
         {
             var operation = new LazyStartsWithOperation<T>(keyPrefix, matches, exclude, start, pageSize, this, pagingInformation, skipAfter);
 
-            return AddLazyOperation<IDictionary<string, T>>(operation, null);
+            return AddLazyOperation<T[]>(operation, null);
         }
 
 
@@ -236,6 +236,18 @@ namespace Raven.NewClient.Client.Document
             var loadOperation = new LoadOperation(this, ids, includes);
             var lazyOp = new LazyLoadOperation<T>(loadOperation, ids, includes);
             return AddLazyOperation(lazyOp, onEval);
+        }
+
+        internal Lazy<int> AddLazyCountOperation(ILazyOperation operation)
+        {
+            pendingLazyOperations.Add(operation);
+            var lazyValue = new Lazy<int>(() =>
+            {
+                ExecuteAllPendingLazyOperations();
+                return operation.QueryResult.TotalResults;
+            });
+
+            return lazyValue;
         }
 
     }

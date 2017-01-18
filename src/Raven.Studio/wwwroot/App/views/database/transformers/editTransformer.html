@@ -1,47 +1,53 @@
 <section id="editTransformerContainer">
     <div class="btn-toolbar">
         <div class="btn-group">
-            <button class="btn btn-primary" data-bind="click: saveTransformer, enable: $root.isSaveEnabled()" title="Save the transformer (Alt+S)" accesskey="S">
+            <button class="btn btn-primary" data-bind="click: saveTransformer, enable: isSaveEnabled, css: { 'btn-spinner': isSaving }" title="Save the transformer (Alt+S)" accesskey="S">
                 <i class="icon-save"></i>
+                <span>Save</span>
             </button>
         </div>
         <div class="btn-group">
             <button class="btn btn-default" title="Format transformer" data-bind="click: formatTransformer">
-                <i class="fa fa-magic"></i>
+                <i class="icon-magic-wand"></i>
+                <span>Format</span>
             </button>
         </div>
         <div class="btn-group" data-bind="visible: isEditingExistingTransformer">
             <button class="btn btn-default" title="Refresh from server, discarding any unsaved changes" data-bind="click: refreshTransformer">
-                <i class="fa fa-refresh"></i>
+                <!--ToDo: add icon-->
+                <span>&nbsp;&nbsp;Refresh</span>
             </button>
+        </div>
+        <div class="btn-group" data-bind="visible: isEditingExistingTransformer">
             <button class="btn btn-danger" data-bind="click: deleteTransformer" title="Delete the transformer (Alt+Shift+Delete)">
-                <i class="fa fa-trash-o"></i>
+                <i class="icon-trash"></i>
+                <span>Delete</span>
             </button>
         </div>
     </div>
 
-
     <br />
     <form class="form-horizontal" role="form" data-bind="with: editedTransformer, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer' }">
-        <div class="form-group">
-            <label for="transformerName" class="col-md-1 control-label" title="Transformer name(Alt+I)">Name</label>
-            <div class="col-md-11">
-                <div class="row">
+        <label for="transformerName" class="col-md-1 control-label" title="Transformer name(Alt+I)">Name</label>
+        <div class="col-md-11">
+            <div class="row">
+                <div class="form-group" data-bind="validationElement: name">
                     <div class="col-md-11">
-                        <input type="text" class="form-control" id="transformerName" placeholder="Transformer name" accesskey="I" data-bind="value: name, valueUpdate: 'afterkeyup'" />
+                        <input type="text" class="form-control" id="transformerName" placeholder="Transformer name" accesskey="I" data-bind="textInput: name" />
                     </div>
                 </div>
             </div>
         </div>
-        <div class="form-group">
-            <label id="transformerResultsLabel" style="cursor: help;" class="col-sm-1 control-label" data-placement="auto top" data-original-title="Transform" data-trigger="hover">
-                Transform
-                <i class="fa fa-info-circle text-info"></i>
-            </label>
-            <div class="col-md-11">
-                <div class="row">
+        <label id="transformerResultsLabel" style="cursor: help;" class="col-sm-1 control-label" data-placement="auto top" data-original-title="Transform" data-trigger="hover">
+            Transform
+            <i class="fa fa-info-circle text-info"></i>
+        </label>
+        <div class="col-md-11">
+            <div class="row">
+                <div class="form-group" data-bind="validationElement: transformResults">
                     <div class="col-md-11">
                         <pre id="transformerAceEditor" class="form-control transformer" data-bind="aceEditor: { code: transformResults, getFocus: true}, dynamicHeight: { resizeTrigger: window.ravenStudioWindowHeight(), target: 'footer', bottomMargin: 65 }"></pre>
+                        <div class="help-block" data-bind="validationMessage: transformResults"></div>
                     </div>
                 </div>
                 <br />

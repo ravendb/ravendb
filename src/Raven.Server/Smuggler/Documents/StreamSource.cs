@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -113,6 +114,7 @@ namespace Raven.Server.Smuggler.Documents
                     ThrowInvalidJson();
 
                 LazyStringValue id;
+                Debug.Assert(metadata != null, "metadata != null");
                 if (metadata.TryGet(Constants.Metadata.Id, out id) == false)
                     ThrowInvalidJson();
 
@@ -332,6 +334,7 @@ namespace Raven.Server.Smuggler.Documents
                 var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "import/object", _parser, _state);
 
                 ReadObject(builder);
+                context.RegisterForDispose(builder);
 
                 yield return builder;
             }

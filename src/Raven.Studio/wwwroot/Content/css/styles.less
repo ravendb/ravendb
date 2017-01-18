@@ -601,6 +601,16 @@ input[type=file] + .form-control {
     }
 }
 
+.scroll-stretch {
+    position: absolute;
+    width: 100%;
+    top: 0;
+    bottom:0;
+    left:0;
+    right:0;
+    overflow: auto;
+
+}
 .vcenter-container {
     position: absolute;
     top: 0;
@@ -736,6 +746,9 @@ input[type=file] + .form-control {
 }
 
 .dropdown-menu {
+    .form-control {
+        border-color: #4b545f;
+    }
     a.btn-spinner {
         .global-spinner;
         pointer-events: none;
@@ -1355,3 +1368,4 @@ pre {
 @import "pages/about.less";
 @import "pages/edit-index.less";
 @import "pages/query.less";
+@import "pages/patch.less";

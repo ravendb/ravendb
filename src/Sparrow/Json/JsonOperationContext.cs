@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -122,6 +123,9 @@ namespace Sparrow.Json
 
         public void RegisterForDispose(IDisposable disposable)
         {
+            if (disposable == null) //precaution
+                return;
+
             _disposables.Add(disposable);
         }
 
@@ -160,14 +164,21 @@ namespace Sparrow.Json
                 //_parent disposal sets _managedBuffers to null,
                 //throwing ObjectDisposedException() to make it more visible
                 if (_parent._disposed)
-                    throw new ObjectDisposedException("ReturnBuffer should not be disposed after it's parent operation context was disposed");
+                    ThrowParentWasDisposed();
+
                 _parent._managedBuffers.Push(_buffer);
                 _buffer = null;
+            }
+
+            private static void ThrowParentWasDisposed()
+            {
+                throw new ObjectDisposedException(
+                    "ReturnBuffer should not be disposed after it's parent operation context was disposed");
             }
         }
 
         /// <summary>
-        /// Returns a singleton memory buffer to work with, be aware, this buffer is not thread safe and/or shareable.
+        /// Returns memory buffer to work with, be aware, this buffer is not thread safe
         /// </summary>
         /// <param name="requestedSize"></param>
         /// <returns></returns>
@@ -292,7 +303,7 @@ namespace Sparrow.Json
             var state = new JsonParserState();
             var maxByteCount = Encoding.GetMaxByteCount(field.Length);
 
-            int escapePositionsSize = state.FindEscapePositionsMaxSize(field);
+            int escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(field);
 
             var memory = GetMemory(maxByteCount + escapePositionsSize, longLived: longLived);
 
@@ -494,7 +505,7 @@ namespace Sparrow.Json
                 // here we "leak" the memory used by the array, in practice this is used
                 // in short scoped context, so we don't care
                 var arrayReader = builder.CreateArrayReader();
-                this.RegisterLiveReader(arrayReader.Parent);
+                RegisterLiveReader(arrayReader.Parent);
                 return Tuple.Create(arrayReader, (IDisposable) arrayReader.Parent);
             }
         }
@@ -716,8 +727,10 @@ namespace Sparrow.Json
                 disposable.Dispose();
             }
 
-            foreach (var memoryData in _disposableAllocatedMemory)
+            //note: this setup does not prevent "double" returns            
+            for (var i = _disposableAllocatedMemory.Count - 1; i >= 0; i--)
             {
+                var memoryData = _disposableAllocatedMemory[i];
                 _arenaAllocator.Return(memoryData);
             }
 

@@ -1,13 +1,12 @@
-﻿using System;
-using System.Linq;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexes;
+﻿using System.Linq;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace FastTests.Issues
 {
-    public class RavenDB_5669 : RavenTestBase
+    public class RavenDB_5669 : RavenNewTestBase
     {
         [Fact]
         public void WorkingTestWithDifferentSearchTermOrder()
@@ -108,13 +107,14 @@ namespace FastTests.Issues
 
             WaitForIndexing(store);
         }
-        public class Animal
+
+        private class Animal
         {
             public string Type { get; set; }
             public string Name { get; set; }
         }
 
-        public class Animal_Index : AbstractIndexCreationTask<Animal>
+        private class Animal_Index : AbstractIndexCreationTask<Animal>
         {
             public Animal_Index()
             {

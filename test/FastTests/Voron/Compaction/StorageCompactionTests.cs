@@ -322,7 +322,9 @@ namespace FastTests.Voron.Compaction
         public static long GetDirSize(DirectoryInfo d)
         {
             var files = d.GetFiles();
-            var size = files.Sum(x => x.Length);
+            var size = files
+                .Where(x=>Path.GetFileNameWithoutExtension(x.Name) != "pending-recycle")
+                .Sum(x => x.Length);
 
             var directories = d.GetDirectories();
             size += directories.Sum(x => GetDirSize(x));

@@ -7,6 +7,13 @@
 .query-container {
     display: flex;
 
+    .query-error {
+        display: none;
+        .help-block {
+            margin-bottom: 0;
+        }
+    }
+
     .query-main {
         width:100%;
         position: relative;
@@ -40,13 +47,31 @@
     }
 }
 
+.results-error {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    .help-block {
+        margin-bottom: 0;
+    }
+    z-index: 1000;
+}
+
 .show-add-filter {
+    .query-error {
+        position: absolute;
+        bottom:100%;
+        width:100%;
+        display: block;
+        z-index: 1049;
+
+    }
 
     .backdrop {
         .backdrop.show;
     }
 
-    .query-title {
+    .query-title, .run-query {
         position: relative;
         z-index: 1049;
     }

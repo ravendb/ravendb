@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -13,7 +15,9 @@ namespace Raven.Server.Documents
 
         private readonly DocumentsNotifications _notifications;
 
-        private readonly List<DocumentChangeNotification> _afterCommitNotifications = new List<DocumentChangeNotification>();
+        private List<DocumentChangeNotification> _documentNotifications;
+
+        private List<DocumentChangeNotification> _systemDocumentChangeNotifications;
 
         public DocumentsTransaction(DocumentsOperationContext context, Transaction transaction, DocumentsNotifications notifications)
             : base(transaction)
@@ -24,34 +28,57 @@ namespace Raven.Server.Documents
 
         public void AddAfterCommitNotification(DocumentChangeNotification notification)
         {
-            _afterCommitNotifications.Add(notification);
+            if (notification.IsSystemDocument)
+            {
+                if (_systemDocumentChangeNotifications == null)
+                    _systemDocumentChangeNotifications = new List<DocumentChangeNotification>();
+                _systemDocumentChangeNotifications.Add(notification);
+            }
+            else
+            {
+                if (_documentNotifications == null)
+                    _documentNotifications = new List<DocumentChangeNotification>();
+                _documentNotifications.Add(notification);
+            }
         }
 
         public override void Dispose()
         {
             if (_context.Transaction != this)
                 throw new InvalidOperationException("There is a different transaction in context.");
-            
+
 
             _context.Transaction = null;
             base.Dispose();
 
-            if(InnerTransaction.LowLevelTransaction.Committed)
+            if (InnerTransaction.LowLevelTransaction.Committed)
                 AfterCommit();
         }
 
         private void AfterCommit()
         {
-            foreach (var notification in _afterCommitNotifications)
+            if (_systemDocumentChangeNotifications != null)
             {
-                if (notification.IsSystemDocument)
+                foreach (var notification in _systemDocumentChangeNotifications)
                 {
                     _notifications.RaiseSystemNotifications(notification);
                 }
-                else
-                {
-                    _notifications.RaiseNotifications(notification);
-                }
+            }
+
+            if (_documentNotifications == null)
+                return;
+
+            if (ThreadPool.QueueUserWorkItem(state => ((DocumentsTransaction)state).RaiseNotifications(), this) == false)
+            {
+                RaiseNotifications(); // raise immediately
+            }
+        }
+
+        private void RaiseNotifications()
+        {
+            foreach (var notification in _documentNotifications)
+            {
+                _notifications.RaiseNotifications(notification);
             }
         }
     }

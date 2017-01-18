@@ -426,6 +426,7 @@ namespace Voron.Impl.Journal
 
             private long _lastFlushedTransactionId;
             private long _lastFlushedJournalId;
+            private long _lastSyncJournalId;
             private JournalFile _lastFlushedJournal;
             private bool _ignoreLockAlreadyTaken;
             private long _totalWrittenButUnsyncedBytes;
@@ -643,17 +644,17 @@ namespace Voron.Impl.Journal
 
             private void QueueDataFileSync()
             {
-                if (_totalWrittenButUnsyncedBytes < 512 * Constants.Size.Megabyte)
-                    return;
-
-                if (DateTime.UtcNow - _lastSyncTime < TimeSpan.FromMinutes(3))
-                    return;
-
-                // if we aren't on the same journal, we have to force the sync, to avoid
-                // having lots of journals around
-                if (_waj.CurrentFile != _lastFlushedJournal)
+                if (_waj.CurrentFile != null && _waj.CurrentFile.Number != _lastSyncJournalId)
+                {
+                    // if we aren't on the same journal, we have to force the sync, to avoid having lots of journals around
                     _waj._env.ForceSyncDataFile();
-                else
+                    return;
+                }
+
+                if (_totalWrittenButUnsyncedBytes > 512*Constants.Size.Megabyte)
+                    _waj._env.QueueForSyncDataFile();
+
+                if (DateTime.UtcNow - _lastSyncTime > TimeSpan.FromMinutes(3))
                     _waj._env.QueueForSyncDataFile();
             }
 
@@ -762,6 +763,7 @@ namespace Voron.Impl.Journal
 
                         _lastFlushedJournal = null;
                         _lastSyncTime = DateTime.UtcNow;
+                        _lastSyncJournalId = lastSyncedJournal;
 
                         foreach (var toDelete in _journalsToDelete)
                         {
@@ -917,7 +919,7 @@ namespace Voron.Impl.Journal
             public void SetLastReadTxHeader(JournalFile file, long maxTransactionId, TransactionHeader* lastReadTxHeader)
             {
                 var readTxHeader = stackalloc TransactionHeader[1];
-
+                lastReadTxHeader->TransactionId = -1;
                 long txPos = 0;
                 while (true)
                 {
@@ -927,6 +929,10 @@ namespace Voron.Impl.Journal
                         break;
                     if (readTxHeader->TransactionId > maxTransactionId)
                         break;
+                    if (lastReadTxHeader->TransactionId > readTxHeader->TransactionId)
+                        // we got to a trasaction that is smaller than the previous one, this is very 
+                        // likely a reused jouranl with old transaction, which we can ignore
+                        break; 
 
                     *lastReadTxHeader = *readTxHeader;
 
@@ -1039,9 +1045,9 @@ namespace Voron.Impl.Journal
                     _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, tx);
                     CurrentFile = NextFile(journalEntry.NumberOf4Kbs);
                 }
-                
+
                 CurrentFile.Write(tx, journalEntry, _lazyTransactionBuffer, pageCount);
-                
+
                 if (CurrentFile.Available4Kbs == 0)
                 {
                     _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, tx);
@@ -1163,7 +1169,7 @@ namespace Voron.Impl.Journal
             txHeader->CompressedSize = compressedLen;
             txHeader->UncompressedSize = totalSizeWritten;
             txHeader->PageCount = numberOfPages;
-            txHeader->Hash = Hashing.XXHash64.Calculate(compressionBuffer, (ulong)compressedLen);
+            txHeader->Hash = Hashing.XXHash64.Calculate(compressionBuffer, (ulong)compressedLen, (ulong)txHeader->TransactionId);
 
             var prepreToWriteToJournal = new CompressedPagesResult
             {

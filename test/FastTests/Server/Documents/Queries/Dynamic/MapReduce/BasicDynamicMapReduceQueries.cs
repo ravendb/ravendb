@@ -4,16 +4,19 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Data;
-using Raven.Client.Indexing;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Commands;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
+using Raven.Server.Documents.Indexes.Static;
 using Xunit;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 {
     [SuppressMessage("ReSharper", "ConsiderUsingConfigureAwait")]
-    public class BasicDynamicMapReduceQueries : RavenTestBase
+    public class BasicDynamicMapReduceQueries : RavenNewTestBase
     {
         [Fact]
         public async Task Group_by_string_calculate_count()
@@ -97,7 +100,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                     Assert.Equal("Torun", addressesTotalCount[0].City);
                 }
 
-                var indexDefinitions = store.DatabaseCommands.GetIndexes(0, 10);
+                var indexDefinitions = store.Admin.Send(new GetIndexesOperation(0, 10));
 
                 Assert.Equal(1, indexDefinitions.Length); // all of the above queries should be handled by the same auto index
                 Assert.Equal("Auto/Addresses/ByCountReducedByCity", indexDefinitions[0].Name);
@@ -239,7 +242,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                     Assert.Equal("Desk", sumOfLinesByNameClass[0].NameOfProduct);
                 }
 
-                var indexDefinitions = store.DatabaseCommands.GetIndexes(0, 10);
+                var indexDefinitions = store.Admin.Send(new GetIndexesOperation(0, 10));
 
                 Assert.Equal(1, indexDefinitions.Length); // all of the above queries should be handled by the same auto index
                 Assert.Equal("Auto/OrderLines/ByQuantityReducedByProductName", indexDefinitions[0].Name);
@@ -290,35 +293,49 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                     await session.SaveChangesAsync();
                 }
 
-                var results = store.DatabaseCommands.Query("dynamic/Addresses", new IndexQuery
+                using (var commands = store.Commands())
                 {
-                    DynamicMapReduceFields = new[]
+                    var command = new QueryCommand(store.Conventions, commands.Context, "dynamic/Addresses", new IndexQuery
                     {
-                        new DynamicMapReduceField
+                        DynamicMapReduceFields = new[]
                         {
-                            Name = "City",
-                            ClientSideName = null,
-                            IsGroupBy = true,
-                            OperationType = FieldMapReduceOperation.None
+                            new DynamicMapReduceField
+                            {
+                                Name = "City",
+                                ClientSideName = null,
+                                IsGroupBy = true,
+                                OperationType = FieldMapReduceOperation.None
+                            },
+                            new DynamicMapReduceField
+                            {
+                                Name = "TotalCount",
+                                ClientSideName = "Count",
+                                IsGroupBy = false,
+                                OperationType = FieldMapReduceOperation.Count
+                            }
                         },
-                        new DynamicMapReduceField
-                        {
-                            Name = "TotalCount",
-                            ClientSideName = "Count",
-                            IsGroupBy = false,
-                            OperationType = FieldMapReduceOperation.Count
-                        }
-                    },
-                    FieldsToFetch = new[] { "City" },
-                    WaitForNonStaleResultsAsOfNow = true
-                });
+                        FieldsToFetch = new[] { "City" },
+                        WaitForNonStaleResultsAsOfNow = true
+                    });
 
-                Assert.Equal(2, results.Results.Count);
-                Assert.True(results.Results.All(x => x.Keys.Count == 2));
-                Assert.True(results.Results.All(x => x.ContainsKey("City")));
-                Assert.True(results.Results.All(x => x.ContainsKey(Constants.Metadata.Key)));
-                Assert.True(results.Results.Any(x => x.Value<string>("City") == "Torun"));
-                Assert.True(results.Results.Any(x => x.Value<string>("City") == "Hadera"));
+                    commands.RequestExecuter.Execute(command, commands.Context);
+
+                    var result = command.Result;
+                    var results = new DynamicArray(result.Results);
+
+                    var cities = new List<string> { "Torun", "Hadera" };
+                    Assert.Equal(2, results.Count);
+                    foreach (dynamic r in results)
+                    {
+                        var json = (DynamicBlittableJson)r;
+                        Assert.Equal(2, json.BlittableJson.Count);
+                        Assert.True(json.ContainsKey("City"));
+                        Assert.True(json.ContainsKey(Constants.Metadata.Key));
+
+                        var city = r.City;
+                        Assert.True(cities.Remove(city));
+                    }
+                }
             }
         }
 
@@ -443,7 +460,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             }
         }
 
-        [Fact]  
+        [Fact]
         public void Group_by_nested_field_sum_on_collection()
         {
             using (var store = GetDocumentStore())
@@ -452,7 +469,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 {
                     session.Store(new Order
                     {
-                        ShipTo = new Address {  Country = "Norway" },
+                        ShipTo = new Address { Country = "Norway" },
                         Lines = new List<OrderLine>
                         {
                             new OrderLine
@@ -543,7 +560,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 }
             }
         }
-        
+
         public class AddressReduceResult
         {
             public string City { get; set; }

@@ -2,8 +2,8 @@
 using System.IO;
 using System.Linq;
 using FastTests.Voron.FixedSize;
+using FastTests.Voron.Util;
 using Raven.Server.Utils;
-using Voron.Tests;
 using Xunit;
 
 namespace FastTests.Utils

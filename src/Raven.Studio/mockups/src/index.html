@@ -9,6 +9,27 @@
         <div class="content-container-margin">
             <h1>Style quide and components</h1>
             <hr />
+
+            <h2>Pages</h2>
+            <hr/>
+            <div class="row">
+                <div class="col-sm-4">
+                    <div class="panel">
+                        <div class="panel-body">
+                            <ul>
+                                {{#each pages}}
+                                <li>
+                                    <a href="{{pagePrefix}}{{this}}">{{this}}</a>
+                                </li>
+                                {{/each}}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+
             <h2>Panels</h2>
             <div class="row">
                 <div class="col-sm-4">

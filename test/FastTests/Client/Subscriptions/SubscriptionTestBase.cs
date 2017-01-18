@@ -1,15 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
-using Raven.Client.Document;
+﻿using System.Threading.Tasks;
+using Raven.NewClient.Client.Document;
 
 namespace FastTests.Client.Subscriptions
 {
-    public class SubscriptionTestBase: RavenTestBase
+    public abstract class SubscriptionTestBase : RavenNewTestBase
     {
-        public class Thing
+        protected class Thing
         {
             public string Name { get; set; }
         }

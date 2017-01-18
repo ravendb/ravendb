@@ -108,5 +108,22 @@ namespace Sparrow
 
             currentTcs.Task.Wait();
         }
+
+        public void SetInAsyncMannerFireAndForget()
+        {
+            SetInAsyncMannerFireAndForget(_tcs);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void SetInAsyncMannerFireAndForget(TaskCompletionSource<bool> tcs)
+        {
+            // run the completion asynchronously to ensure that continuations (await WaitAsync()) won't happen as part of a call to TrySetResult
+            // http://blogs.msdn.com/b/pfxteam/archive/2012/02/11/10266920.aspx
+
+            var currentTcs = tcs;
+
+            Task.Factory.StartNew(s => ((TaskCompletionSource<bool>)s).TrySetResult(true),
+                currentTcs, CancellationToken.None, TaskCreationOptions.PreferFairness | TaskCreationOptions.RunContinuationsAsynchronously, TaskScheduler.Default);
+        }
     }
 }

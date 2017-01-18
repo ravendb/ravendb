@@ -3,7 +3,7 @@ using Xunit;
 
 namespace FastTests.Server.Basic
 {
-    public class MultiGetOperations : RavenTestBase
+    public class MultiGetOperations : RavenNewTestBase
     {
         [Fact]
         public void UnlessAccessedLazyLoadsAreNoOp()
@@ -29,8 +29,8 @@ namespace FastTests.Server.Basic
                     var u1 = session.Advanced.Lazily.Load<User>(new[] { "users/1" });
                     var u2 = session.Advanced.Lazily.Load<User>(new[] { "users/2" });
 
-                    Assert.Null(u1.Value[0]);
-                    Assert.Null(u2.Value[0]);
+                    Assert.Null(u1.Value["users/1"]);
+                    Assert.Null(u2.Value["users/2"]);
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }

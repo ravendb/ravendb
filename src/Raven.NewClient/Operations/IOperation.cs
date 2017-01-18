@@ -4,8 +4,13 @@ using Sparrow.Json;
 
 namespace Raven.NewClient.Operations
 {
+    public interface IOperation<T>
+    {
+        RavenCommand<T> GetCommand(DocumentConvention conventions, JsonOperationContext context);
+    }
+
     public interface IOperation
     {
-        RavenCommand<OperationIdResult> GetCommand(DocumentConvention conventions, JsonOperationContext context);
+        RavenCommand<object> GetCommand(DocumentConvention conventions, JsonOperationContext context);
     }
 }

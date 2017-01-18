@@ -719,17 +719,16 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         public virtual Lazy<int> CountLazily()
         {
-            throw new NotImplementedException();
 
-           /* if (queryOperation == null)
+            if (queryOperation == null)
             {
                 Take(0);
                 queryOperation = InitializeQueryOperation();
             }
 
-            var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback, GetOperationHeaders());
+            var lazyQueryOperation = new LazyQueryOperation<T>(queryOperation, afterQueryExecutedCallback);
 
-            return ((DocumentSession)theSession).AddLazyCountOperation(lazyQueryOperation);*/
+            return ((DocumentSession)theSession).AddLazyCountOperation(lazyQueryOperation);
         }
 
         /// <summary>
@@ -1610,31 +1609,7 @@ If you really want to do in memory filtering on the data returned from the query
             WaitForNonStaleResultsAsOfNow(waitTimeout);
             return this;
         }
-
-        /// <summary>
-        /// Instructs the query to wait for non stale results as of the last write made by any session belonging to the 
-        /// current document store.
-        /// This ensures that you'll always get the most relevant results for your scenarios using simple indexes (map only or dynamic queries).
-        /// However, when used to query map/reduce indexes, it does NOT guarantee that the document that this etag belong to is actually considered for the results. 
-        /// </summary>
-        IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOfLastWrite()
-        {
-            WaitForNonStaleResultsAsOfLastWrite();
-            return this;
-        }
-
-        /// <summary>
-        /// Instructs the query to wait for non stale results as of the last write made by any session belonging to the 
-        /// current document store.
-        /// This ensures that you'll always get the most relevant results for your scenarios using simple indexes (map only or dynamic queries).
-        /// However, when used to query map/reduce indexes, it does NOT guarantee that the document that this etag belong to is actually considered for the results. 
-        /// </summary>
-        IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOfLastWrite(TimeSpan waitTimeout)
-        {
-            WaitForNonStaleResultsAsOfLastWrite(waitTimeout);
-            return this;
-        }
-
+        
         /// <summary>
         /// Instructs the query to wait for non stale results as of the cutoff etag.
         /// </summary>
@@ -1695,35 +1670,7 @@ If you really want to do in memory filtering on the data returned from the query
             timeout = waitTimeout;
             cutoffEtag = cutOffEtag;
         }
-
-        /// <summary>
-        /// Instructs the query to wait for non stale results as of the last write made by any session belonging to the 
-        /// current document store.
-        /// This ensures that you'll always get the most relevant results for your scenarios using simple indexes (map only or dynamic queries).
-        /// However, when used to query map/reduce indexes, it does NOT guarantee that the document that this etag belong to is actually considered for the results. 
-        /// </summary>
-        public void WaitForNonStaleResultsAsOfLastWrite()
-        {
-            WaitForNonStaleResultsAsOfLastWrite(DefaultTimeout);
-        }
-
-        /// <summary>
-        /// Instructs the query to wait for non stale results as of the last write made by any session belonging to the 
-        /// current document store.
-        /// This ensures that you'll always get the most relevant results for your scenarios using simple indexes (map only or dynamic queries).
-        /// However, when used to query map/reduce indexes, it does NOT guarantee that the document that this etag belong to is actually considered for the results. 
-        /// </summary>
-        public void WaitForNonStaleResultsAsOfLastWrite(TimeSpan waitTimeout)
-        {
-            var lastWrittenEtag = theSession.DocumentStore.GetLastWrittenEtag();
-            if (lastWrittenEtag != null)
-            {
-                theWaitForNonStaleResults = true;
-                timeout = waitTimeout;
-                cutoffEtag = theSession.DocumentStore.GetLastWrittenEtag();
-            }
-        }
-
+        
         /// <summary>
         ///   EXPERT ONLY: Instructs the query to wait for non stale results.
         ///   This shouldn't be used outside of unit tests unless you are well aware of the implications

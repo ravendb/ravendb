@@ -3,9 +3,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Text;
-using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Http;
+using Raven.NewClient.Client.Connection;
 
 namespace Raven.NewClient.Abstractions.Connection
 {
@@ -19,11 +17,11 @@ namespace Raven.NewClient.Abstractions.Connection
         }
 
         public ErrorResponseException()
-        {				
+        {
         }
 
         public ErrorResponseException(ErrorResponseException e, string message)
-            :base(message)
+            : base(message)
         {
             Response = e.Response;
             ResponseString = e.ResponseString;
@@ -35,7 +33,7 @@ namespace Raven.NewClient.Abstractions.Connection
             Response = response;
         }
 
-        public ErrorResponseException(HttpResponseMessage response, string msg, string responseString= null)
+        public ErrorResponseException(HttpResponseMessage response, string msg, string responseString = null)
             : base(msg)
         {
             Response = response;
@@ -80,19 +78,6 @@ namespace Raven.NewClient.Abstractions.Connection
 
         public string ResponseString { get; private set; }
 
-        public long? Etag
-        {
-            get
-            {
-                if (Response.Headers.ETag == null)
-                    return null;
-                var responseHeader = Response.Headers.ETag.Tag;
-
-                if (responseHeader[0] == '\"')
-                    return long.Parse(responseHeader.Substring(1, responseHeader.Length - 2));
-
-                return long.Parse(responseHeader);
-            }
-        }
+        public long? Etag => Response.GetEtagHeader();
     }
 }

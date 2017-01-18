@@ -1,16 +1,15 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using FastTests.Server.Documents.Notifications;
-using Raven.Abstractions.Data;
-using Raven.Client.Document;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Commands;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Operations.Databases;
 using Xunit;
 
 namespace FastTests.Client.Subscriptions
 {
-    public class CriteriaScript: SubscriptionTestBase
+    public class CriteriaScript : SubscriptionTestBase
     {
         [Fact]
         public async Task BasicCriteriaTest()
@@ -20,7 +19,7 @@ namespace FastTests.Client.Subscriptions
             {
                 await CreateDocuments(store, 1);
 
-                var lastEtag = store.GetLastWrittenEtag() ?? 0;
+                var lastEtag = (await store.Admin.SendAsync(new GetStatisticsOperation())).LastDocEtag ?? 0;
                 await CreateDocuments(store, 5);
 
                 var subscriptionCriteria = new SubscriptionCriteria

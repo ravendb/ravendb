@@ -2,11 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
-using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document;
+using Raven.NewClient.Extensions;
 using Raven.NewClient.Json.Utilities;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -57,16 +58,7 @@ namespace Raven.NewClient.Client.Commands
             _session.IncrementRequestCount();
             LogQuery();
 
-            return new QueryCommand
-            {
-                Index = _indexName,
-                IndexQuery = _indexQuery,
-                Convention = _session.Conventions,
-                Includes = _includes,
-                MetadataOnly = _metadataOnly,
-                IndexEntriesOnly = _indexEntriesOnly,
-                Context = _session.Context
-            };
+            return new QueryCommand(_session.Conventions, _session.Context, _indexName, _indexQuery, _includes, _metadataOnly, _indexEntriesOnly);
         }
 
         public void SetResult(QueryResult queryResult)
@@ -111,7 +103,7 @@ namespace Raven.NewClient.Client.Commands
         public IDisposable EnterQueryContext()
         {
             StartTiming();
-            
+
             if (_waitForNonStaleResults == false)
                 return null;
 
@@ -142,12 +134,12 @@ namespace Raven.NewClient.Client.Commands
                     continue;
                 }
 
-                BlittableJsonReaderObject metadata;
+                var metadata = document.GetMetadata();
+
                 string id;
-                if (document.TryGet(Constants.Metadata.Key, out metadata) == false)
-                    throw new InvalidOperationException("Document must have a metadata");
-                metadata.TryGet(Constants.Metadata.Id, out id);
-                list.Add(_session.TrackEntity<T>(id, document, metadata, _disableEntitiesTracking));
+                metadata.TryGetId(out id);
+
+                list.Add(Deserialize<T>(id, document, metadata));
             }
 
             if (_disableEntitiesTracking == false)
@@ -158,7 +150,41 @@ namespace Raven.NewClient.Client.Commands
 
             return _transformResults(_indexQuery, list.Cast<object>()).Cast<T>().ToList();
         }
-        
+
+        private T Deserialize<T>(string id, BlittableJsonReaderObject document, BlittableJsonReaderObject metadata)
+        {
+            if (_projectionFields == null || _projectionFields.Length == 0)
+                return _session.TrackEntity<T>(id, document, metadata, _disableEntitiesTracking);
+
+            if (_projectionFields.Length == 1) // we only select a single field
+            {
+                var type = typeof(T);
+                var typeInfo = type.GetTypeInfo();
+                if (type == typeof(string) || typeInfo.IsValueType || typeInfo.IsEnum)
+                {
+                    var projectionField = _projectionFields[0];
+                    T value;
+                    return document.TryGet(projectionField, out value) == false
+                        ? default(T)
+                        : value;
+                }
+            }
+
+            var result = (T)_session.Conventions.DeserializeEntityFromBlittable(typeof(T), document);
+
+            if (string.IsNullOrEmpty(id) == false)
+            {
+                // we need to make an additional check, since it is possible that a value was explicitly stated
+                // for the identity property, in which case we don't want to override it.
+                object value;
+                var identityProperty = _session.Conventions.GetIdentityProperty(typeof(T));
+                if (identityProperty != null && (document.TryGetMember(identityProperty.Name, out value) == false || value == null))
+                    _session.GenerateEntityIdOnTheClient.TrySetIdentity(result, id);
+            }
+
+            return result;
+        }
+
         public bool DisableEntitiesTracking
         {
             get { return _disableEntitiesTracking; }

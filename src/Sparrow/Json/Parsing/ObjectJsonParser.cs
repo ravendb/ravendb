@@ -432,7 +432,7 @@ namespace Sparrow.Json.Parsing
 
             int byteCount = Utf8Encoding.GetMaxByteCount(str.Length);
 
-            int escapePositionsSize = _state.FindEscapePositionsMaxSize(str);
+            int escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(str);
 
             var size = byteCount + escapePositionsSize;
 

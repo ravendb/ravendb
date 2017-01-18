@@ -42,7 +42,7 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// Result of a PATCH operation.
         /// </summary>
-        public PatchResult? PatchResult { get; set; }
+        public PatchStatus? PatchStatus { get; set; }
 
         /// <summary>
         /// Indicates if the document was deleted (null if not DELETE operation)

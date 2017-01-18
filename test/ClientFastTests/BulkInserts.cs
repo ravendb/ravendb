@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.NewClient.Client;
 using Raven.NewClient.Client.Indexes;
 using Xunit;
 using Raven.NewClient.Client.Commands;
@@ -28,8 +29,14 @@ namespace NewClientTests.NewClient.FastTests.BulkInsert
                 
                 using (var session = store.OpenSession())
                 {
-                    var len = session.Advanced.LoadStartingWith<FooBar>("FooBars/", null, 0, 1000);
+                    var pagingInformation = new RavenPagingInformation();
+                    var len = session.Advanced.LoadStartingWith<FooBar>("FooBars/", null, 0, 1000, null, pagingInformation: pagingInformation);
                     Assert.Equal(1000, len.Length);
+
+                    Assert.Equal(1000, pagingInformation.PageSize);
+                    Assert.Equal(0, pagingInformation.Start);
+                    Assert.Equal(1000, pagingInformation.NextPageStart);
+
                 }
             }
         }

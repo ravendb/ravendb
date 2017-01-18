@@ -1,12 +1,13 @@
-﻿using Raven.Client.Data;
-using Raven.Client.Indexes;
-using Raven.Json.Linq;
-using System.Linq;
+﻿using System.Linq;
+using Raven.NewClient.Client.Commands;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Indexes;
+using Sparrow.Json;
 using Xunit;
 
 namespace FastTests.Issues
 {
-    public class RavenDB_5297 : RavenTestBase
+    public class RavenDB_5297 : RavenNewTestBase
     {
         private class User
         {
@@ -38,18 +39,35 @@ namespace FastTests.Issues
                 store.Initialize();
                 new UsersByName().Execute(store);
 
-                store.DatabaseCommands.Put("users/1", null,
-                    new RavenJObject { { "Name", "First" } },
-                    new RavenJObject { { "Raven-Entity-Name", "Users" } });
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "First"
+                    }, "users/1");
 
-                store.DatabaseCommands.Put("users/2", null,
-                    new RavenJObject { { "Name", "Second" } },
-                    new RavenJObject { { "Raven-Entity-Name", "Users" } });
+                    session.Store(new User
+                    {
+                        Name = "Second"
+                    }, "users/2");
+
+                    session.SaveChanges();
+                }
 
                 WaitForIndexing(store);
 
-                var query = store.DatabaseCommands.Query("Users/ByName", new IndexQuery { Query = "Name:* -First" });
-                Assert.Equal(query.TotalResults, 1);
+                var requestExecuter = store.GetRequestExecuterForDefaultDatabase();
+
+                JsonOperationContext context;
+                using (requestExecuter.ContextPool.AllocateOperationContext(out context))
+                {
+                    var command = new QueryCommand(store.Conventions, context, "Users/ByName", new IndexQuery { Query = "Name:* -First" });
+
+                    requestExecuter.Execute(command, context);
+
+                    var query = command.Result;
+                    Assert.Equal(query.TotalResults, 1);
+                }
             }
         }
 
@@ -61,18 +79,35 @@ namespace FastTests.Issues
                 store.Initialize();
                 new UsersByName().Execute(store);
 
-                store.DatabaseCommands.Put("users/1", null,
-                    new RavenJObject { { "Name", "First" } },
-                    new RavenJObject { { "Raven-Entity-Name", "Users" } });
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "First"
+                    }, "users/1");
 
-                store.DatabaseCommands.Put("users/2", null,
-                    new RavenJObject { { "Name", "Second" } },
-                    new RavenJObject { { "Raven-Entity-Name", "Users" } });
+                    session.Store(new User
+                    {
+                        Name = "Second"
+                    }, "users/2");
+
+                    session.SaveChanges();
+                }
 
                 WaitForIndexing(store);
 
-                var query = store.DatabaseCommands.Query("Users/ByName", new IndexQuery { Query = "Name:* NOT Second" });
-                Assert.Equal(query.TotalResults, 1);
+                var requestExecuter = store.GetRequestExecuterForDefaultDatabase();
+
+                JsonOperationContext context;
+                using (requestExecuter.ContextPool.AllocateOperationContext(out context))
+                {
+                    var command = new QueryCommand(store.Conventions, context, "Users/ByName", new IndexQuery { Query = "Name:* NOT Second" });
+
+                    requestExecuter.Execute(command, context);
+
+                    var query = command.Result;
+                    Assert.Equal(query.TotalResults, 1);
+                }
             }
         }
     }

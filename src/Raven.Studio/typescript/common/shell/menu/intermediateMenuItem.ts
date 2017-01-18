@@ -1,4 +1,6 @@
-﻿class intermediateMenuItem implements menuItem {
+﻿/// <reference path="../../../../typings/tsd.d.ts" />
+
+class intermediateMenuItem implements menuItem {
     title: string;
     children: menuItem[];
     css: string;

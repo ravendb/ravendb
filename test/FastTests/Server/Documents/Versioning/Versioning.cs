@@ -4,21 +4,22 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
-using Raven.Abstractions.Connection;
+using Raven.NewClient.Client.Bundles.Versioning;
+using Raven.NewClient.Client.Http;
 using Xunit;
-using Raven.Client.Bundles.Versioning;
 
 namespace FastTests.Server.Documents.Versioning
 {
-    public class Versioning : RavenTestBase
+    public class Versioning : RavenNewTestBase
     {
         [Fact]
         public async Task CanGetAllRevisionsFor()
         {
-            var company = new Company {Name = "Company Name"};
+            var company = new Company { Name = "Company Name" };
             using (var store = GetDocumentStore())
             {
                 await VersioningHelper.SetupVersioning(store);
@@ -58,7 +59,9 @@ namespace FastTests.Server.Documents.Versioning
                 using (var session = store.OpenAsyncSession())
                 {
                     var company3 = await session.LoadAsync<Company>(company.Id);
-                    Assert.Equal("Versioned", session.Advanced.GetMetadataFor(company3).Value<string>("@flags"));
+                    var metadata = session.Advanced.GetMetadataFor(company3);
+
+                    Assert.Equal("Versioned", metadata["@flags"]);
                 }
             }
         }
@@ -85,7 +88,7 @@ namespace FastTests.Server.Documents.Versioning
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    var exception = await Assert.ThrowsAsync<ErrorResponseException>(async () => await session.Advanced.GetRevisionsForAsync<Company>("companies/1"));
+                    var exception = await Assert.ThrowsAsync<InternalServerErrorException>(async () => await session.Advanced.GetRevisionsForAsync<Company>("companies/1"));
                     Assert.Contains("Versioning is disabled", exception.Message);
                 }
             }
@@ -134,7 +137,6 @@ namespace FastTests.Server.Documents.Versioning
                     company3.Name = "Hibernating Rhinos";
                     await session.SaveChangesAsync();
                 }
-
             }
 
             using (var store = GetDocumentStore(path: path))
@@ -152,7 +154,7 @@ namespace FastTests.Server.Documents.Versioning
         [Fact]
         public async Task WillCreateRevisionIfExplicitlyRequested()
         {
-            var product = new Product {Description = "A fine document db", Quantity = 5};
+            var product = new Product { Description = "A fine document db", Quantity = 5 };
             using (var store = GetDocumentStore())
             {
                 await VersioningHelper.SetupVersioning(store);
@@ -186,7 +188,7 @@ namespace FastTests.Server.Documents.Versioning
         [Fact]
         public async Task WillDeleteOldRevisions()
         {
-            var company = new Company {Name = "Company #1"};
+            var company = new Company { Name = "Company #1" };
             using (var store = GetDocumentStore())
             {
                 await VersioningHelper.SetupVersioning(store);
@@ -220,8 +222,8 @@ namespace FastTests.Server.Documents.Versioning
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var company = new Company {Name = "Hibernaitng Rhinos "};
-                    var user = new User {Name = "Fitzchak "};
+                    var company = new Company { Name = "Hibernaitng Rhinos " };
+                    var user = new User { Name = "Fitzchak " };
                     await session.StoreAsync(company);
                     await session.StoreAsync(user);
                     await session.SaveChangesAsync();
@@ -260,8 +262,8 @@ namespace FastTests.Server.Documents.Versioning
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new Company {Name = "New Company"}, "companies/1");
-                    await session.StoreAsync(new User {Name = "New User"}, "users/1");
+                    await session.StoreAsync(new Company { Name = "New Company" }, "companies/1");
+                    await session.StoreAsync(new User { Name = "New User" }, "users/1");
                     await session.SaveChangesAsync();
                 }
                 using (var session = store.OpenAsyncSession())

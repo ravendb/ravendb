@@ -234,6 +234,8 @@ namespace Sparrow.Json
                 while (stack.Count > 0)
                 {
                     var ctx = stack.Pop();
+                    if (Interlocked.CompareExchange(ref ctx.InUse, 1, 0) != 0)
+                        continue;
                     ctx.Dispose();
                 }
             }
