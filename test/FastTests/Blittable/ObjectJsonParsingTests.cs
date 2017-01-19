@@ -9,7 +9,7 @@ using Xunit;
 
 namespace FastTests.Blittable
 {
-    public class ObjectJsonParsingTests
+    public class ObjectJsonParsingTests : NoDisposalNeeded
     {
         [Fact]
         public void Zzz()

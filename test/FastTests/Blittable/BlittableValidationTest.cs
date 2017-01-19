@@ -1,19 +1,19 @@
 ﻿using System;
 using System.IO;
 using System.Text;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
+
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 using FastTests.Blittable.BlittableJsonWriterTests;
 using System.Reflection;
-using Newtonsoft.Json.Linq;
 using System.Linq;
+using Raven.Imports.Newtonsoft.Json;
+using Raven.Json.Linq;
 
 namespace FastTests.Blittable
 {
-    public class BlittableValidationTest : RavenTestBase
+    public class BlittableValidationTest : NoDisposalNeeded
     {
         private BlittableJsonReaderObject InitSimpleBlittable(JsonOperationContext context, out int size)
         {
@@ -57,7 +57,7 @@ namespace FastTests.Blittable
             }
         }
 
-        public class AllTokensTypes
+        private class AllTokensTypes
         {
             public bool Bool { get; set; }
             public string Null { get; set; }
@@ -68,7 +68,7 @@ namespace FastTests.Blittable
             public Empty Object { get; set; }
         }
 
-        public class Str
+        private class Str
         {
             public string str { get; set; }
         }
@@ -123,11 +123,11 @@ namespace FastTests.Blittable
             return company;
         }
 
-        public class Empty
+        private class Empty
         {
         }
 
-        public class City
+        private class City
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -136,20 +136,20 @@ namespace FastTests.Blittable
             public string CountryId { get; set; }
         }
 
-        public class Region
+        private class Region
         {
             public string Id { get; set; }
             public string Name { get; set; }
             public string CountryId { get; set; }
         }
 
-        public class ContactClass
+        private class ContactClass
         {
             public string Name { get; set; }
             public string Title { get; set; }
         }
 
-        public class AddressClass
+        private class AddressClass
         {
             public string Line1 { get; set; }
             public string Line2 { get; set; }
@@ -159,7 +159,7 @@ namespace FastTests.Blittable
             public string Country { get; set; }
         }
 
-        public class Company
+        private class Company
         {
             public enum CompanyType
             {
@@ -177,7 +177,7 @@ namespace FastTests.Blittable
             public Employee[] EmployeesIds { get; set; }
         }
 
-        public class Employee
+        private class Employee
         {
             public string Id { get; set; }
             public string FirstName { get; set; }
@@ -632,7 +632,7 @@ namespace FastTests.Blittable
             }
         }
 
-        public string createRandomEscString(int length)
+        private string createRandomEscString(int length)
         {
             Random random = new Random();
             char[] EscapeChars = { '\b', '\t', '\r', '\n', '\f', '\\', '"', };

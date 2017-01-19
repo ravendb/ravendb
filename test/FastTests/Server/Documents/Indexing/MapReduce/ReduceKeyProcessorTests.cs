@@ -8,7 +8,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Indexing.MapReduce
 {
-    public class ReduceKeyProcessorTests
+    public class ReduceKeyProcessorTests : NoDisposalNeeded
     {
         [Fact]
         public void Can_handle_values_of_different_types()

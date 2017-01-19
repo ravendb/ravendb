@@ -10,7 +10,7 @@ using Xunit;
 
 namespace FastTests.Blittable.BlittableJsonWriterTests
 {
-    public class VariousPropertyAmountsTests
+    public class VariousPropertyAmountsTests : NoDisposalNeeded
     {
         public string GetJsonString(int size)
         {

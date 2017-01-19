@@ -10,7 +10,7 @@ using Voron;
 
 namespace FastTests.Voron.Bugs
 {
-    public class StartsWithSearch
+    public class StartsWithSearch : NoDisposalNeeded
     {
         [Fact]
         public void ShouldWork()
@@ -20,7 +20,7 @@ namespace FastTests.Voron.Bugs
                 using (var tx = env.WriteTransaction())
                 {
                     var s = new string('0', 500);
-                    var tree = tx.CreateTree( "data");
+                    var tree = tx.CreateTree("data");
                     for (int i = 0; i < 10; i++)
                     {
                         tree.Add("users-" + i + "-" + s, new byte[0]);
@@ -40,7 +40,7 @@ namespace FastTests.Voron.Bugs
                         for (int i = 0; i < 10; i++)
                         {
                             Slice.From(tx.Allocator, "users-" + i, out key);
-                            Assert.True(it.Seek(key),i.ToString());
+                            Assert.True(it.Seek(key), i.ToString());
                         }
                     }
                 }

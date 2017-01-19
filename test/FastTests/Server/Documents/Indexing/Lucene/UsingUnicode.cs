@@ -23,7 +23,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 using (var session = store.OpenAsyncSession())
                 {
                     var result = await session.Query<UnicodeItem>()
-                        .Customize(customization => customization.WaitForNonStaleResultsAsOfLastWrite())
+                        .Customize(customization => customization.WaitForNonStaleResults())
                         .CountAsync(item => item.Content == content);
 
                     Assert.Equal(2, result);

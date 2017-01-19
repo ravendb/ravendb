@@ -12,7 +12,7 @@ using Xunit;
 
 namespace FastTests.Voron
 {
-    public unsafe class ValidHeaders
+    public unsafe class ValidHeaders : NoDisposalNeeded
     {
         [Fact]
         public void ValidateNoOverlap()

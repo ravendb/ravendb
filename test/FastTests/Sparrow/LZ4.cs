@@ -9,7 +9,7 @@ using Xunit.Extensions;
 
 namespace FastTests.Sparrow
 {
-    public unsafe class LZ4Tests
+    public unsafe class LZ4Tests : NoDisposalNeeded
     {
         public static IEnumerable<object[]> Sizes
         {
@@ -32,7 +32,7 @@ namespace FastTests.Sparrow
                      new object[] { 100000, 7 }
                 };
             }
-        }        
+        }
 
         [Theory, MemberData("Sizes")]
         public void CompressAndDecompress(int size, int bits)
@@ -45,9 +45,9 @@ namespace FastTests.Sparrow
             byte[] input = new byte[size];
             for (int i = 0; i < size; i++)
                 input[i] = (byte)(rnd.Next() % threshold);
-            
+
             var maximumOutputLength = LZ4.MaximumOutputLength(input.Length);
-            byte[] output = new byte[size + sizeof(uint)];            
+            byte[] output = new byte[size + sizeof(uint)];
             byte[] encodeOutput = new byte[maximumOutputLength + sizeof(uint)];
 
             fixed (byte* inputPtr = input)
@@ -58,7 +58,7 @@ namespace FastTests.Sparrow
                 *(uint*)(encodedOutputPtr + maximumOutputLength) = marker;
                 *(uint*)(outputPtr + size) = marker;
 
-                int compressedSize = LZ4.Encode64(inputPtr, encodedOutputPtr, size, (int) maximumOutputLength);
+                int compressedSize = LZ4.Encode64(inputPtr, encodedOutputPtr, size, (int)maximumOutputLength);
                 int uncompressedSize = LZ4.Decode64(encodedOutputPtr, compressedSize, outputPtr, size, true);
 
                 Assert.True(compressedSize <= maximumOutputLength);
@@ -130,6 +130,6 @@ namespace FastTests.Sparrow
                 Assert.Equal(marker, *(uint*)(encodedOutputPtr + maximumOutputLength));
                 Assert.Equal(marker, *(uint*)(outputPtr + input.Length));
             }
-        }        
+        }
     }
 }

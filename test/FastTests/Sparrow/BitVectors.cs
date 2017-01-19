@@ -9,7 +9,7 @@ using Xunit.Extensions;
 
 namespace FastTests.Sparrow
 {
-    public class BitVectorsTests
+    public class BitVectorsTests : NoDisposalNeeded
     {
         public static IEnumerable<object[]> VectorSize
         {
@@ -48,7 +48,7 @@ namespace FastTests.Sparrow
             Assert.Equal(0x0000000000000008UL, BitVector.BitInWord(60));
             Assert.Equal(0x8000000000000000UL, BitVector.BitInWord(0));
 
-            for ( int i = 0; i < BitVector.BitsPerWord; i++ )
+            for (int i = 0; i < BitVector.BitsPerWord; i++)
                 Assert.Equal(BitVector.BitInWord(i), BitVector.BitInWord(i + BitVector.BitsPerWord));
 
             Assert.Equal(0U, BitVector.WordForBit(0));
@@ -140,7 +140,7 @@ namespace FastTests.Sparrow
 
             vector = BitVector.Of(false, 94949u, 1231u);
             prefixFreeVector = BitVector.Of(true, 94949u, 1231u);
-            
+
             Assert.Equal(vector.Count + 2 * BitVector.BitsPerByte, prefixFreeVector.Count);
             Assert.True(vector.IsProperPrefix(prefixFreeVector));
 
@@ -439,7 +439,7 @@ namespace FastTests.Sparrow
 
             v1 = BitVector.Of(0xFFFFFFFF, 0x00000000, 0x00000000, 0x00001100);
             v2 = BitVector.Of(0xFFFFFFFF, 0x00000000, 0x00000000, 0x00000100);
-        
+
             Assert.Equal(1, v1.CompareTo(v2));
             Assert.Equal(-1, v2.CompareTo(v1));
         }
@@ -542,7 +542,7 @@ namespace FastTests.Sparrow
 
             v1 = BitVector.Parse("00000000010001110000000001011000000000000011001100000000001101110000000000000000");
             v2 = BitVector.Parse("00000000011001100000000000110000000000000011010000000000011011110000000000000000");
-            
+
             Assert.Equal(10, v1.LongestCommonPrefixLength(v2));
             Assert.Equal(v1.LongestCommonPrefixLength(v2), v2.LongestCommonPrefixLength(v1));
 
@@ -563,8 +563,8 @@ namespace FastTests.Sparrow
         public void Operations_GetByte()
         {
             var v1 = BitVector.Of(0x01020304, 0x05060708, 0x090A0B0C, 0x0D0E0F10);
-            for( int i = 0; i < v1.Count / BitVector.BitsPerByte; i++ )
-                Assert.Equal(i+1, v1.GetByte(i));
+            for (int i = 0; i < v1.Count / BitVector.BitsPerByte; i++)
+                Assert.Equal(i + 1, v1.GetByte(i));
         }
 
         [Fact]
@@ -574,7 +574,7 @@ namespace FastTests.Sparrow
             var v2 = BitVector.Parse("0");
 
             Assert.False(v1.IsPrefix(v2));
-            Assert.False(v2.IsPrefix(v1));            
+            Assert.False(v2.IsPrefix(v1));
 
             v1 = BitVector.Parse("10");
             v2 = BitVector.Parse("11");
@@ -583,7 +583,7 @@ namespace FastTests.Sparrow
             Assert.False(v2.IsPrefix(v1));
             Assert.True(v2.IsPrefix(v1, 0));
             Assert.True(v2.IsPrefix(v1, 1));
-            Assert.False(v2.IsPrefix(v1, 2));            
+            Assert.False(v2.IsPrefix(v1, 2));
 
             v1 = BitVector.Parse("10000000");
             v2 = BitVector.Parse("10000000");
@@ -596,19 +596,19 @@ namespace FastTests.Sparrow
                 Assert.True(v2.IsPrefix(v1, i));
                 Assert.True(v1.IsPrefix(v2, i));
             }
-                
+
 
             v1 = BitVector.Parse("1100000");
             v2 = BitVector.Parse("11000001");
 
             Assert.True(v1.IsPrefix(v2));
-            Assert.False(v2.IsPrefix(v1));      
+            Assert.False(v2.IsPrefix(v1));
 
             v1 = BitVector.Parse("1100000011");
             v2 = BitVector.Parse("11000000111");
 
             Assert.True(v1.IsPrefix(v2));
-            Assert.False(v2.IsPrefix(v1));     
+            Assert.False(v2.IsPrefix(v1));
 
             v1 = BitVector.Parse("0100000011");
             v2 = BitVector.Parse("01000000110");
@@ -634,13 +634,13 @@ namespace FastTests.Sparrow
             v2 = BitVector.Of(0xFFFFFFFF, 0x00000000, 0x00000000, 0x00000000);
 
             Assert.True(v1.IsPrefix(v2));
-            Assert.False(v2.IsPrefix(v1));     
+            Assert.False(v2.IsPrefix(v1));
 
             v1 = BitVector.Of(0xFFFFFFFF);
             v2 = BitVector.Of(0xFFFFFFFF, 0x00000000, 0x00000000, 0x00000000);
 
             Assert.True(v1.IsPrefix(v2));
-            Assert.False(v2.IsPrefix(v1));     
+            Assert.False(v2.IsPrefix(v1));
         }
 
         [Fact]

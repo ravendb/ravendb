@@ -3,7 +3,7 @@ using Xunit;
 
 namespace FastTests.Sparrow
 {
-    public class BitsTests
+    public class BitsTests : NoDisposalNeeded
     {
         [Fact]
         public void Bits_MostSignificativeBit()

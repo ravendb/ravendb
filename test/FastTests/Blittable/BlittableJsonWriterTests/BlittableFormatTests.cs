@@ -15,7 +15,7 @@ using Formatting = Raven.Imports.Newtonsoft.Json.Formatting;
 namespace FastTests.Blittable.BlittableJsonWriterTests
 {
 
-    public class BlittableFormatTests
+    public class BlittableFormatTests : NoDisposalNeeded
     {
         [Theory]
         [MemberData("Samples")]
