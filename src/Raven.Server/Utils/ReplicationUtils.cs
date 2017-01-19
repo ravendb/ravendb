@@ -304,7 +304,7 @@ namespace Raven.Server.Utils
                     ia++;
                     ib++;
                 }
-                else if (res > 0)
+                else if (res < 0)
                 {
                     merged.Add(vectorA[ia]);
                     ia++;

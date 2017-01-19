@@ -1489,6 +1489,15 @@ namespace Raven.Server.Documents
                 Interlocked.Increment(ref _hasConflicts);
                 conflictsTable.Set(tvb);
             }
+
+            context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
+            {
+                Etag = _lastEtag,
+                CollectionName = Constants.RavenReplicationConflictCollection,
+                Key = key,
+                Type = DocumentChangeTypes.PutConflict,
+                IsSystemDocument = false,
+            });
         }
 
         public struct PutOperationResults
@@ -1705,13 +1714,15 @@ namespace Raven.Server.Documents
             //We had conflicts need to delete them
             if (mergedChangeVectorEntries != null)
             {
+                
+                DeleteConflictsFor(context, key);
+                if (documentChangeVector != null)
+                    return ReplicationUtils.MergeVectors(mergedChangeVectorEntries, documentChangeVector);
+
                 mergedChangeVectorEntries = ReplicationUtils.MergeVectors(mergedChangeVectorEntries, new ChangeVectorEntry[]
                 {
                     new ChangeVectorEntry() {DbId = _documentDatabase.DbId,Etag = _lastEtag + 1}
                 });
-                DeleteConflictsFor(context, key);
-                if (documentChangeVector != null)
-                    return ReplicationUtils.MergeVectors(mergedChangeVectorEntries, documentChangeVector);
 
                 return mergedChangeVectorEntries;
             }

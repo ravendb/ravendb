@@ -31,7 +31,7 @@ namespace Raven.Client.Replication.Messages
         public string DatabaseId { get; set; }
     }
 
-    public struct ChangeVectorEntry : IComparable
+    public struct ChangeVectorEntry : IComparable<ChangeVectorEntry>
     {
         public Guid DbId;
         public long Etag;
@@ -49,9 +49,10 @@ namespace Raven.Client.Replication.Messages
             }
         }
 
-        public int CompareTo(object obj)
+        // we use it to sort change vectors by the ID.
+        public int CompareTo(ChangeVectorEntry other)
         {
-            return String.CompareOrdinal(DbId.ToString(), ((ChangeVectorEntry) obj).DbId.ToString());
+            return DbId.CompareTo(other.DbId);
         }
     }
 }
