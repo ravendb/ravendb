@@ -12,8 +12,6 @@ namespace Raven.Server.Documents.Indexes.Configuration
     {
         private bool? _runInMemory;
         private string _indexStoragePath;
-        private string _tempPath;
-        private string _journalsStoragePath;
 
         private readonly RavenConfiguration _databaseConfiguration;
 
@@ -32,16 +30,16 @@ namespace Raven.Server.Documents.Indexes.Configuration
             if (string.Equals(StoragePath, _databaseConfiguration.Indexing.StoragePath, StringComparison.OrdinalIgnoreCase))
                 return;
 
-            if (_databaseConfiguration.Indexing.AdditionalIndexStoragePaths != null)
+            if (_databaseConfiguration.Indexing.AdditionalStoragePaths != null)
             {
-                foreach (var path in _databaseConfiguration.Indexing.AdditionalIndexStoragePaths)
+                foreach (var path in _databaseConfiguration.Indexing.AdditionalStoragePaths)
                 {
                     if (string.Equals(StoragePath, path, StringComparison.OrdinalIgnoreCase))
                         return;
                 }
             }
 
-            throw new InvalidOperationException($"Given index path ('{StoragePath}') is not defined in '{Constants.Configuration.Indexing.StoragePath}' or '{Constants.Configuration.Indexing.AdditionalIndexStoragePaths}'");
+            throw new InvalidOperationException($"Given index path ('{StoragePath}') is not defined in '{Constants.Configuration.Indexing.StoragePath}' or '{Constants.Configuration.Indexing.AdditionalStoragePaths}'");
         }
 
         public override bool Disabled => _databaseConfiguration.Indexing.Disabled;
@@ -80,49 +78,11 @@ namespace Raven.Server.Documents.Indexes.Configuration
             }
         }
 
-        public override string TempPath
-        {
-            get
-            {
-                if (string.IsNullOrEmpty(_tempPath))
-                    _tempPath = _databaseConfiguration.Indexing.TempPath;
-                return _tempPath;
-            }
+        public override string TempPath => _databaseConfiguration.Indexing.TempPath;
 
-            protected set
-            {
-                if (string.IsNullOrWhiteSpace(value))
-                {
-                    _tempPath = null;
-                    return;
-                }
+        public override string JournalsStoragePath => _databaseConfiguration.Indexing.JournalsStoragePath;
 
-                _tempPath = AddDatabaseNameToPathIfNeeded(value.ToFullPath());
-            }
-        }
-
-        public override string JournalsStoragePath
-        {
-            get
-            {
-                if (string.IsNullOrEmpty(_journalsStoragePath))
-                    _journalsStoragePath = _databaseConfiguration.Indexing.JournalsStoragePath;
-                return _journalsStoragePath;
-            }
-
-            protected set
-            {
-                if (string.IsNullOrWhiteSpace(value))
-                {
-                    _journalsStoragePath = null;
-                    return;
-                }
-
-                _journalsStoragePath = AddDatabaseNameToPathIfNeeded(value.ToFullPath());
-            }
-        }
-
-        public override string[] AdditionalIndexStoragePaths => _databaseConfiguration.Indexing.AdditionalIndexStoragePaths;
+        public override string[] AdditionalStoragePaths => _databaseConfiguration.Indexing.AdditionalStoragePaths;
 
         public IndexUpdateType CalculateUpdateType(SingleIndexConfiguration newConfiguration)
         {

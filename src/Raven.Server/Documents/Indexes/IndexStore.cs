@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.SqlTypes;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -18,13 +17,9 @@ using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries.Dynamic;
-using Raven.Server.Documents.SqlReplication;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 
 using Voron.Platform.Posix;
-
-using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Platform;
 
@@ -68,9 +63,9 @@ namespace Raven.Server.Documents.Indexes
                 {
                     InitializePath(_documentDatabase.Configuration.Indexing.StoragePath);
 
-                    if (_documentDatabase.Configuration.Indexing.AdditionalIndexStoragePaths != null)
+                    if (_documentDatabase.Configuration.Indexing.AdditionalStoragePaths != null)
                     {
-                        foreach (var path in _documentDatabase.Configuration.Indexing.AdditionalIndexStoragePaths)
+                        foreach (var path in _documentDatabase.Configuration.Indexing.AdditionalStoragePaths)
                             InitializePath(path);
                     }
                 }
@@ -521,9 +516,9 @@ namespace Raven.Server.Documents.Indexes
             {
                 OpenIndexesFromDirectory(_documentDatabase.Configuration.Indexing.StoragePath);
 
-                if (_documentDatabase.Configuration.Indexing.AdditionalIndexStoragePaths != null)
+                if (_documentDatabase.Configuration.Indexing.AdditionalStoragePaths != null)
                 {
-                    foreach (var path in _documentDatabase.Configuration.Indexing.AdditionalIndexStoragePaths)
+                    foreach (var path in _documentDatabase.Configuration.Indexing.AdditionalStoragePaths)
                         OpenIndexesFromDirectory(path);
                 }
             }
@@ -556,8 +551,8 @@ namespace Raven.Server.Documents.Indexes
                 if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
                     return;
 
-                int indexId = indexDirectory.Key;
-                string indexName = indexDirectory.Value.Item2;
+                var indexId = indexDirectory.Key;
+                var indexName = indexDirectory.Value.Item2;
                 var indexPath = indexDirectory.Value.Item1;
 
                 List<Exception> exceptions = null;
@@ -592,7 +587,8 @@ namespace Raven.Server.Documents.Indexes
                         index?.Dispose();
                         exceptions?.Add(e);
 
-                        var fakeIndex = new FaultyInMemoryIndex(e, indexId, IndexDefinitionBase.TryReadNameFromMetadataFile(indexPath) ?? indexName);
+                        var configuration = new FaultyInMemoryIndexConfiguration(path, _documentDatabase.Configuration);
+                        var fakeIndex = new FaultyInMemoryIndex(e, indexId, IndexDefinitionBase.TryReadNameFromMetadataFile(indexPath) ?? indexName, configuration);
 
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Could not open index with id {indexId} at '{indexPath}'. Created in-memory, fake instance: {fakeIndex.Name}", e);

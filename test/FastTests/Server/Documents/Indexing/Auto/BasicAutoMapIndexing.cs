@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
+using Raven.Client.Indexing;
+using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
@@ -220,7 +222,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 database.IndexStore.CreateIndex(
                     new AutoMapIndexDefinition("Users", new[] { new IndexField { Name = "Name1" } }));
 
-            
+
 
             var path1 = Path.Combine(database.Configuration.Indexing.StoragePath,
                 database.IndexStore.GetIndex(index1).GetIndexNameSafeForFileSystem());
@@ -315,7 +317,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         var scope = new IndexingStatsScope(batchStats);
                         while (index.DoIndexingWork(scope, CancellationToken.None))
                         {
-                            
+
                         }
                         Assert.Equal(2, index.GetLastMappedEtagsForDebug().Values.Min());
                         Assert.Equal(2, batchStats.MapAttempts);
@@ -1004,7 +1006,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(IndexState.Idle, index2.State);
 
                 var now = database.Time.GetUtcNow();
-                database.Time.UtcDateTime = () => 
+                database.Time.UtcDateTime = () =>
                         now.Add(TimeSpan.FromSeconds(1))
                            .Add(database.Configuration.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan);
 
@@ -1095,12 +1097,12 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 var index = database.IndexStore.GetIndex(1);
                 indexName = index.Name;
 
-                indexStoragePath = Path.Combine(database.Configuration.Indexing.StoragePath, 
+                indexStoragePath = Path.Combine(database.Configuration.Indexing.StoragePath,
                     index.GetIndexNameSafeForFileSystem());
             }
 
-            IOExtensions.DeleteFile(Path.Combine(indexStoragePath,"headers.one"));
-            IOExtensions.DeleteFile(Path.Combine(indexStoragePath,"headers.two"));
+            IOExtensions.DeleteFile(Path.Combine(indexStoragePath, "headers.one"));
+            IOExtensions.DeleteFile(Path.Combine(indexStoragePath, "headers.two"));
 
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration => configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = false))
             {
@@ -1119,11 +1121,15 @@ namespace FastTests.Server.Documents.Indexing.Auto
         [Fact]
         public void CanDeleteFaultyIndex()
         {
+            var name = Guid.NewGuid().ToString();
             var path = NewDataPath();
             string indexStoragePath;
             string indexSafeName;
 
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
+            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration =>
+            {
+                configuration.DatabaseName = name;
+            }))
             {
                 var name1 = new IndexField
                 {
@@ -1141,10 +1147,78 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     index.GetIndexNameSafeForFileSystem());
             }
 
+            Assert.True(Directory.Exists(indexStoragePath));
             IOExtensions.DeleteDirectory(indexStoragePath);
             Directory.CreateDirectory(indexStoragePath); // worst case, we have no info
 
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration => configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = false))
+            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration =>
+            {
+                configuration.DatabaseName = name;
+                configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = false;
+            }))
+            {
+                var index = database
+                    .IndexStore
+                    .GetIndex(1);
+
+                Assert.IsType<FaultyInMemoryIndex>(index);
+                Assert.Equal(IndexState.Error, index.State);
+                Assert.Equal(indexSafeName, index.GetIndexNameSafeForFileSystem());
+
+                database.IndexStore.DeleteIndex(index.IndexId);
+
+                for (int i = 0; i < 5; i++)
+                {
+                    if (Directory.Exists(indexStoragePath) == false)
+                        return;
+                    Thread.Sleep(16);
+                }
+
+                Assert.False(true, indexStoragePath + " exists");
+            }
+        }
+
+        [Fact]
+        public void CanDeleteFaultyIndexWithNonDefaultPath()
+        {
+            var name = Guid.NewGuid().ToString();
+            var path = NewDataPath();
+            var additionalPath = NewDataPath();
+            string indexStoragePath;
+            string indexSafeName;
+
+            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration =>
+            {
+                configuration.DatabaseName = name;
+                configuration.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.AdditionalStoragePaths), additionalPath);
+            }))
+            {
+                Assert.Equal(1, database.IndexStore.CreateIndex(
+                    new IndexDefinition
+                    {
+                        Name = "Index1",
+                        Maps = { "from doc in docs select new { doc.Name }" },
+                        Configuration =
+                        {
+                            {RavenConfiguration.GetKey(x => x.Indexing.StoragePath), additionalPath}
+                        }
+                    }));
+                var index = database.IndexStore.GetIndex(1);
+                indexSafeName = index.GetIndexNameSafeForFileSystem();
+
+                indexStoragePath = Path.Combine(index.Configuration.StoragePath, index.GetIndexNameSafeForFileSystem());
+            }
+
+            Assert.True(Directory.Exists(indexStoragePath));
+            IOExtensions.DeleteDirectory(indexStoragePath);
+            Directory.CreateDirectory(indexStoragePath); // worst case, we have no info
+
+            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration =>
+            {
+                configuration.DatabaseName = name;
+                configuration.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.AdditionalStoragePaths), additionalPath);
+                configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = false;
+            }))
             {
                 var index = database
                     .IndexStore

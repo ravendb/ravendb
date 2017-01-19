@@ -22,7 +22,7 @@ namespace Raven.Server.Config.Categories
         private string _indexStoragePath;
         private string _tempPath;
         private string _journalsStoragePath;
-        private string[] _additionalIndexStoragePaths;
+        private string[] _additionalStoragePaths;
 
         public IndexingConfiguration(Func<string> databaseName, Func<bool> runInMemory, Func<string> dataDirectory) // TODO arek - maybe use Lazy instead
         {
@@ -122,23 +122,23 @@ namespace Raven.Server.Config.Categories
         [Description("List of paths separated by semicolon ';' where database will look for index when it loads.")]
         [DefaultValue(null)]
         [IndexUpdateType(IndexUpdateType.None)]
-        [ConfigurationEntry(Constants.Configuration.Indexing.AdditionalIndexStoragePaths)]
-        public virtual string[] AdditionalIndexStoragePaths
+        [ConfigurationEntry(Constants.Configuration.Indexing.AdditionalStoragePaths)]
+        public virtual string[] AdditionalStoragePaths
         {
             get
             {
-                return _additionalIndexStoragePaths;
+                return _additionalStoragePaths;
             }
 
             protected set
             {
                 if (value == null)
                 {
-                    _additionalIndexStoragePaths = null;
+                    _additionalStoragePaths = null;
                     return;
                 }
 
-                _additionalIndexStoragePaths = value
+                _additionalStoragePaths = value
                     .Select(x => AddDatabaseNameToPathIfNeeded(x.ToFullPath()))
                     .ToArray();
             }

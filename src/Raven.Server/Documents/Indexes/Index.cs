@@ -156,7 +156,18 @@ namespace Raven.Server.Documents.Indexes
         {
             StorageEnvironment environment = null;
 
-            var options = StorageEnvironmentOptions.ForPath(path);
+            var name = Path.GetDirectoryName(path);
+            var indexPath = path;
+
+            var indexTempPath = documentDatabase.Configuration.Indexing.TempPath != null
+                ? Path.Combine(documentDatabase.Configuration.Indexing.TempPath, name)
+                : null;
+
+            var journalPath = documentDatabase.Configuration.Indexing.JournalsStoragePath != null
+                ? Path.Combine(documentDatabase.Configuration.Indexing.JournalsStoragePath, name)
+                : null;
+
+            var options = StorageEnvironmentOptions.ForPath(indexPath, indexTempPath, journalPath);
             try
             {
                 options.SchemaVersion = 1;

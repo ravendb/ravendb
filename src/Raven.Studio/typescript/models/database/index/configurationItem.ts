@@ -7,9 +7,7 @@ class configurationItem {
         "Raven/Indexing/MaxIndexOutputsPerDocument",
         "Raven/Indexing/MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory",
         "Raven/Indexing/MapTimeoutInSec",
-        "Raven/Indexing/MapTimeoutAfterEtagReachedInMin",
-        "Raven/Indexing/TempPath",
-        "Raven/Indexing/JournalsStoragePath"
+        "Raven/Indexing/MapTimeoutAfterEtagReachedInMin"
     ];
 
     key = ko.observable<string>();
