@@ -279,7 +279,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var options = configuration.RunInMemory
                     ? StorageEnvironmentOptions.CreateMemoryOnly(indexPath, indexTempPath)
-                    : StorageEnvironmentOptions.ForPath(indexPath);
+                    : StorageEnvironmentOptions.ForPath(indexPath, indexTempPath, journalPath);
 
                 options.SchemaVersion = 1;
                 try
@@ -1309,19 +1309,31 @@ namespace Raven.Server.Documents.Indexes
         {
             var stats = new IndexStats.MemoryStats();
 
-            var indexPath = Path.Combine(Configuration.StoragePath,
-                GetIndexNameSafeForFileSystem());
+            var name = GetIndexNameSafeForFileSystem();
+
+            var indexPath = Path.Combine(Configuration.StoragePath, GetIndexNameSafeForFileSystem());
+
+            var indexTempPath = Configuration.TempPath != null
+                ? Path.Combine(Configuration.TempPath, name)
+                : null;
+
+            var journalPath = Configuration.JournalsStoragePath != null
+                ? Path.Combine(Configuration.JournalsStoragePath, name)
+                : null;
+
             var totalSize = 0L;
             foreach (var mapping in NativeMemory.FileMapping)
             {
                 var directory = Path.GetDirectoryName(mapping.Key);
 
-                if (string.Equals(indexPath, directory, StringComparison.OrdinalIgnoreCase) == false)
-                    continue;
+                var isIndexPath = string.Equals(indexPath, directory, StringComparison.OrdinalIgnoreCase);
+                var isTempPath = indexTempPath != null && string.Equals(indexTempPath, directory, StringComparison.OrdinalIgnoreCase);
+                var isJournalPath = journalPath != null && string.Equals(journalPath, directory, StringComparison.OrdinalIgnoreCase);
 
-                foreach (var singleMapping in mapping.Value)
+                if (isIndexPath || isTempPath || isJournalPath)
                 {
-                    totalSize += singleMapping.Value;
+                    foreach (var singleMapping in mapping.Value)
+                        totalSize += singleMapping.Value;
                 }
             }
 
