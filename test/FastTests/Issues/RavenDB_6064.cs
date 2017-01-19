@@ -1,16 +1,13 @@
 ﻿using System.Linq;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
-using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Indexes.MapReduce.Auto;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
-using Lucene.Net;
 
 namespace FastTests.Issues
 {
-    public class RavenDB_6064: RavenTestBase
+    public class RavenDB_6064 : RavenNewTestBase
     {
         [Fact]
         public void MapOnSeveralCompressedStrings()
@@ -30,7 +27,7 @@ namespace FastTests.Issues
 
                     Assert.Equal(4, totalCount.Count);
                 }
-                
+
                 AssertStringCountForMap(store, 2, "Foo");
                 AssertStringCountForMap(store, 2, "Bar");
             }
@@ -42,8 +39,8 @@ namespace FastTests.Issues
             using (var store = GetDocumentStore())
             {
                 new GetMultipleStringFieldsIndex().Execute(store);
-                CreateEntries(store, 2, "Foo", 1024,10);
-                CreateEntries(store, 2, "Bar", 1024,10);
+                CreateEntries(store, 2, "Foo", 1024, 10);
+                CreateEntries(store, 2, "Bar", 1024, 10);
 
                 using (var session = store.OpenSession())
                 {
@@ -59,7 +56,7 @@ namespace FastTests.Issues
             }
         }
 
-        public class Entity
+        private class Entity
         {
             public string StringA;
             public string StringB;
@@ -67,7 +64,7 @@ namespace FastTests.Issues
             public string StringD;
         }
 
-        public void AssertStringCountForMap(DocumentStore store, int expectedCount, string prefix)
+        private void AssertStringCountForMap(DocumentStore store, int expectedCount, string prefix)
         {
             using (var session = store.OpenSession())
             {
@@ -84,7 +81,7 @@ namespace FastTests.Issues
             }
         }
 
-        public void AssertStringCountForReduce(DocumentStore store, int expectedCount, string prefix)
+        private void AssertStringCountForReduce(DocumentStore store, int expectedCount, string prefix)
         {
             using (var session = store.OpenSession())
             {
@@ -101,7 +98,7 @@ namespace FastTests.Issues
             }
         }
 
-        public class EntityIndex : AbstractIndexCreationTask<Entity>
+        private class EntityIndex : AbstractIndexCreationTask<Entity>
         {
             public EntityIndex()
             {
@@ -125,7 +122,7 @@ namespace FastTests.Issues
             }
         }
 
-        public class GetMultipleStringFieldsIndex : AbstractIndexCreationTask<Entity, GetMultipleStringFieldsIndex.ReduceResult>
+        private class GetMultipleStringFieldsIndex : AbstractIndexCreationTask<Entity, GetMultipleStringFieldsIndex.ReduceResult>
         {
             public class ReduceResult
             {
@@ -149,16 +146,16 @@ namespace FastTests.Issues
                                   };
 
                 Reduce = results => from result in results
-                    group result by new {result.StringA, result.StringB, result.StringC, result.StringD}
+                                    group result by new { result.StringA, result.StringB, result.StringC, result.StringD }
                     into g
-                    select new ReduceResult
-                    {
-                        StringA = g.First().StringA,
-                        StringB = g.First().StringB,
-                        StringC = g.First().StringC,
-                        StringD = g.First().StringD,
-                        Sum = g.Sum(x=>x.Sum)
-                    };
+                                    select new ReduceResult
+                                    {
+                                        StringA = g.First().StringA,
+                                        StringB = g.First().StringB,
+                                        StringC = g.First().StringC,
+                                        StringD = g.First().StringD,
+                                        Sum = g.Sum(x => x.Sum)
+                                    };
 
                 Analyzers.Add(c => c.StringA, typeof(Lucene.Net.Analysis.Standard.StandardAnalyzer).ToString());
                 Analyzers.Add(c => c.StringB, typeof(Lucene.Net.Analysis.Standard.StandardAnalyzer).ToString());

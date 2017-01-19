@@ -10,7 +10,7 @@ using Voron;
 
 namespace FastTests.Voron.Bugs
 {
-    public class StorageEnvDisposeWithLazyTx
+    public class StorageEnvDisposeWithLazyTx : NoDisposalNeeded
     {
         [Fact]
         public void CanDisposeStorageWithLazyTx()

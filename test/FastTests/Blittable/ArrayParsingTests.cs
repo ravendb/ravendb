@@ -9,7 +9,7 @@ using Xunit;
 
 namespace FastTests.Blittable
 {
-    public class ArrayParsingTests
+    public class ArrayParsingTests : NoDisposalNeeded
     {
         [Fact]
         public async Task CanParseSimpleArray()
@@ -17,7 +17,7 @@ namespace FastTests.Blittable
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
                 var ms = new MemoryStream(Encoding.UTF8.GetBytes("[\"Oren\",\"Arava\"]"));
-                var arrayParseResult = await ctx.ParseArrayToMemoryAsync(ms, "array",BlittableJsonDocumentBuilder.UsageMode.None);
+                var arrayParseResult = await ctx.ParseArrayToMemoryAsync(ms, "array", BlittableJsonDocumentBuilder.UsageMode.None);
                 using (arrayParseResult.Item2)
                 {
                     Assert.Equal("Oren", arrayParseResult.Item1.GetStringByIndex(0));

@@ -11,7 +11,7 @@ using Xunit;
 
 namespace FastTests.Blittable
 {
-    public unsafe class SmallStringCompressionTests
+    public unsafe class SmallStringCompressionTests : NoDisposalNeeded
     {
         [Theory]
         [InlineData("this is a sample string")]

@@ -7,7 +7,7 @@ using Xunit;
 
 namespace FastTests.Sparrow
 {
-    public unsafe class PtrBitVectorTests
+    public unsafe class PtrBitVectorTests : NoDisposalNeeded
     {
         [Fact(Skip = "We will skip compatibility for now, but we want this to happen before RTM")]
         public void Compatibility()
@@ -35,7 +35,7 @@ namespace FastTests.Sparrow
                 Assert.Equal(false, ptr[idx + 1]);
 
                 ptr.Set(idx, false);
-                ptr.Set(idx+1, true);
+                ptr.Set(idx + 1, true);
 
                 Assert.Equal(false, ptr[idx - 1]);
                 Assert.Equal(false, ptr[idx]);

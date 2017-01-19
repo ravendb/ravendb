@@ -7,7 +7,7 @@ using Voron;
 
 namespace FastTests.Voron.Bugs
 {
-    public class MultiAdds
+    public class MultiAdds : NoDisposalNeeded
     {
         readonly Random _random = new Random(1234);
 
@@ -53,13 +53,13 @@ namespace FastTests.Voron.Bugs
             {
                 using (var tx = env.WriteTransaction())
                 {
-                    tx.CreateTree(  "multi");
+                    tx.CreateTree("multi");
                     tx.Commit();
                 }
 
                 using (var tx = env.WriteTransaction())
                 {
-                   var batch = tx.CreateTree("multi");
+                    var batch = tx.CreateTree("multi");
 
                     batch.MultiAdd("0", "1");
                     batch.MultiAdd("1", "1");
@@ -168,7 +168,7 @@ namespace FastTests.Voron.Bugs
             {
                 for (var j = 0; j < 10; j++)
                 {
-                    
+
                     foreach (var treeName in trees)
                     {
                         var tree = tx.CreateTree(treeName);

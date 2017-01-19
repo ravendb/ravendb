@@ -8,7 +8,7 @@ using Xunit;
 
 namespace FastTests.Sparrow
 {
-    public class IoMetric
+    public class IoMetric : NoDisposalNeeded
     {
         [Fact]
         public void CanProperlyReportIoMetrics()
@@ -19,7 +19,7 @@ namespace FastTests.Sparrow
             {
                 var now = DateTime.UtcNow;
                 metrics.MeterIoRate("file1.txt", IoMetrics.MeterType.JournalWrite, i + 1)
-                    .Parent.Mark(i + 1, now, now.AddMilliseconds(2),IoMetrics.MeterType.JournalWrite);
+                    .Parent.Mark(i + 1, now, now.AddMilliseconds(2), IoMetrics.MeterType.JournalWrite);
             }
 
             int filesCount = 0;
@@ -33,7 +33,7 @@ namespace FastTests.Sparrow
                 foreach (var currentItem in currentItems)
                 {
                     var durationInMs = currentItem.Duration.TotalMilliseconds;
-                    Assert.InRange(durationInMs, 0, 2); 
+                    Assert.InRange(durationInMs, 0, 2);
                 }
 
                 Assert.Equal(1, historyItems.Count);

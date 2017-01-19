@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using FastTests;
@@ -14,10 +15,13 @@ namespace SlowTests.Tests
 {
     public class NoNonDisposableTests : NoDisposalNeeded
     {
+        private readonly HashSet<Assembly> _assemblies = new HashSet<Assembly>();
+
         [Fact]
         public void ShouldExist()
         {
-            var types = from test in typeof(NoNonDisposableTests).GetTypeInfo().Assembly.GetTypes()
+            var types = from assembly in GetAssemblies(typeof(NoNonDisposableTests).GetTypeInfo().Assembly)
+                        from test in assembly.GetTypes()
                         where test.GetMethods().Any(x => x.GetCustomAttributes(typeof(FactAttribute), true).Count() != 0 || x.GetCustomAttributes(typeof(TheoryAttribute), true).Count() != 0)
                         where typeof(IDisposable).IsAssignableFrom(test) == false
                         select test;
@@ -28,6 +32,20 @@ namespace SlowTests.Tests
 
             var userMessage = string.Join(Environment.NewLine, array.Select(x => x.FullName));
             throw new Exception(userMessage);
+        }
+
+        private IEnumerable<Assembly> GetAssemblies(Assembly assemblyToScan)
+        {
+            if (_assemblies.Add(assemblyToScan) == false)
+                yield break;
+
+            yield return assemblyToScan;
+
+            foreach (var referencedAssembly in assemblyToScan.GetReferencedAssemblies().Select(Assembly.Load))
+            {
+                foreach (var assembly in GetAssemblies(referencedAssembly))
+                    yield return assembly;
+            }
         }
     }
 }

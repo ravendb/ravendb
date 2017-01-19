@@ -6,7 +6,7 @@ using Voron;
 
 namespace FastTests.Voron.Storage
 {
-    public class MultiTransactions
+    public class MultiTransactions : NoDisposalNeeded
     {
         [Fact]
         public void ShouldWork()

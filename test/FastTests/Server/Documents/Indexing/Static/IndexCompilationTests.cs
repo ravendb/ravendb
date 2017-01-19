@@ -4,7 +4,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Indexing.Static
 {
-    public class IndexCompilationTests
+    public class IndexCompilationTests : NoDisposalNeeded
     {
         [Fact]
         public void Sum_of_elements()

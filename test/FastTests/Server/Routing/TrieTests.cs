@@ -10,7 +10,7 @@ using Xunit;
 
 namespace FastTests.Server.Routing
 {
-    public class TrieTests
+    public class TrieTests : NoDisposalNeeded
     {
         [Fact]
         public void CanQueryTrie()
