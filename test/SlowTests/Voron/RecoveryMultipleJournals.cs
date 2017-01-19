@@ -182,53 +182,6 @@ namespace SlowTests.Voron
         }
 
         [Fact]
-        public void CanResetLogInfoAfterBigUncommitedTransactionWithRestart2()
-        {
-            RequireFileBasedPager();
-            using (var tx = Env.WriteTransaction())
-            {
-                tx.CreateTree("tree");
-
-                tx.Commit();
-            }
-
-            Random rnd = new Random();
-
-            var buffer = new byte[100];
-            rnd.NextBytes(buffer);
-            using (var tx = Env.WriteTransaction())
-            {
-                for (var i = 0; i < 1000; i++)
-                {
-                    tx.CreateTree("tree").Add("a" + i, new MemoryStream(buffer));
-                }
-                tx.Commit();
-            }
-
-            var currentJournal = Env.Journal.GetCurrentJournalInfo().CurrentJournal;
-
-            using (var tx = Env.WriteTransaction())
-            {
-                for (var i = 0; i < 1000; i++)
-                {
-                    rnd.NextBytes(buffer);
-                    tx.CreateTree("tree").Add("b" + i, new MemoryStream(buffer));
-                }
-                tx.Commit();
-            }
-
-            var lastJournal = Env.Journal.GetCurrentJournalInfo().CurrentJournal;
-
-            StopDatabase();
-
-            CorruptJournal(lastJournal - 1, posOf4KbInJrnl: 3);
-
-            StartDatabase();
-            Assert.Equal(currentJournal, Env.Journal.GetCurrentJournalInfo().CurrentJournal);
-        }
-
-
-        [Fact]
         public void CorruptingOneTransactionWillThrow()
         {
             RequireFileBasedPager();
