@@ -431,6 +431,7 @@ namespace Voron.Impl.Journal
             private bool _ignoreLockAlreadyTaken;
             private long _totalWrittenButUnsyncedBytes;
             private DateTime _lastSyncTime;
+            private bool _stopSync;
 
             public long TotalWrittenButUnsyncedBytes => Volatile.Read(ref _totalWrittenButUnsyncedBytes);
 
@@ -667,6 +668,12 @@ namespace Voron.Impl.Journal
                     throw new InvalidOperationException(
                         "This method can only be called after the storage environment has been disposed");
 
+                LockAndReleaseSyncLock();
+
+            }
+
+            private void LockAndReleaseSyncLock()
+            {
                 if (Monitor.TryEnter(_fsyncLock))
                 {
                     Monitor.Exit(_fsyncLock);
@@ -698,11 +705,14 @@ namespace Voron.Impl.Journal
                 {
                     Monitor.Enter(_flushingLock);// reacquire the lock
                 }
-
             }
 
             public void SyncDataFile()
             {
+                if (_stopSync)
+                {
+                    return;
+                }
                 // This function can take a LONG time, and it needs to run concurrently with the
                 // rest of the system, so in order to handle this properly, we do:
                 // 1) Take the flushing lock (if we fail, we'll requeue for the sync)
@@ -1026,6 +1036,17 @@ namespace Voron.Impl.Journal
                 current.DeleteOnClose = true;
                 current.Release();
 
+            }
+
+            public void StopSync()
+            {
+                _stopSync = true;
+                LockAndReleaseSyncLock();
+            }
+
+            public void ResumeSync()
+            {
+                _stopSync = false;
             }
         }
 

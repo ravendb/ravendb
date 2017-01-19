@@ -99,6 +99,7 @@ namespace Voron.Impl.Backup
             IncrementalBackupInfo backupInfo;
             var transactionPersistentContext = new TransactionPersistentContext(true);
             using (var txw = env.NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
+            using (env.Journal.Applicator.TakeFlushingLock())
             {
                 backupInfo = env.HeaderAccessor.Get(ptr => ptr->IncrementalBackup);
 
