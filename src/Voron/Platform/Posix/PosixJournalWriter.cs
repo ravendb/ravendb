@@ -23,12 +23,14 @@ namespace Voron.Platform.Posix
         private readonly string _filename;
         private int _fd, _fdReads = -1;
         private readonly int _maxNumberOf4KbPerSingleWrite;
+        private readonly bool _postpondDeletion;
 
-        public PosixJournalWriter(StorageEnvironmentOptions options, string filename, long journalSize)
+        public PosixJournalWriter(StorageEnvironmentOptions options, string filename, long journalSize, bool postpondDeletionOnClose)
         {
             _options = options;
             _filename = filename;
             _maxNumberOf4KbPerSingleWrite = int.MaxValue / (4*Constants.Size.Kilobyte);
+            _postpondDeletion = postpondDeletionOnClose;
 
             _fd = Syscall.open(filename, OpenFlags.O_WRONLY | options.PosixOpenFlags | OpenFlags.O_CREAT,
                 FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
@@ -78,7 +80,7 @@ namespace Voron.Platform.Posix
             }
             Syscall.close(_fd);
             _fd = -1;
-            if (DeleteOnClose)
+            if (DeleteOnClose && _postpondDeletion == false)
             {
                 _options.TryStoreJournalForReuse(_filename);
             }

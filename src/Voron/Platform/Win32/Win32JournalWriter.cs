@@ -26,13 +26,16 @@ namespace Voron.Platform.Win32
         private SafeFileHandle _readHandle;
         private NativeOverlapped* _nativeOverlapped;
         private volatile bool _disposed;
+        private readonly bool _postpondDeletion;
 
-        public Win32FileJournalWriter(StorageEnvironmentOptions options, string filename, long journalSize, 
+        public Win32FileJournalWriter(StorageEnvironmentOptions options, string filename, long journalSize,
+            bool postpondDeletionOnClose,
             Win32NativeFileAccess access = Win32NativeFileAccess.GenericWrite, 
             Win32NativeFileShare shareMode = Win32NativeFileShare.Read)
         {
             _options = options;
             _filename = filename;
+            _postpondDeletion = postpondDeletionOnClose;
             _handle = Win32NativeFileMethods.CreateFile(filename,
                 access, shareMode, IntPtr.Zero,
                 Win32NativeFileCreationDisposition.OpenAlways,
@@ -172,7 +175,7 @@ namespace Voron.Platform.Win32
                 _nativeOverlapped = null;
             }
            
-            if (DeleteOnClose)
+            if (DeleteOnClose && _postpondDeletion == false)
             {
                 _options.TryStoreJournalForReuse(_filename);
             }

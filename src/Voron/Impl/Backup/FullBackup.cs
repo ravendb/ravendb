@@ -101,16 +101,21 @@ namespace Voron.Impl.Backup
                 var writePesistentContext = new TransactionPersistentContext(true);
                 var readPesistentContext = new TransactionPersistentContext(true);
                 using (var txw = env.NewLowLevelTransaction(writePesistentContext, TransactionFlags.ReadWrite)) // so we can snapshot the headers safely
+                using (env.Journal.Applicator.TakeFlushingLock())
                 {
-                    txr = env.NewLowLevelTransaction(readPesistentContext, TransactionFlags.Read);// now have snapshot view
-                    allocatedPages = dataPager.NumberOfAllocatedPages;
+                    env.Journal.Applicator.StopSync();
 
-                    Debug.Assert(HeaderAccessor.HeaderFileNames.Length == 2);
-                    infoNotify("Voron copy headers for " + basePath);
-                    VoronBackupUtil.CopyHeaders(compression, package, copier, env.Options, basePath);
+                    txr = env.NewLowLevelTransaction(readPesistentContext, TransactionFlags.Read);// now have snapshot view
+
+                    allocatedPages = dataPager.NumberOfAllocatedPages;
 
                     // journal files snapshot
                     var files = env.Journal.Files; // thread safety copy
+
+                    // header must be copied in the lock
+                    Debug.Assert(HeaderAccessor.HeaderFileNames.Length == 2);
+                    infoNotify("Voron copy headers for " + basePath);
+                    VoronBackupUtil.CopyHeaders(compression, package, copier, env.Options, basePath);
 
                     JournalInfo journalInfo = env.HeaderAccessor.Get(ptr => ptr->Journal);
                     for (var journalNum = journalInfo.CurrentJournal - journalInfo.JournalFilesCount + 1;
@@ -127,7 +132,7 @@ namespace Voron.Impl.Backup
                                 journalSize = Bits.NextPowerOf2(pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
                             }
 
-                            journalFile = new JournalFile(env, env.Options.CreateJournalWriter(journalNum, journalSize), journalNum);
+                            journalFile = new JournalFile(env, env.Options.CreateJournalWriter(journalNum, journalSize, true), journalNum);
                         }
 
                         journalFile.AddRef();
@@ -142,6 +147,8 @@ namespace Voron.Impl.Backup
 
                     // txw.Commit(); intentionally not committing
                 }
+
+                env.Journal.Applicator.ResumeSync();
 
                 backupStarted?.Invoke();
 
@@ -176,10 +183,12 @@ namespace Voron.Impl.Backup
                             copier.ToStream(env, journalFile, 0, pagesToCopy, stream);
                             infoNotify(string.Format("Voron copy journal file {0}", entryName));
                         }
+
                     }
                 }
                 finally
                 {
+                    env.Journal.Applicator.ResumeSync();
                     foreach (var journalFile in usedJournals)
                     {
                         journalFile.Release();

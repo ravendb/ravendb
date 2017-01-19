@@ -103,12 +103,17 @@ namespace Voron
 
         public abstract string BasePath { get; }
 
-        /// <summary>
+        public virtual string JournalPath()
+        {
+            return null;
+        }
+
+    /// <summary>
         /// This mode is used in the Voron recovery tool and is not intended to be set otherwise.
         /// </summary>
         internal bool CopyOnWriteMode { get; set; }
 
-        public abstract IJournalWriter CreateJournalWriter(long journalNumber, long journalSize);
+        public abstract IJournalWriter CreateJournalWriter(long journalNumber, long journalSize, bool postpondDeletion = false);
 
         protected bool Disposed;
         private long _initialLogFileSize;
@@ -164,6 +169,12 @@ namespace Voron
         public class DirectoryStorageEnvironmentOptions : StorageEnvironmentOptions
         {
             private readonly string _journalPath;
+
+            public override string JournalPath()
+            {
+                return _journalPath;
+            }
+
             private readonly string _basePath;
 
             private readonly Lazy<AbstractPager> _dataPager;
@@ -265,7 +276,7 @@ namespace Voron
             }
 
 
-            public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize)
+            public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize, bool postpondDeletion = false)
             {
 
                 var name = JournalName(journalNumber);
@@ -276,9 +287,9 @@ namespace Voron
                 var result = _journals.GetOrAdd(name, _ => new Lazy<IJournalWriter>(() =>
                 {
                     if (RunningOnPosix)
-                        return new PosixJournalWriter(this, path, journalSize);
+                        return new PosixJournalWriter(this, path, journalSize, postpondDeletion);
 
-                    return new Win32FileJournalWriter(this, path, journalSize);
+                    return new Win32FileJournalWriter(this, path, journalSize, postpondDeletion);
                 }));
 
                 if (result.Value.Disposed)
@@ -286,9 +297,9 @@ namespace Voron
                     var newWriter = new Lazy<IJournalWriter>(() =>
                     {
                         if (RunningOnPosix)
-                            return new PosixJournalWriter(this, path, journalSize);
+                            return new PosixJournalWriter(this, path, journalSize, postpondDeletion);
 
-                        return new Win32FileJournalWriter(this, path, journalSize);
+                        return new Win32FileJournalWriter(this, path, journalSize, postpondDeletion);
                     });
                     if (_journals.TryUpdate(name, newWriter, result) == false)
                         throw new InvalidOperationException("Could not update journal pager");
@@ -522,7 +533,7 @@ namespace Voron
 
             public override string BasePath => ":memory:";
 
-            public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize)
+            public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize, bool postpondDeletion = false)
             {
                 var name = JournalName(journalNumber);
                 IJournalWriter value;
@@ -533,11 +544,12 @@ namespace Voron
 
                 if (RunningOnPosix)
                 {
-                    value = new PosixJournalWriter(this, Path.Combine(TempPath, filename), journalSize);
+                    value = new PosixJournalWriter(this, Path.Combine(TempPath, filename), journalSize, postpondDeletion);
                 }
                 else
                 {
                     value = new Win32FileJournalWriter(this, Path.Combine(TempPath, filename), journalSize, 
+                        postpondDeletion,
                         Win32NativeFileAccess.GenericWrite,
                         Win32NativeFileShare.Read|Win32NativeFileShare.Write|Win32NativeFileShare.Delete
                         );
