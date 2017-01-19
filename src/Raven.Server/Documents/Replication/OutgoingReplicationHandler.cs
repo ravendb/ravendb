@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Replication
         private readonly Logger _log;
         private readonly AsyncManualResetEvent _waitForChanges = new AsyncManualResetEvent();
         private readonly CancellationTokenSource _cts;
-        private readonly int _minimalHeartbeatInterval = 15 * 1000;// ms - 15 seconds
+        private int _minimalHeartbeatInterval = 15 * 1000;// ms - 15 seconds
         private Thread _sendingThread;
 
         internal long _lastSentDocumentEtag;
@@ -241,7 +241,7 @@ namespace Raven.Server.Documents.Replication
                                         break;
                                     }
                                 }
-
+               
                                 //if this returns false, this means either timeout or canceled token is activated                    
                                 while (WaitForChanges(_minimalHeartbeatInterval, _cts.Token) == false)
                                 {
@@ -563,6 +563,11 @@ namespace Raven.Server.Documents.Replication
             {
                 _sendingThread?.Join();
             }
+        }
+
+        public void SetMinimalHeartbeat(int time)
+        {
+            _minimalHeartbeatInterval = time;
         }
 
         private void OnSuccessfulTwoWaysCommunication() => SuccessfulTwoWaysCommunication?.Invoke(this);

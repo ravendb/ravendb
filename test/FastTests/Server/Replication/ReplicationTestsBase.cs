@@ -42,7 +42,7 @@ namespace FastTests.Server.Replication
                 string docId,
                 int count = 1)
         {
-            int timeout = 16000;
+            int timeout = 5000;
 
             if (Debugger.IsAttached)
                 timeout *= 100;
@@ -69,7 +69,7 @@ namespace FastTests.Server.Replication
 
         protected bool WaitForDocumentDeletion(DocumentStore store,
             string docId,
-            int timeout = 16000)
+            int timeout = 10000)
         {
             if (Debugger.IsAttached)
                 timeout *= 100;
@@ -105,7 +105,7 @@ namespace FastTests.Server.Replication
 
         protected bool WaitForDocument(DocumentStore store,
             string docId,
-            int timeout = 16000)
+            int timeout = 10000)
         {
             if (Debugger.IsAttached)
                 timeout *= 100;
@@ -144,7 +144,7 @@ namespace FastTests.Server.Replication
                 int count = 1)
         {
 
-            int timeout = 16000;
+            int timeout = 5000;
             if (Debugger.IsAttached)
                 timeout *= 100;
             List<string> tombstones;
@@ -205,6 +205,7 @@ namespace FastTests.Server.Replication
                 var destinations = new List<ReplicationDestination>();
                 session.Store(new ReplicationDocument
                 {
+                    HeartbeatInterval = 1000,
                     Destinations = destinations,
                     DocumentConflictResolution = conflictResolution
                 }, Constants.Replication.DocumentReplicationConfiguration);
@@ -212,8 +213,6 @@ namespace FastTests.Server.Replication
             }
 
         }
-
-
 
         protected static void SetupReplication(DocumentStore fromStore, StraightforwardConflictResolution builtinConflictResolution = StraightforwardConflictResolution.None, params DocumentStore[] toStores)
         {
@@ -230,6 +229,7 @@ namespace FastTests.Server.Replication
                         });
                 session.Store(new ReplicationDocument
                 {
+                    HeartbeatInterval = 100,
                     Destinations = destinations,
                     DocumentConflictResolution = builtinConflictResolution
                 }, Constants.Replication.DocumentReplicationConfiguration);
@@ -253,6 +253,7 @@ namespace FastTests.Server.Replication
                         });
                 session.Store(new ReplicationDocument
                 {
+                    HeartbeatInterval = 100,
                     Destinations = destinations
                 }, Constants.Replication.DocumentReplicationConfiguration);
                 session.SaveChanges();
@@ -265,6 +266,7 @@ namespace FastTests.Server.Replication
             {
                 session.Store(new ReplicationDocument
                 {
+                    HeartbeatInterval = 100,
                     Destinations = toDestinations.ToList()
                 }, Constants.Replication.DocumentReplicationConfiguration);
                 session.SaveChanges();
