@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Voron.Impl;
@@ -28,6 +29,8 @@ namespace Raven.Server.Documents
 
         public void AddAfterCommitNotification(DocumentChangeNotification notification)
         {
+            notification.TriggeredByReplicationThread = IncomingReplicationHandler.IsIncomingReplicationThread;
+
             if (notification.IsSystemDocument)
             {
                 if (_systemDocumentChangeNotifications == null)

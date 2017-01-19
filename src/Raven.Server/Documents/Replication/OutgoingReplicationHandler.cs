@@ -508,8 +508,7 @@ namespace Raven.Server.Documents.Replication
 
         private void OnDocumentChange(DocumentChangeNotification notification)
         {
-            if (IncomingReplicationHandler.IsIncomingReplicationThread
-                && notification.Type != DocumentChangeTypes.DeleteOnTombstoneReplication)
+            if (notification.TriggeredByReplicationThread)
                 return;
             _waitForChanges.Set();
         }
