@@ -1,35 +1,55 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Server.NotificationCenter.Actions.Database;
 using Raven.Server.NotificationCenter.Actions.Details;
 using Raven.Server.NotificationCenter.Alerts;
+using Sparrow.Collections;
 using Sparrow.Json;
 using Xunit;
 
-namespace FastTests.Server.Documents.Alerts
+namespace FastTests.Server.NotificationCenter
 {
-    public class BasicAlertsTest : RavenLowLevelTestBase
+    public class NotificationCenterTests : RavenLowLevelTestBase
     {
         [Fact]
-        public void Can_write_and_read_alert()
+        public void Should_get_notification()
         {
             using (var database = CreateDocumentDatabase())
             {
-                var alert = SampleAlert();
+                var actions = new AsyncQueue<DatabaseAction>();
+
+                using (database.NotificationCenter.TrackActions(actions))
+                {
+                    database.NotificationCenter.Add(GetSampleDatabaseAlert());
+                }
+
+                Assert.Equal(1, actions.Count);
+            }
+        }
+
+        [Fact]
+        public void Persistent_action_is_stored_and_can_be_read()
+        {
+            using (var database = CreateDocumentDatabase())
+            {
+                var alert = GetSampleDatabaseAlert();
+
+                Assert.True(alert.IsPersistent);
 
                 database.NotificationCenter.Add(alert);
 
-                IEnumerable<BlittableJsonReaderObject> alerts;
-                using (database.NotificationCenter.GetAlerts(out alerts))
+                IEnumerable<BlittableJsonReaderObject> actions;
+                using (database.NotificationCenter.GetStored(out actions))
                 {
-                    var jsonAlerts = alerts.ToList();
+                    var jsonAlerts = actions.ToList();
 
                     Assert.Equal(1, jsonAlerts.Count);
-
                     var readAlert = jsonAlerts[0];
 
+                    Assert.Equal(alert.Id, readAlert[nameof(RaiseAlert.Id)].ToString());
                     Assert.Equal(alert.CreatedAt.GetDefaultRavenFormat(alert.CreatedAt.Kind == DateTimeKind.Utc),
                         readAlert[nameof(RaiseAlert.CreatedAt)].ToString());
                     Assert.Equal(alert.Type.ToString(), readAlert[nameof(RaiseAlert.Type)].ToString());
@@ -42,7 +62,6 @@ namespace FastTests.Server.Documents.Alerts
                     Assert.Equal(alert.Severity.ToString(), readAlert[nameof(RaiseAlert.Severity)].ToString());
                     Assert.Equal(alert.AlertType.ToString(), readAlert[nameof(RaiseAlert.AlertType)].ToString());
                     Assert.Equal(alert.Key, readAlert[nameof(RaiseAlert.Key)].ToString());
-                    Assert.Equal(alert.AlertId, readAlert[nameof(RaiseAlert.AlertId)].ToString());
                     Assert.Equal(alert.DismissedUntil, readAlert[nameof(RaiseAlert.DismissedUntil)]);
                 }
             }
@@ -53,15 +72,15 @@ namespace FastTests.Server.Documents.Alerts
         {
             using (var database = CreateDocumentDatabase())
             {
-                var alert1 = SampleAlert();
+                var alert1 = GetSampleDatabaseAlert();
 
                 database.NotificationCenter.Add(alert1);
 
-                var alert2 = SampleAlert(customMessage: "updated");
+                var alert2 = GetSampleDatabaseAlert(customMessage: "updated");
                 database.NotificationCenter.Add(alert2);
 
                 IEnumerable<BlittableJsonReaderObject> alerts;
-                using (database.NotificationCenter.GetAlerts(out alerts))
+                using (database.NotificationCenter.GetStored(out alerts))
                 {
                     var jsonAlerts = alerts.ToList();
 
@@ -77,20 +96,21 @@ namespace FastTests.Server.Documents.Alerts
         }
 
         [Fact]
-        public void Update_should_retain_dismissed_date()
+        public void Repeated_alert_should_retain_dismiss_until_date()
         {
             using (var database = CreateDocumentDatabase())
             {
-                var alert1 = SampleAlert();
-                alert1.DismissedUntil = new DateTime(2014, 10, 2);
-
+                var alert1 = GetSampleDatabaseAlert();
                 database.NotificationCenter.Add(alert1);
 
-                var alert2 = SampleAlert();
+                var dismissUntil = SystemTime.UtcNow.AddDays(1);
+                database.NotificationCenter.DismissUntil(alert1.Id, dismissUntil);
+
+                var alert2 = GetSampleDatabaseAlert();
                 database.NotificationCenter.Add(alert2);
 
                 IEnumerable<BlittableJsonReaderObject> alerts;
-                using (database.NotificationCenter.GetAlerts(out alerts))
+                using (database.NotificationCenter.GetStored(out alerts))
                 {
                     var jsonAlerts = alerts.ToList();
 
@@ -101,26 +121,25 @@ namespace FastTests.Server.Documents.Alerts
                         readAlert[nameof(RaiseAlert.CreatedAt)].ToString());
 
                     Assert.Equal(
-                        alert1.DismissedUntil.Value.GetDefaultRavenFormat(alert1.DismissedUntil.Value.Kind == DateTimeKind.Utc),
+                        dismissUntil.GetDefaultRavenFormat(dismissUntil.Kind == DateTimeKind.Utc),
                         readAlert[nameof(RaiseAlert.DismissedUntil)].ToString());
                 }
             }
         }
 
         [Fact]
-        public void Can_delete_alert()
+        public void Can_delete_persistent_action()
         {
             using (var database = CreateDocumentDatabase())
             {
-                var alert1 = SampleAlert();
+                var alert1 = GetSampleDatabaseAlert();
 
                 database.NotificationCenter.Add(alert1);
 
-                database.NotificationCenter.DeleteAlert(alert1.AlertType, alert1.Key);
-
-
+                database.NotificationCenter.Delete(alert1.Id);
+                
                 IEnumerable<BlittableJsonReaderObject> alerts;
-                using (database.NotificationCenter.GetAlerts(out alerts))
+                using (database.NotificationCenter.GetStored(out alerts))
                 {
                     var jsonAlerts = alerts.ToList();
 
@@ -129,7 +148,7 @@ namespace FastTests.Server.Documents.Alerts
             }
         }
 
-        private static RaiseAlert SampleAlert(string customMessage = null)
+        private static RaiseAlert GetSampleDatabaseAlert(string customMessage = null)
         {
             return RaiseAlert.Create(
                 "title",

@@ -16,11 +16,11 @@ namespace Raven.Server.NotificationCenter.Handlers
             {
                 using (var writer = new NotificationCenterWebsocketWriter<DatabaseAction>(webSocket, Database.NotificationCenter, ContextPool, Database.DatabaseShutdown))
                 {
-                    IEnumerable<BlittableJsonReaderObject> existingAlerts;
+                    IEnumerable<BlittableJsonReaderObject> storedActions;
 
-                    using (Database.NotificationCenter.GetAlerts(out existingAlerts))
+                    using (Database.NotificationCenter.GetStored(out storedActions))
                     {
-                        foreach (var alert in existingAlerts)
+                        foreach (var alert in storedActions)
                         {
                             await writer.WriteToWebSocket(alert);
                         }

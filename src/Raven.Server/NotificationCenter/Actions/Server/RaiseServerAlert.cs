@@ -1,11 +1,10 @@
-﻿using System;
-using Raven.Server.NotificationCenter.Actions.Details;
+﻿using Raven.Server.NotificationCenter.Actions.Details;
 using Raven.Server.NotificationCenter.Alerts;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Actions.Server
 {
-    public class RaiseServerAlert : ServerAction, IAlert
+    public class RaiseServerAlert : ServerAction
     {
         private RaiseServerAlert()
         {
@@ -17,19 +16,14 @@ namespace Raven.Server.NotificationCenter.Actions.Server
 
         public string Key { get; set; }
 
-        public string AlertId => AlertUtil.CreateId(AlertType, Key);
-
-        public DateTime? DismissedUntil { get; set; }
-
+        public override string Id => AlertUtil.CreateId(AlertType, Key);
 
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
-
-            json[nameof(AlertId)] = AlertId;
+            
             json[nameof(Key)] = Key;
             json[nameof(Severity)] = Severity.ToString();
-            json[nameof(DismissedUntil)] = DismissedUntil;
             json[nameof(AlertType)] = AlertType.ToString();
 
             return json;
@@ -39,6 +33,7 @@ namespace Raven.Server.NotificationCenter.Actions.Server
         {
             return new RaiseServerAlert
             {
+                IsPersistent = true,
                 Title = title,
                 Message = msg,
                 Type = ActionType.Alert,

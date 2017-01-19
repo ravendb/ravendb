@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Abstractions.Extensions;
-using Raven.Server.NotificationCenter.Actions;
-using Raven.Server.NotificationCenter.Actions.Database;
-using Raven.Server.NotificationCenter.Alerts;
 using Raven.Server.ServerWide;
 using Sparrow.Collections;
 using Sparrow.Json;
@@ -13,38 +10,33 @@ namespace Raven.Server.NotificationCenter
 {
     public class NotificationCenter<T>  where T : Action
     {
-        private readonly AlertsStorage _alertsStorage;
+        private readonly ActionsStorage _actionsStorage;
 
-        private readonly ConcurrentSet<AsyncQueue<T>> _actions = new ConcurrentSet<AsyncQueue<T>>();
+        private readonly ConcurrentSet<AsyncQueue<T>> _watchers = new ConcurrentSet<AsyncQueue<T>>();
 
-        public NotificationCenter(AlertsStorage alertsStorage)
+        public NotificationCenter(ActionsStorage actionsStorage)
         {
-            _alertsStorage = alertsStorage;
+            _actionsStorage = actionsStorage;
         }
 
         public IDisposable TrackActions(AsyncQueue<T> asyncQueue)
         {
-            _actions.TryAdd(asyncQueue);
+            _watchers.TryAdd(asyncQueue);
             
-            return new DisposableAction(() => _actions.TryRemove(asyncQueue));
+            return new DisposableAction(() => _watchers.TryRemove(asyncQueue));
         }
 
         public void Add(T action)
         {
-            if (action.Type == ActionType.Alert)
+            if (action.IsPersistent)
             {
-                var alert = action as IAlert;
-
-                if (alert == null)
-                    throw new InvalidOperationException($"Action having {action.Type} defined does not implement {nameof(IAlert)} interface");
-
-                _alertsStorage.AddAlert(alert);
+                _actionsStorage.Store(action);
             }
 
-            if (_actions.Count == 0)
+            if (_watchers.Count == 0)
                 return;
 
-            foreach (var asyncQueue in _actions)
+            foreach (var asyncQueue in _watchers)
             {
                 asyncQueue.Enqueue(action);
             }
@@ -63,24 +55,31 @@ namespace Raven.Server.NotificationCenter
             };
         }
 
-        public IDisposable GetAlerts(out IEnumerable<BlittableJsonReaderObject> alerts)
+        public IDisposable GetStored(out IEnumerable<BlittableJsonReaderObject> actions)
         {
-            return _alertsStorage.ReadAlerts(out alerts);
+            return _actionsStorage.ReadActions(out actions);
         }
 
         public long GetAlertCount()
         {
-            return _alertsStorage.GetAlertCount();
+            return _actionsStorage.GetAlertCount();
         }
 
-        public void DeleteAlert(DatabaseAlertType type, string key)
+        public void Delete(string id)
         {
-            _alertsStorage.DeleteAlert(AlertUtil.CreateId(type, key));
+            var deleted = _actionsStorage.Delete(id);
+
+            if (deleted == false)
+                return;
+            
+            // TODO arek : send notification that we deleted it from the storage
         }
 
-        public void DeleteAlert(ServerAlertType type, string key)
+        public void DismissUntil(string id, DateTime until)
         {
-            _alertsStorage.DeleteAlert(AlertUtil.CreateId(type, key));
+            _actionsStorage.ChangeDismissUntilDate(id, until);
+
+            // TODO arek : send notification that item was dismissed
         }
     }
 }

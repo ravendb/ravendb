@@ -6,10 +6,9 @@ namespace Raven.Server.NotificationCenter.Actions.Server
     {
         private ResourceChanged()
         {
-            
         }
 
-        public string Name { get; private set; }
+        public string ResourceName { get; private set; }
 
         public ResourceChangeType ChangeType { get; private set; }
 
@@ -17,7 +16,7 @@ namespace Raven.Server.NotificationCenter.Actions.Server
         {
             var json = base.ToJson();
 
-            json[nameof(Name)] = Name;
+            json[nameof(ResourceName)] = ResourceName;
             json[nameof(ChangeType)] = ChangeType.ToString();
 
             return json;
@@ -28,7 +27,7 @@ namespace Raven.Server.NotificationCenter.Actions.Server
             return new ResourceChanged
             {
                 Type = ActionType.Resource,
-                Name = resourceName,
+                ResourceName = resourceName,
                 ChangeType = change
             };
         }

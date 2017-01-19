@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Actions.Database
 {
-    public class RaiseAlert : DatabaseAction, IAlert
+    public class RaiseAlert : DatabaseAction
     {
         private RaiseAlert()
         {
@@ -17,18 +17,14 @@ namespace Raven.Server.NotificationCenter.Actions.Database
 
         public string Key { get; set; }
 
-        public string AlertId => AlertUtil.CreateId(AlertType, Key);
-
-        public DateTime? DismissedUntil { get; set; }
+        public override string Id => AlertUtil.CreateId(AlertType, Key);
 
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
-
-            json[nameof(AlertId)] = AlertId;
+            
             json[nameof(Key)] = Key;
             json[nameof(Severity)] = Severity.ToString();
-            json[nameof(DismissedUntil)] = DismissedUntil;
             json[nameof(AlertType)] = AlertType.ToString();
 
             return json;
@@ -38,6 +34,7 @@ namespace Raven.Server.NotificationCenter.Actions.Database
         {
             return new RaiseAlert
             {
+                IsPersistent = true,
                 Title = title,
                 Message = msg,
                 Type = ActionType.Alert,
