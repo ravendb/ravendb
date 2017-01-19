@@ -17,7 +17,7 @@ using Xunit;
 
 namespace FastTests.Blittable
 {
-    public class MutatingJsonTests
+    public class MutatingJsonTests : NoDisposalNeeded
     {
         private const string InitialJson = @"{""Name"":""Oren"",""Dogs"":[""Arava"",""Oscar"",""Sunny""],""State"":{""Sleep"":false}}";
 

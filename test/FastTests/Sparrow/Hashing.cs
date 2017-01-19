@@ -6,7 +6,7 @@ using Xunit;
 
 namespace FastTests.Sparrow
 {
-    public class HashingTests
+    public class HashingTests : NoDisposalNeeded
     {
         [Fact]
         public void XXHash64_UseActualValues()

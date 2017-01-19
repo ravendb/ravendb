@@ -13,10 +13,10 @@ using Xunit.Extensions;
 
 namespace FastTests.Sparrow
 {
-    public class ZFastTrieTests
+    public class ZFastTrieTests : NoDisposalNeeded
     {
         private readonly Func<string, BitVector> binarize = x => BitVector.Of(true, Encoding.UTF8.GetBytes(x));
-        
+
         [Fact]
         public void Construction()
         {
@@ -81,7 +81,7 @@ namespace FastTests.Sparrow
             Assert.Equal(tree.Tail, predecessor.Next);
             Assert.Null(predecessor.Previous.Key);
             Assert.Equal(key, predecessor.Key);
-                        
+
             Assert.Equal(predecessor, successor);
             Assert.Equal(tree.Root, predecessor);
 
@@ -175,7 +175,7 @@ namespace FastTests.Sparrow
             ZFastTrieDebugHelpers.StructuralVerify(tree);
 
             Assert.True(tree.Remove(greaterKey));
-            ZFastTrieDebugHelpers.StructuralVerify(tree);            
+            ZFastTrieDebugHelpers.StructuralVerify(tree);
         }
 
         [Fact]
@@ -421,8 +421,8 @@ namespace FastTests.Sparrow
         private static readonly string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
         private static string GenerateRandomString(Random generator, int size)
-        {           
-            var stringChars = new char[size];         
+        {
+            var stringChars = new char[size];
             for (int i = 0; i < stringChars.Length; i++)
                 stringChars[i] = chars[generator.Next(chars.Length)];
 
@@ -437,7 +437,7 @@ namespace FastTests.Sparrow
                 // Or this could read from a file. :)
                 return new[]
                 {
-                    new object[] { 102, 4, 4 },                    
+                    new object[] { 102, 4, 4 },
                     new object[] { 100, 4, 8 },
                     new object[] { 101, 2, 128 },
                     new object[] { 100, 8, 5 },
@@ -448,7 +448,7 @@ namespace FastTests.Sparrow
 
         [Fact]
         public void Structure_RandomTester()
-        {            
+        {
             int count = 1000;
             int size = 5;
             for (int i = 0; i < 1; i++)
@@ -479,7 +479,7 @@ namespace FastTests.Sparrow
                     string key = GenerateRandomString(generator, size);
 
                     if (!insertedKeys.Contains(key))
-                        Assert.False(tree.Remove(key));          
+                        Assert.False(tree.Remove(key));
                 }
 
                 generator = new Random(i + size);
@@ -488,7 +488,7 @@ namespace FastTests.Sparrow
                     string key = GenerateRandomString(generator, size);
 
                     bool removed = tree.Remove(key);
-                    Assert.True(removed);                    
+                    Assert.True(removed);
                 }
 
                 Assert.Equal(0, tree.Count);
@@ -558,7 +558,7 @@ namespace FastTests.Sparrow
             if (node == null)
                 return 0;
 
-            for (int i = depth; i-- != 0; )
+            for (int i = depth; i-- != 0;)
                 Console.Write('\t');
 
             if (node is ZFastTrieSortedSet<T, W>.Internal)
@@ -587,7 +587,7 @@ namespace FastTests.Sparrow
             Assert.Null(tree.Head.Previous);
 
             Assert.True(tree.Root == null || tree.Root.NameLength == 0); // Either the root does not exist or the root is internal and have name length == 0
-            Assert.True(tree.Count == 0 && tree.NodesTable.Count == 0 || tree.Count == tree.NodesTable.Values.Count() + 1); 
+            Assert.True(tree.Count == 0 && tree.NodesTable.Count == 0 || tree.Count == tree.NodesTable.Values.Count() + 1);
 
             if (tree.Count == 0)
             {
@@ -717,6 +717,6 @@ namespace FastTests.Sparrow
 
                 return 1;
             }
-        }       
+        }
     }
 }

@@ -1,18 +1,19 @@
-﻿using Raven.Client.Indexes;
-using Xunit;
+﻿using Xunit;
 using System.Linq;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Operations.Databases.Indexes;
 
 namespace FastTests.Issues
 {
-    public class RavenDB_6064_2 : RavenTestBase
+    public class RavenDB_6064_2 : RavenNewTestBase
     {
-        public class User
+        private class User
         {
             public string A, B, C;
             public string D;
         }
 
-        public class User_Index : AbstractIndexCreationTask<User, User>
+        private class User_Index : AbstractIndexCreationTask<User, User>
         {
             public User_Index()
             {
@@ -61,7 +62,7 @@ namespace FastTests.Issues
 
                 using (var s = store.OpenSession())
                 {
-                    var errors = store.DatabaseCommands.GetIndexErrors()[0];
+                    var errors = store.Admin.Send(new GetIndexErrorsOperation())[0];
                     Assert.Empty(errors.Errors);
                     var collection = s.Query<User, User_Index>().ToList();
                     Assert.NotEmpty(collection);

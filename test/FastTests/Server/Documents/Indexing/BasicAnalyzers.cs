@@ -15,7 +15,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Indexing
 {
-    public class BasicAnalyzers : RavenTestBase
+    public class BasicAnalyzers : NoDisposalNeeded
     {
         [Fact]
         public void CheckAnalyzers()

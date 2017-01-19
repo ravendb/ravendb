@@ -11,7 +11,7 @@ using Xunit;
 
 namespace FastTests.Utils
 {
-    public class IncludeUtilTests
+    public class IncludeUtilTests : NoDisposalNeeded
     {
         [Fact]
         public void FindDocIdFromPath_with_array_of_nested_objects_should_work1()

@@ -5,7 +5,7 @@ using Xunit;
 
 namespace FastTests.Voron.Util
 {
-    public class ImmutableAppendOnlyTests
+    public class ImmutableAppendOnlyTests : NoDisposalNeeded
     {
         [Fact]
         public void CanAddAndRemove()

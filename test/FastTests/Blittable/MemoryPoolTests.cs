@@ -8,7 +8,7 @@ using Xunit;
 
 namespace FastTests.Blittable
 {
-    public unsafe class MemoryPoolTests
+    public unsafe class MemoryPoolTests : NoDisposalNeeded
     {
         [Fact]
         public void SerialAllocationAndRelease()

@@ -11,7 +11,7 @@ using Xunit;
 
 namespace FastTests.Blittable.BlittableJsonWriterTests
 {
-    public unsafe class UnmanageJsonReaderTests
+    public unsafe class UnmanageJsonReaderTests : NoDisposalNeeded
     {
         [Theory]
         [MemberData(nameof(Samples))]

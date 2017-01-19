@@ -4,7 +4,7 @@ using Xunit;
 
 namespace FastTests.Blittable
 {
-    public class BlittableJsonEqualityTests
+    public class BlittableJsonEqualityTests : NoDisposalNeeded
     {
         [Fact]
         public void Equals_even_though_order_of_properties_is_different()

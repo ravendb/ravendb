@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Linq;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace FastTests.Server.Documents.Indexing.MapReduce
 {
-    public class RavenDB_6019 : RavenTestBase
+    public class RavenDB_6019 : RavenNewTestBase
     {
         [Theory]
         [InlineData(1)]
@@ -79,7 +79,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                    from q in questions
                    from a in q.Answers
                    group a by new // distinct users by month
-               {
+                   {
                        a.OwnerUserId,
                        Month = a.CreationDate.ToString("yyyy-MM")
                    } into g

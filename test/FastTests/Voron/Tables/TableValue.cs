@@ -12,7 +12,7 @@ using Voron.Data.Tables;
 
 namespace FastTests.Voron.Tables
 {
-    public unsafe class TableValueTests
+    public unsafe class TableValueTests : NoDisposalNeeded
     {
         [Fact]
         public void CanBuild()
@@ -137,7 +137,7 @@ namespace FastTests.Voron.Tables
 
                     int size;
                     var p = reader.Read(0, out size);
-                    var hello = *(long*) p;
+                    var hello = *(long*)p;
 
                     Assert.Equal(0L, hello);
 

@@ -1,12 +1,12 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
-using Raven.Client;
+using Raven.NewClient.Client;
 using Xunit;
 
 namespace FastTests.Voron.Bugs
 {
-    public class RavenDb_4706 : RavenTestBase
+    public class RavenDb_4706 : RavenNewTestBase
     {
         [Fact]
         public async Task SupportRandomOrder()

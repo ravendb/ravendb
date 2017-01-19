@@ -1,30 +1,40 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
-using Raven.Json.Linq;
+using Raven.NewClient.Client.Http;
 using Xunit;
 
 namespace FastTests.Server.Documents
 {
-    public class ModifyExistingDocument : RavenTestBase
+    public class ModifyExistingDocument : RavenNewTestBase
     {
         [Fact]
         public async Task ShouldThrowIfChangeRavenEntityName()
         {
             using (var store = GetDocumentStore())
             {
-                await store.AsyncDatabaseCommands.PutAsync("users/1", null, 
-                    RavenJObject.Parse("{\"Email\":\"support@ravendb.net\"}"), 
-                    RavenJObject.Parse("{\"Raven-Entity-Name\":\"Users\"}"));
-
-                var exception = await Assert.ThrowsAsync<ErrorResponseException>(async () =>
+                using (var commands = store.Commands())
                 {
-                    await store.AsyncDatabaseCommands.PutAsync("users/1", null,
-                        RavenJObject.Parse("{\"Email\":\"support@hibernatingrhinos.com\"}"),
-                        RavenJObject.Parse("{\"Raven-Entity-Name\":\"UserAddresses\"}"));
-                });
-                Assert.Contains("InvalidOperationException: Changing 'users/1' from 'Users' to 'UserAddresses' via update is not supported." +Environment.NewLine
-                                + "Delete the document and recreate the document users/1.", exception.Message);
+                    await commands.PutAsync("users/1", null,
+                        new { Email = "support@ravendb.net" },
+                        new Dictionary<string, string>
+                        {
+                            {"Raven-Entity-Name", "Users"}
+                        });
+
+                    var exception = await Assert.ThrowsAsync<InternalServerErrorException>(async () =>
+                    {
+                        await commands.PutAsync("users/1", null,
+                            new { Email = "support@hibernatingrhinos.com" },
+                            new Dictionary<string, string>
+                            {
+                                {"Raven-Entity-Name", "UserAddresses"}
+                            });
+                    });
+
+                    Assert.Contains("InvalidOperationException: Changing 'users/1' from 'Users' to 'UserAddresses' via update is not supported." + Environment.NewLine
+                                    + "Delete the document and recreate the document users/1.", exception.Message);
+                }
             }
         }
     }

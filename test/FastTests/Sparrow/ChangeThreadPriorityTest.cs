@@ -7,7 +7,7 @@ using Xunit;
 
 namespace FastTests.Sparrow
 {
-    public class ChangeThreadPriorityTest
+    public class ChangeThreadPriorityTest : NoDisposalNeeded
     {
         [NonLinuxFact]
         public void StartChangeThreadPriority()
