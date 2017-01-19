@@ -19,9 +19,13 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var a = new FastTests.Server.Replication.ReplicationTombstoneTests())
+            for (int i = 0; i < 100; i++)
             {
-                a.Tombstones_replication_should_delete_document_at_destination();
+                using (var a = new WaitingForNonStaleResults())
+                {
+                    a.Throws_if_exceeds_timeout();
+                }
+                Console.WriteLine(i);
             }
         }
     }
