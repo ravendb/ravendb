@@ -78,6 +78,8 @@ namespace Raven.NewClient.Client.Commands
             if (_transformer != null)
                 return;
 
+            _pagingInformation?.Fill(_start, _pageSize, result.NextPageStart);
+
             foreach (BlittableJsonReaderObject document in result.Results)
             {
                 var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(document);

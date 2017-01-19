@@ -1,12 +1,10 @@
 ﻿using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Data;
 using Raven.Client.Indexing;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
-using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
@@ -17,7 +15,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
     public class MatchingAutoMapReduceIndexesForDynamicQueries : RavenLowLevelTestBase
     {
         private readonly DocumentDatabase _documentDatabase;
-        private readonly DynamicQueryToIndexMatcher _sut;
+        protected readonly DynamicQueryToIndexMatcher _sut;
 
         public MatchingAutoMapReduceIndexesForDynamicQueries()
         {
@@ -29,7 +27,10 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public void Failure_match_if_there_is_no_index()
         {
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide { Query = "", DynamicMapReduceFields = new []
+            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
+            {
+                Query = "",
+                DynamicMapReduceFields = new[]
             {
                 new DynamicMapReduceField
                 {
@@ -41,7 +42,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                     Name = "Count",
                     OperationType = FieldMapReduceOperation.Count
                 }
-            }});
+            }
+            });
 
             var result = _sut.Match(dynamicQuery);
 
@@ -90,10 +92,10 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                         IsGroupBy = true
                     }
                 },
-                SortedFields = new []
+                SortedFields = new[]
                 {
                     new SortedField("Count_Range"),
-                    new SortedField("Location"),  
+                    new SortedField("Location"),
                 }
             });
 
@@ -122,7 +124,10 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
             add_index(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide { Query = "Location:Poland", DynamicMapReduceFields = new []
+            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
+            {
+                Query = "Location:Poland",
+                DynamicMapReduceFields = new[]
             {
                 new DynamicMapReduceField
                 {
@@ -134,7 +139,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                     Name = "Location",
                     IsGroupBy = true
                 }
-            }});
+            }
+            });
 
             var result = _sut.Match(dynamicQuery);
 
@@ -401,7 +407,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public void Failure_when_sort_options_do_not_match()
         {
-            var definition = new AutoMapReduceIndexDefinition(new []{ "LineItems" }, new[]
+            var definition = new AutoMapReduceIndexDefinition(new[] { "LineItems" }, new[]
             {
                 new IndexField
                 {
@@ -411,7 +417,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                     MapReduceOperation = FieldMapReduceOperation.Sum,
                     SortOption = SortOptions.String
                 },
-            }, new []
+            }, new[]
             {
                 new IndexField
                 {
@@ -460,66 +466,13 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             Assert.Equal(definition.Name, result.IndexName);
         }
 
-        [Fact]
-        public void Failure_if_matching_index_has_lot_of_errors()
-        {
-            var definition = new AutoMapReduceIndexDefinition(new[] { "Users" }, new[]
-             {
-                new IndexField
-                {
-                    Name = "Count",
-                    Storage = FieldStorage.Yes,
-                    MapReduceOperation = FieldMapReduceOperation.Count,
-                },
-            },
-             new[]
-             {
-                new IndexField
-                {
-                    Name = "Location",
-                    Storage = FieldStorage.Yes,
-                }
-             });
 
-            add_index(definition);
-
-            get_index(definition.Name)._indexStorage.UpdateStats(SystemTime.UtcNow, new IndexingRunStats
-            {
-                MapAttempts = 1000,
-                MapSuccesses = 1000,
-                ReduceAttempts = 1000,
-                ReduceErrors = 900
-            });
-
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
-            {
-                Query = "",
-                DynamicMapReduceFields = new[]
-                {
-                    new DynamicMapReduceField
-                    {
-                        Name = "Count",
-                        OperationType = FieldMapReduceOperation.Count
-                    },
-                    new DynamicMapReduceField
-                    {
-                        Name = "Location",
-                        IsGroupBy = true
-                    }
-                }
-            });
-
-            var result = _sut.Match(dynamicQuery);
-
-            Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
-        }
-
-        private void add_index(IndexDefinitionBase definition)
+        protected void add_index(IndexDefinitionBase definition)
         {
             _documentDatabase.IndexStore.CreateIndex(definition);
         }
 
-        private Index get_index(string name)
+        protected Index get_index(string name)
         {
             return _documentDatabase.IndexStore.GetIndex(name);
         }

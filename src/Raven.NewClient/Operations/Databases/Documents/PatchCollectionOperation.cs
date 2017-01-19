@@ -11,12 +11,12 @@ using Sparrow.Json;
 
 namespace Raven.NewClient.Operations.Databases.Documents
 {
-    public class PatchByCollectionOperation : IOperation
+    public class PatchCollectionOperation : IOperation<OperationIdResult>
     {
         private readonly string _collectionName;
         private readonly PatchRequest _patch;
 
-        public PatchByCollectionOperation(string collectionName, PatchRequest patch)
+        public PatchCollectionOperation(string collectionName, PatchRequest patch)
         {
             if (collectionName == null)
                 throw new ArgumentNullException(nameof(collectionName));
@@ -29,16 +29,16 @@ namespace Raven.NewClient.Operations.Databases.Documents
 
         public RavenCommand<OperationIdResult> GetCommand(DocumentConvention conventions, JsonOperationContext context)
         {
-            return new PatchByCollectionCommand(conventions, context, _collectionName, _patch);
+            return new PatchCollectionCommand(conventions, context, _collectionName, _patch);
         }
 
-        private class PatchByCollectionCommand : RavenCommand<OperationIdResult>
+        private class PatchCollectionCommand : RavenCommand<OperationIdResult>
         {
             private readonly JsonOperationContext _context;
             private readonly string _collectionName;
             private readonly BlittableJsonReaderObject _patch;
 
-            public PatchByCollectionCommand(DocumentConvention conventions, JsonOperationContext context, string collectionName, PatchRequest patch)
+            public PatchCollectionCommand(DocumentConvention conventions, JsonOperationContext context, string collectionName, PatchRequest patch)
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));

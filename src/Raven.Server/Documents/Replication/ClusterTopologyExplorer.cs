@@ -16,7 +16,6 @@ namespace Raven.Server.Documents.Replication
         private readonly DocumentDatabase _database;
         private readonly TimeSpan _timeout;
         private readonly List<NodeTopologyExplorer> _discoverers;
-        private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
         public ClusterTopologyExplorer(
             DocumentDatabase database,
@@ -36,11 +35,9 @@ namespace Raven.Server.Documents.Replication
 
                 var credentials = new OperationCredentials(destination.ApiKey,CredentialCache.DefaultCredentials);
 
-                JsonOperationContext context;
-                _disposables.Add(database.DocumentsStorage.ContextPool.AllocateOperationContext(out context));
-
+                
                 var singleDestinationDiscoverer = new NodeTopologyExplorer(
-                    context,
+                    database.DocumentsStorage.ContextPool,
                     alreadyVisited, 
                     destination,
                     credentials,
@@ -138,8 +135,6 @@ namespace Raven.Server.Documents.Replication
 
         public void Dispose()
         {
-            foreach(var disposable in _disposables)
-                disposable.Dispose();
             foreach (var explorer in _discoverers)
             {
                 explorer.Dispose();

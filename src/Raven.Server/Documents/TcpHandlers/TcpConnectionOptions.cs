@@ -35,6 +35,7 @@ namespace Raven.Server.Documents.TcpHandlers
         public NetworkStream Stream;
 
         public TcpClient TcpClient;
+        public IDisposable ReturnContext;
 
         public TcpConnectionOptions()
         {
@@ -61,6 +62,7 @@ namespace Raven.Server.Documents.TcpHandlers
             MetricsScheduler.Instance.StopTickingMetric(_bytesReceivedMetric);
 
             DocumentDatabase?.RunningTcpConnections.TryRemove(this);
+            MultiDocumentParser.Dispose();
 
             foreach (var disposable in DisposeOnConnectionClose)
             {
@@ -77,9 +79,9 @@ namespace Raven.Server.Documents.TcpHandlers
 
         public void ResetAndRenew()
         {
-            MultiDocumentParser.Parser.ResetStream();
+            MultiDocumentParser.Reset();
             Context.ResetAndRenew();
-            MultiDocumentParser.Parser.SetStream();
+            MultiDocumentParser.Renew();
         }
 
         public void RegisterBytesSent(long bytesAmount)

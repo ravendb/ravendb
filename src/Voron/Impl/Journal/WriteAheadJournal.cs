@@ -644,7 +644,7 @@ namespace Voron.Impl.Journal
 
             private void QueueDataFileSync()
             {
-                if (_waj.CurrentFile.Number != _lastSyncJournalId)
+                if (_waj.CurrentFile != null && _waj.CurrentFile.Number != _lastSyncJournalId)
                 {
                     // if we aren't on the same journal, we have to force the sync, to avoid having lots of journals around
                     _waj._env.ForceSyncDataFile();
@@ -919,7 +919,7 @@ namespace Voron.Impl.Journal
             public void SetLastReadTxHeader(JournalFile file, long maxTransactionId, TransactionHeader* lastReadTxHeader)
             {
                 var readTxHeader = stackalloc TransactionHeader[1];
-
+                lastReadTxHeader->TransactionId = -1;
                 long txPos = 0;
                 while (true)
                 {
@@ -929,6 +929,10 @@ namespace Voron.Impl.Journal
                         break;
                     if (readTxHeader->TransactionId > maxTransactionId)
                         break;
+                    if (lastReadTxHeader->TransactionId > readTxHeader->TransactionId)
+                        // we got to a trasaction that is smaller than the previous one, this is very 
+                        // likely a reused jouranl with old transaction, which we can ignore
+                        break; 
 
                     *lastReadTxHeader = *readTxHeader;
 

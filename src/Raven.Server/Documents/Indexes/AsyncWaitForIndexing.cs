@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Indexes
                 return Task.CompletedTask;
             }
 
-            var waitForIndexingAsync = indexingBatchCompleted.WaitAsync(TimeSpan.FromSeconds(15));
+            var waitForIndexingAsync = indexingBatchCompleted.WaitAsync(remainingTime);
             return waitForIndexingAsync;
         }
     }

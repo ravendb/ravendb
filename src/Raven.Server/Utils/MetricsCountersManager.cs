@@ -18,6 +18,7 @@ namespace Raven.Server.Utils
         public MeterMetric RequestsMeter { get; private set; }
 
         public MeterMetric DocPutsPerSecond { get; private set; }
+        public MeterMetric BytesPutsPerSecond { get; private set; }
         public MeterMetric IndexedPerSecond { get; private set; }
         
         public MeterMetric MapReduceMappedPerSecond { get; private set; }
@@ -36,6 +37,7 @@ namespace Raven.Server.Utils
         {
             RequestsMeter?.Dispose();
             DocPutsPerSecond?.Dispose();
+            BytesPutsPerSecond?.Dispose();
             IndexedPerSecond?.Dispose();
             MapReduceMappedPerSecond?.Dispose();
             MapReduceReducedPerSecond?.Dispose();
@@ -52,6 +54,7 @@ namespace Raven.Server.Utils
         {
             RequestsMeter = new MeterMetric();
             DocPutsPerSecond = new MeterMetric();
+            BytesPutsPerSecond = new MeterMetric();
             IndexedPerSecond = new MeterMetric();
             MapReduceMappedPerSecond = new MeterMetric();
             MapReduceReducedPerSecond = new MeterMetric();
@@ -66,6 +69,7 @@ namespace Raven.Server.Utils
             var metricsStatsJsonValue = new DynamicJsonValue
             {
                 ["DocPutsPerSecond"] = self.DocPutsPerSecond.CreateMeterData(),
+                ["BytesPutsPerSecond"] = self.BytesPutsPerSecond.CreateMeterData(),
                 ["IndexedPerSecond"] = self.IndexedPerSecond.CreateMeterData(),
 
                 ["RequestsMeter "] = self.RequestsMeter.CreateMeterData(),
@@ -83,11 +87,12 @@ namespace Raven.Server.Utils
 
             return new DynamicJsonValue
             {
+                ["Current"] = Math.Round(meterValue.OneSecondRate, 3),
                 ["Count"] = meterValue.Count,
-                ["FifteenMinuteRate"] = Math.Round(meterValue.FifteenMinuteRate, 3),
-                ["FiveMinuteRate"] = Math.Round(meterValue.FiveMinuteRate, 3),
                 ["MeanRate"] = Math.Round(meterValue.MeanRate, 3),
                 ["OneMinuteRate"] = Math.Round(meterValue.OneMinuteRate, 3),
+                ["FiveMinuteRate"] = Math.Round(meterValue.FiveMinuteRate, 3),
+                ["FifteenMinuteRate"] = Math.Round(meterValue.FifteenMinuteRate, 3),
             };
         }
 

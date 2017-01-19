@@ -8,7 +8,7 @@ using Xunit;
 namespace FastTests.Server.Documents.Queries.Dynamic.Map
 {
     [SuppressMessage("ReSharper", "ConsiderUsingConfigureAwait")]
-    public class DynamicQueriesEnumsNestedFieldsAndCollections : RavenTestBase
+    public class DynamicQueriesEnumsNestedFieldsAndCollections : RavenNewTestBase
     {
         [Fact]
         public async Task Query_on_enum()

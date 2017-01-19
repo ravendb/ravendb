@@ -347,10 +347,8 @@ namespace Raven.Server
                             tcpClient
                         }
                     };
-                    tcp.DisposeOnConnectionClose.Add(
-                        _tcpContextPool.AllocateOperationContext(out tcp.Context)
-                        );
 
+                    tcp.ReturnContext = _tcpContextPool.AllocateOperationContext(out tcp.Context);
 
                     tcp.MultiDocumentParser = tcp.Context.ParseMultiFrom(stream);
 
@@ -440,6 +438,10 @@ namespace Raven.Server
                 finally
                 {
                     tcp?.Dispose();
+                    // those have to be disposed separatedly, since the thread we spawn
+                    // rely on them being valid
+                    tcp?.MultiDocumentParser?.Dispose();
+                    tcp?.ReturnContext?.Dispose();
                 }
 
             });

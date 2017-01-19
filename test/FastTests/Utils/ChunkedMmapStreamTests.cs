@@ -16,7 +16,6 @@ namespace FastTests.Utils
         [Theory]
         [InlineDataWithRandomSeed(13, 3)]
         [InlineDataWithRandomSeed(94, 7)]
-        [InlineDataWithRandomSeed(128 * 1024 + 17, 64)]
         public unsafe void Can_seek_and_read_from_chunked_mmap_file(int totalSize, int chunkSize, int seed)
         {
             var random = new Random(seed);

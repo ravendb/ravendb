@@ -1,10 +1,8 @@
 ﻿using System;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
-using Raven.Client.Data;
 using Raven.Client.Indexing;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
@@ -12,7 +10,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 {
-    public class CreationOfAutoMapReduceIndexDefinition
+    public class CreationOfAutoMapReduceIndexDefinition : NoDisposalNeeded
     {
         private DynamicQueryMapping _sut;
 
@@ -144,7 +142,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             _sut = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
             {
                 Query = "Location:A*",
-                DynamicMapReduceFields = new []
+                DynamicMapReduceFields = new[]
                 {
                     new DynamicMapReduceField
                     {
@@ -186,9 +184,9 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                         IsGroupBy = true
                     }
                 },
-                SortedFields = new []
+                SortedFields = new[]
                 {
-                    new SortedField("Age_Range"), 
+                    new SortedField("Age_Range"),
                 }
             });
 

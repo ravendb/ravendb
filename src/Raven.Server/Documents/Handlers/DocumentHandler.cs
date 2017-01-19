@@ -6,7 +6,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -15,6 +14,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
+using Raven.NewClient.Client.Commands;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Transformers;
@@ -131,10 +131,10 @@ namespace Raven.Server.Documents.Handlers
             }
             else if (HttpContext.Request.Query.ContainsKey("startsWith"))
             {
-                documents = Database.DocumentsStorage.GetDocumentsStartingWith(context,
+               documents = Database.DocumentsStorage.GetDocumentsStartingWith(context,
                     HttpContext.Request.Query["startsWith"],
                     HttpContext.Request.Query["matches"],
-                    HttpContext.Request.Query["excludes"],
+                    HttpContext.Request.Query["exclude"],
                     start,
                     pageSize
                 );
@@ -163,6 +163,9 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteDocuments(context, documents, metadataOnly);
                 }
 
+                writer.WriteComma();
+                writer.WritePropertyName("NextPageStart");
+                writer.WriteInteger(Database.DocumentsStorage.NextPage);
                 writer.WriteEndObject();
             }
         }
@@ -404,11 +407,11 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName("Key");
+                    writer.WritePropertyName(nameof(PutResult.Key));
                     writer.WriteString(cmd.PutResult.Key);
                     writer.WriteComma();
 
-                    writer.WritePropertyName("Etag");
+                    writer.WritePropertyName(nameof(PutResult.ETag));
                     writer.WriteInteger(cmd.PutResult.Etag);
 
                     writer.WriteEndObject();
@@ -423,53 +426,84 @@ namespace Raven.Server.Documents.Handlers
 
             var etag = GetLongFromHeaders("If-Match");
             var isTestOnly = GetBoolValueQueryString("test", required: false) ?? false;
+            var isDebugOnly = GetBoolValueQueryString("debug", required: false) ?? isTestOnly;
+            var skipPatchIfEtagMismatch = GetBoolValueQueryString("skipPatchIfEtagMismatch", required: false) ?? false;
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
                 var request = context.Read(RequestBodyStream(), "ScriptedPatchRequest");
 
-                BlittableJsonReaderObject patchCmd, patchIsMissingCmd;
-                if (request.TryGet("Patch", out patchCmd) == false)
+                BlittableJsonReaderObject patchCmd, patchIfMissingCmd;
+                if (request.TryGet("Patch", out patchCmd) == false || patchCmd == null)
                     throw new ArgumentException("The 'Patch' field in the body request is mandatory");
+
                 var patch = PatchRequest.Parse(patchCmd);
 
                 PatchRequest patchIfMissing = null;
-                if (request.TryGet("PatchIfMissing", out patchIsMissingCmd))
-                {
-                    patchIfMissing = PatchRequest.Parse(patchCmd);
-                }
+                if (request.TryGet("PatchIfMissing", out patchIfMissingCmd) && patchIfMissingCmd != null)
+                    patchIfMissing = PatchRequest.Parse(patchIfMissingCmd);
 
                 // TODO: In order to properly move this to the transaction merger, we need
                 // TODO: move a lot of the costs (such as script parsing) out, so we create
                 // TODO: an object that we'll apply, otherwise we'll slow down a lot the transactions
                 // TODO: just by doing the javascript parsing and preparing the engine
 
-                PatchResultData patchResult;
+                PatchResult patchResult;
                 using (context.OpenWriteTransaction())
                 {
-                    patchResult = Database.Patch.Apply(context, id, etag, patch, patchIfMissing, isTestOnly);
-                    context.Transaction.Commit();
+                    patchResult = Database.Patch.Apply(context, id, etag, patch, patchIfMissing, skipPatchIfEtagMismatch, debugMode: isDebugOnly);
+
+                    if (isTestOnly == false)
+                        context.Transaction.Commit();
                 }
 
-                Debug.Assert(patchResult.PatchResult == PatchResult.Patched == isTestOnly == false);
+                switch (patchResult.Status)
+                {
+                    case PatchStatus.DocumentDoesNotExist:
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                        return Task.CompletedTask;
+                    case PatchStatus.Created:
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+                        break;
+                    case PatchStatus.Skipped:
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                        return Task.CompletedTask;
+                    case PatchStatus.Patched:
+                    case PatchStatus.NotModified:
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName(("Patched"));
-                    writer.WriteBool(isTestOnly == false);
+                    writer.WritePropertyName(nameof(patchResult.Status));
+                    writer.WriteString(patchResult.Status.ToString());
                     writer.WriteComma();
 
-                    writer.WritePropertyName(("Debug"));
+                    writer.WritePropertyName(nameof(patchResult.ModifiedDocument));
                     writer.WriteObject(patchResult.ModifiedDocument);
 
-                    if (isTestOnly)
+                    if (isDebugOnly)
                     {
                         writer.WriteComma();
-                        writer.WritePropertyName(("Document"));
-                        writer.WriteObject(patchResult.OriginalDocument);
+
+                        writer.WritePropertyName(nameof(patchResult.OriginalDocument));
+                        if (patchResult.OriginalDocument != null)
+                            writer.WriteObject(patchResult.OriginalDocument);
+                        else
+                            writer.WriteNull();
+
+                        writer.WritePropertyName(nameof(patchResult.Debug));
+                        if (patchResult.Debug != null)
+                            writer.WriteObject(patchResult.Debug);
+                        else
+                            writer.WriteNull();
+                        writer.WriteComma();
                     }
 
                     writer.WriteEndObject();

@@ -16,6 +16,7 @@ using Raven.Server.Config.Attributes;
 using Raven.Server.Documents;
 using System.Threading;
 using Raven.Client.Data;
+using Raven.Server.Utils;
 using Raven.Server.Web;
 
 namespace Raven.Server.Routing
@@ -24,11 +25,14 @@ namespace Raven.Server.Routing
     {
         private readonly Trie<RouteInformation> _trie;
         private readonly RavenServer _ravenServer;
+        private readonly MetricsCountersManager _serverMetrics;
 
         public RequestRouter(Dictionary<string, RouteInformation> routes, RavenServer ravenServer)
         {
             _trie = Trie<RouteInformation>.Build(routes);
             _ravenServer = ravenServer;
+            _serverMetrics = ravenServer.Metrics;
+
         }
 
         public RouteInformation GetRoute(string method, string path, out RouteMatch match)
@@ -58,9 +62,11 @@ namespace Raven.Server.Routing
             HandleRequest handler;
             if (tryMatch.Value.TryGetHandler(reqCtx, out handler) == false)
                 handler = await tryMatch.Value.CreateHandlerAsync(reqCtx);
-            var metricsCountersManager = reqCtx.Database?.Metrics ?? reqCtx.RavenServer.Metrics;
-            metricsCountersManager.RequestsMeter.Mark();
-            Interlocked.Increment(ref metricsCountersManager.ConcurrentRequestsCount);
+            
+            reqCtx.Database?.Metrics?.RequestsMeter.Mark();
+            _serverMetrics.RequestsMeter.Mark();
+
+            Interlocked.Increment(ref _serverMetrics.ConcurrentRequestsCount);
             if (handler == null)
             {
                 context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
@@ -85,7 +91,7 @@ namespace Raven.Server.Routing
                 await handler(reqCtx);
             }
 
-            Interlocked.Decrement(ref metricsCountersManager.ConcurrentRequestsCount);
+            Interlocked.Decrement(ref _serverMetrics.ConcurrentRequestsCount);
 
             return reqCtx.Database?.ResourceName;
         }

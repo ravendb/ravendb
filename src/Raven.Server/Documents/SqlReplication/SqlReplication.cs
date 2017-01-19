@@ -218,6 +218,7 @@ namespace Raven.Server.Documents.SqlReplication
 
         public SqlReplicationScriptResult ApplyConversionScript(List<Document> documents, DocumentsOperationContext context)
         {
+            var patchRequest = new PatchRequest { Script = Configuration.Script };
             var result = new SqlReplicationScriptResult();
             foreach (var replicatedDoc in documents)
             {
@@ -225,10 +226,7 @@ namespace Raven.Server.Documents.SqlReplication
                 var patcher = new SqlReplicationPatchDocument(_database, context, result, Configuration, replicatedDoc.Key);
                 try
                 {
-                    var scope = patcher.Apply(context, replicatedDoc, new PatchRequest { Script = Configuration.Script });
-
-                    if (_logger.IsInfoEnabled && scope.DebugInfo.Count > 0)
-                        _logger.Info(string.Format("Debug output for doc: {0} for script {1}:\r\n.{2}", replicatedDoc.Key, Configuration.Name, string.Join("\r\n", scope.DebugInfo.Items)));
+                    patcher.Apply(context, replicatedDoc, patchRequest);
 
                     Statistics.ScriptSuccess();
                 }

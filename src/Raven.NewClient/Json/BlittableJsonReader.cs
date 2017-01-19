@@ -108,17 +108,19 @@ namespace Raven.NewClient.Client.Json
             throw new InvalidOperationException("Shouldn't happen");
         }
 
-        private BlittableJsonToken GetTokenFromType(object val)
+        private static BlittableJsonToken GetTokenFromType(object val)
         {
-            if (val is string)
+            if (val is string || val is LazyStringValue)
                 return BlittableJsonToken.String;
+            if (val is LazyCompressedStringValue)
+                return BlittableJsonToken.CompressedString;
             if (val is bool)
                 return BlittableJsonToken.Boolean;
             if (val == null)
                 return BlittableJsonToken.Null;
             if (val is int || val is long)
                 return BlittableJsonToken.Integer;
-            if (val is float || val is double || val is decimal)
+            if (val is float || val is double || val is decimal || val is LazyDoubleValue)
                 return BlittableJsonToken.Float;
             if (val is IEnumerable)
                 return BlittableJsonToken.StartArray;
@@ -234,7 +236,7 @@ namespace Raven.NewClient.Client.Json
             var str = ReadAsString();
             if (str == null)
                 return null;
-            return DateTime.ParseExact(str, "o", CultureInfo.InvariantCulture);
+            return DateTimeOffset.ParseExact(str, "o", CultureInfo.InvariantCulture);
         }
     }
 

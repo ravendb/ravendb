@@ -274,6 +274,30 @@
             }
         }
     }
+    &.checkbox-table-selector {
+        padding-top: 0px;
+        height: 27px;
+        min-height: 0;
+        width: 20px;
+        padding: 0;
+
+        input {
+            margin-left:0;
+            position: absolute;
+            top:0;
+            left:0;
+            cursor: pointer;
+        }
+        label {
+            &:after {
+                margin-left: 0;
+            }
+            &:before {
+                margin-left: 0;
+                cursor: pointer;
+            }
+        }
+    }
 
     &.checkbox-circle label::before {
         border-radius: 50%;

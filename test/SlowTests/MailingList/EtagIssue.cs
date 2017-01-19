@@ -263,7 +263,7 @@ namespace SlowTests.MailingList
                         orgAdmin.Org, new HasManager(orgAdmin.User)));
 
                 BatchResult[] results = ((IDocumentStore)store).DatabaseCommands.Batch(patches.ToArray());
-                if (results.Any(r => r.PatchResult.Value != PatchResult.Patched))
+                if (results.Any(r => r.PatchStatus.Value != PatchStatus.Patched))
                     throw new InvalidOperationException("Some patches failed");
             }
         }

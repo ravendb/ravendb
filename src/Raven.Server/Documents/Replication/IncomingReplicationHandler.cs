@@ -118,14 +118,16 @@ namespace Raven.Server.Documents.Replication
             IsIncomingReplicationThread = true;
             try
             {
+                // _multiDocumentParser will be disposed when TcpConnectionOptions is disposed
                 using (_stream)
                 using (var writer = new BlittableJsonTextWriter(_documentsContext, _stream))
-                using (_multiDocumentParser)
                 {
                     while (!_cts.IsCancellationRequested)
                     {
+                        _multiDocumentParser.Reset();
                         _documentsContext.ResetAndRenew();
                         _configurationContext.ResetAndRenew();
+                        _multiDocumentParser.Renew();
                         try
                         {
                             using (var msg = _multiDocumentParser.InterruptibleParseToMemory(
@@ -149,10 +151,10 @@ namespace Raven.Server.Documents.Replication
                         {
                             if (_log.IsInfoEnabled)
                             {
-                                if(e.InnerException is SocketException)
+                                if (e.InnerException is SocketException)
                                     _log.Info("Failed to read data from incoming connection. The incoming connection will be closed and re-created.", e);
                                 else
-                                    _log.Info("Received unexpected exception while receiving replication batch. This is not supposed to happen.",e);
+                                    _log.Info("Received unexpected exception while receiving replication batch. This is not supposed to happen.", e);
                             }
 
                             throw;
@@ -1175,10 +1177,16 @@ namespace Raven.Server.Documents.Replication
                 // do nothing
             }
 
+            _replicationFromAnotherSource.Set();
+
             if (_incomingThread != Thread.CurrentThread)
             {
                 _incomingThread?.Join();
             }
+
+            _connectionOptions.MultiDocumentParser?.Dispose();
+            _connectionOptions.ReturnContext?.Dispose();
+
             _incomingThread = null;
             foreach (var disposable in _disposables)
             {

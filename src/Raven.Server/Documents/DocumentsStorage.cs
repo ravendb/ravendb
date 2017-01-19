@@ -1,17 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Dynamic;
 using System.Linq;
 using System.Net;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Exceptions;
 using Raven.Server.Extensions;
+using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -23,7 +20,6 @@ using Voron.Exceptions;
 using Voron.Impl;
 using Sparrow;
 using Sparrow.Binary;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron.Util;
 
@@ -49,6 +45,8 @@ namespace Raven.Server.Documents
         private readonly DocumentDatabase _documentDatabase;
 
         private Dictionary<string, CollectionName> _collectionsCache;
+
+        public int NextPage;
 
         static DocumentsStorage()
         {
@@ -346,34 +344,50 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string prefix, string matches, string exclude, int start, int take)
         {
+            int docCount = 0;
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+            var originalTake = take;
+            var originalstart = start;
 
             Slice prefixSlice;
             using (DocumentKeyWorker.GetSliceFromKey(context, prefix, out prefixSlice))
             {
-                
                 // ReSharper disable once LoopCanBeConvertedToQuery
                 foreach (var result in table.SeekByPrimaryKey(prefixSlice, startsWith: true))
                 {
-                    var document = TableValueToDocument(context, result);
-                    string documentKey = document.Key;
-                    if (documentKey.StartsWith(prefix, StringComparison.CurrentCultureIgnoreCase) == false)
-                        break;
-
-                    if (!WildcardMatcher.Matches(matches, documentKey) ||
-                        WildcardMatcher.MatchesExclusion(exclude, documentKey))
-                        continue;
-
                     if (start > 0)
                     {
                         start--;
                         continue;
                     }
+                    docCount++;
+                    var document = TableValueToDocument(context, result);
+                    string documentKey = document.Key;
+                    if (documentKey.StartsWith(prefix, StringComparison.CurrentCultureIgnoreCase) == false)
+                        break;
+
+                    var keyTest = documentKey.Substring(prefix.Length);
+                    if (!WildcardMatcher.Matches(matches, keyTest) ||
+                        WildcardMatcher.MatchesExclusion(exclude, keyTest))
+                        continue;
+
                     if (take-- <= 0)
+                    {
+                        if (docCount >= originalTake)
+                            NextPage = (originalstart + docCount - 1);
+                        else
+                            NextPage = (originalstart);
+
                         yield break;
+                    }
                     yield return document;
                 }
             }
+
+            if (docCount >= originalTake)
+                NextPage = (originalstart + docCount);
+            else
+                NextPage = (originalstart);
         }
 
         public IEnumerable<Document> GetDocumentsInReverseEtagOrder(DocumentsOperationContext context, int start, int take)
@@ -1481,6 +1495,20 @@ namespace Raven.Server.Documents
             }
 
             var collectionName = ExtractCollectionName(context, key, document);
+            var newEtag = ++_lastEtag;
+            var newEtagBigEndian = Bits.SwapBytes(newEtag);
+            int flags = 0;
+            if (collectionName.IsSystem == false)
+            {
+                bool hasVersion =
+                    _documentDatabase.BundleLoader.VersioningStorage?.PutFromDocument(context, collectionName,
+                        key, newEtagBigEndian, document) ?? false;
+                if (hasVersion)
+                {
+                    flags = (int)DocumentFlags.Versioned;
+                }
+            }
+
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
             bool knownNewKey = false;
@@ -1513,8 +1541,6 @@ namespace Raven.Server.Documents
                 DeleteTombstoneIfNeeded(context, collectionName, lowerKey, lowerSize);
             }
 
-            var newEtag = ++_lastEtag;
-            var newEtagBigEndian = Bits.SwapBytes(newEtag);
 
             var lastModifiedTicks = DateTime.UtcNow.Ticks;
 
@@ -1536,18 +1562,6 @@ namespace Raven.Server.Documents
 
                 fixed (ChangeVectorEntry* pChangeVector = changeVector)
                 {
-                    int flags = 0;
-                    if (collectionName.IsSystem == false)
-                    {
-                        bool hasVersion =
-                            _documentDatabase.BundleLoader.VersioningStorage?.PutFromDocument(context, collectionName,
-                                key, newEtagBigEndian, document) ?? false;
-                        if (hasVersion)
-                        {
-                            flags = (int)DocumentFlags.Versioned;
-                        }
-                    }
-
                     var tbv = new TableValueBuilder
                     {
                         {lowerKey, lowerSize}, 
@@ -1593,6 +1607,9 @@ namespace Raven.Server.Documents
                     _documentDatabase.BundleLoader.ExpiredDocumentsCleaner?.Put(context,
                         keySlice, document);
                 }
+
+                _documentDatabase.Metrics.DocPutsPerSecond.MarkSingleThreaded(1);
+                _documentDatabase.Metrics.BytesPutsPerSecond.MarkSingleThreaded(document.Size);
             }
 
             context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
@@ -1604,7 +1621,6 @@ namespace Raven.Server.Documents
                 IsSystemDocument = collectionName.IsSystem,
             });
 
-            _documentDatabase.Metrics.DocPutsPerSecond.Mark();
 
             return new PutOperationResults
             {
@@ -1886,19 +1902,19 @@ namespace Raven.Server.Documents
             return fst.NumberOfEntries;
         }
 
-        public class CollectionStat
+        public class CollectionStats
         {
             public string Name;
             public long Count;
         }
 
-        public IEnumerable<CollectionStat> GetCollections(DocumentsOperationContext context)
+        public IEnumerable<CollectionStats> GetCollections(DocumentsOperationContext context)
         {
             foreach (var kvp in _collectionsCache)
             {
                 var collectionTable = context.Transaction.InnerTransaction.OpenTable(DocsSchema, kvp.Value.GetTableName(CollectionTableType.Documents));
 
-                yield return new CollectionStat
+                yield return new CollectionStats
                 {
                     Name = kvp.Key,
                     Count = collectionTable.NumberOfEntries
@@ -1906,12 +1922,12 @@ namespace Raven.Server.Documents
             }
         }
 
-        public CollectionStat GetCollection(string collection, DocumentsOperationContext context)
+        public CollectionStats GetCollection(string collection, DocumentsOperationContext context)
         {
             var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
             {
-                return new CollectionStat
+                return new CollectionStats
                 {
                     Name = collection,
                     Count = 0
@@ -1924,14 +1940,14 @@ namespace Raven.Server.Documents
 
             if (collectionTable == null)
             {
-                return new CollectionStat
+                return new CollectionStats
                 {
                     Name = collection,
                     Count = 0
                 };
             }
 
-            return new CollectionStat
+            return new CollectionStats
             {
                 Name = collectionName.Name,
                 Count = collectionTable.NumberOfEntries

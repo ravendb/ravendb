@@ -5,11 +5,12 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document.Batches;
-using Raven.NewClient.Client.Shard;
+using Raven.NewClient.Client.Json;
 using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Commands.Lazy
@@ -17,54 +18,55 @@ namespace Raven.NewClient.Client.Commands.Lazy
    
     public class LazyStartsWithOperation<T> : ILazyOperation
     {
-        private readonly string keyPrefix;
+        private readonly string _keyPrefix;
 
-        private readonly string matches;
+        private readonly string _matches;
 
-        private readonly string exclude;
+        private readonly string _exclude;
 
-        private readonly int start;
+        private readonly int _start;
 
-        private readonly int pageSize;
+        private readonly int _pageSize;
 
-        private readonly InMemoryDocumentSessionOperations sessionOperations;
+        private readonly InMemoryDocumentSessionOperations _sessionOperations;
 
-        private readonly RavenPagingInformation pagingInformation;
-        private readonly string skipAfter;
+        private readonly RavenPagingInformation _pagingInformation;
+
+        private readonly string _skipAfter;
 
         public LazyStartsWithOperation(string keyPrefix, string matches, string exclude, int start, int pageSize, InMemoryDocumentSessionOperations sessionOperations, RavenPagingInformation pagingInformation, string skipAfter)
         {
-            this.keyPrefix = keyPrefix;
-            this.matches = matches;
-            this.exclude = exclude;
-            this.start = start;
-            this.pageSize = pageSize;
-            this.sessionOperations = sessionOperations;
-            this.pagingInformation = pagingInformation;
-            this.skipAfter = skipAfter;
+            this._keyPrefix = keyPrefix;
+            this._matches = matches;
+            this._exclude = exclude;
+            this._start = start;
+            this._pageSize = pageSize;
+            this._sessionOperations = sessionOperations;
+            this._pagingInformation = pagingInformation;
+            this._skipAfter = skipAfter;
         }
 
         public GetRequest CreateRequest()
         {
-            var actualStart = start;
+            var actualStart = _start;
 
-            var nextPage = pagingInformation != null && pagingInformation.IsForPreviousPage(start, pageSize);
+            var nextPage = _pagingInformation != null && _pagingInformation.IsForPreviousPage(_start, _pageSize);
             if (nextPage)
-                actualStart = pagingInformation.NextPageStart;
+                actualStart = _pagingInformation.NextPageStart;
 
             return new GetRequest
             {
                 Url = "/docs",
-                Query =
+                Query ="?" + 
                     string.Format(
                         "startsWith={0}&matches={3}&exclude={4}&start={1}&pageSize={2}&next-page={5}&skipAfter={6}",
-                        Uri.EscapeDataString(keyPrefix),
+                        Uri.EscapeDataString(_keyPrefix),
                         actualStart,
-                        pageSize,
-                        Uri.EscapeDataString(matches ?? ""),
-                        Uri.EscapeDataString(exclude ?? ""),
+                        _pageSize,
+                        Uri.EscapeDataString(_matches ?? ""),
+                        Uri.EscapeDataString(_exclude ?? ""),
                         nextPage ? "true" : "false",
-                        skipAfter)
+                        _skipAfter)
             };
         }
 
@@ -76,23 +78,38 @@ namespace Raven.NewClient.Client.Commands.Lazy
 
         public void HandleResponse(BlittableJsonReaderObject response)
         {
-            throw new NotImplementedException();
-            /*if (response.RequestHasErrors())
+            BlittableJsonReaderObject result;
+            response.TryGet("Result", out result);
+
+            var getDocumentResult = JsonDeserializationClient.GetDocumentResult(result);
+
+            _pagingInformation?.Fill(_start, _pageSize, getDocumentResult.NextPageStart);
+
+            var finalResults = new List<T>();
+            foreach (BlittableJsonReaderObject document in getDocumentResult.Results)
             {
-                Result = null;
-                RequiresRetry = false;
-                return;
+                var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(document);
+                _sessionOperations.DocumentsById[newDocumentInfo.Id] = newDocumentInfo;
+                if (newDocumentInfo.Id == null)
+                {
+                    finalResults.Add(default(T));
+                    continue;
+                }
+                if (_sessionOperations.IsDeleted(newDocumentInfo.Id))
+                {
+                    finalResults.Add(default(T));
+                    continue;
+                }
+                DocumentInfo doc;
+                if (_sessionOperations.DocumentsById.TryGetValue(newDocumentInfo.Id, out doc))
+                {
+                    finalResults.Add(_sessionOperations.TrackEntity<T>(doc));
+                    continue;
+                }
+
+                finalResults.Add(default(T));
             }
-
-            var jsonDocuments = SerializationHelper.RavenJObjectsToJsonDocuments(((RavenJArray)response.Result).OfType<RavenJObject>());
-
-            int nextPageStart;
-            if (pagingInformation != null && int.TryParse(response.Headers[Constants.Headers.NextPageStart], out nextPageStart))
-                pagingInformation.Fill(start, pageSize, nextPageStart);
-
-            Result = jsonDocuments
-                .Select(sessionOperations.TrackEntity<T>)
-                .ToArray();*/
+            Result = finalResults.ToArray();
         }
     }
 }

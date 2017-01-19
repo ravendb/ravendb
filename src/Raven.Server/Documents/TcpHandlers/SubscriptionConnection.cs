@@ -250,6 +250,8 @@ namespace Raven.Server.Documents.TcpHandlers
                             }
                         }
                         tcpConnectionOptions.Dispose();
+                        tcpConnectionOptions.MultiDocumentParser?.Dispose();
+                        tcpConnectionOptions.ReturnContext?.Dispose();
                     }
                 }
             });

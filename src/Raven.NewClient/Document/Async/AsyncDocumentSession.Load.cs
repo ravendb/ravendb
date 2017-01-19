@@ -188,12 +188,12 @@ namespace Raven.NewClient.Client.Document.Async
             return loadOeration.GetDocuments<T>();
         }
 
-        public async Task<Dictionary<string, T>> LoadAsyncInternal<T>(string[] ids, KeyValuePair<string, Type>[] includes,
+        public async Task<Dictionary<string, T>> LoadAsyncInternal<T>(string[] ids, string[] includes,
             CancellationToken token = new CancellationToken())
         {
             var loadOeration = new LoadOperation(this);
             loadOeration.ByIds(ids);
-            loadOeration.WithIncludes(includes?.Select(x => x.Key).ToArray());
+            loadOeration.WithIncludes(includes?.ToArray());
 
             var command = loadOeration.CreateRequest();
             if (command != null)
@@ -205,9 +205,8 @@ namespace Raven.NewClient.Client.Document.Async
             return loadOeration.GetDocuments<T>();
         }
 
-        public async Task<T[]> LoadUsingTransformerInternalAsync<T>(string[] ids, KeyValuePair<string, Type>[] includes,
-            string transformer, Dictionary<string, object> transformerParameters = null,
-            CancellationToken token = default(CancellationToken))
+        public async Task<T[]> LoadUsingTransformerInternalAsync<T>(string[] ids, string[] includes, string transformer,
+            Dictionary<string, object> transformerParameters = null, CancellationToken token = new CancellationToken())
         {
             if (transformer == null)
                 throw new ArgumentNullException("transformer");
@@ -217,7 +216,7 @@ namespace Raven.NewClient.Client.Document.Async
             var loadTransformerOeration = new LoadTransformerOperation(this);
             loadTransformerOeration.ByIds(ids);
             loadTransformerOeration.WithTransformer(transformer, transformerParameters);
-            loadTransformerOeration.WithIncludes(includes?.Select(x => x.Key).ToArray());
+            loadTransformerOeration.WithIncludes(includes?.ToArray());
 
             var command = loadTransformerOeration.CreateRequest();
             if (command != null)

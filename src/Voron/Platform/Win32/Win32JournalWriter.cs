@@ -119,6 +119,8 @@ namespace Voron.Platform.Win32
                     Win32NativeFileCreationDisposition.OpenExisting,
                     Win32NativeFileAttributes.Normal,
                     IntPtr.Zero);
+                if(_readHandle.IsInvalid)
+                    throw new IOException("When opening file " + _filename, new Win32Exception(Marshal.GetLastWin32Error()));
             }
 
             NativeOverlapped* nativeOverlapped = (NativeOverlapped*)NativeMemory.AllocateMemory(sizeof(NativeOverlapped));
@@ -135,7 +137,7 @@ namespace Voron.Platform.Win32
                         int lastWin32Error = Marshal.GetLastWin32Error();
                         if (lastWin32Error == Win32NativeFileMethods.ErrorHandleEof)
                             return false;
-                        throw new Win32Exception(lastWin32Error);
+                        throw new Win32Exception(lastWin32Error, "Unable to read from " + _filename);
                     }
                     numOfBytes -= read;
                     buffer += read;

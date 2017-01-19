@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -20,6 +21,7 @@ namespace Sparrow.Json
     /// </summary>
     public class JsonOperationContext : IDisposable
     {
+        private int _generation;
         private const int InitialStreamSize = 4096;
         private readonly int _initialSize;
         private readonly int _longLivedSize;
@@ -122,6 +124,9 @@ namespace Sparrow.Json
 
         public void RegisterForDispose(IDisposable disposable)
         {
+            if (disposable == null) //precaution
+                return;
+
             _disposables.Add(disposable);
         }
 
@@ -160,9 +165,16 @@ namespace Sparrow.Json
                 //_parent disposal sets _managedBuffers to null,
                 //throwing ObjectDisposedException() to make it more visible
                 if (_parent._disposed)
-                    throw new ObjectDisposedException("ReturnBuffer should not be disposed after it's parent operation context was disposed");
+                    ThrowParentWasDisposed();
+
                 _parent._managedBuffers.Push(_buffer);
                 _buffer = null;
+            }
+
+            private static void ThrowParentWasDisposed()
+            {
+                throw new ObjectDisposedException(
+                    "ReturnBuffer should not be disposed after it's parent operation context was disposed");
             }
         }
 
@@ -201,6 +213,8 @@ namespace Sparrow.Json
             var allocatedMemory = longLived
                                         ? _arenaAllocatorForLongLivedValues.Allocate(requestedSize)
                                         : _arenaAllocator.Allocate(requestedSize);
+
+            allocatedMemory.ContextGeneration = _generation;
 
             return allocatedMemory;
         }
@@ -292,7 +306,7 @@ namespace Sparrow.Json
             var state = new JsonParserState();
             var maxByteCount = Encoding.GetMaxByteCount(field.Length);
 
-            int escapePositionsSize = state.FindEscapePositionsMaxSize(field);
+            int escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(field);
 
             var memory = GetMemory(maxByteCount + escapePositionsSize, longLived: longLived);
 
@@ -494,7 +508,7 @@ namespace Sparrow.Json
                 // here we "leak" the memory used by the array, in practice this is used
                 // in short scoped context, so we don't care
                 var arrayReader = builder.CreateArrayReader();
-                this.RegisterLiveReader(arrayReader.Parent);
+                RegisterLiveReader(arrayReader.Parent);
                 return Tuple.Create(arrayReader, (IDisposable) arrayReader.Parent);
             }
         }
@@ -680,6 +694,17 @@ namespace Sparrow.Json
                 _parser?.Dispose();
                 _writer?.Dispose();
             }
+
+            public void Reset()
+            {
+                //Parser.ResetStream();
+                //_writer.Reset();
+            }
+
+            public void Renew()
+            {
+                //Parser.SetStream();
+            }
         }
 
         internal void ReaderDisposed(LinkedListNode<BlittableJsonReaderObject> disposedNode)
@@ -716,8 +741,10 @@ namespace Sparrow.Json
                 disposable.Dispose();
             }
 
-            foreach (var memoryData in _disposableAllocatedMemory)
+            //note: this setup does not prevent "double" returns            
+            for (var i = _disposableAllocatedMemory.Count - 1; i >= 0; i--)
             {
+                var memoryData = _disposableAllocatedMemory[i];
                 _arenaAllocator.Return(memoryData);
             }
 
@@ -736,7 +763,6 @@ namespace Sparrow.Json
             _disposables.Clear();
             _disposableAllocatedMemory.Clear();
             _liveReaders.Clear();
-            _arenaAllocator.ResetArena();
 
             _documentBuilder.Reset();
 
@@ -747,7 +773,10 @@ namespace Sparrow.Json
             if (allocatorForLongLivedValues != null && 
                 (allocatorForLongLivedValues.Allocated > _initialSize || forceReleaseLongLivedAllocator))
             {
-                foreach(var mem in _fieldNames.Values){
+                foreach(var mem in _fieldNames.Values)
+                {
+                    _arenaAllocatorForLongLivedValues.Return(mem.AllocatedMemoryData);
+                    mem.AllocatedMemoryData = null;
                     mem.Dispose();
                 }                
                 
@@ -761,6 +790,9 @@ namespace Sparrow.Json
                 _fieldNames.Clear();
                 CachedProperties = null; // need to release this so can be collected
             }
+            _arenaAllocator.ResetArena();
+
+            _generation++;
         }
 
         public void Write(Stream stream, BlittableJsonReaderObject json)
@@ -907,7 +939,16 @@ namespace Sparrow.Json
 
         public void ReturnMemory(AllocatedMemoryData allocation)
         {
+            //if (_generation != allocation.ContextGeneration)
+            //    ThrowUseAfterFree();
+
             _arenaAllocator.Return(allocation);
+        }
+
+        private static void ThrowUseAfterFree()
+        {
+            throw new InvalidOperationException(
+                "UseAfterFree detected! Attempt to return memory from previous generation, Reset has already been called and the memory reused!");
         }
 
         public IntPtr PinObjectAndGetAddress(object obj)

@@ -72,6 +72,7 @@ namespace Raven.NewClient.Client.Commands
                 {
                     documentInfo.Id = key;
                     _session.DocumentsById[key] = documentInfo;
+                    _session.GenerateEntityIdOnTheClient.TrySetIdentity(entity, key);
                 }
 
                 var afterStoreEventArgs = new AfterStoreEventArgs(_session, documentInfo.Id, documentInfo.Entity);

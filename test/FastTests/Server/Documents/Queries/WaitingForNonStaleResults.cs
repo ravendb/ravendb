@@ -1,14 +1,16 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace FastTests.Server.Documents.Queries
 {
     [SuppressMessage("ReSharper", "ConsiderUsingConfigureAwait")]
-    public class WaitingForNonStaleResults : RavenTestBase
+    public class WaitingForNonStaleResults : RavenNewTestBase
     {
         [Fact]
         public async Task Cutoff_etag_usage()
@@ -70,7 +72,7 @@ namespace FastTests.Server.Documents.Queries
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.Admin.StopIndexing();
+                store.Admin.Send(new StopIndexingOperation());
 
                 using (var session = store.OpenSession())
                 {
@@ -82,12 +84,18 @@ namespace FastTests.Server.Documents.Queries
 
                 using (var session = store.OpenSession())
                 {
+                    var sp = Stopwatch.StartNew();
                     Assert.Throws<TimeoutException>(() =>
                         session.Query<Address>()
                         .Customize(x => x.WaitForNonStaleResultsAsOfNow(TimeSpan.FromMilliseconds(1)))
                         .OrderBy(x => x.City)
                         .ToList()
                     );
+
+                    var timeout = 1000;
+                    if (Debugger.IsAttached)
+                        timeout *= 25;
+                    Assert.True(sp.ElapsedMilliseconds < timeout);
                 }
             }
         }

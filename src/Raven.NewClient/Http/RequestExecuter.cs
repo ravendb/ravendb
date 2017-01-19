@@ -184,10 +184,13 @@ namespace Raven.NewClient.Client.Http
                     }
                 }
 
+                command.StatusCode = response.StatusCode;
+
                 if (response.StatusCode == HttpStatusCode.NotModified)
                 {
                     cachedItem.NotModified();
                     command.SetResponse(cachedValue);
+                    command.ResponseWasFromCache();
                     return;
                 }
                 if (response.IsSuccessStatusCode == false)

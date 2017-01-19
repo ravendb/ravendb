@@ -276,6 +276,7 @@ namespace Sparrow.Json
     {
         public byte* Address;
         public int SizeInBytes;
+        public int ContextGeneration;
         public NativeMemory.ThreadStats AllocatingThread;
 #if MEM_GUARD
         ~AllocatedMemoryData(){

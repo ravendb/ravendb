@@ -150,6 +150,8 @@ namespace Raven.Server.Documents
 
         private void DoCommandNotification(MergedTransactionCommand cmd)
         {
+            DisposeIfRelevant(cmd);
+
             if (cmd.Exception != null)
             {
                 cmd.TaskCompletionSource.TrySetException(cmd.Exception);
@@ -159,7 +161,6 @@ namespace Raven.Server.Documents
                 cmd.TaskCompletionSource.TrySetResult(null);
             }
 
-            DisposeIfRelevant(cmd);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

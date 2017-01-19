@@ -25,9 +25,13 @@ namespace Raven.Server.Utils.Metrics
         public double FifteenMinuteRate => GetRate(60 * 15);
         public double FiveMinuteRate => GetRate(60 * 5);
         public double OneMinuteRate => GetRate(60);
+        public double FiveSecondRate => GetRate(5);
 
         private double GetRate(int count)
         {
+            if (count == 0)
+                return 0.0;
+
             var oldCount = count;
             double sum = 0;
             var index = Volatile.Read(ref _index) % _m15Rate.Length;
@@ -45,6 +49,7 @@ namespace Raven.Server.Utils.Metrics
         public double MeanRate => GetMeanRate(Clock.Nanoseconds - _startTime);
 
         public long Count => _count;
+
 
         public void Dispose()
         {
@@ -75,6 +80,15 @@ namespace Raven.Server.Utils.Metrics
         public void Mark(long val)
         {
             Interlocked.Add(ref _count, val);
+        }
+
+        /// <summary>
+        /// This can be called if we _know_ that there can only be one thread calling
+        /// this, so we don't need to expensive interlocked calls
+        /// </summary>
+        public void MarkSingleThreaded(long val)
+        {
+            _count += val;
         }
 
         public double GetMeanRate(double elapsed)
