@@ -63,7 +63,7 @@ namespace SlowTests.Issues
 
         private static async Task LoopResetIndex(IDocumentSession session)
         {
-            for (int i = 0; i < 30; i++)
+            for (int i = 0; i < 2; i++)
             {
                 var indexNames = session.Advanced.DocumentStore.DatabaseCommands.GetIndexNames(0, 999);
                 var cancellation = new CancellationToken();
