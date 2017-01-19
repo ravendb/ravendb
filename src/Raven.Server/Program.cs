@@ -188,7 +188,7 @@ namespace Raven.Server
         private static void WriteServerStatsAndWaitForEsc(RavenServer server)
         {
             Console.WriteLine("Showing stats, press ESC to close...");
-            Console.WriteLine("    working set     | native mem      | managed mem     | mmap size         | reqs/sec (now, 1m, 5m, 15m) ");
+            Console.WriteLine("    working set     | native mem      | managed mem     | mmap size         | reqs/sec (now, 5s, 1m, 5m) ");
             var i = 0;
             while (Console.KeyAvailable == false || Console.ReadKey(true).Key != ConsoleKey.Escape)
             {
@@ -203,7 +203,7 @@ namespace Raven.Server
                 Console.Write($" | {humaneProp?["ManagedAllocations"],-14} ");
                 Console.Write($" | {humaneProp?["TotalMemoryMapped"],-17} ");
 
-                Console.Write($"| {Math.Round(reqCounter.OneSecondRate, 1)}, {Math.Round(reqCounter.OneMinuteRate, 1)}, {Math.Round(reqCounter.FiveMinuteRate, 1)}, {Math.Round(reqCounter.FifteenMinuteRate, 1)}             ");
+                Console.Write($"| {Math.Round(reqCounter.OneSecondRate, 1):#,#.#;;0}, {Math.Round(reqCounter.FiveSecondRate, 1):#,#.#;;0}, {Math.Round(reqCounter.OneMinuteRate, 1):#,#.#;;0}, {Math.Round(reqCounter.FiveMinuteRate, 1):#,#.#;;0}             ");
 
                 for (int j = 0; j < 5 && Console.KeyAvailable == false; j++)
                 {

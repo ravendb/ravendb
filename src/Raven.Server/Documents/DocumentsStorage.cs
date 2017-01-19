@@ -1607,6 +1607,9 @@ namespace Raven.Server.Documents
                     _documentDatabase.BundleLoader.ExpiredDocumentsCleaner?.Put(context,
                         keySlice, document);
                 }
+
+                _documentDatabase.Metrics.DocPutsPerSecond.MarkSingleThreaded(1);
+                _documentDatabase.Metrics.BytesPutsPerSecond.MarkSingleThreaded(document.Size);
             }
 
             context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
@@ -1618,7 +1621,6 @@ namespace Raven.Server.Documents
                 IsSystemDocument = collectionName.IsSystem,
             });
 
-            _documentDatabase.Metrics.DocPutsPerSecond.Mark();
 
             return new PutOperationResults
             {
