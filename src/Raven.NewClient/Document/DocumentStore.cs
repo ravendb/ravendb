@@ -48,6 +48,8 @@ namespace Raven.NewClient.Client.Document
 
         private OperationExecuter _operationExecuter;
 
+        private DatabaseSmuggler _smuggler;
+
         /// <summary>
         /// The current session id - only used during construction
         /// </summary>
@@ -232,19 +234,17 @@ namespace Raven.NewClient.Client.Document
             }
         }
 
-        public override RequestExecuter GetRequestExecuter(string databaseName)
+        public override RequestExecuter GetRequestExecuter(string databaseName = null)
         {
+            if (databaseName == null)
+                databaseName = DefaultDatabase;
+
             Lazy<RequestExecuter> lazy;
             if (_requestExecuters.TryGetValue(databaseName, out lazy))
                 return lazy.Value;
             lazy = _requestExecuters.GetOrAdd(databaseName,
                 dbName => new Lazy<RequestExecuter>(() => new RequestExecuter(Url, dbName, ApiKey)));
             return lazy.Value;
-        }
-
-        public override RequestExecuter GetRequestExecuterForDefaultDatabase()
-        {
-            return GetRequestExecuter(DefaultDatabase);
         }
 
         public override IDocumentStore Initialize()
@@ -283,8 +283,6 @@ namespace Raven.NewClient.Client.Document
                     _asyncMultiDbHiLo = generator;
                     Conventions.AsyncDocumentKeyGenerator = (dbName, entity) => generator.GenerateDocumentKeyAsync(dbName, entity);
                 }
-
-                Smuggler = new DatabaseSmuggler(this);
 
                 initialized = true;
             }
@@ -615,7 +613,7 @@ namespace Raven.NewClient.Client.Document
 
         public Func<HttpMessageHandler> HttpMessageHandlerFactory { get; set; }
 
-        public DatabaseSmuggler Smuggler { get; private set; }
+        public DatabaseSmuggler Smuggler => _smuggler ?? (_smuggler = new DatabaseSmuggler(this));
 
         public AdminOperationExecuter Admin => _adminOperationExecuter ?? (_adminOperationExecuter = new AdminOperationExecuter(this));
 

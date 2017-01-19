@@ -1,21 +1,22 @@
 using System;
 using System.IO;
-using System.Threading.Tasks;
-using FastTests.Server.Documents.Versioning;
-using Raven.Client.Smuggler;
-using Xunit;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
-using FastTests.Server.Documents.Expiration;
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
-using Raven.Json.Linq;
+using FastTests.Server.Documents.Versioning;
+using Raven.NewClient.Abstractions;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Smuggler;
+using Raven.NewClient.Operations.Databases;
+using Raven.Server.Documents.Expiration;
+using Xunit;
 
 namespace FastTests.Smuggler
 {
-    public class SmugglerApiTests : RavenTestBase
+    public class SmugglerApiTests : RavenNewTestBase
     {
         private class Users_ByName : AbstractIndexCreationTask<User>
         {
@@ -57,10 +58,13 @@ namespace FastTests.Smuggler
                     await session.SaveChangesAsync();
                 }
 
-                await store1.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), store2.Url, store2.DefaultDatabase);
+                await store1.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), store2.Smuggler);
 
-                var docs = await store2.AsyncDatabaseCommands.GetDocumentsAsync(0, 10);
-                Assert.Equal(3, docs.Length);
+                using (var commands = store2.Commands())
+                {
+                    var docs = await commands.GetAsync(0, 10);
+                    Assert.Equal(3, docs.Length);
+                }
             }
         }
 
@@ -100,7 +104,7 @@ namespace FastTests.Smuggler
 
                     await store2.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), file);
 
-                    var stats = await store2.AsyncDatabaseCommands.GetStatisticsAsync();
+                    var stats = await store2.Admin.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(3, stats.CountOfDocuments);
                     Assert.Equal(3, stats.CountOfIndexes);
                     Assert.Equal(1, stats.CountOfTransformers);
@@ -124,11 +128,11 @@ namespace FastTests.Smuggler
 
                     using (var session = exportStore.OpenAsyncSession())
                     {
-                        await Expiration.SetupExpiration(exportStore);
+                        await SetupExpiration(exportStore);
                         var person1 = new Person { Name = "Name1" };
                         await session.StoreAsync(person1).ConfigureAwait(false);
                         var metadata = session.Advanced.GetMetadataFor(person1);
-                        metadata[Constants.Expiration.RavenExpirationDate] = new RavenJValue(database.Time.GetUtcNow().AddSeconds(10).ToString(Default.DateTimeOffsetFormatsToWrite));
+                        metadata[Constants.Expiration.RavenExpirationDate] = database.Time.GetUtcNow().AddSeconds(10).ToString(Default.DateTimeOffsetFormatsToWrite);
 
                         await session.SaveChangesAsync().ConfigureAwait(false);
                     }
@@ -197,7 +201,7 @@ namespace FastTests.Smuggler
 
                     await store1.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), file);
 
-                    var stats = await store1.AsyncDatabaseCommands.GetStatisticsAsync();
+                    var stats = await store1.Admin.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(5, stats.CountOfDocuments);
                     Assert.Equal(7, stats.CountOfRevisionDocuments);
                 }
@@ -206,7 +210,7 @@ namespace FastTests.Smuggler
                 {
                     await store2.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), file);
 
-                    var stats = await store2.AsyncDatabaseCommands.GetStatisticsAsync();
+                    var stats = await store2.Admin.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(5, stats.CountOfDocuments);
                     Assert.Equal(7, stats.CountOfRevisionDocuments);
                 }
@@ -214,6 +218,20 @@ namespace FastTests.Smuggler
             finally
             {
                 File.Delete(file);
+            }
+        }
+
+        private static async Task SetupExpiration(DocumentStore store)
+        {
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new ExpirationConfiguration
+                {
+                    Active = true,
+                    DeleteFrequencySeconds = 100,
+                }, Constants.Expiration.ConfigurationDocumentKey);
+
+                await session.SaveChangesAsync();
             }
         }
     }

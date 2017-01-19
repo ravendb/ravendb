@@ -44,7 +44,7 @@ namespace FastTests.Client.Documents
                 }
 
                 var requestExecuter = store
-                    .GetRequestExecuterForDefaultDatabase();
+                    .GetRequestExecuter();
 
                 JsonOperationContext context;
                 using (requestExecuter.ContextPool.AllocateOperationContext(out context))
@@ -134,7 +134,7 @@ namespace FastTests.Client.Documents
                 }
 
                 var requestExecuter = store
-                    .GetRequestExecuterForDefaultDatabase();
+                    .GetRequestExecuter();
 
                 JsonOperationContext context;
                 using (requestExecuter.ContextPool.AllocateOperationContext(out context))

@@ -254,9 +254,7 @@ namespace Raven.NewClient.Client
 
         public abstract string DefaultDatabase { get; set; }
 
-        public abstract RequestExecuter GetRequestExecuter(string databaseName);
-
-        public abstract RequestExecuter GetRequestExecuterForDefaultDatabase();
+        public abstract RequestExecuter GetRequestExecuter(string databaseName = null);
 
         /// <summary>
         /// Setup the context for aggressive caching.

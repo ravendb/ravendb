@@ -56,7 +56,7 @@ namespace FastTests.Issues
 
                 WaitForIndexing(store);
 
-                var requestExecuter = store.GetRequestExecuterForDefaultDatabase();
+                var requestExecuter = store.GetRequestExecuter();
 
                 JsonOperationContext context;
                 using (requestExecuter.ContextPool.AllocateOperationContext(out context))
@@ -96,7 +96,7 @@ namespace FastTests.Issues
 
                 WaitForIndexing(store);
 
-                var requestExecuter = store.GetRequestExecuterForDefaultDatabase();
+                var requestExecuter = store.GetRequestExecuter();
 
                 JsonOperationContext context;
                 using (requestExecuter.ContextPool.AllocateOperationContext(out context))

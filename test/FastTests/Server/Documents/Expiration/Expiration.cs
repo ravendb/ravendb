@@ -18,7 +18,7 @@ namespace FastTests.Server.Documents.Expiration
 {
     public class Expiration : RavenTestBase
     {
-        public static async Task SetupExpiration(DocumentStore store)
+        private static async Task SetupExpiration(DocumentStore store)
         {
             using (var session = store.OpenAsyncSession())
             {
