@@ -104,6 +104,9 @@ namespace Raven.Server.Documents
 
         public bool IsMetadataEqualTo(BlittableJsonReaderObject obj, HashSet<string> excludedShallowProperties)
         {
+            if (obj == null)
+                return false;
+
             BlittableJsonReaderObject myMetadata;
             BlittableJsonReaderObject objMetadata;
             Data.TryGet(Constants.Metadata.Key, out myMetadata);

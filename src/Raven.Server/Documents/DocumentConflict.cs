@@ -13,9 +13,10 @@ namespace Raven.Server.Documents
         public BlittableJsonReaderObject Doc;
         public long StorageId;
         public ChangeVectorEntry[] ChangeVector;
-        public long InsertedEtag; // the etag of the current db when this conflict was added
-        
-        public static implicit operator DocumentConflict(Document doc)
+        public LazyStringValue Collection;
+        public long Etag; // the etag of the current db when this conflict was added
+
+        public static DocumentConflict From(Document doc)
         {
             return new DocumentConflict
             {
@@ -27,7 +28,7 @@ namespace Raven.Server.Documents
             };
         }
 
-        public static implicit operator DocumentConflict(DocumentTombstone doc)
+        public static DocumentConflict From(DocumentTombstone doc)
         {
             return new DocumentConflict
             {
@@ -35,7 +36,7 @@ namespace Raven.Server.Documents
                 Key = doc.Key,
                 Doc = null,
                 StorageId = doc.StorageId,
-                ChangeVector = doc.ChangeVector
+                ChangeVector = doc.ChangeVector,
             };
         }
 

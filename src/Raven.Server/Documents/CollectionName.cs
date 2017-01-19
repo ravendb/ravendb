@@ -137,6 +137,18 @@ namespace Raven.Server.Documents
             return GetCollectionName(document.BlittableJson);
         }
 
+        public static LazyStringValue GetLazyCollectionNameFrom(JsonOperationContext context,BlittableJsonReaderObject document)
+        {
+            BlittableJsonReaderObject metadata;
+            LazyStringValue collectionName;
+            if (document.TryGet(Constants.Metadata.Key, out metadata) == false ||
+                metadata.TryGet(Constants.Headers.RavenEntityName, out collectionName) == false)
+            {
+                return context.GetLazyStringForFieldWithCaching(EmptyCollection);
+            }
+            return collectionName;
+        }
+
         public static string GetCollectionName(BlittableJsonReaderObject document)
         {
             string collectionName;
