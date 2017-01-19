@@ -74,7 +74,7 @@ class indexDefinition {
             this.configuration.remove(existingMaxIndexOutputs);
         }
 
-        const existingIndexStoragePath = this.configuration().find(x => x.key() === configuration.indexing.indexStoragePath);
+        const existingIndexStoragePath = this.configuration().find(x => x.key() === configuration.indexing.storagePath);
         if (existingIndexStoragePath && existingIndexStoragePath.value()) {
             this.indexStoragePath(existingIndexStoragePath.value());
             this.configuration.remove(existingIndexStoragePath);
@@ -149,7 +149,7 @@ class indexDefinition {
         }
 
         if (this.indexStoragePath()) {
-            result[configuration.indexing.indexStoragePath] = this.indexStoragePath();
+            result[configuration.indexing.storagePath] = this.indexStoragePath();
         }
 
         return result;

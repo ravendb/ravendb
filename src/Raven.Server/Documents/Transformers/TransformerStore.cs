@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Transformers
 
                 if (_documentDatabase.Configuration.Indexing.RunInMemory == false)
                 {
-                    _path = Path.Combine(_documentDatabase.Configuration.Indexing.IndexStoragePath, "Transformers");
+                    _path = Path.Combine(_documentDatabase.Configuration.Indexing.StoragePath, "Transformers");
 
                     if (PlatformDetails.RunningOnPosix)
                         _path = PosixHelper.FixLinuxPath(_path);

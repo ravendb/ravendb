@@ -156,7 +156,18 @@ namespace Raven.Server.Documents.Indexes
         {
             StorageEnvironment environment = null;
 
-            var options = StorageEnvironmentOptions.ForPath(path);
+            var name = Path.GetDirectoryName(path);
+            var indexPath = path;
+
+            var indexTempPath = documentDatabase.Configuration.Indexing.TempPath != null
+                ? Path.Combine(documentDatabase.Configuration.Indexing.TempPath, name)
+                : null;
+
+            var journalPath = documentDatabase.Configuration.Indexing.JournalsStoragePath != null
+                ? Path.Combine(documentDatabase.Configuration.Indexing.JournalsStoragePath, name)
+                : null;
+
+            var options = StorageEnvironmentOptions.ForPath(indexPath, indexTempPath, journalPath);
             try
             {
                 options.SchemaVersion = 1;
@@ -254,12 +265,21 @@ namespace Raven.Server.Documents.Indexes
                 if (_initialized)
                     throw new InvalidOperationException($"Index '{Name} ({IndexId})' was already initialized.");
 
-                var indexPath = Path.Combine(configuration.IndexStoragePath,
-                    GetIndexNameSafeForFileSystem());
+                var name = GetIndexNameSafeForFileSystem();
+
+                var indexPath = Path.Combine(configuration.StoragePath, name);
+
+                var indexTempPath = configuration.TempPath != null
+                    ? Path.Combine(configuration.TempPath, name)
+                    : null;
+
+                var journalPath = configuration.JournalsStoragePath != null
+                    ? Path.Combine(configuration.JournalsStoragePath, name)
+                    : null;
 
                 var options = configuration.RunInMemory
-                    ? StorageEnvironmentOptions.CreateMemoryOnly(indexPath)
-                    : StorageEnvironmentOptions.ForPath(indexPath);
+                    ? StorageEnvironmentOptions.CreateMemoryOnly(indexPath, indexTempPath)
+                    : StorageEnvironmentOptions.ForPath(indexPath, indexTempPath, journalPath);
 
                 options.SchemaVersion = 1;
                 try
@@ -1289,19 +1309,31 @@ namespace Raven.Server.Documents.Indexes
         {
             var stats = new IndexStats.MemoryStats();
 
-            var indexPath = Path.Combine(Configuration.IndexStoragePath,
-                GetIndexNameSafeForFileSystem());
+            var name = GetIndexNameSafeForFileSystem();
+
+            var indexPath = Path.Combine(Configuration.StoragePath, GetIndexNameSafeForFileSystem());
+
+            var indexTempPath = Configuration.TempPath != null
+                ? Path.Combine(Configuration.TempPath, name)
+                : null;
+
+            var journalPath = Configuration.JournalsStoragePath != null
+                ? Path.Combine(Configuration.JournalsStoragePath, name)
+                : null;
+
             var totalSize = 0L;
             foreach (var mapping in NativeMemory.FileMapping)
             {
                 var directory = Path.GetDirectoryName(mapping.Key);
 
-                if (string.Equals(indexPath, directory, StringComparison.OrdinalIgnoreCase) == false)
-                    continue;
+                var isIndexPath = string.Equals(indexPath, directory, StringComparison.OrdinalIgnoreCase);
+                var isTempPath = indexTempPath != null && string.Equals(indexTempPath, directory, StringComparison.OrdinalIgnoreCase);
+                var isJournalPath = journalPath != null && string.Equals(journalPath, directory, StringComparison.OrdinalIgnoreCase);
 
-                foreach (var singleMapping in mapping.Value)
+                if (isIndexPath || isTempPath || isJournalPath)
                 {
-                    totalSize += singleMapping.Value;
+                    foreach (var singleMapping in mapping.Value)
+                        totalSize += singleMapping.Value;
                 }
             }
 
@@ -1948,7 +1980,7 @@ namespace Raven.Server.Documents.Indexes
         public abstract int? ActualMaxNumberOfIndexOutputs { get; }
 
         public abstract int MaxNumberOfIndexOutputs { get; }
-        
+
         protected virtual bool EnsureValidNumberOfOutputsForDocument(int numberOfAlreadyProducedOutputs)
         {
             return numberOfAlreadyProducedOutputs <= MaxNumberOfIndexOutputs;
@@ -2018,7 +2050,7 @@ namespace Raven.Server.Documents.Indexes
 
                     Dispose();
 
-                    compactPath = Path.Combine(Configuration.IndexStoragePath,
+                    compactPath = Path.Combine(Configuration.StoragePath,
                         GetIndexNameSafeForFileSystem() + "_Compact");
 
                     using (var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(compactPath))

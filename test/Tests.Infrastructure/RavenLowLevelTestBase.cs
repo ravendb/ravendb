@@ -37,14 +37,15 @@ namespace FastTests
 
             _pathsToDelete.Add(dataDirectory);
 
-            var configuration = new RavenConfiguration();
+            var configuration = new RavenConfiguration { DatabaseName = name };
             configuration.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory), int.MaxValue.ToString());
-            configuration.Initialize();
             configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = true;
-            configuration.Core.RunInMemory = runInMemory;
-            configuration.Core.DataDirectory = dataDirectory;
 
             modifyConfiguration?.Invoke(configuration);
+            configuration.Initialize();
+
+            configuration.Core.RunInMemory = runInMemory;
+            configuration.Core.DataDirectory = dataDirectory;
 
             var documentDatabase = new DocumentDatabase(name, configuration, null);
             documentDatabase.Initialize();

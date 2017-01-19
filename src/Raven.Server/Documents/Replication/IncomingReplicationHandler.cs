@@ -270,7 +270,7 @@ namespace Raven.Server.Documents.Replication
             int itemCount;
             if (!message.TryGet(nameof(ReplicationMessageHeader.ItemCount), out itemCount))
                 throw new InvalidDataException("Expected the 'ItemCount' field, but had no numeric field of this value, this is likely a bug");
-
+            
             ReceiveSingleDocumentsBatch(itemCount, lastDocumentEtag);
             OnDocumentsReceived(this);
         }
@@ -604,6 +604,7 @@ namespace Raven.Server.Documents.Replication
                                 doc.DocumentSize, _documentsContext);
                             json.BlittableValidation();
                         }
+                        
                         ChangeVectorEntry[] conflictingVector;
                         var conflictStatus = GetConflictStatusForDocument(_documentsContext, doc.Id, _tempReplicatedChangeVector, out conflictingVector);
 
@@ -724,12 +725,12 @@ namespace Raven.Server.Documents.Replication
                 isLocalExists = true;
                 if (relevantLocalDoc.Item1 != null)
                 {
-                    conflictedDocs.Add(relevantLocalDoc.Item1);
+                    conflictedDocs.Add(DocumentConflict.From(relevantLocalDoc.Item1));
                     storageId = relevantLocalDoc.Item1.StorageId;
                 }
                 else if (relevantLocalDoc.Item2 != null)
                 {
-                    conflictedDocs.Add(relevantLocalDoc.Item2);
+                    conflictedDocs.Add(DocumentConflict.From(relevantLocalDoc.Item2));
                     storageId = relevantLocalDoc.Item2.StorageId;
                     isTomstone = true;
                 }
@@ -827,11 +828,16 @@ namespace Raven.Server.Documents.Replication
                 HandleHiloConflict(context, docPosition, doc);
                 return;
             }
-            if (_database.DocumentsStorage.TryResolveIdenticalDocument(_documentsContext, docPosition.Id, doc, _tempReplicatedChangeVector) ||
-            TryResovleConflictByScript(docPosition, conflictingVector, doc))
-            {
+            if (_database.DocumentsStorage.TryResolveIdenticalDocument(
+                _documentsContext, 
+                docPosition.Id, 
+                doc, 
+                _tempReplicatedChangeVector))
+
                 return;
-            };
+
+            if (TryResovleConflictByScript(docPosition, conflictingVector, doc))
+                return;
 
             switch (ReplicationDocument?.DocumentConflictResolution ?? StraightforwardConflictResolution.None)
             {
@@ -884,7 +890,7 @@ namespace Raven.Server.Documents.Replication
                     }
                     break;
                  default:
-                    _database.DocumentsStorage.AddConflict(_documentsContext, docPosition.Id, doc, _tempReplicatedChangeVector);
+                    _database.DocumentsStorage.AddConflict(_documentsContext, docPosition.Id, doc, _tempReplicatedChangeVector, docPosition.Collection);
                     break;
             }
         }
@@ -990,9 +996,11 @@ namespace Raven.Server.Documents.Replication
             {
                 _tempReplicatedChangeVector = new ChangeVectorEntry[doc.ChangeVectorCount];
             }
+
             for (int i = 0; i < doc.ChangeVectorCount; i++)
             {
                 _tempReplicatedChangeVector[i] = ((ChangeVectorEntry*)(buffer + doc.Position))[i];
+
                 long etag;
                 if (maxReceivedChangeVectorByDatabase.TryGetValue(_tempReplicatedChangeVector[i].DbId, out etag) == false ||
                     etag > _tempReplicatedChangeVector[i].Etag)
@@ -1120,15 +1128,14 @@ namespace Raven.Server.Documents.Replication
                     _multiDocumentParser.ReadExactly(_tempBuffer, 0, keySize);
                     curDoc.Id = Encoding.UTF8.GetString(_tempBuffer, 0, keySize);
 
-                
-
                     _multiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(int));
                     var documentSize = curDoc.DocumentSize = *(int*)pTemp;
                     if (documentSize != -1) //if -1, then this is a tombstone
                     {
                         while (documentSize > 0)
                         {
-                            var read = _multiDocumentParser.Read(_tempBuffer, 0, Math.Min(_tempBuffer.Length, documentSize));
+                            var read = _multiDocumentParser.Read(_tempBuffer, 0,
+                                Math.Min(_tempBuffer.Length, documentSize));
                             if (read == 0)
                                 throw new EndOfStreamException();
                             writeBuffer.Write(pTemp, read);
@@ -1137,12 +1144,16 @@ namespace Raven.Server.Documents.Replication
                     }
                     else
                     {
-                        //read the collection of the tombstone
+                        //read the collection
                         _multiDocumentParser.ReadExactly(_tempBuffer, 0, sizeof(int));
                         var collectionSize = *(int*)pTemp;
-                        _multiDocumentParser.ReadExactly(_tempBuffer, 0, collectionSize);
-                        curDoc.Collection = Encoding.UTF8.GetString(_tempBuffer, 0, collectionSize);
+                        if (collectionSize != -1)
+                        {
+                            _multiDocumentParser.ReadExactly(_tempBuffer, 0, collectionSize);
+                            curDoc.Collection = Encoding.UTF8.GetString(_tempBuffer, 0, collectionSize);
+                        }
                     }
+                    
                     _replicatedDocs.Add(curDoc);
                 }
             }

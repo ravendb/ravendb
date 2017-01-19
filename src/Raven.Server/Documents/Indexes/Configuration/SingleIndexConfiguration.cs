@@ -27,19 +27,19 @@ namespace Raven.Server.Documents.Indexes.Configuration
 
         private void Validate()
         {
-            if (string.Equals(IndexStoragePath, _databaseConfiguration.Indexing.IndexStoragePath, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(StoragePath, _databaseConfiguration.Indexing.StoragePath, StringComparison.OrdinalIgnoreCase))
                 return;
 
-            if (_databaseConfiguration.Indexing.AdditionalIndexStoragePaths != null)
+            if (_databaseConfiguration.Indexing.AdditionalStoragePaths != null)
             {
-                foreach (var path in _databaseConfiguration.Indexing.AdditionalIndexStoragePaths)
+                foreach (var path in _databaseConfiguration.Indexing.AdditionalStoragePaths)
                 {
-                    if (string.Equals(IndexStoragePath, path, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(StoragePath, path, StringComparison.OrdinalIgnoreCase))
                         return;
                 }
             }
 
-            throw new InvalidOperationException($"Given index path ('{IndexStoragePath}') is not defined in '{Constants.Configuration.Indexing.StoragePath}' or '{Constants.Configuration.Indexing.AdditionalIndexStoragePaths}'");
+            throw new InvalidOperationException($"Given index path ('{StoragePath}') is not defined in '{Constants.Configuration.Indexing.StoragePath}' or '{Constants.Configuration.Indexing.AdditionalStoragePaths}'");
         }
 
         public override bool Disabled => _databaseConfiguration.Indexing.Disabled;
@@ -57,12 +57,12 @@ namespace Raven.Server.Documents.Indexes.Configuration
             protected set { _runInMemory = value; }
         }
 
-        public override string IndexStoragePath
+        public override string StoragePath
         {
             get
             {
                 if (string.IsNullOrEmpty(_indexStoragePath))
-                    _indexStoragePath = _databaseConfiguration.Indexing.IndexStoragePath;
+                    _indexStoragePath = _databaseConfiguration.Indexing.StoragePath;
                 return _indexStoragePath;
             }
 
@@ -78,7 +78,11 @@ namespace Raven.Server.Documents.Indexes.Configuration
             }
         }
 
-        public override string[] AdditionalIndexStoragePaths => _databaseConfiguration.Indexing.AdditionalIndexStoragePaths;
+        public override string TempPath => _databaseConfiguration.Indexing.TempPath;
+
+        public override string JournalsStoragePath => _databaseConfiguration.Indexing.JournalsStoragePath;
+
+        public override string[] AdditionalStoragePaths => _databaseConfiguration.Indexing.AdditionalStoragePaths;
 
         public IndexUpdateType CalculateUpdateType(SingleIndexConfiguration newConfiguration)
         {

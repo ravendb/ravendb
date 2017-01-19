@@ -148,12 +148,12 @@ namespace Voron
         }
 
 
-        public static StorageEnvironmentOptions CreateMemoryOnly(string name = null, string configTempPath = null)
+        public static StorageEnvironmentOptions CreateMemoryOnly(string name = null, string tempPath = null)
         {
-            if (configTempPath == null)
-                configTempPath = Path.GetTempPath();
+            if (tempPath == null)
+                tempPath = Path.GetTempPath();
 
-            return new PureMemoryStorageEnvironmentOptions(name, configTempPath);
+            return new PureMemoryStorageEnvironmentOptions(name, tempPath);
         }
 
         public static StorageEnvironmentOptions ForPath(string path, string tempPath = null, string journalPath = null)
@@ -505,7 +505,7 @@ namespace Voron
                 PosixOpenFlags = 0;
             }
 
-            public PureMemoryStorageEnvironmentOptions(string name, string configTempPath) : base(configTempPath)
+            public PureMemoryStorageEnvironmentOptions(string name, string tempPath) : base(tempPath)
             {
                 _name = name;
                 _instanceId = Interlocked.Increment(ref _counter);

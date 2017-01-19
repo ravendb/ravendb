@@ -20,13 +20,6 @@ namespace Raven.Abstractions.Data
 
     public class DocumentChangeNotification : Notification
     {
-        private string _key;
-
-        [JsonIgnore]
-        public Func<object, string> MaterializeKey;
-
-        public object MaterializeKeyState;
-
         /// <summary>
         /// Type of change that occurred on document.
         /// </summary>
@@ -35,20 +28,7 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// Identifier of document for which notification was created.
         /// </summary>
-        public string Key
-        {
-            get
-            {
-                if (_key == null && MaterializeKey != null)
-                {
-                    _key = MaterializeKey(MaterializeKeyState);
-                    MaterializeKey = null;
-                    MaterializeKeyState = null;
-                }
-                return _key;
-            }
-            set { _key = value; }
-        }
+        public string Key { get; set; }
 
         /// <summary>
         /// Document collection name.
@@ -61,6 +41,8 @@ namespace Raven.Abstractions.Data
         /// Document type name.
         /// </summary>
         public string TypeName { get; set; }
+
+        internal bool TriggeredByReplicationThread;
 
         /// <summary>
         /// Document etag.
@@ -84,6 +66,7 @@ namespace Raven.Abstractions.Data
         BulkInsertEnded = 8,
         BulkInsertError = 16,
         DeleteOnTombstoneReplication = 32,
+        Conflict = 64,
         Common = Put | Delete
     }
 

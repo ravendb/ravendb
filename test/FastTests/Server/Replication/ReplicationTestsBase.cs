@@ -1,11 +1,15 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
+using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Client.Exceptions;
 using Raven.Client.Replication.Messages;
 using Raven.Json.Linq;
 using Raven.Server.Extensions;
@@ -38,7 +42,7 @@ namespace FastTests.Server.Replication
                 string docId,
                 int count = 1)
         {
-            int timeout = 5000;
+            int timeout = 16000;
 
             if (Debugger.IsAttached)
                 timeout *= 100;
@@ -65,7 +69,7 @@ namespace FastTests.Server.Replication
 
         protected bool WaitForDocumentDeletion(DocumentStore store,
             string docId,
-            int timeout = 10000)
+            int timeout = 16000)
         {
             if (Debugger.IsAttached)
                 timeout *= 100;
@@ -75,18 +79,33 @@ namespace FastTests.Server.Replication
             {
                 using (var session = store.OpenSession())
                 {
-                    var doc = session.Load<dynamic>(docId);
-                    if (doc == null)
-                        return true;
+                    try
+                    {
+                        var doc = session.Load<dynamic>(docId);
+                        if (doc == null)
+                            return true;
+                    }
+                    catch (ErrorResponseException e)
+                    {
+                        // expected that we might get conflict, ignore and wait
+                        if (e.StatusCode != HttpStatusCode.Conflict)
+                            throw;
+                    }
                 }
             }
-
+            using (var session = store.OpenSession())
+            {
+                //one last try, and throw if there is still a conflict
+                var doc = session.Load<dynamic>(docId);
+                if (doc == null)
+                    return true;
+            }
             return false;
         }
 
         protected bool WaitForDocument(DocumentStore store,
             string docId,
-            int timeout = 10000)
+            int timeout = 16000)
         {
             if (Debugger.IsAttached)
                 timeout *= 100;
@@ -96,12 +115,27 @@ namespace FastTests.Server.Replication
             {
                 using (var session = store.OpenSession())
                 {
-                    var doc = session.Load<dynamic>(docId);
-                    if (doc != null)
-                        return true;
+                    try
+                    {
+                        var doc = session.Load<dynamic>(docId);
+                        if (doc != null)
+                            return true;
+                    }
+                    catch (ErrorResponseException e)
+                    {
+                        // expected that we might get conflict, ignore and wait
+                        if (e.StatusCode != HttpStatusCode.Conflict)
+                            throw;
+                    }
                 }
             }
-
+            using (var session = store.OpenSession())
+            {
+                //one last try, and throw if there is still a conflict
+                var doc = session.Load<dynamic>(docId);
+                if (doc != null)
+                    return true;
+            }
             return false;
         }
 
@@ -110,7 +144,7 @@ namespace FastTests.Server.Replication
                 int count = 1)
         {
 
-            int timeout = 5000;
+            int timeout = 16000;
             if (Debugger.IsAttached)
                 timeout *= 100;
             List<string> tombstones;

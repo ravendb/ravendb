@@ -77,13 +77,14 @@ namespace Raven.Server.Extensions
             return -1;
         }
 
-        public static string Format(this ChangeVectorEntry[] changeVector)
+        public static string Format(this ChangeVectorEntry[] changeVector, int? maxCount = null)
         {
-            if (changeVector.Length == 0)
+            var max = maxCount ?? changeVector.Length;
+            if (max == 0)
                 return "[]";
             var sb = new StringBuilder();
             sb.Append("[");
-            for (int i = 0; i < changeVector.Length; i++)
+            for (int i = 0; i < max; i++)
             {
                 sb.Append(changeVector[i].DbId)
                     .Append(" : ")
