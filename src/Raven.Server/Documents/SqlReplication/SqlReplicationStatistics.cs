@@ -1,6 +1,6 @@
 using System;
 using Raven.Abstractions;
-using Raven.Server.NotificationCenter.Actions.Database;
+using Raven.Server.NotificationCenter.Actions;
 using Raven.Server.NotificationCenter.Actions.Details;
 using Raven.Server.NotificationCenter.Alerts;
 using Sparrow.Json.Parsing;
@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.SqlReplication
 
             LastAlert = RaiseAlert.Create(SqlReplication.AlertTitle, 
                 $"[{_name}] Write error: {e.Message}",
-                DatabaseAlertType.SqlReplicationError, 
+                AlertType.SqlReplicationError, 
                 AlertSeverity.Error,
                 key: _name, details: new ExceptionDetails(e));
 
@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.SqlReplication
 
             LastAlert = RaiseAlert.Create(SqlReplication.AlertTitle,
                 $"[{_name}] Write error hit ratio too high. Could not tolerate write error ratio and stopped current replication cycle",
-                DatabaseAlertType.SqlReplicationWriteErrorRatio,
+                AlertType.SqlReplicationWriteErrorRatio,
                 AlertSeverity.Error,
                 key: _name, 
                 details: new ExceptionDetails(e));
@@ -97,7 +97,7 @@ namespace Raven.Server.Documents.SqlReplication
 
             LastAlert = RaiseAlert.Create(SqlReplication.AlertTitle,
                 $"[{_name}] Could not parse script",
-                DatabaseAlertType.SqlReplicationScriptError,
+                AlertType.SqlReplicationScriptError,
                 AlertSeverity.Error,
                 key: _name, 
                 details: new MessageDetails
@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.SqlReplication
 
             LastAlert = RaiseAlert.Create(SqlReplication.AlertTitle,
                 $"[{_name}] Replication script failed",
-                DatabaseAlertType.SqlReplicationError, 
+                AlertType.SqlReplicationError, 
                 AlertSeverity.Error,
                 key: _name, 
                 details: new ExceptionDetails(e));
@@ -132,7 +132,7 @@ namespace Raven.Server.Documents.SqlReplication
 
             LastAlert = RaiseAlert.Create(SqlReplication.AlertTitle,
                 $"[{_name}] Script error hit ratio too high. Could not tolerate script error ratio and stopped current replication cycle",
-                DatabaseAlertType.SqlReplicationScriptErrorRatio,
+                AlertType.SqlReplicationScriptErrorRatio,
                 AlertSeverity.Error,
                 key: _name, 
                 details: new ExceptionDetails(e));

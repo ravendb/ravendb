@@ -8,19 +8,21 @@ using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
+using Action = Raven.Server.NotificationCenter.Actions.Action;
+
 namespace Raven.Server.NotificationCenter.Handlers
 {
-    public class NotificationCenterWebsocketWriter<T> : IDisposable where T : Actions.Action
+    public class NotificationCenterWebsocketWriter : IDisposable
     {
         private static readonly ArraySegment<byte> Heartbeat = new ArraySegment<byte>(new[] { (byte)'\r', (byte)'\n' });
 
         private readonly CancellationToken _resourceShutdown;
-        private readonly NotificationCenter<T> _notificationCenter;
+        private readonly NotificationCenter _notificationCenter;
         private readonly IMemoryContextPool _contextPool;
         private readonly WebSocket _webSocket;
         private readonly MemoryStream _ms = new MemoryStream();
 
-        public NotificationCenterWebsocketWriter(WebSocket webSocket, NotificationCenter<T> notificationCenter, IMemoryContextPool contextPool, CancellationToken resourceShutdown)
+        public NotificationCenterWebsocketWriter(WebSocket webSocket, NotificationCenter notificationCenter, IMemoryContextPool contextPool, CancellationToken resourceShutdown)
         {
             _notificationCenter = notificationCenter;
             _contextPool = contextPool;
@@ -35,7 +37,7 @@ namespace Raven.Server.NotificationCenter.Handlers
 
         public async Task WriteNotifications()
         {
-            var asyncQueue = new AsyncQueue<T>();
+            var asyncQueue = new AsyncQueue<Action>();
             
             using (_notificationCenter.TrackActions(asyncQueue))
             {

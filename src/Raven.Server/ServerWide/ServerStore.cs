@@ -9,8 +9,6 @@ using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter;
-using Raven.Server.NotificationCenter.Actions.Server;
-using Raven.Server.NotificationCenter.Alerts;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.LowMemoryNotification;
 using Raven.Server.Utils;
@@ -47,7 +45,7 @@ namespace Raven.Server.ServerWide
         public readonly RavenConfiguration Configuration;
         public readonly IoMetrics IoMetrics;
         public readonly DatabasesLandlord DatabasesLandlord;
-        public readonly NotificationCenter<ServerAction> NotificationCenter;
+        public readonly NotificationCenter.NotificationCenter NotificationCenter;
 
         public static LicenseStorage LicenseStorage { get; } = new LicenseStorage();
 
@@ -89,7 +87,7 @@ namespace Raven.Server.ServerWide
 
             _actionsStorage = new ActionsStorage("Raven/Server");
 
-            NotificationCenter = new NotificationCenter<ServerAction>(_actionsStorage);
+            NotificationCenter = new NotificationCenter.NotificationCenter(_actionsStorage);
 
             DatabaseInfoCache = new DatabaseInfoCache();
 

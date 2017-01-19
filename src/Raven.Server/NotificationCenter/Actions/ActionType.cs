@@ -5,7 +5,8 @@
         None,
         Alert,
         Operation,
-        Resource
+        Resource,
+        ActionUpdate
         // performance, hints?
     }
 }

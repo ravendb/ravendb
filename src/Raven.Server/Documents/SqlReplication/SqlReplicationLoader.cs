@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Server.Json;
-using Raven.Server.NotificationCenter.Actions.Database;
+using Raven.Server.NotificationCenter.Actions;
 using Raven.Server.NotificationCenter.Actions.Details;
 using Raven.Server.NotificationCenter.Alerts;
 using Raven.Server.ServerWide.Context;
@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.SqlReplication
                     ["LastAlert"] =
                     RaiseAlert.Create(SqlReplication.AlertTitle,
                         $"Last SQL replication operation for {simulateSqlReplication.Configuration.Name} was failed",
-                        DatabaseAlertType.SqlReplicationError,
+                        AlertType.SqlReplicationError,
                         AlertSeverity.Error,
                         key: simulateSqlReplication.Configuration.Name,
                         details: new ExceptionDetails(e)).ToJson()

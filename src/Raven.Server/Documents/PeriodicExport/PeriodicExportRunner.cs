@@ -13,7 +13,7 @@ using Raven.Client.Smuggler;
 using Raven.Server.Documents.PeriodicExport.Aws;
 using Raven.Server.Documents.PeriodicExport.Azure;
 using Raven.Server.Json;
-using Raven.Server.NotificationCenter.Actions.Database;
+using Raven.Server.NotificationCenter.Actions;
 using Raven.Server.NotificationCenter.Actions.Details;
 using Raven.Server.NotificationCenter.Alerts;
 using Raven.Server.ServerWide.Context;
@@ -372,7 +372,7 @@ namespace Raven.Server.Documents.PeriodicExport
 
                 _database.NotificationCenter.Add(RaiseAlert.Create("Periodic Export",
                     message,
-                    DatabaseAlertType.PeriodicExport,
+                    AlertType.PeriodicExport,
                     AlertSeverity.Error,
                     details: new ExceptionDetails(e)));
             }

@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
-using Raven.Server.NotificationCenter.Actions.Database;
+using Raven.Server.NotificationCenter.Actions;
 using Raven.Server.NotificationCenter.Actions.Details;
 using Raven.Server.NotificationCenter.Alerts;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Xunit;
+using Action = Raven.Server.NotificationCenter.Actions.Action;
 
 namespace FastTests.Server.NotificationCenter
 {
@@ -19,7 +20,7 @@ namespace FastTests.Server.NotificationCenter
         {
             using (var database = CreateDocumentDatabase())
             {
-                var actions = new AsyncQueue<DatabaseAction>();
+                var actions = new AsyncQueue<Action>();
 
                 using (database.NotificationCenter.TrackActions(actions))
                 {
@@ -128,23 +129,72 @@ namespace FastTests.Server.NotificationCenter
         }
 
         [Fact]
-        public void Can_delete_persistent_action()
+        public void Can_dismiss_and_get_notified_about_it()
         {
             using (var database = CreateDocumentDatabase())
             {
-                var alert1 = GetSampleDatabaseAlert();
+                var alert = GetSampleDatabaseAlert();
+                database.NotificationCenter.Add(alert);
 
-                database.NotificationCenter.Add(alert1);
+                var dismissUntil = SystemTime.UtcNow.AddDays(1);
 
-                database.NotificationCenter.Delete(alert1.Id);
-                
+                var actions = new AsyncQueue<Action>();
+                using (database.NotificationCenter.TrackActions(actions))
+                {
+                    database.NotificationCenter.DismissUntil(alert.Id, dismissUntil);
+                }
+
+                Assert.Equal(1, actions.Count);
+                var notification = actions.DequeueAsync().Result as NotificationDismissed;
+                Assert.NotNull(notification);
+                Assert.Equal(alert.Id, notification.ActionId);
+                Assert.Equal(dismissUntil, notification.NotificationDismissedUntil);
+
                 IEnumerable<BlittableJsonReaderObject> alerts;
                 using (database.NotificationCenter.GetStored(out alerts))
                 {
                     var jsonAlerts = alerts.ToList();
 
-                    Assert.Equal(0, jsonAlerts.Count);
+                    Assert.Equal(1, jsonAlerts.Count);
+                    var readAlert = jsonAlerts[0];
+
+                    Assert.Equal(alert.CreatedAt.GetDefaultRavenFormat(alert.CreatedAt.Kind == DateTimeKind.Utc),
+                        readAlert[nameof(RaiseAlert.CreatedAt)].ToString());
+
+                    Assert.Equal(
+                        dismissUntil.GetDefaultRavenFormat(dismissUntil.Kind == DateTimeKind.Utc),
+                        readAlert[nameof(RaiseAlert.DismissedUntil)].ToString());
                 }
+            }
+        }
+
+        [Fact]
+        public void Can_delete_action_and_get_notified_about_it()
+        {
+            using (var database = CreateDocumentDatabase())
+            {
+                var alert = GetSampleDatabaseAlert();
+
+                database.NotificationCenter.Add(alert);
+
+                var actions = new AsyncQueue<Action>();
+                using (database.NotificationCenter.TrackActions(actions))
+                {
+                    database.NotificationCenter.Delete(alert.Id);
+
+                    IEnumerable<BlittableJsonReaderObject> alerts;
+                    using (database.NotificationCenter.GetStored(out alerts))
+                    {
+                        var jsonAlerts = alerts.ToList();
+
+                        Assert.Equal(0, jsonAlerts.Count);
+                    }
+                }
+
+                Assert.Equal(1, actions.Count);
+                var notification = actions.DequeueAsync().Result as NotificationDeleted;
+                Assert.NotNull(notification);
+                Assert.Equal(alert.Id, notification.ActionId);
             }
         }
 

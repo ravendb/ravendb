@@ -22,7 +22,7 @@ using System.Net;
 using Raven.Server.Documents.Patch;
 using Constants = Raven.Abstractions.Data.Constants;
 using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.NotificationCenter.Actions.Database;
+using Raven.Server.NotificationCenter.Actions;
 using Raven.Server.NotificationCenter.Alerts;
 using ThreadState = System.Threading.ThreadState;
 
@@ -442,7 +442,7 @@ namespace Raven.Server.Documents.Replication
 
                     // this is severe enough to warrant an alert
                     _database.NotificationCenter.AddAfterTransactionCommit(
-                        RaiseAlert.Create("Replication conflict", msg, DatabaseAlertType.Replication,
+                        RaiseAlert.Create("Replication conflict", msg, AlertType.Replication,
                             AlertSeverity.Warning, key: replicationSource),
                         configurationContext.Transaction);
                     break;

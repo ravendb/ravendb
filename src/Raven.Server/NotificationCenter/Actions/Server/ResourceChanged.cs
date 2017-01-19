@@ -2,7 +2,7 @@
 
 namespace Raven.Server.NotificationCenter.Actions.Server
 {
-    public class ResourceChanged : ServerAction
+    public class ResourceChanged : Action
     {
         private ResourceChanged()
         {

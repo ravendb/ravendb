@@ -6,8 +6,8 @@ using Raven.Abstractions;
 using Sparrow.Logging;
 using Raven.Abstractions.Util;
 using Raven.Server.Json;
+using Raven.Server.NotificationCenter.Actions;
 using Raven.Server.NotificationCenter.Actions.Details;
-using Raven.Server.NotificationCenter.Actions.Server;
 using Raven.Server.NotificationCenter.Alerts;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -58,8 +58,8 @@ namespace Raven.Server.ServerWide.BackgroundTasks
                     {
                         var severityInfo = DetermineSeverity(latestVersionInfo);
                         
-                        var alert = RaiseServerAlert.Create("RavenDB update available", $"Version {latestVersionInfo.Version} is avaiable",
-                            ServerAlertType.NewServerVersionAvailable, severityInfo,
+                        var alert = RaiseAlert.Create("RavenDB update available", $"Version {latestVersionInfo.Version} is avaiable",
+                            AlertType.NewServerVersionAvailable, severityInfo,
                             details: new NewVersionAvailableDetails(latestVersionInfo));
 
                         _serverStore.NotificationCenter.Add(alert);

@@ -21,7 +21,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Exceptions;
-using Raven.Server.NotificationCenter.Actions.Database;
+using Raven.Server.NotificationCenter.Actions;
 using Raven.Server.NotificationCenter.Actions.Details;
 using Raven.Server.NotificationCenter.Actions.Server;
 using Raven.Server.NotificationCenter.Alerts;
@@ -183,9 +183,9 @@ namespace Raven.Server
                 if (_logger.IsInfoEnabled)
                     _logger.Info("Could not setup license check.", e);
 
-                var alert = RaiseServerAlert.Create("License manager initialization error",
+                var alert = RaiseAlert.Create("License manager initialization error",
                     "Could not intitalize the license manager", 
-                    ServerAlertType.LicenseManagerInitializationError,
+                    AlertType.LicenseManagerInitializationError,
                     AlertSeverity.Info, 
                     details: new ExceptionDetails(e));
 

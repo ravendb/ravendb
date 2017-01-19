@@ -22,7 +22,7 @@ using Raven.Json.Linq;
 using Raven.NewClient.Client.Exceptions.Database;
 using Raven.Server.Alerts;
 using Raven.Server.Extensions;
-using Raven.Server.NotificationCenter.Actions.Database;
+using Raven.Server.NotificationCenter.Actions;
 using Raven.Server.NotificationCenter.Alerts;
 using Sparrow;
 

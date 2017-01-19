@@ -1,6 +1,6 @@
 ﻿namespace Raven.Server.NotificationCenter.Alerts
 {
-    public enum DatabaseAlertType
+    public enum AlertType
     {
         SqlReplicationConnectionError,
         SqlReplicationProviderError,
@@ -11,6 +11,8 @@
         SqlReplicationScriptError,
         SqlReplicationScriptErrorRatio,
         PeriodicExport,
-        Replication
+        Replication,
+        NewServerVersionAvailable,
+        LicenseManagerInitializationError
     }
 }

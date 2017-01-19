@@ -7,7 +7,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using Raven.Abstractions;
-using Raven.Server.NotificationCenter.Actions.Database;
+using Raven.Server.NotificationCenter.Actions;
 using Raven.Server.NotificationCenter.Actions.Details;
 using Raven.Server.NotificationCenter.Alerts;
 using Raven.Server.ServerWide.Context;
@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.SqlReplication
                 database.NotificationCenter.Add(RaiseAlert.Create(
                     SqlReplication.AlertTitle,
                     $"Sql Replication could not open connection to {_connection.ConnectionString}",
-                    DatabaseAlertType.SqlReplicationConnectionError,
+                    AlertType.SqlReplicationConnectionError,
                     AlertSeverity.Error,
                     key: _connection.ConnectionString,
                     details: new ExceptionDetails(e)));
@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.SqlReplication
                 _database.NotificationCenter.Add(RaiseAlert.Create(
                     SqlReplication.AlertTitle,
                     message,
-                    DatabaseAlertType.SqlReplicationProviderError,
+                    AlertType.SqlReplicationProviderError,
                     AlertSeverity.Error,
                     details: new ExceptionDetails(e)));
 
@@ -326,7 +326,7 @@ namespace Raven.Server.Documents.SqlReplication
             if (_logger.IsInfoEnabled)
                 _logger.Info(message);
 
-            _database.NotificationCenter.Add(RaiseAlert.Create(SqlReplication.AlertTitle, message, DatabaseAlertType.SqlReplicationSlowSql, AlertSeverity.Warning));
+            _database.NotificationCenter.Add(RaiseAlert.Create(SqlReplication.AlertTitle, message, AlertType.SqlReplicationSlowSql, AlertSeverity.Warning));
         }
 
         private string GetTableNameString(string tableName)

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Abstractions.Extensions;
+using Raven.Server.NotificationCenter.Actions;
 using Raven.Server.ServerWide;
 using Sparrow.Collections;
 using Sparrow.Json;
@@ -8,25 +9,25 @@ using Action = Raven.Server.NotificationCenter.Actions.Action;
 
 namespace Raven.Server.NotificationCenter
 {
-    public class NotificationCenter<T>  where T : Action
+    public class NotificationCenter
     {
         private readonly ActionsStorage _actionsStorage;
 
-        private readonly ConcurrentSet<AsyncQueue<T>> _watchers = new ConcurrentSet<AsyncQueue<T>>();
+        private readonly ConcurrentSet<AsyncQueue<Action>> _watchers = new ConcurrentSet<AsyncQueue<Action>>();
 
         public NotificationCenter(ActionsStorage actionsStorage)
         {
             _actionsStorage = actionsStorage;
         }
 
-        public IDisposable TrackActions(AsyncQueue<T> asyncQueue)
+        public IDisposable TrackActions(AsyncQueue<Action> asyncQueue)
         {
             _watchers.TryAdd(asyncQueue);
             
             return new DisposableAction(() => _watchers.TryRemove(asyncQueue));
         }
 
-        public void Add(T action)
+        public void Add(Action action)
         {
             if (action.IsPersistent)
             {
@@ -42,7 +43,7 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
-        public void AddAfterTransactionCommit(T action, RavenTransaction tx)
+        public void AddAfterTransactionCommit(Action action, RavenTransaction tx)
         {
             var llt = tx.InnerTransaction.LowLevelTransaction;
 
@@ -71,15 +72,15 @@ namespace Raven.Server.NotificationCenter
 
             if (deleted == false)
                 return;
-            
-            // TODO arek : send notification that we deleted it from the storage
+
+            Add(NotificationDeleted.Create(id));
         }
 
         public void DismissUntil(string id, DateTime until)
         {
             _actionsStorage.ChangeDismissUntilDate(id, until);
 
-            // TODO arek : send notification that item was dismissed
+            Add(NotificationDismissed.Create(id, until));
         }
     }
 }

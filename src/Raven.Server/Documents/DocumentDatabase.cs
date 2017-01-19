@@ -15,7 +15,6 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Actions;
-using Raven.Server.NotificationCenter.Actions.Database;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow;
@@ -69,7 +68,7 @@ namespace Raven.Server.Documents
             HugeDocuments = new HugeDocuments(configuration.Databases.MaxCollectionSizeHugeDocuments,
                 configuration.Databases.MaxWarnSizeHugeDocuments);
             ConfigurationStorage = new ConfigurationStorage(this);
-            NotificationCenter = new NotificationCenter<DatabaseAction>(ConfigurationStorage.ActionsStorage);
+            NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.ActionsStorage);
             DatabaseInfoCache = serverStore?.DatabaseInfoCache;
         }
 
@@ -103,7 +102,7 @@ namespace Raven.Server.Documents
 
         public DocumentsNotifications Notifications { get; }
 
-        public NotificationCenter<DatabaseAction> NotificationCenter { get; }
+        public NotificationCenter.NotificationCenter NotificationCenter { get; }
 
         public DatabaseOperations Operations { get; private set; }
 
