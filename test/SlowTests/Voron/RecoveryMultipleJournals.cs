@@ -229,7 +229,7 @@ namespace SlowTests.Voron
 
 
         [Fact]
-        public void CorruptingOneTransactionWillKillAllFutureTransactions()
+        public void CorruptingOneTransactionWillThrow()
         {
             RequireFileBasedPager();
             using (var tx = Env.WriteTransaction())
@@ -258,6 +258,47 @@ namespace SlowTests.Voron
 
             CorruptJournal(lastJournal - 3, lastJournalPosition + 1);
 
+            Assert.Throws<InvalidDataException>(() => StartDatabase());
+        }
+
+        [Fact]
+        public void CorruptingAllLastTransactionsConsideredAsEndOfJournal()
+        {
+            RequireFileBasedPager();
+            using (var tx = Env.WriteTransaction())
+            {
+                tx.CreateTree("tree");
+
+                tx.Commit();
+            }
+
+            for (int i = 0; i < 1002; i++)
+            {
+
+                var buffer = new byte[100];
+                new Random().NextBytes(buffer);
+                using (var tx = Env.WriteTransaction())
+                {
+                    tx.CreateTree("tree").Add("a" + i, new MemoryStream(buffer));
+                    tx.Commit();
+                }
+            }
+
+            var lastJournal = Env.Journal.GetCurrentJournalInfo().CurrentJournal;
+            var lastJournalPosition = Env.Journal.CurrentFile.WritePosIn4KbPosition;
+
+
+            StopDatabase();
+
+            Assert.True(Env.Journal.CurrentFile.Available4Kbs - lastJournalPosition > 0);
+
+            for (var pos = lastJournalPosition - 2;
+                pos < lastJournalPosition + 1;
+                pos++)
+            {
+                CorruptJournal(lastJournal, pos);
+            }
+
             StartDatabase();
 
             using (var tx = Env.WriteTransaction())
@@ -269,9 +310,48 @@ namespace SlowTests.Voron
 
             using (var tx = Env.ReadTransaction())
             {
-                Assert.Null(tx.CreateTree("tree").Read("a999"));
+                Assert.Null(tx.CreateTree("tree").Read("a1001"));
             }
 
+        }
+
+        [Fact]
+        public void CorruptingLastTransactionsInNotLastJournalShouldThrow()
+        {
+            RequireFileBasedPager();
+            using (var tx = Env.WriteTransaction())
+            {
+                tx.CreateTree("tree");
+
+                tx.Commit();
+            }
+
+            for (int i = 0; i < 1002; i++)
+            {
+
+                var buffer = new byte[100];
+                new Random().NextBytes(buffer);
+                using (var tx = Env.WriteTransaction())
+                {
+                    tx.CreateTree("tree").Add("a" + i, new MemoryStream(buffer));
+                    tx.Commit();
+                }
+            }
+
+            var middleJournal = Env.Journal.GetCurrentJournalInfo().CurrentJournal/2;
+            var lastJournalPosition = Env.Journal.CurrentFile.WritePosIn4KbPosition;
+
+
+            StopDatabase();
+
+            for (var pos = lastJournalPosition - 3;
+                pos < lastJournalPosition + Env.Journal.CurrentFile.Available4Kbs; // the current journal info applies also for a middle one
+                pos++)
+            {
+                CorruptJournal(middleJournal, pos);
+            }
+
+            Assert.Throws<InvalidDataException>(() => StartDatabase());
         }
 
         private void CorruptJournal(long journal, long posOf4KbInJrnl)

@@ -49,8 +49,23 @@ namespace Voron.Impl.Journal
                 return false;
 
             TransactionHeader* current;
-            if(TryReadAndValidateHeader(options, out current) == false)
+            if (TryReadAndValidateHeader(options, out current) == false)
+            {
+                var lastValid4Kb = _readAt4Kb;
+                _readAt4Kb++;
+                while (_readAt4Kb < _journalPagerNumberOfAllocated4Kb)
+                {
+                    if (TryReadAndValidateHeader(options, out current))
+                    {
+                        RequireHeaderUpdate = true;
+                        break;
+                    }
+                    _readAt4Kb++;
+                }
+
+                _readAt4Kb = lastValid4Kb;
                 return false;
+            }
 
             var transactionSizeIn4Kb =
                 (current->CompressedSize + sizeof(TransactionHeader))/ (4*Constants.Size.Kilobyte) +
@@ -214,9 +229,10 @@ namespace Voron.Impl.Journal
                 RequireHeaderUpdate = true;
                 options.InvokeRecoveryError(this, "Transaction " + current->TransactionId + " was not committed",
                     null);
+                return false;
             }
 
-            return hashIsValid;
+            return true;
         }
 
         private TransactionHeader* EnsureTransactionMapped(TransactionHeader* current, long pageNumber, long positionInsidePage)
