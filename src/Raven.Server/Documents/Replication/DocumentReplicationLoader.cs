@@ -345,6 +345,8 @@ namespace Raven.Server.Documents.Replication
             {
                 Destination = destination
             });
+
+            outgoingReplication.SetMinimalHeartbeat(_replicationDocument.HeartbeatInterval);
             outgoingReplication.Start();
         }
 

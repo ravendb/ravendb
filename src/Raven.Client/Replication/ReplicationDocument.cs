@@ -59,6 +59,7 @@ namespace Raven.Abstractions.Replication
     public class ReplicationDocument : ReplicationDocument<ReplicationDestination>
     {
         public Dictionary<string, ScriptResolver> ResolveByCollection { get; set; }
+        public int HeartbeatInterval { get; set; } = 15*1000;
     }
 
     public class ScriptResolver
