@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using Raven.Abstractions;
-using Raven.Client.Document;
-using Raven.Json.Linq;
-using Raven.Server.Alerts;
-using Raven.Server.Documents;
+using System.Linq;
+using Raven.Abstractions.Extensions;
+using Raven.Server.NotificationCenter.Actions.Database;
+using Raven.Server.NotificationCenter.Actions.Details;
 using Raven.Server.NotificationCenter.Alerts;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Xunit;
 
@@ -15,45 +12,39 @@ namespace FastTests.Server.Documents.Alerts
 {
     public class BasicAlertsTest : RavenLowLevelTestBase
     {
-
         [Fact]
         public void Can_write_and_read_alert()
         {
             using (var database = CreateDocumentDatabase())
-            using (var _ctx = DocumentsOperationContext.ShortTermSingleUse(database))
             {
                 var alert = SampleAlert();
 
-                database.Alerts.AddAlert(alert);
+                database.NotificationCenter.Add(alert);
 
-                List<Alert> alerts;
-
-                using (var ms = new MemoryStream())
+                IEnumerable<BlittableJsonReaderObject> alerts;
+                using (database.NotificationCenter.GetAlerts(out alerts))
                 {
-                    using (var writer = new BlittableJsonTextWriter(_ctx, ms))
-                    {
-                        database.Alerts.WriteAlerts(writer);
-                    }
+                    var jsonAlerts = alerts.ToList();
 
-                    ms.Position = 0;
+                    Assert.Equal(1, jsonAlerts.Count);
 
-                    alerts = DeserializeAlerts(ms);
+                    var readAlert = jsonAlerts[0];
+
+                    Assert.Equal(alert.CreatedAt.GetDefaultRavenFormat(alert.CreatedAt.Kind == DateTimeKind.Utc),
+                        readAlert[nameof(RaiseAlert.CreatedAt)].ToString());
+                    Assert.Equal(alert.Type.ToString(), readAlert[nameof(RaiseAlert.Type)].ToString());
+                    Assert.Equal(alert.Title, readAlert[nameof(RaiseAlert.Title)].ToString());
+                    Assert.Equal(alert.Message, readAlert[nameof(RaiseAlert.Message)].ToString());
+
+                    Assert.Equal(((ExceptionDetails)alert.Details).Exception,
+                        ((BlittableJsonReaderObject)readAlert[nameof(RaiseAlert.Details)])[nameof(ExceptionDetails.Exception)].ToString());
+
+                    Assert.Equal(alert.Severity.ToString(), readAlert[nameof(RaiseAlert.Severity)].ToString());
+                    Assert.Equal(alert.AlertType.ToString(), readAlert[nameof(RaiseAlert.AlertType)].ToString());
+                    Assert.Equal(alert.Key, readAlert[nameof(RaiseAlert.Key)].ToString());
+                    Assert.Equal(alert.AlertId, readAlert[nameof(RaiseAlert.AlertId)].ToString());
+                    Assert.Equal(alert.DismissedUntil, readAlert[nameof(RaiseAlert.DismissedUntil)]);
                 }
-                
-                Assert.Equal(1, alerts.Count);
-                var loadedAlert = alerts[0];
-                Assert.Equal(alert.Type, loadedAlert.Type);
-                Assert.Equal(alert.Message, loadedAlert.Message);
-                Assert.Equal(alert.Severity, loadedAlert.Severity);
-                Assert.Equal(alert.Read, loadedAlert.Read);
-                Assert.Equal(alert.Key, loadedAlert.Key);
-                Assert.IsType<ExceptionActionDetails>(loadedAlert.Content);
-                var loadedContent = loadedAlert.Content as ExceptionActionDetails;
-                var content = alert.Content as ExceptionActionDetails;
-                Assert.Equal(content.Message, loadedContent.Message);
-                Assert.Equal(content.Exception, loadedContent.Exception);
-                Assert.Equal(alert.CreatedAt, loadedAlert.CreatedAt);
-                Assert.Equal(alert.DismissedUntil, loadedAlert.DismissedUntil);
             }
         }
 
@@ -61,33 +52,27 @@ namespace FastTests.Server.Documents.Alerts
         public void Can_update_alert()
         {
             using (var database = CreateDocumentDatabase())
-            using (var _ctx = DocumentsOperationContext.ShortTermSingleUse(database))
             {
                 var alert1 = SampleAlert();
 
-                database.Alerts.AddAlert(alert1);
+                database.NotificationCenter.Add(alert1);
 
-                var alert2 = SampleAlert();
-                alert2.Message = "Updated message";
-                database.Alerts.AddAlert(alert2);
+                var alert2 = SampleAlert(customMessage: "updated");
+                database.NotificationCenter.Add(alert2);
 
-                List<Alert> alerts;
-
-                using (var ms = new MemoryStream())
+                IEnumerable<BlittableJsonReaderObject> alerts;
+                using (database.NotificationCenter.GetAlerts(out alerts))
                 {
-                    using (var writer = new BlittableJsonTextWriter(_ctx, ms))
-                    {
-                        database.Alerts.WriteAlerts(writer);
-                    }
+                    var jsonAlerts = alerts.ToList();
 
-                    ms.Position = 0;
+                    Assert.Equal(1, jsonAlerts.Count);
 
-                    alerts = DeserializeAlerts(ms);
+                    var readAlert = jsonAlerts[0];
+
+                    Assert.Equal(alert2.CreatedAt.GetDefaultRavenFormat(alert2.CreatedAt.Kind == DateTimeKind.Utc),
+                        readAlert[nameof(RaiseAlert.CreatedAt)].ToString());
+                    Assert.Equal(alert2.Message, readAlert[nameof(RaiseAlert.Message)].ToString());
                 }
-
-                Assert.Equal(1, alerts.Count);
-                var loadedAlert = alerts[0];
-                Assert.Equal(alert2.Message, loadedAlert.Message);
             }
         }
 
@@ -95,33 +80,30 @@ namespace FastTests.Server.Documents.Alerts
         public void Update_should_retain_dismissed_date()
         {
             using (var database = CreateDocumentDatabase())
-            using (var _ctx = DocumentsOperationContext.ShortTermSingleUse(database))
             {
                 var alert1 = SampleAlert();
                 alert1.DismissedUntil = new DateTime(2014, 10, 2);
 
-                database.Alerts.AddAlert(alert1);
+                database.NotificationCenter.Add(alert1);
 
                 var alert2 = SampleAlert();
-                database.Alerts.AddAlert(alert2);
+                database.NotificationCenter.Add(alert2);
 
-                List<Alert> alerts;
-
-                using (var ms = new MemoryStream())
+                IEnumerable<BlittableJsonReaderObject> alerts;
+                using (database.NotificationCenter.GetAlerts(out alerts))
                 {
-                    using (var writer = new BlittableJsonTextWriter(_ctx, ms))
-                    {
-                        database.Alerts.WriteAlerts(writer);
-                    }
+                    var jsonAlerts = alerts.ToList();
 
-                    ms.Position = 0;
+                    Assert.Equal(1, jsonAlerts.Count);
+                    var readAlert = jsonAlerts[0];
 
-                    alerts = DeserializeAlerts(ms);
+                    Assert.Equal(alert2.CreatedAt.GetDefaultRavenFormat(alert2.CreatedAt.Kind == DateTimeKind.Utc),
+                        readAlert[nameof(RaiseAlert.CreatedAt)].ToString());
+
+                    Assert.Equal(
+                        alert1.DismissedUntil.Value.GetDefaultRavenFormat(alert1.DismissedUntil.Value.Kind == DateTimeKind.Utc),
+                        readAlert[nameof(RaiseAlert.DismissedUntil)].ToString());
                 }
-
-                Assert.Equal(1, alerts.Count);
-                var loadedAlert = alerts[0];
-                Assert.Equal(alert1.DismissedUntil, loadedAlert.DismissedUntil);
             }
         }
 
@@ -129,57 +111,33 @@ namespace FastTests.Server.Documents.Alerts
         public void Can_delete_alert()
         {
             using (var database = CreateDocumentDatabase())
-            using (var _ctx = DocumentsOperationContext.ShortTermSingleUse(database))
             {
                 var alert1 = SampleAlert();
 
-                database.Alerts.AddAlert(alert1);
+                database.NotificationCenter.Add(alert1);
 
-                database.Alerts.DeleteAlert(alert1.Type, alert1.Key);
+                database.NotificationCenter.DeleteAlert(alert1.AlertType, alert1.Key);
 
-                List<Alert> alerts;
 
-                using (var ms = new MemoryStream())
+                IEnumerable<BlittableJsonReaderObject> alerts;
+                using (database.NotificationCenter.GetAlerts(out alerts))
                 {
-                    using (var writer = new BlittableJsonTextWriter(_ctx, ms))
-                    {
-                        database.Alerts.WriteAlerts(writer);
-                    }
+                    var jsonAlerts = alerts.ToList();
 
-                    ms.Position = 0;
-
-                    alerts = DeserializeAlerts(ms);
+                    Assert.Equal(0, jsonAlerts.Count);
                 }
-
-                Assert.Equal(0, alerts.Count);
             }
         }
 
-        private static Alert SampleAlert()
+        private static RaiseAlert SampleAlert(string customMessage = null)
         {
-            var alert = new Alert
-            {
-                Type = (DatabaseAlertType)0, // use any type
-                Message = "Alert #1",
-                Severity = AlertSeverity.Info,
-                Read = false,
-                Key = null,
-                Content = new ExceptionActionDetails
-                {
-                    Message = "Error message",
-                    Exception = "Stack goes here"
-                },
-                CreatedAt = SystemTime.UtcNow,
-                DismissedUntil = null
-            };
-            return alert;
-        }
-
-        private List<Alert> DeserializeAlerts(MemoryStream ms)
-        {
-            var conventions = new DocumentConvention();
-            var alertList = RavenJToken.TryLoad(ms) as RavenJArray;
-            return (List<Alert>) conventions.CreateSerializer().Deserialize(new RavenJTokenReader(alertList), typeof(List<Alert>));
+            return RaiseAlert.Create(
+                "title",
+                customMessage ?? "Alert #1",
+                0, //use any type
+                AlertSeverity.Info,
+                key: "Key",
+                details: new ExceptionDetails(new Exception("Error message")));
         }
     }
 }

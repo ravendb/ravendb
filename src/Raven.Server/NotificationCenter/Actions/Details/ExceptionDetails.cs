@@ -7,16 +7,16 @@ namespace Raven.Server.NotificationCenter.Actions.Details
     {
         public ExceptionDetails(Exception e)
         {
-            Exception = e;
+            Exception = e.ToString();
         }
 
-        public Exception Exception { get; }
+        public string Exception { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue(GetType())
             {
-                [nameof(Exception)] = Exception.ToString()
+                [nameof(Exception)] = Exception
             };
         }
     }

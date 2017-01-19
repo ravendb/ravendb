@@ -15,15 +15,12 @@ namespace Raven.Server.NotificationCenter.Actions.Server
 
         public override DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue
-            {
-                [nameof(Message)] = Message,
-                [nameof(Type)] = Type.ToString(),
-                [nameof(CreatedAt)] = CreatedAt,
-                [nameof(Name)] = Name,
-                [nameof(ChangeType)] = ChangeType.ToString()
-                //[nameof(Details)] = Details?.ToJson()
-            };
+            var json = base.ToJson();
+
+            json[nameof(Name)] = Name;
+            json[nameof(ChangeType)] = ChangeType.ToString();
+
+            return json;
         }
 
         public static ResourceChanged Create(string resourceName, ResourceChangeType change)

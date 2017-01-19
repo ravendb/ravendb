@@ -22,6 +22,16 @@ namespace Raven.Server.NotificationCenter.Actions
 
         public IActionDetails Details { get; set; }
 
-        public abstract DynamicJsonValue ToJson();
+        public virtual DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Title)] = Title,
+                [nameof(Message)] = Message,
+                [nameof(Type)] = Type.ToString(),
+                [nameof(CreatedAt)] = CreatedAt,
+                [nameof(Details)] = Details?.ToJson()
+            };
+        }
     }
 }

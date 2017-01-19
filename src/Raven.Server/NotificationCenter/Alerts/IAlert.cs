@@ -5,7 +5,7 @@ namespace Raven.Server.NotificationCenter.Alerts
 {
     public interface IAlert
     {
-        string Id { get; }
+        string AlertId { get; }
 
         DateTime? DismissedUntil { get; }
 

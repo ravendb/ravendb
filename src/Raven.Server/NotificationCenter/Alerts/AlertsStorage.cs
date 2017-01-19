@@ -49,7 +49,7 @@ namespace Raven.Server.NotificationCenter.Alerts
         public void AddAlert(IAlert alert)
         {
             if (Logger.IsInfoEnabled)
-                Logger.Info($"Saving alert '{alert.Id}'.");
+                Logger.Info($"Saving alert '{alert.AlertId}'.");
 
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
@@ -69,7 +69,7 @@ namespace Raven.Server.NotificationCenter.Alerts
 
             // if previous alert has dismissed until value pass this value to newly saved alert
             Slice slice;
-            using (Slice.From(tx.InnerTransaction.Allocator, alert.Id, out slice))
+            using (Slice.From(tx.InnerTransaction.Allocator, alert.AlertId, out slice))
             {
                 TableValueReader existingTvr;
                 if (table.ReadByKey(slice, out existingTvr))
@@ -87,7 +87,7 @@ namespace Raven.Server.NotificationCenter.Alerts
                 }
             }
 
-            var lazyStringId = context.GetDiscardableLazyString(alert.Id);
+            var lazyStringId = context.GetDiscardableLazyString(alert.AlertId);
 
             using (var json = context.ReadObject(alertDjv, "alert", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
             {
@@ -126,18 +126,16 @@ namespace Raven.Server.NotificationCenter.Alerts
             }
         }
 
-        public void DeleteAlert(DatabaseAlertType type, string key)
+        public void DeleteAlert(string alertId)
         {
             if (Logger.IsInfoEnabled)
-                Logger.Info($"Deleting alert '{type}'.");
+                Logger.Info($"Deleting alert '{alertId}'.");
 
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenWriteTransaction())
             {
                 var table = tx.InnerTransaction.OpenTable(_alertsSchema, AlertsSchema.AlertsTree);
-
-                var alertId = AlertUtil.CreateId(type, key); // TODO arek
 
                 Slice alertSlice;
                 using (Slice.From(tx.InnerTransaction.Allocator, alertId, out alertSlice))

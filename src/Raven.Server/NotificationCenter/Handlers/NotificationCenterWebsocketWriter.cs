@@ -36,8 +36,8 @@ namespace Raven.Server.NotificationCenter.Handlers
         public async Task WriteNotifications()
         {
             var asyncQueue = new AsyncQueue<T>();
-
-            using (await _notificationCenter.TrackActions(asyncQueue, existing => WriteToWebSocket(_ms, existing, _webSocket)))
+            
+            using (_notificationCenter.TrackActions(asyncQueue))
             {
                 while (_resourceShutdown.IsCancellationRequested == false)
                 {
@@ -48,31 +48,38 @@ namespace Raven.Server.NotificationCenter.Handlers
                         continue;
                     }
 
-                    await WriteToWebSocket(_ms, tuple.Item2.ToJson(), _webSocket);
+                    await WriteToWebSocket(tuple.Item2.ToJson());
                 }
             }
         }
 
-        private Task WriteToWebSocket(MemoryStream ms, object notification, WebSocket webSocket)
+        public Task WriteToWebSocket<TNotification>(TNotification notification)
         {
-            ms.SetLength(0);
+            _ms.SetLength(0);
 
             JsonOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
-            using (var writer = new BlittableJsonTextWriter(context, ms))
+            using (var writer = new BlittableJsonTextWriter(context, _ms))
             {
-                if (notification is DynamicJsonValue)
-                    context.Write(writer, (DynamicJsonValue)notification);
-                else if (notification is BlittableJsonReaderObject)
-                    context.Write(writer, (BlittableJsonReaderObject)notification);
+                var notificationType = notification.GetType();
+
+                if (notificationType == typeof(DynamicJsonValue))
+                    context.Write(writer, notification as DynamicJsonValue);
+                else if (notificationType == typeof(BlittableJsonReaderObject))
+                    context.Write(writer, notification as BlittableJsonReaderObject);
                 else
-                    throw new InvalidOperationException($"Not supported notification type: {notification.GetType()}");
+                    ThrowNotSupportedType(notification);
             }
 
             ArraySegment<byte> bytes;
-            ms.TryGetBuffer(out bytes);
+            _ms.TryGetBuffer(out bytes);
 
-            return webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, _resourceShutdown);
+            return _webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, _resourceShutdown);
+        }
+
+        private static void ThrowNotSupportedType<TNotification>(TNotification notification)
+        {
+            throw new NotSupportedException($"Not supported notification type: {notification.GetType()}");
         }
     }
 }

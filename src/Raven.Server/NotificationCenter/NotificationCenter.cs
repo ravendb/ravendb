@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
 using Raven.Server.NotificationCenter.Actions;
+using Raven.Server.NotificationCenter.Actions.Database;
 using Raven.Server.NotificationCenter.Alerts;
 using Raven.Server.ServerWide;
 using Sparrow.Collections;
@@ -22,18 +22,9 @@ namespace Raven.Server.NotificationCenter
             _alertsStorage = alertsStorage;
         }
 
-        public async Task<IDisposable> TrackActions(AsyncQueue<T> asyncQueue, Func<BlittableJsonReaderObject, Task> writeAlertOnLoad)
+        public IDisposable TrackActions(AsyncQueue<T> asyncQueue)
         {
             _actions.TryAdd(asyncQueue);
-
-            IEnumerable<BlittableJsonReaderObject> existingAlerts;
-            using (_alertsStorage.ReadAlerts(out existingAlerts))
-            {
-                foreach (var alert in existingAlerts)
-                {
-                    await writeAlertOnLoad(alert);
-                }
-            }
             
             return new DisposableAction(() => _actions.TryRemove(asyncQueue));
         }
@@ -72,9 +63,24 @@ namespace Raven.Server.NotificationCenter
             };
         }
 
+        public IDisposable GetAlerts(out IEnumerable<BlittableJsonReaderObject> alerts)
+        {
+            return _alertsStorage.ReadAlerts(out alerts);
+        }
+
         public long GetAlertCount()
         {
             return _alertsStorage.GetAlertCount();
+        }
+
+        public void DeleteAlert(DatabaseAlertType type, string key)
+        {
+            _alertsStorage.DeleteAlert(AlertUtil.CreateId(type, key));
+        }
+
+        public void DeleteAlert(ServerAlertType type, string key)
+        {
+            _alertsStorage.DeleteAlert(AlertUtil.CreateId(type, key));
         }
     }
 }

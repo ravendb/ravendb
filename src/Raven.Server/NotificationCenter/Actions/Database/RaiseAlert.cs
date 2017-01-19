@@ -17,23 +17,21 @@ namespace Raven.Server.NotificationCenter.Actions.Database
 
         public string Key { get; set; }
 
-        public string Id => AlertUtil.CreateId(AlertType, Key);
+        public string AlertId => AlertUtil.CreateId(AlertType, Key);
 
         public DateTime? DismissedUntil { get; set; }
 
         public override DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue
-            {
-                [nameof(Title)] = Title,
-                [nameof(Message)] = Message,
-                [nameof(Severity)] = Severity.ToString(),
-                [nameof(Type)] = Type.ToString(),
-                [nameof(Key)] = Key,
-                [nameof(CreatedAt)] = CreatedAt,
-                [nameof(DismissedUntil)] = DismissedUntil,
-                [nameof(Details)] = Details?.ToJson()
-            };
+            var json = base.ToJson();
+
+            json[nameof(AlertId)] = AlertId;
+            json[nameof(Key)] = Key;
+            json[nameof(Severity)] = Severity.ToString();
+            json[nameof(DismissedUntil)] = DismissedUntil;
+            json[nameof(AlertType)] = AlertType.ToString();
+
+            return json;
         }
 
         public static RaiseAlert Create(string title, string msg, DatabaseAlertType type, AlertSeverity severity, string key = null, IActionDetails details = null)
