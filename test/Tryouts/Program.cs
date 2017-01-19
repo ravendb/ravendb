@@ -9,9 +9,12 @@ using Sparrow.Platform;
 using System.Linq;
 using FastTests.Blittable;
 using FastTests.Issues;
+using FastTests.Server.Documents;
 using FastTests.Server.Documents.Queries;
+using FastTests.Voron.FixedSize;
 using FastTests.Voron.RawData;
 using SlowTests.Tests;
+using SlowTests.Voron;
 
 namespace Tryouts
 {
@@ -19,10 +22,21 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var a = new FastTests.Voron.Compaction.StorageCompactionTests())
-            {
-                a.ShouldOccupyLessSpace();
-            }
+            using (var a = new RecoveryMultipleJournals())
+                a.CorruptingOneTransactionWillThrow();
+
+            using (var a = new RecoveryMultipleJournals())
+                a.CorruptingAllLastTransactionsConsideredAsEndOfJournal();
+
+            using (var a = new DocumentsCrud())
+                a.EtagsArePersistedWithDeletes();
+
+            using (var a = new LargeFixedSizeTreeBugs())
+                a.DeleteRangeShouldModifyPage();
+
+            using (var a = new RecoveryMultipleJournals())
+                a.CorruptingLastTransactionsInNotLastJournalShouldThrow();
+
         }
     }
 }
