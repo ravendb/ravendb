@@ -4,8 +4,10 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Sparrow;
@@ -23,6 +25,22 @@ namespace Voron.Platform.Posix
         private readonly string _filename;
         private int _fd, _fdReads = -1;
         private readonly int _maxNumberOf4KbPerSingleWrite;
+        private int _refs;
+
+        public void AddRef()
+        {
+            Interlocked.Increment(ref _refs);
+        }
+
+        public bool Release()
+        {
+            if (Interlocked.Decrement(ref _refs) != 0)
+                return false;
+
+            Dispose();
+            return true;
+        }
+
 
         public PosixJournalWriter(StorageEnvironmentOptions options, string filename, long journalSize)
         {
@@ -87,6 +105,12 @@ namespace Voron.Platform.Posix
         ~PosixJournalWriter()
         {
             Dispose();
+
+#if DEBUG
+            Debug.WriteLine(
+                "Disposing a journal file from finalizer! It should be disposed by using JournalFile.Release() instead!. Log file number: " 
+                +_filename + ". Number of references: " + _refs);
+#endif
         }
 
 

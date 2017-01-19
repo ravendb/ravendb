@@ -22,13 +22,13 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            for (int i = 0; i < 19; i++)
+            for (int i = 0; i < 10; i++)
             {
-                Console.WriteLine(i);
-                using (var a = new FastTests.Server.Replication.ReplicationOfConflicts())
+                using (var a = new Full())
                 {
-                    a.ReplicateAConflictOnThreeDBsAndResolve();
+                    a.CanBackupAndRestore();
                 }
+                Console.WriteLine(i);
             }
 
         }

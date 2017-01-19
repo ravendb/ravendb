@@ -21,8 +21,8 @@ namespace Voron.Impl.Journal
         private readonly StorageEnvironment _env;
         private IJournalWriter _journalWriter;
         private long _writePosIn4Kb;
-        private bool _disposed;
-        private int _refs;
+     
+        
         private readonly PageTable _pageTranslationTable = new PageTable();
 
         private readonly HashSet<PagePosition> _unusedPagesHashSetPool = new HashSet<PagePosition>(PagePositionEqualityComparer.Instance);
@@ -45,18 +45,6 @@ namespace Voron.Impl.Journal
             return string.Format("Number: {0}", Number);
         }
 
-     
-
-        ~JournalFile()
-        {
-            Dispose();
-
-#if DEBUG
-            Debug.WriteLine(
-                "Disposing a journal file from finalizer! It should be disposed by using JournalFile.Release() instead!. Log file number: " +
-                Number + ". Number of references: " + _refs);
-#endif
-        }
 
         internal long WritePosIn4KbPosition => _writePosIn4Kb;
 
@@ -71,7 +59,7 @@ namespace Voron.Impl.Journal
 
         public void Release()
         {
-            if (Interlocked.Decrement(ref _refs) != 0)
+            if (_journalWriter?.Release() != true)
                 return;
 
             Dispose();
@@ -79,14 +67,15 @@ namespace Voron.Impl.Journal
 
         public void AddRef()
         {
-            Interlocked.Increment(ref _refs);
+            _journalWriter?.AddRef();
         }
 
         public void Dispose()
         {
-            DisposeWithoutClosingPager();
+           
+            GC.SuppressFinalize(this);
 
-            _journalWriter?.Dispose();
+
             _journalWriter = null;
         }
 
@@ -101,16 +90,6 @@ namespace Voron.Impl.Journal
                 PageTranslationTable = _pageTranslationTable,
                 LastTransaction = lastTxId
             };
-        }
-
-        public void DisposeWithoutClosingPager()
-        {
-            if (_disposed)
-                return;
-
-            GC.SuppressFinalize(this);
-
-            _disposed = true;
         }
 
         public bool ReadTransaction(long pos, TransactionHeader* txHeader)

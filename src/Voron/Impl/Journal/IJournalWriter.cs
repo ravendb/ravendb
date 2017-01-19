@@ -12,5 +12,8 @@ namespace Voron.Impl.Journal
         AbstractPager CreatePager();
         bool Read(byte* buffer, long numOfBytes, long offsetInFile);
         void Truncate(long size);
+
+        void AddRef();
+        bool Release();
     }
 }

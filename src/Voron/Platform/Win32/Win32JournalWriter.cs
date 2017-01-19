@@ -26,6 +26,21 @@ namespace Voron.Platform.Win32
         private SafeFileHandle _readHandle;
         private NativeOverlapped* _nativeOverlapped;
         private volatile bool _disposed;
+        private int _refs;
+
+        public void AddRef()
+        {
+            Interlocked.Increment(ref _refs);
+        }
+
+        public bool Release()
+        {
+            if (Interlocked.Decrement(ref _refs) != 0)
+                return false;
+
+            Dispose();
+            return true;
+        }
 
         public Win32FileJournalWriter(StorageEnvironmentOptions options, string filename, long journalSize, 
             Win32NativeFileAccess access = Win32NativeFileAccess.GenericWrite, 
@@ -191,6 +206,12 @@ namespace Voron.Platform.Win32
         ~Win32FileJournalWriter()
         {
             Dispose();
+
+#if DEBUG
+            Debug.WriteLine(
+                "Disposing a journal file from finalizer! It should be disposed by using JournalFile.Release() instead!. Log file number: "
+                + _filename + ". Number of references: " + _refs);
+#endif
         }
 
     }
