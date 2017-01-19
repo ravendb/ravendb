@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Extensions;
@@ -10,6 +9,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Raven.Abstractions.Data;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Replication
         private readonly byte[] _tempBuffer = new byte[32 * 1024];
         private readonly Stream _stream;
         private readonly OutgoingReplicationHandler _parent;
-
+        
         public ReplicationDocumentSender(Stream stream, OutgoingReplicationHandler parent, Logger log)
         {
             _log = log;
@@ -36,6 +36,7 @@ namespace Raven.Server.Documents.Replication
             None = 0,
             HasDocs = 1,
             HasTombs = 2,
+            HasConflicts = 4,
             HasDocsAndTombs = HasDocs | HasTombs
         }
 
@@ -43,9 +44,13 @@ namespace Raven.Server.Documents.Replication
         {
             var docs = _parent._database.DocumentsStorage.GetDocumentsFrom(_parent._documentsContext,etag+ 1);
             var tombs = _parent._database.DocumentsStorage.GetTombstonesFrom(_parent._documentsContext,etag + 1,0, int.MaxValue);
+            var conflicts = _parent._database.DocumentsStorage.GetConflictsFrom(_parent._documentsContext,etag + 1);
+
+            
 
             using (var docsIt = docs.GetEnumerator())
             using (var tombsIt = tombs.GetEnumerator())
+            using (var conflictsIt = conflicts.GetEnumerator())
             {
                 var state = CurrentEnumerationState.None;
 
@@ -53,13 +58,15 @@ namespace Raven.Server.Documents.Replication
                     state |= CurrentEnumerationState.HasDocs;
                 if(tombsIt.MoveNext())
                     state |= CurrentEnumerationState.HasTombs;
-
+                if (conflictsIt.MoveNext())
+                    state |= CurrentEnumerationState.HasConflicts;
                 while (true)
                 {
                     switch (state)
                     {
                         case CurrentEnumerationState.None:
                             yield break;
+                        case CurrentEnumerationState.HasConflicts | CurrentEnumerationState.HasDocs:
                         case CurrentEnumerationState.HasDocs:
                             var docsItCurrent = docsIt.Current;
                             yield return new ReplicationBatchDocumentItem
@@ -73,6 +80,7 @@ namespace Raven.Server.Documents.Replication
                             if (docsIt.MoveNext() == false)
                                 state &= ~CurrentEnumerationState.HasDocs;
                             break;
+                        case CurrentEnumerationState.HasConflicts | CurrentEnumerationState.HasTombs:
                         case CurrentEnumerationState.HasTombs:
                             var tombsItCurrent = tombsIt.Current;
                             yield return new ReplicationBatchDocumentItem
@@ -86,10 +94,25 @@ namespace Raven.Server.Documents.Replication
                             if (tombsIt.MoveNext() == false)
                                 state &= ~CurrentEnumerationState.HasTombs;
                             break;
+                        case CurrentEnumerationState.HasConflicts:
+                            var conflictCurrent = conflictsIt.Current;
+                            yield return new ReplicationBatchDocumentItem
+                            {
+                                Etag = conflictCurrent.InsertedEtag,
+                                ChangeVector = conflictCurrent.ChangeVector,
+                                Data = conflictCurrent.Doc,
+                                Key = conflictCurrent.Key,
+                                Collection = _parent._documentsContext.GetLazyString(Constants.RavenReplicationConflictCollection),
+                                TransactionMarker = (short)conflictCurrent.LoweredKey.GetHashCode()
+                            };
+                            if (conflictsIt.MoveNext() == false)
+                                state &= ~CurrentEnumerationState.HasConflicts;
+                            break;
+                        case CurrentEnumerationState.HasConflicts | CurrentEnumerationState.HasDocsAndTombs:
                         case CurrentEnumerationState.HasDocsAndTombs:
                             if (docsIt.Current.Etag > tombsIt.Current.Etag)
                                 goto case CurrentEnumerationState.HasDocs;
-                            goto case CurrentEnumerationState.HasTombs;
+                            goto case CurrentEnumerationState.HasTombs;                            
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
@@ -115,19 +138,22 @@ namespace Raven.Server.Documents.Replication
                 short lastTransactionMarker = -1;
                 foreach (var item in GetDocsAndTombstonesAfter(_lastEtag))
                 {
-                    if (lastTransactionMarker != item.TransactionMarker)// TODO: add a configuration option to disable this check
+                    if (item.Collection?.Contains(Constants.RavenReplicationConflictCollection) != true)
                     {
-                        // we want to limit batch sizes to reasonable limits
-                        if (size > maxSizeToSend || numberOfItemsSent > batchSize)
-                            break;
+                        if (lastTransactionMarker != item.TransactionMarker)// TODO: add a configuration option to disable this check
+                        {
+                            // we want to limit batch sizes to reasonable limits
+                            if (size > maxSizeToSend || numberOfItemsSent > batchSize)
+                                break;
 
-                        lastTransactionMarker = item.TransactionMarker;
+                            lastTransactionMarker = item.TransactionMarker;
+                        }
                     }
+                    
+                    _lastEtag = item.Etag > _lastEtag ? item.Etag : _lastEtag;
 
                     if (item.Data != null)
                         size += item.Data.Size;
-
-                    _lastEtag = item.Etag;
 
                     AddReplicationItemToBatch(item);
 
@@ -183,6 +209,11 @@ namespace Raven.Server.Documents.Replication
 
         private void AddReplicationItemToBatch(ReplicationBatchDocumentItem item)
         {
+            if (item.Collection?.Contains(Constants.RavenReplicationConflictCollection) == true)
+            {
+                _orderedReplicaItems.Add(item.Etag, item);
+                return;
+            }
             if (ShouldSkipReplication(item.Key))
             {
                 if (_log.IsInfoEnabled)
@@ -219,7 +250,7 @@ namespace Raven.Server.Documents.Replication
                     [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Documents,
                     [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastEtag,
                     [nameof(ReplicationMessageHeader.LastIndexOrTransformerEtag)] = _parent._lastSentIndexOrTransformerEtag,
-                    [nameof(ReplicationMessageHeader.ItemCount)] = _orderedReplicaItems.Count
+                    [nameof(ReplicationMessageHeader.ItemCount)] = _orderedReplicaItems.Count,
                 };
                 _parent.WriteToServerAndFlush(headerJson);
                 foreach (var item in _orderedReplicaItems)
@@ -274,6 +305,9 @@ namespace Raven.Server.Documents.Replication
                     tempBufferPos += changeVectorSize;
                 }
 
+                *(long*)(pTemp + tempBufferPos) = item.Etag;
+                tempBufferPos += sizeof(long);
+
                 *(short*)(pTemp + tempBufferPos) = item.TransactionMarker;
                 tempBufferPos += sizeof(short);
 
@@ -314,12 +348,21 @@ namespace Raven.Server.Documents.Replication
                     {
                         throw new InvalidDataException("Cannot write tombstone with empty collection name...");
                     }
+                }
 
-                    *(int*)(pTemp + tempBufferPos) = item.Collection.Size;
+                if (item.Collection != null)
+                {
+                    *(int*) (pTemp + tempBufferPos) = item.Collection.Size;
                     tempBufferPos += sizeof(int);
                     Memory.Copy(pTemp + tempBufferPos, item.Collection.Buffer, item.Collection.Size);
                     tempBufferPos += item.Collection.Size;
                 }
+                else
+                {
+                    *(int*)(pTemp + tempBufferPos) = -1;
+                    tempBufferPos += sizeof(int);
+                }
+                
                 _stream.Write(_tempBuffer, 0, tempBufferPos);
             }
         }
