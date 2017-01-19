@@ -22,20 +22,14 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var a = new RecoveryMultipleJournals())
-                a.CorruptingOneTransactionWillThrow();
-
-            using (var a = new RecoveryMultipleJournals())
-                a.CorruptingAllLastTransactionsConsideredAsEndOfJournal();
-
-            using (var a = new DocumentsCrud())
-                a.EtagsArePersistedWithDeletes();
-
-            using (var a = new LargeFixedSizeTreeBugs())
-                a.DeleteRangeShouldModifyPage();
-
-            using (var a = new RecoveryMultipleJournals())
-                a.CorruptingLastTransactionsInNotLastJournalShouldThrow();
+            for (int i = 0; i < 19; i++)
+            {
+                Console.WriteLine(i);
+                using (var a = new FastTests.Server.Replication.ReplicationOfConflicts())
+                {
+                    a.ReplicateAConflictOnThreeDBsAndResolve();
+                }
+            }
 
         }
     }

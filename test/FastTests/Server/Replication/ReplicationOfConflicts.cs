@@ -120,9 +120,12 @@ namespace FastTests.Server.Replication
                 session.Store(new User { Name = "Oren" }, "foo/bar");
                 session.SaveChanges();
             }
-            SetupReplication(store2, store1);
+
             var conflicts = WaitUntilHasConflict(store2, "foo/bar");
             Assert.Equal(2, conflicts["foo/bar"].Count);
+
+            SetupReplication(store2, store1);
+         
 
             conflicts = WaitUntilHasConflict(store1, "foo/bar");
             Assert.Equal(2, conflicts["foo/bar"].Count);
