@@ -48,7 +48,11 @@ namespace Raven.Server.Documents
             OnDocumentChange?.Invoke(documentChangeNotification);
 
             foreach (var connection in Connections)
-                connection.Value.SendDocumentChanges(documentChangeNotification);
+            {
+                if (connection.Value.IsDisposed == false)
+                    connection.Value.SendDocumentChanges(documentChangeNotification);
+            }
+                
         }
 
         public void RaiseNotifications(OperationStatusChangeNotification operationStatusChangeNotification)
