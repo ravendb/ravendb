@@ -20,7 +20,9 @@ namespace Raven.Server.Config.Categories
         private readonly Func<string> _dataDirectory;
 
         private string _indexStoragePath;
-        private string[] _additionalIndexStoragePaths;
+        private string _tempPath;
+        private string _journalsStoragePath;
+        private string[] _additionalStoragePaths;
 
         public IndexingConfiguration(Func<string> databaseName, Func<bool> runInMemory, Func<string> dataDirectory) // TODO arek - maybe use Lazy instead
         {
@@ -55,7 +57,7 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry(Constants.Configuration.Indexing.StoragePath)]
         [LegacyConfigurationEntry("Raven/IndexStoragePath")]
-        public virtual string IndexStoragePath
+        public virtual string StoragePath
         {
             get
             {
@@ -75,26 +77,68 @@ namespace Raven.Server.Config.Categories
             }
         }
 
-        [Description("List of paths separated by semicolon ';' where database will look for index when it loads.")]
         [DefaultValue(null)]
-        [IndexUpdateType(IndexUpdateType.None)]
-        [ConfigurationEntry(Constants.Configuration.Indexing.AdditionalIndexStoragePaths)]
-        public virtual string[] AdditionalIndexStoragePaths
+        [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry(Constants.Configuration.Indexing.TempPath)]
+        public virtual string TempPath
         {
             get
             {
-                return _additionalIndexStoragePaths;
+                return _tempPath;
+            }
+            protected set
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    _tempPath = null;
+                    return;
+                }
+
+                _tempPath = AddDatabaseNameToPathIfNeeded(value.ToFullPath());
+            }
+        }
+
+        [DefaultValue(null)]
+        [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry(Constants.Configuration.Indexing.JournalsStoragePath)]
+        public virtual string JournalsStoragePath
+        {
+            get
+            {
+                return _journalsStoragePath;
+            }
+            protected set
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    _journalsStoragePath = null;
+                    return;
+                }
+
+                _journalsStoragePath = AddDatabaseNameToPathIfNeeded(value.ToFullPath());
+            }
+        }
+
+        [Description("List of paths separated by semicolon ';' where database will look for index when it loads.")]
+        [DefaultValue(null)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry(Constants.Configuration.Indexing.AdditionalStoragePaths)]
+        public virtual string[] AdditionalStoragePaths
+        {
+            get
+            {
+                return _additionalStoragePaths;
             }
 
             protected set
             {
                 if (value == null)
                 {
-                    _additionalIndexStoragePaths = null;
+                    _additionalStoragePaths = null;
                     return;
                 }
 
-                _additionalIndexStoragePaths = value
+                _additionalStoragePaths = value
                     .Select(x => AddDatabaseNameToPathIfNeeded(x.ToFullPath()))
                     .ToArray();
             }

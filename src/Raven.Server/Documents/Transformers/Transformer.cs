@@ -133,7 +133,7 @@ namespace Raven.Server.Documents.Transformers
 
         private static string GetPath(int transformerId, string name, IndexingConfiguration configuration)
         {
-            var path = Path.Combine(configuration.IndexStoragePath, "Transformers", $"{transformerId}.{Convert.ToBase64String(Encoding.UTF8.GetBytes(name))}{FileExtension}");
+            var path = Path.Combine(configuration.StoragePath, "Transformers", $"{transformerId}.{Convert.ToBase64String(Encoding.UTF8.GetBytes(name))}{FileExtension}");
 
             if (PlatformDetails.RunningOnPosix)
                 path = PosixHelper.FixLinuxPath(path);

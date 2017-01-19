@@ -32,17 +32,26 @@ namespace Raven.Server.Web.System
 
             IOExtensions.DeleteDirectory(configuration.Core.DataDirectory);
 
-            if (configuration.Indexing.IndexStoragePath != null)
-                IOExtensions.DeleteDirectory(configuration.Indexing.IndexStoragePath);
-
-            if (configuration.Indexing.AdditionalIndexStoragePaths != null)
-            {
-                foreach (var path in configuration.Indexing.AdditionalIndexStoragePaths)
-                    IOExtensions.DeleteDirectory(path);
-            }
+            if (configuration.Storage.TempPath != null)
+                IOExtensions.DeleteDirectory(configuration.Storage.TempPath);
 
             if (configuration.Storage.JournalsStoragePath != null)
                 IOExtensions.DeleteDirectory(configuration.Storage.JournalsStoragePath);
+
+            if (configuration.Indexing.StoragePath != null)
+                IOExtensions.DeleteDirectory(configuration.Indexing.StoragePath);
+
+            if (configuration.Indexing.AdditionalStoragePaths != null)
+            {
+                foreach (var path in configuration.Indexing.AdditionalStoragePaths)
+                    IOExtensions.DeleteDirectory(path);
+            }
+
+            if (configuration.Indexing.TempPath != null)
+                IOExtensions.DeleteDirectory(configuration.Indexing.TempPath);
+
+            if (configuration.Indexing.JournalsStoragePath != null)
+                IOExtensions.DeleteDirectory(configuration.Indexing.JournalsStoragePath);
         }
     }
 }
