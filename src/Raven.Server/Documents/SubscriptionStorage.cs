@@ -386,6 +386,17 @@ namespace Raven.Server.Documents
             Memory.Copy(data.Address, ptr, size);
             var criteria = new BlittableJsonReaderObject(data.Address, size, context);
 
+            //registering 'criteria' is not enough for disposal since it 
+            //is constructed using the Address field (which is only a pointer),
+            //thus when disposed, BlittableJsonReaderObject won't return to context 
+            //the allocated memory
+            context.RegisterForReturnMemory(data);
+
+            //we still need to dispose 'criteria' because of the
+            //UnamangedWriteBuffer (that is used in BlittableJsonReaderObject)
+            //that needs to be disposed
+            context.RegisterForDispose(criteria); 
+
             return new DynamicJsonValue
             {
                 ["SubscriptionId"] = id,

@@ -665,8 +665,10 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
 
         [Theory]
         [InlineData(byte.MaxValue)]
+#if !MEM_GUARD
         [InlineData(short.MaxValue)]
         [InlineData(short.MaxValue + 1)]
+#endif
         public void BigAmountOfPreperties(int propertiesAmount)
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4))
@@ -703,8 +705,10 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
 
         [Theory]
         [InlineData(byte.MaxValue)]
+#if !MEM_GUARD
         [InlineData(short.MaxValue)]
         [InlineData(short.MaxValue + 1)]
+#endif
         public void BigDepthTest(int propertiesAmount)
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4))

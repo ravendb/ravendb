@@ -38,10 +38,38 @@ namespace Sparrow.Json
 
         public unsafe class ManagedPinnedBuffer : IDisposable
         {
-            public readonly ArraySegment<byte> Buffer;
+            private ArraySegment<byte>? _buffer;
+            private bool _isDisposed;
+            public ArraySegment<byte> Buffer
+            {
+                get
+                {
+                    if(_isDisposed)
+                        throw new ObjectDisposedException(nameof(ManagedPinnedBuffer));
+                    return _buffer.GetValueOrDefault();
+                }
+                set { _buffer = value; }
+            }
+
             public readonly int Length;
-            public readonly byte* Pointer;
+            public byte* _pointer;
+
+            public byte* Pointer
+            {
+                get
+                {
+                    if (_isDisposed)
+                        throw new ObjectDisposedException(nameof(ManagedPinnedBuffer));
+                    return _pointer;
+                }
+                set { _pointer = value; }
+            }
             private GCHandle? _handle;
+
+#if MEM_GUARD_STACK
+            public string AllocatedBy;
+            public string DisposedBy;
+#endif
 
             public ManagedPinnedBuffer(ArraySegment<byte> buffer, byte* pointer)
             {
@@ -66,18 +94,41 @@ namespace Sparrow.Json
                 {
                     handle.Free();
                 }
+
+#if MEM_GUARD_STACK
+                var allocatedBy = Environment.StackTrace;
+                foreach (var buf in stack)
+                    buf.AllocatedBy = allocatedBy;
+#endif
             }
 
             public void Dispose()
             {
+                _isDisposed = true;
                 GC.SuppressFinalize(this);
                 _handle?.Free();
                 _handle = null;
+                Pointer = null;
+                _buffer = null;
+#if MEM_GUARD_STACK
+                DisposedBy = Environment.StackTrace;
+#endif
             }
 
             ~ManagedPinnedBuffer()
             {
+#if MEM_GUARD
+                if (_handle == null)
+                {
+                    Console.WriteLine("Memory was not freed with dispose and had to be finalized... Allocated by:"
+#if MEM_GUARD_STACK
+                        + AllocatedBy
+#endif  
+                        );
+                }           
+#endif
                 Dispose();
+
             }
         }
 
@@ -527,6 +578,9 @@ namespace Sparrow.Json
             private readonly BlittableJsonDocumentBuilder _writer;
             private ReturnBuffer _returnManagedBuffer;
             private int _bufferOffset;
+            private Task<BlittableJsonReaderObject> _prevCall;
+            private Task[] _waitableTasks;
+            private readonly JsonParserState _state;
 
             public UnmanagedJsonParser Parser => _parser;
 
@@ -534,14 +588,13 @@ namespace Sparrow.Json
             {
                 _context = context;
                 _stream = stream;
-                var state = new JsonParserState();
+                _state = new JsonParserState();
+                
                 _returnManagedBuffer = context.GetManagedBuffer(out _buffer);
-                _parser = new UnmanagedJsonParser(context, state, "parse/multi");
-                _writer = new BlittableJsonDocumentBuilder(_context, state, _parser);
+                _parser = new UnmanagedJsonParser(context, _state, "parse/multi");
+                _writer = new BlittableJsonDocumentBuilder(_context, _state, _parser);
             }
 
-            private Task<BlittableJsonReaderObject> _prevCall;
-            private Task[] _waitableTasks;
 
             public async Task<BlittableJsonReaderObject> InterruptibleParseToMemoryAsync(string debugTag, AsyncManualResetEvent interruptEvent)
             {
@@ -693,17 +746,19 @@ namespace Sparrow.Json
                 _returnManagedBuffer.Dispose();
                 _parser?.Dispose();
                 _writer?.Dispose();
+                _state.Dispose();
             }
 
             public void Reset()
             {
-                //Parser.ResetStream();
-                //_writer.Reset();
+                Parser.ResetStream();
+                _writer.Reset();
+                _state.Reset();
             }
 
             public void Renew()
             {
-                //Parser.SetStream();
+                Parser.SetStream();
             }
         }
 
@@ -939,8 +994,8 @@ namespace Sparrow.Json
 
         public void ReturnMemory(AllocatedMemoryData allocation)
         {
-            //if (_generation != allocation.ContextGeneration)
-            //    ThrowUseAfterFree();
+            if (_generation != allocation.ContextGeneration)
+                ThrowUseAfterFree();
 
             _arenaAllocator.Return(allocation);
         }

@@ -9,8 +9,10 @@ using Sparrow.Platform;
 using System.Linq;
 using FastTests.Blittable;
 using FastTests.Issues;
+using FastTests.Server.Basic;
 using FastTests.Server.Documents;
 using FastTests.Server.Documents.Queries;
+using FastTests.Server.Replication;
 using FastTests.Voron.FixedSize;
 using FastTests.Voron.RawData;
 using SlowTests.Tests;
@@ -22,21 +24,13 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var a = new RecoveryMultipleJournals())
-                a.CorruptingOneTransactionWillThrow();
+            for (int i = 0; i < 100; i++)
+            {
+                using (var a = new ReplicationIndexesAndTransformers())
+                    a.Manually_removed_indexes_would_remove_metadata_on_startup().Wait();
 
-            using (var a = new RecoveryMultipleJournals())
-                a.CorruptingAllLastTransactionsConsideredAsEndOfJournal();
-
-            using (var a = new DocumentsCrud())
-                a.EtagsArePersistedWithDeletes();
-
-            using (var a = new LargeFixedSizeTreeBugs())
-                a.DeleteRangeShouldModifyPage();
-
-            using (var a = new RecoveryMultipleJournals())
-                a.CorruptingLastTransactionsInNotLastJournalShouldThrow();
-
+                Console.Write(".");
+            }
         }
     }
 }
