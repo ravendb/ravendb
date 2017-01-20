@@ -18,7 +18,7 @@ namespace Raven.NewClient.Client.Commands
 
         protected void LogBatch()
         {
-           //TODO
+            //TODO
         }
 
         private List<object> _entities;
@@ -33,12 +33,7 @@ namespace Raven.NewClient.Client.Commands
             _entities = result.Entities;
             _deferredCommandsCount = result.DeferredCommandsCount;
 
-            return new BatchCommand()
-            {
-                Commands = result.Commands,
-                Context = _session.Context,
-                Options = result?.Options,
-            };
+            return new BatchCommand(_session.Context, result.Commands, result.Options);
         }
 
         public void SetResult(BlittableArrayResult result)

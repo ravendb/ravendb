@@ -1,9 +1,5 @@
-using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using Raven.NewClient.Abstractions.Data;
 
 namespace Raven.NewClient.Client.Data
 {

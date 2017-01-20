@@ -12,6 +12,7 @@ using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Data.Indexes;
 using Raven.NewClient.Operations.Databases;
 using Raven.Server.Config;
+using Raven.Server.Config.Attributes;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -96,6 +97,7 @@ namespace FastTests
                     if (databaseTask != null && databaseTask.IsCompleted == false)
                         databaseTask.Wait(); // if we are disposing store before database had chance to load then we need to wait
 
+                    Server.Configuration.Server.AnonymousUserAccessMode = AnonymousUserAccessModeValues.Admin;
                     store.Admin.Send(new DeleteDatabaseOperation(name, hardDelete));
                 }
             };

@@ -17,6 +17,7 @@ using Raven.NewClient.Abstractions.Exceptions;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Exceptions;
+using Raven.NewClient.Exceptions.Security;
 using Sparrow.Logging;
 
 namespace Raven.NewClient.Client.Http
@@ -250,11 +251,9 @@ namespace Raven.NewClient.Client.Http
                 case HttpStatusCode.Unauthorized:
                 case HttpStatusCode.PreconditionFailed:
                     if (string.IsNullOrEmpty(choosenNode.Node.ApiKey))
-                        throw new UnauthorizedAccessException(
-                            $"Got unauthorized response exception for {url}. Please specify an API Key.");
+                        throw AuthorizationException.EmptyApiKey(url);
                     if (++command.AuthenticationRetries > 1)
-                        throw new UnauthorizedAccessException(
-                            $"Got unauthorized response exception for {url} after trying to authenticate using ApiKey.");
+                        throw AuthorizationException.Unauthorized(url);
 
                     var oauthSource = response.Headers.GetFirstValue("OAuth-Source");
 
@@ -268,8 +267,7 @@ namespace Raven.NewClient.Client.Http
                     await ExecuteAsync(choosenNode, context, command).ConfigureAwait(false);
                     return true;
                 case HttpStatusCode.Forbidden:
-                    throw new UnauthorizedAccessException(
-                        $"Forbidan access to {url}. Make sure you're using the correct ApiKey.");
+                    throw AuthorizationException.Forbidden(url);
                 case HttpStatusCode.BadGateway:
                 case HttpStatusCode.ServiceUnavailable:
                     await HandleServerDown(choosenNode, context, command, null);
