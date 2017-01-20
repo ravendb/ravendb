@@ -29,6 +29,7 @@ import killOperationComamnd = require('commands/operations/killOperationCommand'
 import eventsCollector = require("common/eventsCollector");
 import notificationCenter = require("common/notifications/notificationCenter");
 import genUtils = require("common/generalUtils");
+import queryCriteria = require("models/database/query/queryCriteria");
 
 type indexInfo = {
     name: string;
@@ -422,7 +423,12 @@ class patch extends viewModelBase {
             this.patchDocument().query(queryText);
             var database = this.activeDatabase();
             var resultsFetcher = (skip: number, take: number) => {
-                var command = new queryIndexCommand(selectedIndex, database, skip, take, queryText, []);
+
+                const criteria = queryCriteria.empty();
+                criteria.selectedIndex(selectedIndex);
+                criteria.queryText(queryText);
+
+                var command = new queryIndexCommand(database, skip, take, criteria);
                 return command.execute()
                     .fail(() => recentPatchesStorage.removeIndexFromRecentPatches(database, selectedIndex));
             };

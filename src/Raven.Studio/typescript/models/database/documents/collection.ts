@@ -18,6 +18,7 @@ class collection implements ICollectionBase {
     static readonly systemDocusCollectionName = "@system";
     private static collectionColorMaps: resourceStyleMap[] = [];
 
+    //TODO: name is duplicate of collectionName? 
     constructor(public name: string, public ownerDatabase: database, docCount: number = 0) {
         this.collectionName = name;
         this.isAllDocuments = name === collection.allDocsCollectionName;

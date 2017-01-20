@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
-class getIndexFieldsCommand extends commandBase {
+class getIndexFieldsFromMapCommand extends commandBase {
 
     constructor(private db: database, private map: string) {
         super();
@@ -17,4 +17,4 @@ class getIndexFieldsCommand extends commandBase {
     }
 } 
 
-export = getIndexFieldsCommand;
+export = getIndexFieldsFromMapCommand;

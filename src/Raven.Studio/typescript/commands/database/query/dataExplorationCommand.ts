@@ -11,7 +11,7 @@ class dataExplorationCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<indexQueryResultsDto> {
+    execute(): JQueryPromise<Raven.Client.Data.Queries.QueryResult<any>> { //TODO avoid using any? 
         var self = this;
         var queryTask = this.query(this.getUrl(), null, this.db);
         queryTask.fail((response: JQueryXHR) => this.reportError("Error during query", response.responseText, response.statusText));

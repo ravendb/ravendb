@@ -8,8 +8,7 @@ class abstractQueryResult {
     totalResults: number;
     skippedResults: number;
     indexName: string;
-    indexEtag: string;
-    resultEtag: string;
+    resultEtag: number;
     highlightings: any;
     nonAuthoritativeInformation: boolean;
     lastQueryTime: Date;
@@ -22,10 +21,8 @@ class abstractQueryResult {
         this.totalResults = dto.TotalResults;
         this.skippedResults = dto.SkippedResults;
         this.indexName = dto.IndexName;
-        this.indexEtag = dto.IndexEtag;
         this.resultEtag = dto.ResultEtag;
         this.highlightings = dto.Highlightings;
-        this.nonAuthoritativeInformation = dto.NonAuthoritativeInformation;
         this.lastQueryTime = new Date(dto.LastQueryTime);
         this.durationMilliseconds = dto.DurationMilliseconds;
     }

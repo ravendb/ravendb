@@ -3,48 +3,49 @@ import database = require("models/resources/database");
 import document = require("models/database/documents/document");
 import pagedResultSet = require("common/pagedResultSet");
 import querySort = require("models/database/query/querySort");
-import transformerQueryType = require("models/database/index/transformerQuery");
+import endpoints = require("endpoints");
+import queryCriteria = require("models/database/query/queryCriteria");
 
 class queryIndexCommand extends commandBase {
-    constructor(private indexName: string, private db: database, private skip: number, private take: number, private queryText?: string, private sorts?: querySort[], private transformerQuery?: transformerQueryType,
-        private showFields?: boolean, private indexEntries?: boolean, private useAndOperator?: boolean, private disableCache?: boolean) {
+    constructor(private db: database, private skip: number, private take: number, private criteria: queryCriteria, private disableCache?: boolean) {
         super();
     }
 
     execute(): JQueryPromise<pagedResultSet<any>> {
-        var selector = (results: indexQueryResultsDto) => new pagedResultSet(results.Results.map(d => new document(d)), results.TotalResults, results);
-        var queryTask = this.query(this.getUrl(), null, this.db, selector);
-        queryTask.fail((response: JQueryXHR) => this.reportError("Error querying index", response.responseText, response.statusText));
-
-        return queryTask;
+        const selector = (results: Raven.Client.Data.Queries.QueryResult<any>) => new pagedResultSet(results.Results.map(d => new document(d)), results.TotalResults, results);
+        return this.query(this.getUrl(), null, this.db, selector)
+            .fail((response: JQueryXHR) => this.reportError("Error querying index", response.responseText, response.statusText));
     }
 
     getUrl() {
-        var url = "/queries/" + this.indexName;//TODO: use endpoints
-        //var resultsTransformerUrlFragment = this.transformer && this.transformer.name() ? "&resultsTransformer=" + this.transformer.name() : ""; // This should not be urlEncoded, as it breaks the query.
-        var resultsTransformerUrlFragment = (this.transformerQuery ? this.transformerQuery.toUrl() : "");
-        var urlArgs = this.urlEncodeArgs({
-            query: this.queryText ? this.queryText : undefined,
+        const criteria = this.criteria;
+        const url = endpoints.databases.queries.queries$ + criteria.selectedIndex();
+        const resultsTransformerUrlFragment = criteria.getTransformerQueryUrlPart();
+
+        const urlArgs = this.urlEncodeArgs({
+            query: criteria.queryText() || undefined,
             start: this.skip,
             pageSize: this.take,
-            sort: this.sorts.map(s => s.toQuerySortString()),
-            fetch: this.showFields ? "__all_fields" : undefined,
-            debug: this.indexEntries ? "entries" : undefined,
-            operator: this.useAndOperator ? "AND" : undefined, 
+            sort: criteria.sorts().filter(x => x.fieldName()).map(x => x.toQuerySortString()),
+            fetch: criteria.showFields() ? "__all_fields" : undefined,
+            debug: criteria.indexEntries() ? "entries" : undefined,
+            operator: criteria.useAndOperator() ? "AND" : undefined, 
             disableCache: this.disableCache ? Date.now() : undefined
         }) + resultsTransformerUrlFragment;
         return url + urlArgs;
     }
 
     getCsvUrl() {
-        var url = "/streams/query/" + this.indexName;//TODO: use endpoints
-        var resultsTransformerUrlFragment = (this.transformerQuery ? this.transformerQuery.toUrl() : "");
-        var urlArgs = this.urlEncodeArgs({
-            query: this.queryText ? this.queryText : undefined,
-            sort: this.sorts.map(s => s.toQuerySortString()),
-            fetch: this.showFields ? "__all_fields" : undefined,
-            debug: this.indexEntries ? "entries" : undefined,
-            operator: this.useAndOperator ? "AND" : undefined,
+        const criteria = this.criteria;
+        const url = endpoints.databases.streaming.streamsQueries$ + criteria.selectedIndex();
+        const resultsTransformerUrlFragment = criteria.getTransformerQueryUrlPart();
+
+        const urlArgs = this.urlEncodeArgs({
+            query: criteria.queryText() || undefined,
+            sort: criteria.sorts().filter(x => x.fieldName()).map(x => x.toQuerySortString()),
+            fetch: criteria.showFields() ? "__all_fields" : undefined,
+            debug: criteria.indexEntries() ? "entries" : undefined,
+            operator: criteria.useAndOperator() ? "AND" : undefined,
             format: "excel",
             download: true
         }) + resultsTransformerUrlFragment;

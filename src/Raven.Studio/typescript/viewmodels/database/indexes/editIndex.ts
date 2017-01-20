@@ -32,7 +32,7 @@ import showDataDialog = require("viewmodels/common/showDataDialog");
 import formatIndexCommand = require("commands/database/index/formatIndexCommand");
 import renameOrDuplicateIndexDialog = require("viewmodels/database/indexes/renameOrDuplicateIndexDialog");
 import indexFieldOptions = require("models/database/index/indexFieldOptions");
-import getIndexFieldsCommand = require("commands/database/index/getIndexFieldsCommand");
+import getIndexFieldsFromMapCommand = require("commands/database/index/getIndexFieldsFromMapCommand");
 import configurationItem = require("models/database/index/configurationItem");
 import getDatabaseSettingsCommand = require("commands/resources/getDatabaseSettingsCommand");
 import configuration = require("configuration");
@@ -183,7 +183,7 @@ class editIndex extends viewModelBase {
 
     private updateIndexFields() {
         const map = this.editedIndex().maps()[0].map();
-        new getIndexFieldsCommand(this.activeDatabase(), map)
+        new getIndexFieldsFromMapCommand(this.activeDatabase(), map)
             .execute()
             .done((fields: string[]) => {
                 this.fieldNames(fields);

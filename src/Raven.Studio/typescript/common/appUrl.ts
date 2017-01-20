@@ -660,9 +660,9 @@ class appUrl {
         return "#databases/transformers?" + databasePart;
     }
 
-    static forQuery(db: database, indexNameOrHashToQuery?: any): string {
-        var databasePart = appUrl.getEncodedDbPart(db);
-        var indexToQueryComponent = indexNameOrHashToQuery;
+    static forQuery(db: database, indexNameOrHashToQuery?: string | number): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        let indexToQueryComponent = indexNameOrHashToQuery as string;
         if (typeof indexNameOrHashToQuery === "number") {
             indexToQueryComponent = "recentquery-" + indexNameOrHashToQuery;
         } 
