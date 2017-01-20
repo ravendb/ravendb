@@ -7,6 +7,7 @@ using Raven.NewClient.Abstractions;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client;
 using Raven.NewClient.Client.Bundles.MoreLikeThis;
+using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Data.Indexes;
@@ -15,6 +16,7 @@ using Raven.NewClient.Operations.Databases.Documents;
 using Raven.NewClient.Operations.Databases.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Exceptions;
 using Sparrow;
 using Xunit;
@@ -593,41 +595,45 @@ namespace FastTests.Client.Indexing
         }
 
         [Fact]
-        public Task CanExplain()
+        public async Task CanExplain()
         {
-            return Task.CompletedTask;
-            //using (var store = GetDocumentStore())
-            //{
-            //    using (var session = store.OpenAsyncSession())
-            //    {
-            //        await session.StoreAsync(new User { Name = "Fitzchak" });
-            //        await session.StoreAsync(new User { Name = "Arek" });
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" });
+                    await session.StoreAsync(new User { Name = "Arek" });
 
-            //        await session.SaveChangesAsync();
-            //    }
+                    await session.SaveChangesAsync();
+                }
 
-            //    using (var session = store.OpenSession())
-            //    {
-            //        RavenQueryStatistics stats;
-            //        var users = session.Query<User>()
-            //            .Statistics(out stats)
-            //            .Where(x => x.Name == "Arek")
-            //            .ToList();
+                using (var session = store.OpenSession())
+                {
+                    RavenQueryStatistics stats;
+                    var users = session.Query<User>()
+                        .Statistics(out stats)
+                        .Where(x => x.Name == "Arek")
+                        .ToList();
 
-            //        users = session.Query<User>()
-            //            .Statistics(out stats)
-            //            .Where(x => x.Age > 10)
-            //            .ToList();
-            //    }
+                    users = session.Query<User>()
+                        .Statistics(out stats)
+                        .Where(x => x.Age > 10)
+                        .ToList();
+                }
 
-            //    var request = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, store.Url.ForDatabase(store.DefaultDatabase) + "/queries/dynamic/Users?debug=explain", HttpMethod.Get, store.DatabaseCommands.PrimaryCredentials, store.Conventions));
-            //    var array = (RavenJArray)await request.ReadResponseJsonAsync();
-            //    var explanations = array.JsonDeserialization<DynamicQueryToIndexMatcher.Explanation>();
+                using (var commands = store.Commands())
+                {
+                    var command = new ExplainQueryCommand(store.Conventions, commands.Context, "dynamic/Users", new IndexQuery());
 
-            //    Assert.Equal(1, explanations.Length);
-            //    Assert.NotNull(explanations[0].Index);
-            //    Assert.NotNull(explanations[0].Reason);
-            //}
+                    await commands.RequestExecuter.ExecuteAsync(command, commands.Context);
+
+                    var explanations = command.Result;
+
+                    Assert.Equal(1, explanations.Length);
+                    Assert.NotNull(explanations[0].Index);
+                    Assert.NotNull(explanations[0].Reason);
+                }
+            }
         }
 
         [Fact]

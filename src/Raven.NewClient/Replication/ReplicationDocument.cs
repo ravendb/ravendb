@@ -3,6 +3,8 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 
 using Raven.NewClient.Abstractions.Cluster;
@@ -56,6 +58,14 @@ namespace Raven.NewClient.Abstractions.Replication
     /// </summary>
     public class ReplicationDocument : ReplicationDocument<ReplicationDestination>
     {
+        public Dictionary<string, ScriptResolver> ResolveByCollection { get; set; }
+        public int HeartbeatInterval { get; set; } = 15 * 1000;
+    }
+
+    public class ScriptResolver
+    {
+        public string Script { get; set; }
+        public DateTime LastModifiedTime { get; } = SystemTime.UtcNow;
     }
 
     public class ReplicationDocumentWithClusterInformation : ReplicationDocument<ReplicationDestination.ReplicationDestinationWithClusterInformation>
