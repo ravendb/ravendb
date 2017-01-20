@@ -1,4 +1,5 @@
-﻿using Raven.NewClient.Client.Indexing;
+﻿using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Data.Indexes;
 
 namespace Raven.NewClient.Operations.Databases.Responses
@@ -17,6 +18,10 @@ namespace Raven.NewClient.Operations.Databases.Responses
     }
 
     public class GetIndexStatisticsResponse : ResultsResponse<IndexStats>
+    {
+    }
+
+    public class GetApiKeysResponse : ResultsResponse<NamedApiKeyDefinition>
     {
     }
 }

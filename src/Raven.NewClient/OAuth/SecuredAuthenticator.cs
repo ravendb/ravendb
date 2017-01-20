@@ -14,8 +14,10 @@ using Raven.NewClient.Abstractions.Connection;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Json;
 using Raven.NewClient.Abstractions.Logging;
+using Raven.NewClient.Client.Exceptions;
 using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Client.Platform;
+using Raven.NewClient.Exceptions.Security;
 
 namespace Raven.NewClient.Client.OAuth
 {
@@ -104,7 +106,7 @@ namespace Raven.NewClient.Client.OAuth
                 throw new InvalidOperationException("DoAuthRequest provided with invalid url");
 
             if (apiKey == null)
-                throw new InvalidApiKeyException("DoAuthRequest provided with null apiKey");
+                throw new AuthenticationException("DoAuthRequest provided with null apiKey");
         }
 
         private async Task Send(RavenClientWebSocket webSocket, string command, string commandParameter)
@@ -171,7 +173,7 @@ namespace Raven.NewClient.Client.OAuth
             }
 
             if (apiKeyParts.Length < 2)
-                throw new InvalidApiKeyException("Invalid Api-Key. Contains less then two parts separated with slash");
+                throw new AuthenticationException("Invalid Api-Key. Contains less then two parts separated with slash");
 
             return apiKeyParts;
         }

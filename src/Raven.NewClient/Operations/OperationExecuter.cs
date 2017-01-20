@@ -16,9 +16,7 @@ namespace Raven.NewClient.Operations
         {
             _store = store;
             _databaseName = databaseName ?? store.DefaultDatabase;
-            _requestExecuter = string.Equals(_databaseName, store.DefaultDatabase, StringComparison.OrdinalIgnoreCase)
-                ? store.GetRequestExecuterForDefaultDatabase()
-                : store.GetRequestExecuter(_databaseName);
+            _requestExecuter = store.GetRequestExecuter(databaseName);
         }
 
         internal OperationExecuter(DocumentStoreBase store, RequestExecuter requestExecuter, JsonOperationContext context)
@@ -30,7 +28,7 @@ namespace Raven.NewClient.Operations
 
         public OperationExecuter ForDatabase(string databaseName)
         {
-            if (string.Equals(_databaseName, databaseName))
+            if (string.Equals(_databaseName, databaseName, StringComparison.OrdinalIgnoreCase))
                 return this;
 
             return new OperationExecuter(_store, databaseName);

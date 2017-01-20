@@ -35,10 +35,7 @@ namespace FastTests
 
                 _store = store;
 
-                if (string.IsNullOrWhiteSpace(databaseName) || string.Equals(store.DefaultDatabase, databaseName, StringComparison.OrdinalIgnoreCase))
-                    RequestExecuter = store.GetRequestExecuterForDefaultDatabase();
-                else
-                    RequestExecuter = store.GetRequestExecuter(databaseName);
+                RequestExecuter = store.GetRequestExecuter(databaseName);
 
                 _returnContext = RequestExecuter.ContextPool.AllocateOperationContext(out Context);
             }

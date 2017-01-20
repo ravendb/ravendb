@@ -223,12 +223,6 @@ namespace Raven.NewClient.Client.Document
         Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue, RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null, CancellationToken token = default (CancellationToken));
 
         /// <summary>
-        ///     Gets the metadata for the specified entity.
-        /// </summary>
-        /// <param name="instance">The instance.</param>
-        IDictionary<string, string> GetMetadataForAsync<T>(T instance);
-
-        /// <summary>
         ///     DeleteByIndexAsync using linq expression
         /// </summary>
         /// <param name="expression">The linq expression</param>

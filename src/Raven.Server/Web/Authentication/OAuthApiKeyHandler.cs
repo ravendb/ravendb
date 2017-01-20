@@ -5,14 +5,12 @@ using System.IO;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
-using Raven.Abstractions;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Logging;
-using Raven.Client.Data;
-using Raven.Client.OAuth;
-using Raven.Server.Json;
+using Raven.NewClient.Abstractions;
+using Raven.NewClient.Abstractions.Connection;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Client.Http;
+using Raven.NewClient.Exceptions.Security;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -45,14 +43,14 @@ namespace Raven.Server.Web.Authentication
                             var accessToken = await ProcessToken(context, webSocket);
                             if (accessToken == null)
                             {
-                                await SendError(webSocket, "Unable to authenticate api key", "InvalidApiKeyException");
+                                await SendError(webSocket, "Unable to authenticate api key", typeof(AuthenticationException));
                                 return;
                             }
 
-                            AccessToken old;
+                            Raven.Client.Data.AccessToken old;
                             if (Server.AccessTokensByName.TryGetValue(accessToken.Name, out old))
                             {
-                                AccessToken value;
+                                Raven.Client.Data.AccessToken value;
                                 Server.AccessTokensByName.TryRemove(old.Name, out value);
                             }
 
@@ -72,7 +70,7 @@ namespace Raven.Server.Web.Authentication
                     {
                         if (_logger.IsInfoEnabled)
                             _logger.Info("Failed to authenticate api key", e);
-                        await SendError(webSocket, e.ToString(), "InvalidOperationException");
+                        await SendError(webSocket, e.ToString(), typeof(AuthenticationException));
                     }
                 }
             }
@@ -96,9 +94,9 @@ namespace Raven.Server.Web.Authentication
 
             var json = new DynamicJsonValue
             {
-                [OAuthHelper.Keys.RSAExponent] = OAuthServerHelper.RSAExponent,
-                [OAuthHelper.Keys.RSAModulus] = OAuthServerHelper.RSAModulus,
-                [OAuthHelper.Keys.Challenge] =
+                [nameof(AuthenticatorChallenge.RSAExponent)] = OAuthServerHelper.RSAExponent,
+                [nameof(AuthenticatorChallenge.RSAModulus)] = OAuthServerHelper.RSAModulus,
+                [nameof(AuthenticatorChallenge.Challenge)] =
                     OAuthServerHelper.EncryptSymmetric(OAuthHelper.DictionaryToString(challengeData))
             };
 
@@ -127,7 +125,7 @@ namespace Raven.Server.Web.Authentication
         }
 
 
-        private async Task<AccessToken> ProcessToken(JsonOperationContext context, WebSocket webSocket)
+        private async Task<Raven.Client.Data.AccessToken> ProcessToken(JsonOperationContext context, WebSocket webSocket)
         {
             using (var reader = await context.ReadFromWebSocket(webSocket, DebugTag, ServerStore.ServerShutdown))
             {
@@ -207,14 +205,14 @@ namespace Raven.Server.Web.Authentication
             return encryptedData;
         }
 
-        private async Task SendError(WebSocket webSocket, string errorMsg, string exceptionType)
+        private async Task SendError(WebSocket webSocket, string errorMsg, Type type)
         {
             if (webSocket.State != WebSocketState.Open)
                 return;
             var json = new DynamicJsonValue
             {
                 ["Error"] = errorMsg,
-                ["ExceptionType"] = exceptionType
+                ["ExceptionType"] = type.Name
             };
             try
             {
@@ -229,7 +227,7 @@ namespace Raven.Server.Web.Authentication
             }
         }
 
-        private AccessToken BuildAccessTokenAndGetApiKeySecret(string apiKeyName, out string secret)
+        private Raven.Client.Data.AccessToken BuildAccessTokenAndGetApiKeySecret(string apiKeyName, out string secret)
         {
 
             TransactionOperationContext context;
@@ -256,7 +254,7 @@ namespace Raven.Server.Web.Authentication
                     throw new InvalidOperationException($"Missing 'Secret' property in api kye: {apiKeyName}");
                 }
 
-                var databases = new Dictionary<string, AccessModes>(StringComparer.OrdinalIgnoreCase);
+                var databases = new Dictionary<string, Raven.Client.Data.AccessModes>(StringComparer.OrdinalIgnoreCase);
 
                 BlittableJsonReaderObject accessMode;
                 if (apiDoc.TryGet("ResourcesAccessMode", out accessMode) == false)
@@ -274,7 +272,7 @@ namespace Raven.Server.Web.Authentication
                     {
                         throw new InvalidOperationException($"Missing value of dbName -'{prop.Name}' property in api key: {apiKeyName}");
                     }
-                    AccessModes mode;
+                    Raven.Client.Data.AccessModes mode;
                     if (Enum.TryParse(accessValue, out mode) == false)
                     {
                         throw new InvalidOperationException(
@@ -283,7 +281,7 @@ namespace Raven.Server.Web.Authentication
                     databases[prop.Name] = mode;
                 }
 
-                return new AccessToken
+                return new Raven.Client.Data.AccessToken
                 {
                     Name = apiKeyName,
                     Token = Guid.NewGuid().ToString(),

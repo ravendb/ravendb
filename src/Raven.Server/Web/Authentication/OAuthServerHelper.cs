@@ -17,9 +17,6 @@ namespace Raven.Server.Web.Authentication
         private static readonly IAsymmetricalEncryptor rsa;
         private static readonly ISymmetricalEncryptor aes;
 
-        private static readonly string rsaExponent;
-        private static readonly string rsaModulus;
-
         static OAuthServerHelper()
         {
             RSAParameters privateRsaParameters;
@@ -43,19 +40,13 @@ namespace Raven.Server.Web.Authentication
             aes.Key = aesKeyAndIV.Item1;
             aes.IV = aesKeyAndIV.Item2;
 
-            rsaExponent = OAuthHelper.BytesToString(publicRsaParameters.Exponent);
-            rsaModulus = OAuthHelper.BytesToString(publicRsaParameters.Modulus);
+            RSAExponent = OAuthHelper.BytesToString(publicRsaParameters.Exponent);
+            RSAModulus = OAuthHelper.BytesToString(publicRsaParameters.Modulus);
         }
 
-        public static string RSAExponent
-        {
-            get { return rsaExponent; }
-        }
+        public static string RSAExponent { get; }
 
-        public static string RSAModulus
-        {
-            get { return rsaModulus; }
-        }
+        public static string RSAModulus { get; }
 
         public static byte[] RandomBytes(int count)
         {

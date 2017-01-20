@@ -14,6 +14,7 @@ using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Json;
 using Raven.Abstractions.Logging;
+using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Platform;
 using Raven.Json.Linq;
@@ -97,13 +98,13 @@ namespace Raven.Client.OAuth
             }
         }
 
-        private void ThrowIfBadUrlOrApiKey(string url, string apiKey)
+        private static void ThrowIfBadUrlOrApiKey(string url, string apiKey)
         {
             if (string.IsNullOrEmpty(url))
                 throw new InvalidOperationException("DoAuthRequest provided with invalid url");
 
             if (apiKey == null)
-                throw new InvalidApiKeyException("DoAuthRequest provided with null apiKey");
+                throw new AuthenticationException("DoAuthRequest provided with null apiKey");
         }
 
         private async Task Send(RavenClientWebSocket webSocket, string command, string commandParameter)
@@ -169,7 +170,7 @@ namespace Raven.Client.OAuth
             }
 
             if (apiKeyParts.Length < 2)
-                throw new InvalidApiKeyException("Invalid Api-Key. Contains less then two parts separated with slash");
+                throw new AuthenticationException("Invalid Api-Key. Contains less then two parts separated with slash");
 
             return apiKeyParts;
         }
@@ -233,11 +234,11 @@ namespace Raven.Client.OAuth
             if (errorMsg != null)
             {
                 var exceptionType = recvRavenJObject.Value<string>("ExceptionType");
-                if (exceptionType == null || exceptionType.Equals("InvalidOperationException"))
+                if (exceptionType == null || exceptionType.Equals(typeof(InvalidOperationException).Name))
                     throw new InvalidOperationException("Server returned error: " + errorMsg);
 
-                if (exceptionType.Equals("InvalidApiKeyException"))
-                    throw new InvalidApiKeyException(errorMsg);
+                if (exceptionType.Equals(typeof(AuthenticationException).Name))
+                    throw new AuthenticationException(errorMsg);
             }
 
             var currentOauthToken = recvRavenJObject.Value<string>("CurrentToken");

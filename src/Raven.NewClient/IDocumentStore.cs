@@ -207,7 +207,5 @@ namespace Raven.NewClient.Client
         string DefaultDatabase { get; set; }
 
         RequestExecuter GetRequestExecuter(string databaseName);
-
-        RequestExecuter GetRequestExecuterForDefaultDatabase();
     }
 }

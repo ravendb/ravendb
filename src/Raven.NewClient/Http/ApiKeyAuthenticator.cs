@@ -6,10 +6,12 @@ using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Connection;
+using Raven.NewClient.Client.Exceptions;
 using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Client.Json;
 using Raven.NewClient.Client.OAuth;
 using Raven.NewClient.Client.Platform;
+using Raven.NewClient.Exceptions.Security;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -41,7 +43,7 @@ namespace Raven.NewClient.Client.Http
                     }
 
                     AuthenticatorChallenge authenticatorChallenge;
-                    using (var result = await Recieve(webSocket, context))
+                    using (var result = await Receive(webSocket, context))
                     {
                         if (result == null)
                             throw new InvalidDataException("Got null authtication challenge");
@@ -51,17 +53,17 @@ namespace Raven.NewClient.Client.Http
                     await Send(webSocket, context, "ChallengeResponse", challenge);
 
                     string currentToken;
-                    using (var reader = await Recieve(webSocket, context))
+                    using (var reader = await Receive(webSocket, context))
                     {
                         string error;
                         if (reader.TryGet("Error", out error))
                         {
                             string exceptionType;
-                            if (reader.TryGet("ExceptionType", out exceptionType) == false || exceptionType == "InvalidOperationException")
+                            if (reader.TryGet("ExceptionType", out exceptionType) == false || exceptionType == typeof(InvalidOperationException).Name)
                                 throw new InvalidOperationException("Server returned error: " + error);
 
-                            if (exceptionType == "InvalidApiKeyException")
-                                throw new InvalidApiKeyException(error);
+                            if (exceptionType == typeof(AuthenticationException).Name)
+                                throw new AuthenticationException(error);
                         }
 
                         string currentOauthToken;
@@ -77,8 +79,8 @@ namespace Raven.NewClient.Client.Http
                     }
                     catch (Exception ex)
                     {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info("Failed to close the client", ex);
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info("Failed to close the client", ex);
                     }
 
                     return currentToken;
@@ -87,7 +89,11 @@ namespace Raven.NewClient.Client.Http
                 {
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Failed to DoOAuthRequest to {url} with {apiKey}", ex);
-                    throw;
+
+                    if (ex is AuthenticationException)
+                        throw;
+
+                    throw new AuthenticationException(ex.Message, ex);
                 }
             }
         }
@@ -103,7 +109,7 @@ namespace Raven.NewClient.Client.Http
             };
 
             using (var stream = new MemoryStream())
-            using(var writer = new BlittableJsonTextWriter(context, stream))
+            using (var writer = new BlittableJsonTextWriter(context, stream))
             {
                 context.Write(writer, json);
                 writer.Flush();
@@ -129,13 +135,14 @@ namespace Raven.NewClient.Client.Http
                 {OAuthHelper.Keys.RSAModulus, challenge.RSAModulus},
                 {
                     OAuthHelper.Keys.EncryptedData,
-                    OAuthHelper.EncryptAsymmetric(OAuthHelper.ParseBytes(challenge.RSAExponent),
+                    OAuthHelper.EncryptAsymmetric(
+                        OAuthHelper.ParseBytes(challenge.RSAExponent),
                         OAuthHelper.ParseBytes(challenge.RSAModulus),
                         OAuthHelper.DictionaryToString(new Dictionary<string, string>
                         {
                             {OAuthHelper.Keys.APIKeyName, apiKeyName},
                             {OAuthHelper.Keys.Challenge, challenge.Challenge},
-                            {OAuthHelper.Keys.Response, OAuthHelper.Hash(string.Format("{0};{1}", challenge, apiSecret))}
+                            {OAuthHelper.Keys.Response, OAuthHelper.Hash(string.Format(OAuthHelper.Keys.ResponseFormat, challenge.Challenge, apiSecret))}
                         }))
                 }
             });
@@ -153,12 +160,12 @@ namespace Raven.NewClient.Client.Http
             }
 
             if (apiKeyParts.Length < 2)
-                throw new InvalidApiKeyException("Invalid Api-Key. Contains less then two parts separated with slash");
+                throw new AuthenticationException("Invalid Api-Key. Contains less then two parts separated with slash");
 
             return apiKeyParts;
         }
 
-        private async Task<BlittableJsonReaderObject> Recieve(RavenClientWebSocket webSocket, JsonOperationContext context)
+        private async Task<BlittableJsonReaderObject> Receive(RavenClientWebSocket webSocket, JsonOperationContext context)
         {
             BlittableJsonDocumentBuilder builder = null;
             try
@@ -172,7 +179,7 @@ namespace Raven.NewClient.Client.Http
                 using (context.GetManagedBuffer(out buffer))
                 using (var parser = new UnmanagedJsonParser(context, state, "")) //TODO: FIXME
                 {
-                    builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, nameof(ApiKeyAuthenticator) + "." + nameof(Recieve), parser, state);
+                    builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, nameof(ApiKeyAuthenticator) + "." + nameof(Receive), parser, state);
                     builder.ReadObjectDocument();
                     while (builder.Read() == false)
                     {
@@ -190,7 +197,7 @@ namespace Raven.NewClient.Client.Http
 
                         if (result.EndOfMessage == false)
                         {
-                             throw new EndOfStreamException("Stream ended without reaching end of json content.");
+                            throw new EndOfStreamException("Stream ended without reaching end of json content.");
                         }
 
                         parser.SetBuffer(buffer, result.Count);

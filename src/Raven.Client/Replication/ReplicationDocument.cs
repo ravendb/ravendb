@@ -59,13 +59,13 @@ namespace Raven.Abstractions.Replication
     public class ReplicationDocument : ReplicationDocument<ReplicationDestination>
     {
         public Dictionary<string, ScriptResolver> ResolveByCollection { get; set; }
-        public int HeartbeatInterval { get; set; } = 15*1000;
+        public int HeartbeatInterval { get; set; } = 15 * 1000;
     }
 
     public class ScriptResolver
     {
         public string Script { get; set; }
-        public DateTime LastModifiedTime { get; }= DateTime.UtcNow;
+        public DateTime LastModifiedTime { get; } = DateTime.UtcNow;
     }
 
     public class ReplicationDocumentWithClusterInformation : ReplicationDocument<ReplicationDestination.ReplicationDestinationWithClusterInformation>
@@ -107,7 +107,7 @@ namespace Raven.Abstractions.Replication
 
         public void UpdateRequestTime(long requestTimeInMilliseconds)
         {
-            
+
         }
 
         public bool IsRateSurpassed(double requestTimeSlaThresholdInMilliseconds)

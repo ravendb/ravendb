@@ -283,7 +283,7 @@ namespace Raven.NewClient.Client.Indexes
             Conventions = documentConvention;
             var indexDefinition = CreateIndexDefinition();
 
-            var requestExecuter = documentStore.GetRequestExecuterForDefaultDatabase();
+            var requestExecuter = documentStore.GetRequestExecuter();
 
             JsonOperationContext context;
             using (requestExecuter.ContextPool.AllocateOperationContext(out context))

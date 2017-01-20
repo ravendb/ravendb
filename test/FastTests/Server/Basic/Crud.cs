@@ -41,7 +41,7 @@ namespace FastTests.Server.Basic
         {
             using (var store = GetDocumentStore())
             {
-                var requestExecuter = store.GetRequestExecuterForDefaultDatabase();
+                var requestExecuter = store.GetRequestExecuter();
 
                 JsonOperationContext context;
                 using (requestExecuter.ContextPool.AllocateOperationContext(out context))

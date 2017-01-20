@@ -1,10 +1,10 @@
 ﻿using System.Threading.Tasks;
-using Raven.Client;
+using Raven.NewClient.Client;
 using Xunit;
 
 namespace FastTests.Server.Documents.Indexing.Lucene
 {
-    public class UsingUnicode : RavenTestBase
+    public class UsingUnicode : RavenNewTestBase
     {
         [Theory]
         [InlineData("לְשֵׁם יִחוּד קֻדְשָׁא בְּרִיךְ הוּא וּשְׁכִינְתֵּהּ")]
