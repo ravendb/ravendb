@@ -21,8 +21,8 @@
                 <div class="field-terms panel-body">
                     <ul class="list-unstyled row" data-bind="foreach: terms">
                         <li class="col-sm-3">
-                            <span data-bind="text: $data">
-                            </span>
+                            <a data-bind="text: $data, click: _.partial($root.navigateToQuery, $parent.name, $data)" href="#">
+                            </a>
                         </li>
                     </ul>
                     <div class="loadMore" data-bind="visible: hasMoreTerms">

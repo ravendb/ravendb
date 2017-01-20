@@ -66,6 +66,22 @@ class recentQueriesStorage {
         return recentQueriesFromLocalStorage;
     }
 
+    static appendQuery(query: storedQueryDto, recentQueries: KnockoutObservableArray<storedQueryDto>): void {
+        const existing = recentQueries().find(q => q.hash === query.hash);
+        if (existing) {
+            recentQueries.remove(existing);
+            recentQueries.unshift(existing);
+        } else {
+            recentQueries.unshift(query);
+        }
+
+        // Limit us to 15 query recent runs.
+        if (recentQueries().length > 15) {
+            recentQueries.pop();
+        }
+    }
+
+
     static onResourceDeleted(qualifer: string, name: string) {
         if (qualifer === database.qualifier) {
             const localStorageName = recentQueriesStorage.getLocalStorageKey(name);
