@@ -1,6 +1,5 @@
 ﻿using FastTests.Server.Basic.Entities;
-using Raven.Abstractions.Replication;
-using Raven.Json.Linq;
+using Raven.NewClient.Client.Replication;
 using Xunit;
 
 namespace FastTests.Server.Replication
@@ -20,7 +19,7 @@ namespace FastTests.Server.Replication
 
                 using (var session = master.OpenSession())
                 {
-                    session.Store(new User()
+                    session.Store(new User
                     {
                         Name = "Karmeli"
                     }, "users/1");
@@ -70,7 +69,7 @@ namespace FastTests.Server.Replication
 
                 using (var session = slave.OpenSession())
                 {
-                    session.Store(new User()
+                    session.Store(new User
                     {
                         Name = "Karmel"
                     }, "users/1");
@@ -80,7 +79,7 @@ namespace FastTests.Server.Replication
 
                 using (var session = master.OpenSession())
                 {
-                    session.Store(new User()
+                    session.Store(new User
                     {
                         Name = "Karmeli"
                     }, "users/1");
@@ -104,13 +103,13 @@ namespace FastTests.Server.Replication
 
                 using (var session = slave.OpenSession())
                 {
-                    session.Store(new User()
+                    session.Store(new User
                     {
                         Name = "Karmel"
                     }, "users/1");
                     var user = session.Load<User>("users/1");
                     var meta = session.Advanced.GetMetadataFor(user);
-                    meta.Add(("bla"), new RavenJValue("asd"));
+                    meta.Add("bla", "asd");
                     session.Store(user);
                     session.SaveChanges();
                 }
@@ -118,18 +117,18 @@ namespace FastTests.Server.Replication
 
                 using (var session = master.OpenSession())
                 {
-                    session.Store(new User()
+                    session.Store(new User
                     {
                         Name = "Karmel"
                     }, "users/1");
                     var user = session.Load<User>("users/1");
                     var meta = session.Advanced.GetMetadataFor(user);
-                    meta.Add(("bla"), new RavenJValue("asd"));
-                    meta.Add(("bla2"), new RavenJValue("asd"));
+                    meta.Add("bla", "asd");
+                    meta.Add("bla2", "asd");
                     session.SaveChanges();
                 }
 
-                var conflicts =  WaitUntilHasConflict(slave, "users/1", 1);
+                var conflicts = WaitUntilHasConflict(slave, "users/1", 1);
                 Assert.Equal(2, conflicts["users/1"].Count);
             }
         }
@@ -146,7 +145,7 @@ namespace FastTests.Server.Replication
 
                 using (var session = slave.OpenSession())
                 {
-                    session.Store(new User()
+                    session.Store(new User
                     {
                         Name = "Karmel",
                         Age = 12
@@ -157,7 +156,7 @@ namespace FastTests.Server.Replication
 
                 using (var session = master.OpenSession())
                 {
-                    session.Store(new User()
+                    session.Store(new User
                     {
                         Age = 12,
                         Name = "Karmel"
@@ -168,7 +167,7 @@ namespace FastTests.Server.Replication
                 bool failed = false;
                 try
                 {
-                     WaitUntilHasConflict(slave, "users/1", 1);
+                    WaitUntilHasConflict(slave, "users/1", 1);
                     failed = true;
                 }
                 catch
@@ -191,7 +190,7 @@ namespace FastTests.Server.Replication
 
                 using (var session = slave.OpenSession())
                 {
-                    session.Store(new User()
+                    session.Store(new User
                     {
                         Name = "Karmel"
                     }, "users/1");
@@ -200,25 +199,25 @@ namespace FastTests.Server.Replication
 
                 using (var session = master.OpenSession())
                 {
-                    session.Store(new User()
+                    session.Store(new User
                     {
                         Name = "Karmeli"
                     }, "users/1");
                     session.SaveChanges();
                 }
-                var conflicts =  WaitUntilHasConflict(slave, "users/1", 1);
+                var conflicts = WaitUntilHasConflict(slave, "users/1", 1);
                 Assert.Equal(1, conflicts.Count);
 
                 using (var session = master.OpenSession())
                 {
-                    session.Store(new User()
+                    session.Store(new User
                     {
                         Name = "Karmel123"
                     }, "users/1");
                     session.SaveChanges();
                 }
 
-                conflicts =  WaitUntilHasConflict(slave, "users/1", 1);
+                conflicts = WaitUntilHasConflict(slave, "users/1", 1);
                 Assert.Equal(2, conflicts["users/1"].Count);
             }
         }

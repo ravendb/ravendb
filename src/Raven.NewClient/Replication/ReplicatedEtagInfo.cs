@@ -3,11 +3,8 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
 
-using Raven.NewClient.Abstractions.Data;
-
-namespace Raven.NewClient.Abstractions.Replication
+namespace Raven.NewClient.Client.Replication
 {
     public class ReplicatedEtagInfo
     {

@@ -87,6 +87,21 @@ namespace FastTests
                 }
             }
 
+            public void Delete(string id, long? etag)
+            {
+                AsyncHelpers.RunSync(() => DeleteAsync(id, etag));
+            }
+
+            public async Task DeleteAsync(string id, long? etag)
+            {
+                if (id == null)
+                    throw new ArgumentNullException(nameof(id));
+
+                var command = new DeleteDocumentCommand(id, etag);
+
+                await RequestExecuter.ExecuteAsync(command, Context);
+            }
+
             public DynamicBlittableJson Get(string id)
             {
                 return AsyncHelpers.RunSync(() => GetAsync(id));

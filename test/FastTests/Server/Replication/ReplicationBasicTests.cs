@@ -166,10 +166,10 @@ namespace FastTests.Server.Replication
                         "users/4"
                     });
 
-                    Assert.Contains(docs, d => d.Name.Equals("John Dow"));
-                    Assert.Contains(docs, d => d.Name.Equals("Jane Dow"));
-                    Assert.Contains(docs, d => d.Name.Equals("Jack Dow"));
-                    Assert.Contains(docs, d => d.Name.Equals("Jessy Dow"));
+                    Assert.Contains(docs, d => d.Value.Name.Equals("John Dow"));
+                    Assert.Contains(docs, d => d.Value.Name.Equals("Jane Dow"));
+                    Assert.Contains(docs, d => d.Value.Name.Equals("Jack Dow"));
+                    Assert.Contains(docs, d => d.Value.Name.Equals("Jessy Dow"));
                 }
 
             }
@@ -240,10 +240,10 @@ namespace FastTests.Server.Replication
                         "users/4"
                     });
 
-                    Assert.Contains(docs, d => d.Name.Equals("John Dow"));
-                    Assert.Contains(docs, d => d.Name.Equals("Jane Dow"));
-                    Assert.Contains(docs, d => d.Name.Equals("Jack Dow"));
-                    Assert.Contains(docs, d => d.Name.Equals("Jessy Dow"));
+                    Assert.Contains(docs, d => d.Value.Name.Equals("John Dow"));
+                    Assert.Contains(docs, d => d.Value.Name.Equals("Jane Dow"));
+                    Assert.Contains(docs, d => d.Value.Name.Equals("Jack Dow"));
+                    Assert.Contains(docs, d => d.Value.Name.Equals("Jessy Dow"));
                 }
 
                 using (var session = store2.OpenSession())
@@ -256,10 +256,10 @@ namespace FastTests.Server.Replication
                         "users/4"
                     });
 
-                    Assert.Contains(docs, d => d.Name.Equals("John Dow"));
-                    Assert.Contains(docs, d => d.Name.Equals("Jane Dow"));
-                    Assert.Contains(docs, d => d.Name.Equals("Jack Dow"));
-                    Assert.Contains(docs, d => d.Name.Equals("Jessy Dow"));
+                    Assert.Contains(docs, d => d.Value.Name.Equals("John Dow"));
+                    Assert.Contains(docs, d => d.Value.Name.Equals("Jane Dow"));
+                    Assert.Contains(docs, d => d.Value.Name.Equals("Jack Dow"));
+                    Assert.Contains(docs, d => d.Value.Name.Equals("Jessy Dow"));
                 }
 
             }

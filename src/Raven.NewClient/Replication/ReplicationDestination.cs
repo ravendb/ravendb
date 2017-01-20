@@ -8,7 +8,7 @@ using System;
 using System.Collections.Generic;
 using Raven.NewClient.Abstractions.Cluster;
 
-namespace Raven.NewClient.Abstractions.Replication
+namespace Raven.NewClient.Client.Replication
 {
     /// <summary>
     /// Data class for replication destination documents
@@ -121,7 +121,7 @@ namespace Raven.NewClient.Abstractions.Replication
                    IgnoredClient.Equals(other.IgnoredClient) && Disabled.Equals(other.Disabled) &&
                    ((string.Equals(Url, other.Url, StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(ClientVisibleUrl)) ||
                    (!string.IsNullOrWhiteSpace(ClientVisibleUrl) && string.Equals(ClientVisibleUrl, other.ClientVisibleUrl, StringComparison.OrdinalIgnoreCase))) &&
-                   Extensions.DictionaryExtensions.ContentEquals(SpecifiedCollections, other.SpecifiedCollections);
+                   Abstractions.Extensions.DictionaryExtensions.ContentEquals(SpecifiedCollections, other.SpecifiedCollections);
         }
 
         public override bool Equals(object obj)

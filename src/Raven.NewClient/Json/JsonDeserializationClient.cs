@@ -5,6 +5,7 @@ using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Http;
+using Raven.NewClient.Client.Replication.Messages;
 using Raven.NewClient.Data.Indexes;
 using Raven.NewClient.Operations.Databases.Responses;
 using Sparrow.Json;
@@ -59,6 +60,8 @@ namespace Raven.NewClient.Client.Json
 
         public static readonly Func<BlittableJsonReaderObject, GetIndexNamesResponse> GetIndexNamesResponse = GenerateJsonDeserializationRoutine<GetIndexNamesResponse>();
 
+        public static readonly Func<BlittableJsonReaderObject, GetTransformerNamesResponse> GetTransformerNamesResponse = GenerateJsonDeserializationRoutine<GetTransformerNamesResponse>();
+
         public static readonly Func<BlittableJsonReaderObject, GetIndexStatisticsResponse> GetIndexStatisticsResponse = GenerateJsonDeserializationRoutine<GetIndexStatisticsResponse>();
 
         public static readonly Func<BlittableJsonReaderObject, IndexErrors> IndexErrors = GenerateJsonDeserializationRoutine<IndexErrors>();
@@ -66,5 +69,7 @@ namespace Raven.NewClient.Client.Json
         public static readonly Func<BlittableJsonReaderObject, PatchResult> PatchResult = GenerateJsonDeserializationRoutine<PatchResult>();
 
         public static readonly Func<BlittableJsonReaderObject, GetApiKeysResponse> GetApiKeysResponse = GenerateJsonDeserializationRoutine<GetApiKeysResponse>();
+
+        public static readonly Func<BlittableJsonReaderObject, FullTopologyInfo> FullTopologyInfo = GenerateJsonDeserializationRoutine<FullTopologyInfo>();
     }
 }

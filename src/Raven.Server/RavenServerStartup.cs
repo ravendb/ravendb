@@ -14,11 +14,12 @@ using Raven.Client.Exceptions;
 using Raven.Server.Exceptions;
 using Raven.Server.Routing;
 using Raven.Server.TrafficWatch;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
+using ConflictException = Raven.Client.Exceptions.ConflictException;
+using IndexCompilationException = Raven.Client.Exceptions.IndexCompilationException;
 
 namespace Raven.Server
 {
@@ -145,7 +146,8 @@ namespace Raven.Server
             var documentConflictException = exception as DocumentConflictException;
             if (documentConflictException != null)
             {
-                djv["ConflictInfo"] = ReplicationUtils.GetJsonForConflicts(documentConflictException.DocId, documentConflictException.Conflicts);
+                djv[nameof(DocumentConflictException.DocId)] = documentConflictException.DocId;
+                djv[nameof(DocumentConflictException.Conflicts)] = documentConflictException.GetConflicts();
                 return;
             }
         }

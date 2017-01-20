@@ -98,7 +98,7 @@ namespace Raven.NewClient.Connection
                     _work = false;
                     var exceptionResult = notification.State.Result as OperationExceptionResult;
                     if (exceptionResult?.StatusCode == 409)
-                        _result.TrySetException(new DocumentInConflictException(exceptionResult.Message));
+                        _result.TrySetException(DocumentConflictException.From(exceptionResult.Message));
                     else
                         _result.TrySetException(new InvalidOperationException(exceptionResult?.Message));
                     break;

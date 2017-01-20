@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Net;
 using System.Threading;
 using FastTests.Server.Basic.Entities;
-using Raven.Abstractions.Connection;
+using Raven.NewClient.Client.Exceptions;
 using Xunit;
 
 namespace FastTests.Server.Replication
@@ -19,7 +18,7 @@ namespace FastTests.Server.Replication
 
                 using (var session = slave.OpenSession())
                 {
-                    session.Store(new User()
+                    session.Store(new User
                     {
                         Name = "local"
                     }, "users/1");
@@ -28,7 +27,7 @@ namespace FastTests.Server.Replication
 
                 using (var session = master.OpenSession())
                 {
-                    session.Store(new User()
+                    session.Store(new User
                     {
                         Name = "remote"
                     }, "users/1");
@@ -43,10 +42,9 @@ namespace FastTests.Server.Replication
                         {
                             var item = session.Load<User>("users/1");
                         }
-                        catch (ErrorResponseException e)
+                        catch (ConflictException)
                         {
-                            Assert.Equal(HttpStatusCode.Conflict, e.StatusCode);
-                            session.Store(new User()
+                            session.Store(new User
                             {
                                 Name = "I win"
                             }, "users/1");
@@ -55,7 +53,7 @@ namespace FastTests.Server.Replication
                             return;
                         }
                     }
-                    Thread.Sleep(500); ;
+                    Thread.Sleep(500);
                 }
 
                 Assert.True(false, "We were expected to get a conflict on user/1 but we didn't");

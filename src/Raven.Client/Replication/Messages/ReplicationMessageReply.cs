@@ -1,5 +1,5 @@
 ﻿using System;
-using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Replication.Messages
 {
@@ -45,7 +45,7 @@ namespace Raven.Client.Replication.Messages
         {
             unchecked
             {
-                return (DbId.GetHashCode()*397) ^ Etag.GetHashCode();
+                return (DbId.GetHashCode() * 397) ^ Etag.GetHashCode();
             }
         }
 
@@ -53,6 +53,15 @@ namespace Raven.Client.Replication.Messages
         public int CompareTo(ChangeVectorEntry other)
         {
             return DbId.CompareTo(other.DbId);
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(DbId)] = DbId.ToString(),
+                [nameof(Etag)] = Etag
+            };
         }
     }
 }

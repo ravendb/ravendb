@@ -2,14 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using Raven.Abstractions.Data;
+using Raven.Client.Exceptions;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Exceptions;
 using Raven.Server.Extensions;
-using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -17,12 +15,12 @@ using Sparrow.Json;
 using Voron;
 using Voron.Data.Fixed;
 using Voron.Data.Tables;
-using Voron.Exceptions;
 using Voron.Impl;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Logging;
 using Voron.Util;
+using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
 
 namespace Raven.Server.Documents
 {
@@ -989,11 +987,17 @@ namespace Raven.Server.Documents
         }
 
 
-        private void ThrowDocumentConflictIfNeeded(DocumentsOperationContext context, Slice loweredKey)
+        private static void ThrowDocumentConflictIfNeeded(DocumentsOperationContext context, Slice loweredKey)
         {
             var conflicts = GetConflictsFor(context, loweredKey);
             if (conflicts.Count > 0)
-                throw new DocumentConflictException(loweredKey.ToString(), conflicts);
+            {
+                var changeVectors = new List<ChangeVectorEntry[]>();
+                foreach (var conflict in conflicts)
+                    changeVectors.Add(conflict.ChangeVector);
+
+                throw new DocumentConflictException(loweredKey.ToString(), changeVectors);
+            }
         }
 
         private void EnsureLastEtagIsPersisted(DocumentsOperationContext context, long docEtag)
