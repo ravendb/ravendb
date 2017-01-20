@@ -1,6 +1,10 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import getIndexTermsCommand = require("commands/database/index/getIndexTermsCommand");
 import getIndexEntriesFieldsCommand = require("commands/database/index/getIndexEntriesFieldsCommand");
+import queryCriteria = require("models/database/query/queryCriteria");
+import recentQueriesStorage = require("common/storage/recentQueriesStorage");
+import queryUtil = require("common/queryUtil");
+import appUrl = require("common/appUrl");
 
 type termsForField = {
     name: string;
@@ -17,7 +21,13 @@ class indexTerms extends viewModelBase {
 
     indexPageUrl: KnockoutComputed<string>;
 
-    static readonly termsPageLimit = 100; //TODO: consider higher value?
+    static readonly termsPageLimit = 500; 
+
+    constructor() {
+        super();
+
+        this.bindToCurrentInstance("navigateToQuery");
+    }
 
     activate(indexName: string): JQueryPromise<string[]> {
         super.activate(indexName);
@@ -31,6 +41,20 @@ class indexTerms extends viewModelBase {
         return new getIndexEntriesFieldsCommand(indexName, this.activeDatabase())
             .execute()
             .done((fields: string[]) => this.processFields(fields));
+    }
+
+    navigateToQuery(fieldName: string, term: string) {
+        const query = queryCriteria.empty();
+        query.queryText(fieldName + ":" + queryUtil.escapeTerm(term));
+        query.selectedIndex(this.indexName);
+
+        const queryDto = query.toStorageDto();
+        const recentQueries = recentQueriesStorage.getRecentQueries(this.activeDatabase());
+        recentQueriesStorage.appendQuery(queryDto, ko.observableArray(recentQueries));
+        recentQueriesStorage.saveRecentQueries(this.activeDatabase(), recentQueries);
+
+        const queryUrl = appUrl.forQuery(this.activeDatabase(), queryDto.hash);
+        this.navigate(queryUrl);
     }
 
     static createTermsForField(fieldName: string): termsForField {

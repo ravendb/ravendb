@@ -37,13 +37,18 @@
                 li {
                     border: 1px solid transparent;
 
-                    span {
+                    a {
                         text-overflow: ellipsis;
                         white-space: nowrap;
+                        display: block;
                     }
 
                     &:hover {
                         .bg-primary;
+
+                        a:hover {
+                            text-decoration: none !important;
+                        }
                     }
                 }
             }

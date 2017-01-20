@@ -556,34 +556,40 @@ class query extends viewModelBase {
     private recordQueryRun(criteria: queryCriteria) {
         const newQuery: storedQueryDto = criteria.toStorageDto();
 
-        // Put the query into the URL, so that if the user refreshes the page, he's still got this query loaded.
         const queryUrl = appUrl.forQuery(this.activeDatabase(), newQuery.hash);
         this.updateUrl(queryUrl);
 
-        // Add this query to our recent queries list in the UI, or move it to the top of the list if it's already there.
-        const existing = this.recentQueries().find(q => q.hash === newQuery.hash);
-        if (existing) {
-            this.recentQueries.remove(existing);
-            this.recentQueries.unshift(existing);
-        } else {
-            this.recentQueries.unshift(newQuery);
-        }
-
-        // Limit us to 15 query recent runs.
-        if (this.recentQueries().length > 15) {
-            this.recentQueries.remove(this.recentQueries()[15]);
-        }
-
-        //save the recent queries to local storage
+        recentQueriesStorage.appendQuery(newQuery, this.recentQueries);
         recentQueriesStorage.saveRecentQueries(this.activeDatabase(), this.recentQueries());
     }
 
     runRecentQuery(storedQuery: storedQueryDto) {
         eventsCollector.default.reportEvent("query", "run-recent");
 
-        this.criteria().updateUsing(storedQuery);
-        this.criteria().sorts().forEach(sort => sort.bindOnUpdateAction(() => this.runQuery()));
+        const criteria = this.criteria();
+
+        criteria.updateUsing(storedQuery);
+        criteria.sorts().forEach(sort => sort.bindOnUpdateAction(() => this.runQuery()));
+
+        const matchedTransformer = this.allTransformers().find(t => t.Name === criteria.transformer());
+
+        if (matchedTransformer) {
+            this.selectTransformer(matchedTransformer);
+            this.fillTransformerParameters(criteria.transformerParameters());
+        } else {
+            this.selectTransformer(null);
+        }
+
         this.runQuery();
+    }
+
+    private fillTransformerParameters(transformerParameters: Array<transformerParamDto>) {
+        transformerParameters.forEach(param => {
+            const matchingField = this.uiTransformerParameters().find(x => x.name === param.name);
+            if (matchingField) {
+                matchingField.value(param.value);
+            }
+        });
     }
 
     selectTransformer(transformer: Raven.Abstractions.Indexing.TransformerDefinition) {
