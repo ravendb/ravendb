@@ -9,7 +9,6 @@ class deleteTransformerCommand extends commandBase {
     }
 
     execute(): JQueryPromise<void> {
-        this.reportInfo("Deleting " + this.transformerName + "...");
         const args = {
             name : this.transformerName
         }

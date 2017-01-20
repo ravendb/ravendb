@@ -378,7 +378,7 @@ class sqlReplicationPerfStats extends viewModelBase {
     }
 
     getTooltip(d) {
-        return '<button type="button" class="close" data-bind="click: tooltipClose" aria-hidden="true"><i class="fa fa-times"></i></button>'
+        return '<button type="button" class="close" data-bind="click: tooltipClose" aria-hidden="true"><i class="icon-cancel"></i></button>'
             + "<strong>Replication Name:</strong> <span>" + d.ReplicationName + "</span><br />"
             + "<strong>Duration milliseconds:</strong> <span>" + d.DurationMilliseconds + "</span><br />"
             + "<strong>Batch size:</strong> <span>" + d.BatchSize + "</span><br />"

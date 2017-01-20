@@ -34,7 +34,7 @@
                         <h3 class="panel-title">
                             <span data-bind="text: name() ? name() : '[new api key]'"></span>
                             <button type="button" style="display: inline-block;" class="close" data-bind="click: $root.removeApiKey.bind($root), visible: $root.settingsAccess.isReadOnly() == false" title="Remove this API key">
-                                <i class="fa fa-times"></i>
+                                <i class="icon-cancel"></i>
                             </button>
                         </h3>
                     </div>
@@ -133,7 +133,7 @@
                                         </td>
                                         <td>
                                             <button type="button" style="display: inline-block; float: none; vertical-align: middle; font-size: 14px;" class="close" data-bind="visible: $parent.databases().length > 1, click: $parent.removeDatabase.bind($parent, $data), visible: !$root.settingsAccess.isReadOnly()" title="Remove this resource">
-                                                <i class="fa fa-times"></i>
+                                                <i class="icon-cancel"></i>
                                             </button>
                                         </td>
                                     </tr>

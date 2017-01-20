@@ -35,7 +35,7 @@
                                     <div class="panel-heading">
                                         <h3 class="panel-title">
                                             <span data-bind="text: name"></span>
-                                            <button type="button" class="close" data-dismiss="modal" aria-hidden="true"><i class="fa fa-times" data-bind="click: $root.removeDestination.bind($root)" title="Remove this replication destination"></i></button>
+                                            <button type="button" class="close" data-dismiss="modal" aria-hidden="true"><i class="icon-cancel" data-bind="click: $root.removeDestination.bind($root)" title="Remove this replication destination"></i></button>
                                         </h3>
                                     </div>
                                     <div class="panel-body">
@@ -148,7 +148,7 @@
                                                                 </td>
                                                                 <td>
                                                                     <button type="button" class="close" aria-hidden="true" data-bind="visible: $parent.specifiedCollections().length > 1">
-                                                                        <i class="fa fa-times" data-bind="click: $parent.removeCollection.bind($parent, $data)" title="Remove this collection from ETL"></i>
+                                                                        <i class="icon-cancel" data-bind="click: $parent.removeCollection.bind($parent, $data)" title="Remove this collection from ETL"></i>
                                                                     </button>
                                                                 </td>
                                                             </tr>

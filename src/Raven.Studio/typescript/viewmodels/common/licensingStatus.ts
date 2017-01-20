@@ -97,7 +97,7 @@ class licensingStatus extends dialogViewModelBase {
         } else if (input === 'true') {
             return '<i class="fa fa-check"></i>';
         } else if (input === 'false' || !input) {
-            return '<i class="fa fa-times"></i>';
+            return '<i class="icon-cancel"></i>';
         } 
         return input;
     }
