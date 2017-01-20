@@ -97,6 +97,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexDefinition));
             scripter.AddType(typeof(TermsQueryResult));
 
+            // query 
+            scripter.AddType(typeof(QueryResult<>));
 
             // transformers
             scripter.AddType(typeof(TransformerDefinition));

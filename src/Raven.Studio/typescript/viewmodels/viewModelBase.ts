@@ -36,6 +36,7 @@ class viewModelBase {
     private keyboardShortcutDomContainers: string[] = [];
     static modelPollingHandle: number; // mark as static to fix https://github.com/BlueSpire/Durandal/issues/181
     private notifications: Array<changeSubscription> = [];
+    private disposableActions: Array<Function> = [];
     appUrls: computedAppUrls;
     private postboxSubscriptions: Array<KnockoutSubscription> = [];
     static showSplash = ko.observable<boolean>(false);
@@ -155,8 +156,17 @@ class viewModelBase {
         this.keyboardShortcutDomContainers.forEach(el => this.removeKeyboardShortcuts(el));
         this.modelPollingStop();
 
+        this.disposableActions.forEach(f => f());
+        this.disposableActions = [];
+
         this.isAttached = true;
         viewModelBase.showSplash(false);
+    }
+
+    protected registerDisposableHandler($element: JQuery, event: string, handler: Function) {
+        $element.on(event as any, handler);
+
+        this.disposableActions.push(() => $element.off(event as any, handler as any));
     }
 
     createNotifications(): Array<changeSubscription> {

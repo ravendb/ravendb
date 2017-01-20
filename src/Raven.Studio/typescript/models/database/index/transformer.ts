@@ -43,32 +43,32 @@ class transformer {
         }
     }
 
-    extractInputs(): Array<transformerParamInfo> {
-        if (this.transformResults()) {
-            const matcher = /(Query|Parameter)\(["'].*?["']\)/g;
-            const defaultMatcher = /(Query|Parameter)OrDefault\(["'].*?["'],\s+["'].*?["']\)/g;
-
-            const parameters: string[] = this.transformResults().match(matcher);
-            const parametersWithDefault: string[] = this.transformResults().match(defaultMatcher);
-            const results: Array<transformerParamInfo> = [];
-
-            if (parameters) {
-                parameters.forEach((value: string) => results.push({
-                    name: value.substring(value.indexOf("(") + 2, value.length - 2),
-                    hasDefault: false
-                }));
-            }
-
-            if (parametersWithDefault) {
-                parametersWithDefault.forEach((value: string) => results.push({
-                    name: value.substring(value.indexOf("(") + 2, value.indexOf(",") - 1),
-                    hasDefault: true
-                }));
-            }
-            return results;
+    static extractInputs(transformResult: string): Array<transformerParamInfo> {
+        if (!transformResult) {
+            return [];
         }
 
-        return [];
+        const matcher = /Parameter\(["'].*?["']\)/g;
+        const defaultMatcher = /ParameterOrDefault\(["'].*?["'],\s+["'].*?["']\)/g;
+
+        const parameters: string[] = transformResult.match(matcher);
+        const parametersWithDefault: string[] = transformResult.match(defaultMatcher);
+        const results: Array<transformerParamInfo> = [];
+
+        if (parameters) {
+            parameters.forEach((value: string) => results.push({
+                name: value.substring(value.indexOf("(") + 2, value.length - 2),
+                hasDefault: false
+            }));
+        }
+
+        if (parametersWithDefault) {
+            parametersWithDefault.forEach((value: string) => results.push({
+                name: value.substring(value.indexOf("(") + 2, value.indexOf(",") - 1),
+                hasDefault: true
+            }));
+        }
+        return results;
     }
     
     static empty(): transformer {

@@ -3,19 +3,14 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import router = require("plugins/router");
 
 class queryStatsDialog extends dialogViewModelBase {
-    
-    constructor(private queryStats: indexQueryResultsDto, private selectedIndexEditUrl: string, private didDynamicChangeIndex: boolean, private rawJsonUrl:string) {
-        super();        
-    }
 
+    //TODO: detect index change (take code from v3.5)
+    constructor(private queryStats: Raven.Client.Data.Queries.QueryResult<any>, private indexUsedForQuery: string) {
+        super();
+    }
     
     cancel() {                
         dialog.close(this);
-    }
-
-    goToIndex() {        
-        dialog.close(this);
-        router.navigate(this.selectedIndexEditUrl, true);
     }
 
 }

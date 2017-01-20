@@ -198,6 +198,32 @@ interface workTimeUnit {
     endTime: number;
 }
 
+interface transformerQueryDto {
+    transformerName: string;
+    queryParams: Array<transformerParamDto>;
+}
+
+interface transformerParamDto {
+    name: string;
+    value: string;
+}
+
+interface queryDto {
+    indexName: string;
+    queryText: string;
+    sorts: string[];
+    transformerQuery: transformerQueryDto;
+    showFields: boolean;
+    indexEntries: boolean;
+    useAndOperator: boolean;
+}
+
+interface storedQueryDto extends queryDto {
+    hash: number;
+}
+
 type resourceDisconnectionCause = "Error" | "ResourceDeleted" | "ResourceDisabled" | "ChangingResource";
 
 type alertType = "Info" | "Success" | "Error" | "Warning";
+
+type querySortType = "Ascending" | "Descending" | "Range Ascending" | "Range Descending";

@@ -148,6 +148,27 @@ class extensions {
             }
         };
 
+        ko.bindingHandlers["dropdownPanel"] = {
+            init: (element) => {
+                $(element).on('click', e => {
+                    const $target = $(e.target);
+                    const $button = $target.closest(".dropdown-toggle");
+                    const $dropdown = $button.next(".dropdown-menu");
+                    if ($dropdown.length && $dropdown[0] !== element) {
+                        const $parent = $dropdown.parent();
+                        $parent.toggleClass('open');
+                    } else {
+                        // close any child dropdown
+                        $(".dropdown", element).each((idx, elem) => {
+                            $(elem).removeClass('open');
+                        });
+                    }
+
+                    e.stopPropagation();
+                });
+            }
+        }
+
         ko.bindingHandlers["bsChecked"] = {
             init: (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) => {
                 var value = valueAccessor();

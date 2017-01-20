@@ -16,10 +16,12 @@ class recentQueriesStorage {
         // when saving object.prop = undefined in localstorage 
         // we don't get 'prop' property during read.
         recentQueriesFromLocalStorage.forEach(entry => {
-            if (entry.TransformerQuery) {
-                if (("transformerName" in entry.TransformerQuery) === false) {
-                    entry.TransformerQuery.transformerName = undefined;
+            if (entry.transformerQuery) {
+                if (("transformerName" in entry.transformerQuery) === false) {
+                    entry.transformerQuery.transformerName = undefined;
                 };
+            } else {
+                entry.transformerQuery = undefined;
             }
         });
 
@@ -41,7 +43,7 @@ class recentQueriesStorage {
         if (recentQueriesFromLocalStorage == null)
             return;
 
-        const newRecentQueries = recentQueriesFromLocalStorage.filter((query: storedQueryDto) => query.IndexName != indexName);
+        const newRecentQueries = recentQueriesFromLocalStorage.filter((query: storedQueryDto) => query.indexName != indexName);
         localStorage.setObject(localStorageName, newRecentQueries);
     }
 
