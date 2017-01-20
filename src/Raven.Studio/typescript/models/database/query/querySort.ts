@@ -1,105 +1,72 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
 class querySort {
+
     fieldName = ko.observable<string>();
-    fieldNameOrDefault: KnockoutComputed<string>;
-    ascending: KnockoutComputed<boolean>;
-    descending: KnockoutComputed<boolean>;
-    rangeAscending: KnockoutComputed<boolean>;
-    rangeDescending: KnockoutComputed<boolean>;
-    isRange = ko.observable<boolean>(false);
-    isAscending = ko.observable<boolean>(true);
+    sortType = ko.observable<querySortType>("Ascending");
 
-    static rangeIndicator = "_Range";
+    static readonly RangeIndicator = "_Range";
 
-    constructor() {
-        this.fieldNameOrDefault = ko.computed(() => this.fieldName() ? this.fieldName() : "Select a field");
+    static empty() {
+        return new querySort();
     }
 
-    toggleAscending() {
-        this.isAscending.toggle();
-    }
-
-    toggleRange() {
-        this.isRange.toggle();
+    bindOnUpdateAction(func: Function) {
+        this.fieldName.subscribe(() => func());
+        this.sortType.subscribe(() => func());
     }
 
     toQuerySortString(): string {
-        var querySortString: string;
-
-        if (this.isRange()) {
-            if (this.isAscending()) {
-                querySortString = this.fieldName() + querySort.rangeIndicator; //ascending range
-            }
-            else {
-                querySortString = "-" + this.fieldName() + querySort.rangeIndicator; //descending range
-            }
-        } else {
-            if (this.isAscending()) {
-                querySortString = this.fieldName(); // ascending
-            }
-            else {
-                querySortString = "-" + this.fieldName(); // descending
-            }
+        switch (this.sortType()) {
+            case "Ascending":
+                return this.fieldName();
+            case "Descending":
+                return "-" + this.fieldName();
+            case "Range Ascending":
+                return this.fieldName() + querySort.RangeIndicator;
+            case "Range Descending":
+                return "-" + this.fieldName() + querySort.RangeIndicator;
         }
-
-        return querySortString;
     }
 
     toHumanizedString(): string {
-        var str: string;
-
-        if (this.isRange()) {
-            if (this.isAscending()) {
-                str = this.fieldName() + " range"; //ascending range
-            }
-            else {
-                str = this.fieldName() + " range descending"; //descending range
-            }
-        } else {
-
-            if (this.isAscending()) {
-                str = this.fieldName(); // ascending
-            }
-            else {
-                str = this.fieldName() + " descending"; // descending
-            }
+        switch (this.sortType()) {
+            case "Ascending":
+                return this.fieldName() + " ascending"
+            case "Descending":
+                return this.fieldName() + " descending";
+            case "Range Ascending":
+                return this.fieldName() + " range";
+            case "Range Descending":
+                return this.fieldName() + " range descending";
         }
-
-        return str;
     }
 
-    static fromQuerySortString(querySortText: string) {
-        var isDescending = querySortText.slice(0, 1) === "-";
-        var isRange = querySortText.length > querySort.rangeIndicator.length 
-            && querySortText.substr(querySortText.length - querySort.rangeIndicator.length) === querySort.rangeIndicator;
+    static fromQuerySortString(querySortText: string): querySort {
+        const isDescending = querySortText.startsWith("-");
+        const isRange = querySortText.endsWith(querySort.RangeIndicator);
 
-        var sortField = querySort.getSortField(querySortText, isDescending, isRange);
+        let rawSortText = querySortText;
+        if (isDescending) {
+            rawSortText = rawSortText.substr(1);
+        }
+        if (isRange) {
+            rawSortText = rawSortText.substr(0, rawSortText.length - querySort.RangeIndicator.length);
+        }
 
-        var q = new querySort();
-        q.isAscending(!isDescending);
-        q.isRange(isRange);
-        q.fieldName(sortField);
-        return q;
+        const newSort = querySort.empty();
+        newSort.fieldName(rawSortText);
+        newSort.sortType(querySort.getSortType(isDescending, isRange));
+
+        return newSort;
     }
 
-    private static getSortField(querySortText: string, isDescending: boolean, isRange: boolean) {
-        var sortField: string;
-
-        if (isRange && isDescending) {
-            sortField = querySortText.substr(1, querySortText.length - 1 - querySort.rangeIndicator.length);
+    private static getSortType(isDescending: boolean, isRange: boolean) {
+        if (isDescending) {
+            return isRange ? "Range Descending" : "Descending";
+        } else { //asc
+            return isRange ? "Range Ascending" : "Ascending";
         }
-        else if (isRange && !isDescending) {
-            sortField = querySortText.substr(0, querySortText.length - 1 - querySort.rangeIndicator.length);
-        }
-        else if (!isRange && isDescending) {
-            sortField = querySortText.substr(1, querySortText.length - 1);
-        }
-        else {
-            sortField = querySortText;
-        }
-
-        return sortField;
     }
 }
 

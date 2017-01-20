@@ -65,10 +65,10 @@ class exploration extends viewModelBase {
 
         var command = new dataExplorationCommand(requestDto, this.activeDatabase());
         command.execute()
-            .done((results: indexQueryResultsDto) => {
-                if (results.Error) {
-                    messagePublisher.reportError("Unable to execute query", results.Error);
-                } else {
+            .done((results: Raven.Client.Data.Queries.QueryResult<any>) => { //TODO: avoid using any? 
+                // TODO if (results.Error) {
+                    //TODO:messagePublisher.reportError("Unable to execute query", results.Error);
+                //TODO: } else {
                     var mainSelector = new pagedResultSet(results.Results.map(d => new document(d)), results.Results.length, results);
                     var resultsFetcher = (skip: number, take: number) => {
                         var slicedResult = new pagedResultSet(mainSelector.items.slice(skip, Math.min(skip + take, mainSelector.totalResultCount)), mainSelector.totalResultCount);
@@ -76,7 +76,7 @@ class exploration extends viewModelBase {
                     };
                     var resultsList = new pagedList(resultsFetcher);
                     this.queryResults(resultsList);
-                }
+                //TODO: }
             })
             .always(() => {
                 this.isBusy(false);

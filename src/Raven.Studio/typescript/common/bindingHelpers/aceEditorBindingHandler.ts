@@ -127,6 +127,7 @@ class aceEditorBindingHandler {
             fontSize?: string;
             lang?: string;
             getFocus?: boolean;
+            hasFocus?: KnockoutObservable<boolean>;
             readOnly?: boolean;
             completer?: (editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) => void;
             typeName?: string;
@@ -158,6 +159,7 @@ class aceEditorBindingHandler {
         var bubbleEscKey = bindingValues.bubbleEscKey || this.defaults.bubbleEscKey;
         var bubbleEnterKey = bindingValues.bubbleEnterKey || this.defaults.bubbleEnterKey;
         var getFocus = bindingValues.getFocus;
+        var hasFocus = bindingValues.hasFocus;
 
         if (!ko.isObservable(code)) {
             throw new Error("code should be an observable");
@@ -167,7 +169,7 @@ class aceEditorBindingHandler {
             langTools = ace.require("ace/ext/language_tools");
         }
 
-        var aceEditor: any = ace.edit(element);
+        var aceEditor: AceAjax.Editor = ace.edit(element);
 
         aceEditor.setOption("enableBasicAutocompletion", true);
         aceEditor.setOption("newLineMode", "windows");
@@ -177,6 +179,28 @@ class aceEditorBindingHandler {
         aceEditor.$blockScrolling = Infinity;
         aceEditor.getSession().setMode(lang);
         aceEditor.setReadOnly(readOnly);
+
+        if (hasFocus) {
+            let aceHasFocus = false;
+            aceEditor.on('focus', () => {
+                aceHasFocus = true;
+                hasFocus(true);
+            });
+            aceEditor.on('blur', () => {
+                aceHasFocus = false;
+                hasFocus(false)
+            });
+
+            hasFocus.subscribe(newFocus => {
+                if (newFocus !== aceHasFocus) {
+                    if (newFocus) {
+                        aceEditor.focus();
+                    } else {
+                        aceEditor.blur();
+                    }
+                }
+            });
+        }
 
         // Setup key bubbling 
         if (bubbleEscKey) {
@@ -195,8 +219,8 @@ class aceEditorBindingHandler {
                 if (!aceEditorBindingHandler.customCompleters.find(x=> x.editorType === typeName)) {
                     aceEditorBindingHandler.customCompleters.push({ editorType: typeName, completerHostObject: completerHostObject, completer: bindingValues.completer });
                 }
-                if (!!aceEditor.completers) {
-                    var completersList: { getComplitions: any; moduleId?: string }[] = aceEditor.completers;
+                if (!!(<any>aceEditor).completers) {
+                    var completersList: { getComplitions: any; moduleId?: string }[] = (<any>aceEditor).completers;
                     if (!completersList.find(x=> x.moduleId === "aceEditoBindingHandler")) {
                         langTools.addCompleter({ moduleId: "aceEditoBindingHandler", getCompletions: aceEditorBindingHandler.autoCompleteHub });
                     }

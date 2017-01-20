@@ -1,13 +1,13 @@
 /// <reference path="../../typescript/common/constants.ts"/>
 
-interface collectionInfoDto extends indexResultsDto<documentDto> {
+interface collectionInfoDto extends Raven.Client.Data.Queries.QueryResult<documentDto> {
 }
 
 interface documentDto extends metadataAwareDto {
     [key:string]: any;
 }
 
-interface conflictsInfoDto extends indexResultsDto<conflictDto> {
+interface conflictsInfoDto extends Raven.Client.Data.Queries.QueryResult<conflictDto> {
 }
 
 interface metadataAwareDto {
@@ -298,31 +298,10 @@ interface documentCountDto {
     IsEtl: boolean;
 }
 
-interface indexResultsDto<T extends metadataAwareDto> {
-    DurationMilliseconds: number;
-    Highlightings: any;
-    Includes: any;
-    IndexEtag: string;
-    IndexName: string;
-    IndexTimestamp: string;
-    IsStale: boolean;
-    LastQueryTime: string;
-    NonAuthoritativeInformation: boolean;
-    ResultEtag: string;
-    Results: T[];
-    SkippedResults: number;
-    TotalResults: number;
-}
-
 interface documentPreviewDto {
     Results: documentDto[];
     TotalResults: number;
 }
-
-interface indexQueryResultsDto extends indexResultsDto<documentDto> {
-    Error?: string;
-}
-
 
 interface replicationDestinationDto {
     Url: string;
@@ -398,35 +377,8 @@ interface windowsAuthDto {
     RequiredUsers: windowsAuthDataDto[];
 }
 
-interface transformerParamDto {
-    name: string;
-    value: string;
-}
-
-interface transformerQueryDto {
-    transformerName: string;
-    queryParams: Array<transformerParamDto>;
-}
-
-interface storedQueryDto {
-    IsPinned: boolean;
-    IndexName: string;
-    QueryText: string;
-    Sorts: string[];
-    TransformerQuery: transformerQueryDto;
-    ShowFields: boolean;
-    IndexEntries: boolean;
-    UseAndOperator: boolean;
-    Hash: number;
-}
-
 interface storedPatchDto extends patchDto {
     Hash: number;
-}
-
-interface indexDataDto {
-    name: string;
-    hasReduce: boolean;
 }
 
 interface bulkDocumentDto {

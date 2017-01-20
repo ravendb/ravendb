@@ -15,7 +15,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.indexes
         }),
         new leafMenuItem({
-            route: ['', 'databases/query/index(/:indexNameOrRecentQueryIndex)'],
+            route: 'databases/query/index(/:indexNameOrRecentQueryIndex)',
             moduleId: 'viewmodels/database/query/query',
             title: 'Query',
             nav: true,
