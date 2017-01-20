@@ -395,7 +395,7 @@ class editIndex extends viewModelBase {
 
         const indexDto = editedIndex.toDto();
 
-        /* TODO
+        /* TODO we probably won't need this because edit name is locked + we have clone feature
         if (this.isEditingExistingIndex() && index.Name !== this.loadedIndexName()) {
             // user changed index name on edit page, ask him what to do: rename or duplicate
             var dialog = new renameOrDuplicateIndexDialog(this.loadedIndexName(), this.editedIndex().name());

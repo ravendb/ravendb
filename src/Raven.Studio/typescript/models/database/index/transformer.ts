@@ -6,26 +6,34 @@ class transformer {
     name = ko.observable<string>();
     transformResults = ko.observable<string>();
     lockMode = ko.observable<Raven.Abstractions.Indexing.TransformerLockMode>();
-    private originalName = ko.observable<string>();
     temporary = ko.observable<boolean>();
-    nameChanged = ko.pureComputed<boolean>(() => this.name() !== this.originalName());
     transformerId = ko.observable<number>();
 
     editUrl: KnockoutComputed<string>;
-
-    isLocked = ko.pureComputed(() => this.lockMode() === ("LockedIgnore" as Raven.Abstractions.Indexing.TransformerLockMode));
+    isLocked = ko.pureComputed(() => this.lockMode() === "LockedIgnore");
 
     filteredOut = ko.observable<boolean>(false); //UI only property
     
     constructor(dto: Raven.Abstractions.Indexing.TransformerDefinition) {
-        this.originalName(dto.Name);
+        this.updateUsing(dto);
+
+        this.initializeObservables();
+    }
+
+    cleanForClone() {
+        this.name(null);
+        this.lockMode("Unlock");
+        this.transformerId(null);
+        this.temporary(false);
+    }
+
+    updateUsing(dto: Raven.Abstractions.Indexing.TransformerDefinition) {
         this.name(dto.Name);
         this.lockMode(dto.LockMode);
         this.temporary(dto.Temporary);
         this.transformerId(dto.TransfomerId);
         this.transformResults(dto.TransformResults);
-
-        this.initializeObservables();
+        this.filteredOut(false);
     }
 
     private initializeObservables() {

@@ -819,7 +819,7 @@ class replicationStats extends viewModelBase {
     }
 
     getTooltip(d) {
-        return '<button type="button" class="close" data-bind="click: tooltipClose" aria-hidden="true"><i class="fa fa-times"></i></button>'
+        return '<button type="button" class="close" data-bind="click: tooltipClose" aria-hidden="true"><i class="icon-cancel"></i></button>'
             + "<table>"
             + "<tr><td><strong>Destination:</strong></td><td>" + d.Destination + "</td></tr>"
             + "<tr><td><strong>Duration milliseconds:</strong></td><td>" + d.DurationMilliseconds + "</td></tr>"
