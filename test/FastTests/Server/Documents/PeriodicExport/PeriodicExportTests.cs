@@ -9,17 +9,17 @@ using System.IO;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Client.Smuggler;
+
 using Raven.Server.Documents.PeriodicExport;
 using Xunit;
 using System.Linq;
 using FastTests.Server.Basic.Entities;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Smuggler;
 
 namespace FastTests.Server.Documents.PeriodicExport
 {
-    public class PeriodicExportTests : RavenTestBase
+    public class PeriodicExportTests : RavenNewTestBase
     {
         private readonly string _exportPath;
 
@@ -79,7 +79,10 @@ namespace FastTests.Server.Documents.PeriodicExport
                     .GetField(nameof(PeriodicExportRunner.MaxTimerTimeout), BindingFlags.Instance | BindingFlags.Public)
                     .SetValue(periodicExportRunner, TimeSpan.FromMilliseconds(5));
 
-                SpinWait.SpinUntil(() => store.AsyncDatabaseCommands.GetAsync(Constants.PeriodicExport.StatusDocumentKey).Result != null, 10000);
+                using (var commands = store.Commands())
+                {
+                    SpinWait.SpinUntil(() => commands.Get(Constants.PeriodicExport.StatusDocumentKey) != null, 10000);
+                }
             }
 
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
@@ -111,12 +114,16 @@ namespace FastTests.Server.Documents.PeriodicExport
                     await session.SaveChangesAsync();
 
                 }
-                SpinWait.SpinUntil(() => store.AsyncDatabaseCommands.GetAsync(Constants.PeriodicExport.StatusDocumentKey).Result != null, 10000);
+
+                using (var commands = store.Commands())
+                {
+                    SpinWait.SpinUntil(() => commands.Get(Constants.PeriodicExport.StatusDocumentKey) != null, 10000);
+                }
             }
 
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
             {
-                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(), 
+                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
                     Directory.GetDirectories(_exportPath).First());
 
                 using (var session = store.OpenAsyncSession())
@@ -143,37 +150,46 @@ namespace FastTests.Server.Documents.PeriodicExport
                     }, Constants.PeriodicExport.ConfigurationDocumentKey);
 
                     await session.SaveChangesAsync();
-
                 }
-                SpinWait.SpinUntil(() =>
-                {
-                    var jsonDocument = store.DatabaseCommands.Get(Constants.PeriodicExport.StatusDocumentKey);
-                    if (jsonDocument == null)
-                        return false;
-                    var periodicExportStatus = jsonDocument.DataAsJson.JsonDeserialization<PeriodicExportStatus>();
-                    return periodicExportStatus.LastDocsEtag > 0;
-                }, TimeSpan.FromSeconds(10));
 
-                var statusDocument = await store.AsyncDatabaseCommands.GetAsync(Constants.PeriodicExport.StatusDocumentKey);
-                var etagForExports = statusDocument.Etag;
-                using (var session = store.OpenAsyncSession())
+                using (var commands = store.Commands())
                 {
-                    await session.StoreAsync(new User { Name = "ayende" });
-                    await session.SaveChangesAsync();
+                    SpinWait.SpinUntil(() =>
+                    {
+                        var jsonDocument = commands.Get(Constants.PeriodicExport.StatusDocumentKey);
+                        if (jsonDocument == null)
+                            return false;
+                        var periodicExportStatus = (PeriodicExportStatus)store.Conventions.DeserializeEntityFromBlittable(typeof(PeriodicExportStatus), jsonDocument.BlittableJson);
+                        return periodicExportStatus.LastDocsEtag > 0;
+                    }, TimeSpan.FromSeconds(10));
+
+
+                    dynamic statusDocument = await commands.GetAsync(Constants.PeriodicExport.StatusDocumentKey);
+                    var etagForExports = statusDocument.Etag;
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User { Name = "ayende" });
+                        await session.SaveChangesAsync();
+                    }
+
+                    SpinWait.SpinUntil(() =>
+                    {
+                        dynamic document = commands.Get(Constants.PeriodicExport.StatusDocumentKey);
+                        return document.Etag != etagForExports;
+                    }, 10000);
                 }
-                SpinWait.SpinUntil(() => store.DatabaseCommands.Get(Constants.PeriodicExport.StatusDocumentKey).Etag != etagForExports, TimeSpan.FromSeconds(10));
             }
 
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
             {
-                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(), 
+                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
                     Directory.GetDirectories(_exportPath).First());
 
                 using (var session = store.OpenAsyncSession())
                 {
                     var users = await session.LoadAsync<User>(new ValueType[] { 1, 2 });
-                    Assert.Equal("oren", users[0].Name);
-                    Assert.Equal("ayende", users[1].Name);
+                    Assert.True(users.Any(x => x.Value.Name == "oren"));
+                    Assert.True(users.Any(x => x.Value.Name == "ayende"));
                 }
             }
         }
@@ -207,23 +223,31 @@ namespace FastTests.Server.Documents.PeriodicExport
                     .GetField(nameof(PeriodicExportRunner.MaxTimerTimeout), BindingFlags.Instance | BindingFlags.Public)
                     .SetValue(periodicExportRunner, TimeSpan.FromMilliseconds(5));
 
-                SpinWait.SpinUntil(() =>
+                using (var commands = store.Commands())
                 {
-                    var jsonDocument = store.DatabaseCommands.Get(Constants.PeriodicExport.StatusDocumentKey);
-                    if (jsonDocument == null)
-                        return false;
-                    var periodicExportStatus = jsonDocument.DataAsJson.JsonDeserialization<PeriodicExportStatus>();
-                    return periodicExportStatus.LastDocsEtag > 0;
-                }, TimeSpan.FromSeconds(10));
+                    SpinWait.SpinUntil(() =>
+                    {
+                        var jsonDocument = commands.Get(Constants.PeriodicExport.StatusDocumentKey);
+                        if (jsonDocument == null)
+                            return false;
+                        var periodicExportStatus = (PeriodicExportStatus)store.Conventions.DeserializeEntityFromBlittable(typeof(PeriodicExportStatus), jsonDocument.BlittableJson);
+                        return periodicExportStatus.LastDocsEtag > 0;
+                    }, TimeSpan.FromSeconds(10));
 
-                var statusDocument = await store.AsyncDatabaseCommands.GetAsync(Constants.PeriodicExport.StatusDocumentKey);
-                var etagForExports = statusDocument.Etag;
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User { Name = "ayende" });
-                    await session.SaveChangesAsync();
+                    dynamic statusDocument = await commands.GetAsync(Constants.PeriodicExport.StatusDocumentKey);
+                    var etagForExports = statusDocument.Etag;
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User { Name = "ayende" });
+                        await session.SaveChangesAsync();
+                    }
+
+                    SpinWait.SpinUntil(() =>
+                    {
+                        dynamic document = commands.Get(Constants.PeriodicExport.StatusDocumentKey);
+                        return document.Etag != etagForExports;
+                    }, 10000);
                 }
-                SpinWait.SpinUntil(() => store.DatabaseCommands.Get(Constants.PeriodicExport.StatusDocumentKey).Etag != etagForExports, TimeSpan.FromSeconds(10));
             }
 
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
@@ -233,8 +257,8 @@ namespace FastTests.Server.Documents.PeriodicExport
                 using (var session = store.OpenAsyncSession())
                 {
                     var users = await session.LoadAsync<User>(new ValueType[] { 1, 2 });
-                    Assert.Equal("oren", users[0].Name);
-                    Assert.Equal("ayende", users[1].Name);
+                    Assert.True(users.Any(x => x.Value.Name == "oren"));
+                    Assert.True(users.Any(x => x.Value.Name == "ayende"));
                 }
             }
         }

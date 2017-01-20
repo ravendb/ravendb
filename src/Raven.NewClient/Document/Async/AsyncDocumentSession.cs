@@ -68,11 +68,6 @@ namespace Raven.NewClient.Client.Document.Async
             RefreshInternal(entity, command, documentInfo);
         }
 
-        public IDictionary<string, string> GetMetadataForAsync<T>(T instance)
-        {
-            return GetMetadataFor(instance);
-        }
-
         public async Task<Operation> DeleteByIndexAsync<T, TIndexCreator>(Expression<Func<T, bool>> expression) where TIndexCreator : AbstractIndexCreationTask, new()
         {
             var indexCreator = new TIndexCreator();

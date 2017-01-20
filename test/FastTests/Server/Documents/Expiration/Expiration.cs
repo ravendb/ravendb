@@ -5,18 +5,20 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
+using System.Globalization;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
-using Raven.Client.Document;
-using Raven.Json.Linq;
+using Raven.NewClient.Abstractions;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Operations.Databases;
 using Raven.Server.Documents.Expiration;
 using Xunit;
 
 namespace FastTests.Server.Documents.Expiration
 {
-    public class Expiration : RavenTestBase
+    public class Expiration : RavenNewTestBase
     {
         private static async Task SetupExpiration(DocumentStore store)
         {
@@ -44,8 +46,8 @@ namespace FastTests.Server.Documents.Expiration
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
-                    var metadata = await session.Advanced.GetMetadataForAsync(company);
-                    metadata[Constants.Expiration.RavenExpirationDate] = new RavenJValue(expiry.ToString(Default.DateTimeOffsetFormatsToWrite));
+                    var metadata = session.Advanced.GetMetadataFor(company);
+                    metadata[Constants.Expiration.RavenExpirationDate] = expiry.ToString(Default.DateTimeOffsetFormatsToWrite);
                     await session.SaveChangesAsync();
                 }
 
@@ -53,14 +55,13 @@ namespace FastTests.Server.Documents.Expiration
                 {
                     var company2 = await session.LoadAsync<Company>(company.Id);
                     Assert.NotNull(company2);
-                    var metadata = await session.Advanced.GetMetadataForAsync(company2);
-                    var expirationDate = metadata["Raven-Expiration-Date"];
+                    var metadata = session.Advanced.GetMetadataFor(company2);
+                    var expirationDate = metadata[Constants.Expiration.RavenExpirationDate];
                     Assert.NotNull(expirationDate);
-                    var dateTime = expirationDate.Value<DateTime>();
+                    var dateTime = DateTime.ParseExact(expirationDate, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
                     Assert.Equal(DateTimeKind.Utc, dateTime.Kind);
-                    Assert.Equal(expiry.ToString("O"), expirationDate.ToString());
+                    Assert.Equal(expiry.ToString("O"), expirationDate);
                 }
-
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
@@ -81,27 +82,28 @@ namespace FastTests.Server.Documents.Expiration
         public async Task CanAddALotOfEntitiesWithSameExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry(int count)
         {
             var company = new { Name = "Company Name" };
-            var companyJson = RavenJObject.FromObject(company);
 
             using (var store = GetDocumentStore())
             {
                 await SetupExpiration(store);
 
                 var expiry = SystemTime.UtcNow.AddMinutes(5);
-                var metadata = new RavenJObject
+                var metadata = new Dictionary<string, string>
                 {
-                    [Constants.Expiration.RavenExpirationDate] =
-                        new RavenJValue(expiry.ToString(Default.DateTimeOffsetFormatsToWrite))
+                    [Constants.Expiration.RavenExpirationDate] = expiry.ToString(Default.DateTimeOffsetFormatsToWrite)
                 };
-                var metadata2 = new RavenJObject
+                var metadata2 = new Dictionary<string, string>
                 {
-                    [Constants.Expiration.RavenExpirationDate] =
-                        new RavenJValue(expiry.AddMinutes(1).ToString(Default.DateTimeOffsetFormatsToWrite))
+                    [Constants.Expiration.RavenExpirationDate] = expiry.AddMinutes(1).ToString(Default.DateTimeOffsetFormatsToWrite)
                 };
-                for (int i = 0; i < count; i++)
+
+                using (var commands = store.Commands())
                 {
-                    await store.AsyncDatabaseCommands.PutAsync("companies/" + i, null, companyJson, metadata);
-                    await store.AsyncDatabaseCommands.PutAsync("companies-type2/" + i, null, companyJson, metadata2);
+                    for (var i = 0; i < count; i++)
+                    {
+                        await commands.PutAsync("companies/" + i, null, company, metadata);
+                        await commands.PutAsync("companies-type2/" + i, null, company, metadata2);
+                    }
                 }
 
                 using (var session = store.OpenAsyncSession())
@@ -116,7 +118,7 @@ namespace FastTests.Server.Documents.Expiration
 
                 expiredDocumentsCleaner.CleanupExpiredDocs();
 
-                var stats = await store.AsyncDatabaseCommands.GetStatisticsAsync();
+                var stats = await store.Admin.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(1, stats.CountOfDocuments);
             }
         }
