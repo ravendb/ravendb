@@ -31,17 +31,12 @@ namespace Raven.Server.Extensions
         public static DynamicJsonArray ToJson(this ChangeVectorEntry[] self)
         {
             var results = new DynamicJsonArray();
-            foreach(var entry in self)
-                results.Add(new DynamicJsonValue
-                {
-                    ["DbId"] = entry.DbId.ToString(),
-                    ["Etag"] = entry.Etag
-                });
+            foreach (var entry in self)
+                results.Add(entry.ToJson());
             return results;
         }
 
-
-        public static bool GreaterThan(this ChangeVectorEntry[] self, Dictionary<Guid,long> other)
+        public static bool GreaterThan(this ChangeVectorEntry[] self, Dictionary<Guid, long> other)
         {
             for (int i = 0; i < self.Length; i++)
             {

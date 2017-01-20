@@ -1,3 +1,4 @@
+using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client.Exceptions;
 using Xunit;
@@ -42,23 +43,28 @@ namespace SlowTests.Issues
             conflicts = WaitUntilHasConflict(store1, "people/1");
             Assert.Equal(2, conflicts["people/1"].Count);
 
-            store2.DatabaseCommands.Delete("people/1", null);
-
-
-            try
+            using (var commands = store2.Commands())
             {
-                store1.DatabaseCommands.Get("people/1");
+                commands.Delete("people/1", null);
             }
-            catch (ConflictException e)
+
+            using (var commands = store1.Commands())
             {
-                var c1 = store1.DatabaseCommands.Get(e.ConflictedVersionIds[0]);
-                var c2 = store1.DatabaseCommands.Get(e.ConflictedVersionIds[1]);
+                try
+                {
+                    commands.Get("people/1");
+                }
+                catch (ConflictException e)
+                {
+                    var c1 = commands.Get(e.ConflictedVersionIds[0]);
+                    var c2 = commands.Get(e.ConflictedVersionIds[1]);
 
-                Assert.NotNull(c1);
-                Assert.Null(c2);
+                    Assert.NotNull(c1);
+                    Assert.Null(c2);
 
-                //       c1.Metadata.Remove(Constants.RavenReplicationConflictDocument);
-                store1.DatabaseCommands.Put("people/1", null, c1.DataAsJson, c1.Metadata);
+                    //       c1.Metadata.Remove(Constants.RavenReplicationConflictDocument);
+                    //commands.Put("people/1", null, c1.DataAsJson, c1.Metadata); FIX ME!
+                }
             }
 
             var r1 = WaitForDocument(store1, "people/1");

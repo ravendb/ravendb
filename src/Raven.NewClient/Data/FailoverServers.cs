@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
-using Raven.NewClient.Abstractions.Replication;
+using Raven.NewClient.Client.Replication;
 
 namespace Raven.NewClient.Abstractions.Data
 {

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,16 +11,13 @@ using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Http;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
-using Voron.Debugging;
 
 namespace Raven.Server.Utils
 {
@@ -379,25 +375,5 @@ namespace Raven.Server.Utils
 
             return false;
         }
-
-        public static DynamicJsonValue GetJsonForConflicts(string docId, IEnumerable<DocumentConflict> conflicts)
-        {
-            var conflictsArray = new DynamicJsonArray();
-            foreach (var c in conflicts)
-            {
-                conflictsArray.Add(new DynamicJsonValue
-                {
-                    ["ChangeVector"] = c.ChangeVector.ToJson(),
-                });
-            }
-
-            return new DynamicJsonValue
-            {
-                ["Message"] = "Conflict detected on " + docId + ", conflict must be resolved before the document will be accessible",
-                ["DocId"] = docId,
-                ["Conflics"] = conflictsArray
-            };
-        }
-
     }
 }

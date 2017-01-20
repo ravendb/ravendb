@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Data;
-using Raven.Server.Exceptions;
+using Raven.Client.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Json;

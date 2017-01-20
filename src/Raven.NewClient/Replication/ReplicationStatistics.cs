@@ -1,8 +1,7 @@
 using System;
 using System.Collections.Generic;
-using Raven.NewClient.Abstractions.Data;
 
-namespace Raven.NewClient.Abstractions.Replication
+namespace Raven.NewClient.Client.Replication
 {
     
 
@@ -36,7 +35,7 @@ namespace Raven.NewClient.Abstractions.Replication
         public DateTime? LastFailureTimestamp { get; set; }
         public DateTime? FirstFailureInCycleTimestamp { get; set; }
         public int FailureCount => FailureCountInternal;
-	    public string LastError { get; set; }
+        public string LastError { get; set; }
         public RavenJArray LastStats { get; set; }*/
     }
 

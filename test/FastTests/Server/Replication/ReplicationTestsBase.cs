@@ -4,36 +4,31 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Replication;
-using Raven.Client.Connection;
-using Raven.Client.Document;
-using Raven.Client.Exceptions;
-using Raven.Client.Replication.Messages;
-using Raven.Json.Linq;
-using Raven.Server.Extensions;
+using Raven.NewClient.Abstractions.Connection;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Commands;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Exceptions;
+using Raven.NewClient.Client.Http;
+using Raven.NewClient.Client.Json;
+using Raven.NewClient.Client.Replication;
+using Raven.NewClient.Client.Replication.Messages;
+using Sparrow.Json;
 using Xunit;
 
 namespace FastTests.Server.Replication
 {
-    public class ReplicationTestsBase : RavenTestBase
+    public class ReplicationTestsBase : RavenNewTestBase
     {
         protected Dictionary<string, List<ChangeVectorEntry[]>> GetConflicts(DocumentStore store, string docId)
         {
-            var url = $"{store.Url}/databases/{store.DefaultDatabase}/replication/conflicts?docId={docId}";
-            using (var request = store.JsonRequestFactory.CreateHttpJsonRequest(
-                new CreateHttpJsonRequestParams(null, url, HttpMethod.Get, store.DatabaseCommands.PrimaryCredentials, store.Conventions)))
+            using (var commands = store.Commands())
             {
-                var json = (RavenJObject)request.ReadResponseJson();
-                var array = json.Value<RavenJArray>("Results");
-                var conflicts = array.Select(x => new
-                {
-                    Key = x.Value<string>("Key"),
-                    ChangeVector = x.Value<RavenJArray>("ChangeVector").Select(c => c.FromJson()).ToArray()
-                }).GroupBy(x => x.Key).ToDictionary(x => x.Key, x => x.Select(i => i.ChangeVector).ToList());
+                var command = new GetReplicationConflictsCommand(docId);
 
-                return conflicts;
+                commands.RequestExecuter.Execute(command, commands.Context);
+
+                return command.Result;
             }
         }
 
@@ -121,11 +116,9 @@ namespace FastTests.Server.Replication
                         if (doc != null)
                             return true;
                     }
-                    catch (ErrorResponseException e)
+                    catch (ConflictException)
                     {
                         // expected that we might get conflict, ignore and wait
-                        if (e.StatusCode != HttpStatusCode.Conflict)
-                            throw;
                     }
                 }
             }
@@ -169,14 +162,25 @@ namespace FastTests.Server.Replication
 
         protected List<string> GetTombstones(DocumentStore store)
         {
-            var url = $"{store.Url}/databases/{store.DefaultDatabase}/replication/tombstones";
-            using (var request = store.JsonRequestFactory.CreateHttpJsonRequest(
-                new CreateHttpJsonRequestParams(null, url, HttpMethod.Get, store.DatabaseCommands.PrimaryCredentials, store.Conventions)))
+            using (var commands = store.Commands())
             {
-                var json = (RavenJObject)request.ReadResponseJson();
-                var array = json.Value<RavenJArray>("Results");
-                var tombstones = array.Select(x => x.Value<string>("Key")).ToList();
-                return tombstones;
+                var command = new GetReplicationTombstonesCommand();
+
+                commands.RequestExecuter.Execute(command, commands.Context);
+
+                return command.Result;
+            }
+        }
+
+        protected FullTopologyInfo GetFullTopology(DocumentStore store)
+        {
+            using (var commands = store.Commands())
+            {
+                var command = new GetFullTopologyCommand();
+
+                commands.RequestExecuter.Execute(command, commands.Context);
+
+                return command.Result;
             }
         }
 
@@ -211,7 +215,6 @@ namespace FastTests.Server.Replication
                 }, Constants.Replication.DocumentReplicationConfiguration);
                 session.SaveChanges();
             }
-
         }
 
         protected static void SetupReplication(DocumentStore fromStore, StraightforwardConflictResolution builtinConflictResolution = StraightforwardConflictResolution.None, params DocumentStore[] toStores)
@@ -237,7 +240,6 @@ namespace FastTests.Server.Replication
             }
         }
 
-
         protected static void SetupReplication(DocumentStore fromStore, params DocumentStore[] toStores)
         {
             using (var session = fromStore.OpenSession())
@@ -258,7 +260,7 @@ namespace FastTests.Server.Replication
                 }, Constants.Replication.DocumentReplicationConfiguration);
                 session.SaveChanges();
             }
-        }        
+        }
 
         protected static void SetupReplicationWithCustomDestinations(DocumentStore fromStore, params ReplicationDestination[] toDestinations)
         {
@@ -270,6 +272,136 @@ namespace FastTests.Server.Replication
                     Destinations = toDestinations.ToList()
                 }, Constants.Replication.DocumentReplicationConfiguration);
                 session.SaveChanges();
+            }
+        }
+
+        private class GetFullTopologyCommand : RavenCommand<FullTopologyInfo>
+        {
+            public override bool IsReadRequest => true;
+
+            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            {
+                url = $"{node.Url}/databases/{node.Database}/topology/full";
+
+                return new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get
+                };
+            }
+
+            public override void SetResponse(BlittableJsonReaderObject response)
+            {
+                if (response == null)
+                    ThrowInvalidResponse();
+
+                Result = JsonDeserializationClient.FullTopologyInfo(response);
+            }
+        }
+
+        private class GetReplicationTombstonesCommand : RavenCommand<List<string>>
+        {
+            public override bool IsReadRequest => true;
+
+            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            {
+                url = $"{node.Url}/databases/{node.Database}/replication/tombstones";
+
+                return new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get
+                };
+            }
+
+            public override void SetResponse(BlittableJsonReaderObject response)
+            {
+                if (response == null)
+                    ThrowInvalidResponse();
+
+                BlittableJsonReaderArray array;
+                if (response.TryGet("Results", out array) == false)
+                    ThrowInvalidResponse();
+
+                var result = new List<string>();
+                foreach (BlittableJsonReaderObject json in array)
+                {
+                    string key;
+                    if (json.TryGet("Key", out key) == false)
+                        ThrowInvalidResponse();
+
+                    result.Add(key);
+                }
+
+                Result = result;
+            }
+        }
+
+        private class GetReplicationConflictsCommand : RavenCommand<Dictionary<string, List<ChangeVectorEntry[]>>>
+        {
+            private readonly string _id;
+
+            public GetReplicationConflictsCommand(string id)
+            {
+                if (id == null)
+                    throw new ArgumentNullException(nameof(id));
+
+                _id = id;
+            }
+
+            public override bool IsReadRequest => true;
+
+            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            {
+                url = $"{node.Url}/databases/{node.Database}/replication/conflicts?docId={_id}";
+
+                return new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get
+                };
+            }
+
+            public override void SetResponse(BlittableJsonReaderObject response)
+            {
+                if (response == null)
+                    ThrowInvalidResponse();
+
+                BlittableJsonReaderArray array;
+                if (response.TryGet("Results", out array) == false)
+                    ThrowInvalidResponse();
+
+                var result = new Dictionary<string, List<ChangeVectorEntry[]>>();
+                foreach (BlittableJsonReaderObject json in array)
+                {
+                    string key;
+                    if (json.TryGet("Key", out key) == false)
+                        ThrowInvalidResponse();
+
+                    BlittableJsonReaderArray vectorsArray;
+                    if (json.TryGet("ChangeVector", out vectorsArray) == false)
+                        ThrowInvalidResponse();
+
+                    var vectors = new ChangeVectorEntry[vectorsArray.Length];
+                    for (int i = 0; i < vectorsArray.Length; i++)
+                    {
+                        var vectorJson = (BlittableJsonReaderObject)vectorsArray[i];
+                        var vector = new ChangeVectorEntry();
+
+                        if (vectorJson.TryGet(nameof(ChangeVectorEntry.DbId), out vector.DbId) == false)
+                            ThrowInvalidResponse();
+
+                        if (vectorJson.TryGet(nameof(ChangeVectorEntry.Etag), out vector.Etag) == false)
+                            ThrowInvalidResponse();
+
+                        vectors[i] = vector;
+                    }
+
+                    List<ChangeVectorEntry[]> values;
+                    if (result.TryGetValue(key, out values) == false)
+                        result[key] = values = new List<ChangeVectorEntry[]>();
+
+                    values.Add(vectors);
+                }
+
+                Result = result;
             }
         }
     }

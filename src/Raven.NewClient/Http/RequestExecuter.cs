@@ -273,20 +273,35 @@ namespace Raven.NewClient.Client.Http
                     await HandleServerDown(choosenNode, context, command, null);
                     break;
                 case HttpStatusCode.Conflict:
-                    // TODO: Conflict resolution
-                    // current implementation is temporary 
-                    object message;
-                    using (var stream = await response.Content.ReadAsStreamAsync())
-                    {
-                        var blittableJsonReaderObject = await context.ReadForMemoryAsync(stream, "PutResult");
-                        blittableJsonReaderObject.TryGetMember("Message", out message);
-                    }
-                    throw new ConcurrencyException(message.ToString());
+                    await HandleConflict(context, response);
+                    break;
                 default:
                     await ThrowServerError(context, response);
                     break;
             }
             return false;
+        }
+
+        private static async Task HandleConflict(JsonOperationContext context, HttpResponseMessage response)
+        {
+            // TODO: Conflict resolution
+            // current implementation is temporary 
+            
+            using (var stream = await response.Content.ReadAsStreamAsync())
+            {
+                var json = await context.ReadForMemoryAsync(stream, "conflict");
+
+                string type;
+                json.TryGet("Type", out type);
+
+                if (type == "Raven.Client.Exceptions.DocumentConflictException") // temporary!
+                    throw DocumentConflictException.From(json);
+
+                string message;
+                json.TryGet("Message", out message);
+
+                throw new ConcurrencyException(message);
+            }
         }
 
         public static async Task<MemoryStream> ReadAsStreamUncompressedAsync(HttpResponseMessage response)

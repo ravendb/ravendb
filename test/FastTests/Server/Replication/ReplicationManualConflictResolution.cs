@@ -3,10 +3,10 @@ using System.Diagnostics;
 using System.Net;
 using System.Threading;
 using FastTests.Server.Basic.Entities;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Replication;
-using Raven.Client.Document;
+using Raven.NewClient.Abstractions.Connection;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Replication;
 using Xunit;
 
 namespace FastTests.Server.Replication
@@ -216,7 +216,7 @@ return out;
                     session.SaveChanges();
                 }
 
-                var conflicts =  WaitUntilHasConflict(slave, "users/1");
+                var conflicts = WaitUntilHasConflict(slave, "users/1");
                 Assert.Equal(2, conflicts["users/1"].Count);
             }
         }

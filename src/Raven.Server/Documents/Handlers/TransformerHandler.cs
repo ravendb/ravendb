@@ -53,6 +53,7 @@ namespace Raven.Server.Documents.Handlers
 
             var start = GetStart();
             var pageSize = GetPageSize(Database.Configuration.Core.MaxPageSize);
+            var namesOnly = GetBoolValueQueryString("namesOnly", required: false) ?? false;
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -82,6 +83,12 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteStartObject();
                 writer.WriteResults(context, transformerDefinitions, (w, c, definition) =>
                 {
+                    if (namesOnly)
+                    {
+                        w.WriteString(definition.Name);
+                        return;
+                    }
+
                     w.WriteTransformerDefinition(c, definition);
                 });
 

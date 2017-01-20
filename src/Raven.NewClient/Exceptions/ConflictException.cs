@@ -4,8 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Runtime.Serialization;
-using Raven.NewClient.Abstractions.Data;
 
 namespace Raven.NewClient.Client.Exceptions
 {
@@ -13,24 +11,12 @@ namespace Raven.NewClient.Client.Exceptions
     /// This exception occurs when a (replication) conflict is encountered.
     /// Usually this required a user to manually resolve the conflict.
     /// </summary>
-    public class ConflictException : Exception
+    public abstract class ConflictException : Exception
     {
-        /// <summary>
-        /// Gets or sets the conflicted version ids.
-        /// </summary>
-        /// <value>The conflicted version ids.</value>
-        public string[] ConflictedVersionIds { get; set; }
-
-
-        /// <summary>
-        /// Gets or sets the conflicted document etag
-        /// </summary>
-        public long? Etag { get; set; }
-
         /// <summary>
         /// Initializes a new instance of the <see cref="ConflictException"/> class.
         /// </summary>
-        public ConflictException()
+        protected ConflictException()
         {
         }
 
@@ -38,7 +24,7 @@ namespace Raven.NewClient.Client.Exceptions
         /// Initializes a new instance of the <see cref="ConflictException"/> class.
         /// </summary>
         /// <param name="message">The message.</param>
-        public ConflictException(string message)
+        protected ConflictException(string message)
             : base(message)
         {
         }

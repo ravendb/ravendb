@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
-using Raven.NewClient.Abstractions.Replication;
 using Raven.NewClient.Client.Linq;
+using Raven.NewClient.Client.Replication;
 
 namespace Raven.NewClient.Client
 {
