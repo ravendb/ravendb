@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
@@ -139,8 +140,8 @@ namespace Raven.Server.Documents
                 {
                     var innerException = taskResult.Exception.ExtractSingleInnerException();
 
-                    var documentConflictException = innerException as DocumentConflictException;
-                    var status = documentConflictException != null ? 409 : 500;
+                    var isConflict = innerException is DocumentConflictException || innerException is ConcurrencyException;
+                    var status = isConflict ? HttpStatusCode.Conflict : HttpStatusCode.InternalServerError;
                     operationState.Result = new OperationExceptionResult(innerException, status);
                     operationState.Status = OperationStatus.Faulted;
                 }
@@ -266,7 +267,7 @@ namespace Raven.Server.Documents
             DeleteByIndex,
 
             DatabaseExport,
-            
+
             DatabaseImport,
 
             IndexCompact,

@@ -3,13 +3,13 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using System;
 using System.Net;
-using System.Runtime.Serialization;
 
-namespace Raven.NewClient.Abstractions.Exceptions.Subscriptions
+namespace Raven.NewClient.Client.Exceptions.Subscriptions
 {
-    public abstract class SubscriptionException : Exception
+    public abstract class SubscriptionException : RavenException
     {
         protected SubscriptionException(HttpStatusCode httpResponseCode)
         {

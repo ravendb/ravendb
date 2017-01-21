@@ -5,6 +5,7 @@ using FastTests;
 using Raven.NewClient.Client.Exceptions;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Util;
+using Raven.NewClient.Client.Exceptions.Session;
 using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Transformers;
 using Xunit;

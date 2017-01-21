@@ -10,7 +10,7 @@ using Raven.NewClient.Client.Http;
 using Raven.NewClient.Commands;
 using Sparrow.Json;
 
-namespace Raven.NewClient.Connection
+namespace Raven.NewClient.Client.Connection
 {
     public class Operation : IObserver<OperationStatusChangeNotification>
     {
@@ -96,11 +96,8 @@ namespace Raven.NewClient.Connection
                     break;
                 case OperationStatus.Faulted:
                     _work = false;
-                    var exceptionResult = notification.State.Result as OperationExceptionResult;
-                    if (exceptionResult?.StatusCode == 409)
-                        _result.TrySetException(DocumentConflictException.From(exceptionResult.Message));
-                    else
-                        _result.TrySetException(new InvalidOperationException(exceptionResult?.Message));
+                    var exceptionResult = (OperationExceptionResult)notification.State.Result;
+                    _result.TrySetException(ExceptionDispatcher.Get(exceptionResult.Message, exceptionResult.Error, exceptionResult.Type, exceptionResult.StatusCode));
                     break;
                 case OperationStatus.Canceled:
                     _work = false;

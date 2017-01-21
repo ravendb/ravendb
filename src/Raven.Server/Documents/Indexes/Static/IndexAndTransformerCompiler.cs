@@ -17,13 +17,14 @@ using Microsoft.CodeAnalysis.Emit;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
-using Raven.Client.Exceptions;
 using Raven.Client.Indexes;
 using Raven.Client.Indexing;
+using Raven.NewClient.Client.Exceptions.Compilation;
 using Raven.Server.Documents.Indexes.Static.Roslyn;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex;
 using Raven.Server.Documents.Transformers;
+using IndexCompilationException = Raven.Client.Exceptions.IndexCompilationException;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -158,7 +159,10 @@ namespace Raven.Server.Documents.Indexes.Static
                 foreach (var diagnostic in failures)
                     sb.AppendLine(diagnostic.ToString());
 
-                throw new IndexCompilationException(sb.ToString());
+                if (isIndex)
+                    throw new IndexCompilationException(sb.ToString());
+
+                throw new TransformerCompilationException(sb.ToString());
             }
 
             asm.Position = 0;
@@ -271,9 +275,9 @@ namespace Raven.Server.Documents.Indexes.Static
             }
             catch (Exception ex)
             {
-                throw new IndexCompilationException(ex.Message, ex)
+                throw new TransformerCompilationException(ex.Message, ex)
                 {
-                    IndexDefinitionProperty = "TransformResults",
+                    TransformerDefinitionProperty = nameof(TransformerDefinition.TransformResults),
                     ProblematicText = transformResults
                 };
             }
@@ -303,7 +307,7 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 throw new IndexCompilationException(ex.Message, ex)
                 {
-                    IndexDefinitionProperty = "Maps",
+                    IndexDefinitionProperty = nameof(IndexDefinition.Maps),
                     ProblematicText = map
                 };
             }
@@ -349,7 +353,7 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 throw new IndexCompilationException(ex.Message, ex)
                 {
-                    IndexDefinitionProperty = "Reduce",
+                    IndexDefinitionProperty = nameof(IndexDefinition.Reduce),
                     ProblematicText = reduce
                 };
             }

@@ -2,7 +2,7 @@ using System;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading.Tasks;
-
+using Raven.NewClient.Client.Exceptions.Database;
 using Raven.Server.Documents;
 using Raven.Server.Exceptions;
 using Raven.Server.Web;
@@ -37,7 +37,7 @@ namespace Raven.Server.Routing
 
         public void Build(MethodInfo action)
         {
-            if (action.ReturnType != typeof (Task))
+            if (action.ReturnType != typeof(Task))
                 throw new InvalidOperationException(action.DeclaringType.FullName + "." + action.Name +
                                                     " must return Task");
 
@@ -47,13 +47,13 @@ namespace Raven.Server.Routing
             }
 
             // CurrentRequestContext currentRequestContext
-            var currentRequestContext = Expression.Parameter(typeof (RequestHandlerContext), "currentRequestContext");
+            var currentRequestContext = Expression.Parameter(typeof(RequestHandlerContext), "currentRequestContext");
             // new Handler(currentRequestContext)
             var constructorInfo = action.DeclaringType.GetConstructor(new Type[0]);
             var newExpression = Expression.New(constructorInfo);
             var handler = Expression.Parameter(action.DeclaringType, "handler");
 
-            var block = Expression.Block(typeof(Task),new [] {handler},
+            var block = Expression.Block(typeof(Task), new[] { handler },
                 Expression.Assign(handler, newExpression),
                 Expression.Call(handler, "Init", new Type[0], currentRequestContext),
                 Expression.Call(handler, action.Name, new Type[0]));
@@ -65,11 +65,11 @@ namespace Raven.Server.Routing
         {
             var databaseName = context.RouteMatch.GetCapture();
             var databasesLandlord = context.RavenServer.ServerStore.DatabasesLandlord;
-            var database =  databasesLandlord.TryGetOrCreateResourceStore(databaseName);
+            var database = databasesLandlord.TryGetOrCreateResourceStore(databaseName);
 
             if (database == null)
             {
-                ThrowDatabaseDoesNotExists(databaseName);
+                ThrowDatabaseDoesNotExist(databaseName);
                 return Task.CompletedTask;// never hit
             }
 
@@ -93,13 +93,12 @@ namespace Raven.Server.Routing
 
         private static void ThrowDatabaseLoadTimeout(StringSegment databaseName, TimeSpan timeout)
         {
-            throw new InvalidOperationException(
-                $"Timeout when loading database {databaseName} after {timeout}, try again later");
+            throw new DatabaseLoadTimeoutException($"Timeout when loading database {databaseName} after {timeout}, try again later");
         }
 
-        private static void ThrowDatabaseDoesNotExists(StringSegment databaseName)
+        private static void ThrowDatabaseDoesNotExist(StringSegment databaseName)
         {
-            throw new DatabaseDoesNotExistsException($"Database '{databaseName}' was not found");
+            throw new DatabaseDoesNotExistException($"Database '{databaseName}' was not found");
         }
 
         public bool TryGetHandler(RequestHandlerContext context, out HandleRequest handler)

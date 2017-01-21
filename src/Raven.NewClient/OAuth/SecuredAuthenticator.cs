@@ -15,9 +15,9 @@ using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Json;
 using Raven.NewClient.Abstractions.Logging;
 using Raven.NewClient.Client.Exceptions;
+using Raven.NewClient.Client.Exceptions.Security;
 using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Client.Platform;
-using Raven.NewClient.Exceptions.Security;
 
 namespace Raven.NewClient.Client.OAuth
 {

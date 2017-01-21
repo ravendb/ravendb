@@ -80,11 +80,9 @@ namespace FastTests.Server.Replication
                         if (doc == null)
                             return true;
                     }
-                    catch (ErrorResponseException e)
+                    catch (ConflictException)
                     {
                         // expected that we might get conflict, ignore and wait
-                        if (e.StatusCode != HttpStatusCode.Conflict)
-                            throw;
                     }
                 }
             }

@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var transformer = Database.TransformerStore.GetTransformer(name);
                 if (transformer == null)
-                    TransformerDoesNotExistsException.ThrowFor(name);
+                    TransformerDoesNotExistException.ThrowFor(name);
 
                 transformer.SetLock(mode);
             }

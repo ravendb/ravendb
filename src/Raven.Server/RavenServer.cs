@@ -17,6 +17,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Client.Data;
 using Raven.Client.Json;
+using Raven.NewClient.Client.Exceptions.Database;
 using Raven.Server.Alerts;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
@@ -377,7 +378,7 @@ namespace Raven.Server
                         {
                             var resultingTask = await Task.WhenAny(databaseLoadingTask, Task.Delay(databaseLoadTimeout));
                             if (resultingTask != databaseLoadingTask)
-                                ThrowTimeoutOnDatbaseLoad(header);
+                                ThrowTimeoutOnDatabaseLoad(header);
                         }
 
                         tcp.DocumentDatabase = await databaseLoadingTask;
@@ -447,15 +448,14 @@ namespace Raven.Server
             });
         }
 
-        private static void ThrowTimeoutOnDatbaseLoad(TcpConnectionHeaderMessage header)
+        private static void ThrowTimeoutOnDatabaseLoad(TcpConnectionHeaderMessage header)
         {
-            throw new InvalidOperationException(
-                $"Timeout when loading database {header.DatabaseName}, try again later");
+            throw new DatabaseLoadTimeoutException($"Timeout when loading database {header.DatabaseName}, try again later");
         }
 
         private static void ThrowNoSuchDatabase(TcpConnectionHeaderMessage header)
         {
-            throw new DatabaseDoesNotExistsException("There is no database named " + header.DatabaseName);
+            throw new DatabaseDoesNotExistException("There is no database named " + header.DatabaseName);
         }
 
         public RequestRouter Router { get; private set; }

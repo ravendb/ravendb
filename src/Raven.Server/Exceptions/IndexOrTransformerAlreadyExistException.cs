@@ -1,11 +1,12 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="IndexAlreadyExistsException.cs" company="Hibernating Rhinos LTD">
+// <copyright file="IndexOrTransformerAlreadyExistException.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 
-namespace Raven.Abstractions.Exceptions
+namespace Raven.Server.Exceptions
 {
     /// <summary>
     /// This exception is raised if creation of index is attempted when there is already an index with identical name

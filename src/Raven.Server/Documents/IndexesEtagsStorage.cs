@@ -8,6 +8,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Transformers;
+using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -534,7 +535,7 @@ namespace Raven.Server.Documents
 
 
         private void ThrowIfAlreadyExistsAndOverwriting(
-            string indexName,
+            string name,
             IndexEntryType type,
             int indexIndexId,
             Table table,
@@ -560,11 +561,11 @@ namespace Raven.Server.Documents
             {
                 case IndexEntryType.Index:
                     msg =
-                        $"Tried to create an index with a name of {indexName}, but an index or a transformer under the same name exist";
+                        $"Tried to create an index with a name of {name}, but an index or a transformer under the same name exist";
                     break;
                 case IndexEntryType.Transformer:
                     msg =
-                        $"Tried to create an transformer with a name of {indexName}, but an index or a transformer under the same name exist";
+                        $"Tried to create an transformer with a name of {name}, but an index or a transformer under the same name exist";
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type),

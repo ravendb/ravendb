@@ -1,9 +1,6 @@
 using System;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Connection;
-using Raven.NewClient.Abstractions.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -53,16 +50,6 @@ namespace Raven.NewClient.Abstractions.Extensions
                 : firstLine;
         }
 
-        public static Task<string> TryReadResponseIfWebException(this AggregateException e)
-        {
-            var errorResponseException = e.ExtractSingleInnerException() as ErrorResponseException;
-            if (errorResponseException != null)
-            {
-                return new CompletedTask<string>(errorResponseException.ResponseString);
-            }
-            return new CompletedTask<string>(string.Empty);
-        }
-
         public static string TryReadErrorPropertyFromJson(this string errorString)
         {
             if (string.IsNullOrEmpty(errorString) || !errorString.StartsWith("{"))
@@ -87,23 +74,6 @@ namespace Raven.NewClient.Abstractions.Extensions
                 return string.Empty;
             }
         }
-
-        public static Task<T> TryReadErrorResponseObject<T>(this ErrorResponseException ex, T protoTypeObject = null) where T : class
-        {
-            var response = ex.ResponseString;
-            if (string.IsNullOrEmpty(response))
-                return null;
-
-            try
-            {
-                return new CompletedTask<T>(JsonConvert.DeserializeObject<T>(response));
-            }
-            catch (JsonReaderException readerException)
-            {
-                throw new InvalidOperationException("Exception occured reading the string: " + ex.ResponseString, readerException);
-            }
-        }
-
 
         /// <remarks>Code from http://stackoverflow.com/questions/1886611/c-overriding-tostring-method-for-custom-exceptions </remarks>
         public static string ExceptionToString(

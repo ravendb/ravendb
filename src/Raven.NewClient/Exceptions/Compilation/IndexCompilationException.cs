@@ -1,12 +1,10 @@
 using System;
-
 using Raven.NewClient.Abstractions.Extensions;
 
-namespace Raven.NewClient.Client.Exceptions
+namespace Raven.NewClient.Client.Exceptions.Compilation
 {
-    public class IndexCompilationException : Exception
+    public class IndexCompilationException : CompilationException
     {
-     
         public IndexCompilationException()
         {
         }
@@ -33,11 +31,7 @@ namespace Raven.NewClient.Client.Exceptions
 
         public override string ToString()
         {
-            return this.ExceptionToString(description =>
-                                          description.AppendFormat(
-                                              ", IndexDefinitionProperty='{0}', ProblematicText='{1}'",
-                                              IndexDefinitionProperty,
-                                              ProblematicText));
+            return this.ExceptionToString(description => description.AppendFormat(", IndexDefinitionProperty='{0}', ProblematicText='{1}'", IndexDefinitionProperty, ProblematicText));
         }
     }
 }

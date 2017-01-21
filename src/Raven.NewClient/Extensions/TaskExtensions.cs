@@ -4,7 +4,6 @@ using System.Net;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Exceptions;
 
 namespace Raven.NewClient.Abstractions.Extensions
 {

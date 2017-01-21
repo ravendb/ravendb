@@ -6,20 +6,20 @@
 
 using System;
 
-namespace Raven.Server.Exceptions
+namespace Raven.NewClient.Client.Exceptions.Database
 {
-    public class DatabaseDoesNotExistsException : Exception
+    public class DatabaseDoesNotExistException : RavenException
     {
-        public DatabaseDoesNotExistsException()
+        public DatabaseDoesNotExistException()
         {
         }
 
-        public DatabaseDoesNotExistsException(string msg) : base(msg)
+        public DatabaseDoesNotExistException(string msg) : base(msg)
         {
 
         }
 
-        public DatabaseDoesNotExistsException(string message, Exception e)
+        public DatabaseDoesNotExistException(string message, Exception e)
             : base(message, e)
         {
         }

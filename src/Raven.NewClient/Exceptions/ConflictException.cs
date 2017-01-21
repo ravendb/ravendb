@@ -11,7 +11,7 @@ namespace Raven.NewClient.Client.Exceptions
     /// This exception occurs when a (replication) conflict is encountered.
     /// Usually this required a user to manually resolve the conflict.
     /// </summary>
-    public abstract class ConflictException : Exception
+    public abstract class ConflictException : RavenException
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ConflictException"/> class.
@@ -34,7 +34,7 @@ namespace Raven.NewClient.Client.Exceptions
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="inner">The inner.</param>
-        public ConflictException(string message, Exception inner)
+        protected ConflictException(string message, Exception inner)
             : base(message, inner)
         {
         }

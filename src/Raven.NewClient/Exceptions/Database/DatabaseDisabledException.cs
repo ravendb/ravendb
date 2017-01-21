@@ -1,14 +1,14 @@
 //-----------------------------------------------------------------------
-// <copyright file="DatabaseDoesNotExistsException.cs" company="Hibernating Rhinos LTD">
+// <copyright file="DatabaseDoesNotExistException.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 
-namespace Raven.Server.Exceptions
+namespace Raven.NewClient.Client.Exceptions.Database
 {
-    public class DatabaseDisabledException : Exception
+    public class DatabaseDisabledException : RavenException
     {
         public DatabaseDisabledException()
         {

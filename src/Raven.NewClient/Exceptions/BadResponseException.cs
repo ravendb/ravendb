@@ -1,39 +1,41 @@
 //-----------------------------------------------------------------------
-// <copyright file="ReadVetoException.cs" company="Hibernating Rhinos LTD">
+// <copyright file="BadResponseException.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
-using System.Runtime.Serialization;
 
 namespace Raven.NewClient.Client.Exceptions
 {
     /// <summary>
-    /// This exception is raised whenever a trigger vetoes the read by the session
+    /// This exception is raised when a bad response is send from the server
     /// </summary>
-    public class ReadVetoException : Exception
+    public class BadResponseException : RavenException
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="ReadVetoException"/> class.
+        /// Initializes a new instance of the <see cref="BadResponseException"/> class.
         /// </summary>
-        public ReadVetoException()
+        public BadResponseException()
         {
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ReadVetoException"/> class.
+        /// Initializes a new instance of the <see cref="BadResponseException"/> class.
         /// </summary>
         /// <param name="message">The message.</param>
-        public ReadVetoException(string message) : base(message)
+        public BadResponseException(string message)
+            : base(message)
         {
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ReadVetoException"/> class.
+        /// Initializes a new instance of the <see cref="BadResponseException"/> class.
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="inner">The inner.</param>
-        public ReadVetoException(string message, Exception inner) : base(message, inner)
+        public BadResponseException(string message, Exception inner)
+            : base(message, inner)
         {
         }
     }

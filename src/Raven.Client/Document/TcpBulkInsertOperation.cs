@@ -262,7 +262,7 @@ namespace Raven.Client.Document
                                     msg =
                                         $"Bulk insert aborted because of server-side exception. Exception information from server : {Environment.NewLine} {exceptionString}";
                                     ReportProgress(msg);
-                                    throw new BulkInsertAbortedExeption(msg);
+                                    throw new BulkInsertAbortedException(msg);
 
                                 case "Processing":
                                     // do nothing. this is hearbeat while server is really busy
@@ -310,7 +310,7 @@ namespace Raven.Client.Document
                                     {
                                         msg = "Received unexpected message from a server : " + responseType;
                                         ReportProgress(msg);
-                                        throw new BulkInsertProtocolViolationExeption(msg);
+                                        throw new BulkInsertProtocolViolationException(msg);
                                     }
                             }
                         }

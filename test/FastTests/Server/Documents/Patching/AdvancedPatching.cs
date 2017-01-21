@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Exceptions.Patching;
 using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Operations.Databases;
@@ -326,7 +327,7 @@ namespace FastTests.Server.Documents.Patching
                 {
                     await commands.PutAsync("doc", null, _test, null);
 
-                    var parseException = await Assert.ThrowsAsync<InternalServerErrorException>(async () =>
+                    var parseException = await Assert.ThrowsAsync<JavaScriptException>(async () =>
                     {
                         await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
                         {
@@ -334,7 +335,7 @@ namespace FastTests.Server.Documents.Patching
                         }));
                     });
 
-                    Assert.Contains("Raven.Server.Documents.Patch.ParseException: Could not parse: " + Environment.NewLine
+                    Assert.Contains("Could not parse: " + Environment.NewLine
                                     + "this.Id = 'Something", parseException.Message);
                 }
             }
@@ -349,7 +350,7 @@ namespace FastTests.Server.Documents.Patching
                 {
                     await commands.PutAsync("doc", null, _test, null);
 
-                    var invalidOperationException = await Assert.ThrowsAsync<InternalServerErrorException>(async () =>
+                    var invalidOperationException = await Assert.ThrowsAsync<JavaScriptException>(async () =>
                     {
                         await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
                         {
@@ -357,7 +358,7 @@ namespace FastTests.Server.Documents.Patching
                         }));
                     });
 
-                    Assert.Contains("System.InvalidOperationException: Unable to execute JavaScript: " + Environment.NewLine
+                    Assert.Contains("Unable to execute JavaScript: " + Environment.NewLine
                                     + "throw 'problem'" + Environment.NewLine
                                     + Environment.NewLine
                                     + "Error: " + Environment.NewLine
@@ -408,7 +409,7 @@ namespace FastTests.Server.Documents.Patching
                 {
                     await commands.PutAsync("doc", null, _test, null);
 
-                    var exception = await Assert.ThrowsAsync<InternalServerErrorException>(async () =>
+                    var exception = await Assert.ThrowsAsync<JavaScriptException>(async () =>
                     {
                         await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
                         {
@@ -704,7 +705,7 @@ this.Value = another.Value;
                     await commands.PutAsync("doc", null, _test, null);
                 }
 
-                var exception = await Assert.ThrowsAsync<InternalServerErrorException>(async () =>
+                var exception = await Assert.ThrowsAsync<JavaScriptException>(async () =>
                 {
                     await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
                     {
@@ -727,7 +728,7 @@ this.Value = another.Value;
                     await session.SaveChangesAsync();
                 }
 
-                var exception = await Assert.ThrowsAsync<InternalServerErrorException>(async () =>
+                var exception = await Assert.ThrowsAsync<JavaScriptException>(async () =>
                 {
                     await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
                     {
@@ -776,7 +777,7 @@ this.Value = another.Value;
                     await commands.PutAsync("doc", null, _test, null);
                 }
 
-                var exception = await Assert.ThrowsAsync<InternalServerErrorException>(async () =>
+                var exception = await Assert.ThrowsAsync<JavaScriptException>(async () =>
                 {
                     await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
                     {

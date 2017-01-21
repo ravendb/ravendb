@@ -6,9 +6,9 @@
 
 using System;
 
-namespace Raven.Server.Exceptions
+namespace Raven.NewClient.Client.Exceptions.Database
 {
-    public class DatabaseNotFoundException : Exception
+    public class DatabaseNotFoundException : RavenException
     {
         public DatabaseNotFoundException()
         {

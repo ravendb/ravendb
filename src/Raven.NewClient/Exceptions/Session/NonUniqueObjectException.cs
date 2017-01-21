@@ -3,16 +3,16 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Runtime.Serialization;
 
-namespace Raven.NewClient.Client.Exceptions
+using System;
+
+namespace Raven.NewClient.Client.Exceptions.Session
 {
     /// <summary>
     /// This exception is thrown when a separate instance of an entity is added to the session
     /// when a different entity with the same key already exists within the session.
     /// </summary>
-    public class NonUniqueObjectException : Exception
+    public class NonUniqueObjectException : RavenException
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="NonUniqueObjectException"/> class.

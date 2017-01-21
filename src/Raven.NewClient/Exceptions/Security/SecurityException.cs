@@ -1,8 +1,8 @@
 ﻿using System;
 
-namespace Raven.NewClient.Exceptions.Security
+namespace Raven.NewClient.Client.Exceptions.Security
 {
-    public abstract class SecurityException : Exception
+    public abstract class SecurityException : RavenException
     {
         protected SecurityException()
         {

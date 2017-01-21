@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Replication.Messages;
-using Raven.NewClient.Client.Http;
+using Raven.NewClient.Client.Exceptions;
 using Raven.NewClient.Client.Indexes;
 using Raven.NewClient.Client.Operations.Databases.Transformers;
 using Raven.NewClient.Operations.Databases.Indexes;
@@ -622,7 +622,7 @@ namespace FastTests.Server.Replication
                 userByNameIndex.Execute(store);
 
                 var usernameToUpperTransformer = new UsernameToUpperTransformer("FooBar");
-                Assert.Throws<InternalServerErrorException>(() => usernameToUpperTransformer.Execute(store));
+                Assert.Throws<RavenException>(() => usernameToUpperTransformer.Execute(store));
             }
         }
 
@@ -635,7 +635,7 @@ namespace FastTests.Server.Replication
                 usernameToUpperTransformer.Execute(store);
 
                 var userByNameIndex = new UserByNameIndex("FooBar");
-                Assert.Throws<InternalServerErrorException>(() => userByNameIndex.Execute(store));
+                Assert.Throws<RavenException>(() => userByNameIndex.Execute(store));
             }
         }
 
