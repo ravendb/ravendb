@@ -7,6 +7,7 @@ using Jint.Native;
 using Jint.Parser;
 using Jint.Runtime;
 using Raven.NewClient.Client.Commands;
+using Raven.NewClient.Client.Exceptions.Patching;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -188,15 +189,15 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (NotSupportedException e)
                 {
-                    throw new JavaScriptException("Could not parse script", e);
+                    throw new JavaScriptParseException("Could not parse script", e);
                 }
                 catch (Jint.Runtime.JavaScriptException e)
                 {
-                    throw new JavaScriptException("Could not parse script", e);
+                    throw new JavaScriptParseException("Could not parse script", e);
                 }
                 catch (Exception e)
                 {
-                    throw new JavaScriptException("Could not parse: " + Environment.NewLine + patch.Script, e);
+                    throw new JavaScriptParseException("Could not parse: " + Environment.NewLine + patch.Script, e);
                 }
             }
 

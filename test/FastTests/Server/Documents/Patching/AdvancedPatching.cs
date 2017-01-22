@@ -327,7 +327,7 @@ namespace FastTests.Server.Documents.Patching
                 {
                     await commands.PutAsync("doc", null, _test, null);
 
-                    var parseException = await Assert.ThrowsAsync<JavaScriptException>(async () =>
+                    var parseException = await Assert.ThrowsAsync<JavaScriptParseException>(async () =>
                     {
                         await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
                         {
