@@ -15,6 +15,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Extensions;
 using Raven.Client.Document;
 using Raven.Server.Documents.SqlReplication;
 using Sparrow.Platform;
@@ -619,7 +620,7 @@ replicateToOrders(orderData);");
 var nameArr = this.StepName.split('.');");
 
                 Assert.True(eventSlim.Wait(TimeSpan.FromSeconds(30)));
-                await task;
+                Assert.True(await task.WaitWithTimeout(TimeSpan.FromSeconds(30)));
 
                 var msg = "Could not process SQL Replication script for OrdersAndLines, skipping document: orders/1";
                 if (sb.ToString().Split(new string[] { Environment.NewLine }, StringSplitOptions.None).ToList().Any(x => x.Contains(msg)) == false)
