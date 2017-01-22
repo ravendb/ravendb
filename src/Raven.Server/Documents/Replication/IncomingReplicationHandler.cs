@@ -105,21 +105,20 @@ namespace Raven.Server.Documents.Replication
             IsIncomingReplicationThread = true;
             try
             {
+                using(_connectionOptions.ConnectionProcessingInProgress())
                 using (_stream)
                 {
-
-                    DocumentsOperationContext _documentsContext;
-                    TransactionOperationContext _configurationContext;
                     while (!_cts.IsCancellationRequested)
                     {
-                        using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out _documentsContext))
-                        using (_database.ConfigurationStorage.ContextPool.AllocateOperationContext(out _configurationContext))
-                        using (var writer = new BlittableJsonTextWriter(_documentsContext, _stream))
+                        DocumentsOperationContext documentsContext;
+                        TransactionOperationContext configurationContext;
+                        using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
+                        using (_database.ConfigurationStorage.ContextPool.AllocateOperationContext(out configurationContext))
+                        using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
                         {
                             try
                             {
-                                var interruptibleRead = new InterruptibleRead(_replicationFromAnotherSource,
-                                    _documentsContext);
+                                var interruptibleRead = new InterruptibleRead(_replicationFromAnotherSource, documentsContext);
                                 using (var msg = interruptibleRead.ParseToMemory(
                                     _connectionOptions.Stream,
                                     "IncomingReplication/read-message",
@@ -129,13 +128,13 @@ namespace Raven.Server.Documents.Replication
                                 {
                                     if (msg.Document != null)
                                     {
-                                        HandleSingleReplicationBatch(_documentsContext, _configurationContext, msg.Document, writer);
+                                        HandleSingleReplicationBatch(documentsContext, configurationContext, msg.Document, writer);
                                     }
                                     else // notify peer about new change vector
                                     {
                                         SendHeartbeatStatusToSource(
-                                            _documentsContext,
-                                            _configurationContext, 
+                                            documentsContext,
+                                            configurationContext, 
                                             writer, 
                                             _lastDocumentEtag,
                                             _lastIndexOrTransformerEtag, 

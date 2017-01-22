@@ -17,6 +17,7 @@ namespace Raven.Server.Documents.Replication
         {
             DocumentsOperationContext context;
             using (tcp)
+            using(tcp.ConnectionProcessingInProgress())
             using (tcp.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
                 TopologyDiscoveryRequest header;
@@ -24,7 +25,7 @@ namespace Raven.Server.Documents.Replication
                 using (var headerJson = context.ParseToMemory(
                     tcp.Stream,
                     "ReplicationTopologDiscovery/read-discovery-header",
-                    BlittableJsonDocumentBuilder.UsageMode.None, 
+                    BlittableJsonDocumentBuilder.UsageMode.None,
                     tcp.PinnedBuffer))
                 {
                     headerJson.BlittableValidation();
