@@ -1,6 +1,7 @@
 /// <reference path="../../../typings/tsd.d.ts" />
 
 import database = require("models/resources/database");
+import storageKeyProvider = require("common/storage/storageKeyProvider");
 
 class recentQueriesStorage {
     static getRecentQueries(db: database): storedQueryDto[] {
@@ -53,7 +54,7 @@ class recentQueriesStorage {
     }
 
     private static getLocalStorageKey(dbName: string) {
-        return "ravenDB-recentQueries." + dbName;
+        return storageKeyProvider.storageKeyFor("recentQueries." + dbName);
     }
 
     private static getRecentQueriesFromLocalStorage(localStorageName: string): storedQueryDto[]  {

@@ -193,7 +193,7 @@ class exportDatabase extends viewModelBase {
 
                 notificationCenter.instance.monitorOperation(db, operationId)
                     .fail((exception: Raven.Client.Data.OperationExceptionResult) => {
-                        messagePublisher.reportError("Could not export database: " + exception.Message, exception.StackTrace, null, false);
+                        messagePublisher.reportError("Could not export database: " + exception.Message, exception.Error, null, false);
                     }).always(() => exportDatabase.isExporting(false));
 
             });

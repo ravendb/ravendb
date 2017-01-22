@@ -16,11 +16,10 @@ describe(viewUnderTest, () => {
 
 });
 
-function getIndexTermsCommand(): Raven.Server.Documents.Queries.TermsQueryResult {
+function getIndexTermsCommand(): Raven.Client.Data.Queries.TermsQueryResult {
     return {
         "IndexName": "Orders/ByCompany",
         "ResultEtag": 5818580220936548876,
-        "Terms": ["100", "101", "102"],
-        NotModified: null
+        "Terms": ["100", "101", "102"]
     }
 }
