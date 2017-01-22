@@ -231,7 +231,7 @@ namespace Raven.Server.Documents.SqlReplication
 
                     Statistics.ScriptSuccess();
                 }
-                catch (JavaScriptException e)
+                catch (JavaScriptParseException e)
                 {
                     Statistics.MarkScriptAsInvalid(_database, Configuration.Script);
 
