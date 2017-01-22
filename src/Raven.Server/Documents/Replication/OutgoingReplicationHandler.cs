@@ -21,7 +21,6 @@ using Raven.Client.Replication.Messages;
 using Raven.Json.Linq;
 using Raven.NewClient.Client.Exceptions.Database;
 using Raven.Server.Alerts;
-using Raven.Server.Exceptions;
 using Raven.Server.Extensions;
 using Sparrow;
 
@@ -52,15 +51,18 @@ namespace Raven.Server.Documents.Replication
 
         private TcpClient _tcpClient;
         private BlittableJsonTextWriter _writer;
-        private JsonOperationContext.MultiDocumentParser _parser;
         internal DocumentsOperationContext _documentsContext;
         internal TransactionOperationContext _configurationContext;
+
+        private readonly AsyncManualResetEvent _connectionDisposed = new AsyncManualResetEvent();
+        private JsonOperationContext.ManagedPinnedBuffer _buffer;
 
         internal CancellationToken CancellationToken => _cts.Token;
 
         internal string DestinationDbId;
 
         public long LastHeartbeatTicks;
+        private NetworkStream _stream;
 
         public event Action<OutgoingReplicationHandler, Exception> Failed;
 
@@ -125,13 +127,13 @@ namespace Raven.Server.Documents.Replication
 
                     using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out _documentsContext))
                     using (_database.ConfigurationStorage.ContextPool.AllocateOperationContext(out _configurationContext))
-                    using (var stream = _tcpClient.GetStream())
+                    using (_stream = _tcpClient.GetStream())
+                    using(_buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance())
                     {
-                        var documentSender = new ReplicationDocumentSender(stream, this, _log);
-                        var indexAndTransformerSender = new ReplicationIndexTransformerSender(stream, this, _log);
+                        var documentSender = new ReplicationDocumentSender(_stream, this, _log);
+                        var indexAndTransformerSender = new ReplicationIndexTransformerSender(_stream, this, _log);
 
-                        using (_writer = new BlittableJsonTextWriter(_documentsContext, stream))
-                        using (_parser = _documentsContext.ParseMultiFrom(stream))
+                        using (_writer = new BlittableJsonTextWriter(_documentsContext, _stream))
                         {
                             //send initial connection information
                             _documentsContext.Write(_writer, new DynamicJsonValue
@@ -160,11 +162,11 @@ namespace Raven.Server.Documents.Replication
                                     var response = HandleServerResponse();
                                     if (response.Item1 == ReplicationMessageReply.ReplyType.Error)
                                     {
-                                        if(response.Item2.Exception.Contains("DatabaseDoesNotExistException"))
+                                        if (response.Item2.Exception.Contains("DatabaseDoesNotExistException"))
                                             throw new DatabaseDoesNotExistException(response.Item2.Message, new InvalidOperationException(response.Item2.Exception));
 
                                         throw new InvalidOperationException(response.Item2.Exception);
-                                    }                                    
+                                    }
                                 }
                             }
                             catch (DatabaseDoesNotExistException e)
@@ -173,7 +175,7 @@ namespace Raven.Server.Documents.Replication
                                           "In order for the replication to work, a database with the same name needs to be created at the destination";
                                 if (_log.IsInfoEnabled)
                                 {
-                                    _log.Info(msg,e);
+                                    _log.Info(msg, e);
                                 }
 
                                 using (var txw = _configurationContext.OpenWriteTransaction())
@@ -196,7 +198,7 @@ namespace Raven.Server.Documents.Replication
                                 var msg =
                                     $"Failed to parse initial server response. This is definitely not supposed to happen. Exception thrown: {e}";
                                 if (_log.IsInfoEnabled)
-                                    _log.Info(msg,e);
+                                    _log.Info(msg, e);
 
                                 using (var txw = _configurationContext.OpenWriteTransaction())
                                 {
@@ -216,9 +218,7 @@ namespace Raven.Server.Documents.Replication
 
                             while (_cts.IsCancellationRequested == false)
                             {
-                                _parser.Reset();
-                                _documentsContext.ResetAndRenew();                                
-                                _parser.Renew();
+                                _documentsContext.ResetAndRenew();
                                 long currentEtag;
 
                                 Debug.Assert(_database.IndexMetadataPersistence.IsInitialized);
@@ -226,7 +226,7 @@ namespace Raven.Server.Documents.Replication
                                 using (_configurationContext.OpenReadTransaction())
                                     currentEtag = _database.IndexMetadataPersistence.ReadLastEtag(_configurationContext.Transaction.InnerTransaction);
 
-                               
+
                                 if (_destination.SkipIndexReplication == false &&
                                     currentEtag != indexAndTransformerSender.LastEtag)
                                 {
@@ -242,14 +242,12 @@ namespace Raven.Server.Documents.Replication
                                         break;
                                     }
                                 }
-               
+
                                 //if this returns false, this means either timeout or canceled token is activated                    
                                 while (WaitForChanges(_minimalHeartbeatInterval, _cts.Token) == false)
                                 {
-                                    _parser.Reset();
                                     _configurationContext.ResetAndRenew();
                                     _documentsContext.ResetAndRenew();
-                                    _parser.Renew();
                                     using (_documentsContext.OpenReadTransaction())
                                     using (_configurationContext.OpenReadTransaction())
                                     {
@@ -291,22 +289,27 @@ namespace Raven.Server.Documents.Replication
 
         private bool WaitForChanges(int timeout, CancellationToken token)
         {
+            var interruptableRead = new InterruptibleRead(_waitForChanges, _documentsContext);
             while (true)
             {
-                int state;
-                using (var interruptibleParseToMemory = _parser.InterruptibleParseToMemory("replication notify message", _waitForChanges, timeout, token, out state))
+                using (var result = interruptableRead.ParseToMemory(
+                    _stream, 
+                    "replication notify message", 
+                    timeout, 
+                    _buffer, 
+                    token))
                 {
-                    if (interruptibleParseToMemory != null)
+                    if (result.Document != null)
                     {
                         using (_documentsContext.OpenReadTransaction())
                         using (_configurationContext.OpenReadTransaction())
                         {
-                            HandleServerResponse(interruptibleParseToMemory, allowNotify: true);
+                            HandleServerResponse(result.Document, allowNotify: true);
                         }
                     }
                     else
                     {
-                        return state != -1; // -1 is timeout
+                        return result.Timeout == false;
                     }
                 }
             }
@@ -408,17 +411,24 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private readonly AsyncManualResetEvent _connectionDisposed = new AsyncManualResetEvent();
+
         internal Tuple<ReplicationMessageReply.ReplyType, ReplicationMessageReply> HandleServerResponse()
         {
+            var interruptableRead = new InterruptibleRead(_connectionDisposed, _documentsContext);
+
             while (true)
             {
-                using (var replicationBatchReplyMessage = _parser.InterruptibleParseToMemory("replication acknowledge message", _connectionDisposed))
+                using (var replicationBatchReplyMessage = interruptableRead.ParseToMemory(
+                    _stream,
+                    "replication acknowledge message", 
+                    Timeout.Infinite,
+                    _buffer, 
+                    CancellationToken))
                 {
-                    if (replicationBatchReplyMessage == null)
+                    if (replicationBatchReplyMessage.Interrupted)
                         ThrowConnectionClosed();
 
-                    var replicationBatchReply = HandleServerResponse(replicationBatchReplyMessage, allowNotify: false);
+                    var replicationBatchReply = HandleServerResponse(replicationBatchReplyMessage.Document, allowNotify: false);
                     if(replicationBatchReply == null)
                         continue;
 
