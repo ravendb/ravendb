@@ -25,10 +25,10 @@ class document implements documentBase {
     }
 
     getDocumentPropertyNames(): Array<string> {
-        var propertyNames: Array<string> = [];
-        for (var property in this) {
-            var isMeta = property === "__metadata" || property === "__moduleId__";
-            var isFunction = typeof (<any>this)[property] === "function";
+        const propertyNames: Array<string> = [];
+        for (let property in this) {
+            const isMeta = property === "__metadata" || property === "__moduleId__";
+            const isFunction = typeof (<any>this)[property] === "function";
             if (!isMeta && !isFunction) {
                 propertyNames.push(property);
             }

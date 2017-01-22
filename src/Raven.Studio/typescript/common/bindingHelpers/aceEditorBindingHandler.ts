@@ -45,7 +45,7 @@ class aceEditorBindingHandler {
             composition.addBindingHandler("aceEditor");
 
 
-            var Editor = ace.require("ace/editor").Editor;
+            const Editor = ace.require("ace/editor").Editor;
             ace.require("ace/config").defineOptions(Editor.prototype, "editor", {
                 editorType: {
                     set: function (val :any) {
@@ -73,9 +73,7 @@ class aceEditorBindingHandler {
                         $(".fullScreenModeLabel").text(aceEditorBindingHandler.goToFullScreenText);
                         $(".fullScreenModeLabel").show();
                         editor.setOption("maxLines", 10 * 1000 );
-
                     }
-
                 }
             });
 
@@ -92,7 +90,6 @@ class aceEditorBindingHandler {
                     editor.resize();
                 }
             });
-            /// 
         }
     }
 
@@ -105,8 +102,8 @@ class aceEditorBindingHandler {
     static customCompleters: { editorType: string; completerHostObject: any; completer: (editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) => void }[] = [];
 
     static autoCompleteHub(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void): void {
-        var curEditorType = editor.getOption("editorType");
-        var completerThreesome = aceEditorBindingHandler.customCompleters.find(x=> x.editorType === curEditorType);
+        const curEditorType = editor.getOption("editorType");
+        const completerThreesome = aceEditorBindingHandler.customCompleters.find(x=> x.editorType === curEditorType);
 
         if (!!completerThreesome) {
             completerThreesome.completer.call(completerThreesome.completerHostObject, editor, session, pos, prefix, callback);
@@ -118,6 +115,7 @@ class aceEditorBindingHandler {
     minHeight: number;
     maxHeight: number;
     allowResize: boolean;
+    previousLinesCount = -1;
 
     // Called by Knockout a single time when the binding handler is setup.
     init(element: HTMLElement,
@@ -142,24 +140,23 @@ class aceEditorBindingHandler {
         allBindings: any,
         viewModel: any,
         bindingContext: any) {
-        var self = this;
-        var bindingValues = valueAccessor();
-        var theme = bindingValues.theme || this.defaults.theme;
-        var fontSize = bindingValues.fontSize || this.defaults.fontSize;
-        var lang = bindingValues.lang || this.defaults.lang;
-        var readOnly = bindingValues.readOnly || this.defaults.readOnly;
-        var typeName = bindingValues.typeName;
-        var code = typeof bindingValues.code === "function" ? bindingValues.code : bindingContext.$rawData;
-        var langTools: any = null;
-        var completerHostObject = bindingValues.completerHostObject;
+        const bindingValues = valueAccessor();
+        const theme = bindingValues.theme || this.defaults.theme;
+        const fontSize = bindingValues.fontSize || this.defaults.fontSize;
+        const lang = bindingValues.lang || this.defaults.lang;
+        const readOnly = bindingValues.readOnly || this.defaults.readOnly;
+        const typeName = bindingValues.typeName;
+        const code = typeof bindingValues.code === "function" ? bindingValues.code : bindingContext.$rawData;
+        let langTools: any = null;
+        const completerHostObject = bindingValues.completerHostObject;
         this.minHeight = bindingValues.minHeight ? bindingValues.minHeight : 140;
         this.maxHeight = bindingValues.maxHeight ? bindingValues.maxHeight : 400;
         this.allowResize = bindingValues.allowResize ? bindingValues.allowResize : false;
-        var selectAll = bindingValues.selectAll || this.defaults.selectAll;
-        var bubbleEscKey = bindingValues.bubbleEscKey || this.defaults.bubbleEscKey;
-        var bubbleEnterKey = bindingValues.bubbleEnterKey || this.defaults.bubbleEnterKey;
-        var getFocus = bindingValues.getFocus;
-        var hasFocus = bindingValues.hasFocus;
+        const selectAll = bindingValues.selectAll || this.defaults.selectAll;
+        const bubbleEscKey = bindingValues.bubbleEscKey || this.defaults.bubbleEscKey;
+        const bubbleEnterKey = bindingValues.bubbleEnterKey || this.defaults.bubbleEnterKey;
+        const getFocus = bindingValues.getFocus;
+        const hasFocus = bindingValues.hasFocus;
 
         if (!ko.isObservable(code)) {
             throw new Error("code should be an observable");
@@ -169,7 +166,7 @@ class aceEditorBindingHandler {
             langTools = ace.require("ace/ext/language_tools");
         }
 
-        var aceEditor: AceAjax.Editor = ace.edit(element);
+        const aceEditor: AceAjax.Editor = ace.edit(element);
 
         aceEditor.setOption("enableBasicAutocompletion", true);
         aceEditor.setOption("newLineMode", "windows");
@@ -220,7 +217,7 @@ class aceEditorBindingHandler {
                     aceEditorBindingHandler.customCompleters.push({ editorType: typeName, completerHostObject: completerHostObject, completer: bindingValues.completer });
                 }
                 if (!!(<any>aceEditor).completers) {
-                    var completersList: { getComplitions: any; moduleId?: string }[] = (<any>aceEditor).completers;
+                    let completersList: { getComplitions: any; moduleId?: string }[] = (<any>aceEditor).completers;
                     if (!completersList.find(x=> x.moduleId === "aceEditoBindingHandler")) {
                         langTools.addCompleter({ moduleId: "aceEditoBindingHandler", getCompletions: aceEditorBindingHandler.autoCompleteHub });
                     }
@@ -232,10 +229,10 @@ class aceEditorBindingHandler {
         }
 
         // In the event of keyup or lose focus, push the value into the observable.
-        var aceFocusElement = ".ace_text-input";
+        const aceFocusElement = ".ace_text-input";
         $(element).on('keyup', aceFocusElement, () => {
             code(aceEditor.getSession().getValue());
-            self.alterHeight(element, aceEditor);
+            this.alterHeight(element, aceEditor);
         });
         $(element).on('focus', aceFocusElement, () => aceEditorBindingHandler.currentEditor = aceEditor);
 
@@ -283,13 +280,11 @@ class aceEditorBindingHandler {
         }
     }
 
-
-    // Called by Knockout each time the dependent observable value changes.
     update(element: HTMLElement, valueAccessor: () => { code: (KnockoutObservable<string> | string); theme?: string; fontSize?: string; lang?: string; readOnly?: boolean }, allBindings: any, viewModel: any, bindingContext: any) {
-        var bindingValues = valueAccessor();
-        var code = ko.unwrap(bindingValues.code);
-        var aceEditor: AceAjax.Editor = ko.utils.domData.get(element, "aceEditor");
-        var editorCode = aceEditor.getSession().getValue();
+        const bindingValues = valueAccessor();
+        const code = ko.unwrap(bindingValues.code);
+        const aceEditor: AceAjax.Editor = ko.utils.domData.get(element, "aceEditor");
+        const editorCode = aceEditor.getSession().getValue();
         if (code !== editorCode) {
             aceEditor.getSession().setValue(code||"");
         }
@@ -299,7 +294,7 @@ class aceEditorBindingHandler {
         }
     }
 
-    previousLinesCount = -1;
+    
 
     alterHeight(element: HTMLElement, aceEditor: AceAjax.Editor) {
         if (!this.allowResize) {
@@ -308,7 +303,7 @@ class aceEditorBindingHandler {
         // update only if line count changes
         var currentLinesCount = aceEditor.getSession().getScreenLength();
         if (this.previousLinesCount != currentLinesCount) {
-            var newHeight = currentLinesCount
+            let newHeight = currentLinesCount
                 * aceEditor.renderer.lineHeight
                 + (<any>aceEditor.renderer).scrollBar.getWidth();
                 + 10; // few pixels extra padding

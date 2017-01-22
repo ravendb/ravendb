@@ -48,6 +48,7 @@ class editIndex extends viewModelBase {
     originalIndexName: string;
     isSaveEnabled: KnockoutComputed<boolean>;
     saveInProgress = ko.observable<boolean>(false);
+    indexAutoCompleter: indexAceAutoCompleteProvider;
 
     fieldNames = ko.observableArray<string>([]);
     defaultIndexPath = ko.observable<string>();
@@ -63,7 +64,6 @@ class editIndex extends viewModelBase {
     termsUrl = ko.observable<string>();
 
     /* TODO
-    indexAutoCompleter: indexAceAutoCompleteProvider;
     canSaveSideBySideIndex: KnockoutComputed<boolean>;
      mergeSuggestion = ko.observable<indexMergeSuggestion>(null);
     */
@@ -163,7 +163,8 @@ class editIndex extends viewModelBase {
         this.updateHelpLink('CQ5AYO');
 
         this.initializeDirtyFlag();
-        //TODO: this.indexAutoCompleter = new indexAceAutoCompleteProvider(this.activeDatabase(), this.editedIndex);
+        this.indexAutoCompleter = new indexAceAutoCompleteProvider(this.activeDatabase(), this.editedIndex);
+        
         //TODO: scripted index this.checkIfScriptedIndexBundleIsActive();
     }
 
@@ -461,14 +462,15 @@ class editIndex extends viewModelBase {
 
     deleteIndex() {
         eventsCollector.default.reportEvent("index", "delete");
-        var indexName = this.originalIndexName;
+        const indexName = this.originalIndexName;
         if (indexName) {
-            var db = this.activeDatabase();
-            var deleteViewModel = new deleteIndexesConfirm([indexName], db);
-            deleteViewModel.deleteTask.done(() => {
-                //prevent asking for unsaved changes
-                this.dirtyFlag().reset(); // Resync Changes
-                router.navigate(appUrl.forIndexes(db));
+            const db = this.activeDatabase();
+            const deleteViewModel = new deleteIndexesConfirm([indexName], db);
+            deleteViewModel.deleteTask.done((can: boolean) => {
+                if (can) {
+                    this.dirtyFlag().reset(); // Resync Changes
+                    router.navigate(appUrl.forIndexes(db));
+                }
             });
 
             dialog.show(deleteViewModel);
