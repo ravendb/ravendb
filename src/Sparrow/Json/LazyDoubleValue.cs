@@ -38,6 +38,13 @@ namespace Sparrow.Json
             return val;
         }
 
+        public static implicit operator string(LazyDoubleValue self)
+        {
+            return self.ToString();
+            
+        }
+
+
         public static implicit operator decimal(LazyDoubleValue self)
         {
             if (self._decimalVal != null)
@@ -137,6 +144,12 @@ namespace Sparrow.Json
         public override string ToString()
         {
             return this.Inner.ToString();
+        }
+
+        public string ToString(string format)
+        {
+            var @double = (double) this;
+            return @double.ToString(format);
         }
     }
 }

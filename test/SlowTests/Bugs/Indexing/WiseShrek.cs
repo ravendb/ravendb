@@ -1,0 +1,123 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using FastTests;
+using Raven.Abstractions.Indexing;
+using Raven.Client.Indexing;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
+using Xunit;
+using System.Linq;
+using Lucene.Net.Analysis;
+using Lucene.Net.Analysis.Standard;
+using Lucene.Net.Analysis.Tokenattributes;
+using Lucene.Net.Index;
+using Lucene.Net.Store;
+using Raven.Abstractions.Data;
+using Raven.Client.Indexes;
+using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Persistence.Lucene;
+
+namespace SlowTests.Bugs.Indexing
+{
+    public class WiseShrek : RavenTestBase
+    {
+
+        private class Soft
+        {
+            public int f_platform { get; set; }
+            public string f_name { get; set; }
+            public string f_alias { get; set; }
+            public string f_License { get; set; }
+            public int f_totaldownload { get; set; }
+        }
+
+        [Fact (Skip = "Missing features ")]
+        public void Isolated()
+        {
+            //var ramDirectory = new RAMDirectory();
+            //using (new IndexWriter(ramDirectory, new StandardAnalyzer(Version.LUCENE_29), IndexWriter.MaxFieldLength.UNLIMITED)) { }
+            //var inMemoryRavenConfiguration = new InMemoryRavenConfiguration();
+            //inMemoryRavenConfiguration.Initialize();
+
+            //var fieldOptions1 = new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed };
+            //var fieldOptions2 = new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed, Sort = SortOptions.NumericLong };
+            //var fieldOptions3 = new IndexFieldOptions { Indexing = FieldIndexing.Analyzed, Analyzer = typeof(KeywordAnalyzer).AssemblyQualifiedName };
+
+            //var simpleIndex = new SimpleIndex(ramDirectory, 0, new IndexDefinition
+            //{
+
+            //    Maps = { @"from s in docs.Softs select new { s.f_platform, s.f_name, s.f_alias,s.f_License,s.f_totaldownload}" },
+
+            //    Fields =
+            //        {
+            //            { "f_platform" , fieldOptions1 },
+            //            {"f_License" , fieldOptions2 },
+            //            {"f_totaldownload" , fieldOptions2 },
+            //            {"f_name" , fieldOptions3 },
+            //            {"f_alias" , fieldOptions3 }
+            //        }
+
+            //}, new MapOnlyView(), new WorkContext()
+            //{
+            //    Configuration = inMemoryRavenConfiguration
+            //});
+
+            //var perFieldAnalyzerWrapper = RavenPerFieldAnalyzerWrapper.CreateAnalyzer(new LowerCaseKeywordAnalyzer(), new List<Action>());
+
+            //var tokenStream = perFieldAnalyzerWrapper.TokenStream("f_name", new StringReader("hello Shrek"));
+            //while (tokenStream.IncrementToken())
+            //{
+            //    var attribute = (TermAttribute)tokenStream.GetAttribute<ITermAttribute>();
+            //    Assert.Equal("hello Shrek", attribute.Term);
+            //}
+        }
+
+        [Fact]
+        public void UsingKeywordAnalyzing()
+        {
+            using (var store = GetDocumentStore())
+            using (var session = store.OpenSession())
+            {
+                var fieldOptions1 = new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed };
+                var fieldOptions2 = new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed, Sort = SortOptions.NumericLong};
+                var fieldOptions3 = new IndexFieldOptions { Indexing = FieldIndexing.Analyzed, Analyzer = typeof(KeywordAnalyzer).AssemblyQualifiedName };
+
+                store.DatabaseCommands.PutIndex("test", new IndexDefinition
+                {
+                    Maps = { @"from s in docs.Softs select new { s.f_platform, s.f_name, s.f_alias,s.f_License,s.f_totaldownload}" },
+
+                    Fields =
+                    {
+                        { "f_platform" , fieldOptions1 },
+                        {"f_License" , fieldOptions2 },
+                        {"f_totaldownload" , fieldOptions2 },
+                        {"f_name" , fieldOptions3 }, 
+                        {"f_alias" , fieldOptions3 }
+                    }
+
+                }, true);
+
+                Soft entity = new Soft
+                {
+                    f_platform = 1,
+                    f_name = "hello Shrek",
+                    f_alias = "world",
+                    f_License = "agpl",
+                    f_totaldownload = -1
+                };
+                session.Store(entity);
+                session.Advanced.GetMetadataFor(entity)["Raven-Entity-Name"] = "Softs";
+                session.SaveChanges();
+
+                List<Soft> tmps = session.Advanced.DocumentQuery<Soft>("test").
+                                        WaitForNonStaleResults(TimeSpan.FromHours(1))
+                                        .WhereStartsWith("f_name", "s")
+                                        .OrderBy(new[] { "-f_License", "f_totaldownload" })
+                                        .ToList();
+
+
+                Assert.Empty(tmps);
+            }
+        }
+    }
+}
