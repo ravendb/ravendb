@@ -384,8 +384,6 @@ class editIndex extends viewModelBase {
 
         this.saveInProgress(true);
 
-        
-
         //if index name has changed it isn't the same index
         /*
         if (this.originalIndexName === this.indexName() && editedIndex.lockMode === "LockedIgnore") {
@@ -451,9 +449,7 @@ class editIndex extends viewModelBase {
 
     updateUrl(indexName: string, isSavingMergedIndex: boolean = false) {
         const url = appUrl.forEditIndex(indexName, this.activeDatabase());
-        if (this.originalIndexName !== indexName) {
-            this.navigate(url);
-        }
+        this.navigate(url);
         /* TODO:merged index
         else if (isSavingMergedIndex) {
             super.updateUrl(url);
@@ -475,6 +471,12 @@ class editIndex extends viewModelBase {
 
             dialog.show(deleteViewModel);
         }
+    }
+
+    cloneIndex() {
+        this.isEditingExistingIndex(false);
+        this.editedIndex().name(null);
+        this.editedIndex().validationGroup.errors.showAllMessages(false);
     }
 
     /* TODO
