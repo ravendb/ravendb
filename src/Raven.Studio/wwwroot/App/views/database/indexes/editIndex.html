@@ -14,7 +14,7 @@
             </div>
 
             <button class="btn btn-primary" data-bind="click: save, enable: isSaveEnabled, css: { 'btn-spinner': saveInProgress }"><i class="icon-save"></i><span>Save</span></button>
-            <button class="btn btn-default btn-prerelease" disabled="disabled"><i class="icon-clone"></i><span>Clone</span></button>
+            <button class="btn btn-default" data-bind="click: cloneIndex, visible: isEditingExistingIndex"><i class="icon-clone"></i><span>Clone</span></button>
             <button class="btn btn-default btn-prerelease" disabled="disabled"><i class="icon-rocket"></i><span>Try</span></button>
             
             <button class="btn btn-danger" data-bind="visible: isEditingExistingIndex, click: deleteIndex"><i class="icon-trash"></i> <span>Delete</span></button>

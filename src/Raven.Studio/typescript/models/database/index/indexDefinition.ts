@@ -46,7 +46,7 @@ class indexDefinition {
 
     hasReduce = ko.observable<boolean>(false);
 
-    validationGroup: KnockoutObservable<any>;
+    validationGroup: KnockoutValidationGroup;
 
     constructor(dto: Raven.Client.Indexing.IndexDefinition) {
         this.name(dto.Name);
