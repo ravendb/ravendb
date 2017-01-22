@@ -74,7 +74,13 @@ namespace Raven.Server.Documents.Replication
         public void AcceptIncomingConnection(TcpConnectionOptions tcpConnectionOptions)
         {
             ReplicationLatestEtagRequest getLatestEtagMessage;
-            using (var readerObject = tcpConnectionOptions.MultiDocumentParser.ParseToMemory("IncomingReplication/get-last-etag-message read"))
+            JsonOperationContext context;
+            using(tcpConnectionOptions.ContextPool.AllocateOperationContext(out context))
+            using (var readerObject = context.ParseToMemory(
+                tcpConnectionOptions.Stream,
+                "IncomingReplication/get-last-etag-message read",
+                BlittableJsonDocumentBuilder.UsageMode.None, 
+                tcpConnectionOptions.PinnedBuffer))
             {
                 getLatestEtagMessage = JsonDeserializationServer.ReplicationLatestEtagRequest(readerObject);
                 if (_log.IsInfoEnabled)
@@ -100,8 +106,6 @@ namespace Raven.Server.Documents.Replication
                 try
                 {
                     tcpConnectionOptions.Dispose();
-                    tcpConnectionOptions.MultiDocumentParser?.Dispose();
-                    tcpConnectionOptions.ReturnContext?.Dispose();
                 }
                 catch
                 {
@@ -165,8 +169,6 @@ namespace Raven.Server.Documents.Replication
                 try
                 {
                     tcpConnectionOptions.Dispose();
-                    tcpConnectionOptions.MultiDocumentParser?.Dispose();
-                    tcpConnectionOptions.ReturnContext?.Dispose();
                 }
 
                 catch (Exception)
