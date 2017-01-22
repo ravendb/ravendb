@@ -7,8 +7,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
-using Raven.Client.Exceptions;
-using Raven.Json.Linq;
+using Raven.NewClient.Client.Exceptions;
 using Xunit;
 
 namespace FastTests.Server.Replication
@@ -51,22 +50,28 @@ namespace FastTests.Server.Replication
             {
                 SetupReplication(source, destination);
 
-                source.DatabaseCommands.Put("docs/1", null, new RavenJObject() { { "Key", "Value" } }, new RavenJObject());
-
-                var document = WaitForDocument(destination, "docs/1");
-
-                Assert.NotNull(document);
-
-                source.DatabaseCommands.Delete("docs/1", null);
-
-                for (int i = 0; i < 10; i++)
+                using (var sourceCommands = source.Commands())
                 {
-                    if (destination.DatabaseCommands.Get("docs/1") == null)
-                        break;
-                    Thread.Sleep(100);
+                    sourceCommands.Put("docs/1", null, new { Key = "Value" }, null);
+
+                    var document = WaitForDocument(destination, "docs/1");
+
+                    Assert.NotNull(document);
+
+                    sourceCommands.Delete("docs/1", null);
                 }
 
-                Assert.Null(destination.DatabaseCommands.Get("docs/1"));
+                using (var destinationCommands = destination.Commands())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        if (destinationCommands.Get("docs/1") == null)
+                            break;
+                        Thread.Sleep(100);
+                    }
+
+                    Assert.Null(destinationCommands.Get("docs/1"));
+                }
             }
         }
 
@@ -76,26 +81,29 @@ namespace FastTests.Server.Replication
             using (var source = GetDocumentStore())
             using (var destination = GetDocumentStore())
             {
-                source.DatabaseCommands.Put("docs/1", null, new RavenJObject() { { "Key", "Value" } }, new RavenJObject());
-                destination.DatabaseCommands.Put("docs/1", null, new RavenJObject() { { "Key", "Value2" } }, new RavenJObject());
+                using (var sourceCommands = source.Commands())
+                using (var destinationCommands = destination.Commands())
+                {
+                    sourceCommands.Put("docs/1", null, new { Key = "Value" }, null);
+                    destinationCommands.Put("docs/1", null, new { Key = "Value2" }, null);
 
-                SetupReplication(source, destination);
+                    SetupReplication(source, destination);
 
-                source.DatabaseCommands.Put("marker", null, new RavenJObject() { { "Key", "Value" } }, new RavenJObject());
+                    sourceCommands.Put("marker", null, new { Key = "Value" }, null);
 
-                var marker = WaitForDocument(destination, "marker");
+                    var marker = WaitForDocument(destination, "marker");
 
-                Assert.NotNull(marker);
+                    Assert.NotNull(marker);
 
-                var conflicts = GetConflicts(destination, "docs/1");
-                Assert.Equal(2,conflicts["docs/1"].Count);
-                Assert.NotEqual(conflicts["docs/1"][0][0].DbId, conflicts["docs/1"][1][0].DbId);
-                Assert.Equal(1,conflicts["docs/1"][0][0].Etag);
-                Assert.Equal(1, conflicts["docs/1"][1][0].Etag);
+                    var conflicts = GetConflicts(destination, "docs/1");
+                    Assert.Equal(2, conflicts["docs/1"].Count);
+                    Assert.NotEqual(conflicts["docs/1"][0][0].DbId, conflicts["docs/1"][1][0].DbId);
+                    Assert.Equal(1, conflicts["docs/1"][0][0].Etag);
+                    Assert.Equal(1, conflicts["docs/1"][1][0].Etag);
 
-                var conflictException = Assert.Throws<ConflictException>(() => destination.DatabaseCommands.Get("docs/1"));
-                Assert.Equal("Conflict detected on docs/1, conflict must be resolved before the document will be accessible", conflictException.Message);
-
+                    var conflictException = Assert.Throws<ConflictException>(() => destinationCommands.Get("docs/1"));
+                    Assert.Equal("Conflict detected on docs/1, conflict must be resolved before the document will be accessible", conflictException.Message);
+                }
                 // resolve by using first
                 //TODO : when client API is finished, refactor this so the test works as designed
                 //var resolution = destination.DatabaseCommands.Get(conflictException.ConflictedVersionIds[0]);

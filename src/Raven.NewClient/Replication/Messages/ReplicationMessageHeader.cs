@@ -1,4 +1,4 @@
-﻿namespace Raven.NewClient.Replication.Messages
+﻿namespace Raven.NewClient.Client.Replication.Messages
 {
     public class ReplicationMessageHeader
     {

@@ -1,12 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
-using System.Net;
 using System.Threading;
 using FastTests.Server.Basic.Entities;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Replication;
-using Raven.Client.Document;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Exceptions;
+using Raven.NewClient.Client.Replication;
 using Xunit;
 
 namespace FastTests.Server.Replication
@@ -59,9 +58,9 @@ namespace FastTests.Server.Replication
                         var item = session.Load<User>("users/1");
                         Assert.Equal(item.Name, "Karmeli123");
                     }
-                    catch (ErrorResponseException e)
+                    catch (ConflictException)
                     {
-                        Assert.Equal(HttpStatusCode.Conflict, e.StatusCode);
+                        //Assert.Equal(HttpStatusCode.Conflict, e.StatusCode);
                         //var list = new List<JsonDocument>();
                         //for (int i = 0; i < e.ConflictedVersionIds.Length; i++)
                         //{
@@ -177,9 +176,8 @@ return out;
                         Assert.Equal("Karmel", item.Name);
                         Assert.Equal(123, item.Age);
                     }
-                    catch (ErrorResponseException e)
+                    catch (ConflictException)
                     {
-                        Assert.Equal(HttpStatusCode.Conflict, e.StatusCode);
                     }
                 }
             }
@@ -216,7 +214,7 @@ return out;
                     session.SaveChanges();
                 }
 
-                var conflicts =  WaitUntilHasConflict(slave, "users/1");
+                var conflicts = WaitUntilHasConflict(slave, "users/1");
                 Assert.Equal(2, conflicts["users/1"].Count);
             }
         }

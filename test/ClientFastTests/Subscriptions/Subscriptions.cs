@@ -5,7 +5,7 @@ using Xunit;
 using System;
 using System.Threading;
 using FastTests.Subscriptions;
-using Raven.NewClient.Abstractions.Exceptions.Subscriptions;
+using Raven.NewClient.Client.Exceptions.Subscriptions;
 using Sparrow;
 
 namespace NewClientTests.NewClient.Subscriptions

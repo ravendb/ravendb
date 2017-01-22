@@ -13,11 +13,11 @@ using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Connection;
 using Raven.NewClient.Client.Connection;
 using Sparrow.Json;
-using Raven.NewClient.Abstractions.Exceptions;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Exceptions.Security;
+using Raven.NewClient.Client.Exceptions.Compilation;
+using Raven.NewClient.Client.Exceptions.Security;
 using Sparrow.Logging;
 
 namespace Raven.NewClient.Client.Http
@@ -270,23 +270,24 @@ namespace Raven.NewClient.Client.Http
                     throw AuthorizationException.Forbidden(url);
                 case HttpStatusCode.BadGateway:
                 case HttpStatusCode.ServiceUnavailable:
-                    await HandleServerDown(choosenNode, context, command, null);
+                    await HandleServerDown(choosenNode, context, command, null).ConfigureAwait(false);
                     break;
                 case HttpStatusCode.Conflict:
-                    // TODO: Conflict resolution
-                    // current implementation is temporary 
-                    object message;
-                    using (var stream = await response.Content.ReadAsStreamAsync())
-                    {
-                        var blittableJsonReaderObject = await context.ReadForMemoryAsync(stream, "PutResult");
-                        blittableJsonReaderObject.TryGetMember("Message", out message);
-                    }
-                    throw new ConcurrencyException(message.ToString());
+                    await HandleConflict(context, response).ConfigureAwait(false);
+                    break;
                 default:
-                    await ThrowServerError(context, response);
+                    await ExceptionDispatcher.Throw(context, response).ConfigureAwait(false);
                     break;
             }
             return false;
+        }
+
+        private static Task HandleConflict(JsonOperationContext context, HttpResponseMessage response)
+        {
+            // TODO: Conflict resolution
+            // current implementation is temporary 
+
+            return ExceptionDispatcher.Throw(context, response);
         }
 
         public static async Task<MemoryStream> ReadAsStreamUncompressedAsync(HttpResponseMessage response)
@@ -310,49 +311,6 @@ namespace Raven.NewClient.Client.Http
                 stream.Dispose();
                 ms.Position = 0;
                 return ms;
-            }
-        }
-
-        private static async Task ThrowServerError(JsonOperationContext context, HttpResponseMessage response)
-        {
-            using (var stream = await ReadAsStreamUncompressedAsync(response))
-            {
-                BlittableJsonReaderObject blittableJsonReaderObject;
-                try
-                {
-                    blittableJsonReaderObject = await context.ReadForMemoryAsync(stream, "ErrorResponse");
-                }
-                catch (Exception e)
-                {
-                    stream.Position = 0;
-                    throw new InvalidOperationException(
-                        $"Cannot parse the {response.StatusCode} response: {new StreamReader(stream).ReadToEnd()}", e);
-                }
-                stream.Position = 0;
-                using (blittableJsonReaderObject)
-                {
-                    string error;
-                    if (blittableJsonReaderObject.TryGet("Error", out error) == false)
-                        throw new InvalidOperationException(
-                            $"Doesn't know how to handle error: {response.StatusCode}, response: {new StreamReader(stream).ReadToEnd()}");
-
-                    if (response.StatusCode == HttpStatusCode.BadRequest)
-                        throw new BadRequestException(error + ". Response: " + blittableJsonReaderObject);
-
-                    string indexDefinitionProperty;
-                    if (blittableJsonReaderObject.TryGet(nameof(IndexCompilationException.IndexDefinitionProperty),
-                        out indexDefinitionProperty))
-                    {
-                        var indexCompilationException = new IndexCompilationException(error);
-                        blittableJsonReaderObject.TryGet(nameof(IndexCompilationException.IndexDefinitionProperty),
-                            out indexCompilationException.IndexDefinitionProperty);
-                        blittableJsonReaderObject.TryGet(nameof(IndexCompilationException.ProblematicText),
-                            out indexCompilationException.ProblematicText);
-                        throw indexCompilationException;
-                    }
-
-                    throw new InternalServerErrorException(error + ". Response: " + blittableJsonReaderObject);
-                }
             }
         }
 

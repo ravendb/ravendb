@@ -4,7 +4,7 @@ using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_535 : RavenTestBase
     {

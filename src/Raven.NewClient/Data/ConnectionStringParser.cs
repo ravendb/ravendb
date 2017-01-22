@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
-using Raven.NewClient.Abstractions.Replication;
 using Newtonsoft.Json;
+using Raven.NewClient.Client.Replication;
 
 namespace Raven.NewClient.Abstractions.Data
 {

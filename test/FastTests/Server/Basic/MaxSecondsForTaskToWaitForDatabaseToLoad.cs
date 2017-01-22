@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading;
-using Raven.NewClient.Client.Http;
+using Raven.NewClient.Client.Exceptions.Database;
 using Raven.Server.Config.Settings;
 using Xunit;
 
@@ -23,7 +23,7 @@ namespace FastTests.Server.Basic
                 }
             });
 
-            Assert.Throws<InternalServerErrorException>(tryLoad);
+            Assert.Throws<DatabaseLoadTimeoutException>(tryLoad);
 
             Server.Configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(10, TimeUnit.Seconds);
 

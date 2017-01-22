@@ -14,6 +14,7 @@ using Raven.NewClient.Client.Connection;
 
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Exceptions;
+using Raven.NewClient.Client.Exceptions.Compilation;
 using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Data.Indexes;
 

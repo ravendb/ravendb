@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Raven.NewClient.Exceptions.Security
+namespace Raven.NewClient.Client.Exceptions.Security
 {
     public class AuthorizationException : SecurityException
     {

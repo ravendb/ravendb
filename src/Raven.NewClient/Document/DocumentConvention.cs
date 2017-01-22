@@ -17,8 +17,6 @@ using Microsoft.CSharp.RuntimeBinder;
 
 using Raven.NewClient.Abstractions.Cluster;
 using Raven.NewClient.Abstractions.Indexing;
-using Raven.NewClient.Abstractions.Replication;
-
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
@@ -31,6 +29,7 @@ using Raven.NewClient.Client.Helpers;
 using Raven.NewClient.Client.Util;
 
 using Raven.NewClient.Client.Json;
+using Raven.NewClient.Client.Replication;
 using Sparrow.Json;
 
 

@@ -8,6 +8,7 @@ using System;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.NewClient.Client.Exceptions.Versioning;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -22,7 +23,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var versioningStorage = Database.BundleLoader.VersioningStorage;
             if (versioningStorage == null)
-                throw new InvalidOperationException("Versioning is disabled");
+                throw new VersioningDisabledException();
 
             var key = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
 

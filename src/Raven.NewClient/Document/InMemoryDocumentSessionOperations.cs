@@ -24,6 +24,7 @@ using Raven.NewClient.Client.Util;
 using Newtonsoft.Json;
 using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Commands;
+using Raven.NewClient.Client.Exceptions.Session;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 

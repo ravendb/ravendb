@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Data;
@@ -112,7 +111,7 @@ namespace FastTests.Server.Documents.Operations
                 var result = notification.State.Result as OperationExceptionResult;
                 Assert.NotNull(result);
                 Assert.Equal("Something bad happened", result.Message);
-                Assert.IsType<string>(result.StackTrace);
+                Assert.IsType<string>(result.Error);
             }
         }
 

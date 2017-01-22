@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Raven.NewClient.Client.Exceptions;
 using Raven.NewClient.Client.Http;
 using Xunit;
 
@@ -22,7 +23,7 @@ namespace FastTests.Server.Documents
                             {"Raven-Entity-Name", "Users"}
                         });
 
-                    var exception = await Assert.ThrowsAsync<InternalServerErrorException>(async () =>
+                    var exception = await Assert.ThrowsAsync<RavenException>(async () =>
                     {
                         await commands.PutAsync("users/1", null,
                             new { Email = "support@hibernatingrhinos.com" },
@@ -32,7 +33,7 @@ namespace FastTests.Server.Documents
                             });
                     });
 
-                    Assert.Contains("InvalidOperationException: Changing 'users/1' from 'Users' to 'UserAddresses' via update is not supported." + Environment.NewLine
+                    Assert.Contains("Changing 'users/1' from 'Users' to 'UserAddresses' via update is not supported." + Environment.NewLine
                                     + "Delete the document and recreate the document users/1.", exception.Message);
                 }
             }

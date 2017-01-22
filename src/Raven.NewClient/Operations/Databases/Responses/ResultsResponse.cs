@@ -13,6 +13,10 @@ namespace Raven.NewClient.Operations.Databases.Responses
     {
     }
 
+    public class GetTransformerNamesResponse : ResultsResponse<string>
+    {
+    }
+
     public class GetIndexesResponse : ResultsResponse<IndexDefinition>
     {
     }

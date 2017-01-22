@@ -6,7 +6,6 @@
 using System;
 using System.Net;
 using System.Threading;
-using Raven.NewClient.Abstractions.Exceptions.Subscriptions;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Extensions;
 using Newtonsoft.Json;

@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Net;
 
-using Raven.NewClient.Abstractions.Exceptions;
 using Raven.NewClient.Abstractions.Json;
 using Raven.NewClient.Abstractions.Util;
 

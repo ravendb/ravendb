@@ -1,23 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Connection;
-using Raven.Client.Data;
-using Raven.Client.Document;
-using Raven.Client.Exceptions;
-using Raven.Client.Indexes;
 using Raven.Client.Replication.Messages;
-using Raven.Json.Linq;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Exceptions;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Operations.Databases.Documents;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Replication;
 using Xunit;
-using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace FastTests.Server.Replication
 {
@@ -253,14 +245,12 @@ namespace FastTests.Server.Replication
                 SetupReplication(store1, store2);
 
                 WaitUntilHasConflict(store2, "foo/bar");
+
                 // /indexes/Raven/DocumentsByEntityName
-                //TODO: this needs to be replaced by ClientAPI LoadDocument() when the ClientAPI is finished
-                var url = $"{store2.Url}/databases/{store2.DefaultDatabase}/queries/{userIndex.IndexName}";
-                using (var request = store2.JsonRequestFactory.CreateHttpJsonRequest(
-                    new CreateHttpJsonRequestParams(null, url, HttpMethod.Get, new OperationCredentials(null, CredentialCache.DefaultCredentials), new DocumentConvention())))
+                using (var session = store2.OpenSession())
                 {
-                    var ex = Assert.Throws<ErrorResponseException>(() => request.ExecuteRequest());
-                    Assert409Response(ex);
+                    var exception = Assert.Throws<DocumentConflictException>(() => session.Query<User>(userIndex.IndexName).ToList());
+                    Assert409Response(exception);
                 }
             }
         }
@@ -290,36 +280,10 @@ namespace FastTests.Server.Replication
 
                 WaitUntilHasConflict(store2, "foo/bar");
 
+                var operation = store2.Operations.Send(new DeleteByIndexOperation(userIndex.IndexName, new IndexQuery { Query = string.Empty }));
 
-                var op = store2.DatabaseCommands.DeleteByIndex(userIndex.IndexName, new IndexQuery
-                {
-                    Query = String.Empty
-                });
-
-                Assert.Throws<DocumentInConflictException>(() => op.WaitForCompletion(TimeSpan.FromSeconds(15)));
+                Assert.Throws<DocumentConflictException>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(15)));
             }
-        }
-
-        //TODO: this probably needs to be refactored when operations related functionality is finished
-        protected async Task AssertOperationFaultsAsync(DocumentStore store, int operationId)
-        {
-            var url = $"{store.Url}/databases/{store.DefaultDatabase}/operations/state?id={operationId}";
-            var sw = Stopwatch.StartNew();
-            RavenJToken response = null;
-            while (sw.ElapsedMilliseconds < 10000 || response?.Value<string>("Status") != "Faulted")
-            {
-                using (var request = store.JsonRequestFactory.CreateHttpJsonRequest(
-                    new CreateHttpJsonRequestParams(null, url, HttpMethod.Get,
-                        new OperationCredentials(null, CredentialCache.DefaultCredentials), new DocumentConvention())))
-                {
-                    response = await request.ReadResponseJsonAsync();
-                }
-            }
-            Assert.NotNull(response); //precaution
-            Assert.Equal("Faulted", response.Value<string>("Status"));
-
-            var result = response.Value<RavenJToken>("Result");
-            Assert.Contains("DocumentConflictException", result.Value<string>("StackTrace"));
         }
 
         [Fact]
@@ -347,17 +311,16 @@ namespace FastTests.Server.Replication
 
                 WaitUntilHasConflict(store2, "foo/bar");
 
-
                 // /indexes/Raven/DocumentsByEntityName
-                var op = store2.DatabaseCommands.UpdateByIndex(userIndex.IndexName, new IndexQuery
+                var operation = store2.Operations.Send(new PatchByIndexOperation(userIndex.IndexName, new IndexQuery
                 {
-                    Query = String.Empty
-                }, new Raven.Client.Data.PatchRequest
+                    Query = string.Empty
+                }, new Raven.NewClient.Client.Data.PatchRequest
                 {
-                    Script = String.Empty
-                });
+                    Script = string.Empty
+                }));
 
-                Assert.Throws<DocumentInConflictException>(() => op.WaitForCompletion(TimeSpan.FromSeconds(15)));
+                Assert.Throws<DocumentConflictException>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(15)));
             }
         }
 
@@ -383,13 +346,10 @@ namespace FastTests.Server.Replication
 
                 WaitUntilHasConflict(store2, "foo/bar");
 
-                //TODO: this needs to be replaced by ClientAPI LoadDocument() when the ClientAPI is finished
-                var url = $"{store2.Url}/databases/{store2.DefaultDatabase}/docs?id=foo/bar";
-                using (var request = store2.JsonRequestFactory.CreateHttpJsonRequest(
-                    new CreateHttpJsonRequestParams(null, url, HttpMethod.Get, new OperationCredentials(null, CredentialCache.DefaultCredentials), new DocumentConvention())))
+                using (var session = store2.OpenSession())
                 {
-                    var ex = Assert.Throws<ErrorResponseException>(() => request.ExecuteRequest());
-                    Assert409Response(ex);
+                    var exception = Assert.Throws<DocumentConflictException>(() => session.Load<User>("foo/bar"));
+                    Assert409Response(exception);
                 }
             }
         }
@@ -416,20 +376,12 @@ namespace FastTests.Server.Replication
 
                 WaitUntilHasConflict(store2, "foo/bar");
 
-                //TODO: this needs to be replaced by ClientAPI Delete() when the ClientAPI is finished
-                var url = $"{store2.Url}/databases/{store2.DefaultDatabase}/docs?id=foo/bar";
-                using (var request = store2.JsonRequestFactory.CreateHttpJsonRequest(
-                    new CreateHttpJsonRequestParams(null, url, new HttpMethod("PATCH"), new OperationCredentials(null, CredentialCache.DefaultCredentials), new DocumentConvention())))
+                var exception = Assert.Throws<DocumentConflictException>(() => store2.Operations.Send(new PatchOperation("foo/bar", null, new Raven.NewClient.Client.Data.PatchRequest
                 {
-                    var ex = Assert.Throws<AggregateException>(() => request.WriteWithObjectAsync(new
-                    {
-                        Patch = new PatchRequest
-                        {
-                            Script = "this.x = 123"
-                        }
-                    }).Wait());
-                    Assert409Response(ex.InnerException);
-                }
+                    Script = "this.x = 123"
+                })));
+
+                Assert409Response(exception);
             }
         }
 
@@ -455,26 +407,23 @@ namespace FastTests.Server.Replication
 
                 WaitUntilHasConflict(store2, "foo/bar");
 
-                //TODO: this needs to be replaced by ClientAPI Delete() when the ClientAPI is finished
-                var url = $"{store2.Url}/databases/{store2.DefaultDatabase}/docs?id=foo/bar";
-                using (var request = store2.JsonRequestFactory.CreateHttpJsonRequest(
-                    new CreateHttpJsonRequestParams(null, url, HttpMethod.Delete, new OperationCredentials(null, CredentialCache.DefaultCredentials), new DocumentConvention())))
+                using (var session = store2.OpenSession())
                 {
-                    var ex = Assert.Throws<ErrorResponseException>(() => request.ExecuteRequest());
-                    Assert409Response(ex);
+                    var exception = Assert.Throws<DocumentConflictException>(() =>
+                    {
+                        session.Delete("foo/bar");
+                        session.SaveChanges();
+                    });
+                    Assert409Response(exception);
                 }
             }
         }
 
-        private static void Assert409Response(Exception e)
+        private static void Assert409Response(DocumentConflictException e)
         {
-            var theException = e as ErrorResponseException;
-            Assert.NotNull(theException);
-            Assert.Equal(HttpStatusCode.Conflict, theException.StatusCode);
-            var responseJson = RavenJObject.Parse(theException.ResponseString);
-            Assert.Equal("foo/bar", responseJson.Value<RavenJToken>("ConflictInfo").Value<string>("DocId"));
+            Assert.NotNull(e);
+            Assert.Equal("foo/bar", e.DocId);
         }
-
 
         [Fact]
         public void Conflict_should_work_on_master_slave_slave()

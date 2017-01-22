@@ -1,12 +1,11 @@
-using System;
+using System.Linq;
 using FastTests;
 using Raven.Abstractions;
 using Raven.Client.Indexing;
 using SlowTests.Utils;
-using System.Linq;
 using Xunit;
 
-namespace SlowTests.Tests.Zhang
+namespace SlowTests.Tests.Bugs.Zhang
 {
     public class UseMaxForLongTypeInReduce : RavenTestBase
     {

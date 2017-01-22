@@ -4,13 +4,14 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Abstractions.Connection;
-using Raven.Client.Indexes;
 using Raven.Client.Replication.Messages;
+using Raven.NewClient.Client.Exceptions;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Operations.Databases.Transformers;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 
@@ -279,7 +280,7 @@ namespace FastTests.Server.Replication
                 var databaseStore =
                     await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
 
-                store.DatabaseCommands.DeleteIndex(userByName.IndexName);
+                store.Admin.Send(new DeleteIndexOperation(userByName.IndexName));
 
                 IndexesEtagsStorage.IndexEntryMetadata metadata;
                 TransactionOperationContext context;
@@ -292,7 +293,7 @@ namespace FastTests.Server.Replication
                     metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByName.IndexName);
                 Assert.Null(metadata);
 
-                store.DatabaseCommands.DeleteIndex(userByAge.IndexName);
+                store.Admin.Send(new DeleteIndexOperation(userByAge.IndexName));
                 using (var tx = context.OpenReadTransaction())
                     metadata = databaseStore.IndexMetadataPersistence.GetIndexMetadataByName(tx.InnerTransaction, context, userByAge.IndexName);
                 Assert.Null(metadata);
@@ -332,7 +333,7 @@ namespace FastTests.Server.Replication
                 var destIndexNames = new string[0];
                 var timeout = Debugger.IsAttached ? 60 * 1000000 : 3000;
                 while (sw.ElapsedMilliseconds < timeout && destIndexNames.Length != 1)
-                    destIndexNames = destination.DatabaseCommands.GetIndexNames(0, 1024);
+                    destIndexNames = destination.Admin.Send(new GetIndexNamesOperation(0, 1024));
 
                 Assert.NotNull(destIndexNames); //precaution
                 Assert.Equal(1, destIndexNames.Length);
@@ -358,7 +359,7 @@ namespace FastTests.Server.Replication
                 var destIndexNames = new string[0];
                 var timeout = Debugger.IsAttached ? 60 * 1000000 : 3000;
                 while (sw.ElapsedMilliseconds < timeout && destIndexNames.Length != 2)
-                    destIndexNames = destination.DatabaseCommands.GetIndexNames(0, 1024);
+                    destIndexNames = destination.Admin.Send(new GetIndexNamesOperation(0, 1024));
 
                 Assert.NotNull(destIndexNames); //precaution
                 Assert.Equal(2, destIndexNames.Length);
@@ -392,11 +393,11 @@ namespace FastTests.Server.Replication
                 var destTransformerNames = new string[0];
                 var timeout = Debugger.IsAttached ? 60 * 1000000 : 3000;
                 while (sw.ElapsedMilliseconds < timeout && destIndexNames.Length != 2)
-                    destIndexNames = destination.DatabaseCommands.GetIndexNames(0, 1024);
+                    destIndexNames = destination.Admin.Send(new GetIndexNamesOperation(0, 1024));
 
                 sw.Restart();
                 while (sw.ElapsedMilliseconds < timeout && destTransformerNames.Length != 2)
-                    destTransformerNames = destination.DatabaseCommands.GetTransformers(0, 1024).Select(x => x.Name).ToArray();
+                    destTransformerNames = destination.Admin.Send(new GetTransformerNamesOperation(0, 1024));
 
                 Assert.NotNull(destIndexNames); //precaution
                 Assert.Equal(2, destIndexNames.Length);
@@ -425,7 +426,7 @@ namespace FastTests.Server.Replication
                 var transformerNames = new string[0];
                 var timeout = Debugger.IsAttached ? 60 * 1000000 : 3000;
                 while (sw.ElapsedMilliseconds < timeout && transformerNames.Length != 1)
-                    transformerNames = destination.DatabaseCommands.GetTransformers(0, 1024).Select(x => x.Name).ToArray();
+                    transformerNames = destination.Admin.Send(new GetTransformerNamesOperation(0, 1024));
 
                 Assert.NotNull(transformerNames); //precaution
                 Assert.Equal(1, transformerNames.Length);
@@ -451,7 +452,7 @@ namespace FastTests.Server.Replication
                 var transformerNames = new string[0];
                 var timeout = Debugger.IsAttached ? 60 * 1000000 : 3000;
                 while (sw.ElapsedMilliseconds < timeout && transformerNames.Length != 2)
-                    transformerNames = destination.DatabaseCommands.GetTransformers(0, 1024).Select(x => x.Name).ToArray();
+                    transformerNames = destination.Admin.Send(new GetTransformerNamesOperation(0, 1024));
 
                 Assert.NotNull(transformerNames); //precaution
                 Assert.Equal(2, transformerNames.Length);
@@ -472,8 +473,8 @@ namespace FastTests.Server.Replication
                 userByAge.Execute(store);
                 userByNameAndBirthday.Execute(store);
 
-                store.DatabaseCommands.DeleteIndex(userByName.IndexName);
-                store.DatabaseCommands.DeleteIndex(userByNameAndBirthday.IndexName);
+                store.Admin.Send(new DeleteIndexOperation(userByName.IndexName));
+                store.Admin.Send(new DeleteIndexOperation(userByNameAndBirthday.IndexName));
 
                 var databaseStore =
                     await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
@@ -526,9 +527,8 @@ namespace FastTests.Server.Replication
                 //this one was created last, so it has the largest etag
                 Assert.Equal(userByNameAndBirthday.IndexName.ToLower(), metadataItems[0].Name);
 
-                store.DatabaseCommands.DeleteIndex(userByName.IndexName);
-                store.DatabaseCommands.DeleteIndex(userByNameAndBirthday.IndexName);
-
+                store.Admin.Send(new DeleteIndexOperation(userByName.IndexName));
+                store.Admin.Send(new DeleteIndexOperation(userByNameAndBirthday.IndexName));
 
                 using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
                 using (var tx = context.OpenReadTransaction())
@@ -550,11 +550,11 @@ namespace FastTests.Server.Replication
                 userByName.Execute(store);
                 userByAge.Execute(store);
 
-                store.DatabaseCommands.DeleteIndex(userByName.IndexName);
-                store.DatabaseCommands.DeleteIndex(userByAge.IndexName);
+                store.Admin.Send(new DeleteIndexOperation(userByName.IndexName));
+                store.Admin.Send(new DeleteIndexOperation(userByAge.IndexName));
+
                 var databaseStore =
                     await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.DefaultDatabase);
-
 
                 TransactionOperationContext context;
                 using (databaseStore.ConfigurationStorage.ContextPool.AllocateOperationContext(out context))
@@ -622,7 +622,7 @@ namespace FastTests.Server.Replication
                 userByNameIndex.Execute(store);
 
                 var usernameToUpperTransformer = new UsernameToUpperTransformer("FooBar");
-                Assert.Throws<ErrorResponseException>(() => usernameToUpperTransformer.Execute(store));
+                Assert.Throws<RavenException>(() => usernameToUpperTransformer.Execute(store));
             }
         }
 
@@ -635,7 +635,7 @@ namespace FastTests.Server.Replication
                 usernameToUpperTransformer.Execute(store);
 
                 var userByNameIndex = new UserByNameIndex("FooBar");
-                Assert.Throws<ErrorResponseException>(() => userByNameIndex.Execute(store));
+                Assert.Throws<RavenException>(() => userByNameIndex.Execute(store));
             }
         }
 
@@ -648,7 +648,7 @@ namespace FastTests.Server.Replication
                 var usernameToUpperTransformer = new UsernameToUpperTransformer(name);
                 usernameToUpperTransformer.Execute(store);
 
-                store.DatabaseCommands.DeleteTransformer(name);
+                store.Admin.Send(new DeleteTransformerOperation(name));
 
                 var userByNameIndex = new UserByNameIndex(name);
                 userByNameIndex.Execute(store);
@@ -683,7 +683,7 @@ namespace FastTests.Server.Replication
                 var userByNameIndex = new UserByNameIndex(name);
                 userByNameIndex.Execute(store);
 
-                store.DatabaseCommands.DeleteIndex(name);
+                store.Admin.Send(new DeleteIndexOperation(name));
 
                 var usernameToUpperTransformer = new UsernameToUpperTransformer(name);
                 usernameToUpperTransformer.Execute(store);
@@ -713,8 +713,8 @@ namespace FastTests.Server.Replication
         public async Task Manually_removed_indexes_would_remove_metadata_on_startup()
         {
             var pathPrefix = Guid.NewGuid().ToString();
-            var databasePath = String.Empty;
-            var indexesPath = String.Empty;
+            var databasePath = string.Empty;
+            var indexesPath = string.Empty;
 
             try
             {
