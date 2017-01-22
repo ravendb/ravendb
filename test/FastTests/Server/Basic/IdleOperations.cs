@@ -59,6 +59,7 @@ namespace FastTests.Server.Basic
         {
             DoNotReuseServer();
 
+            DateTime outTime;
             var landlord = Server.ServerStore.DatabasesLandlord;
 
             using (var store = GetDocumentStore())
@@ -87,7 +88,17 @@ namespace FastTests.Server.Basic
 
                 Server.ServerStore.IdleOperations(null);
 
-                Assert.Equal(5, landlord.LastRecentlyUsed.Count);
+                for (var i = 0; i < 10; i++)
+                {
+                    var name = "IdleOperations_CleanupResources_DB_" + i;
+
+                    if (i%2==1)
+                        Assert.True(landlord.LastRecentlyUsed.TryGetValue(name, out outTime));
+                    else
+                        Assert.False(landlord.LastRecentlyUsed.TryGetValue(name, out outTime));
+
+                    store.Admin.Send(new DeleteDatabaseOperation(name, true));
+                }
             }
         }
     }
