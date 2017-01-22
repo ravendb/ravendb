@@ -5,7 +5,7 @@ using static Sparrow.Json.BlittableJsonDocumentBuilder;
 
 namespace Sparrow.Json
 {
-    public class ManualBlittalbeJsonDocumentBuilder<TWriter> :IDisposable
+    public class ManualBlittalbeJsonDocumentBuilder<TWriter> : IDisposable
         where TWriter : struct, IUnmanagedWriteBuffer
     {
         private readonly JsonOperationContext _context;
@@ -22,13 +22,13 @@ namespace Sparrow.Json
         /// <param name="mode"></param>
         /// <param name="writer"></param>
         public ManualBlittalbeJsonDocumentBuilder(
-            JsonOperationContext context, 
-            UsageMode? mode = null, 
+            JsonOperationContext context,
+            UsageMode? mode = null,
             BlittableWriter<TWriter> writer = null)
         {
             _context = context;
-            _mode = mode?? UsageMode.None;
-            _writer = writer?? new BlittableWriter<TWriter>(_context);
+            _mode = mode ?? UsageMode.None;
+            _writer = writer ?? new BlittableWriter<TWriter>(_context);
         }
 
         public virtual void StartWriteObjectDocument()
@@ -67,7 +67,7 @@ namespace Sparrow.Json
 
             if (currentState.State != ContinuationState.ReadPropertyName)
             {
-                ThrowIllegalStateExeption(currentState.State, "WritePropertyName");
+                ThrowIllegalStateException(currentState.State, "WritePropertyName");
             }
 
             var property = _context.GetLazyStringForFieldWithCaching(propertyName);
@@ -86,7 +86,7 @@ namespace Sparrow.Json
             if (previousState.State != ContinuationState.ReadObjectDocument &&
                 previousState.State != ContinuationState.ReadPropertyValue &&
                 previousState.State != ContinuationState.ReadArray)
-                ThrowIllegalStateExeption(previousState.State, "WriteObject");
+                ThrowIllegalStateException(previousState.State, "WriteObject");
 
             previousState.State = previousState.State == ContinuationState.ReadPropertyValue ? ContinuationState.ReadPropertyName : previousState.State;
             _continuationState.Push(previousState);
@@ -171,7 +171,7 @@ namespace Sparrow.Json
                     }
                     break;
                 default:
-                    ThrowIllegalStateExeption(currentState.State, "ReadEndObject");
+                    ThrowIllegalStateException(currentState.State, "ReadEndObject");
                     break;
             }
         }
@@ -244,7 +244,7 @@ namespace Sparrow.Json
                         }
                         else
                         {
-                            ThrowIllegalStateExeption(outerState.State, "ReadEndArray");
+                            ThrowIllegalStateException(outerState.State, "ReadEndArray");
                         }
 
                         _continuationState.Push(outerState);
@@ -253,7 +253,7 @@ namespace Sparrow.Json
 
                     break;
                 default:
-                    ThrowIllegalStateExeption(currentState.State, "ReadEndArray");
+                    ThrowIllegalStateException(currentState.State, "ReadEndArray");
                     break;
             }
         }
@@ -364,7 +364,7 @@ namespace Sparrow.Json
         {
             var currentState = _continuationState.Pop();
             BlittableJsonToken stringToken;
-            var valuePos = _writer.WriteValue(value,out stringToken,_mode);
+            var valuePos = _writer.WriteValue(value, out stringToken, _mode);
             _writeToken = new WriteToken //todo: figure out if we really need those WriteTokens
             {
                 ValuePos = valuePos,
@@ -383,7 +383,7 @@ namespace Sparrow.Json
             var currentState = _continuationState.Pop();
             BlittableJsonToken token;
             var valuePos = _writer.WriteValue(document.BasePointer, document.Size, out token, UsageMode.None, null);
-            _writeToken = new WriteToken 
+            _writeToken = new WriteToken
             {
                 ValuePos = valuePos,
                 WrittenToken = BlittableJsonToken.EmbeddedBlittable
@@ -404,7 +404,7 @@ namespace Sparrow.Json
                     currentState.Properties.Add(new BlittableJsonDocumentBuilder.PropertyTag
                     {
                         Position = _writeToken.ValuePos,
-                        Type = (byte) _writeToken.WrittenToken,
+                        Type = (byte)_writeToken.WrittenToken,
                         PropertyId = currentState.CurrentPropertyId
                     });
 
@@ -415,7 +415,7 @@ namespace Sparrow.Json
                     currentState.Positions.Add(_writeToken.ValuePos);
                     break;
                 default:
-                    ThrowIllegalStateExeption(currentState.State, "ReadValue");
+                    ThrowIllegalStateException(currentState.State, "ReadValue");
                     break;
             }
             return currentState;
@@ -430,7 +430,7 @@ namespace Sparrow.Json
             _writer.WriteDocumentMetadata(rootOffset, documentToken);
         }
 
-        private void ThrowIllegalStateExeption(BlittableJsonDocumentBuilder.ContinuationState state, string realOperation)
+        private void ThrowIllegalStateException(BlittableJsonDocumentBuilder.ContinuationState state, string realOperation)
         {
             throw new InvalidOperationException($"Cannot perform {realOperation} when encountered the {state} state");
         }

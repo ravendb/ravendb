@@ -18,7 +18,6 @@ using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document.Batches;
 using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Linq;
-using Raven.NewClient.Connection;
 using Raven.NewClient.Operations;
 using Raven.NewClient.Operations.Databases.Documents;
 

@@ -1,25 +1,29 @@
 ﻿using System;
+using System.Net;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Data
 {
     public class OperationExceptionResult : IOperationResult
     {
+        public string Type { get; set; }
+
         public string Message { get; set; }
 
-        public string StackTrace { get; set; }
+        public string Error { get; set; }
 
-        public int StatusCode { get; set; } //http status code for special results like 409		
+        public HttpStatusCode StatusCode { get; set; } //http status code for special results like 409		
 
         public OperationExceptionResult()
         {
             // .ctor required for deserialization
         }
 
-        public OperationExceptionResult(Exception exception, int statusCode = 500)
+        public OperationExceptionResult(Exception exception, HttpStatusCode statusCode)
         {
+            Type = exception.GetType().FullName;
             Message = exception.Message;
-            StackTrace = ExceptionToString(exception);
+            Error = ExceptionToString(exception);
             StatusCode = statusCode;
         }
 
@@ -27,13 +31,14 @@ namespace Raven.Client.Data
         {
             return new DynamicJsonValue(GetType())
             {
-                ["Message"] = Message,
-                ["StackTrace"] = StackTrace,
-                ["StatusCode"] = StatusCode
+                [nameof(Type)] = Type,
+                [nameof(Message)] = Message,
+                [nameof(Error)] = Error,
+                [nameof(StatusCode)] = (int)StatusCode
             };
         }
 
-        private string ExceptionToString(Exception exception)
+        private static string ExceptionToString(Exception exception)
         {
             try
             {

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
+using Raven.NewClient.Client.Exceptions.Patching;
 using Raven.Server.Alerts;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
@@ -230,7 +231,7 @@ namespace Raven.Server.Documents.SqlReplication
 
                     Statistics.ScriptSuccess();
                 }
-                catch (ParseException e)
+                catch (JavaScriptParseException e)
                 {
                     Statistics.MarkScriptAsInvalid(_database, Configuration.Script);
 

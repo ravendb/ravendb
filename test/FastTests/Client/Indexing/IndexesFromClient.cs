@@ -10,6 +10,7 @@ using Raven.NewClient.Client.Bundles.MoreLikeThis;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
+using Raven.NewClient.Client.Exceptions;
 using Raven.NewClient.Data.Indexes;
 using Raven.NewClient.Operations.Databases;
 using Raven.NewClient.Operations.Databases.Documents;
@@ -508,12 +509,12 @@ namespace FastTests.Client.Indexing
                     .Operations
                     .SendAsync(new DeleteByIndexOperation(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }));
 
-                var e = Assert.Throws<InvalidOperationException>(() =>
+                var e = Assert.Throws<RavenException>(() =>
                 {
                     operation.WaitForCompletion(TimeSpan.FromSeconds(15));
                 });
 
-                Assert.True(e.Message.Contains("Query is stale"));
+                Assert.Contains("Query is stale", e.Message);
             }
         }
 

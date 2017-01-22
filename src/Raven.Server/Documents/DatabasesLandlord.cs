@@ -9,6 +9,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Client.Json;
+using Raven.NewClient.Client.Exceptions.Database;
 using Raven.Server.Config;
 using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;

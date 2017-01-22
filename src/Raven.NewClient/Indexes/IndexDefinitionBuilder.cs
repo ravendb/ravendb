@@ -9,12 +9,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 
-using Raven.NewClient.Abstractions.Exceptions;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Exceptions;
+using Raven.NewClient.Client.Exceptions.Compilation;
 using Raven.NewClient.Client.Indexing;
 
 namespace Raven.NewClient.Client.Indexes

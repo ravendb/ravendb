@@ -167,7 +167,7 @@ namespace Raven.Server.Documents.Transformers
         {
             var transformer = GetTransformer(name);
             if (transformer == null)
-                TransformerDoesNotExistsException.ThrowFor(name);
+                TransformerDoesNotExistException.ThrowFor(name);
 
             DeleteTransformerInternal(transformer.TransformerId);
         }
@@ -191,7 +191,7 @@ namespace Raven.Server.Documents.Transformers
         {
             Transformer transformer;
             if (_transformers.TryRemoveById(id, out transformer) == false)
-                TransformerDoesNotExistsException.ThrowFor(id);
+                TransformerDoesNotExistException.ThrowFor(id);
 
             transformer.Delete();
             var tombstoneEtag = _documentDatabase.IndexMetadataPersistence.OnTransformerDeleted(transformer);

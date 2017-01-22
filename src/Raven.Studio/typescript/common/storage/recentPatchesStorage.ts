@@ -1,4 +1,5 @@
 import database = require("models/resources/database");
+import storageKeyProvider = require("common/storage/storageKeyProvider");
 
 class recentPatchesStorage {
     static getRecentPatches(db: database): storedPatchDto[] {
@@ -37,7 +38,7 @@ class recentPatchesStorage {
     }
 
     private static getLocalStorageKey(dbName: string) {
-        return "ravenDB-recentPatches." + dbName;
+        return storageKeyProvider.storageKeyFor("recentPatches." + dbName);
     }
 
     private static getRecentPatchesFromLocalStorage(localStorageName: string): storedPatchDto[]  {

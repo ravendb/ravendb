@@ -10,16 +10,18 @@ using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Raven.Abstractions.Data;
-using Raven.Client.Exceptions;
-using Raven.Server.Exceptions;
+using Raven.NewClient.Client.Exceptions;
+using Raven.NewClient.Client.Exceptions.Compilation;
+using Raven.NewClient.Client.Exceptions.Database;
 using Raven.Server.Routing;
 using Raven.Server.TrafficWatch;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
-using ConflictException = Raven.Client.Exceptions.ConflictException;
 using IndexCompilationException = Raven.Client.Exceptions.IndexCompilationException;
+using ConflictException = Raven.Client.Exceptions.ConflictException;
+using DocumentConflictException = Raven.Client.Exceptions.DocumentConflictException;
 
 namespace Raven.Server
 {
@@ -104,9 +106,9 @@ namespace Raven.Server
                 {
                     var djv = new DynamicJsonValue
                     {
-                        ["Url"] = $"{context.Request.Path}?{context.Request.QueryString}",
-                        ["Type"] = e.GetType().FullName,
-                        ["Message"] = e.Message
+                        [nameof(ExceptionDispatcher.ExceptionSchema.Url)] = $"{context.Request.Path}?{context.Request.QueryString}",
+                        [nameof(ExceptionDispatcher.ExceptionSchema.Type)] = e.GetType().FullName,
+                        [nameof(ExceptionDispatcher.ExceptionSchema.Message)] = e.Message
                     };
 
                     string errorString;
@@ -120,7 +122,7 @@ namespace Raven.Server
                         errorString = e.ToString();
                     }
 
-                    djv["Error"] = errorString;
+                    djv[nameof(ExceptionDispatcher.ExceptionSchema.Error)] = errorString;
 
                     MaybeAddAdditionalExceptionData(djv, e);
 
@@ -140,6 +142,14 @@ namespace Raven.Server
             {
                 djv[nameof(IndexCompilationException.IndexDefinitionProperty)] = indexCompilationException.IndexDefinitionProperty;
                 djv[nameof(IndexCompilationException.ProblematicText)] = indexCompilationException.ProblematicText;
+                return;
+            }
+
+            var transformerCompilationException = exception as TransformerCompilationException;
+            if (transformerCompilationException != null)
+            {
+                djv[nameof(TransformerCompilationException.TransformerDefinitionProperty)] = transformerCompilationException.TransformerDefinitionProperty;
+                djv[nameof(TransformerCompilationException.ProblematicText)] = transformerCompilationException.ProblematicText;
                 return;
             }
 

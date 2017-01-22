@@ -1,8 +1,10 @@
 /// <reference path="../../../typings/tsd.d.ts" />
 
+import storageKeyProvider = require("common/storage/storageKeyProvider");
+
 class serverSmugglingLocalStorage {
 
-    static localStorageName = "serverSmuggling";
+    static localStorageName = storageKeyProvider.storageKeyFor("serverSmuggling");
 
     static get(): serverSmugglingDto {
         return localStorage.getObject(serverSmugglingLocalStorage.localStorageName);

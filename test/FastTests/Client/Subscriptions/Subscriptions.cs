@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Documents.Notifications;
 using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Exceptions.Subscriptions;
+using Raven.NewClient.Client.Exceptions.Subscriptions;
 using Raven.NewClient.Operations.Databases;
 using Xunit;
 using Sparrow;

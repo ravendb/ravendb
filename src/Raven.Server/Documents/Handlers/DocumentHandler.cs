@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 transformer = Database.TransformerStore.GetTransformer(transformerName);
                 if (transformer == null)
-                    TransformerDoesNotExistsException.ThrowFor(transformerName);
+                    TransformerDoesNotExistException.ThrowFor(transformerName);
             }
 
             DocumentsOperationContext context;

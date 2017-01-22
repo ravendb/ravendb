@@ -3,7 +3,7 @@ using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Exceptions;
 using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Replication.Messages;
 using Raven.NewClient.Data.Indexes;
@@ -71,5 +71,7 @@ namespace Raven.NewClient.Client.Json
         public static readonly Func<BlittableJsonReaderObject, GetApiKeysResponse> GetApiKeysResponse = GenerateJsonDeserializationRoutine<GetApiKeysResponse>();
 
         public static readonly Func<BlittableJsonReaderObject, FullTopologyInfo> FullTopologyInfo = GenerateJsonDeserializationRoutine<FullTopologyInfo>();
+
+        internal static readonly Func<BlittableJsonReaderObject, ExceptionDispatcher.ExceptionSchema> ExceptionSchema = GenerateJsonDeserializationRoutine<ExceptionDispatcher.ExceptionSchema>();
     }
 }

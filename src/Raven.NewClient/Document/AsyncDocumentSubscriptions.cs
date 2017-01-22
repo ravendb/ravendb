@@ -9,7 +9,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Connection;
 using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Exceptions.Subscriptions;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Util;
 
@@ -17,6 +16,7 @@ using Raven.NewClient.Client.Util;
 using Newtonsoft.Json;
 using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Commands;
+using Raven.NewClient.Client.Exceptions.Subscriptions;
 using Sparrow.Collections;
 using Sparrow.Json;
 
@@ -111,50 +111,6 @@ namespace Raven.NewClient.Client.Document
 
             var command = new DeleteSubscriptionCommand(id);
             await requestExecuter.ExecuteAsync(command, jsonOperationContext);
-        }
-
-        public static bool TryGetSubscriptionException(ErrorResponseException ere, out SubscriptionException subscriptionException)
-        {
-            var text = ere.ResponseString;
-
-            if (ere.StatusCode == SubscriptionDoesNotExistException.RelevantHttpStatusCode)
-            {
-                var errorResult = JsonConvert.DeserializeAnonymousType(text, new
-                {
-                    url = (string)null,
-                    error = (string)null
-                });
-
-                subscriptionException = new SubscriptionDoesNotExistException(errorResult.error);
-                return true;
-            }
-
-            if (ere.StatusCode == SubscriptionInUseException.RelavantHttpStatusCode)
-            {
-                var errorResult = JsonConvert.DeserializeAnonymousType(text, new
-                {
-                    url = (string)null,
-                    error = (string)null
-                });
-
-                subscriptionException = new SubscriptionInUseException(errorResult.error);
-                return true;
-            }
-
-            if (ere.StatusCode == SubscriptionClosedException.RelevantHttpStatusCode)
-            {
-                var errorResult = JsonConvert.DeserializeAnonymousType(text, new
-                {
-                    url = (string)null,
-                    error = (string)null
-                });
-
-                subscriptionException = new SubscriptionClosedException(errorResult.error);
-                return true;
-            }
-
-            subscriptionException = null;
-            return false;
         }
 
         public void Dispose()

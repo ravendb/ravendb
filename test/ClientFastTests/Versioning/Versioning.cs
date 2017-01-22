@@ -10,6 +10,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Raven.NewClient.Client.Bundles.Versioning;
 using System.Linq;
 using FastTests;
+using Raven.NewClient.Client.Exceptions.Versioning;
 using Raven.NewClient.Client.Http;
 
 namespace NewClientTests.NewClient.FastTests.Versioning
@@ -86,7 +87,7 @@ namespace NewClientTests.NewClient.FastTests.Versioning
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    var exception = await Assert.ThrowsAsync<InternalServerErrorException>(async () => await session.Advanced.GetRevisionsForAsync<Company>("companies/1"));
+                    var exception = await Assert.ThrowsAsync<VersioningDisabledException>(async () => await session.Advanced.GetRevisionsForAsync<Company>("companies/1"));
                     Assert.Contains("Versioning is disabled", exception.Message);
                 }
             }

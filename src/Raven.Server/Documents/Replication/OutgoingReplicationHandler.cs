@@ -19,6 +19,7 @@ using Raven.Client.Connection;
 using Raven.Client.Extensions;
 using Raven.Client.Replication.Messages;
 using Raven.Json.Linq;
+using Raven.NewClient.Client.Exceptions.Database;
 using Raven.Server.Alerts;
 using Raven.Server.Exceptions;
 using Raven.Server.Extensions;
@@ -159,14 +160,14 @@ namespace Raven.Server.Documents.Replication
                                     var response = HandleServerResponse();
                                     if (response.Item1 == ReplicationMessageReply.ReplyType.Error)
                                     {
-                                        if(response.Item2.Exception.Contains("DatabaseDoesNotExistsException"))
-                                            throw new DatabaseDoesNotExistsException(response.Item2.Message, new InvalidOperationException(response.Item2.Exception));
+                                        if(response.Item2.Exception.Contains("DatabaseDoesNotExistException"))
+                                            throw new DatabaseDoesNotExistException(response.Item2.Message, new InvalidOperationException(response.Item2.Exception));
 
                                         throw new InvalidOperationException(response.Item2.Exception);
                                     }                                    
                                 }
                             }
-                            catch (DatabaseDoesNotExistsException e)
+                            catch (DatabaseDoesNotExistException e)
                             {
                                 var msg = $"Failed to parse initial server replication response, because there is no database named {_database.Name} on the other end. " +
                                           "In order for the replication to work, a database with the same name needs to be created at the destination";

@@ -1,8 +1,10 @@
 /// <reference path="../../../typings/tsd.d.ts" />
 
+import storageKeyProvider = require("common/storage/storageKeyProvider");
+
 class apiKeyLocalStorage {
 
-    static localStorageName = "apiKey";
+    static localStorageName = storageKeyProvider.storageKeyFor("apiKey");
 
     static get() {
         return localStorage.getObject(apiKeyLocalStorage.localStorageName);

@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
@@ -89,7 +90,7 @@ namespace Raven.Client.Connection
                 case OperationStatus.Faulted:
                     _subscription.Dispose();
                     var exceptionResult = notification.State.Result as OperationExceptionResult;
-                    if (exceptionResult?.StatusCode == 409)
+                    if (exceptionResult?.StatusCode == HttpStatusCode.Conflict)
                         _result.TrySetException(new ConflictException(exceptionResult.Message));
                     else
                         _result.TrySetException(new InvalidOperationException(exceptionResult?.Message));

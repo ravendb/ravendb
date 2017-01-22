@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Commands;
-using Raven.NewClient.Connection;
+using Raven.NewClient.Client.Connection;
 using Sparrow.Json;
 
 namespace Raven.NewClient.Operations

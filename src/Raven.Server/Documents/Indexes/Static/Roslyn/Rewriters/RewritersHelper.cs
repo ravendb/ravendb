@@ -19,11 +19,20 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 }
                 else
                 {
-                    var memberAccess = initializer.Expression as MemberAccessExpressionSyntax;
-                    if (memberAccess == null)
-                        throw new NotSupportedException($"Cannot extract field name from: {initializer}");
+                    var expressionSysntaxMemberAccess = initializer.Expression as MemberAccessExpressionSyntax;
+                    if (expressionSysntaxMemberAccess != null)
+                    {
+                        name = expressionSysntaxMemberAccess.Name.Identifier.Text;
+                    }
+                    else
+                    {
+                        var identifierNameSyntax = initializer.Expression as IdentifierNameSyntax;
 
-                    name = memberAccess.Name.Identifier.Text;
+                        if (identifierNameSyntax == null)
+                            throw new NotSupportedException($"Cannot extract field name from: {initializer}");
+
+                        name = identifierNameSyntax.Identifier.Text;
+                    }
                 }
 
                 fields.Add(name);

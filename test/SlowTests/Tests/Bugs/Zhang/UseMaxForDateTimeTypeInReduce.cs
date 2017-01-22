@@ -6,7 +6,7 @@ using Raven.Client.Indexing;
 using SlowTests.Utils;
 using Xunit;
 
-namespace SlowTests.Tests.Zhang
+namespace SlowTests.Tests.Bugs.Zhang
 {
     public class UseMaxForDateTimeTypeInReduce : RavenTestBase
     {

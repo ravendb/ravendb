@@ -15,8 +15,13 @@ type rTreeLeaf = {
     minY: number;
     maxX: number;
     maxY: number;
-    actionType: "toggleIndex" | "trackItem";
+    actionType: "toggleIndex" | "trackItem" | "gapItem";
     arg: any;
+}
+
+interface IndexingPerformanceGap {
+    DurationInMilliseconds: number;
+    StartTime: string;     
 }
 
 class hitTest {
@@ -24,8 +29,10 @@ class hitTest {
     private rTree = rbush<rTreeLeaf>();
     private container: d3.Selection<any>;
     private onToggleIndex: (indexName: string) => void;
-    private handleTooltip: (item: Raven.Client.Data.Indexes.IndexingPerformanceOperation, x: number, y: number) => void;
-    private onTrackClicked: (item: Raven.Client.Data.Indexes.IndexingPerformanceOperation) => void;
+    private handleTrackTooltip: (item: Raven.Client.Data.Indexes.IndexingPerformanceOperation, x: number, y: number) => void;
+    private handleGapTooltip: (item: IndexingPerformanceGap, x: number, y: number) => void;
+    private removeTooltip: () => void;
+    private onTrackClicked: (item: Raven.Client.Data.Indexes.IndexingPerformanceOperation) => void;    
 
     reset() {
         this.rTree.clear();
@@ -33,11 +40,15 @@ class hitTest {
 
     init(container: d3.Selection<any>,
         onToggleIndex: (indeName: string) => void,
-        handleTooltip: (item: Raven.Client.Data.Indexes.IndexingPerformanceOperation, x: number, y: number) => void,
+        handleTrackTooltip: (item: Raven.Client.Data.Indexes.IndexingPerformanceOperation, x: number, y: number) => void,
+        handleGapTooltip: (item: IndexingPerformanceGap, x: number, y: number) => void,
+        removeTooltip: () => void,
         onTrackClicked: (item: Raven.Client.Data.Indexes.IndexingPerformanceOperation) => void) {
         this.container = container;
         this.onToggleIndex = onToggleIndex;
-        this.handleTooltip = handleTooltip;
+        this.handleTrackTooltip = handleTrackTooltip;
+        this.handleGapTooltip = handleGapTooltip;
+        this.removeTooltip = removeTooltip;
         this.onTrackClicked = onTrackClicked;
     }
 
@@ -65,6 +76,18 @@ class hitTest {
         this.rTree.insert(data);
     }
 
+    registerGapItem(x: number, y: number, width: number, height: number, element: IndexingPerformanceGap) {
+        const data = {
+            minX: x,
+            minY: y,
+            maxX: x + width,
+            maxY: y + height,
+            actionType: "gapItem",
+            arg: element
+        } as rTreeLeaf;
+        this.rTree.insert(data);
+    }
+
     onClick() {
         const clickLocation = d3.mouse(this.container.node());
 
@@ -80,18 +103,31 @@ class hitTest {
                 this.onToggleIndex(item.arg as string);
             } else if (item.actionType === "trackItem") {
                 this.onTrackClicked(item.arg as Raven.Client.Data.Indexes.IndexingPerformanceOperation);
+            } else if (item.actionType === "gapItem") {
+                // do nothing
             }
         }
     }
 
     onMouseMove() {
         const clickLocation = d3.mouse(this.container.node());
-        const items = this.findItems(clickLocation[0], clickLocation[1]);
+        const items = this.findItems(clickLocation[0], clickLocation[1]);        
 
         this.cursor(items.length ? "pointer" : "auto");
 
-        const currentItem = items.filter(x => x.actionType === "trackItem").map(x => x.arg as Raven.Client.Data.Indexes.IndexingPerformanceOperation)[0];
-        this.handleTooltip(currentItem, clickLocation[0], clickLocation[1]);
+        const currentItem = items.filter(x => x.actionType === "gapItem").map(x => x.arg as IndexingPerformanceGap)[0];
+        if (currentItem) {
+            this.handleGapTooltip(currentItem, clickLocation[0], clickLocation[1]);
+        }
+        else {
+                const currentGapItem = items.filter(x => x.actionType === "trackItem").map(x => x.arg as Raven.Client.Data.Indexes.IndexingPerformanceOperation)[0];
+                if (currentGapItem) {
+                     this.handleTrackTooltip(currentGapItem, clickLocation[0], clickLocation[1]);
+             }
+        else {
+                this.removeTooltip();
+             }
+        }
     }
 
     private findItems(x: number, y: number): Array<rTreeLeaf> {
@@ -190,7 +226,7 @@ class metrics extends viewModelBase {
     private currentYOffset = 0;
     private maxYOffset = 0;
     private hitTest = new hitTest();
-    private tooltip: d3.Selection<Raven.Client.Data.Indexes.IndexingPerformanceOperation>;
+    private tooltip: d3.Selection<Raven.Client.Data.Indexes.IndexingPerformanceOperation | IndexingPerformanceGap>;   
 
     private gapFinder: gapFinder;
 
@@ -242,8 +278,10 @@ class metrics extends viewModelBase {
 
         this.initCanvas();
         this.hitTest.init(this.svg,
-            (indexName) => this.onToggleIndex(indexName),
-            (item, x, y) => this.handleTooltip(item, x, y),
+            (indexName) => this.onToggleIndex(indexName),          
+            (item, x, y) => this.handleTrackTooltip(item, x, y),
+            (gapItem, x, y) => this.handleGapTooltip(gapItem, x, y),
+            () => this.hideTooltip(),
             item => this.showDialog(item));
 
         this.draw();
@@ -716,17 +754,25 @@ class metrics extends viewModelBase {
         });
     }
 
-    private drawGaps(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
+    private drawGaps(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {      
 
         const range = xScale.range();
         context.strokeStyle = metrics.colors.gaps;
-        for (let i = 1; i < range.length; i += 2) {
+
+        for (let i = 1; i < range.length; i += 2) { 
             const gapX = Math.floor(range[i]) + 0.5;
 
             context.beginPath();
             context.moveTo(gapX, metrics.axisHeight);
             context.lineTo(gapX, this.totalHeight);
             context.stroke();
+
+            const indexToGapFinderPosition = (i - 1) / 2; 
+            const gapInfo = this.gapFinder.gapsPositions[indexToGapFinderPosition];
+            if (gapInfo) {
+                this.hitTest.registerGapItem(gapX - 5, metrics.axisHeight, 10, this.totalHeight,
+                    { DurationInMilliseconds: gapInfo.durationInMillis, StartTime: gapInfo.start.toLocaleTimeString() });
+            }
         }
     }
 
@@ -751,41 +797,54 @@ class metrics extends viewModelBase {
     }
 
     /*
-     * Called by hitTest class on mouse move
-     * show tooltip when element !== null
-     * hide if it is null
+     * Called by hitTest class on mouse move    
      */
-    private handleTooltip(element: Raven.Client.Data.Indexes.IndexingPerformanceOperation, x: number, y: number) {
-        if (element && !this.dialogVisible) {
-            const currentDatum = this.tooltip.datum();
-            if (currentDatum !== element) {
-                this.tooltip.transition()
-                    .duration(200)
-                    .style("opacity", 1);
-                let html = element.Name;
-                html += "<br />Duration: " + generalUtils.formatMillis(element.DurationInMilliseconds);
+    
+    private handleGapTooltip(element: IndexingPerformanceGap, x: number, y: number) {
+        const currentDatum = this.tooltip.datum();
 
-                this.tooltip.html(html);
-                this.tooltip.datum(element);
-            }
+        if (currentDatum !== element) {
+            const tooltipHtml = "Gap start time: " + (element).StartTime +
+                                  "<br />Gap duration: " + generalUtils.formatMillis((element).DurationInMilliseconds);       
+            this.handleTooltip(element, x, y, tooltipHtml);
+        }
+    } 
 
-            const tooltipWidth = $("#indexingPerformance .tooltip").width() + 30;
+    private handleTrackTooltip(element: Raven.Client.Data.Indexes.IndexingPerformanceOperation, x: number, y: number) {
+        const currentDatum = this.tooltip.datum();
 
-            x = Math.min(x, Math.max(this.totalWidth - tooltipWidth, 0));
-
-            this.tooltip
-                .style("left", (x + 10) + "px")
-                .style("top", (y + 10) + "px");
-        } else {
-            this.hideTooltip();
+        if (currentDatum !== element) {
+            const tooltipHtml = (element).Name + "<br />Duration: " + generalUtils.formatMillis((element).DurationInMilliseconds);
+            this.handleTooltip(element, x, y, tooltipHtml);
         }
     }
 
+    private handleTooltip(element: Raven.Client.Data.Indexes.IndexingPerformanceOperation | IndexingPerformanceGap, x: number, y: number, tooltipHtml: string) {
+        if (element && !this.dialogVisible) {
+            const tooltipWidth = $("#indexingPerformance .tooltip").width() + 30;
+            x = Math.min(x, Math.max(this.totalWidth - tooltipWidth, 0));
+
+            this.tooltip.transition()
+                .duration(200)                                                          
+                .style("opacity", 1)              
+                .style("left", (x + 10) + "px")
+                .style("top", (y + 10) + "px");
+
+            this.tooltip
+                .html(tooltipHtml)
+                .datum(element);
+
+        } else {
+            this.hideTooltip();
+        }
+    }    
+
     private hideTooltip() {
-        this.tooltip.datum(null);
         this.tooltip.transition()
             .duration(200)
             .style("opacity", 0);
+         
+        this.tooltip.datum(null);      
     }
 
     private showDialog(element: Raven.Client.Data.Indexes.IndexingPerformanceOperation) {

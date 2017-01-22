@@ -7,12 +7,14 @@ using Jint.Native;
 using Jint.Parser;
 using Jint.Runtime;
 using Raven.NewClient.Client.Commands;
+using Raven.NewClient.Client.Exceptions.Patching;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron.Exceptions;
 using Sparrow.Logging;
+using JavaScriptException = Raven.NewClient.Client.Exceptions.Patching.JavaScriptException;
 
 namespace Raven.Server.Documents.Patch
 {
@@ -187,15 +189,15 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (NotSupportedException e)
                 {
-                    throw new ParseException("Could not parse script", e);
+                    throw new JavaScriptParseException("Could not parse script", e);
                 }
-                catch (JavaScriptException e)
+                catch (Jint.Runtime.JavaScriptException e)
                 {
-                    throw new ParseException("Could not parse script", e);
+                    throw new JavaScriptParseException("Could not parse script", e);
                 }
                 catch (Exception e)
                 {
-                    throw new ParseException("Could not parse: " + Environment.NewLine + patch.Script, e);
+                    throw new JavaScriptParseException("Could not parse: " + Environment.NewLine + patch.Script, e);
                 }
             }
 
@@ -224,7 +226,7 @@ namespace Raven.Server.Documents.Patch
 
                 _parent.OutputLog(JintEngine, Scope);
                 var errorMsg = "Unable to execute JavaScript: " + Environment.NewLine + _patch.Script + Environment.NewLine;
-                var error = errorEx as JavaScriptException;
+                var error = errorEx as Jint.Runtime.JavaScriptException;
                 if (error != null)
                     errorMsg += Environment.NewLine + "Error: " + Environment.NewLine + string.Join(Environment.NewLine, error.Error);
                 if (Scope.DebugInfo.Items.Count != 0)
@@ -236,13 +238,13 @@ namespace Raven.Server.Documents.Patch
 
                 var targetEx = errorEx as TargetInvocationException;
                 if (targetEx != null && targetEx.InnerException != null)
-                    throw new InvalidOperationException(errorMsg, targetEx.InnerException);
+                    throw new JavaScriptException(errorMsg, targetEx.InnerException);
 
                 var recursionEx = errorEx as RecursionDepthOverflowException;
                 if (recursionEx != null)
                     errorMsg += Environment.NewLine + "Max recursion depth is limited to: " + MaxRecursionDepth;
 
-                throw new InvalidOperationException(errorMsg, errorEx);
+                throw new JavaScriptException(errorMsg, errorEx);
             }
         }
 
