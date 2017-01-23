@@ -183,7 +183,7 @@ namespace Raven.Server
                 if (_logger.IsInfoEnabled)
                     _logger.Info("Could not setup license check.", e);
 
-                var alert = RaiseAlert.Create("License manager initialization error",
+                var alert = AlertRaised.Create("License manager initialization error",
                     "Could not intitalize the license manager", 
                     AlertType.LicenseManagerInitializationError,
                     AlertSeverity.Info, 

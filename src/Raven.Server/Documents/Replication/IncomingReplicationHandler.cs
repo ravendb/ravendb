@@ -442,7 +442,7 @@ namespace Raven.Server.Documents.Replication
 
                     // this is severe enough to warrant an alert
                     _database.NotificationCenter.AddAfterTransactionCommit(
-                        RaiseAlert.Create("Replication conflict", msg, AlertType.Replication,
+                        AlertRaised.Create("Replication conflict", msg, AlertType.Replication,
                             AlertSeverity.Warning, key: replicationSource),
                         configurationContext.Transaction);
                     break;

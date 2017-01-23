@@ -277,7 +277,7 @@ namespace Raven.Server.Documents.SqlReplication
                         _logger.Info(message);
                 }
 
-                Statistics.LastAlert = RaiseAlert.Create(AlertTitle, message, AlertType.SqlReplicationConnectionStringMissing, AlertSeverity.Error);
+                Statistics.LastAlert = AlertRaised.Create(AlertTitle, message, AlertType.SqlReplicationConnectionStringMissing, AlertSeverity.Error);
 
                 return false;
             }
@@ -291,7 +291,7 @@ namespace Raven.Server.Documents.SqlReplication
                     _logger.Info(emptyConnectionStringMsg);
             }
 
-            Statistics.LastAlert = RaiseAlert.Create(AlertTitle, emptyConnectionStringMsg, AlertType.SqlReplicationConnectionStringMissing, AlertSeverity.Error);
+            Statistics.LastAlert = AlertRaised.Create(AlertTitle, emptyConnectionStringMsg, AlertType.SqlReplicationConnectionStringMissing, AlertSeverity.Error);
 
             return false;
         }
@@ -306,7 +306,7 @@ namespace Raven.Server.Documents.SqlReplication
             if (_logger.IsInfoEnabled)
                 _logger.Info(message);
 
-            Statistics.LastAlert = RaiseAlert.Create(AlertTitle, message, AlertType.SqlReplicationConnectionStringMissing, AlertSeverity.Error);
+            Statistics.LastAlert = AlertRaised.Create(AlertTitle, message, AlertType.SqlReplicationConnectionStringMissing, AlertSeverity.Error);
             return false;
         }
 

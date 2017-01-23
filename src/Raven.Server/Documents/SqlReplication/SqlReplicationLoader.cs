@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.SqlReplication
                 return new DynamicJsonValue
                 {
                     ["LastAlert"] =
-                    RaiseAlert.Create(SqlReplication.AlertTitle,
+                    AlertRaised.Create(SqlReplication.AlertTitle,
                         $"Last SQL replication operation for {simulateSqlReplication.Configuration.Name} was failed",
                         AlertType.SqlReplicationError,
                         AlertSeverity.Error,

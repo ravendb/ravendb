@@ -58,7 +58,7 @@ namespace Raven.Server.ServerWide.BackgroundTasks
                     {
                         var severityInfo = DetermineSeverity(latestVersionInfo);
                         
-                        var alert = RaiseAlert.Create("RavenDB update available", $"Version {latestVersionInfo.Version} is avaiable",
+                        var alert = AlertRaised.Create("RavenDB update available", $"Version {latestVersionInfo.Version} is avaiable",
                             AlertType.NewServerVersionAvailable, severityInfo,
                             details: new NewVersionAvailableDetails(latestVersionInfo));
 

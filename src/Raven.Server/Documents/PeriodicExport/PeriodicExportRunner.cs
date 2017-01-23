@@ -370,7 +370,7 @@ namespace Raven.Server.Documents.PeriodicExport
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations(message, e);
 
-                _database.NotificationCenter.Add(RaiseAlert.Create("Periodic Export",
+                _database.NotificationCenter.Add(AlertRaised.Create("Periodic Export",
                     message,
                     AlertType.PeriodicExport,
                     AlertSeverity.Error,

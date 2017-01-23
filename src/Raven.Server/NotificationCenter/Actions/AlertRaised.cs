@@ -4,9 +4,9 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Actions
 {
-    public class RaiseAlert : Action
+    public class AlertRaised : Action
     {
-        private RaiseAlert()
+        private AlertRaised()
         {
         }
 
@@ -29,9 +29,9 @@ namespace Raven.Server.NotificationCenter.Actions
             return json;
         }
 
-        public static RaiseAlert Create(string title, string msg, AlertType type, AlertSeverity severity, string key = null, IActionDetails details = null)
+        public static AlertRaised Create(string title, string msg, AlertType type, AlertSeverity severity, string key = null, IActionDetails details = null)
         {
-            return new RaiseAlert
+            return new AlertRaised
             {
                 IsPersistent = true,
                 Title = title,
