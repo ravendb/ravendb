@@ -112,9 +112,9 @@ namespace Raven.Server.Documents.Replication
                     {
                         DocumentsOperationContext documentsContext;
                         TransactionOperationContext configurationContext;
-                        using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
+                        var documenContextReturn = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext);
+                        var writer = new BlittableJsonTextWriter(documentsContext, _stream);
                         using (_database.ConfigurationStorage.ContextPool.AllocateOperationContext(out configurationContext))
-                        using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
                         {
                             try
                             {
@@ -129,6 +129,12 @@ namespace Raven.Server.Documents.Replication
                                     if (msg.Document != null)
                                     {
                                         HandleSingleReplicationBatch(documentsContext, configurationContext, msg.Document, writer);
+                                        using (documenContextReturn)
+                                        using (writer)
+                                        {
+                                            // dispose writer and contest 
+                                        }
+                                            
                                     }
                                     else // notify peer about new change vector
                                     {
@@ -139,6 +145,15 @@ namespace Raven.Server.Documents.Replication
                                             _lastDocumentEtag,
                                             _lastIndexOrTransformerEtag, 
                                             "Notify");
+
+                                        interruptibleRead.PrevCall?.ContinueWith(x =>
+                                        {
+                                            using (documenContextReturn)
+                                            using (writer)
+                                            {
+                                                // dispose writer and contest 
+                                            }
+                                        });
                                     }
                                     // we reset it after every time we send to the remote server
                                     // because that is when we know that it is up to date with our 

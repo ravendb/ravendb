@@ -14,6 +14,8 @@ namespace Raven.Server.Documents.Replication
         private Task<BlittableJsonReaderObject> _prevCall;
         private Task[] _waitableTasks;
 
+        public Task<BlittableJsonReaderObject> PrevCall => _prevCall;
+
         public struct Result : IDisposable
         {
             public BlittableJsonReaderObject Document;
