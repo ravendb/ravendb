@@ -33,33 +33,5 @@ namespace Raven.Server
 
             return result;
         }
-
-        public static void PrepareForStorage(this BlittableJsonReaderObject doc)
-        {
-            DynamicJsonValue mutableMetadata;
-            BlittableJsonReaderObject metadata;
-            if (doc.TryGet(Constants.Metadata.Key, out metadata))
-            {
-                metadata.Modifications = mutableMetadata = new DynamicJsonValue(metadata);
-                var props = new BlittableJsonReaderObject.PropertyDetails();
-                for (int i = 0; i < metadata.Count; i++)
-                {
-                    metadata.GetPropertyByIndex(i, ref props);
-                    if (props.Name[0] == (byte) '@')
-                    {
-                        metadata.Modifications.Remove(props.Name);
-                    }
-                }
-            }
-            else
-            {
-                doc.Modifications = new DynamicJsonValue(doc)
-                {
-                    [Constants.Metadata.Key] = mutableMetadata = new DynamicJsonValue()
-                };
-            }
-            
-            mutableMetadata["Raven-Last-Modified"] = SystemTime.UtcNow.GetDefaultRavenFormat(isUtc: true);
-        }
     }
 }

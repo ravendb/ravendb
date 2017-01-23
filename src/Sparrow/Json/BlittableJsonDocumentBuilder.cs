@@ -418,9 +418,10 @@ namespace Sparrow.Json
             return _writer.CreateReader();
         }
 
-        public BlittableJsonReaderArray CreateArrayReader()
+        public BlittableJsonReaderArray CreateArrayReader(bool noCache)
         {
             var reader = CreateReader();
+            reader.NoCache = noCache;
             BlittableJsonReaderArray array;
             if (reader.TryGet("_", out array))
                 return array;
