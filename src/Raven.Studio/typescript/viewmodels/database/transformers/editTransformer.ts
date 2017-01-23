@@ -27,7 +27,7 @@ class editTransformer extends viewModelBase {
     isSaving = ko.observable<boolean>(false);
     renameMode = ko.observable<boolean>(false);
     renameInProgress = ko.observable<boolean>(false);
-    canEditIndexName: KnockoutComputed<boolean>;
+    canEditTransformerName: KnockoutComputed<boolean>;
 
     globalValidationGroup: KnockoutValidationGroup;
     
@@ -118,7 +118,7 @@ class editTransformer extends viewModelBase {
 
         this.isEditingExistingTransformer = ko.pureComputed(() => !!this.loadedTransformerName());
 
-        this.canEditIndexName = ko.pureComputed(() => {
+        this.canEditTransformerName = ko.pureComputed(() => {
             const renameMode = this.renameMode();
             const editMode = this.isEditingExistingTransformer();
             return !editMode || renameMode;
