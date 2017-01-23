@@ -287,9 +287,11 @@ namespace Raven.Server.Documents.Replication
         private bool WaitForChanges(int timeout, CancellationToken token)
         {
             DocumentsOperationContext documentsContext;
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
+            var returnContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext);
+            
+            var interruptableRead = new InterruptibleRead(_waitForChanges, documentsContext);
+            try
             {
-                var interruptableRead = new InterruptibleRead(_waitForChanges, documentsContext);
                 while (true)
                 {
                     using (var result = interruptableRead.ParseToMemory(
@@ -305,11 +307,21 @@ namespace Raven.Server.Documents.Replication
                         }
                         else
                         {
+                            interruptableRead.PrevCall?.ContinueWith(x =>
+                            {
+                                returnContext.Dispose();
+                            });
                             return result.Timeout == false;
                         }
                     }
                 }
             }
+            catch (Exception)
+            {
+                returnContext.Dispose();
+                throw;
+            }
+            
         }
 
         internal void WriteToServer(DynamicJsonValue val)
@@ -428,9 +440,12 @@ namespace Raven.Server.Documents.Replication
         internal Tuple<ReplicationMessageReply.ReplyType, ReplicationMessageReply> HandleServerResponse()
         {
             DocumentsOperationContext documentsContext;
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
+            var contextPoolReturn = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext);
+            
+            var interruptableRead = new InterruptibleRead(_connectionDisposed, documentsContext);
+            var wasInterrupted = false;
+            try
             {
-                var interruptableRead = new InterruptibleRead(_connectionDisposed, documentsContext);
                 while (true)
                 {
                     using (var replicationBatchReplyMessage = interruptableRead.ParseToMemory(
@@ -441,7 +456,14 @@ namespace Raven.Server.Documents.Replication
                         CancellationToken))
                     {
                         if (replicationBatchReplyMessage.Interrupted)
+                        {
+                            interruptableRead.PrevCall?.ContinueWith(x =>
+                            {
+                                contextPoolReturn.Dispose();
+                            });
+                            wasInterrupted = true;
                             ThrowConnectionClosed();
+                        }
 
                         var replicationBatchReply = HandleServerResponse(replicationBatchReplyMessage.Document,
                             allowNotify: false);
@@ -457,6 +479,12 @@ namespace Raven.Server.Documents.Replication
                     }
                 }
             }
+            finally
+            {
+                if (wasInterrupted == false)
+                    contextPoolReturn.Dispose();
+            }
+            
         }
 
         private static void ThrowConnectionClosed()

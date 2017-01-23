@@ -24,11 +24,12 @@ namespace Tryouts
         {
             for (int i = 0; i < 10; i++)
             {
+                Console.WriteLine($"{i} started");
                 using (var a = new FastTests.Server.Replication.AutomaticConflictResolution())
                 {
                     a.ShouldResolveDocumentConflictInFavorOfRemoteVersion();
                 }
-                Console.WriteLine(i);
+                Console.WriteLine($"{i} finished");
             }
 
         }
