@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using Raven.Client.Connection;
+using Raven.Json.Linq;
 using Raven.NewClient.Abstractions.Connection;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Commands;
@@ -14,12 +16,26 @@ using Raven.NewClient.Client.Json;
 using Raven.NewClient.Client.Replication;
 using Raven.NewClient.Client.Replication.Messages;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Xunit;
 
 namespace FastTests.Server.Replication
 {
     public class ReplicationTestsBase : RavenNewTestBase
     {
+
+        protected Dictionary<string,string[]> GetConnectionFaliures(DocumentStore store)
+        {
+            using (var commands = store.Commands())
+            {
+                var command = new GetConncectionFailuresCommand();
+
+                commands.RequestExecuter.Execute(command, commands.Context);
+
+                return command.Result;
+            }
+        }
+
         protected Dictionary<string, List<ChangeVectorEntry[]>> GetConflicts(DocumentStore store, string docId)
         {
             using (var commands = store.Commands())
@@ -94,6 +110,17 @@ namespace FastTests.Server.Replication
                     return true;
             }
             return false;
+        }
+
+        protected T WaitForDocument<T>(DocumentStore store,
+            string docId,
+            int timeout = 10000)
+        {
+            Assert.True(WaitForDocument(store, docId, timeout));
+            using (var session = store.OpenSession())
+            {
+                return session.Load<T>(docId);
+            }
         }
 
         protected bool WaitForDocument(DocumentStore store,
@@ -240,6 +267,16 @@ namespace FastTests.Server.Replication
 
         protected static void SetupReplication(DocumentStore fromStore, params DocumentStore[] toStores)
         {
+            SetupReplication(fromStore, 
+                new ReplicationDocument
+                {
+                    HeartbeatInterval = 100,
+                }, 
+                toStores);
+        }
+
+        protected static void SetupReplication(DocumentStore fromStore, ReplicationDocument configOptions, params DocumentStore[] toStores)
+        {
             using (var session = fromStore.OpenSession())
             {
                 var destinations = new List<ReplicationDestination>();
@@ -251,11 +288,9 @@ namespace FastTests.Server.Replication
                             Url = store.Url,
 
                         });
-                session.Store(new ReplicationDocument
-                {
-                    HeartbeatInterval = 100,
-                    Destinations = destinations
-                }, Constants.Replication.DocumentReplicationConfiguration);
+
+                configOptions.Destinations = destinations;
+                session.Store(configOptions, Constants.Replication.DocumentReplicationConfiguration);
                 session.SaveChanges();
             }
         }
@@ -270,6 +305,51 @@ namespace FastTests.Server.Replication
                     Destinations = toDestinations.ToList()
                 }, Constants.Replication.DocumentReplicationConfiguration);
                 session.SaveChanges();
+            }
+        }
+
+
+        private class GetConncectionFailuresCommand : RavenCommand<Dictionary<string, string[]>>
+        {
+
+            public override bool IsReadRequest => true;
+            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            {
+                url = $"{node.Url}/databases/{node.Database}/replication/debug/incoming-rejection-info";
+
+                ResponseType = RavenCommandResponseType.Array;
+                return new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get
+                };
+            }
+            public override void SetResponse(BlittableJsonReaderArray response)
+            {
+                List<string> list = new List<string>();
+                Dictionary<string,string[]> result = new Dictionary<string, string[]>();
+                foreach (BlittableJsonReaderObject responseItem in response.Items)
+                {
+                    BlittableJsonReaderObject obj;
+                    responseItem.TryGet("Key", out obj);
+                    string name;
+                    obj.TryGet("SourceDatabaseName", out name);
+
+                    BlittableJsonReaderArray arr;
+                    responseItem.TryGet("Value", out arr);
+                    list.Clear();
+                    foreach (BlittableJsonReaderObject arrItem in arr)
+                    {
+                        string reason;
+                        arrItem.TryGet("Reason", out reason);
+                        list.Add(reason);
+                    }
+                    result.Add(name,list.ToArray());
+                }
+                Result = result;
+            }
+            public override void SetResponse(BlittableJsonReaderObject response)
+            {
+                throw new NotImplementedException();
             }
         }
 

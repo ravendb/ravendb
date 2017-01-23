@@ -260,6 +260,13 @@ namespace Raven.Server.Documents.Replication
                     [nameof(ReplicationMessageHeader.LastIndexOrTransformerEtag)] = _parent._lastSentIndexOrTransformerEtag,
                     [nameof(ReplicationMessageHeader.ItemCount)] = _orderedReplicaItems.Count,
                 };
+                if (_parent._parent.ResolverLeader.HasLeader())
+                {
+                    headerJson[nameof(ReplicationMessageHeader.ResovlerId)] =
+                        _parent._parent.ResolverLeader.Dbid.ToString();
+                    headerJson[nameof(ReplicationMessageHeader.ResovlerVersion)] =
+                        _parent._parent.ResolverLeader.Version.ToString();
+                }
                 _parent.WriteToServerAndFlush(headerJson);
                 foreach (var item in _orderedReplicaItems)
                 {
@@ -285,7 +292,11 @@ namespace Raven.Server.Documents.Replication
             using (_parent._documentsContext.OpenReadTransaction())
             using (_parent._configurationContext.OpenReadTransaction())
             {
-                _parent.HandleServerResponse();
+                var answer = _parent.HandleServerResponse(serveFullResponse:true);
+                if (answer.Item1 == ReplicationMessageReply.ReplyType.Ok && answer.Item2.ResolverId != null)
+                {
+                    _parent._parent.ResolverLeader.ParseAndUpdate(answer.Item2.ResolverId, answer.Item2.ResolverVersion);
+                }
             }
         }
 
