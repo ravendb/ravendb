@@ -9,6 +9,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -69,6 +70,38 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 context.Write(writer, Database.Metrics.CreateMetricsStatsJsonValue());
+            }
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/metrics/puts", "GET")]
+        public Task PutsMetrics()
+        {
+            JsonOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                context.Write(writer, new DynamicJsonValue
+                {
+                    ["DocsPutsPerSec"] = Database.Metrics.DocPutsPerSecond.CreateMeterData(true),
+                });
+            }
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/metrics/bytes", "GET")]
+        public Task BytesMetrics()
+        {
+            JsonOperationContext context;
+            using (ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                context.Write(writer, new DynamicJsonValue
+                {
+                    ["BytesPutsPerSecond"] = Database.Metrics.BytesPutsPerSecond.CreateMeterData(true),
+                });
             }
 
             return Task.CompletedTask;

@@ -86,7 +86,6 @@ namespace Sparrow.Json
         private readonly LinkedList<BlittableJsonReaderObject> _liveReaders =
             new LinkedList<BlittableJsonReaderObject>();
 
-        public LZ4 Lz4 = new LZ4();
         public UTF8Encoding Encoding;
 
         public CachedProperties CachedProperties;
@@ -96,8 +95,6 @@ namespace Sparrow.Json
         private readonly JsonParserState _jsonParserState;
         private readonly ObjectJsonParser _objectJsonParser;
         private readonly BlittableJsonDocumentBuilder _documentBuilder;
-
-        private static readonly Logger _log = LoggingSource.Instance.GetLogger<JsonOperationContext>("JsonOperationContext");
 
         public static JsonOperationContext ShortTermSingleUse()
         {
@@ -450,7 +447,7 @@ namespace Sparrow.Json
             }
         }
 
-        private void RegisterLiveReader(BlittableJsonReaderObject reader)
+        public void RegisterLiveReader(BlittableJsonReaderObject reader)
         {
             reader.DisposeTrackingReference = _liveReaders.AddFirst(reader);
         }
@@ -485,7 +482,7 @@ namespace Sparrow.Json
 
 
         public async Task<Tuple<BlittableJsonReaderArray, IDisposable>> ParseArrayToMemoryAsync(Stream stream, string debugTag,
-            BlittableJsonDocumentBuilder.UsageMode mode)
+            BlittableJsonDocumentBuilder.UsageMode mode, bool noCache = false)
         {
             _jsonParserState.Reset();
             ManagedPinnedBuffer bytes;
@@ -507,7 +504,7 @@ namespace Sparrow.Json
                 builder.FinalizeDocument();
                 // here we "leak" the memory used by the array, in practice this is used
                 // in short scoped context, so we don't care
-                var arrayReader = builder.CreateArrayReader();
+                var arrayReader = builder.CreateArrayReader(noCache);
                 RegisterLiveReader(arrayReader.Parent);
                 return Tuple.Create(arrayReader, (IDisposable) arrayReader.Parent);
             }
