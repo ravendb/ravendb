@@ -33,8 +33,7 @@ namespace FastTests.Server.Replication
 
             SetupReplication(store2, new ReplicationDocument
             {
-                SetAsResolver = true,
-                HeartbeatInterval = 100
+                SetAsResolver = true
             }, store1);
 
             await Task.Delay(500);
@@ -80,8 +79,7 @@ namespace FastTests.Server.Replication
             // store2 <--> store1 <--> store3*
             SetupReplication(store3, new ReplicationDocument
             {
-                SetAsResolver = true,
-                HeartbeatInterval = 100
+                SetAsResolver = true
             },store1);
 
             var doc1 = WaitForDocument<User>(store1, "foo/bar");
@@ -125,8 +123,7 @@ namespace FastTests.Server.Replication
             // store2* <--> store1 --> store3
             SetupReplication(store2, new ReplicationDocument
             {
-                SetAsResolver = true,
-                HeartbeatInterval = 100
+                SetAsResolver = true
             }, store1);
 
             await Task.Delay(delay);
@@ -142,8 +139,7 @@ namespace FastTests.Server.Replication
             // store2 <--> store1 --> store3*
             SetupReplication(store3, new ReplicationDocument
             {
-                SetAsResolver = true,
-                HeartbeatInterval = 100
+                SetAsResolver = true
             });
 
             using (var session = store3.OpenSession())
@@ -161,8 +157,7 @@ namespace FastTests.Server.Replication
             // store2 <--> store1 --> store3*
             SetupReplication(store3, new ReplicationDocument
             {
-                SetAsResolver = true,
-                HeartbeatInterval = 100
+                SetAsResolver = true
             },store1);
 
             await Task.Delay(delay);
@@ -194,8 +189,7 @@ namespace FastTests.Server.Replication
             // store1* --> store2
             SetupReplication(store1, new ReplicationDocument
             {
-                SetAsResolver = true,
-                HeartbeatInterval = 100
+                SetAsResolver = true
             }, store2);
 
             await Task.Delay(500);
@@ -203,10 +197,7 @@ namespace FastTests.Server.Replication
             var doc1 = WaitForDocument<User>(store2, "foo/bar");
             Assert.Equal("Karmel", doc1.Name);
 
-            SetupReplication(store1, new ReplicationDocument
-            {
-                HeartbeatInterval = 100
-            }, store2);
+            SetupReplication(store1, store2);
 
             using (var session = store2.OpenSession())
             {
@@ -241,15 +232,13 @@ namespace FastTests.Server.Replication
 
             SetupReplication(store1, new ReplicationDocument
             {
-                SetAsResolver = true,
-                HeartbeatInterval = 100
+                SetAsResolver = true
             });
  
             // store2* --> store1*
             SetupReplication(store2, new ReplicationDocument
             {
-                SetAsResolver = true,
-                HeartbeatInterval = 100
+                SetAsResolver = true
             }, store1);
 
             await Task.Delay(500);

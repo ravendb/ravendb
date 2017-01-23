@@ -234,7 +234,6 @@ namespace FastTests.Server.Replication
                 var destinations = new List<ReplicationDestination>();
                 session.Store(new ReplicationDocument
                 {
-                    HeartbeatInterval = 1000,
                     Destinations = destinations,
                     DocumentConflictResolution = conflictResolution
                 }, Constants.Replication.DocumentReplicationConfiguration);
@@ -257,7 +256,6 @@ namespace FastTests.Server.Replication
                         });
                 session.Store(new ReplicationDocument
                 {
-                    HeartbeatInterval = 100,
                     Destinations = destinations,
                     DocumentConflictResolution = builtinConflictResolution
                 }, Constants.Replication.DocumentReplicationConfiguration);
@@ -270,7 +268,7 @@ namespace FastTests.Server.Replication
             SetupReplication(fromStore, 
                 new ReplicationDocument
                 {
-                    HeartbeatInterval = 100,
+                    
                 }, 
                 toStores);
         }
@@ -288,7 +286,7 @@ namespace FastTests.Server.Replication
                             Url = store.Url,
 
                         });
-
+                
                 configOptions.Destinations = destinations;
                 session.Store(configOptions, Constants.Replication.DocumentReplicationConfiguration);
                 session.SaveChanges();
@@ -301,7 +299,6 @@ namespace FastTests.Server.Replication
             {
                 session.Store(new ReplicationDocument
                 {
-                    HeartbeatInterval = 100,
                     Destinations = toDestinations.ToList()
                 }, Constants.Replication.DocumentReplicationConfiguration);
                 session.SaveChanges();

@@ -34,7 +34,6 @@ namespace Raven.Server.Documents.Replication
         private readonly Logger _log;
         private readonly AsyncManualResetEvent _waitForChanges = new AsyncManualResetEvent();
         private readonly CancellationTokenSource _cts;
-        private int _minimalHeartbeatInterval = 15 * 1000;// ms - 15 seconds
         private Thread _sendingThread;
         internal readonly DocumentReplicationLoader _parent;
         internal long _lastSentDocumentEtag;
@@ -258,7 +257,7 @@ namespace Raven.Server.Documents.Replication
                                 }
                
                                 //if this returns false, this means either timeout or canceled token is activated                    
-                                while (WaitForChanges(_minimalHeartbeatInterval, _cts.Token) == false)
+                                while (WaitForChanges(_parent._minimalHeartbeatInterval, _cts.Token) == false)
                                 {
                                     _parser.Reset();
                                     _configurationContext.ResetAndRenew();
@@ -372,7 +371,7 @@ namespace Raven.Server.Documents.Replication
                     // those up with the remove side, so we'll start the replication loop again.
                     // We don't care if they are locally modified or not, because we filter documents that
                     // the other side already have (based on the change vector).
-                    if ((DateTime.UtcNow - _lastDocumentSentTime).TotalMilliseconds > _minimalHeartbeatInterval)
+                    if ((DateTime.UtcNow - _lastDocumentSentTime).TotalMilliseconds > _parent._minimalHeartbeatInterval)
                         _waitForChanges.SetByAsyncCompletion();
                 }
             }
@@ -381,7 +380,7 @@ namespace Raven.Server.Documents.Replication
                 _database.IndexMetadataPersistence.ReadLastEtag(_configurationContext.Transaction.InnerTransaction) !=
                 replicationBatchReply.LastIndexTransformerEtagAccepted)
             {
-                if ((DateTime.UtcNow - _lastIndexOrTransformerSentTime).TotalMilliseconds > _minimalHeartbeatInterval)
+                if ((DateTime.UtcNow - _lastIndexOrTransformerSentTime).TotalMilliseconds > _parent._minimalHeartbeatInterval)
                     _waitForChanges.SetByAsyncCompletion();
             }
         }
@@ -589,11 +588,6 @@ namespace Raven.Server.Documents.Replication
             {
                 _sendingThread?.Join();
             }
-        }
-
-        public void SetMinimalHeartbeat(int time)
-        {
-            _minimalHeartbeatInterval = time;
         }
 
         private void OnSuccessfulTwoWaysCommunication() => SuccessfulTwoWaysCommunication?.Invoke(this);

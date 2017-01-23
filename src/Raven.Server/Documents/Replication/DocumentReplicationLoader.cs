@@ -27,6 +27,8 @@ namespace Raven.Server.Documents.Replication
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
         private readonly Timer _reconnectAttemptTimer;
+        internal int _minimalHeartbeatInterval = 15 * 1000;
+
         private readonly ConcurrentSet<OutgoingReplicationHandler> _outgoing = new ConcurrentSet<OutgoingReplicationHandler>();
         private readonly ConcurrentDictionary<ReplicationDestination, ConnectionShutdownInfo> _outgoingFailureInfo = new ConcurrentDictionary<ReplicationDestination, ConnectionShutdownInfo>();
 
@@ -56,6 +58,8 @@ namespace Raven.Server.Documents.Replication
             _log = LoggingSource.Instance.GetLogger<DocumentReplicationLoader>(_database.Name);
             _reconnectAttemptTimer = new Timer(AttemptReconnectFailedOutgoing,
                 null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
+            _minimalHeartbeatInterval = _database.Configuration.Replication.ReplicationMinimalHeartbeat.AsTimeSpan.Milliseconds;
+
         }
 
         public IReadOnlyDictionary<ReplicationDestination, ConnectionShutdownInfo> OutgoingFailureInfo => _outgoingFailureInfo;
@@ -365,7 +369,6 @@ namespace Raven.Server.Documents.Replication
             if (_log.IsInfoEnabled)
                 _log.Info("Finished initialization of outgoing replications..");
         }
-
         private void AddAndStartOutgoingReplication(ReplicationDestination destination)
         {
             var outgoingReplication = new OutgoingReplicationHandler(this,_database, destination);
@@ -376,8 +379,6 @@ namespace Raven.Server.Documents.Replication
             {
                 Destination = destination
             });
-
-            outgoingReplication.SetMinimalHeartbeat(_replicationDocument.HeartbeatInterval);
             outgoingReplication.Start();
         }
 
