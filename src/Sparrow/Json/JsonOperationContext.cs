@@ -423,7 +423,7 @@ namespace Sparrow.Json
                     while (true)
                     {
                         var read = builder.Read();
-                        bytes.Used = parser.BufferOffset;
+                        bytes.Used += parser.BufferOffset;
                         if (read)
                             break;
                         result = await webSocket.ReceiveAsync(bytes.Buffer, cancellationToken);
@@ -479,7 +479,7 @@ namespace Sparrow.Json
                     }
                     parser.SetBuffer(bytes);
                     var result = builder.Read();
-                    bytes.Used = parser.BufferOffset;
+                    bytes.Used += parser.BufferOffset;
                     if (result)
                         break;
                 }
@@ -523,7 +523,7 @@ namespace Sparrow.Json
                     }
                     parser.SetBuffer(bytes);
                     var result = builder.Read();
-                    bytes.Used = parser.BufferOffset;
+                    bytes.Used += parser.BufferOffset;
                     if (result)
                         break;
                 }
@@ -560,7 +560,7 @@ namespace Sparrow.Json
                     }
                     parser.SetBuffer(bytes);
                     var readObj = builder.Read();
-                    bytes.Used = parser.BufferOffset;
+                    bytes.Used += parser.BufferOffset;
                     if (readObj)
                         break;
                 }

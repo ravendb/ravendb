@@ -46,7 +46,7 @@ namespace Sparrow.Json.Parsing
 
         public void SetBuffer(JsonOperationContext.ManagedPinnedBuffer inputBuffer)
         {
-            SetBuffer(inputBuffer.Pointer + inputBuffer.Used, inputBuffer.Valid);
+            SetBuffer(inputBuffer.Pointer + inputBuffer.Used, inputBuffer.Valid - inputBuffer.Used);
         }
 
         public void SetBuffer(JsonOperationContext.ManagedPinnedBuffer inputBuffer, int offset, int size)

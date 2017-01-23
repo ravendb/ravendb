@@ -122,8 +122,6 @@ namespace Raven.NewClient.Client.Document
             DeserializeEntityFromBlittable = new JsonNetBlittableEntitySerializer(this).EntityFromJsonStream;
         }
 
-        internal JsonContextPool ContextPool = new JsonContextPool(); // not sure it should be here..
-
         public class JsonNetBlittableEntitySerializer
         {
             private readonly DocumentConvention _conventions;

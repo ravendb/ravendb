@@ -63,9 +63,13 @@ namespace Raven.Server.Documents.TcpHandlers
                 JsonOperationContext context;
                 using (TcpConnection.ContextPool.AllocateOperationContext(out context))
                 using (var subscriptionCommandOptions = await context.ParseToMemoryAsync(
-                        TcpConnection.Stream, "subscription options",
-                            BlittableJsonDocumentBuilder.UsageMode.None, TcpConnection.PinnedBuffer)) 
-                _options = JsonDeserializationServer.SubscriptionConnectionOptions(subscriptionCommandOptions);
+                    TcpConnection.Stream,
+                    "subscription options",
+                    BlittableJsonDocumentBuilder.UsageMode.None,
+                    TcpConnection.PinnedBuffer))
+                {
+                    _options = JsonDeserializationServer.SubscriptionConnectionOptions(subscriptionCommandOptions);
+                }
                 
             }
             catch (Exception ex)
@@ -274,7 +278,11 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             JsonOperationContext context;
             using (TcpConnection.ContextPool.AllocateOperationContext(out context))
-            using (var reader = await context.ParseToMemoryAsync(TcpConnection.Stream,"Reply from subscription client",BlittableJsonDocumentBuilder.UsageMode.None, TcpConnection.PinnedBuffer))
+            using (var reader = await context.ParseToMemoryAsync(
+                TcpConnection.Stream,
+                "Reply from subscription client",
+                BlittableJsonDocumentBuilder.UsageMode.None, 
+                TcpConnection.PinnedBuffer))
             {
                 TcpConnection.RegisterBytesReceived(reader.Size);
                 return JsonDeserializationServer.SubscriptionConnectionClientMessage(reader);

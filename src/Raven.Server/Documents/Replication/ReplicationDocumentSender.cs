@@ -10,6 +10,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Raven.Abstractions.Data;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -21,7 +22,7 @@ namespace Raven.Server.Documents.Replication
         private readonly byte[] _tempBuffer = new byte[32 * 1024];
         private readonly Stream _stream;
         private readonly OutgoingReplicationHandler _parent;
-        
+
         public ReplicationDocumentSender(Stream stream, OutgoingReplicationHandler parent, Logger log)
         {
             _log = log;
@@ -43,11 +44,11 @@ namespace Raven.Server.Documents.Replication
             HasDocsAndConflicts = HasConflicts | HasDocs
         }
 
-        private IEnumerable<ReplicationBatchDocumentItem> GetDocsConflictsAndTombstonesAfter(long etag)
+        private IEnumerable<ReplicationBatchDocumentItem> GetDocsConflictsAndTombstonesAfter(DocumentsOperationContext ctx, long etag)
         {
-            var docs = _parent._database.DocumentsStorage.GetDocumentsFrom(_parent._documentsContext,etag+ 1);
-            var tombs = _parent._database.DocumentsStorage.GetTombstonesFrom(_parent._documentsContext,etag + 1,0, int.MaxValue);
-            var conflicts = _parent._database.DocumentsStorage.GetConflictsFrom(_parent._documentsContext,etag + 1);
+            var docs = _parent._database.DocumentsStorage.GetDocumentsFrom(ctx, etag + 1);
+            var tombs = _parent._database.DocumentsStorage.GetTombstonesFrom(ctx, etag + 1, 0, int.MaxValue);
+            var conflicts = _parent._database.DocumentsStorage.GetConflictsFrom(ctx, etag + 1);
 
             using (var docsIt = docs.GetEnumerator())
             using (var tombsIt = tombs.GetEnumerator())
@@ -55,9 +56,9 @@ namespace Raven.Server.Documents.Replication
             {
                 var state = CurrentEnumerationState.None;
 
-                if(docsIt.MoveNext())
+                if (docsIt.MoveNext())
                     state |= CurrentEnumerationState.HasDocs;
-                if(tombsIt.MoveNext())
+                if (tombsIt.MoveNext())
                     state |= CurrentEnumerationState.HasTombs;
                 if (conflictsIt.MoveNext())
                     state |= CurrentEnumerationState.HasConflicts;
@@ -136,86 +137,83 @@ namespace Raven.Server.Documents.Replication
         }
 
         public bool ExecuteReplicationOnce()
-        {            
-            var readTx = _parent._documentsContext.OpenReadTransaction();
-            try
+        {
+            DocumentsOperationContext documentsContext;
+            using (_parent._database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
+            using (documentsContext.OpenReadTransaction())
             {
-                // we scan through the documents to send to the other side, we need to be careful about
-                // filtering a lot of documents, because we need to let the other side know about this, and 
-                // at the same time, we need to send a heartbeat to keep the tcp connection alive
-                _lastEtag = _parent._lastSentDocumentEtag;
-                _parent.CancellationToken.ThrowIfCancellationRequested();
-
-                const int batchSize = 1024;//TODO: Make batchSize & maxSizeToSend configurable
-                const int maxSizeToSend = 16*1024*1024;
-                long size = 0;
-                int numberOfItemsSent = 0;
-                short lastTransactionMarker = -1;
-                foreach (var item in GetDocsConflictsAndTombstonesAfter(_lastEtag))
-                {
-                    if (lastTransactionMarker != item.TransactionMarker)
-                        // TODO: add a configuration option to disable this check
-                    {
-                        // we want to limit batch sizes to reasonable limits
-                        if (size > maxSizeToSend || numberOfItemsSent > batchSize)
-                            break;
-
-                        lastTransactionMarker = item.TransactionMarker;
-                    }
-
-                    _lastEtag = item.Etag;
-
-                    if (item.Data != null)
-                        size += item.Data.Size;
-
-                    AddReplicationItemToBatch(item);
-
-                    numberOfItemsSent++;
-                }
-
-                if (_log.IsInfoEnabled)
-                {
-                    _log.Info($"Found {_orderedReplicaItems.Count:#,#;;0} documents to replicate to {_parent.Destination.Database} @ {_parent.Destination.Url}");
-                }
-
-                if (_orderedReplicaItems.Count == 0)
-                {
-                    var hasModification = _lastEtag != _parent._lastSentDocumentEtag;
-
-                    // ensure that the other server is aware that we skipped 
-                    // on (potentially a lot of) documents to send, and we update
-                    // the last etag they have from us on the other side
-                    _parent._lastSentDocumentEtag = _lastEtag;
-
-                    using (_parent._configurationContext.OpenReadTransaction())
-                    {
-                        _parent._lastDocumentSentTime = DateTime.UtcNow;
-                        _parent.SendHeartbeat();
-                    }
-                    return hasModification;
-                }
-
-                _parent.CancellationToken.ThrowIfCancellationRequested();
                 try
                 {
-                    SendDocumentsBatch();
-                }
-                catch (Exception e)
-                {
-                    if(_log.IsInfoEnabled)
-                        _log.Info("Failed to send document replication batch",e);
-                    throw;
-                }
-                return true;
-            }
-            finally
-            {
-                foreach(var item in _orderedReplicaItems)
-                    item.Value.Data?.Dispose(); //item.Value.Data is null if tombstone
-                _orderedReplicaItems.Clear();
+                    // we scan through the documents to send to the other side, we need to be careful about
+                    // filtering a lot of documents, because we need to let the other side know about this, and 
+                    // at the same time, we need to send a heartbeat to keep the tcp connection alive
+                    _lastEtag = _parent._lastSentDocumentEtag;
+                    _parent.CancellationToken.ThrowIfCancellationRequested();
 
-                if (readTx.Disposed == false)
-                    readTx.Dispose();
+                    const int batchSize = 1024;//TODO: Make batchSize & maxSizeToSend configurable
+                    const int maxSizeToSend = 16 * 1024 * 1024;
+                    long size = 0;
+                    int numberOfItemsSent = 0;
+                    short lastTransactionMarker = -1;
+                    foreach (var item in GetDocsConflictsAndTombstonesAfter(documentsContext, _lastEtag))
+                    {
+                        if (lastTransactionMarker != item.TransactionMarker)
+                        // TODO: add a configuration option to disable this check
+                        {
+                            // we want to limit batch sizes to reasonable limits
+                            if (size > maxSizeToSend || numberOfItemsSent > batchSize)
+                                break;
+
+                            lastTransactionMarker = item.TransactionMarker;
+                        }
+
+                        _lastEtag = item.Etag;
+
+                        if (item.Data != null)
+                            size += item.Data.Size;
+
+                        AddReplicationItemToBatch(item);
+
+                        numberOfItemsSent++;
+                    }
+
+                    if (_log.IsInfoEnabled)
+                    {
+                        _log.Info($"Found {_orderedReplicaItems.Count:#,#;;0} documents to replicate to {_parent.Destination.Database} @ {_parent.Destination.Url}");
+                    }
+
+                    if (_orderedReplicaItems.Count == 0)
+                    {
+                        var hasModification = _lastEtag != _parent._lastSentDocumentEtag;
+
+                        // ensure that the other server is aware that we skipped 
+                        // on (potentially a lot of) documents to send, and we update
+                        // the last etag they have from us on the other side
+                        _parent._lastSentDocumentEtag = _lastEtag;
+                        _parent._lastDocumentSentTime = DateTime.UtcNow;
+                        _parent.SendHeartbeat();
+                        return hasModification;
+                    }
+
+                    _parent.CancellationToken.ThrowIfCancellationRequested();
+                    try
+                    {
+                        SendDocumentsBatch(documentsContext);
+                    }
+                    catch (Exception e)
+                    {
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Failed to send document replication batch", e);
+                        throw;
+                    }
+                    return true;
+                }
+                finally
+                {
+                    foreach (var item in _orderedReplicaItems)
+                        item.Value.Data?.Dispose(); //item.Value.Data is null if tombstone
+                    _orderedReplicaItems.Clear();
+                }
             }
         }
 
@@ -244,34 +242,28 @@ namespace Raven.Server.Documents.Replication
         }
 
 
-        private void SendDocumentsBatch()
+        private void SendDocumentsBatch(DocumentsOperationContext documentsContext)
         {
             if (_log.IsInfoEnabled)
                 _log.Info(
                     $"Starting sending replication batch ({_parent._database.Name}) with {_orderedReplicaItems.Count:#,#;;0} docs, and last etag {_lastEtag}");
 
             var sw = Stopwatch.StartNew();
-            try
+            var headerJson = new DynamicJsonValue
             {
-                var headerJson = new DynamicJsonValue
-                {
-                    [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Documents,
-                    [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastEtag,
-                    [nameof(ReplicationMessageHeader.LastIndexOrTransformerEtag)] = _parent._lastSentIndexOrTransformerEtag,
-                    [nameof(ReplicationMessageHeader.ItemCount)] = _orderedReplicaItems.Count,
-                };
-                _parent.WriteToServerAndFlush(headerJson);
-                foreach (var item in _orderedReplicaItems)
-                {
-                    WriteDocumentToServer(item.Value);
-                }
-            }
-            finally //do try-finally as precaution
+                [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Documents,
+                [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastEtag,
+                [nameof(ReplicationMessageHeader.LastIndexOrTransformerEtag)] = _parent._lastSentIndexOrTransformerEtag,
+                [nameof(ReplicationMessageHeader.ItemCount)] = _orderedReplicaItems.Count,
+            };
+            _parent.WriteToServer(headerJson);
+            foreach (var item in _orderedReplicaItems)
             {
-                // we can release the read transaction while we are waiting for 
-                // reply from the server and not hold it for a long time
-                _parent._documentsContext.Transaction.Dispose();
+                WriteDocumentToServer(item.Value);
             }
+            // close the transaction as early as possible, and before we wait for reply
+            // from other side
+            documentsContext.Transaction.Dispose();
             _stream.Flush();
             sw.Stop();
 
@@ -282,11 +274,7 @@ namespace Raven.Server.Documents.Replication
                     $"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents in {sw.ElapsedMilliseconds:#,#;;0} ms. Last sent etag = {_lastEtag}");
 
             _parent._lastDocumentSentTime = DateTime.UtcNow;
-            using (_parent._documentsContext.OpenReadTransaction())
-            using (_parent._configurationContext.OpenReadTransaction())
-            {
-                _parent.HandleServerResponse();
-            }
+            _parent.HandleServerResponse();
         }
 
         private unsafe void WriteDocumentToServer(ReplicationBatchDocumentItem item)
@@ -296,7 +284,7 @@ namespace Raven.Server.Documents.Replication
                                sizeof(int) + // # of change vectors
                                sizeof(int) + // size of document key
                                item.Key.Size +
-                               sizeof(int)  + // size of document
+                               sizeof(int) + // size of document
                                sizeof(short) // transaction marker
                 ;
             if (requiredSize > _tempBuffer.Length)
@@ -359,7 +347,7 @@ namespace Raven.Server.Documents.Replication
                     Memory.Copy(pTemp + tempBufferPos, item.Collection.Buffer, item.Collection.Size);
                     tempBufferPos += item.Collection.Size;
                 }
-                
+
                 _stream.Write(_tempBuffer, 0, tempBufferPos);
             }
         }

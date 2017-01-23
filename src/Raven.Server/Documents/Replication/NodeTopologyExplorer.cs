@@ -80,11 +80,20 @@ namespace Raven.Server.Documents.Replication
                     writer.Flush();
 
                     //now parse the response                
-                    using (var parser = context.ParseMultiFrom(stream))
-                    using (var topologyResponseJson = await parser.ParseToMemoryAsync("ReplicationDiscovere/Read-topology-response"))
+                    JsonOperationContext.ManagedPinnedBuffer buffer;
+                    using(context.GetManagedBuffer(out buffer))
                     {
-                        topologyResponseJson.BlittableValidation();
-                        var topologyResponse = JsonDeserializationServer.TopologyDiscoveryResponse(topologyResponseJson);
+                        TopologyDiscoveryResponseHeader topologyResponse;
+
+                        using (var topologyResponseJson =
+                                await context.ParseToMemoryAsync(stream, "ReplicationDiscovere/Read-topology-response",
+                                    BlittableJsonDocumentBuilder.UsageMode.None,
+                                    buffer))
+                        {
+                            topologyResponseJson.BlittableValidation();
+                            topologyResponse = JsonDeserializationServer.TopologyDiscoveryResponse(topologyResponseJson);
+                        }
+
                         if (topologyResponse.Type == TopologyDiscoveryResponseHeader.Status.AlreadyKnown)
                             return null;
 
@@ -94,7 +103,9 @@ namespace Raven.Server.Documents.Replication
                                 _log.Info("Discover topology request failed. Reason:" + topologyResponse.Exception);
                             throw new InvalidOperationException(topologyResponse.Message, new InvalidOperationException(topologyResponse.Exception));
                         }
-                        using (var topologyInfoJson = await parser.ParseToMemoryAsync("ReplicationDiscovere/Read-topology-info"))
+                        using (var topologyInfoJson = await context.ParseToMemoryAsync(stream,"ReplicationDiscovere/Read-topology-info",
+                            BlittableJsonDocumentBuilder.UsageMode.None, 
+                            buffer))
                         {
                             topologyInfoJson.BlittableValidation();
                             var topology = JsonDeserializationServer.FullTopologyInfo(topologyInfoJson);

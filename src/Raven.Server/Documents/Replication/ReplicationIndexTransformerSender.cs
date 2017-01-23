@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Extensions;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow;
 using Sparrow.Json;
@@ -40,96 +41,99 @@ namespace Raven.Server.Documents.Replication
             {
                 var sp = Stopwatch.StartNew();
                 var timeout = Debugger.IsAttached ? 60 * 1000 : 1000;
-                var configurationContext = _parent._configurationContext;
-                using (configurationContext.OpenReadTransaction())
+                TransactionOperationContext configurationContext;
+                using (_parent._database.ConfigurationStorage.ContextPool.AllocateOperationContext(out configurationContext))
                 {
                     while (sp.ElapsedMilliseconds < timeout)
                     {
-                        LastEtag = _parent._lastSentIndexOrTransformerEtag;
-
-                        _parent.CancellationToken.ThrowIfCancellationRequested();
-
-                        var indexAndTransformerMetadata = _parent._database.IndexMetadataPersistence.GetAfter(
-                            configurationContext.Transaction.InnerTransaction,
-                            configurationContext, LastEtag + 1, 0, 1024);
-
-                        using (var stream = new MemoryStream())
+                        using (configurationContext.OpenReadTransaction())
                         {
-                            foreach (var item in indexAndTransformerMetadata)
+                            LastEtag = _parent._lastSentIndexOrTransformerEtag;
+
+                            _parent.CancellationToken.ThrowIfCancellationRequested();
+
+                            var indexAndTransformerMetadata = _parent._database.IndexMetadataPersistence.GetAfter(
+                                configurationContext.Transaction.InnerTransaction,
+                                configurationContext, LastEtag + 1, 0, 1024);
+
+                            using (var stream = new MemoryStream())
                             {
-                                _parent.CancellationToken.ThrowIfCancellationRequested();
-                                stream.Position = 0;
-                                using (var writer = new BlittableJsonTextWriter(configurationContext, stream))
+                                foreach (var item in indexAndTransformerMetadata)
                                 {
-                                    switch (item.Type)
-                                    {
-                                        case IndexEntryType.Index:
-                                            var index = _parent._database.IndexStore.GetIndex(item.Id);
-                                            if (index == null) //precaution
-                                                throw new InvalidDataException(
-                                                    $"Index with name {item.Name} has metadata, but is not at the index store. This is not supposed to happen and is likely a bug.");
-
-                                            try
-                                            {
-                                                IndexProcessor.Export(writer, index, configurationContext, false);
-                                            }
-                                            catch (InvalidOperationException e)
-                                            {
-                                                if (_log.IsInfoEnabled)
-                                                    _log.Info(
-                                                        $"Failed to export index definition for replication. Index name = {item.Name}",
-                                                        e);
-                                            }
-                                            break;
-                                        case IndexEntryType.Transformer:
-                                            var transformer = _parent._database.TransformerStore.GetTransformer(item.Id);
-                                            if (transformer == null) //precaution
-                                                throw new InvalidDataException(
-                                                    $"Transformer with name {item.Name} has metadata, but is not at the transformer store. This is not supposed to happen and is likely a bug.");
-
-                                            try
-                                            {
-                                                TransformerProcessor.Export(writer, transformer,
-                                                    configurationContext);
-                                            }
-                                            catch (InvalidOperationException e)
-                                            {
-                                                if (_log.IsInfoEnabled)
-                                                    _log.Info(
-                                                        $"Failed to export transformer definition for replication. Transformer name = {item.Name}",
-                                                        e);
-                                            }
-                                            break;
-                                        default:
-                                            throw new ArgumentOutOfRangeException(nameof(item),
-                                                "Unexpected item type in index/transformer metadata. This is not supposed to happen.");
-                                    }
-
-                                    writer.Flush();
-
+                                    _parent.CancellationToken.ThrowIfCancellationRequested();
                                     stream.Position = 0;
-                                    var newItem = new ReplicationBatchIndexItem
+                                    using (var writer = new BlittableJsonTextWriter(configurationContext, stream))
                                     {
-                                        Name = item.Name,
-                                        ChangeVector = item.ChangeVector,
-                                        Etag = item.Etag,
-                                        Type = (int) item.Type,
-                                        Definition =
-                                            configurationContext.ReadForMemory(stream,
-                                                "Index/Transformer Replication - Reading definition into memory")
-                                    };
+                                        switch (item.Type)
+                                        {
+                                            case IndexEntryType.Index:
+                                                var index = _parent._database.IndexStore.GetIndex(item.Id);
+                                                if (index == null) //precaution
+                                                    throw new InvalidDataException(
+                                                        $"Index with name {item.Name} has metadata, but is not at the index store. This is not supposed to happen and is likely a bug.");
 
-                                    AddReplicationItemToBatch(newItem);
+                                                try
+                                                {
+                                                    IndexProcessor.Export(writer, index, configurationContext, false);
+                                                }
+                                                catch (InvalidOperationException e)
+                                                {
+                                                    if (_log.IsInfoEnabled)
+                                                        _log.Info(
+                                                            $"Failed to export index definition for replication. Index name = {item.Name}",
+                                                            e);
+                                                }
+                                                break;
+                                            case IndexEntryType.Transformer:
+                                                var transformer = _parent._database.TransformerStore.GetTransformer(item.Id);
+                                                if (transformer == null) //precaution
+                                                    throw new InvalidDataException(
+                                                        $"Transformer with name {item.Name} has metadata, but is not at the transformer store. This is not supposed to happen and is likely a bug.");
+
+                                                try
+                                                {
+                                                    TransformerProcessor.Export(writer, transformer,
+                                                        configurationContext);
+                                                }
+                                                catch (InvalidOperationException e)
+                                                {
+                                                    if (_log.IsInfoEnabled)
+                                                        _log.Info(
+                                                            $"Failed to export transformer definition for replication. Transformer name = {item.Name}",
+                                                            e);
+                                                }
+                                                break;
+                                            default:
+                                                throw new ArgumentOutOfRangeException(nameof(item),
+                                                    "Unexpected item type in index/transformer metadata. This is not supposed to happen.");
+                                        }
+
+                                        writer.Flush();
+
+                                        stream.Position = 0;
+                                        var newItem = new ReplicationBatchIndexItem
+                                        {
+                                            Name = item.Name,
+                                            ChangeVector = item.ChangeVector,
+                                            Etag = item.Etag,
+                                            Type = (int)item.Type,
+                                            Definition =
+                                                configurationContext.ReadForMemory(stream,
+                                                    "Index/Transformer Replication - Reading definition into memory")
+                                        };
+
+                                        AddReplicationItemToBatch(newItem);
+                                    }
                                 }
                             }
-                        }
 
-                        // if we are at the end, we are done
-                        if (LastEtag <=
-                            _parent._database.IndexMetadataPersistence.ReadLastEtag(
-                                configurationContext.Transaction.InnerTransaction))
-                        {
-                            break;
+                            // if we are at the end, we are done
+                            if (LastEtag <=
+                                _parent._database.IndexMetadataPersistence.ReadLastEtag(
+                                    configurationContext.Transaction.InnerTransaction))
+                            {
+                                break;
+                            }
                         }
                     }
 
@@ -144,8 +148,7 @@ namespace Raven.Server.Documents.Replication
 
                     try
                     {
-                        using (_parent._documentsContext.OpenReadTransaction())
-                            SendIndexTransformerBatch();
+                        SendIndexTransformerBatch();
                     }
                     catch (Exception e)
                     {
@@ -166,7 +169,7 @@ namespace Raven.Server.Documents.Replication
         }
 
         private void AddReplicationItemToBatch(ReplicationBatchIndexItem item)
-        {          
+        {
             // destination already has it
             if (item.ChangeVector.GreaterThan(_parent._destinationLastKnownDocumentChangeVector) == false)
             {
@@ -200,7 +203,7 @@ namespace Raven.Server.Documents.Replication
                 [nameof(ReplicationMessageHeader.LastIndexOrTransformerEtag)] = LastEtag,
                 [nameof(ReplicationMessageHeader.ItemCount)] = _orderedReplicaItems.Count
             };
-            _parent.WriteToServerAndFlush(headerJson);
+            _parent.WriteToServer(headerJson);
 
             foreach (var item in _orderedReplicaItems)
                 WriteMetadataToServer(item.Value);
@@ -232,7 +235,7 @@ namespace Raven.Server.Documents.Replication
                                sizeOfNameInBytes +
                                item.Definition.Size +
                                sizeof(int); // size of definition
-            
+
             if (requiredSize > _tempBuffer.Length)
                 ThrowTooManyChangeVectorEntries(item.Name, item.ChangeVector, requiredSize);
 
@@ -242,23 +245,23 @@ namespace Raven.Server.Documents.Replication
                 //start writing change vector
                 fixed (ChangeVectorEntry* pChangeVectorEntries = item.ChangeVector)
                 {
-                    *(int*) pTemp = item.ChangeVector.Length; //write change vector length
+                    *(int*)pTemp = item.ChangeVector.Length; //write change vector length
                     tempBufferPos += sizeof(int);
 
                     //write change vector entries
-                    Memory.Copy(pTemp + tempBufferPos, (byte*) pChangeVectorEntries, changeVectorSize);
+                    Memory.Copy(pTemp + tempBufferPos, (byte*)pChangeVectorEntries, changeVectorSize);
                     tempBufferPos += changeVectorSize;
                 }
                 //end writing change vector
 
-                *(long*) (pTemp + tempBufferPos) = item.Etag; //write etag
+                *(long*)(pTemp + tempBufferPos) = item.Etag; //write etag
                 tempBufferPos += sizeof(long);
 
-                *(int*) (pTemp + tempBufferPos) = item.Type;
+                *(int*)(pTemp + tempBufferPos) = item.Type;
                 tempBufferPos += sizeof(int);
 
                 //start writing index/transformer metadata name
-                * (int*) (pTemp + tempBufferPos) = sizeOfNameInBytes; //write the size of the name string
+                *(int*)(pTemp + tempBufferPos) = sizeOfNameInBytes; //write the size of the name string
                 tempBufferPos += sizeof(int);
 
                 *(int*)(pTemp + tempBufferPos) = item.Name.Length;
@@ -274,13 +277,13 @@ namespace Raven.Server.Documents.Replication
 
                 //start writing index/transformer definition                
                 //first write index/transformer definition size
-                *(int*) (pTemp + tempBufferPos) = item.Definition.Size;
+                *(int*)(pTemp + tempBufferPos) = item.Definition.Size;
                 tempBufferPos += sizeof(int);
 
                 //start writing definition json data
                 var docReadPos = 0;
                 while (docReadPos < item.Definition.Size)
-                {                    
+                {
                     var sizeToCopy = Math.Min(item.Definition.Size - docReadPos, _tempBuffer.Length - tempBufferPos);
                     if (sizeToCopy == 0) // buffer is full, need to flush it
                     {
