@@ -193,6 +193,9 @@ namespace Raven.Server.Documents
         private void InitializeInternal()
         {
             TxMerger.Start();
+
+            ConfigurationStorage.InitializeActionsStorage();
+
             _indexStoreTask = IndexStore.InitializeAsync();
             _transformerStoreTask = TransformerStore.InitializeAsync();
             SqlReplicationLoader.Initialize();
@@ -222,7 +225,7 @@ namespace Raven.Server.Documents
 
             //Index Metadata Store shares Voron env and context pool with documents storage, 
             //so replication of both documents and indexes/transformers can be made within one transaction
-            ConfigurationStorage.Initialize(IndexStore, TransformerStore);
+            ConfigurationStorage.InitializeIndexesEtagsStorage(IndexStore, TransformerStore);
             DocumentReplicationLoader.Initialize();
         }
 

@@ -3,7 +3,6 @@ using System.IO;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.NotificationCenter;
-using Raven.Server.NotificationCenter.Alerts;
 using Raven.Server.ServerWide.Context;
 using Voron;
 
@@ -30,16 +29,21 @@ namespace Raven.Server.Documents
             options.SchemaVersion = 1;
 
             Environment = new StorageEnvironment(options);
-
+            
             ActionsStorage = new ActionsStorage(db.Name);
-
+            
             IndexesEtagsStorage = new IndexesEtagsStorage(db.Name);
+
+            _contextPool = new TransactionContextPool(Environment);
         }
 
-        public void Initialize(IndexStore indexStore, TransformerStore transformerStore)
+        public void InitializeActionsStorage()
         {
-            _contextPool = new TransactionContextPool(Environment);
             ActionsStorage.Initialize(Environment, _contextPool);
+        }
+
+        public void InitializeIndexesEtagsStorage(IndexStore indexStore, TransformerStore transformerStore)
+        {
             IndexesEtagsStorage.Initialize(Environment, _contextPool, indexStore, transformerStore);
         }
 
