@@ -1,8 +1,10 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
 
+import storageKeyProvider = require("common/storage/storageKeyProvider");
+
 class numberFormattingStorage {
 
-    static localStorageName = "NumberFormatting";
+    static localStorageName = storageKeyProvider.storageKeyFor("numberFormatting");
 
     static shouldUseRaw() {
         return localStorage.getObject(numberFormattingStorage.localStorageName);

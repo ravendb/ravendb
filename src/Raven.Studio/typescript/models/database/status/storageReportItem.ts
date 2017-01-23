@@ -36,7 +36,7 @@ class storageReportItem {
     }
 
     hasChildren(): boolean {
-        return this.internalChildren && this.internalChildren.length > 0;
+        return (this.internalChildren && this.internalChildren.length > 0) || (this.lazyLoadChildren === true);
     }
 
 }

@@ -112,6 +112,12 @@ declare module AceAjax {
     interface IEditSession {
         foldAll(): void;
     }
+
+    interface TokenInfo {
+        index: number;
+        start: number;
+        type: string;
+    }
 }
 
 interface DurandalAppModule {

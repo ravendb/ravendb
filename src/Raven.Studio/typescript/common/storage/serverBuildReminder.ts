@@ -1,8 +1,10 @@
 /// <reference path="../../../typings/tsd.d.ts" />
 
+import storageKeyProvider = require("common/storage/storageKeyProvider");
+
 class serverBuildReminder {
 
-    static localStorageName = "LastServerBuildReminder";
+    static localStorageName = storageKeyProvider.storageKeyFor("lastServerBuildReminder");
 
     static get() {
         return localStorage.getObject(serverBuildReminder.localStorageName);

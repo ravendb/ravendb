@@ -2,6 +2,7 @@
 
 import database = require("models/resources/database");
 import indexMergeSuggestion = require("models/database/index/indexMergeSuggestion");
+import storageKeyProvider = require("common/storage/storageKeyProvider");
 
 class mergedIndexesStorage {
 
@@ -28,7 +29,7 @@ class mergedIndexesStorage {
     }
 
     private static getStoragePrefixForDatabase(dbName: string) {
-        return "ravenDB-mergedIndex." + dbName;
+        return storageKeyProvider.storageKeyFor("mergedIndex." + dbName);
     }
 
     static getLocalStorageKey(db: database, id: string) {

@@ -2,6 +2,7 @@
 
 import database = require("models/resources/database");
 import verifyDocumentsIDsCommand = require("commands/database/documents/verifyDocumentsIDsCommand");
+import storageKeyProvider = require("common/storage/storageKeyProvider");
 
 class starredDocumentsStorage {
 
@@ -57,7 +58,7 @@ class starredDocumentsStorage {
     }
 
     private static getLocalStorageKey(dbName: string) {
-        return "ravenDB-starredDocuments." + dbName;
+        return storageKeyProvider.storageKeyFor("starredDocuments." + dbName);
     }
 
     private static getFromLocalStorage(localStorageName: string): string[]  {

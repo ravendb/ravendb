@@ -347,8 +347,8 @@ class storageReport extends viewModelBase {
             .on("mousemove", d => this.onMouseMove(d));
 
         const rectangles = cell.append("svg:rect")
-            .attr("width", d => d.dx - 1)
-            .attr("height", d => d.dy - 1);
+            .attr("width", d => Math.max(0, d.dx - 1))
+            .attr("height", d => Math.max(0, d.dy - 1))          
 
         rectangles
             .filter(x => x.hasChildren() || x.lazyLoadChildren)
@@ -426,6 +426,7 @@ class storageReport extends viewModelBase {
             this.loadDetailedReport(d)
                 .done(() => {
                     const prev = this.node();
+                    this.sortBySize(d);
                     this.node(d);
                     this.draw(true, prev);
                 })
