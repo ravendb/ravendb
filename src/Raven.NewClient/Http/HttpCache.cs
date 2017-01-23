@@ -21,6 +21,8 @@ namespace Raven.NewClient.Client.Http
         private long _totalSize;
         private readonly UnmanagedBuffersPool _unmanagedBuffersPool;
 
+        public int NumberOfItems => _items.Count;
+
         public HttpCache(long maxSize = 1024 * 1024L * 512L)
         {
             _maxSize = maxSize;

@@ -28,7 +28,7 @@ namespace Raven.NewClient.Client.Commands
             throw new NotSupportedException();
         }
 
-        public override async Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
+        public override async Task ProcessResponse(JsonOperationContext context, HttpCache cache, RequestExecuterOptions options, HttpResponseMessage response, string url)
         {
             Result = new StreamResult
             {

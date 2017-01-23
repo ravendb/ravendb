@@ -9,11 +9,13 @@ using System.Threading.Tasks;
 using Xunit;
 using System.Collections.Generic;
 using FastTests;
-using Raven.Client.Indexing;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases;
+using Raven.NewClient.Operations.Databases.Indexes;
 
 namespace SlowTests.Bugs.Caching
 {
-    public class CachingOfDocumentInclude : RavenTestBase
+    public class CachingOfDocumentInclude : RavenNewTestBase
     {
         private class User
         {
@@ -49,7 +51,8 @@ namespace SlowTests.Bugs.Caching
                 {
                     s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
-                    Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests);
+
+                    Assert.Equal(1, s.Advanced.RequestExecuter._cache.NumberOfItems);
                 }
             }
         }
@@ -196,7 +199,7 @@ namespace SlowTests.Bugs.Caching
                 {
                     var user = s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
-                    Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests);
+                    Assert.Equal(1, s.Advanced.RequestExecuter._cache.NumberOfItems);
                     user.Name = "Foo";
                     s.SaveChanges();
                 }
@@ -206,7 +209,7 @@ namespace SlowTests.Bugs.Caching
                 {
                     s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
-                    Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests); // did NOT increase cache
+                    Assert.Equal(1, s.Advanced.RequestExecuter._cache.NumberOfItems); // did NOT increase cache
                 }
             }
         }
@@ -220,15 +223,16 @@ namespace SlowTests.Bugs.Caching
                 {
                     s.Store(new User { Name = "Ayende", Email = "same.email@example.com" });
 
-                    store.DatabaseCommands.PutIndex("index",
-                                                         new IndexDefinition()
-                                                         {
-                                                             Maps = { "from user in docs.Users select new {Email=user.Email}" }
-                                                         });
+                    store.Admin.Send(new PutIndexOperation("index",
+                        new IndexDefinition
+                        {
+                            Maps = { "from user in docs.Users select new {Email=user.Email}" }
+                        }));
+
                     s.SaveChanges();
                 }
 
-                var latestEtag1 = store.LastEtagHolder.GetLastWrittenEtag();
+                var latestEtag1 = store.Admin.Send(new GetStatisticsOperation()).LastDocEtag ?? 0;
 
                 using (var s = store.OpenSession())
                 {
@@ -249,7 +253,7 @@ namespace SlowTests.Bugs.Caching
                     s.SaveChanges();
                 }
 
-                var latestEtag2 = store.LastEtagHolder.GetLastWrittenEtag();
+                var latestEtag2 = store.Admin.Send(new GetStatisticsOperation()).LastDocEtag ?? 0;
 
                 using (var s = store.OpenSession())
                 {
@@ -298,7 +302,7 @@ namespace SlowTests.Bugs.Caching
                 {
                     s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
-                    Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests);
+                    Assert.Equal(1, s.Advanced.RequestExecuter._cache.NumberOfItems);
                     s.Load<User>("users/1").Name = "foo";
                     s.SaveChanges();
                 }
@@ -307,7 +311,7 @@ namespace SlowTests.Bugs.Caching
                 {
                     s.Include<User>(x => x.PartnerId)
                         .Load("users/2");
-                    Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests); // did NOT increase cache
+                    Assert.Equal(1, s.Advanced.RequestExecuter._cache.NumberOfItems); // did NOT increase cache
                 }
             }
         }

@@ -54,7 +54,7 @@ namespace Raven.NewClient.Client.Commands
             return FailedNodes != null && FailedNodes.Contains(leaderNode);
         }
 
-        public virtual async Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
+        public virtual async Task ProcessResponse(JsonOperationContext context, HttpCache cache, RequestExecuterOptions options, HttpResponseMessage response, string url)
         {
             using (response)
             using (var stream = await response.Content.ReadAsStreamAsync())
@@ -64,9 +64,13 @@ namespace Raven.NewClient.Client.Commands
                     // we intentionally don't dispose the reader here, we'll be using it
                     // in the command, any associated memory will be released on context reset
                     var json = await context.ReadForMemoryAsync(stream, "response/object");
-                    var etag = response.GetEtagHeader();
-                    if (etag.HasValue)
-                        cache.Set(url, etag.Value, json);
+
+                    if (options.ShouldCacheRequest(url))
+                    {
+                        var etag = response.GetEtagHeader();
+                        if (etag.HasValue)
+                            cache.Set(url, etag.Value, json);
+                    }
 
                     SetResponse(json);
                     return;
