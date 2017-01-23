@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
@@ -109,6 +110,18 @@ namespace Raven.Server.Documents.Handlers
                 });
             }
 
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/indexes/rename", "POST")]
+        public Task Rename()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var newName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("newName");
+
+            Thread.Sleep(2000);//TODO: implement me and remove this sleep!
+
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             return Task.CompletedTask;
         }
 
