@@ -98,6 +98,18 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
+        [RavenAction("/databases/*/transformers/rename", "POST")]
+        public Task Rename()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var newName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("newName");
+
+            Thread.Sleep(2000);//TODO: implement me and remove this sleep!
+
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/databases/*/transformers/set-lock", "POST")]
         public Task SetLockMode()
         {
