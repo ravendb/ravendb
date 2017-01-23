@@ -3,6 +3,7 @@
 @navbar-height: 70px;
 @navbar-height-xs: 51px;
 @top-alert-height: 21px;
+@notification-center-z-index: 990;
 
 @menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
 @layout-border: @gray-dark;
@@ -614,7 +615,7 @@ body.show-top-alert {
     -o-transform: translateX(100%);
     -ms-transform: translateX(100%);
     transform: translateX(100%);
-    z-index: 990;
+    z-index: @notification-center-z-index;
     background-color: @gray-base;
     border-left: 1px solid @gray-dark;
     -webkit-transition: transform @menu-transition-ease;
