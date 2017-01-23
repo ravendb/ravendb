@@ -269,7 +269,9 @@ namespace Raven.NewClient.Client.Document
             try
             {
                 _proccessingCts.Token.ThrowIfCancellationRequested();
-                using (var context = new JsonOperationContext(4096, 1024))
+
+                JsonOperationContext context;
+                using (_store.Conventions.ContextPool.AllocateOperationContext(out context))
                 {
                     using (var tcpStream = await ConnectToServer().ConfigureAwait(false))
                     using(var parser = context.ParseMultiFrom(tcpStream))
@@ -368,10 +370,12 @@ namespace Raven.NewClient.Client.Document
             }
         }
 
-        private async Task<SubscriptionConnectionServerMessage> ReadNextObject(JsonOperationContext.MultiDocumentParser parser)
+        private async Task<SubscriptionConnectionServerMessage> ReadNextObject()
         {
             if (_proccessingCts.IsCancellationRequested || _tcpClient.Connected == false)
                     return null;
+
+            using (_tcpClient.Con)
             var blittable = await parser.ParseToMemoryAsync("Subscription/next/object");
             
             return JsonDeserializationClient.SubscriptionNextObjectResult(blittable);
