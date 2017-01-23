@@ -2,6 +2,7 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 
@@ -10,27 +11,28 @@ namespace Raven.Server.Documents.Replication
     public struct InterruptibleRead
     {
         private readonly AsyncManualResetEvent _interrupt;
-        private readonly JsonOperationContext _context;
-        private Task<BlittableJsonReaderObject> _prevCall;
+        private Task<Result> _prevCall;
         private Task[] _waitableTasks;
-
-        public Task<BlittableJsonReaderObject> PrevCall => _prevCall;
+        private readonly DocumentsContextPool _contextPool;
 
         public struct Result : IDisposable
         {
             public BlittableJsonReaderObject Document;
+            public IDisposable ReturnContext;
+            public DocumentsOperationContext Context;
             public bool Timeout;
             public bool Interrupted;
             public void Dispose()
             {
                 Document?.Dispose();
+                ReturnContext?.Dispose();
             }
         }
 
-        public InterruptibleRead(AsyncManualResetEvent interrupt, JsonOperationContext context) : this()
+        public InterruptibleRead(AsyncManualResetEvent interrupt, DocumentsContextPool contextPool) : this()
         {
             _interrupt = interrupt;
-            _context = context;
+            _contextPool = contextPool;
         }
 
         public Result ParseToMemory(
@@ -42,7 +44,7 @@ namespace Raven.Server.Documents.Replication
         {
             if (_prevCall == null)
             {
-                _prevCall = _context.ParseToMemoryAsync(stream, debugTag,BlittableJsonDocumentBuilder.UsageMode.None, buffer);
+                _prevCall = ReadNextObject(stream, debugTag, buffer);
             }
             if (_waitableTasks == null)
                 _waitableTasks = new Task[2];
@@ -60,8 +62,29 @@ namespace Raven.Server.Documents.Replication
 
             var result = _prevCall.Result;
             _prevCall = null;
-            return new Result { Document = result };
+            return result;
         }
 
+        private async Task<Result> ReadNextObject(Stream stream, string debugTag, JsonOperationContext.ManagedPinnedBuffer buffer)
+        {
+            DocumentsOperationContext context;
+            var retCtx = _contextPool.AllocateOperationContext(out context);
+            try
+            {
+                var jsonReaderObject =
+                    await context.ParseToMemoryAsync(stream, debugTag, BlittableJsonDocumentBuilder.UsageMode.None, buffer);
+                return new Result
+                {
+                    Document = jsonReaderObject,
+                    ReturnContext = retCtx,
+                    Context = context
+                };
+            }
+            catch (Exception)
+            {
+                retCtx.Dispose();
+                throw;
+            }
+        }
     }
 }

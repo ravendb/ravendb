@@ -66,16 +66,13 @@ namespace Sparrow
         }
 
 
-        public string LastSetStack = null;
         public void Set()
         {
-            LastSetStack = Environment.StackTrace;
             _tcs.TrySetResult(true);
         }
 
         public void SetByAsyncCompletion()
         {
-            LastSetStack = Environment.StackTrace;
             SetInAsyncManner(_tcs);
         }
 
@@ -95,7 +92,6 @@ namespace Sparrow
         public void SetAndResetAtomically()
         {
             // we intentionally reset it first to have this operation to behave as atomic
-            LastSetStack = Environment.StackTrace;
             var previousTcs = _tcs;
 
             Reset(force: true);
@@ -118,7 +114,6 @@ namespace Sparrow
 
         public void SetInAsyncMannerFireAndForget()
         {
-            LastSetStack = Environment.StackTrace;
             SetInAsyncMannerFireAndForget(_tcs);
         }
 

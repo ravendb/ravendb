@@ -286,42 +286,26 @@ namespace Raven.Server.Documents.Replication
 
         private bool WaitForChanges(int timeout, CancellationToken token)
         {
-            DocumentsOperationContext documentsContext;
-            var returnContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext);
-            
-            var interruptableRead = new InterruptibleRead(_waitForChanges, documentsContext);
-            try
+            var interruptableRead = new InterruptibleRead(_waitForChanges, _database.DocumentsStorage.ContextPool);
+            while (true)
             {
-                while (true)
+                using (var result = interruptableRead.ParseToMemory(
+                    _stream,
+                    "replication notify message",
+                    timeout,
+                    _buffer,
+                    token))
                 {
-                    using (var result = interruptableRead.ParseToMemory(
-                        _stream,
-                        "replication notify message",
-                        timeout,
-                        _buffer,
-                        token))
+                    if (result.Document != null)
                     {
-                        if (result.Document != null)
-                        {
-                            HandleServerResponse(result.Document, allowNotify: true);
-                        }
-                        else
-                        {
-                            interruptableRead.PrevCall?.ContinueWith(x =>
-                            {
-                                returnContext.Dispose();
-                            });
-                            return result.Timeout == false;
-                        }
+                        HandleServerResponse(result.Document, allowNotify: true);
+                    }
+                    else
+                    {
+                        return result.Timeout == false;
                     }
                 }
             }
-            catch (Exception)
-            {
-                returnContext.Dispose();
-                throw;
-            }
-            
         }
 
         internal void WriteToServer(DynamicJsonValue val)
@@ -439,52 +423,34 @@ namespace Raven.Server.Documents.Replication
 
         internal Tuple<ReplicationMessageReply.ReplyType, ReplicationMessageReply> HandleServerResponse()
         {
-            DocumentsOperationContext documentsContext;
-            var contextPoolReturn = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext);
-            
-            var interruptableRead = new InterruptibleRead(_connectionDisposed, documentsContext);
-            var wasInterrupted = false;
-            try
+            var interruptableRead = new InterruptibleRead(_connectionDisposed, _database.DocumentsStorage.ContextPool);
+            while (true)
             {
-                while (true)
+                using (var replicationBatchReplyMessage = interruptableRead.ParseToMemory(
+                    _stream,
+                    "replication acknowledge message",
+                    Timeout.Infinite,
+                    _buffer,
+                    CancellationToken))
                 {
-                    using (var replicationBatchReplyMessage = interruptableRead.ParseToMemory(
-                        _stream,
-                        "replication acknowledge message",
-                        Timeout.Infinite,
-                        _buffer,
-                        CancellationToken))
+                    if (replicationBatchReplyMessage.Interrupted)
                     {
-                        if (replicationBatchReplyMessage.Interrupted)
-                        {
-                            interruptableRead.PrevCall?.ContinueWith(x =>
-                            {
-                                contextPoolReturn.Dispose();
-                            });
-                            wasInterrupted = true;
-                            ThrowConnectionClosed();
-                        }
-
-                        var replicationBatchReply = HandleServerResponse(replicationBatchReplyMessage.Document,
-                            allowNotify: false);
-                        if (replicationBatchReply == null)
-                            continue;
-
-                        LastHeartbeatTicks = _database.Time.GetUtcNow().Ticks;
-
-                        return Tuple.Create(replicationBatchReply.Type,
-                            replicationBatchReply.Type == ReplicationMessageReply.ReplyType.Error
-                                ? replicationBatchReply
-                                : null);
+                        ThrowConnectionClosed();
                     }
+
+                    var replicationBatchReply = HandleServerResponse(replicationBatchReplyMessage.Document,
+                        allowNotify: false);
+                    if (replicationBatchReply == null)
+                        continue;
+
+                    LastHeartbeatTicks = _database.Time.GetUtcNow().Ticks;
+
+                    return Tuple.Create(replicationBatchReply.Type,
+                        replicationBatchReply.Type == ReplicationMessageReply.ReplyType.Error
+                            ? replicationBatchReply
+                            : null);
                 }
             }
-            finally
-            {
-                if (wasInterrupted == false)
-                    contextPoolReturn.Dispose();
-            }
-            
         }
 
         private static void ThrowConnectionClosed()

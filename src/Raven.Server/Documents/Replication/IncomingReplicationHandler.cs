@@ -110,73 +110,69 @@ namespace Raven.Server.Documents.Replication
                 {
                     while (!_cts.IsCancellationRequested)
                     {
-                        DocumentsOperationContext documentsContext;
-                        TransactionOperationContext configurationContext;
-                        var documenContextReturn = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext);
-                        var writer = new BlittableJsonTextWriter(documentsContext, _stream);
-                        using (_database.ConfigurationStorage.ContextPool.AllocateOperationContext(out configurationContext))
+                        try
                         {
-                            try
+                            var interruptibleRead = new InterruptibleRead(_replicationFromAnotherSource,
+                                _database.DocumentsStorage.ContextPool);
+                            using (var msg = interruptibleRead.ParseToMemory(
+                                _connectionOptions.Stream,
+                                "IncomingReplication/read-message",
+                                Timeout.Infinite,
+                                _connectionOptions.PinnedBuffer,
+                                CancellationToken.None))
                             {
-                                var interruptibleRead = new InterruptibleRead(_replicationFromAnotherSource, documentsContext);
-                                using (var msg = interruptibleRead.ParseToMemory(
-                                    _connectionOptions.Stream,
-                                    "IncomingReplication/read-message",
-                                    Timeout.Infinite,
-                                    _connectionOptions.PinnedBuffer,
-                                    CancellationToken.None))
+                                TransactionOperationContext configurationContext;
+                                if (msg.Document != null)
                                 {
-                                    if (msg.Document != null)
+                                    using (var writer = new BlittableJsonTextWriter(msg.Context, _stream))
+                                    using (_database.ConfigurationStorage.ContextPool.AllocateOperationContext(
+                                            out configurationContext))
                                     {
-                                        HandleSingleReplicationBatch(documentsContext, configurationContext, msg.Document, writer);
-                                        using (documenContextReturn)
-                                        using (writer)
-                                        {
-                                            // dispose writer and contest 
-                                        }
-                                            
+                                        HandleSingleReplicationBatch(msg.Context, configurationContext,
+                                            msg.Document,
+                                            writer);
                                     }
-                                    else // notify peer about new change vector
+                                }
+                                else // notify peer about new change vector
+                                {
+                                    DocumentsOperationContext documentsContext;
+
+                                    using (_database.ConfigurationStorage.ContextPool.AllocateOperationContext(
+                                        out configurationContext))
+                                    using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(
+                                            out documentsContext))
+                                    using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
                                     {
                                         SendHeartbeatStatusToSource(
                                             documentsContext,
-                                            configurationContext, 
-                                            writer, 
+                                            configurationContext,
+                                            writer,
                                             _lastDocumentEtag,
-                                            _lastIndexOrTransformerEtag, 
+                                            _lastIndexOrTransformerEtag,
                                             "Notify");
-
-                                        interruptibleRead.PrevCall?.ContinueWith(x =>
-                                        {
-                                            using (documenContextReturn)
-                                            using (writer)
-                                            {
-                                                // dispose writer and contest 
-                                            }
-                                        });
                                     }
-                                    // we reset it after every time we send to the remote server
-                                    // because that is when we know that it is up to date with our 
-                                    // status, so no need to send again
-                                    _replicationFromAnotherSource.Reset();
                                 }
+                                // we reset it after every time we send to the remote server
+                                // because that is when we know that it is up to date with our 
+                                // status, so no need to send again
+                                _replicationFromAnotherSource.Reset();
                             }
-                            catch (Exception e)
+                        }
+                        catch (Exception e)
+                        {
+                            if (_log.IsInfoEnabled)
                             {
-                                if (_log.IsInfoEnabled)
-                                {
-                                    if (e.InnerException is SocketException)
-                                        _log.Info(
-                                            "Failed to read data from incoming connection. The incoming connection will be closed and re-created.",
-                                            e);
-                                    else
-                                        _log.Info(
-                                            "Received unexpected exception while receiving replication batch. This is not supposed to happen.",
-                                            e);
-                                }
-
-                                throw;
+                                if (e.InnerException is SocketException)
+                                    _log.Info(
+                                        "Failed to read data from incoming connection. The incoming connection will be closed and re-created.",
+                                        e);
+                                else
+                                    _log.Info(
+                                        "Received unexpected exception while receiving replication batch. This is not supposed to happen.",
+                                        e);
                             }
+
+                            throw;
                         }
                     }
                 }
