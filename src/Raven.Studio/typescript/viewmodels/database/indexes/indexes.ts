@@ -13,7 +13,7 @@ import saveIndexPriorityCommand = require("commands/database/index/saveIndexPrio
 import getIndexesStatsCommand = require("commands/database/index/getIndexesStatsCommand");
 import getIndexesStatusCommand = require("commands/database/index/getIndexesStatusCommand");
 import resetIndexCommand = require("commands/database/index/resetIndexCommand");
-import toggleIndexingCommand = require("commands/database/index/toggleIndexingCommand");
+import togglePauseIndexingCommand = require("commands/database/index/togglePauseIndexingCommand");
 import eventsCollector = require("common/eventsCollector");
 import enableIndexCommand = require("commands/database/index/enableIndexCommand");
 import disableIndexCommand = require("commands/database/index/disableIndexCommand");
@@ -42,8 +42,7 @@ class indexes extends viewModelBase {
         localState: ko.observableArray<string>([])
     }
 
-    //indexingEnabled = ko.observable<boolean>(true);
-    indexingPaused = ko.observable<boolean>(false);
+    globalIndexingStatus = ko.observable<Raven.Client.Data.Indexes.IndexRunningStatus>();
 
     resetsInProgress = new Set<string>();
 
@@ -136,14 +135,11 @@ class indexes extends viewModelBase {
     private processData(stats: Array<Raven.Client.Data.Indexes.IndexStats>, replacements: indexReplaceDocument[], statuses: Raven.Client.Data.Indexes.IndexingStatus) {
         //TODO: handle replacements
 
-        //this.indexingEnabled(statuses.Status !== "Paused");
-        this.indexingPaused(statuses.Status === "Paused")
+        this.globalIndexingStatus(statuses.Status);
 
         stats
-            .map(i => new index(i))
+            .map(i => new index(i, this.globalIndexingStatus ))
             .forEach(i => {
-                const paused = !!statuses.Indexes.find(x => x.Name === i.name && x.Status === "Paused");
-                i.pausedUntilRestart(paused);
                 this.putIndexIntoGroups(i);
             });
     }
@@ -320,7 +316,6 @@ class indexes extends viewModelBase {
                 .execute()
                 .done(() => {
                     idx.state("Disabled");
-                    idx.pausedUntilRestart(false);
                 })
                 .always(() => this.spinners.localState.remove(idx.name));
         }
@@ -346,7 +341,7 @@ class indexes extends viewModelBase {
         if (originalPriority !== newPriority) {
             this.spinners.localPriority.push(idx.name);
 
-            const optionalResumeTask = idx.pausedUntilRestart()
+            const optionalResumeTask = idx.globalIndexingStatus() === "Paused"
                 ? this.resumeIndexingInternal(idx)
                 : $.Deferred<void>().resolve();
 
@@ -439,9 +434,8 @@ class indexes extends viewModelBase {
                 if (result.can) {
                     eventsCollector.default.reportEvent("indexes", "resume-all");
                     this.spinners.globalStartStop(true);
-                    new toggleIndexingCommand(true, this.activeDatabase())
+                    new togglePauseIndexingCommand(true, this.activeDatabase())
                         .execute()
-                        .done(() => this.indexingPaused(false))
                         .always(() => {
                             this.spinners.globalStartStop(false);
                             this.fetchIndexes();
@@ -456,9 +450,8 @@ class indexes extends viewModelBase {
                 if (result.can) {
                     eventsCollector.default.reportEvent("indexes", "pause-all");
                     this.spinners.globalStartStop(true);
-                    new toggleIndexingCommand(false, this.activeDatabase())
+                    new togglePauseIndexingCommand(false, this.activeDatabase())
                         .execute()
-                        .done(() => this.indexingPaused(true))
                         .always(() => {
                             this.spinners.globalStartStop(false);
                             this.fetchIndexes();
@@ -476,18 +469,16 @@ class indexes extends viewModelBase {
     }
 
     private resumeIndexingInternal(idx: index): JQueryPromise<void> {
-        return new toggleIndexingCommand(true, this.activeDatabase(), { name: [idx.name] })
-            .execute()
-            .done(() => idx.pausedUntilRestart(false));
+        return new togglePauseIndexingCommand(true, this.activeDatabase(), { name: [idx.name] })
+            .execute();
     }
 
     pauseUntilRestart(idx: index) {
         eventsCollector.default.reportEvent("indexes", "pause");
         this.spinners.localState.push(idx.name);
 
-        new toggleIndexingCommand(false, this.activeDatabase(), { name: [idx.name] })
+        new togglePauseIndexingCommand(false, this.activeDatabase(), { name: [idx.name] })
             .execute()
-            .done(() => idx.pausedUntilRestart(true))
             .always(() => this.spinners.localState.remove(idx.name));
     }
 

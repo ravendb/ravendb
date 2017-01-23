@@ -76,7 +76,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public bool TryWriteOfflineDatabaseStatustoRequest(TransactionOperationContext ctx, BlittableJsonTextWriter writer, string databaseName, bool disabled)
+        public bool TryWriteOfflineDatabaseStatustoRequest(TransactionOperationContext ctx, BlittableJsonTextWriter writer, string databaseName, bool disabled, string indexingStatus)
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
@@ -98,7 +98,8 @@ namespace Raven.Server.Documents
                 {
                     databaseInfoJson.Modifications = new DynamicJsonValue(databaseInfoJson)
                     {
-                        [nameof(ResourceInfo.Disabled)] = disabled
+                        [nameof(ResourceInfo.Disabled)] = disabled,
+                        [nameof(DatabaseInfo.IndexingStatus)] = indexingStatus
                     };
 
                     ctx.Write(writer, databaseInfoJson);

@@ -75,6 +75,11 @@ namespace Raven.Server.Web.System
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
+            Task<DocumentDatabase> dbTask;
+            var online =
+                ServerStore.DatabasesLandlord.ResourcesStoresCache.TryGetValue(name, out dbTask) &&
+                dbTask != null && dbTask.IsCompleted;
+
             string errorMessage;
             if (
                 ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory,
@@ -137,7 +142,11 @@ namespace Raven.Server.Web.System
                         tx.Commit();
                     }
                 });
-
+                
+                object disabled;
+                if (online && (dbDoc.TryGetMember("Disabled", out disabled) == false || (bool)disabled == false))
+                    ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name);
+              
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

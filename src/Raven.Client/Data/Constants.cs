@@ -37,6 +37,8 @@ namespace Raven.Abstractions.Data
 
                 public const string JournalsStoragePath = "Raven/Indexing/JournalsStoragePath";
             }
+
+            public const string RavenIndexingDisable = "Raven/Indexing/Disable";
         }
 
         public class Command

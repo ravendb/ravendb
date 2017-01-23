@@ -86,24 +86,26 @@ namespace Raven.Server.Web.System
                     }
 
                     object disabledValue;
-                    var disabled = false;
                     if (dbDoc.TryGetMember("Disabled", out disabledValue))
                     {
-                        disabled = (bool)disabledValue;
+                        if ((bool) disabledValue == disableRequested)
+                        {
+                            var state = disableRequested ? "disabled" : "enabled";
+                            context.Write(writer, new DynamicJsonValue
+                            {
+                                ["Name"] = name,
+                                ["Success"] = false,
+                                ["Disabled"] = disableRequested,
+                                ["Reason"] = $"Database already {state}",
+                            });
+                            continue;
+                        }
                     }
 
-                    if (disabled == disableRequested)
+                    dbDoc.Modifications = new DynamicJsonValue(dbDoc)
                     {
-                        var state = disableRequested ? "disabled" : "enabled";
-                        context.Write(writer, new DynamicJsonValue
-                        {
-                            ["Name"] = name,
-                            ["Success"] = false,
-                            ["Disabled"] = disableRequested,
-                            ["Reason"] = $"Database already {state}",
-                        });
-                        continue;
-                    }
+                        ["Disabled"] = disableRequested
+                    };
 
                     var newDoc2 = context.ReadObject(dbDoc, dbId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
