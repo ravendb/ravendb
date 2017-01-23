@@ -38,41 +38,40 @@ namespace NewClientTests.NewClient
             {
                 AddMap<Opinion>(
                     opinions => from opinion in opinions
-                        select new
-                        {
-                            opinion.EntityId,
-                            DisplayName = (string) null,
-                            Visibility = (string) null,
-                            UpdatedAt = DateTimeOffset.MinValue,
-                            NumberOfFavorites = opinion.IsFavorite ? 1 : 0,
-                        });
+                                select new
+                                {
+                                    opinion.EntityId,
+                                    DisplayName = (string)null,
+                                    Visibility = (string)null,
+                                    UpdatedAt = DateTimeOffset.MinValue,
+                                    NumberOfFavorites = opinion.IsFavorite ? 1 : 0,
+                                });
 
                 AddMap<Entity>(
                     entities => from entity in entities
-                        select new
-                        {
-                            EntityId = entity.Id,
-                            entity.DisplayName,
-                            entity.Visibility,
-                            entity.UpdatedAt,
-                            NumberOfFavorites = 0,
-                        });
+                                select new
+                                {
+                                    EntityId = entity.Id,
+                                    entity.DisplayName,
+                                    entity.Visibility,
+                                    entity.UpdatedAt,
+                                    NumberOfFavorites = 0,
+                                });
 
                 Reduce = results => from result in results
-                    group result by result.EntityId
-                    into g
-                    select new
-                    {
-                        EntityId = g.Key,
-                        DisplayName = g.Select(x => x.DisplayName).Where(x => x != null).FirstOrDefault(),
-                        Visibility = g.Select(x => x.Visibility).Where(x => x != null).FirstOrDefault(),
-                        UpdatedAt = g.Max(x => (DateTimeOffset) x.UpdatedAt),
-                        NumberOfFavorites = g.Sum(x => x.NumberOfFavorites),
-                    };
+                                    group result by result.EntityId into g
+                                    select new
+                                    {
+                                        EntityId = g.Key,
+                                        DisplayName = g.Select(x => x.DisplayName).Where(x => x != null).FirstOrDefault(),
+                                        Visibility = g.Select(x => x.Visibility).Where(x => x != null).FirstOrDefault(),
+                                        UpdatedAt = g.Max(x => (DateTimeOffset)x.UpdatedAt),
+                                        NumberOfFavorites = g.Sum(x => x.NumberOfFavorites),
+                                    };
             }
         }
 
-        [Fact(Skip = "RavenDB-5747 Unable to deserialize DateTimeOffset [newClient]")]
+        [Fact]
         public void Should_get_stats_whe_using_lazy()
         {
             using (var store = GetDocumentStore())
@@ -94,7 +93,7 @@ namespace NewClientTests.NewClient
                         var opinion = new Opinion
                         {
                             EntityId = entity.Id,
-                            IsFavorite = i%2 == 0
+                            IsFavorite = i % 2 == 0
                         };
 
                         session.Store(opinion);
@@ -116,7 +115,6 @@ namespace NewClientTests.NewClient
                         .Skip(0)
                         .Take(10)
                         .Lazily();
-
 
                     var items = pagedQuery.Value.ToArray();
                     Assert.Equal(15, stats.TotalResults);
