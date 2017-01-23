@@ -168,6 +168,13 @@ class editIndex extends viewModelBase {
         //TODO: scripted index this.checkIfScriptedIndexBundleIsActive();
     }
 
+    attached() {
+        super.attached();
+        this.addMapHelpPopover();
+        this.addReduceHelpPopover();
+        //TODO: this.addScriptsLabelPopover();
+    }
+
     private updateIndexPaths() {
         new getDatabaseSettingsCommand(this.activeDatabase())
             .execute()
@@ -250,6 +257,23 @@ class editIndex extends viewModelBase {
         this.termsUrl(appUrl.forTerms(indexName, this.activeDatabase()));
         this.queryUrl(appUrl.forQuery(this.activeDatabase(), indexName));
     }
+
+    addMapHelpPopover() {
+        $("#map-title small").popover({
+            html: true,
+            trigger: 'hover',
+            content: 'Maps project the fields to search on or to group by. It uses LINQ query syntax.<br/><br/>Example:</br><pre><span class="code-keyword">from</span> order <span class="code-keyword">in</span> docs.Orders<br/><span class="code-keyword">where</span> order.IsShipped<br/><span class="code-keyword">select new</span><br/>{</br>   order.Date, <br/>   order.Amount,<br/>   RegionId = order.Region.Id <br />}</pre>Each map function should project the same set of fields.',
+        });
+    }
+
+    addReduceHelpPopover() {
+        $("#reduce-title small").popover({
+            html: true,
+            trigger: 'hover',
+            content: 'The Reduce function consolidates documents from the Maps stage into a smaller set of documents. It uses LINQ query syntax.<br/><br/>Example:</br><pre><span class="code-keyword">from</span> result <span class="code-keyword">in</span> results<br/><span class="code-keyword">group</span> result <span class="code-keyword">by new</span> { result.RegionId, result.Date } into g<br/><span class="code-keyword">select new</span><br/>{<br/>  Date = g.Key.Date,<br/>  RegionId = g.Key.RegionId,<br/>  Amount = g.Sum(x => x.Amount)<br/>}</pre>The objects produced by the Reduce function should have the same fields as the inputs.',
+        });
+    }
+
 
     addMap() {
         eventsCollector.default.reportEvent("index", "add-map");
