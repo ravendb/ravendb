@@ -136,6 +136,7 @@ namespace Raven.Bundles.Replication.Tasks
 
         private void Execute()
         {
+            var sw = new Stopwatch();
             using (LogContext.WithDatabase(docDb.Name))
             {
                 log.Debug("Replication task started.");
@@ -164,15 +165,71 @@ namespace Raven.Bundles.Replication.Tasks
                         }
                     }
 
-                    runningBecauseOfDataModifications = context.WaitForWork(timeToWaitInMinutes, ref workCounter, name);
+                    // ReSharper disable once TooWideLocalVariableScope
+                    TimeSpan timeToWaitDelta;
+                    do
+                    {
+                        sw.Restart();
+                        runningBecauseOfDataModifications = context.WaitForWork(timeToWaitInMinutes, ref workCounter, name);
+                        sw.Stop();
 
-                    timeToWaitInMinutes = runningBecauseOfDataModifications
-                        ? TimeSpan.FromSeconds(30)
-                        : TimeSpan.FromMinutes(5);
+                        if(runningBecauseOfDataModifications && HasDocumentOrTombstoneEtagChanged())
+                            break;
+                        
+                        timeToWaitInMinutes = GetTimeToWait(
+                            timeToWaitInMinutes,
+                            sw,
+                            runningBecauseOfDataModifications,
+                            out timeToWaitDelta);
+
+                        //make sure changes have actually happened (etag changes and proper timeout)
+                        //if we do not have modifications in the specified timeout, wait a bit more for work..
+                    } while (!runningBecauseOfDataModifications);
                 }
 
                 IsRunning = false;
             }
+        }
+
+        private static TimeSpan GetTimeToWait(TimeSpan timeToWaitInMinutes, 
+            Stopwatch sw, 
+            bool runningBecauseOfDataModifications,
+            out TimeSpan timeToWaitDelta)
+        {
+            timeToWaitDelta = timeToWaitInMinutes - TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds);
+            if (timeToWaitDelta.TotalMilliseconds > 0)
+            {
+                timeToWaitInMinutes = timeToWaitDelta;
+            }
+            else
+            {
+                timeToWaitInMinutes = runningBecauseOfDataModifications
+                    ? TimeSpan.FromSeconds(30)
+                    : TimeSpan.FromMinutes(5);
+            }
+            return timeToWaitInMinutes;
+        }
+
+
+        private bool HasDocumentOrTombstoneEtagChanged()
+        {
+            var lastDocumentEtag = Etag.Empty;
+            docDb.TransactionalStorage.Batch(accessor =>
+                lastDocumentEtag = accessor.Staleness.GetMostRecentDocumentEtag());
+
+            var lastTombstoneEtag = Etag.Empty;
+            docDb.TransactionalStorage.Batch(actions =>
+            {
+                var lastTombstone = actions.Lists
+                                           .ReadLast(Constants.RavenReplicationIndexesTombstones);
+                lastTombstoneEtag = lastTombstone.Etag;
+            });
+
+            var lastEtag = EtagUtil.IsGreaterThanOrEqual(lastDocumentEtag, lastTombstoneEtag)
+                                ? lastDocumentEtag :
+                                 lastTombstoneEtag;
+
+            return EtagUtil.IsGreaterThan(lastEtag, _lastReplicatedDocumentOrTombstoneEtag);
         }
 
         public Task ExecuteReplicationOnce(bool runningBecauseOfDataModifications)
@@ -220,7 +277,7 @@ namespace Raven.Bundles.Replication.Tasks
                             {
                                 try
                                 {
-                                    if (ReplicateTo(destination))
+                                    if (ReplicateTo(destination, out _lastReplicatedDocumentOrTombstoneEtag))
                                         docDb.WorkContext.NotifyAboutWork();
                                 }
                                 catch (Exception e)
@@ -433,8 +490,9 @@ namespace Raven.Bundles.Replication.Tasks
             }
         }
 
-        private bool ReplicateTo(ReplicationStrategy destination)
+        private bool ReplicateTo(ReplicationStrategy destination, out Etag lastReplicatedEtag)
         {
+            lastReplicatedEtag = Etag.Empty;
             try
             {
                 if (docDb.Disposed)
@@ -513,7 +571,11 @@ namespace Raven.Bundles.Replication.Tasks
 
                     using (var scope = stats.StartRecording("Documents"))
                     {
-                        switch (ReplicateDocuments(destination, destinationsReplicationInformationForSource, scope, out replicatedDocuments))
+                        switch (ReplicateDocuments(destination, 
+                            destinationsReplicationInformationForSource, 
+                            scope, 
+                            out replicatedDocuments,
+                            out lastReplicatedEtag))
                         {
                             case true:
                                 replicated = true;
@@ -618,8 +680,9 @@ namespace Raven.Bundles.Replication.Tasks
             return true;
         }
 
-        private bool? ReplicateDocuments(ReplicationStrategy destination, SourceReplicationInformationWithBatchInformation destinationsReplicationInformationForSource, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope recorder, out int replicatedDocuments)
+        private bool? ReplicateDocuments(ReplicationStrategy destination, SourceReplicationInformationWithBatchInformation destinationsReplicationInformationForSource, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope recorder, out int replicatedDocuments, out Etag lastReplicatedEtag)
         {
+            lastReplicatedEtag = Etag.Empty;
             replicatedDocuments = 0;
             JsonDocumentsToReplicate documentsToReplicate = null;
             var sp = Stopwatch.StartNew();
@@ -648,6 +711,7 @@ namespace Raven.Bundles.Replication.Tasks
                                 using (scope.StartRecording("Notify"))
                                 {
                                     SetLastReplicatedEtagForServer(destination, lastDocEtag: documentsToReplicate.LastEtag);
+                                    lastReplicatedEtag = documentsToReplicate.LastEtag;
                                     scope.Record(new RavenJObject
                                              {
                                                  { "LastDocEtag", documentsToReplicate.LastEtag.ToString() }
@@ -1475,6 +1539,7 @@ namespace Raven.Bundles.Replication.Tasks
 
         private readonly ConcurrentDictionary<string, DateTime> heartbeatDictionary = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
         private readonly Task completedTask = new CompletedTask();
+        private Etag _lastReplicatedDocumentOrTombstoneEtag;
 
         internal static void EnsureReplicationInformationInMetadata(RavenJObject metadata, DocumentDatabase database)
         {
