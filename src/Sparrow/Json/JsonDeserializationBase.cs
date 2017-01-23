@@ -285,10 +285,10 @@ namespace Sparrow.Json
 
             foreach (var propertyName in obj.GetPropertyNames())
             {
-                string val;
+                object val;
                 if (obj.TryGet(propertyName, out val))
                 {
-                    dic[propertyName] = val;
+                    dic[propertyName] = val.ToString();
                 }
             }
             return dic;

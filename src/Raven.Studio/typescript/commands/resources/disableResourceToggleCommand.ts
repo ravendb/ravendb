@@ -35,7 +35,10 @@ class disableResourceToggleCommand extends commandBase {
                 const joinedResult = ([]).concat.apply([], results);
                 joinedResultTask.resolve(joinedResult);
             })
-            .catch((result: any) => joinedResultTask.reject(result));
+            .catch((result: any) => {
+                joinedResultTask.reject(result);
+                this.reportError("Failed to toggle database status");
+            });
 
         return joinedResultTask;
     }

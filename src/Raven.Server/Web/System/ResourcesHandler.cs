@@ -92,18 +92,31 @@ namespace Raven.Server.Web.System
                 ServerStore.DatabasesLandlord.ResourcesStoresCache.TryGetValue(databaseName, out dbTask) &&
                 dbTask != null && dbTask.IsCompleted;
             var db = online ? dbTask.Result : null;
+
+            var indexingStatus = db != null
+                ? db.IndexStore.Status.ToString()
+                : "Running";
+
+            //Looking for disabled indexing flag inside the database settings for offline database status
+            BlittableJsonReaderObject settings;
+            if (data.TryGet("Settings", out settings))
+            {
+                bool indexingDisable;
+                if (settings.TryGet(Constants.Configuration.RavenIndexingDisable, out indexingDisable) &&
+                    indexingDisable)
+                    indexingStatus = "Disabled";
+            }
+
             if (online == false)
             {
                 // if state of database is found in the cache we can continue
                 if (ServerStore.DatabaseInfoCache.TryWriteOfflineDatabaseStatustoRequest(
-                    context, writer, databaseName, disabled))
+                    context, writer, databaseName, disabled, indexingStatus))
+                {
                     return;
+                }
                 // we won't find it if it is a new database or after a dirty shutdown, so just report empty values then
             }
-
-            var indexingStatus = dbTask != null && dbTask.IsCompleted
-                ? dbTask.Result.IndexStore.Status.ToString()
-                : null;
 
             var size = new Size(GetTotalSize(db));
             var backupInfo = GetBackupInfo(db);

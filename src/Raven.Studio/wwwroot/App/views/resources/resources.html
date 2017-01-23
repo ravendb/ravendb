@@ -117,14 +117,24 @@
                                         <span class="sr-only">Toggle Dropdown</span>
                                     </button>
                                     <ul class="dropdown-menu">
-                                        <li data-bind="visible: online() && !indexingPaused()">
-                                            <a href="#" data-bind="click: $root.toggleDatabaseIndexing">
+                                        <li data-bind="visible: online() && !indexingPaused() && indexingEnabled()">
+                                            <a href="#" data-bind="click: $root.togglePauseDatabaseIndexing">
                                                 <i class="icon-pause"></i> Pause indexing
                                             </a>
                                         </li>
-                                        <li data-bind="visible: online() && indexingPaused()">
-                                            <a href="#" data-bind="click: $root.toggleDatabaseIndexing">
+                                        <li data-bind="visible: indexingPaused() && indexingEnabled()">
+                                            <a href="#" data-bind="click: $root.togglePauseDatabaseIndexing">
                                                 <i class="icon-play"></i> Resume indexing
+                                            </a>
+                                        </li>
+                                        <li data-bind="visible: indexingEnabled()">
+                                            <a href="#" data-bind="click: $root.toggleDisableDatabaseIndexing">
+                                                <i class="icon-lock"></i> Disable indexing
+                                            </a>
+                                        </li>
+                                        <li data-bind="visible: !indexingEnabled()">
+                                            <a href="#" data-bind="click: $root.toggleDisableDatabaseIndexing">
+                                                <i class="icon-play"></i> Enable indexing
                                             </a>
                                         </li>
                                         <li>
@@ -221,11 +231,20 @@
         </div>
     </div>
 
-    <div class="properties-item" data-bind="visible: indexingPaused()">
+    <div class="properties-item" data-bind="visible: indexingPaused() && indexingEnabled()">
         <div class="properties-value value-only text-warning">
             <div class="set-size">
                 <i class="icon-pause"></i>
                 <span>Indexing paused</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="properties-item" data-bind="visible: !indexingEnabled()">
+        <div class="properties-value value-only text-warning">
+            <div class="set-size">
+                <i class="icon-lock"></i>
+                <span>Indexing Disabled</span>
             </div>
         </div>
     </div>

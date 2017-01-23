@@ -12,7 +12,7 @@ type optsType = {
     type: toggleType;
 }
 
-class toggleIndexingCommand extends commandBase {
+class togglePauseIndexingCommand extends commandBase {
 
     private toggleAll = false;
     private names: Array<string>;
@@ -51,4 +51,4 @@ class toggleIndexingCommand extends commandBase {
 
 }
 
-export = toggleIndexingCommand;
+export = togglePauseIndexingCommand;

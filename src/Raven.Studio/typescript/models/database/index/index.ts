@@ -25,6 +25,7 @@ class index {
     name: string;
     priority = ko.observable<Raven.Client.Data.Indexes.IndexPriority>();
     state = ko.observable<Raven.Client.Data.Indexes.IndexState>();
+    status = ko.observable<Raven.Client.Data.Indexes.IndexRunningStatus>();
     reduceAttempts?: number;
     reduceErrors?: number;
     reduceSuccesses?: number;
@@ -44,15 +45,16 @@ class index {
     isIdleState: KnockoutComputed<boolean>;
     isErrorState: KnockoutComputed<boolean>;
     isNormalState: KnockoutComputed<boolean>;
+    isPausedState: KnockoutComputed<boolean>;
 
     isFaulty: KnockoutComputed<boolean>;
-    pausedUntilRestart = ko.observable<boolean>();
+    globalIndexingStatus = ko.observable<Raven.Client.Data.Indexes.IndexRunningStatus>();
     canBePaused: KnockoutComputed<boolean>;
     canBeResumed: KnockoutComputed<boolean>;
     canBeEnabled: KnockoutComputed<boolean>;
     canBeDisabled: KnockoutComputed<boolean>;
 
-    constructor(dto: Raven.Client.Data.Indexes.IndexStats) {
+    constructor(dto: Raven.Client.Data.Indexes.IndexStats, globalIndexingStatus: KnockoutObservable<Raven.Client.Data.Indexes.IndexRunningStatus>) {
         this.collections = dto.Collections;
         this.collectionNames = index.extractCollectionNames(dto.Collections);
         this.createdTimestamp = dto.CreatedTimestamp;
@@ -76,7 +78,8 @@ class index {
         this.reduceSuccesses = dto.ReduceSuccesses;
         this.type = dto.Type;
         this.state(dto.State);
-
+        this.globalIndexingStatus = globalIndexingStatus;
+        this.status(dto.Status); 
         this.initializeObservables();
     }
 
@@ -104,20 +107,37 @@ class index {
         this.isLowPriority = ko.pureComputed(() => this.priority() === "Low");
         this.isHighPriority = ko.pureComputed(() => this.priority() === "High");
 
-        this.isIdleState = ko.pureComputed(() => this.state() === "Idle");
-        this.isDisabledState = ko.pureComputed(() => this.state() === "Disabled");
+        this.isIdleState = ko.pureComputed(() => {
+            let stateIsIdle = this.state() === "Idle";
+            let statusIsNotDisabled = this.globalIndexingStatus() === "Running";
+            return stateIsIdle && statusIsNotDisabled;
+        });
+        this.isDisabledState = ko.pureComputed(() => {
+            let stateIsDisabeld = this.state() === "Disabled";
+            let statusIsDisabled = this.globalIndexingStatus() === "Disabled";
+            return stateIsDisabeld || statusIsDisabled;
+        });
+        this.isPausedState = ko.pureComputed(() => {
+            let localStatusIsPaused = this.status() === "Paused";
+            let globalStatusIsPaused = this.globalIndexingStatus() === "Paused";
+            return localStatusIsPaused || globalStatusIsPaused;
+        });
         this.isErrorState = ko.pureComputed(() => this.state() === "Error");
-        this.isNormalState = ko.pureComputed(() => this.state() === "Normal");
+        this.isNormalState = ko.pureComputed(() => {
+            let stateIsNoraml = this.state() === "Normal";
+            let statusIsNotDisabled = this.globalIndexingStatus() === "Running";
+            return stateIsNoraml && statusIsNotDisabled;
+        });
 
         this.canBePaused = ko.pureComputed(() => {
-            const disabled = this.isDisabledState();
-            const paused = this.pausedUntilRestart();
-            return !disabled && !paused;
+            let statusIsNotDisabled = this.status() !== "Disabled";
+            let notInPausedState = !this.isPausedState();
+            return statusIsNotDisabled && notInPausedState
         });
         this.canBeResumed = ko.pureComputed(() => {
-            const disabled = this.isDisabledState();
-            const paused = this.pausedUntilRestart();
-            return !disabled && paused;
+            let statusIsNotDisabled = this.status() !== "Disabled";
+            let inPausedState = this.isPausedState();
+            return statusIsNotDisabled && inPausedState;
         });
         this.canBeDisabled = ko.pureComputed(() => {
             return !this.isDisabledState();
@@ -136,7 +156,7 @@ class index {
                 return "state-danger";
             }
 
-            if (this.pausedUntilRestart()) {
+            if (this.isPausedState()) {
                 return "state-warning";
             }
 
@@ -160,7 +180,7 @@ class index {
                 return "Faulty";
             }
 
-            if (this.pausedUntilRestart()) {
+            if (this.isPausedState()) {
                 return "Paused";
             }
 

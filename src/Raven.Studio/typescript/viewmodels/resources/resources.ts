@@ -7,7 +7,8 @@ import deleteResourceConfirm = require("viewmodels/resources/deleteResourceConfi
 import createDatabase = require("viewmodels/resources/createDatabase");
 import disableResourceToggleConfirm = require("viewmodels/resources/disableResourceToggleConfirm");
 import disableResourceToggleCommand = require("commands/resources/disableResourceToggleCommand");
-import toggleIndexingCommand = require("commands/database/index/toggleIndexingCommand");
+import togglePauseIndexingCommand = require("commands/database/index/togglePauseIndexingCommand");
+import toggleDisableIndexingCommand = require("commands/database/index/toggleDisableIndexingCommand");
 import deleteResourceCommand = require("commands/resources/deleteResourceCommand");
 import loadResourceCommand = require("commands/resources/loadResourceCommand");
 import resourcesManager = require("common/shell/resourcesManager");
@@ -50,7 +51,7 @@ class resources extends viewModelBase {
     constructor() {
         super();
 
-        this.bindToCurrentInstance("toggleResource", "toggleDatabaseIndexing", "deleteResource", "activateResource");
+        this.bindToCurrentInstance("toggleResource", "togglePauseDatabaseIndexing", "toggleDisableDatabaseIndexing", "deleteResource", "activateResource");
 
         this.initObservables();
     }
@@ -300,8 +301,7 @@ class resources extends viewModelBase {
         }
     }
 
-    /*
-    toggleDatabaseIndexing(db: databaseInfo) {
+    toggleDisableDatabaseIndexing(db: databaseInfo) {
         const enableIndexing = !db.indexingEnabled();
         const message = enableIndexing ? "Enable" : "Disable";
 
@@ -310,15 +310,14 @@ class resources extends viewModelBase {
                 if (result.can) {
                     this.spinners.disableIndexing.push(db.qualifiedName);
 
-                    new toggleIndexingCommand(true, db.asResource())
+                    new toggleDisableIndexingCommand(enableIndexing, db)
                         .execute()
-                        .done(() => db.indexingEnabled(enableIndexing))
                         .always(() => this.spinners.disableIndexing.remove(db.qualifiedName));
                 }
             });
-    */
+    }
 
-    toggleDatabaseIndexing(db: databaseInfo) {
+    togglePauseDatabaseIndexing(db: databaseInfo) {
         const pauseIndexing = db.indexingPaused();
         const message = pauseIndexing ? "Resume" : "Pause";
 
@@ -327,7 +326,7 @@ class resources extends viewModelBase {
                 if (result.can) {
                     this.spinners.disableIndexing.push(db.qualifiedName);
 
-                    new toggleIndexingCommand(pauseIndexing, db.asResource())
+                    new togglePauseIndexingCommand(pauseIndexing, db.asResource())
                         .execute()
                         .done(() => db.indexingPaused(!pauseIndexing))
                         .always(() => this.spinners.disableIndexing.remove(db.qualifiedName));
