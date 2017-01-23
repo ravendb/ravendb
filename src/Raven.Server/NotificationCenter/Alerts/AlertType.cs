@@ -1,18 +1,21 @@
-﻿namespace Raven.Server.NotificationCenter.Alerts
+﻿// ReSharper disable InconsistentNaming
+namespace Raven.Server.NotificationCenter.Alerts
 {
     public enum AlertType
     {
-        SqlReplicationConnectionError,
-        SqlReplicationProviderError,
-        SqlReplicationSlowSql,
-        SqlReplicationConnectionStringMissing,
-        SqlReplicationError,
-        SqlReplicationWriteErrorRatio,
-        SqlReplicationScriptError,
-        SqlReplicationScriptErrorRatio,
+        SqlReplication_ConnectionError,
+        SqlReplication_ProviderError,
+        SqlReplication_SlowSql,
+        SqlReplication_ConnectionStringMissing,
+        SqlReplication_Error,
+        SqlReplication_WriteErrorRatio,
+        SqlReplication_ScriptError,
+        SqlReplication_ScriptErrorRatio,
         PeriodicExport,
         Replication,
-        NewServerVersionAvailable,
-        LicenseManagerInitializationError
+        Server_NewVersionAvailable,
+        LicenseManager_InitializationError,
+        IndexStore_IndexCouldNotBeOpened,
+        TransformerStore_TransformerCouldNotBeOpened
     }
 }

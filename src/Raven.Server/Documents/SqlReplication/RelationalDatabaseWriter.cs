@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.SqlReplication
                 database.NotificationCenter.Add(AlertRaised.Create(
                     SqlReplication.AlertTitle,
                     $"Sql Replication could not open connection to {_connection.ConnectionString}",
-                    AlertType.SqlReplicationConnectionError,
+                    AlertType.SqlReplication_ConnectionError,
                     AlertSeverity.Error,
                     key: _connection.ConnectionString,
                     details: new ExceptionDetails(e)));
@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.SqlReplication
                 _database.NotificationCenter.Add(AlertRaised.Create(
                     SqlReplication.AlertTitle,
                     message,
-                    AlertType.SqlReplicationProviderError,
+                    AlertType.SqlReplication_ProviderError,
                     AlertSeverity.Error,
                     details: new ExceptionDetails(e)));
 
@@ -326,7 +326,7 @@ namespace Raven.Server.Documents.SqlReplication
             if (_logger.IsInfoEnabled)
                 _logger.Info(message);
 
-            _database.NotificationCenter.Add(AlertRaised.Create(SqlReplication.AlertTitle, message, AlertType.SqlReplicationSlowSql, AlertSeverity.Warning));
+            _database.NotificationCenter.Add(AlertRaised.Create(SqlReplication.AlertTitle, message, AlertType.SqlReplication_SlowSql, AlertSeverity.Warning));
         }
 
         private string GetTableNameString(string tableName)
