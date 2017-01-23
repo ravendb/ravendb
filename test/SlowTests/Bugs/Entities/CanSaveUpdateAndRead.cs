@@ -1,10 +1,11 @@
 using System.Linq;
 using FastTests;
+using Raven.NewClient.Abstractions.Data;
 using Xunit;
 
 namespace SlowTests.Bugs.Entities
 {
-    public class CanSaveUpdateAndRead : RavenTestBase
+    public class CanSaveUpdateAndRead : RavenNewTestBase
     {
         [Fact]
         public void Can_read_entity_name_after_update()
@@ -26,7 +27,7 @@ namespace SlowTests.Bugs.Entities
                 using (var s = store.OpenSession())
                 {
                     var e = s.Load<Event>("events/1");
-                    var entityName = s.Advanced.GetMetadataFor(e)["Raven-Entity-Name"].Value<string>();
+                    var entityName = s.Advanced.GetMetadataFor(e)[Constants.Headers.RavenEntityName];
                     Assert.Equal("Events", entityName);
                 }
             }
