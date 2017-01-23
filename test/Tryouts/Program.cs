@@ -24,9 +24,9 @@ namespace Tryouts
         {
             for (int i = 0; i < 10; i++)
             {
-                using (var a = new Full())
+                using (var a = new FastTests.Server.Replication.AutomaticConflictResolution())
                 {
-                    a.CanBackupAndRestore();
+                    a.ShouldResolveDocumentConflictInFavorOfRemoteVersion();
                 }
                 Console.WriteLine(i);
             }

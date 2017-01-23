@@ -8,6 +8,7 @@ using Raven.Server.Utils;
 using Raven.Server.Utils.Metrics;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Voron.Util;
 
 namespace Raven.Server.Documents.TcpHandlers
 {
@@ -21,21 +22,15 @@ namespace Raven.Server.Documents.TcpHandlers
 
         private bool _isDisposed;
 
-        public JsonOperationContext Context;
-
-        public List<IDisposable> DisposeOnConnectionClose = new List<IDisposable>();
         public DocumentDatabase DocumentDatabase;
 
         public Action<JsonOperationContext, DynamicJsonValue> GetTypeSpecificStats;
-
-        public JsonOperationContext.MultiDocumentParser MultiDocumentParser;
 
         public TcpConnectionHeaderMessage.OperationTypes Operation;
 
         public NetworkStream Stream;
 
         public TcpClient TcpClient;
-        public IDisposable ReturnContext;
 
         public TcpConnectionOptions()
         {
@@ -50,38 +45,42 @@ namespace Raven.Server.Documents.TcpHandlers
         }
 
         public long Id { get; set; }
+        public JsonContextPool ContextPool;
 
+        public JsonOperationContext.ManagedPinnedBuffer PinnedBuffer;
+
+        private readonly SemaphoreSlim _running = new SemaphoreSlim(1);
+
+        public IDisposable ConnectionProcessingInProgress()
+        {
+            _running.Wait();
+            return new DisposableAction(() => _running.Release());
+        }
 
         public void Dispose()
         {
             if (_isDisposed)
                 return;
 
-            _isDisposed = true;
-            MetricsScheduler.Instance.StopTickingMetric(_bytesSentMetric);
-            MetricsScheduler.Instance.StopTickingMetric(_bytesReceivedMetric);
+            Stream?.Dispose();
+            TcpClient?.Dispose();
 
-            DocumentDatabase?.RunningTcpConnections.TryRemove(this);
-            MultiDocumentParser.Dispose();
-
-            foreach (var disposable in DisposeOnConnectionClose)
+            _running.Wait();
+            try
             {
-                try
-                {
-                    disposable?.Dispose();
-                }
-                catch (Exception)
-                {
-                    // nothing to do here
-                }
-            }
-        }
+                _isDisposed = true;
+                MetricsScheduler.Instance.StopTickingMetric(_bytesSentMetric);
+                MetricsScheduler.Instance.StopTickingMetric(_bytesReceivedMetric);
 
-        public void ResetAndRenew()
-        {
-            MultiDocumentParser.Reset();
-            Context.ResetAndRenew();
-            MultiDocumentParser.Renew();
+                DocumentDatabase?.RunningTcpConnections.TryRemove(this);
+
+                PinnedBuffer?.Dispose();
+            }
+            finally
+            {
+                _running.Release();
+            }
+            _running.Dispose();
         }
 
         public void RegisterBytesSent(long bytesAmount)
@@ -99,17 +98,11 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             var totalSeconds = (long) (DateTime.UtcNow - _connectedAt).TotalSeconds;
 
-            if (minSecondsDuration.HasValue)
-            {
-                if (totalSeconds < minSecondsDuration.Value)
-                    return false;
-            }
+            if (totalSeconds < minSecondsDuration)
+                return false;
 
-            if (maxSecondsDuration.HasValue)
-            {
-                if (totalSeconds > maxSecondsDuration.Value)
-                    return false;
-            }
+            if (totalSeconds > maxSecondsDuration)
+                return false;
 
             if (string.IsNullOrEmpty(ip) == false)
             {

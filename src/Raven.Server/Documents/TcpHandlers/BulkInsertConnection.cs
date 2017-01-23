@@ -40,8 +40,7 @@ namespace Raven.Server.Documents.TcpHandlers
         private readonly BlockingCollection<byte[]> _messagesToClient =
             new BlockingCollection<byte[]>(32);
 
-        private readonly BlockingCollection<BulkInsertDoc> _docsToRelease =
-            new BlockingCollection<BulkInsertDoc>();
+        private readonly UnmanagedBuffersPool _memPool;
 
         private Task _replyToCustomer;
         private Task _insertDocuments;
@@ -50,23 +49,13 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             TcpConnection = tcpConnection;
             _logger = logger;
+            _memPool = new UnmanagedBuffersPool("bulk-insert",tcpConnection.DocumentDatabase.Name);
         }
 
         public void Execute()
         {
             _replyToCustomer = Task.Factory.StartNew(ReplyToClient);
-            _insertDocuments = Task.Factory.StartNew(() =>
-            {
-                try
-                {
-                    InsertDocuments();
-                }
-                catch (Exception)
-                {
-                    _docsToRelease.CompleteAdding(); // will abort the reading thread
-                    throw;
-                }
-            });
+            _insertDocuments = Task.Factory.StartNew(InsertDocuments);
             try
             {
                 ReadBulkInsert();
@@ -137,17 +126,23 @@ namespace Raven.Server.Documents.TcpHandlers
             }
             try
             {
-                var error = TcpConnection.Context.ReadObject(new DynamicJsonValue
+                JsonOperationContext context;
+                using (TcpConnection.ContextPool.AllocateOperationContext(out context))
                 {
-                    ["Type"] = "Error",
-                    ["Exception"] = e.ToString()
-                }, "error/message");
+                    var error = context.ReadObject(new DynamicJsonValue
+                    {
+                        ["Type"] = "Error",
+                        ["Exception"] = e.ToString()
+                    }, "error/message");
 
-                using (var countingStream = new CountingStream(TcpConnection.Stream))
-                {
-                    TcpConnection.Context.Write(countingStream, error);
-                    TcpConnection.RegisterBytesSent(countingStream.NumberOfWrittenBytes);
+                    using (var countingStream = new CountingStream(TcpConnection.Stream))
+                    {
+                        context.Write(countingStream, error);
+                        TcpConnection.RegisterBytesSent(countingStream.NumberOfWrittenBytes);
+                    }
                 }
+
+                  
             }
             catch (Exception errorSending)
             {
@@ -265,7 +260,7 @@ namespace Raven.Server.Documents.TcpHandlers
             }
             foreach (var bulkInsertDoc in docsToWrite)
             {
-                _docsToRelease.Add(bulkInsertDoc);
+                _memPool.Return(bulkInsertDoc.Memory);
             }
             if (_logger.IsInfoEnabled)
                 _logger.Info(
@@ -276,81 +271,49 @@ namespace Raven.Server.Documents.TcpHandlers
 
         private void ReadBulkInsert()
         {
-            var managedBuffer = new byte[1024 * 32];
-            fixed (byte* managedBufferPointer = managedBuffer)
+            while (true)
             {
-                while (true)
+                // _context.Reset(); - we cannot reset the context here
+                // because the memory is being used by the other threads 
+                // we avoid the memory leak of infinite usage by limiting 
+                // the number of buffers we get from the context and then
+                // reusing them
+                var len = Read7BitEncodedInt();
+                if (len <= 0)
                 {
-                    // _context.Reset(); - we cannot reset the context here
-                    // because the memory is being used by the other threads 
-                    // we avoid the memory leak of infinite usage by limiting 
-                    // the number of buffers we get from the context and then
-                    // reusing them
-                    var len = Read7BitEncodedInt();
-                    if (len <= 0)
-                    {
-                        _docsToWrite.CompleteAdding();
-                        break;
-                    }
+                    _docsToWrite.CompleteAdding();
+                    break;
+                }
 
-                    BulkInsertDoc buffer;
-                    while (true)
-                    {
-                        bool hasFreeBuffer;
-                        try
-                        {
-                            hasFreeBuffer = _docsToRelease.TryTake(out buffer);
-                            if (_docsToRelease.IsAddingCompleted)
-                            {
-                                if (_logger.IsInfoEnabled)
-                                    _logger.Info("Stopping read bulk insert due to an error in insert documents task");
-                                // error during the insert, just quit and use the error handling to report to the user
-                                return;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            if (_logger.IsInfoEnabled)
-                                _logger.Info("Server internal error while in read documents in bulk insert", ex);
-                            return;
-                        }
-                        if (hasFreeBuffer == false)
-                        {
-                            var allocatedMemoryData = TcpConnection.Context.GetMemory(len);
-                            buffer = new BulkInsertDoc
-                            {
-                                Memory = allocatedMemoryData,
-                                Pointer = (byte*)allocatedMemoryData.Address
-                            };
-                            break;
-                        }
-                        buffer.Used = 0;
-                        if (buffer.Memory.SizeInBytes >= len)
-                            break;
+                var buffer = new BulkInsertDoc
+                {
+                    Memory = _memPool.Allocate(len),
+                };
+                buffer.Pointer = buffer.Memory.Address;
+                buffer.Used = 0;
 
-                        //if we are here, this means that the buffer that we got 
-                        //from _docsToRelease is too small,
-                        //thus discard the buffer since we don't need it and look for another
-                        TcpConnection.Context.ReturnMemory(buffer.Memory);
-                        buffer.Memory = null; //precaution
-                    }
-
-                    while (len > 0)
+                while (len > 0)
+                {
+                    if (TcpConnection.PinnedBuffer.Valid == TcpConnection.PinnedBuffer.Used)
                     {
-                        var read = TcpConnection.MultiDocumentParser.Read(managedBuffer, 0, Math.Min(len, managedBuffer.Length));
+                        var read = TcpConnection.Stream.Read(TcpConnection.PinnedBuffer.Buffer.Array,
+                            TcpConnection.PinnedBuffer.Buffer.Offset, TcpConnection.PinnedBuffer.Buffer.Count);
                         TcpConnection.RegisterBytesReceived(read);
                         if (read == 0)
                             throw new EndOfStreamException("Could not read expected document");
-                        len -= read;
-
-                        Memory.Copy(buffer.Pointer + buffer.Used, managedBufferPointer, read);
-
-                        buffer.Used += read;
+                        TcpConnection.PinnedBuffer.Valid = read;
+                        TcpConnection.PinnedBuffer.Used = 0;
                     }
-                    while (_docsToWrite.TryAdd(buffer, 500) == false)
-                    {
-                        _messagesToClient.Add(ProcessingMessage);
-                    }
+
+                    var min = Math.Min(len, TcpConnection.PinnedBuffer.Valid - TcpConnection.PinnedBuffer.Used);
+                    Memory.Copy(buffer.Pointer + buffer.Used, TcpConnection.PinnedBuffer.Pointer + TcpConnection.PinnedBuffer.Used, min);
+                    TcpConnection.PinnedBuffer.Used += min;
+                    len -= min;
+                    buffer.Used += min;
+                }
+                while (_docsToWrite.TryAdd(buffer, 500) == false)
+                {
+                    _messagesToClient.Add(ProcessingMessage);
                 }
             }
         }
@@ -368,10 +331,17 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 if (shift == 35)
                     throw new FormatException("Bad variable size int");
-                int r = TcpConnection.MultiDocumentParser.ReadByte();
-                if (r == -1)
-                    return -1;
-                b = (byte)r;
+                if (TcpConnection.PinnedBuffer.Valid == TcpConnection.PinnedBuffer.Used)
+                {
+                    var read = TcpConnection.Stream.Read(TcpConnection.PinnedBuffer.Buffer.Array,
+                        TcpConnection.PinnedBuffer.Buffer.Offset, TcpConnection.PinnedBuffer.Buffer.Count);
+                    TcpConnection.RegisterBytesReceived(read);
+                    if (read == 0)
+                        return -1;
+                    TcpConnection.PinnedBuffer.Valid = read;
+                    TcpConnection.PinnedBuffer.Used = 0;
+                }
+                b = TcpConnection.PinnedBuffer.Pointer[TcpConnection.PinnedBuffer.Used++];
                 count |= (b & 0x7F) << shift;
                 shift += 7;
             } while ((b & 0x80) != 0);
@@ -380,19 +350,13 @@ namespace Raven.Server.Documents.TcpHandlers
 
         public void Dispose()
         {
-            _docsToRelease.CompleteAdding();
-            foreach (var bulkInsertDoc in _docsToRelease)
-            {
-                TcpConnection.Context.ReturnMemory(bulkInsertDoc.Memory);
-            }
-
             //dispose those too if we dispose before finishing the bulk insert
             //(for example if we finish early because of an exception)
             foreach (var bulkInsertDoc in _docsToWrite)
             {
-                TcpConnection.Context.ReturnMemory(bulkInsertDoc.Memory);
+                _memPool.Return(bulkInsertDoc.Memory);
             }
-            _docsToRelease.Dispose();
+            _memPool.Dispose();
             _docsToWrite.Dispose();
             _messagesToClient.Dispose();
             try
@@ -411,6 +375,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 var logger = LoggingSource.Instance.GetLogger<BulkInsertConnection>(tcpConnectionOptions.DocumentDatabase.Name);
                 try
                 {
+                    using(tcpConnectionOptions.ConnectionProcessingInProgress())
                     using (var bulkInsert = new BulkInsertConnection(tcpConnectionOptions, logger))
                     {
                         bulkInsert.Execute();
@@ -424,9 +389,11 @@ namespace Raven.Server.Documents.TcpHandlers
                     }
                     try
                     {
-                        using (var writer = new BlittableJsonTextWriter(tcpConnectionOptions.Context, tcpConnectionOptions.Stream))
+                        JsonOperationContext context;
+                        using(tcpConnectionOptions.ContextPool.AllocateOperationContext(out context))
+                        using (var writer = new BlittableJsonTextWriter(context, tcpConnectionOptions.Stream))
                         {
-                            tcpConnectionOptions.Context.Write(writer, new DynamicJsonValue
+                            context.Write(writer, new DynamicJsonValue
                             {
                                 ["Type"] = "Error",
                                 ["Exception"] = e.ToString()
@@ -440,9 +407,6 @@ namespace Raven.Server.Documents.TcpHandlers
                 finally
                 {
                     tcpConnectionOptions.Dispose();
-
-                    tcpConnectionOptions.MultiDocumentParser?.Dispose();
-                    tcpConnectionOptions.ReturnContext?.Dispose();
 
                     // Thread is going to die, let us release those resources early, instead of waiting for finalizer
                     ByteStringMemoryCache.Clean();

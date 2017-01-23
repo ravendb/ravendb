@@ -16,8 +16,7 @@ namespace FastTests.Issues
             {
                 for (int i = 0; i < 3; i++)
                 {
-                    using (var multiDocumentParser = context.ParseMultiFrom(new MemoryStream(Encoding.UTF8.GetBytes(json))))
-                    using (var blittableJsonReaderObject = multiDocumentParser.Parse(BlittableJsonDocumentBuilder.UsageMode.None, "n"))
+                    using (var blittableJsonReaderObject = context.Read(new MemoryStream(Encoding.UTF8.GetBytes(json)), "n"))
                     {
                         string s;
                         blittableJsonReaderObject.TryGet("Type", out s);

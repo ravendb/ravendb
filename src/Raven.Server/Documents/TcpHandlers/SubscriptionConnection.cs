@@ -20,7 +20,6 @@ namespace Raven.Server.Documents.TcpHandlers
     {
         public readonly TcpConnectionOptions TcpConnection;
         private readonly MemoryStream _buffer = new MemoryStream();
-        private readonly BlittableJsonTextWriter _bufferedWriter;
         private readonly Logger _logger;
         public readonly SubscriptionConnectionStats Stats;
         public readonly CancellationTokenSource CancellationTokenSource;
@@ -43,7 +42,6 @@ namespace Raven.Server.Documents.TcpHandlers
         public SubscriptionConnection(TcpConnectionOptions connectionOptions)
         {
             TcpConnection = connectionOptions;
-            _bufferedWriter = new BlittableJsonTextWriter(connectionOptions.Context, _buffer);
             _logger = LoggingSource.Instance.GetLogger<SubscriptionConnection>(connectionOptions.DocumentDatabase.Name);
 
             CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(TcpConnection.DocumentDatabase.DatabaseShutdown);
@@ -60,12 +58,19 @@ namespace Raven.Server.Documents.TcpHandlers
 
         private async Task<bool> ParseSubscriptionOptionsAsync()
         {
-            BlittableJsonReaderObject subscriptionCommandOptions = null;
             try
             {
-                subscriptionCommandOptions = await TcpConnection.MultiDocumentParser.ParseToMemoryAsync("subscription options");
-
-                _options = JsonDeserializationServer.SubscriptionConnectionOptions(subscriptionCommandOptions);
+                JsonOperationContext context;
+                using (TcpConnection.ContextPool.AllocateOperationContext(out context))
+                using (var subscriptionCommandOptions = await context.ParseToMemoryAsync(
+                    TcpConnection.Stream,
+                    "subscription options",
+                    BlittableJsonDocumentBuilder.UsageMode.None,
+                    TcpConnection.PinnedBuffer))
+                {
+                    _options = JsonDeserializationServer.SubscriptionConnectionOptions(subscriptionCommandOptions);
+                }
+                
             }
             catch (Exception ex)
             {
@@ -74,10 +79,6 @@ namespace Raven.Server.Documents.TcpHandlers
                     _logger.Info($"Failed to parse subscription options document", ex);
                 }
                 return false;
-            }
-            finally
-            {
-                subscriptionCommandOptions?.Dispose();
             }
 
             return true;
@@ -160,9 +161,18 @@ namespace Raven.Server.Documents.TcpHandlers
 
         private async Task WriteJsonAsync(DynamicJsonValue value)
         {
-            TcpConnection.Context.Write(_bufferedWriter, value);
-            _bufferedWriter.Flush();
-            await FlushBufferToNetwork();
+            JsonOperationContext context;
+
+            int writtenBytes = 0;
+            using (TcpConnection.ContextPool.AllocateOperationContext(out context))
+            using (var writer = new BlittableJsonTextWriter(context, TcpConnection.Stream))
+            {
+                context.Write(writer, value);
+                writtenBytes = writer.Position;
+            }
+            
+            await TcpConnection.Stream.FlushAsync();
+            TcpConnection.RegisterBytesSent(writtenBytes);
         }
 
         private async Task FlushBufferToNetwork()
@@ -180,8 +190,8 @@ namespace Raven.Server.Documents.TcpHandlers
             Task.Run(async () =>
             {
                 using (var connection = new SubscriptionConnection(tcpConnectionOptions))
+                using (tcpConnectionOptions.ConnectionProcessingInProgress())
                 {
-                    tcpConnectionOptions.DisposeOnConnectionClose.Add(connection);
                     try
                     {
                         if (await connection.InitAsync() == false)
@@ -200,16 +210,13 @@ namespace Raven.Server.Documents.TcpHandlers
                         {
                             if (connection.ConnectionException != null)
                                 return;
-                            using (
-                                var writer = new BlittableJsonTextWriter(tcpConnectionOptions.Context,
-                                    tcpConnectionOptions.Stream))
+
+                            await connection.WriteJsonAsync(new DynamicJsonValue
                             {
-                                tcpConnectionOptions.Context.Write(writer, new DynamicJsonValue
-                                {
-                                    ["Type"] = "Error",
-                                    ["Exception"] = e.ToString()
-                                });
-                            }
+                                ["Type"] = "Error",
+                                ["Exception"] = e.ToString()
+                            });
+                            
                         }
                         catch (Exception)
                         {
@@ -232,17 +239,13 @@ namespace Raven.Server.Documents.TcpHandlers
                                 if (connection.ConnectionException is SubscriptionClosedException)
                                     status = "Closed";
 
-                                using (
-                                    var writer = new BlittableJsonTextWriter(tcpConnectionOptions.Context,
-                                        tcpConnectionOptions.Stream))
+                                await connection.WriteJsonAsync(new DynamicJsonValue
                                 {
-                                    tcpConnectionOptions.Context.Write(writer, new DynamicJsonValue
-                                    {
-                                        ["Type"] = "Error",
-                                        ["Status"] = status,
-                                        ["Exception"] = connection.ConnectionException.ToString()
-                                    });
-                                }
+                                    ["Type"] = "Error",
+                                    ["Status"] = status,
+                                    ["Exception"] = connection.ConnectionException.ToString()
+                                });
+
                             }
                             catch
                             {
@@ -250,8 +253,6 @@ namespace Raven.Server.Documents.TcpHandlers
                             }
                         }
                         tcpConnectionOptions.Dispose();
-                        tcpConnectionOptions.MultiDocumentParser?.Dispose();
-                        tcpConnectionOptions.ReturnContext?.Dispose();
                     }
                 }
             });
@@ -273,6 +274,20 @@ namespace Raven.Server.Documents.TcpHandlers
             });
         }
 
+        private async Task<SubscriptionConnectionClientMessage> GetReplyFromClient()
+        {
+            JsonOperationContext context;
+            using (TcpConnection.ContextPool.AllocateOperationContext(out context))
+            using (var reader = await context.ParseToMemoryAsync(
+                TcpConnection.Stream,
+                "Reply from subscription client",
+                BlittableJsonDocumentBuilder.UsageMode.None, 
+                TcpConnection.PinnedBuffer))
+            {
+                TcpConnection.RegisterBytesReceived(reader.Size);
+                return JsonDeserializationServer.SubscriptionConnectionClientMessage(reader);
+            }
+        }
 
         private async Task ProcessSubscriptionAysnc()
         {
@@ -291,7 +306,8 @@ namespace Raven.Server.Documents.TcpHandlers
                 TcpConnection.DocumentDatabase.SubscriptionStorage.GetCriteriaAndEtag(_options.SubscriptionId, dbContext,
                     out criteria, out startEtag);
 
-                var replyFromClientTask = TcpConnection.MultiDocumentParser.ParseToMemoryAsync("client reply");
+                
+                var replyFromClientTask = GetReplyFromClient();
                 var registrenNotificationDisposable = RegisterForNotificationOnNewDocuments(criteria);
                 try
                 {
@@ -311,53 +327,59 @@ namespace Raven.Server.Documents.TcpHandlers
                             var docsToFlush = 0;
 
                             var sendingCurrentBatchStopwatch = Stopwatch.StartNew();
-                            foreach (var doc in documents)
+
+                            JsonOperationContext context;
+                            using (TcpConnection.ContextPool.AllocateOperationContext(out context))
+                            using (var writer = new BlittableJsonTextWriter(context, _buffer))
                             {
-                                anyDocumentsSentInCurrentIteration = true;
-                                startEtag = doc.Etag;
-                                if (DocumentMatchCriteriaScript(patch, dbContext, doc) == false)
+                                foreach (var doc in documents)
                                 {
-                                    // make sure that if we read a lot of irrelevant documents, we send keep alive over the network
+                                    anyDocumentsSentInCurrentIteration = true;
+                                    startEtag = doc.Etag;
+                                    if (DocumentMatchCriteriaScript(patch, dbContext, doc) == false)
+                                    {
+                                        // make sure that if we read a lot of irrelevant documents, we send keep alive over the network
+                                        if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
+                                        {
+                                            await SendHeartBeat();
+                                            sendingCurrentBatchStopwatch.Reset();
+                                        }
+                                        continue;
+                                    }
+                                    doc.EnsureMetadata();
+
+                                    context.Write(writer, new DynamicJsonValue
+                                    {
+                                        ["Type"] = "Data",
+                                        ["Data"] = doc.Data
+                                    });
+                                    docsToFlush++;
+
+                                    // perform flush for current batch after 1000ms of running
                                     if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
                                     {
-                                        await SendHeartBeat();
-                                        sendingCurrentBatchStopwatch.Reset();
-                                    }
-                                    continue;
-                                }
-                                doc.EnsureMetadata();
-
-                                TcpConnection.Context.Write(_bufferedWriter, new DynamicJsonValue
-                                {
-                                    ["Type"] = "Data",
-                                    ["Data"] = doc.Data
-                                });
-                                docsToFlush++;
-
-                                // perform flush for current batch after 1000ms of running
-                                if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
-                                {
-                                    if (docsToFlush > 0)
-                                    {
-                                        await FlushDocsToClient(docsToFlush);
-                                        docsToFlush = 0;
-                                        sendingCurrentBatchStopwatch.Reset();
-                                    }
-                                    else
-                                    {
-                                        await SendHeartBeat();
+                                        if (docsToFlush > 0)
+                                        {
+                                            await FlushDocsToClient(writer,docsToFlush);
+                                            docsToFlush = 0;
+                                            sendingCurrentBatchStopwatch.Reset();
+                                        }
+                                        else
+                                        {
+                                            await SendHeartBeat();
+                                        }
                                     }
                                 }
-                            }
 
-                            if (anyDocumentsSentInCurrentIteration)
-                            {
-                                TcpConnection.Context.Write(_bufferedWriter, new DynamicJsonValue
+                                if (anyDocumentsSentInCurrentIteration)
                                 {
-                                    ["Type"] = "EndOfBatch"
-                                });
+                                    context.Write(writer, new DynamicJsonValue
+                                    {
+                                        ["Type"] = "EndOfBatch"
+                                    });
 
-                                await FlushDocsToClient(docsToFlush, true);
+                                    await FlushDocsToClient(writer,docsToFlush, true);
+                                }
                             }
 
                             if (anyDocumentsSentInCurrentIteration == false)
@@ -370,23 +392,13 @@ namespace Raven.Server.Documents.TcpHandlers
 
                             while (true)
                             {
-                                var result =
-                                    await
-                                        Task.WhenAny(replyFromClientTask,
-                                            Task.Delay(TimeSpan.FromSeconds(5), CancellationTokenSource.Token));
+                                var result = await Task.WhenAny(replyFromClientTask,
+                                                    Task.Delay(TimeSpan.FromSeconds(5), CancellationTokenSource.Token));
+
                                 if (result == replyFromClientTask)
                                 {
-                                    using (var reply = await replyFromClientTask)
-                                    {
-                                        TcpConnection.RegisterBytesReceived(reply.Size);
-                                        clientReply =
-                                            JsonDeserializationServer.SubscriptionConnectionClientMessage(reply);
-                                    }
-
-                                    TcpConnection.ResetAndRenew();
-
-                                    replyFromClientTask =
-                                        TcpConnection.MultiDocumentParser.ParseToMemoryAsync("client reply");
+                                    clientReply = await replyFromClientTask;
+                                    replyFromClientTask = GetReplyFromClient();
                                     break;
                                 }
                                 await SendHeartBeat();
@@ -416,18 +428,6 @@ namespace Raven.Server.Documents.TcpHandlers
                 finally
                 {
                     registrenNotificationDisposable.Dispose();
-                    if (replyFromClientTask != null)
-                    {
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                        replyFromClientTask.ContinueWith(x =>
-                        {
-                            if (x.IsCompleted)
-                            {
-                                x.Result.Dispose();
-                            }
-                        }, null);
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                    }
                 }
             }
         }
@@ -438,19 +438,19 @@ namespace Raven.Server.Documents.TcpHandlers
             TcpConnection.RegisterBytesSent(Heartbeat.Length);
         }
 
-        private async Task FlushDocsToClient(int docsToFlush, bool endOfBatch = false)
+        private async Task FlushDocsToClient(BlittableJsonTextWriter writer, int flushedDocs, bool endOfBatch = false)
         {
             if (_logger.IsInfoEnabled)
             {
                 _logger.Info(
-                    $"Flushing {docsToFlush} documents for subscription {SubscriptionId} sending to {TcpConnection.TcpClient.Client.RemoteEndPoint} {(endOfBatch?", ending batch":string.Empty)}" );
+                    $"Flushing {flushedDocs} documents for subscription {SubscriptionId} sending to {TcpConnection.TcpClient.Client.RemoteEndPoint} {(endOfBatch?", ending batch":string.Empty)}" );
             }
             
-            _bufferedWriter.Flush();
+            writer.Flush();
             var bufferSize = _buffer.Length;
             await FlushBufferToNetwork();
             Stats.LastMessageSentAt = DateTime.UtcNow;
-            Stats.DocsRate.Mark(docsToFlush);
+            Stats.DocsRate.Mark(flushedDocs);
             Stats.BytesRate.Mark(bufferSize);
             TcpConnection.RegisterBytesSent(bufferSize);
         }

@@ -62,13 +62,16 @@ namespace FastTests.Server.Documents.Notifications
 
                 const int docsCount = 10000;
 
-                using (var session = store.OpenAsyncSession())
+                for (int j = 0; j < docsCount/100; j++)
                 {
-                    for (int i = 1; i <= docsCount; i++)
+                    using (var session = store.OpenAsyncSession())
                     {
-                        await session.StoreAsync(new User(), "users/" + i);
+                        for (int i = 0; i <= 100; i++)
+                        {
+                            await session.StoreAsync(new User(), "users/");
+                        }
+                        await session.SaveChangesAsync();
                     }
-                    await session.SaveChangesAsync();
                 }
 
                 DocumentChangeNotification documentChangeNotification;
