@@ -10,7 +10,6 @@ using Raven.Client.Data.Queries;
 using Raven.Client.Indexing;
 using Raven.Client.Smuggler;
 using Raven.Json.Linq;
-using Raven.Server.Alerts;
 using Raven.Server.Commercial;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Debugging;
@@ -84,11 +83,6 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexChangeNotification));
             scripter.AddType(typeof(TransformerChangeNotification));
             scripter.AddType(typeof(DatabaseOperations.PendingOperation));
-
-            // alerts
-            scripter.AddType(typeof(Alert));
-            scripter.AddType(typeof(GlobalAlertNotification));
-            scripter.AddType(typeof(AlertNotification));
             
             // indexes
             scripter.AddType(typeof(IndexStats));

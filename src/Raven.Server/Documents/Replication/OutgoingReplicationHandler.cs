@@ -20,7 +20,7 @@ using Raven.Client.Extensions;
 using Raven.Client.Replication.Messages;
 using Raven.Json.Linq;
 using Raven.NewClient.Client.Exceptions.Database;
-using Raven.Server.Alerts;
+using Raven.Server.Exceptions;
 using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Actions;
 using Raven.Server.NotificationCenter.Alerts;
