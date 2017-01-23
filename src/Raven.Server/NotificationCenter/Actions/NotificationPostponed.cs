@@ -1,15 +1,17 @@
-﻿using Sparrow.Json.Parsing;
+﻿using System;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Actions
 {
-    public class NotificationDeleted : Action
+    public class NotificationPostponed : Action
     {
-        private NotificationDeleted()
+        private NotificationPostponed()
         {
-            
         }
 
         public string ActionId { get; private set; }
+
+        public DateTime NotificationDismissedUntil { get; private set; }
 
         public override DynamicJsonValue ToJson()
         {
@@ -20,12 +22,13 @@ namespace Raven.Server.NotificationCenter.Actions
             return result;
         }
 
-        public static NotificationDeleted Create(string id)
+        public static NotificationPostponed Create(string id, DateTime until)
         {
-            return new NotificationDeleted
+            return new NotificationPostponed
             {
                 Type = ActionType.NotificationUpdate,
-                ActionId = id
+                ActionId = id,
+                NotificationDismissedUntil = until
             };
         }
     }

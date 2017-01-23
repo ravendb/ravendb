@@ -63,7 +63,7 @@ namespace FastTests.Server.NotificationCenter
                     Assert.Equal(alert.Severity.ToString(), readAlert[nameof(AlertRaised.Severity)].ToString());
                     Assert.Equal(alert.AlertType.ToString(), readAlert[nameof(AlertRaised.AlertType)].ToString());
                     Assert.Equal(alert.Key, readAlert[nameof(AlertRaised.Key)].ToString());
-                    Assert.Equal(alert.DismissedUntil, readAlert[nameof(AlertRaised.DismissedUntil)]);
+                    Assert.Equal(alert.PostponedUntil, readAlert[nameof(AlertRaised.PostponedUntil)]);
                 }
             }
         }
@@ -105,7 +105,7 @@ namespace FastTests.Server.NotificationCenter
                 database.NotificationCenter.Add(alert1);
 
                 var dismissUntil = SystemTime.UtcNow.AddDays(1);
-                database.NotificationCenter.DismissUntil(alert1.Id, dismissUntil);
+                database.NotificationCenter.Postpone(alert1.Id, dismissUntil);
 
                 var alert2 = GetSampleAlert();
                 database.NotificationCenter.Add(alert2);
@@ -123,13 +123,13 @@ namespace FastTests.Server.NotificationCenter
 
                     Assert.Equal(
                         dismissUntil.GetDefaultRavenFormat(dismissUntil.Kind == DateTimeKind.Utc),
-                        readAlert[nameof(AlertRaised.DismissedUntil)].ToString());
+                        readAlert[nameof(AlertRaised.PostponedUntil)].ToString());
                 }
             }
         }
 
         [Fact]
-        public void Can_dismiss_and_get_notified_about_it()
+        public void Can_postpone_persistent_action_and_get_notified_about_it()
         {
             using (var database = CreateDocumentDatabase())
             {
@@ -141,11 +141,11 @@ namespace FastTests.Server.NotificationCenter
                 var actions = new AsyncQueue<Action>();
                 using (database.NotificationCenter.TrackActions(actions))
                 {
-                    database.NotificationCenter.DismissUntil(alert.Id, dismissUntil);
+                    database.NotificationCenter.Postpone(alert.Id, dismissUntil);
                 }
 
                 Assert.Equal(1, actions.Count);
-                var notification = actions.DequeueAsync().Result as NotificationDismissed;
+                var notification = actions.DequeueAsync().Result as NotificationPostponed;
                 Assert.NotNull(notification);
                 Assert.Equal(alert.Id, notification.ActionId);
                 Assert.Equal(dismissUntil, notification.NotificationDismissedUntil);
@@ -163,13 +163,13 @@ namespace FastTests.Server.NotificationCenter
 
                     Assert.Equal(
                         dismissUntil.GetDefaultRavenFormat(dismissUntil.Kind == DateTimeKind.Utc),
-                        readAlert[nameof(AlertRaised.DismissedUntil)].ToString());
+                        readAlert[nameof(AlertRaised.PostponedUntil)].ToString());
                 }
             }
         }
 
         [Fact]
-        public void Can_delete_action_and_get_notified_about_it()
+        public void Can_dismiss_persistent_action_and_get_notified_about_it()
         {
             using (var database = CreateDocumentDatabase())
             {
@@ -180,7 +180,7 @@ namespace FastTests.Server.NotificationCenter
                 var actions = new AsyncQueue<Action>();
                 using (database.NotificationCenter.TrackActions(actions))
                 {
-                    database.NotificationCenter.Delete(alert.Id);
+                    database.NotificationCenter.Dismiss(alert.Id);
 
                     IEnumerable<BlittableJsonReaderObject> alerts;
                     using (database.NotificationCenter.GetStored(out alerts))
@@ -192,7 +192,7 @@ namespace FastTests.Server.NotificationCenter
                 }
 
                 Assert.Equal(1, actions.Count);
-                var notification = actions.DequeueAsync().Result as NotificationDeleted;
+                var notification = actions.DequeueAsync().Result as NotificationDismissed;
                 Assert.NotNull(notification);
                 Assert.Equal(alert.Id, notification.ActionId);
             }
@@ -211,10 +211,10 @@ namespace FastTests.Server.NotificationCenter
                 
                 Assert.Equal(2, database.NotificationCenter.GetAlertCount());
 
-                database.NotificationCenter.Delete(alert1.Id);
+                database.NotificationCenter.Dismiss(alert1.Id);
                 Assert.Equal(1, database.NotificationCenter.GetAlertCount());
 
-                database.NotificationCenter.Delete(alert2.Id);
+                database.NotificationCenter.Dismiss(alert2.Id);
                 Assert.Equal(0, database.NotificationCenter.GetAlertCount());
             }
         }

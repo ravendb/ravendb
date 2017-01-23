@@ -58,16 +58,16 @@ namespace Raven.Server.NotificationCenter
             using (_contextPool.AllocateOperationContext(out context))
             using (var tx = context.OpenWriteTransaction())
             {
-                // if previous action has dismissed until value pass this value to newly saved action
+                // if previous action had postponed until value pass this value to newly saved action
                 var existing = Get(action.Id, context, tx);
 
                 if (existing != null)
                 {
-                    DateTime dismissedUntil;
-                    if (TryGetDismissedUntilDate(existing, out dismissedUntil))
+                    DateTime postponedUntil;
+                    if (TryGetPostponedUntilDate(existing, out postponedUntil))
                     {
-                        if (action.DismissedUntil == null && dismissedUntil > SystemTime.UtcNow)
-                            action.DismissedUntil = dismissedUntil;
+                        if (action.PostponedUntil == null && postponedUntil > SystemTime.UtcNow)
+                            action.PostponedUntil = postponedUntil;
                     }
                 }
 
@@ -93,19 +93,19 @@ namespace Raven.Server.NotificationCenter
             table.Set(tvb);
         }
 
-        private bool TryGetDismissedUntilDate(BlittableJsonReaderObject action, out DateTime dismissedUntil)
+        private bool TryGetPostponedUntilDate(BlittableJsonReaderObject action, out DateTime postponedUntil)
         {
-            object dismissedUntilString;
-            if (action.TryGetMember(nameof(Action.DismissedUntil), out dismissedUntilString) == false || dismissedUntilString == null)
+            object postponedUntilString;
+            if (action.TryGetMember(nameof(Action.PostponedUntil), out postponedUntilString) == false || postponedUntilString == null)
             {
-                dismissedUntil = default(DateTime);
+                postponedUntil = default(DateTime);
                 return false;
             }
 
-            var lazyStrinDate = (LazyStringValue) dismissedUntilString;
+            var lazyStringDate = (LazyStringValue) postponedUntilString;
 
             DateTimeOffset _;
-            var parsedType = LazyStringParser.TryParseDateTime(lazyStrinDate.Buffer, lazyStrinDate.Size, out dismissedUntil, out _);
+            var parsedType = LazyStringParser.TryParseDateTime(lazyStringDate.Buffer, lazyStringDate.Size, out postponedUntil, out _);
 
             switch (parsedType)
             {
@@ -202,7 +202,7 @@ namespace Raven.Server.NotificationCenter
             return new BlittableJsonReaderObject(ptr, size, context);
         }
 
-        public void ChangeDismissUntilDate(string id, DateTime dismissUntil)
+        public void ChangePostponeDate(string id, DateTime postponeUntil)
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
@@ -215,7 +215,7 @@ namespace Raven.Server.NotificationCenter
 
                 item.Modifications = new DynamicJsonValue
                 {
-                    [nameof(Action.DismissedUntil)] = dismissUntil
+                    [nameof(Action.PostponedUntil)] = postponeUntil
                 };
 
                 var updated = context.ReadObject(item, "action", BlittableJsonDocumentBuilder.UsageMode.ToDisk);

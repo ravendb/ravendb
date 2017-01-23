@@ -66,21 +66,21 @@ namespace Raven.Server.NotificationCenter
             return _actionsStorage.GetAlertCount();
         }
 
-        public void Delete(string id)
+        public void Dismiss(string id)
         {
             var deleted = _actionsStorage.Delete(id);
 
             if (deleted == false)
                 return;
 
-            Add(NotificationDeleted.Create(id));
+            Add(NotificationDismissed.Create(id));
         }
 
-        public void DismissUntil(string id, DateTime until)
+        public void Postpone(string id, DateTime until)
         {
-            _actionsStorage.ChangeDismissUntilDate(id, until);
+            _actionsStorage.ChangePostponeDate(id, until);
 
-            Add(NotificationDismissed.Create(id, until));
+            Add(NotificationPostponed.Create(id, until));
         }
     }
 }

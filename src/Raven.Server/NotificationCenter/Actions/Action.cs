@@ -30,7 +30,7 @@ namespace Raven.Server.NotificationCenter.Actions
 
         public bool IsPersistent { get; protected set; }
 
-        public DateTime? DismissedUntil { get; set; }
+        public DateTime? PostponedUntil { get; set; }
 
         public IActionDetails Details { get; protected set; }
 
@@ -44,7 +44,7 @@ namespace Raven.Server.NotificationCenter.Actions
                 [nameof(Title)] = Title,
                 [nameof(Message)] = Message,
                 [nameof(IsPersistent)] = IsPersistent,
-                [nameof(DismissedUntil)] = DismissedUntil,
+                [nameof(PostponedUntil)] = PostponedUntil,
                 [nameof(Details)] = Details?.ToJson()
             };
         }

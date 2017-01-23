@@ -1,5 +1,4 @@
-﻿using System;
-using Sparrow.Json.Parsing;
+﻿using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Actions
 {
@@ -11,8 +10,6 @@ namespace Raven.Server.NotificationCenter.Actions
 
         public string ActionId { get; private set; }
 
-        public DateTime NotificationDismissedUntil { get; private set; }
-
         public override DynamicJsonValue ToJson()
         {
             var result = base.ToJson();
@@ -22,13 +19,12 @@ namespace Raven.Server.NotificationCenter.Actions
             return result;
         }
 
-        public static NotificationDismissed Create(string id, DateTime until)
+        public static NotificationDismissed Create(string id)
         {
             return new NotificationDismissed
             {
                 Type = ActionType.NotificationUpdate,
-                ActionId = id,
-                NotificationDismissedUntil = until
+                ActionId = id
             };
         }
     }
