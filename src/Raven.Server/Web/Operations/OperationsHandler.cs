@@ -47,7 +47,7 @@ namespace Raven.Server.Web.Operations
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                ICollection<DatabaseOperations.PendingOperation> operations;
+                IEnumerable<DatabaseOperations.Operation> operations;
                 if (id.HasValue == false)
                     operations = Database.Operations.GetAll();
                 else
@@ -59,7 +59,7 @@ namespace Raven.Server.Web.Operations
                         return Task.CompletedTask;
                     }
 
-                    operations = new List<DatabaseOperations.PendingOperation> { operation };
+                    operations = new List<DatabaseOperations.Operation> { operation };
                 }
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -82,7 +82,7 @@ namespace Raven.Server.Web.Operations
         {
             var id = GetLongQueryString("id");
             // ReSharper disable once PossibleInvalidOperationException
-            var state = Database.Operations.GetOperationState(id.Value);
+            var state = Database.Operations.GetOperation(id.Value)?.State;
 
             if (state == null)
             {

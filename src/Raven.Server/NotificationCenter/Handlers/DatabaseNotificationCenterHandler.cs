@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Documents;
+using Raven.Server.NotificationCenter.Actions;
 using Raven.Server.Routing;
 using Sparrow.Json;
 
@@ -25,6 +27,13 @@ namespace Raven.Server.NotificationCenter.Handlers
                         }
                     }
 
+                    foreach (var operation in Database.Operations.GetActive().OrderBy(x => x.Description.StartTime))
+                    {
+                        var action = OperationChanged.Create(operation.Id, operation.Description, operation.State);
+
+                        await writer.WriteToWebSocket(action.ToJson());
+                    }
+                    
                     await writer.WriteNotifications();
                 }
             }

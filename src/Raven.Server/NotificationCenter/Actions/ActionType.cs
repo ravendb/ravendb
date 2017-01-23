@@ -6,7 +6,7 @@
         Alert,
         Operation,
         Resource,
-        ActionUpdate
+        NotificationUpdate
         // performance, hints?
     }
 }

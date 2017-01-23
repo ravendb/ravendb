@@ -26,7 +26,7 @@ namespace Raven.Server.NotificationCenter.Actions
         {
             return new NotificationDismissed
             {
-                Type = ActionType.ActionUpdate,
+                Type = ActionType.NotificationUpdate,
                 ActionId = id,
                 NotificationDismissedUntil = until
             };

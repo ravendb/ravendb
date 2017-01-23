@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,6 +10,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Data;
 using Raven.Client.Exceptions;
+using Raven.Server.NotificationCenter.Actions;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -20,7 +23,8 @@ namespace Raven.Server.Documents
     {
         private readonly Logger _logger;
         private readonly DocumentDatabase _db;
-        private readonly ConcurrentDictionary<long, PendingOperation> _pendingOperations = new ConcurrentDictionary<long, PendingOperation>();
+        private readonly ConcurrentDictionary<long, Operation> _active = new ConcurrentDictionary<long, Operation>();
+        private readonly ConcurrentDictionary<long, Operation> _completed = new ConcurrentDictionary<long, Operation>();
 
         private long _pendingOperationsCounter;
 
@@ -34,18 +38,17 @@ namespace Raven.Server.Documents
         {
             var twoDaysAgo = SystemTime.UtcNow.AddDays(-2);
 
-            foreach (var taskAndState in _pendingOperations)
+            foreach (var taskAndState in _completed)
             {
                 var state = taskAndState.Value;
-                var task = state.Task;
-                if (task.IsCompleted)
+
+                if (state.Description.EndTime < twoDaysAgo)
                 {
-                    if (state.Description.EndTime < twoDaysAgo)
-                    {
-                        PendingOperation value;
-                        _pendingOperations.TryRemove(taskAndState.Key, out value);
-                    }
+                    Operation value;
+                    _completed.TryRemove(taskAndState.Key, out value);
                 }
+
+                var task = state.Task;
                 if (task.Exception != null)
                 {
                     if (_logger.IsOperationsEnabled)
@@ -54,36 +57,35 @@ namespace Raven.Server.Documents
             }
         }
 
-        public OperationState GetOperationState(long id)
-        {
-            PendingOperation operation;
-            if (_pendingOperations.TryGetValue(id, out operation))
-            {
-                return operation.State;
-            }
-            return null;
-        }
-
         public void KillOperation(long id)
         {
-            var operation = GetOperation(id);
+            Operation operation;
+            if (_active.TryGetValue(id, out operation) == false)
+                return;
+            
             if (operation?.Token != null && operation.Task.IsCompleted == false)
             {
                 operation.Token.Cancel();
             }
         }
 
-        public PendingOperation GetOperation(long id)
+        public Operation GetOperation(long id)
         {
-            PendingOperation operation;
-            if (_pendingOperations.TryGetValue(id, out operation))
+            Operation operation;
+            if (_active.TryGetValue(id, out operation))
             {
                 return operation;
             }
+
+            if (_completed.TryGetValue(id, out operation))
+            {
+                return operation;
+            }
+
             return null;
         }
 
-        public Task<IOperationResult> AddOperation(string description, PendingOperationType opererationType, Func<Action<IOperationProgress>, Task<IOperationResult>> taskFactory,
+        public Task<IOperationResult> AddOperation(string description, OperationType opererationType, Func<Action<IOperationProgress>, Task<IOperationResult>> taskFactory,
             long id, OperationCancelToken token = null)
         {
             var operationState = new OperationState
@@ -97,33 +99,34 @@ namespace Raven.Server.Documents
                 State = operationState
             };
 
-            Action<IOperationProgress> action = progress =>
-            {
-                notification.State.Progress = progress;
-                RaiseNotifications(notification);
-            };
-            var task = taskFactory(action);
-
-            var operationDescription = new PendingOperationDescription
+            var operationDescription = new OperationDescription
             {
                 Description = description,
                 TaskType = opererationType,
                 StartTime = SystemTime.UtcNow
             };
 
-            var pendingOperation = new PendingOperation
+            var operation = new Operation
             {
                 Id = id,
-                Task = task,
                 Description = operationDescription,
                 Token = token,
                 State = operationState
             };
 
-            task.ContinueWith(taskResult =>
+            Action<IOperationProgress> action = progress =>
+            {
+                notification.State.Progress = progress;
+                RaiseNotifications(notification, operation);
+            };
+
+            operation.Task = taskFactory(action);
+            
+            operation.Task.ContinueWith(taskResult =>
             {
                 operationDescription.EndTime = SystemTime.UtcNow;
                 operationState.Progress = null;
+
                 if (taskResult.IsCanceled)
                 {
                     operationState.Result = null;
@@ -143,27 +146,44 @@ namespace Raven.Server.Documents
                     operationState.Result = taskResult.Result;
                     operationState.Status = OperationStatus.Completed;
                 }
-                //TODO arek: NotificationCenter add operation
-                RaiseNotifications(notification);
+
+                Operation completed;
+                if (_active.TryGetValue(id, out completed))
+                {
+                    // add to completed items before removing from active ones to ensure an operation status is accessible all the time
+                    _completed.TryAdd(id, completed);
+                    _active.TryRemove(id, out completed);
+                }
+                
+                RaiseNotifications(notification, operation);
             });
 
-            _pendingOperations.TryAdd(id, pendingOperation);
-            return task;
+            _active.TryAdd(id, operation);
+
+            return operation.Task;
         }
 
-        private void RaiseNotifications(OperationStatusChangeNotification notification)
+        private void RaiseNotifications(OperationStatusChangeNotification notification, Operation operation)
         {
+            var operationChanged = OperationChanged.Create(notification.OperationId, operation.Description, notification.State);
+
+            operation.NotifyCenter(operationChanged, x => _db.NotificationCenter.Add(x));
+
             _db.Notifications.RaiseNotifications(notification);
         }
 
         public void KillRunningOperation(long id)
         {
-            PendingOperation value;
-            if (_pendingOperations.TryGetValue(id, out value))
+            Operation value;
+            if (_active.TryGetValue(id, out value))
             {
                 if (value.Task.IsCompleted == false)
                 {
                     value.Token?.Cancel();
+
+                    // add to completed items before removing from active ones to ensure an operation status is accessible all the time
+                    _completed.TryAdd(id, value);
+                    _active.TryRemove(id, out value);
                 }
             }
         }
@@ -173,15 +193,9 @@ namespace Raven.Server.Documents
             return Interlocked.Increment(ref _pendingOperationsCounter);
         }
 
-        public void RemoveOperation(long operationId)
-        {
-            PendingOperation value;
-            _pendingOperations.TryRemove(operationId, out value);
-        }
-
         public void Dispose(ExceptionAggregator exceptionAggregator)
         {
-            foreach (var pendingTaskAndState in _pendingOperations.Values)
+            foreach (var pendingTaskAndState in _active.Values)
             {
                 exceptionAggregator.Execute(() =>
                 {
@@ -196,25 +210,35 @@ namespace Raven.Server.Documents
                 });
             }
 
-            _pendingOperations.Clear();
+            _active.Clear();
+            _completed.Clear();
         }
 
-        public ICollection<PendingOperation> GetAll()
+        public IEnumerable<Operation> GetAll()
         {
-            return _pendingOperations.Values;
+            return _active.Values.Union(_completed.Values);
         }
 
-        public class PendingOperation
+        public ICollection<Operation> GetActive()
         {
+            return _active.Values;
+        }
+
+        public class Operation
+        {
+            private readonly TimeSpan _throttleTime = TimeSpan.FromSeconds(1);
+
+            private readonly ThrottledNotification _throttle = new ThrottledNotification();
+
             public long Id;
 
             [JsonIgnore]
-            public Task Task;
+            public Task<IOperationResult> Task;
 
             [JsonIgnore]
             public OperationCancelToken Token;
 
-            public PendingOperationDescription Description;
+            public OperationDescription Description;
 
             public OperationState State;
 
@@ -230,12 +254,58 @@ namespace Raven.Server.Documents
                     [nameof(State)] = State.ToJson()
                 };
             }
+
+            public void NotifyCenter(OperationChanged notification, Action<OperationChanged> addToNotificationCenter)
+            {
+                if (notification.State.Status != OperationStatus.InProgress)
+                {
+                    addToNotificationCenter(notification);
+                    return;
+                }
+
+                // let us throttle notifications about the operation progress
+
+                var now = SystemTime.UtcNow;
+
+                _throttle.Notification = notification;
+
+                var sinceLastSent = now - _throttle.SentAt;
+
+                if (_throttle.Scheduled == null && sinceLastSent > _throttleTime)
+                {
+                    addToNotificationCenter(_throttle.Notification);
+                    _throttle.SentAt = now;
+
+                    return;
+                }
+
+                if (_throttle.Scheduled == null)
+                {
+                    _throttle.Scheduled = System.Threading.Tasks.Task.Delay(_throttleTime - sinceLastSent).ContinueWith(x =>
+                    {
+                        if (State.Status == OperationStatus.InProgress)
+                            addToNotificationCenter(_throttle.Notification);
+
+                        _throttle.SentAt = DateTime.UtcNow;
+                        _throttle.Scheduled = null;
+                    });
+                }
+            }
+
+            private class ThrottledNotification
+            {
+                public OperationChanged Notification;
+
+                public DateTime SentAt;
+
+                public Task Scheduled;
+            }
         }
 
-        public class PendingOperationDescription
+        public class OperationDescription
         {
             public string Description;
-            public PendingOperationType TaskType;
+            public OperationType TaskType;
             public DateTime StartTime;
             public DateTime EndTime;
 
@@ -251,23 +321,28 @@ namespace Raven.Server.Documents
             }
         }
 
-        public enum PendingOperationType
+        public enum OperationType
         {
+            [Description("Update by index")]
             UpdateByIndex,
 
+            [Description("Delete by index")]
             DeleteByIndex,
 
+            [Description("Database export")]
             DatabaseExport,
 
+            [Description("Database import")]
             DatabaseImport,
 
+            [Description("Index compact")]
             IndexCompact,
 
+            [Description("Delete by collection")]
             DeleteByCollection,
 
+            [Description("Update by collection")]
             UpdateByCollection
-            //TODO: other operation types
-            ,
 
         }
     }

@@ -24,7 +24,7 @@ namespace Raven.Server.NotificationCenter.Actions
         {
             return new NotificationDeleted
             {
-                Type = ActionType.ActionUpdate,
+                Type = ActionType.NotificationUpdate,
                 ActionId = id
             };
         }

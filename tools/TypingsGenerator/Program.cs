@@ -82,7 +82,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DocumentChangeNotification));
             scripter.AddType(typeof(IndexChangeNotification));
             scripter.AddType(typeof(TransformerChangeNotification));
-            scripter.AddType(typeof(DatabaseOperations.PendingOperation));
+            scripter.AddType(typeof(DatabaseOperations.Operation));
             
             // indexes
             scripter.AddType(typeof(IndexStats));
