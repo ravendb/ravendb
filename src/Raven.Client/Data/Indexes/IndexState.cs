@@ -5,7 +5,6 @@ namespace Raven.Client.Data.Indexes
         Normal,
         Disabled,
         Idle,
-        Error,
-        Paused
+        Error
     }
 }

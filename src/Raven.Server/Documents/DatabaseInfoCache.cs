@@ -91,8 +91,9 @@ namespace Raven.Server.Documents
                     if (table.ReadByKey(databaseNameAsSlice, out infoTvr) == false)
                         return false;
                 }
-                //It seems like the database was shutdown rudly and never wrote it stats onto the disk
-             
+                //It seems like the database was shutdown rudely and never wrote it stats onto the disk
+                if (infoTvr == null)
+                    return false;
 
                 using (var databaseInfoJson = Read(context, ref infoTvr))
                 {

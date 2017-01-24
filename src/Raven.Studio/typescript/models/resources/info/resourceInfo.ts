@@ -36,8 +36,6 @@ abstract class resourceInfo {
 
     canNavigateToResource: KnockoutComputed<boolean>;
 
-    indexingDisable = ko.observable<boolean>();
-
     static extractQualifierAndNameFromNotification(input: string): { qualifier: string, name: string } {
         return { qualifier: input.substr(0, 2), name: input.substr(3) };
     }

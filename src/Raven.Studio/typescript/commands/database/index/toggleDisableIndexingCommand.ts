@@ -21,16 +21,18 @@ class toggleDisableIndexingCommand extends commandBase {
             .done(() => {
                 const state = this.start ? "Enable" : "Disabled";
                 this.reportSuccess(`Indexing is ${state}`);
-                this.db.indexingEnabled(this.start);
+                this.db.indexingDisabled(!this.start);
             }).fail((response: JQueryXHR) => this.reportError("Failed to toggle indexing status", response.responseText));
     }
 
     execute(): JQueryPromise<void> {
-        const basicUrl = endpoints.global.adminDatabases.adminDatabases + "?name=" + this.db.name;
+        const args = {
+            "name": this.db.name
+        };
+        const basicUrl = endpoints.global.adminDatabases.adminDatabases + this.urlEncodeArgs(args);
 
-        return this.query(basicUrl, null).then((databaseConfigDocument: any) => {
-            this.updateDocument(basicUrl, databaseConfigDocument);
-        })
+        return this.query(basicUrl, null).then((databaseConfigDocument: any) => 
+            this.updateDocument(basicUrl, databaseConfigDocument));
     }
 }
 
