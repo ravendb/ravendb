@@ -41,7 +41,6 @@ namespace Raven.Server.Documents
             SubscriptionConnection incomingConnection,
             int timeToWait)
         {
-            Console.WriteLine("register sub " + incomingConnection.SubscriptionId + " " + incomingConnection.Strategy);
             try
             {
                 if (await _connectionInUse.WaitAsync(TimeSpan.FromMilliseconds(timeToWait)) == false)
