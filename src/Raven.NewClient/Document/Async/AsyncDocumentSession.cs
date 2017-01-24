@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Extensions;
@@ -17,9 +18,11 @@ using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document.Batches;
 using Raven.NewClient.Client.Http;
+using Raven.NewClient.Client.Json;
 using Raven.NewClient.Client.Linq;
 using Raven.NewClient.Operations;
 using Raven.NewClient.Operations.Databases.Documents;
+using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Document.Async
 {
@@ -40,9 +43,33 @@ namespace Raven.NewClient.Client.Document.Async
             GenerateDocumentKeysOnStore = false;
         }
 
-        public Task<FacetedQueryResult[]> MultiFacetedSearchAsync(params FacetQuery[] queries)
+        public async Task<FacetedQueryResult[]> MultiFacetedSearchAsync(params FacetQuery[] queries)
         {
-            throw new NotImplementedException();
+            IncrementRequestCount();
+            var requests = new List<GetRequest>();
+            var results = new List<FacetedQueryResult>();
+            foreach (var q in queries)
+            {
+                var method = q.CalculateHttpMethod();
+                requests.Add(new GetRequest
+                {
+                    Url = "/queries/" + q.IndexName,
+                    Query = "?" + q.GetQueryString(method),
+                    Method = method.Method,
+                    Content = method == HttpMethod.Post ? q.GetFacetsAsJson() : null
+                });
+            }
+            var multiGetOperation = new MultiGetOperation(this);
+            var command = multiGetOperation.CreateRequest(requests);
+            await RequestExecuter.ExecuteAsync(command, Context).ConfigureAwait(false);
+            foreach (var result in command.Result.Results)
+            {
+                var facetResult = (BlittableJsonReaderObject)result;
+                BlittableJsonReaderObject res;
+                facetResult.TryGet("Result", out res);
+                results.Add(JsonDeserializationClient.FacetedQueryResult(res));
+            }
+            return results.ToArray();
         }
 
         public string GetDocumentUrl(object entity)
@@ -80,7 +107,7 @@ namespace Raven.NewClient.Client.Document.Async
             {
                 Query = query.ToString()
             };
-            if(_operations == null)
+            if (_operations == null)
                 _operations = new OperationExecuter(_documentStore, _requestExecuter, Context);
 
             return await _operations.SendAsync(new DeleteByIndexOperation(indexName, indexQuery));

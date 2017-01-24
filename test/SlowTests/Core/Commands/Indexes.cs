@@ -129,7 +129,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact(Skip = "Missing feature: query for index entries only")]
+        [Fact]
         public void CanQueryForMetadataAndIndexEntriesOnly()
         {
             using (var store = GetDocumentStore())

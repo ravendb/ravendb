@@ -172,7 +172,7 @@ namespace Raven.NewClient.Client.Smuggler
                 ThrowInvalidResponse();
             }
 
-            public override async Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
+            public override async Task ProcessResponse(JsonOperationContext context, HttpCache cache, RequestExecuterOptions options, HttpResponseMessage response, string url)
             {
                 Result = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
             }

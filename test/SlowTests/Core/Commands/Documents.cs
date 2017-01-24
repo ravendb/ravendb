@@ -123,7 +123,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact(Skip = "Missing feature: /docs/startsWith")]
+        [Fact]
         public async Task CanGetDocumentsWhoseIdStartsWithAPrefix()
         {
             using (var store = GetDocumentStore())
@@ -140,7 +140,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact(Skip = "Missing feature: /docs/stream")]
+        [Fact]
         public void CanStreamDocs()
         {
             using (var store = GetDocumentStore())

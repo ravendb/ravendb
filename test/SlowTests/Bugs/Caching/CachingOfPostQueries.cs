@@ -1,17 +1,15 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Document.Async;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs.Caching
 {
-    public class CachingOfPostQueries : RavenTestBase
+    public class CachingOfPostQueries : RavenNewTestBase
     {
         private class Person
         {
@@ -31,7 +29,7 @@ namespace SlowTests.Bugs.Caching
             }
         }
 
-        private void InitData(IDocumentStore store)
+        private static void InitData(IDocumentStore store)
         {
             using (var session = store.OpenSession())
             {
@@ -63,10 +61,10 @@ namespace SlowTests.Bugs.Caching
                 {
                     var response = session.Query<Person, PersonsIndex>().FirstOrDefault(x => x.Name == "Johnny");
                     Assert.Equal(session.Advanced.NumberOfRequests, 1);
-                    Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
+                    Assert.Equal(1, session.Advanced.RequestExecuter._cache.NumberOfItems);
                     response = session.Query<Person, PersonsIndex>().FirstOrDefault(x => x.Name == "Johnny");
                     Assert.Equal(session.Advanced.NumberOfRequests, 2);
-                    Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests);
+                    Assert.Equal(1, session.Advanced.RequestExecuter._cache.NumberOfItems);
                 }
             }
         }
@@ -82,10 +80,10 @@ namespace SlowTests.Bugs.Caching
                 {
                     var response = session.Query<Person, PersonsIndex>().FirstOrDefault(x => x.Name != "Jane" && x.Name != "Mika" && x.Name != "Michael" && x.Name != "Samuel");
                     Assert.Equal(session.Advanced.NumberOfRequests, 1);
-                    Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
+                    Assert.Equal(1, session.Advanced.RequestExecuter._cache.NumberOfItems);
                     response = session.Query<Person, PersonsIndex>().FirstOrDefault(x => x.Name != "Jane" && x.Name != "Mika" && x.Name != "Michael" && x.Name != "Samuel");
                     Assert.Equal(session.Advanced.NumberOfRequests, 2);
-                    Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests);
+                    Assert.Equal(1, session.Advanced.RequestExecuter._cache.NumberOfItems);
                 }
                 store.Conventions.MaxLengthOfQueryUsingGetUrl = maxLengthOfGetRequest;
             }
@@ -100,23 +98,24 @@ namespace SlowTests.Bugs.Caching
                 {
                     var response = session.Query<Person, PersonsIndex>().Where(x => x.Name == "Johnny").ToFacets(new[]
                     {
-                        new Facet()
+                        new Facet
                         {
                             Name = "Age"
                         }
                     });
-                    Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
+                    Assert.Equal(1, session.Advanced.RequestExecuter._cache.NumberOfItems);
                     response = session.Query<Person, PersonsIndex>().Where(x => x.Name == "Johnny").ToFacets(new[]
                     {
-                        new Facet()
+                        new Facet
                         {
                             Name = "Age"
                         }
                     });
-                    Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests);
+                    Assert.Equal(1, session.Advanced.RequestExecuter._cache.NumberOfItems);
                 }
             }
         }
+
         [Fact]
         public void CachedFacetsPostRequest()
         {
@@ -128,63 +127,58 @@ namespace SlowTests.Bugs.Caching
                     {
                         Name = "Age"
                     }));
-                    Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
+                    Assert.Equal(1, session.Advanced.RequestExecuter._cache.NumberOfItems);
                     response = session.Query<Person, PersonsIndex>().Where(x => x.Name == "Johnny").ToFacets(Enumerable.Repeat(1, 200).Select(x => new Facet()
                     {
                         Name = "Age"
                     }));
-                    Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests);
+                    Assert.Equal(1, session.Advanced.RequestExecuter._cache.NumberOfItems);
                 }
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6178")]
         public async Task CachedMultiFacetsRequest()
         {
             using (var store = GetTestStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await ((AsyncDocumentSession)session).AsyncDatabaseCommands.GetMultiFacetsAsync(new[]
+                    await session.Advanced.MultiFacetedSearchAsync(new FacetQuery
                     {
-                        new FacetQuery()
+                        Query = "Name:Johnny",
+                        IndexName = "PersonsIndex",
+                        Start = 0,
+                        PageSize = 16,
+                        Facets = new List<Facet>
                         {
-                            Query = "Name:Johnny",
-                            IndexName = "PersonsIndex",
-                            Start = 0,
-                            PageSize = 16,
-                            Facets = new List<Facet>()
+                            new Facet
                             {
-                                new Facet()
-                                {
-                                    Name = "Age"
-                                }
+                                Name = "Age"
                             }
                         }
-                    }).ConfigureAwait(false);
-                    Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
-                    await ((AsyncDocumentSession)session).AsyncDatabaseCommands.GetMultiFacetsAsync(new FacetQuery[]
+                    });
+
+                    Assert.Equal(1, session.Advanced.RequestExecuter._cache.NumberOfItems);
+
+                    await session.Advanced.MultiFacetedSearchAsync(new FacetQuery
                     {
-                        new FacetQuery()
+                        Query = "Name:Johnny",
+                        IndexName = "PersonsIndex",
+                        Start = 0,
+                        PageSize = 16,
+                        Facets = new List<Facet>
                         {
-                            Query = "Name:Johnny",
-                            IndexName = "PersonsIndex",
-                            Start = 0,
-                            PageSize = 16,
-                            Facets = new List<Facet>()
+                            new Facet
                             {
-                                new Facet()
-                                {
-                                    Name = "Age"
-                                }
+                                Name = "Age"
                             }
                         }
-                    }).ConfigureAwait(false);
-                    Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests);
+                    });
+
+                    Assert.Equal(1, session.Advanced.RequestExecuter._cache.NumberOfItems);
                 }
             }
         }
-
-
     }
 }

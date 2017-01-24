@@ -16,7 +16,6 @@ using Sparrow.Json;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Client.Exceptions.Compilation;
 using Raven.NewClient.Client.Exceptions.Security;
 using Sparrow.Logging;
 
@@ -24,6 +23,7 @@ namespace Raven.NewClient.Client.Http
 {
     public class RequestExecuter : IDisposable
     {
+        private readonly RequestExecuterOptions _options;
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RequestExecuter>("Client");
 
         public readonly JsonContextPool ContextPool;
@@ -37,7 +37,7 @@ namespace Raven.NewClient.Client.Http
 
         public readonly AsyncLocal<AggresiveCacheOptions> AggressiveCaching = new AsyncLocal<AggresiveCacheOptions>();
 
-        private readonly HttpCache _cache = new HttpCache();
+        internal readonly HttpCache _cache = new HttpCache();
 
         private readonly HttpClient _httpClient;
 
@@ -48,8 +48,9 @@ namespace Raven.NewClient.Client.Http
         private Timer _updateCurrentTokenTimer;
         private readonly Timer _updateFailingNodesStatus;
 
-        public RequestExecuter(string url, string databaseName, string apiKey)
+        public RequestExecuter(string url, string databaseName, string apiKey, RequestExecuterOptions options = null)
         {
+            _options = options ?? new RequestExecuterOptions();
             _topology = new Topology
             {
                 LeaderNode = new ServerNode
@@ -203,7 +204,7 @@ namespace Raven.NewClient.Client.Http
                 if (response.Content.Headers.ContentLength.HasValue && response.Content.Headers.ContentLength == 0)
                     return;
 
-                await command.ProcessResponse(context, _cache, response, url).ConfigureAwait(false);
+                await command.ProcessResponse(context, _cache, _options, response, url).ConfigureAwait(false);
             }
         }
 

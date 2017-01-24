@@ -4,8 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System.Threading.Tasks;
-
 using FastTests;
 
 using Xunit;
@@ -16,7 +14,7 @@ namespace SlowTests.Core.Streaming
 {
     public class DocumentStreaming : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: /docs/stream")]
+        [Fact]
         public void CanStreamDocumentsStartingWith()
         {
             using (var store = GetDocumentStore())
@@ -46,7 +44,7 @@ namespace SlowTests.Core.Streaming
             }
         }
 
-        [Fact(Skip = "Missing feature: /docs/stream")]
+        [Fact(Skip = "TODO")]
         public void CanStreamDocumentsFromSpecifiedEtag()
         {
             using (var store = GetDocumentStore())

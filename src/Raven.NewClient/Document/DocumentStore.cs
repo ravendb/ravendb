@@ -243,7 +243,7 @@ namespace Raven.NewClient.Client.Document
             if (_requestExecuters.TryGetValue(databaseName, out lazy))
                 return lazy.Value;
             lazy = _requestExecuters.GetOrAdd(databaseName,
-                dbName => new Lazy<RequestExecuter>(() => new RequestExecuter(Url, dbName, ApiKey)));
+                dbName => new Lazy<RequestExecuter>(() => new RequestExecuter(Url, dbName, ApiKey, new RequestExecuterOptions(Conventions))));
             return lazy.Value;
         }
 

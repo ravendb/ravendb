@@ -4,44 +4,44 @@ using Xunit;
 
 namespace SlowTests.Bugs.Async
 {
-   public class DynamicGeneratedIds : RavenTestBase
-   {
-      [Fact]
-      public void AsyncMatchesSyncGeneratedIdForDynamicBehavior()
-      {
-         using (var store = GetDocumentStore())
-         {
-            using (var session = store.OpenAsyncSession())
+    public class DynamicGeneratedIds : RavenNewTestBase
+    {
+        [Fact]
+        public void AsyncMatchesSyncGeneratedIdForDynamicBehavior()
+        {
+            using (var store = GetDocumentStore())
             {
-               dynamic client = new ExpandoObject();
-               client.Name = "Test";
-               var result = session.StoreAsync(client);
-               result.Wait();
+                using (var session = store.OpenAsyncSession())
+                {
+                    dynamic client = new ExpandoObject();
+                    client.Name = "Test";
+                    var result = session.StoreAsync(client);
+                    result.Wait();
 
-               Assert.Equal("ExpandoObjects/1", client.Id);
+                    Assert.Equal("ExpandoObjects/1", client.Id);
+                }
             }
-         }
-      }
+        }
 
-      [Fact]
-      public void GeneratedIdForDynamicTagNameAsync()
-      {
-         using (var store = GetDocumentStore())
-         {
-            store.Conventions.FindDynamicTagName = (entity) => entity.EntityName;
-
-            using (var session = store.OpenAsyncSession())
+        [Fact]
+        public void GeneratedIdForDynamicTagNameAsync()
+        {
+            using (var store = GetDocumentStore())
             {
-               dynamic client = new ExpandoObject();
-               client.Name = "Test";
-               client.EntityName = "clients";
+                store.Conventions.FindDynamicTagName = (entity) => entity.EntityName;
 
-               var result = session.StoreAsync(client);
-               result.Wait();
+                using (var session = store.OpenAsyncSession())
+                {
+                    dynamic client = new ExpandoObject();
+                    client.Name = "Test";
+                    client.EntityName = "clients";
 
-               Assert.Equal("clients/1", client.Id);
+                    var result = session.StoreAsync(client);
+                    result.Wait();
+
+                    Assert.Equal("clients/1", client.Id);
+                }
             }
-         }
-      }
-   }
+        }
+    }
 }
