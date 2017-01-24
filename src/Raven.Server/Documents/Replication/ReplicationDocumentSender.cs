@@ -256,6 +256,13 @@ namespace Raven.Server.Documents.Replication
                 [nameof(ReplicationMessageHeader.LastIndexOrTransformerEtag)] = _parent._lastSentIndexOrTransformerEtag,
                 [nameof(ReplicationMessageHeader.ItemCount)] = _orderedReplicaItems.Count,
             };
+      if (_parent._parent.ResolverLeader.HasLeader())
+                {
+                    headerJson[nameof(ReplicationMessageHeader.ResovlerId)] =
+                        _parent._parent.ResolverLeader.Dbid.ToString();
+                    headerJson[nameof(ReplicationMessageHeader.ResovlerVersion)] =
+                        _parent._parent.ResolverLeader.Version.ToString();
+                }
             _parent.WriteToServer(headerJson);
             foreach (var item in _orderedReplicaItems)
             {
@@ -274,7 +281,11 @@ namespace Raven.Server.Documents.Replication
                     $"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents in {sw.ElapsedMilliseconds:#,#;;0} ms. Last sent etag = {_lastEtag}");
 
             _parent._lastDocumentSentTime = DateTime.UtcNow;
-            _parent.HandleServerResponse();
+var answer = _parent.HandleServerResponse(serveFullResponse:true);
+                if (answer.Item1 == ReplicationMessageReply.ReplyType.Ok && answer.Item2.ResolverId != null)
+                {
+                    _parent._parent.ResolverLeader.ParseAndUpdate(answer.Item2.ResolverId, answer.Item2.ResolverVersion);
+                }
         }
 
         private unsafe void WriteDocumentToServer(ReplicationBatchDocumentItem item)
