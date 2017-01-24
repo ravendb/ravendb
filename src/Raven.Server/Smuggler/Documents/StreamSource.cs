@@ -255,7 +255,7 @@ namespace Raven.Server.Smuggler.Documents
                 if (read == 0)
                     throw new EndOfStreamException("Stream ended without reaching end of json content");
 
-                _parser.SetBuffer(_buffer, read);
+                _parser.SetBuffer(_buffer, 0, read);
             }
             builder.FinalizeDocument();
 
@@ -297,7 +297,7 @@ namespace Raven.Server.Smuggler.Documents
                 return false;
             }
 
-            _parser.SetBuffer(_buffer, read);
+            _parser.SetBuffer(_buffer, 0, read);
             return _parser.Read();
         }
 

@@ -26,8 +26,10 @@ namespace Raven.NewClient.Abstractions.Data
         public long Etag { get; set; }
     }
 
-    public class SubscriptionConnectionServerMessage
+    public class SubscriptionConnectionServerMessage : IDisposable
     {
+        internal BlittableJsonReaderObject ParentObjectToDispose;
+
         public enum MessageType
         {
             None,
@@ -51,6 +53,12 @@ namespace Raven.NewClient.Abstractions.Data
         public ConnectionStatus Status { get; set; }
         public BlittableJsonReaderObject Data { get; set; }
         public string Exception { get; set; }
+
+        public void Dispose()
+        {
+            ParentObjectToDispose?.Dispose();
+            ParentObjectToDispose = null;
+        }
     }
   
     public class SubscriptionConnectionOptions

@@ -151,6 +151,9 @@ namespace Raven.Server.Documents
 
         public void SendDocumentChanges(DocumentChangeNotification notification)
         {
+            // this is a precaution, in order to overcome an observed race condition between notification client disconnection and raising notifications
+            if (IsDisposed)
+                return;
             if (_watchAllDocuments > 0)
             {
                 Send(notification);
@@ -473,8 +476,12 @@ namespace Raven.Server.Documents
             }
         }
 
+        private long _isDisposed;
+        public bool IsDisposed => Interlocked.Read(ref _isDisposed) == 1;
+
         public void Dispose()
         {
+            Interlocked.Exchange(ref _isDisposed, 1);
             _disposeToken.Cancel();
             _sendQueue.Dispose();
         }

@@ -23,9 +23,9 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 100; i++)
             {
-                using (var a = new ReplicationResolveToLeader())
+               using (var a = new ReplicationResolveToLeader())
                 {
                     var res =Task.Run(a.ChangeLeaderAndResolve);
                     var res2 =Task.Run(a.ResovleToLeader);
@@ -35,7 +35,7 @@ namespace Tryouts
 
                     Task.WaitAll(res, res2, res3, res4, res5);
                 }
-                Console.WriteLine(i);
+                Console.WriteLine($"{i} finished");
             }
 
         }

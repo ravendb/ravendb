@@ -47,15 +47,19 @@ namespace Raven.Server.Documents
 
         public override void Dispose()
         {
-            if (_context.Transaction != this)
-                throw new InvalidOperationException("There is a different transaction in context.");
-
+            if (_context.Transaction != null && _context.Transaction != this)
+                ThrowInvalidTransactionUsage();
 
             _context.Transaction = null;
             base.Dispose();
 
             if (InnerTransaction.LowLevelTransaction.Committed)
                 AfterCommit();
+        }
+
+        private static void ThrowInvalidTransactionUsage()
+        {
+            throw new InvalidOperationException("There is a different transaction in context.");
         }
 
         private void AfterCommit()

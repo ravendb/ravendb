@@ -243,6 +243,7 @@ namespace FastTests.Client.Subscriptions
                     Collection = "Things",
                 };
                 var subsId = await store.AsyncSubscriptions.CreateAsync(subscriptionCriteria, lastEtag);
+                
                 using (
                     var acceptedSubscription = store.AsyncSubscriptions.Open<Thing>(new SubscriptionConnectionOptions()
                     {
@@ -251,16 +252,21 @@ namespace FastTests.Client.Subscriptions
                 {
                     var acceptedSusbscriptionList = new BlockingCollection<Thing>();
                     var takingOverSubscriptionList = new BlockingCollection<Thing>();
-
+                    long counter = 0;
                     acceptedSubscription.Subscribe(x =>
                     {
+                        Interlocked.Increment(ref counter);
                         acceptedSusbscriptionList.Add(x);
                     });
 
                     var batchProccessedByFirstSubscription = new AsyncManualResetEvent();
 
                     acceptedSubscription.AfterAcknowledgment +=
-                        () => batchProccessedByFirstSubscription.SetByAsyncCompletion();
+                        () =>
+                        {
+                            if (Interlocked.Read(ref counter) == 5)
+                                batchProccessedByFirstSubscription.SetByAsyncCompletion();
+                        };
 
                     await acceptedSubscription.StartAsync();
 

@@ -142,7 +142,7 @@ namespace Raven.Client.Document
                             var read = jsonBuffer.Read(bytes.Buffer.Array, bytes.Buffer.Offset, bytes.Length);
                             if (read == 0)
                                 throw new EndOfStreamException("Stream ended without reaching end of json content");
-                            jsonParser.SetBuffer(bytes, read);
+                            jsonParser.SetBuffer(bytes, 0, read);
                             if (builder.Read())
                                 break;
                         }
@@ -214,7 +214,7 @@ namespace Raven.Client.Document
 
                 var result = await webSocket.ReceiveAsync(bytes.Buffer, cancellationToken).ConfigureAwait(false);
 
-                parser.SetBuffer(bytes, result.Count);
+                parser.SetBuffer(bytes, 0, result.Count);
                 while (writer.Read() == false)
                 {
                     // we got incomplete json response.
@@ -224,7 +224,7 @@ namespace Raven.Client.Document
 
                     result = await webSocket.ReceiveAsync(bytes.Buffer, cancellationToken).ConfigureAwait(false);
 
-                    parser.SetBuffer(bytes, result.Count);
+                    parser.SetBuffer(bytes, 0, result.Count);
                 }
                 writer.FinalizeDocument();
                 return writer.CreateReader();

@@ -127,7 +127,7 @@ namespace Raven.NewClient.Client.Commands
                 var read = stream.Read(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Buffer.Count);
                 if (read == 0)
                     throw new EndOfStreamException("The stream ended unexpectedly");
-                parser.SetBuffer(buffer, read);
+                parser.SetBuffer(buffer, 0, read);
             }
         }
 
@@ -138,7 +138,7 @@ namespace Raven.NewClient.Client.Commands
                 var read = await stream.ReadAsync(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Buffer.Count).ConfigureAwait(false);
                 if (read == 0)
                     throw new EndOfStreamException("The stream ended unexpectedly");
-                parser.SetBuffer(buffer, read);
+                parser.SetBuffer(buffer, 0, read);
             }
         }
 
@@ -192,7 +192,7 @@ namespace Raven.NewClient.Client.Commands
                         var read = response.Stream.Read(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Length);
                         if (read == 0)
                             throw new EndOfStreamException("Stream ended without reaching end of json content");
-                        parser.SetBuffer(buffer, read);
+                        parser.SetBuffer(buffer, 0, read);
                     }
                     builder.FinalizeDocument();
                     ReadNextToken(response.Stream, parser, buffer);
@@ -286,7 +286,7 @@ namespace Raven.NewClient.Client.Commands
                         var read = await _response.Stream.ReadAsync(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Length).ConfigureAwait(false);
                         if (read == 0)
                             throw new EndOfStreamException("Stream ended without reaching end of json content");
-                        parser.SetBuffer(buffer, read);
+                        parser.SetBuffer(buffer, 0, read);
                     }
                     builder.FinalizeDocument();
                     await ReadNextTokenAsync(_response.Stream, parser, buffer).ConfigureAwait(false);
