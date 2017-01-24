@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Abstractions;
+using Raven.Server.NotificationCenter.Actions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -205,15 +206,28 @@ namespace Raven.Server.NotificationCenter
             return deleteResult;
         }
 
-        public long GetAlertCount() // TODO: only alerts
+        public long GetAlertCount()
         {
+            var count = 0;
+
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
-            using (var tx = context.OpenReadTransaction())
+            using (context.OpenReadTransaction())
             {
-                var table = tx.InnerTransaction.OpenTable(_actionsSchema, ActionsSchema.ActionsTree);
-                return table.NumberOfEntries;
+                foreach (var action in ReadActionsByCreatedAtIndex(context))
+                {
+                    object type;
+                    if (action.TryGetMember(nameof(Action.Type), out type) == false)
+                        throw new InvalidOperationException($"Could not find action type. Action: {action}");
+
+                    var typeLsv = (LazyStringValue) type;
+                    
+                    if (typeLsv.CompareTo(ActionType.AlertRaised.ToString()) == 0)
+                        count++;
+                }
             }
+
+            return count;
         }
 
         private BlittableJsonReaderObject Read(JsonOperationContext context, TableValueReader reader)
