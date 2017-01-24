@@ -3,13 +3,11 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Json;
 using Sparrow.Json;
-
 
 namespace Raven.NewClient.Client.Document.Batches
 {
@@ -39,16 +37,22 @@ namespace Raven.NewClient.Client.Document.Batches
         public QueryResult QueryResult { get; set; }
         public bool RequiresRetry { get; private set; }
 
-        public void HandleResponse(BlittableJsonReaderObject response)
+        public void HandleResponse(GetResponse response)
         {
             if (response == null)
             {
                 Result = null;
                 return;
             }
-            BlittableJsonReaderObject result;
-            response.TryGet("Result", out result);
-            var res = JsonDeserializationClient.GetDocumentResult(result);
+
+            if (response.ForceRetry)
+            {
+                Result = null;
+                RequiresRetry = true;
+                return;
+            }
+
+            var res = JsonDeserializationClient.GetDocumentResult((BlittableJsonReaderObject)response.Result);
             _loadOperation.SetResult(res);
             Result = _loadOperation.GetDocuments<T>();
         }

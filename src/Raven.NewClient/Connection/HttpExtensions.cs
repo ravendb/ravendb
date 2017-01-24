@@ -34,7 +34,16 @@ namespace Raven.NewClient.Client.Connection
                 return null;
 
             return EtagHeaderToEtag(value);
-        }        
+        }
+
+        public static long? GetEtagHeader(this Dictionary<string, string> headers)
+        {
+            string value;
+            if (headers.TryGetValue(Constants.MetadataEtagField, out value) == false || value == null)
+                return null;
+
+            return EtagHeaderToEtag(value);
+        }
 
         internal static long EtagHeaderToEtag(string responseHeader)
         {

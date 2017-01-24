@@ -2,14 +2,11 @@ using System;
 using System.Text;
 
 using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document.Batches;
 using Raven.NewClient.Client.Json;
-using Raven.NewClient.Client.Shard;
 using Sparrow.Json;
-
 
 namespace Raven.NewClient.Client.Commands.Lazy
 {
@@ -26,10 +23,10 @@ namespace Raven.NewClient.Client.Commands.Lazy
             string[] includes,
             string transformer = null)
         {
-            this._loadOperation = loadOperation;
-            this._ids = ids;
-            this._includes = includes;
-            this._transformer = transformer;
+            _loadOperation = loadOperation;
+            _ids = ids;
+            _includes = includes;
+            _transformer = transformer;
         }
 
         public LazyLoadOperation(
@@ -60,29 +57,24 @@ namespace Raven.NewClient.Client.Commands.Lazy
         public QueryResult QueryResult { get; set; }
         public bool RequiresRetry { get; set; }
 
-        public void HandleResponse(BlittableJsonReaderObject response)
+        public void HandleResponse(GetResponse response)
         {
-            bool forceRetry;
-            response.TryGet("ForceRetry", out forceRetry);
-
-            if (forceRetry)
+            if (response.ForceRetry)
             {
                 Result = null;
                 RequiresRetry = true;
                 return;
             }
 
-            BlittableJsonReaderObject result;
-            response.TryGet("Result", out result);
-            var multiLoadResult = JsonDeserializationClient.GetDocumentResult(result);
+            var multiLoadResult = JsonDeserializationClient.GetDocumentResult((BlittableJsonReaderObject)response.Result);
             HandleResponse(multiLoadResult);
         }
 
         private void HandleResponse(GetDocumentResult loadResult)
         {
-              _loadOperation.SetResult(loadResult);
-              if (RequiresRetry == false)
-                  Result = _loadOperation.GetDocuments<T>();
+            _loadOperation.SetResult(loadResult);
+            if (RequiresRetry == false)
+                Result = _loadOperation.GetDocuments<T>();
         }
     }
 }

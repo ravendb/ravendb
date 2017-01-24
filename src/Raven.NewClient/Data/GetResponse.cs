@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
+using Sparrow.Json;
 
-
-namespace Raven.NewClient.Abstractions.Data
+namespace Raven.NewClient.Client.Data
 {
     public class GetResponse
     {
@@ -14,17 +15,17 @@ namespace Raven.NewClient.Abstractions.Data
         /// <summary>
         /// Response result as JSON.
         /// </summary>
-        //public RavenJToken Result { get; set; }
+        public BlittableJsonReaderBase Result { get; set; }
 
         /// <summary>
         /// Response headers.
         /// </summary>
-        public IDictionary<string,string> Headers { get; set; }
+        public Dictionary<string, string> Headers { get; set; }
 
         /// <summary>
         /// Response HTTP status code.
         /// </summary>
-        public int Status { get; set; }
+        public HttpStatusCode StatusCode { get; set; }
 
         /// <summary>
         /// Indicates if request should be retried (forced).
@@ -40,15 +41,15 @@ namespace Raven.NewClient.Abstractions.Data
         /// <returns><c>false</c> if Status is 0, 200, 201, 203, 204, 304 and 404. <c>True</c> otherwise.</returns>
         public bool RequestHasErrors()
         {
-            switch (Status)
+            switch (StatusCode)
             {
-                case 0:   // aggressively cached
-                case 200: // known non error values
-                case 201:
-                case 203:
-                case 204:
-                case 304:
-                case 404:
+                case 0:                     // aggressively cached
+                case HttpStatusCode.OK:     // known non error values
+                case HttpStatusCode.Created:
+                case HttpStatusCode.NonAuthoritativeInformation:
+                case HttpStatusCode.NoContent:
+                case HttpStatusCode.NotModified:
+                case HttpStatusCode.NotFound:
                     return false;
                 default:
                     return true;

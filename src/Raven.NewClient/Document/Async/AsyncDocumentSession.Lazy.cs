@@ -18,7 +18,6 @@ using System.Diagnostics;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Commands.Lazy;
 using Raven.NewClient.Client.Data.Queries;
-using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Document.Async
 {
@@ -108,10 +107,9 @@ namespace Raven.NewClient.Client.Document.Async
             { 
                 long totalTime;
                 string tempReqTime;
-                var response = (BlittableJsonReaderObject)responses.Results[i];
-                BlittableJsonReaderObject headers;
-                response.TryGet("Headers", out headers);
-                headers.TryGet(Constants.Headers.RequestTime, out tempReqTime);
+                var response = responses[i];
+
+                response.Headers.TryGetValue(Constants.Headers.RequestTime, out tempReqTime);
 
                 long.TryParse(tempReqTime, out totalTime);
 
@@ -121,22 +119,8 @@ namespace Raven.NewClient.Client.Document.Async
                     Duration = TimeSpan.FromMilliseconds(totalTime)
                 });
 
-                long status;
-                response.TryGet("Status", out status);
-                switch (status)
-                {
-                    case 0:   // aggressively cached
-                    case 200: // known non error values
-                    case 201:
-                    case 203:
-                    case 204:
-                    case 304:
-                    case 404:
-                        break;
-                    default:
-                        throw new InvalidOperationException("Got an error from server, status code: " + (int)status +
-                                                        Environment.NewLine + response);
-                }
+                if (response.RequestHasErrors())
+                    throw new InvalidOperationException("Got an error from server, status code: " + (int)response.StatusCode + Environment.NewLine + response.Result);
 
                 pendingLazyOperations[i].HandleResponse(response);
                 if (pendingLazyOperations[i].RequiresRetry)

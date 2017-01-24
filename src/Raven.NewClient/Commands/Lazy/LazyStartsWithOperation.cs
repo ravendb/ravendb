@@ -15,7 +15,6 @@ using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Commands.Lazy
 {
-   
     public class LazyStartsWithOperation<T> : ILazyOperation
     {
         private readonly string _keyPrefix;
@@ -36,14 +35,14 @@ namespace Raven.NewClient.Client.Commands.Lazy
 
         public LazyStartsWithOperation(string keyPrefix, string matches, string exclude, int start, int pageSize, InMemoryDocumentSessionOperations sessionOperations, RavenPagingInformation pagingInformation, string skipAfter)
         {
-            this._keyPrefix = keyPrefix;
-            this._matches = matches;
-            this._exclude = exclude;
-            this._start = start;
-            this._pageSize = pageSize;
-            this._sessionOperations = sessionOperations;
-            this._pagingInformation = pagingInformation;
-            this._skipAfter = skipAfter;
+            _keyPrefix = keyPrefix;
+            _matches = matches;
+            _exclude = exclude;
+            _start = start;
+            _pageSize = pageSize;
+            _sessionOperations = sessionOperations;
+            _pagingInformation = pagingInformation;
+            _skipAfter = skipAfter;
         }
 
         public GetRequest CreateRequest()
@@ -57,7 +56,7 @@ namespace Raven.NewClient.Client.Commands.Lazy
             return new GetRequest
             {
                 Url = "/docs",
-                Query ="?" + 
+                Query = "?" +
                     string.Format(
                         "startsWith={0}&matches={3}&exclude={4}&start={1}&pageSize={2}&next-page={5}&skipAfter={6}",
                         Uri.EscapeDataString(_keyPrefix),
@@ -76,12 +75,9 @@ namespace Raven.NewClient.Client.Commands.Lazy
 
         public bool RequiresRetry { get; set; }
 
-        public void HandleResponse(BlittableJsonReaderObject response)
+        public void HandleResponse(GetResponse response)
         {
-            BlittableJsonReaderObject result;
-            response.TryGet("Result", out result);
-
-            var getDocumentResult = JsonDeserializationClient.GetDocumentResult(result);
+            var getDocumentResult = JsonDeserializationClient.GetDocumentResult((BlittableJsonReaderObject)response.Result);
 
             _pagingInformation?.Fill(_start, _pageSize, getDocumentResult.NextPageStart);
 

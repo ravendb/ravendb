@@ -13,6 +13,6 @@ namespace Raven.NewClient.Client.Document.Batches
         object Result { get; }
         QueryResult QueryResult { get; }
         bool RequiresRetry { get; }
-        void HandleResponse(BlittableJsonReaderObject response);
+        void HandleResponse(GetResponse response);
     }
 }

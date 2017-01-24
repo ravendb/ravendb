@@ -1,43 +1,39 @@
 using System;
 using System.Globalization;
-using System.Linq;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Shard;
-using Sparrow.Json;
-
 
 namespace Raven.NewClient.Client.Document.Batches
 {
     public class LazySuggestOperation : ILazyOperation
     {
-        private readonly string index;
-        private readonly SuggestionQuery suggestionQuery;
+        private readonly string _index;
+        private readonly SuggestionQuery _suggestionQuery;
 
         public LazySuggestOperation(string index, SuggestionQuery suggestionQuery)
         {
-            this.index = index;
-            this.suggestionQuery = suggestionQuery;
+            _index = index;
+            _suggestionQuery = suggestionQuery;
         }
 
         public GetRequest CreateRequest()
         {
             var query = string.Format(
                 "term={0}&field={1}&max={2}",
-                suggestionQuery.Term,
-                suggestionQuery.Field,
-                suggestionQuery.MaxSuggestions);
+                _suggestionQuery.Term,
+                _suggestionQuery.Field,
+                _suggestionQuery.MaxSuggestions);
 
-            if (suggestionQuery.Accuracy.HasValue)
-                query += "&accuracy=" + suggestionQuery.Accuracy.Value.ToString(CultureInfo.InvariantCulture);
+            if (_suggestionQuery.Accuracy.HasValue)
+                query += "&accuracy=" + _suggestionQuery.Accuracy.Value.ToString(CultureInfo.InvariantCulture);
 
-            if (suggestionQuery.Distance.HasValue)
-                query += "&distance=" + suggestionQuery.Distance;
+            if (_suggestionQuery.Distance.HasValue)
+                query += "&distance=" + _suggestionQuery.Distance;
 
             return new GetRequest
             {
-                Url = "/suggest/" + index,
+                Url = "/suggest/" + _index,
                 Query = query
             };
         }
@@ -45,7 +41,7 @@ namespace Raven.NewClient.Client.Document.Batches
         public object Result { get; private set; }
         public QueryResult QueryResult { get; set; }
         public bool RequiresRetry { get; private set; }
-        public void HandleResponse(BlittableJsonReaderObject response)
+        public void HandleResponse(GetResponse response)
         {
             throw new NotImplementedException();
 
