@@ -8,12 +8,12 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Replication
 {
-    public struct InterruptibleRead
+    public class InterruptibleRead : IDisposable
     {
-        private readonly AsyncManualResetEvent _interrupt;
         private Task<Result> _prevCall;
         private Task[] _waitableTasks;
         private readonly DocumentsContextPool _contextPool;
+        private readonly Stream _stream;
 
         public struct Result : IDisposable
         {
@@ -29,14 +29,14 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public InterruptibleRead(AsyncManualResetEvent interrupt, DocumentsContextPool contextPool) : this()
+        public InterruptibleRead(DocumentsContextPool contextPool, Stream stream)
         {
-            _interrupt = interrupt;
             _contextPool = contextPool;
+            _stream = stream;
         }
 
         public Result ParseToMemory(
-            Stream stream,
+            AsyncManualResetEvent interrupt,
             string debugTag, 
             int timeout, 
             JsonOperationContext.ManagedPinnedBuffer buffer, 
@@ -44,13 +44,13 @@ namespace Raven.Server.Documents.Replication
         {
             if (_prevCall == null)
             {
-                _prevCall = ReadNextObject(stream, debugTag, buffer);
+                _prevCall = ReadNextObject(debugTag, buffer);
             }
             if (_waitableTasks == null)
                 _waitableTasks = new Task[2];
 
             _waitableTasks[0] = _prevCall;
-            _waitableTasks[1] = _interrupt.WaitAsync();
+            _waitableTasks[1] = interrupt.WaitAsync();
 
             var state = Task.WaitAny(_waitableTasks, timeout, token);
 
@@ -60,19 +60,24 @@ namespace Raven.Server.Documents.Replication
             if (state != 0)
                 return new Result {Interrupted = true};
 
-            var result = _prevCall.Result;
-            _prevCall = null;
-            return result;
+            try
+            {
+                return _prevCall.Result;
+            }
+            finally
+            {
+                _prevCall = null;
+            }
         }
 
-        private async Task<Result> ReadNextObject(Stream stream, string debugTag, JsonOperationContext.ManagedPinnedBuffer buffer)
+        private async Task<Result> ReadNextObject(string debugTag, JsonOperationContext.ManagedPinnedBuffer buffer)
         {
             DocumentsOperationContext context;
             var retCtx = _contextPool.AllocateOperationContext(out context);
             try
             {
                 var jsonReaderObject =
-                    await context.ParseToMemoryAsync(stream, debugTag, BlittableJsonDocumentBuilder.UsageMode.None, buffer);
+                    await context.ParseToMemoryAsync(_stream, debugTag, BlittableJsonDocumentBuilder.UsageMode.None, buffer);
                 return new Result
                 {
                     Document = jsonReaderObject,
@@ -84,6 +89,28 @@ namespace Raven.Server.Documents.Replication
             {
                 retCtx.Dispose();
                 throw;
+            }
+        }
+
+        public void Dispose()
+        {
+            if (_prevCall == null)
+                return;
+
+            try
+            {
+                using (_prevCall.Result)
+                {
+
+                }
+            }
+            catch (Exception)
+            {
+                // explicitly ignoring this
+            }
+            finally
+            {
+                _prevCall = null;
             }
         }
     }

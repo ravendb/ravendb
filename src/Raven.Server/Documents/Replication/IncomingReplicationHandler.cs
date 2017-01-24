@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Replication
     {
         private readonly DocumentDatabase _database;
         private readonly TcpClient _tcpClient;
-        private readonly NetworkStream _stream;
+        private readonly Stream _stream;
         private readonly DocumentReplicationLoader _parent;
         private Thread _incomingThread;
         private readonly CancellationTokenSource _cts;
@@ -65,7 +65,6 @@ namespace Raven.Server.Documents.Replication
             _log = LoggingSource.Instance.GetLogger<IncomingReplicationHandler>(_database.Name);
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
         }
-
 
         public void Start()
         {
@@ -105,17 +104,19 @@ namespace Raven.Server.Documents.Replication
             IsIncomingReplicationThread = true;
             try
             {
-                using(_connectionOptions.ConnectionProcessingInProgress())
+                
+                using (_connectionOptions.ConnectionProcessingInProgress())
                 using (_stream)
+                using (var interruptibleRead = new InterruptibleRead(
+                            _database.DocumentsStorage.ContextPool,
+                            _stream))
                 {
                     while (!_cts.IsCancellationRequested)
                     {
                         try
                         {
-                            var interruptibleRead = new InterruptibleRead(_replicationFromAnotherSource,
-                                _database.DocumentsStorage.ContextPool);
                             using (var msg = interruptibleRead.ParseToMemory(
-                                _connectionOptions.Stream,
+                                _replicationFromAnotherSource,
                                 "IncomingReplication/read-message",
                                 Timeout.Infinite,
                                 _connectionOptions.PinnedBuffer,
