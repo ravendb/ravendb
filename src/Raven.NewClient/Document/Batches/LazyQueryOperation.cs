@@ -1,7 +1,5 @@
 using System;
-using System.Collections.Specialized;
 using System.Text;
-using Raven.NewClient.Client.Shard;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
@@ -13,13 +11,12 @@ namespace Raven.NewClient.Client.Document.Batches
     public class LazyQueryOperation<T> : ILazyOperation
     {
         private readonly QueryOperation _queryOperation;
-        private readonly Action<QueryResult> afterQueryExecuted;
-
+        private readonly Action<QueryResult> _afterQueryExecuted;
 
         public LazyQueryOperation(QueryOperation queryOperation, Action<QueryResult> afterQueryExecuted)
         {
-            this._queryOperation = queryOperation;
-            this.afterQueryExecuted = afterQueryExecuted;
+            _queryOperation = queryOperation;
+            _afterQueryExecuted = afterQueryExecuted;
         }
 
         public GetRequest CreateRequest()
@@ -40,20 +37,16 @@ namespace Raven.NewClient.Client.Document.Batches
         public QueryResult QueryResult { get; set; }
         public bool RequiresRetry { get; set; }
 
-        public void HandleResponse(BlittableJsonReaderObject response)
+        public void HandleResponse(GetResponse response)
         {
-            bool forceRetry;
-            response.TryGet("ForceRetry", out forceRetry);
-
-            if (forceRetry)
+            if (response.ForceRetry)
             {
                 Result = null;
                 RequiresRetry = true;
                 return;
             }
-            BlittableJsonReaderObject result;
-            response.TryGet("Result", out result);
-            var queryResult = JsonDeserializationClient.QueryResult(result);
+
+            var queryResult = JsonDeserializationClient.QueryResult((BlittableJsonReaderObject)response.Result);
 
             HandleResponse(queryResult);
         }
@@ -62,7 +55,7 @@ namespace Raven.NewClient.Client.Document.Batches
         {
             _queryOperation.EnsureIsAcceptableAndSaveResult(queryResult);
 
-            afterQueryExecuted?.Invoke(queryResult);
+            _afterQueryExecuted?.Invoke(queryResult);
             Result = _queryOperation.Complete<T>();
             QueryResult = queryResult;
         }

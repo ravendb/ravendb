@@ -76,7 +76,7 @@ namespace Raven.NewClient.Client.Document
             {
                 Query = query.ToString()
             };
-            if(_operations == null)
+            if (_operations == null)
                 _operations = new OperationExecuter(_documentStore, _requestExecuter, Context);
 
 
@@ -153,12 +153,9 @@ namespace Raven.NewClient.Client.Document
             var multiGetOperation = new MultiGetOperation(this);
             var command = multiGetOperation.CreateRequest(requests);
             RequestExecuter.Execute(command, Context);
-            foreach (var result in command.Result.Results)
+            foreach (var result in command.Result)
             {
-                var facetResult = (BlittableJsonReaderObject)result;
-                BlittableJsonReaderObject res;
-                facetResult.TryGet("Result", out res);
-                results.Add(JsonDeserializationClient.FacetedQueryResult(res));
+                results.Add(JsonDeserializationClient.FacetedQueryResult((BlittableJsonReaderObject)result.Result));
             }
             return results.ToArray();
         }
@@ -232,10 +229,9 @@ namespace Raven.NewClient.Client.Document
             {
                 long totalTime;
                 string tempReqTime;
-                var response = (BlittableJsonReaderObject)responses.Results[i];
-                BlittableJsonReaderObject headers;
-                response.TryGet("Headers", out headers);
-                headers.TryGet(Constants.Headers.RequestTime, out tempReqTime);
+                var response = responses[i];
+
+                response.Headers.TryGetValue(Constants.Headers.RequestTime, out tempReqTime);
 
                 long.TryParse(tempReqTime, out totalTime);
 
@@ -245,22 +241,8 @@ namespace Raven.NewClient.Client.Document
                     Duration = TimeSpan.FromMilliseconds(totalTime)
                 });
 
-                long status;
-                response.TryGet("Status", out status);
-                switch (status)
-                {
-                    case 0:   // aggressively cached
-                    case 200: // known non error values
-                    case 201:
-                    case 203:
-                    case 204:
-                    case 304:
-                    case 404:
-                        break;
-                    default:
-                        throw new InvalidOperationException("Got an error from server, status code: " + (int)status +
-                                                        Environment.NewLine + response);
-                }
+                if (response.RequestHasErrors())
+                    throw new InvalidOperationException("Got an error from server, status code: " + (int)response.StatusCode + Environment.NewLine + response.Result);
 
                 pendingLazyOperations[i].HandleResponse(response);
                 if (pendingLazyOperations[i].RequiresRetry)

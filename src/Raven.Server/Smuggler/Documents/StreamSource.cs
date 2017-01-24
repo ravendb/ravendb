@@ -48,7 +48,7 @@ namespace Raven.Server.Smuggler.Documents
             _state = new JsonParserState();
             _parser = new UnmanagedJsonParser(_context, _state, "file");
 
-            if (Read() == false)
+            if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
                 ThrowInvalidJson();
 
             if (_state.CurrentTokenType != JsonParserToken.StartObject)
@@ -227,14 +227,9 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private static void ThrowInvalidJson()
-        {
-            throw new InvalidOperationException("Invalid JSON.");
-        }
-
         private unsafe string ReadType()
         {
-            if (Read() == false)
+            if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
                 ThrowInvalidJson();
 
             if (_state.CurrentTokenType == JsonParserToken.EndObject)
@@ -246,18 +241,14 @@ namespace Raven.Server.Smuggler.Documents
             return new LazyStringValue(null, _state.StringBuffer, _state.StringSize, _context).ToString();
         }
 
+        private static void ThrowInvalidJson()
+        {
+            throw new InvalidOperationException("Invalid JSON.");
+        }
+
         private void ReadObject(BlittableJsonDocumentBuilder builder)
         {
-            builder.ReadNestedObject();
-            while (builder.Read() == false)
-            {
-                var read = _stream.Read(_buffer.Buffer.Array, _buffer.Buffer.Offset, _buffer.Length);
-                if (read == 0)
-                    throw new EndOfStreamException("Stream ended without reaching end of json content");
-
-                _parser.SetBuffer(_buffer, 0, read);
-            }
-            builder.FinalizeDocument();
+            UnmanagedJsonParserHelper.ReadObject(builder, _stream, _parser, _buffer);
 
             _totalObjectsRead.Add(builder.SizeInBytes, SizeUnit.Bytes);
         }
@@ -274,31 +265,13 @@ namespace Raven.Server.Smuggler.Documents
                 return 0;
             }
 
-            if (Read() == false)
+            if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
                 ThrowInvalidJson();
 
             if (_state.CurrentTokenType != JsonParserToken.Integer)
                 ThrowInvalidJson();
 
             return _state.Long;
-        }
-
-        private bool Read()
-        {
-            if (_parser.Read())
-                return true;
-
-            var read = _stream.Read(_buffer.Buffer.Array, _buffer.Buffer.Offset, _buffer.Length);
-            if (read == 0)
-            {
-                if (_state.CurrentTokenType != JsonParserToken.EndObject)
-                    throw new EndOfStreamException("Stream ended without reaching end of json content");
-
-                return false;
-            }
-
-            _parser.SetBuffer(_buffer, 0, read);
-            return _parser.Read();
         }
 
         private long SkipArray()
@@ -314,7 +287,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private IEnumerable<BlittableJsonDocumentBuilder> ReadArray(INewDocumentActions actions = null)
         {
-            if (Read() == false)
+            if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
                 ThrowInvalidJson();
 
             if (_state.CurrentTokenType != JsonParserToken.StartArray)
@@ -324,7 +297,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 MaybeResetContextAndParser();
 
-                if (Read() == false)
+                if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
                     ThrowInvalidJson();
 
                 if (_state.CurrentTokenType == JsonParserToken.EndArray)

@@ -11,34 +11,34 @@ namespace Raven.NewClient.Client.Commands.Lazy
 {
     public class LazyTransformerLoadOperation<T> : ILazyOperation
     {
-        private readonly string[] ids;
-        private readonly string transformer;
+        private readonly string[] _ids;
+        private readonly string _transformer;
 
-        private readonly Dictionary<string, object> transformerParameters;
+        private readonly Dictionary<string, object> _transformerParameters;
 
         private readonly LoadTransformerOperation _loadTransformerOperation;
-        private readonly bool singleResult;
+        private readonly bool _singleResult;
 
         public LazyTransformerLoadOperation(string[] ids, string transformer, Dictionary<string, object> transformerParameters, LoadTransformerOperation loadTransformerOperation, bool singleResult)
         {
-            this.ids = ids;
-            this.transformer = transformer;
-            this.transformerParameters = transformerParameters;
-            this._loadTransformerOperation = loadTransformerOperation;
+            _ids = ids;
+            _transformer = transformer;
+            _transformerParameters = transformerParameters;
+            _loadTransformerOperation = loadTransformerOperation;
             _loadTransformerOperation.ByIds(ids);
             _loadTransformerOperation.WithTransformer(transformer, transformerParameters);
-            this.singleResult = singleResult;
+            _singleResult = singleResult;
         }
 
         public GetRequest CreateRequest()
         {
-            string query = "?" + string.Join("&", ids.Select(x => "id=" + Uri.EscapeDataString(x)).ToArray());
-            if (string.IsNullOrEmpty(transformer) == false)
+            string query = "?" + string.Join("&", _ids.Select(x => "id=" + Uri.EscapeDataString(x)).ToArray());
+            if (string.IsNullOrEmpty(_transformer) == false)
             {
-                query += "&transformer=" + transformer;
+                query += "&transformer=" + _transformer;
 
-                if (transformerParameters != null)
-                    query = transformerParameters.Aggregate(query, (current, queryInput) => current + ("&" + string.Format("tp-{0}={1}", queryInput.Key, queryInput.Value)));
+                if (_transformerParameters != null)
+                    query = _transformerParameters.Aggregate(query, (current, queryInput) => current + ("&" + string.Format("tp-{0}={1}", queryInput.Key, queryInput.Value)));
             }
 
             return new GetRequest
@@ -52,21 +52,16 @@ namespace Raven.NewClient.Client.Commands.Lazy
         public QueryResult QueryResult { get; set; }
         public bool RequiresRetry { get; set; }
 
-        public void HandleResponse(BlittableJsonReaderObject response)
+        public void HandleResponse(GetResponse response)
         {
-            bool forceRetry;
-            response.TryGet("ForceRetry", out forceRetry);
-
-            if (forceRetry)
+            if (response.ForceRetry)
             {
                 Result = null;
                 RequiresRetry = true;
                 return;
             }
 
-            BlittableJsonReaderObject result;
-            response.TryGet("Result", out result);
-            var loadTransformerOperation = JsonDeserializationClient.GetDocumentResult(result);
+            var loadTransformerOperation = JsonDeserializationClient.GetDocumentResult((BlittableJsonReaderObject)response.Result);
             HandleResponse(loadTransformerOperation);
         }
 

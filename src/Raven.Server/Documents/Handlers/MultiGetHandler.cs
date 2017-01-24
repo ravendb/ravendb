@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Raven.NewClient.Client.Commands;
+using Raven.NewClient.Client.Data;
 using Raven.Server.Routing;
 using Raven.Server.Web;
 using Sparrow.Json;
@@ -39,9 +40,9 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
                     writer.WriteStartArray();
-                    var resultProperty = context.GetLazyStringForFieldWithCaching(nameof(MultiGetCommand.Response.Result));
-                    var statusProperty = context.GetLazyStringForFieldWithCaching(nameof(MultiGetCommand.Response.StatusCode));
-                    var headersProperty = context.GetLazyStringForFieldWithCaching(nameof(MultiGetCommand.Response.Headers));
+                    var resultProperty = context.GetLazyStringForFieldWithCaching(nameof(GetResponse.Result));
+                    var statusProperty = context.GetLazyStringForFieldWithCaching(nameof(GetResponse.StatusCode));
+                    var headersProperty = context.GetLazyStringForFieldWithCaching(nameof(GetResponse.Headers));
 
                     var features = new FeatureCollection(HttpContext.Features);
                     var responseStream = new MultiGetHttpResponseStream(HttpContext.Response.Body);

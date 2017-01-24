@@ -62,12 +62,9 @@ namespace Raven.NewClient.Client.Document.Async
             var multiGetOperation = new MultiGetOperation(this);
             var command = multiGetOperation.CreateRequest(requests);
             await RequestExecuter.ExecuteAsync(command, Context).ConfigureAwait(false);
-            foreach (var result in command.Result.Results)
+            foreach (var result in command.Result)
             {
-                var facetResult = (BlittableJsonReaderObject)result;
-                BlittableJsonReaderObject res;
-                facetResult.TryGet("Result", out res);
-                results.Add(JsonDeserializationClient.FacetedQueryResult(res));
+                results.Add(JsonDeserializationClient.FacetedQueryResult((BlittableJsonReaderObject)result.Result));
             }
             return results.ToArray();
         }

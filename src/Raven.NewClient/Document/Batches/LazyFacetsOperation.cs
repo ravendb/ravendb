@@ -1,13 +1,7 @@
-using System;
-using System.Linq;
 using System.Net.Http;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Json;
-using Raven.NewClient.Client.Shard;
 using Sparrow.Json;
 
 
@@ -38,11 +32,16 @@ namespace Raven.NewClient.Client.Document.Batches
         public QueryResult QueryResult { get; set; }
         public bool RequiresRetry { get; private set; }
 
-        public void HandleResponse(BlittableJsonReaderObject response)
+        public void HandleResponse(GetResponse response)
         {
-            BlittableJsonReaderObject result;
-            response.TryGet("Result", out result);
-            Result = JsonDeserializationClient.FacetedQueryResult(result);
+            if (response.ForceRetry)
+            {
+                Result = null;
+                RequiresRetry = true;
+                return;
+            }
+
+            Result = JsonDeserializationClient.FacetedQueryResult((BlittableJsonReaderObject)response.Result);
         }
     }
 }

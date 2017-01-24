@@ -1,32 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Threading.Tasks;
 using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Json;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Raven.NewClient.Client.Http;
 
 namespace Raven.NewClient.Client.Commands
 {
-    public class MultiGetCommand : RavenCommand<BlittableArrayResult>
+    public class MultiGetCommand : RavenCommand<List<GetResponse>>
     {
-        /// <summary>
-        /// Used for nameof
-        /// </summary>
-        internal class Response
-        {
-            public HttpStatusCode StatusCode { get; set; }
-
-            public object Result { get; set; }
-
-            public Dictionary<string, object> Headers { get; set; }
-        }
-
         private readonly JsonOperationContext _context;
         private readonly HttpCache _cache;
         private readonly List<GetRequest> _commands;
@@ -105,97 +92,125 @@ namespace Raven.NewClient.Client.Commands
             return $"{command.Method}-{requestUrl}";
         }
 
-        public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+        public override async Task ProcessResponse(JsonOperationContext context, HttpCache cache, RequestExecuterOptions options,
+            HttpResponseMessage response, string url)
         {
-            if (response == null)
-                ThrowInvalidResponse();
+            JsonOperationContext.ManagedPinnedBuffer buffer;
+            var state = new JsonParserState();
 
-            BlittableJsonReaderArray array;
-            if (response.TryGet("Results", out array) == false || array == null)
-                ThrowInvalidResponse();
-
-            var anyModifications = false;
-            for (int i = 0; i < array.Length; i++)
+            using (response)
+            using (var stream = await response.Content.ReadAsStreamAsync())
+            using (var parser = new UnmanagedJsonParser(context, state, "multi_get/response"))
+            using (_context.GetManagedBuffer(out buffer))
             {
-                var result = (BlittableJsonReaderObject)array[i];
+                if (UnmanagedJsonParserHelper.Read(stream, parser, state, buffer) == false)
+                    ThrowInvalidResponse();
 
-                HttpStatusCode statusCode;
-                if (result.TryGet(nameof(Response.StatusCode), out statusCode) == false)
-                    continue;
+                if (state.CurrentTokenType != JsonParserToken.StartObject)
+                    ThrowInvalidResponse();
 
-                if (statusCode != HttpStatusCode.NotModified)
-                    continue;
+                var property = UnmanagedJsonParserHelper.ReadProperty(context, stream, parser, state, buffer);
+                if (property != nameof(BlittableArrayResult.Results))
+                    ThrowInvalidResponse();
 
-                var command = _commands[i];
-
-                string requestUrl;
-                var cacheKey = GetCacheKey(command, out requestUrl);
-
-                long cachedEtag;
-                BlittableJsonReaderObject cachedResponse;
-                using (_cache.Get(_context, cacheKey, out cachedEtag, out cachedResponse))
+                var i = 0;
+                Result = new List<GetResponse>();
+                foreach (var result in UnmanagedJsonParserHelper.ReadArray(context, stream, parser, state, buffer))
                 {
-                    if (result.Modifications == null)
-                        result.Modifications = new DynamicJsonValue(result);
+                    var getResponse = ConvertToGetResponse(result);
+                    var command = _commands[i];
 
-                    result.Modifications[nameof(Response.Result)] = cachedResponse;
-                    anyModifications = true;
+                    MaybeSetCache(getResponse, command, options);
+                    MaybeReadFromCache(getResponse, command);
+
+                    Result.Add(getResponse);
+
+                    i++;
                 }
+
+                if (UnmanagedJsonParserHelper.Read(stream, parser, state, buffer) == false)
+                    ThrowInvalidResponse();
+
+                if (state.CurrentTokenType != JsonParserToken.EndObject)
+                    ThrowInvalidResponse();
             }
-
-            if (anyModifications)
-                response = _context.ReadObject(response, "multi_get/response");
-
-            Result = JsonDeserializationClient.BlittableArrayResult(response);
         }
 
-        protected override void CacheResponse(HttpCache cache, RequestExecuterOptions options, string url, HttpResponseMessage response, BlittableJsonReaderObject responseJson)
+        private void MaybeReadFromCache(GetResponse getResponse, GetRequest command)
         {
-            if (_baseUrl == null || responseJson == null)
+            if (getResponse.StatusCode != HttpStatusCode.NotModified)
                 return;
 
-            BlittableJsonReaderArray array;
-            if (responseJson.TryGet("Results", out array) == false || array == null)
-                return;
+            string requestUrl;
+            var cacheKey = GetCacheKey(command, out requestUrl);
 
-            for (var i = 0; i < array.Length; i++)
+            long cachedEtag;
+            BlittableJsonReaderObject cachedResponse;
+            using (_cache.Get(_context, cacheKey, out cachedEtag, out cachedResponse))
             {
-                var result = (BlittableJsonReaderObject)array[i];
-                var command = _commands[i];
-
-                string requestUrl;
-                var cacheKey = GetCacheKey(command, out requestUrl);
-
-                if (options.ShouldCacheRequest(requestUrl) == false)
-                    continue;
-
-                HttpStatusCode statusCode;
-                if (result.TryGet(nameof(Response.StatusCode), out statusCode) == false)
-                    continue;
-
-                if (statusCode == HttpStatusCode.NotModified)
-                    continue;
-
-                BlittableJsonReaderObject responseResult;
-                if (result.TryGet(nameof(Response.Result), out responseResult) == false)
-                    continue;
-
-                BlittableJsonReaderObject headers;
-                if (result.TryGet(nameof(Response.Headers), out headers) == false)
-                    continue;
-
-                var etag = headers.GetEtagHeader();
-                if (etag.HasValue == false)
-                    continue;
-
-                using (var memoryStream = new MemoryStream()) // how to do it better?
-                {
-                    responseResult.WriteJsonTo(memoryStream);
-                    memoryStream.Position = 0;
-
-                    _cache.Set(cacheKey, etag.Value, _context.ReadForMemory(memoryStream, "multi_get/result"));
-                }
+                getResponse.Result = cachedResponse;
             }
+        }
+
+        private void MaybeSetCache(GetResponse getResponse, GetRequest command, RequestExecuterOptions options)
+        {
+            if (getResponse.StatusCode == HttpStatusCode.NotModified)
+                return;
+
+            string requestUrl;
+            var cacheKey = GetCacheKey(command, out requestUrl);
+
+            if (options.ShouldCacheRequest(requestUrl) == false)
+                return;
+
+            var result = getResponse.Result as BlittableJsonReaderObject;
+            if (result == null)
+                return;
+
+            var etag = getResponse.Headers.GetEtagHeader();
+            if (etag.HasValue == false)
+                return;
+
+            using (var memoryStream = new MemoryStream()) // how to do it better?
+            {
+                result.WriteJsonTo(memoryStream);
+                memoryStream.Position = 0;
+
+                _cache.Set(cacheKey, etag.Value, _context.ReadForMemory(memoryStream, "multi_get/result"));
+            }
+        }
+
+        private GetResponse ConvertToGetResponse(BlittableJsonDocumentBuilder builder)
+        {
+            var reader = builder.CreateReader();
+
+            HttpStatusCode statusCode;
+            if (reader.TryGet(nameof(GetResponse.StatusCode), out statusCode) == false)
+                ThrowInvalidResponse();
+
+            BlittableJsonReaderObject result;
+            if (reader.TryGet(nameof(GetResponse.Result), out result) == false)
+                ThrowInvalidResponse();
+
+            BlittableJsonReaderObject headersJson;
+            if (reader.TryGet(nameof(GetResponse.Headers), out headersJson) == false)
+                ThrowInvalidResponse();
+
+            var getResponse = new GetResponse
+            {
+                Result = result,
+                StatusCode = statusCode,
+            };
+
+            foreach (var propertyName in headersJson.GetPropertyNames())
+                getResponse.Headers[propertyName] = headersJson[propertyName].ToString();
+
+            return getResponse;
+        }
+
+        public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+        {
+            ThrowInvalidResponse();
         }
 
         public override bool IsReadRequest => false;
