@@ -1,6 +1,5 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import app = require("durandal/app");
-import indexPerformanceDetails = require("viewmodels/database/indexes/indexPerformanceDetails");
 import getIndexesPerformance = require("commands/database/debug/getIndexesPerformance");
 import fileDownloader = require("common/fileDownloader");
 import graphHelper = require("common/helpers/graph/graphHelper");
@@ -32,8 +31,7 @@ class hitTest {
     private handleTrackTooltip: (item: Raven.Client.Data.Indexes.IndexingPerformanceOperation, x: number, y: number) => void;
     private handleGapTooltip: (item: IndexingPerformanceGap, x: number, y: number) => void;
     private removeTooltip: () => void;
-    private onTrackClicked: (item: Raven.Client.Data.Indexes.IndexingPerformanceOperation) => void;    
-
+   
     reset() {
         this.rTree.clear();
     }
@@ -42,14 +40,12 @@ class hitTest {
         onToggleIndex: (indeName: string) => void,
         handleTrackTooltip: (item: Raven.Client.Data.Indexes.IndexingPerformanceOperation, x: number, y: number) => void,
         handleGapTooltip: (item: IndexingPerformanceGap, x: number, y: number) => void,
-        removeTooltip: () => void,
-        onTrackClicked: (item: Raven.Client.Data.Indexes.IndexingPerformanceOperation) => void) {
+        removeTooltip: () => void) {       
         this.container = container;
         this.onToggleIndex = onToggleIndex;
         this.handleTrackTooltip = handleTrackTooltip;
         this.handleGapTooltip = handleGapTooltip;
-        this.removeTooltip = removeTooltip;
-        this.onTrackClicked = onTrackClicked;
+        this.removeTooltip = removeTooltip;        
     }
 
     registerTrackItem(x: number, y: number, width: number, height: number, element: Raven.Client.Data.Indexes.IndexingPerformanceOperation) {
@@ -99,35 +95,30 @@ class hitTest {
 
         for (let i = 0; i < items.length; i++) {
             const item = items[i];
+
             if (item.actionType === "toggleIndex") {
-                this.onToggleIndex(item.arg as string);
-            } else if (item.actionType === "trackItem") {
-                this.onTrackClicked(item.arg as Raven.Client.Data.Indexes.IndexingPerformanceOperation);
-            } else if (item.actionType === "gapItem") {
-                // do nothing
-            }
+                 this.onToggleIndex(item.arg as string);
+            } 
         }
     }
 
     onMouseMove() {
         const clickLocation = d3.mouse(this.container.node());
-        const items = this.findItems(clickLocation[0], clickLocation[1]);        
+        const items = this.findItems(clickLocation[0], clickLocation[1]);              
 
-        this.cursor(items.length ? "pointer" : "auto");
-
-        const currentItem = items.filter(x => x.actionType === "gapItem").map(x => x.arg as IndexingPerformanceGap)[0];
+        const currentItem = items.filter(x => x.actionType === "trackItem").map(x => x.arg as Raven.Client.Data.Indexes.IndexingPerformanceOperation)[0];
         if (currentItem) {
-            this.handleGapTooltip(currentItem, clickLocation[0], clickLocation[1]);
+            this.handleTrackTooltip(currentItem, clickLocation[0], clickLocation[1]);           
         }
         else {
-                const currentGapItem = items.filter(x => x.actionType === "trackItem").map(x => x.arg as Raven.Client.Data.Indexes.IndexingPerformanceOperation)[0];
-                if (currentGapItem) {
-                     this.handleTrackTooltip(currentGapItem, clickLocation[0], clickLocation[1]);
-             }
-        else {
+            const currentGapItem = items.filter(x => x.actionType === "gapItem").map(x => x.arg as IndexingPerformanceGap)[0];
+            if (currentGapItem) {
+                this.handleGapTooltip(currentGapItem, clickLocation[0], clickLocation[1]);
+            }
+            else {
                 this.removeTooltip();
-             }
-        }
+            }
+        }        
     }
 
     private findItems(x: number, y: number): Array<rTreeLeaf> {
@@ -281,8 +272,7 @@ class metrics extends viewModelBase {
             (indexName) => this.onToggleIndex(indexName),          
             (item, x, y) => this.handleTrackTooltip(item, x, y),
             (gapItem, x, y) => this.handleGapTooltip(gapItem, x, y),
-            () => this.hideTooltip(),
-            item => this.showDialog(item));
+            () => this.hideTooltip());
 
         this.draw();
     }
@@ -815,7 +805,34 @@ class metrics extends viewModelBase {
         const currentDatum = this.tooltip.datum();
 
         if (currentDatum !== element) {
-            const tooltipHtml = (element).Name + "<br />Duration: " + generalUtils.formatMillis((element).DurationInMilliseconds);
+            let tooltipHtml = `${element.Name}<br/>Duration: ${generalUtils.formatMillis((element).DurationInMilliseconds)}`;
+
+            if (element.CommitDetails) {   
+                let commitDetails: string;
+                commitDetails = `<br/>*** Commit details ***<br/>`;
+                commitDetails += `Modified pages: ${element.CommitDetails.NumberOfModifiedPages}<br/>`;
+                commitDetails += `Pages written to disk: ${element.CommitDetails.NumberOfPagesWrittenToDisk}`;
+                tooltipHtml += commitDetails;
+            }
+            if (element.MapDetails) {
+                let mapDetails: string;
+                mapDetails = `<br/>*** Map details ***<br/>`;
+                mapDetails += `Allocation budget: ${element.MapDetails.AllocationBudget}<br/>`;
+                mapDetails += `Batch complete reason: ${element.MapDetails.BatchCompleteReason}<br/>`;
+                mapDetails += `Currently allocated: ${element.MapDetails.CurrentlyAllocated}<br/>`;
+                mapDetails += `Process private memory: ${element.MapDetails.ProcessPrivateMemory}<br/>`;
+                mapDetails += `Process working set: ${element.MapDetails.ProcessWorkingSet}`;
+                tooltipHtml += mapDetails;
+            }
+            if (element.ReduceDetails) {
+                let reduceDetails: string;
+                reduceDetails = `<br/>*** Reduce details ***<br/>`;
+                reduceDetails += `Compressed leaves: ${element.ReduceDetails.NumberOfCompressedLeafs}<br/>`;
+                reduceDetails += `Modified branches: ${element.ReduceDetails.NumberOfModifiedBranches}<br/>`;
+                reduceDetails += `Modified leaves: ${element.ReduceDetails.NumberOfModifiedLeafs}`;
+                tooltipHtml += reduceDetails;
+            }           
+
             this.handleTooltip(element, x, y, tooltipHtml);
         }
     }
@@ -846,15 +863,6 @@ class metrics extends viewModelBase {
             .style("opacity", 0);
          
         this.tooltip.datum(null);      
-    }
-
-    private showDialog(element: Raven.Client.Data.Indexes.IndexingPerformanceOperation) {
-        const dialog = new indexPerformanceDetails(element);
-
-        this.dialogVisible = true;
-        app.showBootstrapDialog(dialog)
-            .always(() => this.dialogVisible = false);
-        this.hideTooltip();
     }
 
     fileSelected() { 
