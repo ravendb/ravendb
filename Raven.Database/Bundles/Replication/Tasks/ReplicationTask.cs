@@ -136,13 +136,14 @@ namespace Raven.Bundles.Replication.Tasks
 
         private void Execute()
         {
+            var sw = new Stopwatch();
             using (LogContext.WithDatabase(docDb.Name))
             {
                 log.Debug("Replication task started.");
 
                 var name = GetType().Name;
 
-                var timeToWaitInMinutes = TimeSpan.FromMinutes(5);
+                var timeToWait = TimeSpan.FromMinutes(5);
                 bool runningBecauseOfDataModifications = false;
                 var context = docDb.WorkContext;
                 NotifySiblings();
@@ -164,15 +165,99 @@ namespace Raven.Bundles.Replication.Tasks
                         }
                     }
 
-                    runningBecauseOfDataModifications = context.WaitForWork(timeToWaitInMinutes, ref workCounter, name);
+                    do
+                    {
+                        sw.Restart();
+                        runningBecauseOfDataModifications = context.WaitForWork(timeToWait, ref workCounter, name);
+                        sw.Stop();
 
-                    timeToWaitInMinutes = runningBecauseOfDataModifications
+                        //note: the two if's can obviously be combined, 
+                        //but in separated form they reflect the logic better
+                        if(docDb.WorkContext.CancellationToken.IsCancellationRequested)
+                            break;
+
+                        if(runningBecauseOfDataModifications && 
+                            (HasDocumentOrTombstoneEtagChanged() || HasAttachmentEtagChanged()))
+                            break;
+
+                        timeToWait = timeToWait - TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds);
+
+                    } while (timeToWait.TotalMilliseconds > 0 && 
+                              docDb.WorkContext.CancellationToken.IsCancellationRequested == false);
+
+                    timeToWait = runningBecauseOfDataModifications
                         ? TimeSpan.FromSeconds(30)
                         : TimeSpan.FromMinutes(5);
+
                 }
 
                 IsRunning = false;
             }
+        }
+
+        private bool HasAttachmentEtagChanged()
+        {
+            if (_hasReplicationRanAtLeastOnce == false)
+                return true;
+
+            if (_lastReplicatedAttachmentOrTombstoneEtag == null)
+                return _attachmentCountInLastBatch > 0;
+
+            var lastTombstoneEtag = Etag.Empty;
+            docDb.TransactionalStorage.Batch(actions =>
+            {
+                var lastTombstone = actions.Lists
+                                           .ReadLast(Constants.RavenReplicationAttachmentsTombstones);
+
+                if (lastTombstone != null) //no deletes --> no tombstones
+                {
+                    lastTombstoneEtag = lastTombstone.Etag;
+                }
+            });
+
+            //since tombstones always come last in replication batches, 
+            //if last tombstone etag is greater then last replicated etag, it is enough.
+            if (EtagUtil.IsGreaterThan(lastTombstoneEtag, _lastReplicatedAttachmentOrTombstoneEtag))
+                return true;
+
+            var lastAttachmentEtag = Etag.Empty;
+            docDb.TransactionalStorage.Batch(accessor =>
+                lastAttachmentEtag = accessor.Staleness.GetMostRecentAttachmentEtag());
+
+            return EtagUtil.IsGreaterThan(lastAttachmentEtag, _lastReplicatedAttachmentOrTombstoneEtag);
+        }
+
+        private bool HasDocumentOrTombstoneEtagChanged()
+        {
+            if (_hasReplicationRanAtLeastOnce == false)
+                return true;
+
+            if (_lastReplicatedDocumentOrTombstoneEtag == null)
+                return _documentCountInLastBatch > 0;
+
+
+            var lastTombstoneEtag = Etag.Empty;
+            docDb.TransactionalStorage.Batch(actions =>
+            {
+                var lastTombstone = actions.Lists
+                                           .ReadLast(Constants.RavenReplicationDocsTombstones);
+
+                if (lastTombstone != null) //no deletes --> no tombstones
+                {
+                    lastTombstoneEtag = lastTombstone.Etag;
+                }
+            });
+
+            //since tombstones always come last in replication batches, 
+            //if last tombstone etag is greater then last replicated etag, it is enough.
+            if (EtagUtil.IsGreaterThan(lastTombstoneEtag, _lastReplicatedDocumentOrTombstoneEtag))
+                return true;
+
+            var lastDocumentEtag = Etag.Empty;
+            docDb.TransactionalStorage.Batch(accessor =>
+                lastDocumentEtag = accessor.Staleness.GetMostRecentDocumentEtag());
+
+            return EtagUtil.IsGreaterThan(lastDocumentEtag, _lastReplicatedDocumentOrTombstoneEtag);
         }
 
         public Task ExecuteReplicationOnce(bool runningBecauseOfDataModifications)
@@ -220,6 +305,7 @@ namespace Raven.Bundles.Replication.Tasks
                             {
                                 try
                                 {
+                                    _hasReplicationRanAtLeastOnce = true;
                                     if (ReplicateTo(destination))
                                         docDb.WorkContext.NotifyAboutWork();
                                 }
@@ -513,7 +599,10 @@ namespace Raven.Bundles.Replication.Tasks
 
                     using (var scope = stats.StartRecording("Documents"))
                     {
-                        switch (ReplicateDocuments(destination, destinationsReplicationInformationForSource, scope, out replicatedDocuments))
+                        switch (ReplicateDocuments(destination, 
+                            destinationsReplicationInformationForSource, 
+                            scope, 
+                            out replicatedDocuments))
                         {
                             case true:
                                 replicated = true;
@@ -618,7 +707,10 @@ namespace Raven.Bundles.Replication.Tasks
             return true;
         }
 
-        private bool? ReplicateDocuments(ReplicationStrategy destination, SourceReplicationInformationWithBatchInformation destinationsReplicationInformationForSource, ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope recorder, out int replicatedDocuments)
+        private bool? ReplicateDocuments(ReplicationStrategy destination, 
+            SourceReplicationInformationWithBatchInformation destinationsReplicationInformationForSource, 
+            ReplicationStatisticsRecorder.ReplicationStatisticsRecorderScope recorder, 
+            out int replicatedDocuments)
         {
             replicatedDocuments = 0;
             JsonDocumentsToReplicate documentsToReplicate = null;
@@ -627,7 +719,6 @@ namespace Raven.Bundles.Replication.Tasks
 
             var prefetchingBehavior = prefetchingBehaviors.GetOrAdd(destination.ConnectionStringOptions.Url,
                 x => docDb.Prefetcher.CreatePrefetchingBehavior(PrefetchingUser.Replicator, autoTuner, string.Format("Replication for URL: {0}" ,destination.ConnectionStringOptions.DefaultDatabase) ));
-
 
             prefetchingBehavior.AdditionalInfo = string.Format("For destination: {0}. Last replicated etag: {1}", destination.ConnectionStringOptions.Url, destinationsReplicationInformationForSource.LastDocumentEtag);
 
@@ -693,10 +784,15 @@ namespace Raven.Bundles.Replication.Tasks
             }
             finally
             {
-                if (documentsToReplicate != null && documentsToReplicate.LoadedDocs != null)
+                if (documentsToReplicate != null)
                 {
-                    prefetchingBehavior.UpdateAutoThrottler(documentsToReplicate.LoadedDocs, sp.Elapsed);
-                    replicatedDocuments = documentsToReplicate.LoadedDocs.Count;
+                    _lastReplicatedDocumentOrTombstoneEtag = documentsToReplicate.LastEtag;
+
+                    if (documentsToReplicate.LoadedDocs != null)
+                    {
+                        prefetchingBehavior.UpdateAutoThrottler(documentsToReplicate.LoadedDocs, sp.Elapsed);
+                        replicatedDocuments = documentsToReplicate.LoadedDocs.Count;
+                    }
                 }
 
                 if (removeBatch != null)
@@ -1113,14 +1209,17 @@ namespace Raven.Bundles.Replication.Tasks
 
                 results = results.Where(x => EtagUtil.IsGreaterThan(x.Etag, lastTombstoneEtag) == false);
             }
-
+            
             results = results.OrderBy(x => x.Etag);
 
             // can't return earlier, because we need to know if there are tombstones that need to be send
             if (maxNumberOfItemsToReceiveInSingleBatch.HasValue)
                 results = results.Take(maxNumberOfItemsToReceiveInSingleBatch.Value);
 
-            return results.ToList();
+            
+            var resultsList = results.ToList();
+            _documentCountInLastBatch = resultsList.Count;
+            return resultsList;
         }
 
         [Obsolete("Use RavenFS instead.")]
@@ -1161,10 +1260,11 @@ namespace Raven.Bundles.Replication.Tasks
                         Etag attachmentEtag = jsonDocument.Etag;
                         log.Debug("All the attachments were filtered, trying another batch from etag [>{0}]", attachmentEtag);
                         lastAttachmentEtag = attachmentEtag;
-
                         if (duration.Elapsed > timeout)
                             break;
                     }
+
+                    _lastReplicatedAttachmentOrTombstoneEtag = lastAttachmentEtag;
 
                     log.Debug(() =>
                     {
@@ -1230,7 +1330,7 @@ namespace Raven.Bundles.Replication.Tasks
         }
 
         [Obsolete("Use RavenFS instead.")]
-        private static List<AttachmentInformation> GetAttachmentsToReplicate(IStorageActionsAccessor actions, Etag lastAttachmentEtag, int? maxNumberOfItemsToReceiveInSingleBatch)
+        private List<AttachmentInformation> GetAttachmentsToReplicate(IStorageActionsAccessor actions, Etag lastAttachmentEtag, int? maxNumberOfItemsToReceiveInSingleBatch)
         {
             var maxNumberOfAttachments = 100;
             if (maxNumberOfItemsToReceiveInSingleBatch.HasValue)
@@ -1271,7 +1371,9 @@ namespace Raven.Bundles.Replication.Tasks
             if (maxNumberOfItemsToReceiveInSingleBatch.HasValue)
                 results = results.Take(maxNumberOfItemsToReceiveInSingleBatch.Value);
 
-            return results.ToList();
+            var resultsList = results.ToList();
+            _attachmentCountInLastBatch = resultsList.Count;
+            return resultsList;
         }
 
         internal SourceReplicationInformationWithBatchInformation GetLastReplicatedEtagFrom(ReplicationStrategy destination)
@@ -1476,6 +1578,14 @@ namespace Raven.Bundles.Replication.Tasks
         private readonly ConcurrentDictionary<string, DateTime> heartbeatDictionary = new ConcurrentDictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
         private readonly Task completedTask = new CompletedTask();
 
+        private Etag _lastReplicatedDocumentOrTombstoneEtag;
+        private Etag _lastReplicatedAttachmentOrTombstoneEtag;
+
+        private bool _hasReplicationRanAtLeastOnce;
+        
+        private int _documentCountInLastBatch;
+        private int _attachmentCountInLastBatch;
+
         internal static void EnsureReplicationInformationInMetadata(RavenJObject metadata, DocumentDatabase database)
         {
             Debug.Assert(database != null);
@@ -1496,7 +1606,6 @@ namespace Raven.Bundles.Replication.Tasks
             var replicationExecuted = ReplicationExecuted;
             if (replicationExecuted != null) replicationExecuted();
         }
-
     }
 
     internal class ReplicationStatisticsRecorder : IDisposable
