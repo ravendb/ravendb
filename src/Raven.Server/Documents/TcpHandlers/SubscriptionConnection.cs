@@ -118,8 +118,7 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 try
                 {
-                    DisposeOnDisconnect = await _state.RegisterSubscriptionConnection(this,
-                        timeout);
+                    DisposeOnDisconnect = await _state.RegisterSubscriptionConnection(this, timeout);
 
                     await WriteJsonAsync(new DynamicJsonValue
                     {
@@ -189,6 +188,7 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             Task.Run(async () =>
             {
+                using(tcpConnectionOptions)
                 using (var connection = new SubscriptionConnection(tcpConnectionOptions))
                 using (tcpConnectionOptions.ConnectionProcessingInProgress())
                 {
@@ -216,7 +216,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 ["Type"] = "Error",
                                 ["Exception"] = e.ToString()
                             });
-                            
+
                         }
                         catch (Exception)
                         {
@@ -252,7 +252,6 @@ namespace Raven.Server.Documents.TcpHandlers
                                 // ignored
                             }
                         }
-                        tcpConnectionOptions.Dispose();
                     }
                 }
             });
@@ -394,7 +393,7 @@ namespace Raven.Server.Documents.TcpHandlers
                             {
                                 var result = await Task.WhenAny(replyFromClientTask,
                                                     Task.Delay(TimeSpan.FromSeconds(5), CancellationTokenSource.Token));
-
+                                CancellationTokenSource.Token.ThrowIfCancellationRequested();
                                 if (result == replyFromClientTask)
                                 {
                                     clientReply = await replyFromClientTask;
@@ -440,6 +439,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
         private async Task FlushDocsToClient(BlittableJsonTextWriter writer, int flushedDocs, bool endOfBatch = false)
         {
+            CancellationTokenSource.Token.ThrowIfCancellationRequested();
+
             if (_logger.IsInfoEnabled)
             {
                 _logger.Info(
@@ -461,6 +462,8 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 var hasMoreDocsTask = _waitForMoreDocuments.WaitAsync();
                 var resultingTask = await Task.WhenAny(hasMoreDocsTask, pendingReply, Task.Delay(3000));
+                if (CancellationTokenSource.IsCancellationRequested)
+                    return false;
                 if (resultingTask == pendingReply)
                     return false;
 

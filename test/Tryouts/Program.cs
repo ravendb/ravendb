@@ -25,9 +25,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine($"{i} started");
-                using (var a = new FastTests.Server.Replication.AutomaticConflictResolution())
+                using (var a = new FastTests.Client.Subscriptions.Subscriptions())
                 {
-                    a.ShouldResolveDocumentConflictInFavorOfRemoteVersion();
+                    a.SubscriptionSimpleTakeOverStrategy().Wait();
                 }
                 Console.WriteLine($"{i} finished");
             }

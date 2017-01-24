@@ -372,11 +372,12 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             var bulkInsertThread = new Thread(() =>
             {
+
                 var logger = LoggingSource.Instance.GetLogger<BulkInsertConnection>(tcpConnectionOptions.DocumentDatabase.Name);
                 try
                 {
-                    using(tcpConnectionOptions.ConnectionProcessingInProgress())
                     using (var bulkInsert = new BulkInsertConnection(tcpConnectionOptions, logger))
+                    using(tcpConnectionOptions.ConnectionProcessingInProgress())
                     {
                         bulkInsert.Execute();
                     }
