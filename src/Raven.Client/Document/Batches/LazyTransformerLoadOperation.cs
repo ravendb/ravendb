@@ -55,7 +55,7 @@ namespace Raven.Client.Document.Batches
 
         public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
         {
-            var response = responses.OrderBy(x => x.Status).First(); // this way, 200 response is higher than 404
+            var response = responses.OrderBy(x => x.StatusCode).First(); // this way, 200 response is higher than 404
             HandleResponse(response);
         }
 
@@ -63,7 +63,7 @@ namespace Raven.Client.Document.Batches
         {
             if (response.RequestHasErrors())
             {
-                throw new InvalidOperationException("Got bad status code: " + response.Status);
+                throw new InvalidOperationException("Got bad status code: " + response.StatusCode);
             }
 
             HandleRespose(new LoadResult

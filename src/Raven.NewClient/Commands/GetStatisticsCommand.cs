@@ -17,7 +17,7 @@ namespace Raven.NewClient.Client.Commands
             };
         }
 
-        public override void SetResponse(BlittableJsonReaderObject response)
+        public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
         {
             Result = JsonDeserializationClient.GetStatisticsResult(response);
         }

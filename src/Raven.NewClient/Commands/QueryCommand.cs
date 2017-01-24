@@ -87,7 +87,7 @@ namespace Raven.NewClient.Client.Commands
             return request;
         }
 
-        public override void SetResponse(BlittableJsonReaderObject response)
+        public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
         {
             if (response == null)
             {
@@ -96,14 +96,9 @@ namespace Raven.NewClient.Client.Commands
             }
 
             Result = JsonDeserializationClient.QueryResult(response);
-        }
 
-        public override void ResponseWasFromCache()
-        {
-            if (Result == null)
-                return;
-
-            Result.DurationMilliseconds = -1;
+            if (fromCache)
+                Result.DurationMilliseconds = -1;
         }
 
         public override bool IsReadRequest => true;

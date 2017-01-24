@@ -52,12 +52,12 @@ namespace Raven.NewClient.Operations.Databases.Indexes
                 };
             }
 
-            public override void SetResponse(BlittableJsonReaderObject response)
+            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
                 ThrowInvalidResponse();
             }
 
-            public override void SetResponse(BlittableJsonReaderArray response)
+            public override void SetResponse(BlittableJsonReaderArray response, bool fromCache)
             {
                 if (response == null)
                     ThrowInvalidResponse();

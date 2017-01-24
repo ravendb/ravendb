@@ -100,7 +100,7 @@ namespace FastTests.Server.Documents
                     };
                 }
 
-                public override void SetResponse(BlittableJsonReaderObject response)
+                public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
                 {
                     if (response == null)
                         ThrowInvalidResponse();

@@ -37,7 +37,7 @@ namespace Raven.NewClient.Client.Http
 
         public readonly AsyncLocal<AggresiveCacheOptions> AggressiveCaching = new AsyncLocal<AggresiveCacheOptions>();
 
-        internal readonly HttpCache _cache = new HttpCache();
+        public readonly HttpCache Cache = new HttpCache();
 
         private readonly HttpClient _httpClient;
 
@@ -153,7 +153,7 @@ namespace Raven.NewClient.Client.Http
                     var aggresiveCacheOptions = AggressiveCaching.Value;
                     if (aggresiveCacheOptions != null && cachedItem.Age < aggresiveCacheOptions.Duration)
                     {
-                        command.SetResponse(cachedValue);
+                        command.SetResponse(cachedValue, fromCache: true);
                         return;
                     }
 
@@ -191,8 +191,7 @@ namespace Raven.NewClient.Client.Http
                 if (response.StatusCode == HttpStatusCode.NotModified)
                 {
                     cachedItem.NotModified();
-                    command.SetResponse(cachedValue);
-                    command.ResponseWasFromCache();
+                    command.SetResponse(cachedValue, fromCache: true);
                     return;
                 }
                 if (response.IsSuccessStatusCode == false)
@@ -204,7 +203,7 @@ namespace Raven.NewClient.Client.Http
                 if (response.Content.Headers.ContentLength.HasValue && response.Content.Headers.ContentLength == 0)
                     return;
 
-                await command.ProcessResponse(context, _cache, _options, response, url).ConfigureAwait(false);
+                await command.ProcessResponse(context, Cache, _options, response, url).ConfigureAwait(false);
             }
         }
 
@@ -214,7 +213,7 @@ namespace Raven.NewClient.Client.Http
             {
                 if (request.Method != HttpMethod.Get)
                     url = request.Method + "-" + url;
-                return _cache.Get(context, url, out cachedEtag, out cachedValue);
+                return Cache.Get(context, url, out cachedEtag, out cachedValue);
             }
 
             cachedEtag = 0;
@@ -245,9 +244,9 @@ namespace Raven.NewClient.Client.Http
             {
                 case HttpStatusCode.NotFound:
                     if (command.ResponseType == RavenCommandResponseType.Object)
-                        command.SetResponse((BlittableJsonReaderObject)null);
+                        command.SetResponse((BlittableJsonReaderObject)null, fromCache: false);
                     else
-                        command.SetResponse((BlittableJsonReaderArray)null);
+                        command.SetResponse((BlittableJsonReaderArray)null, fromCache: false);
                     return true;
                 case HttpStatusCode.Unauthorized:
                 case HttpStatusCode.PreconditionFailed:
@@ -555,7 +554,7 @@ namespace Raven.NewClient.Client.Http
 
         public void Dispose()
         {
-            _cache.Dispose();
+            Cache.Dispose();
             _authenticator.Dispose();
             ContextPool.Dispose();
         }

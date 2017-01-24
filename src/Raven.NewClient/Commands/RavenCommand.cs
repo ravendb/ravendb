@@ -26,15 +26,11 @@ namespace Raven.NewClient.Client.Commands
         public RavenCommandResponseType ResponseType { get; protected set; } = RavenCommandResponseType.Object;
 
         public abstract HttpRequestMessage CreateRequest(ServerNode node, out string url);
-        public abstract void SetResponse(BlittableJsonReaderObject response);
+        public abstract void SetResponse(BlittableJsonReaderObject response, bool fromCache);
 
-        public virtual void SetResponse(BlittableJsonReaderArray response)
+        public virtual void SetResponse(BlittableJsonReaderArray response, bool fromCache)
         {
             throw new NotSupportedException($"When {nameof(ResponseType)} is set to Array then please override this method to handle the response.");
-        }
-
-        public virtual void ResponseWasFromCache()
-        {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -66,19 +62,25 @@ namespace Raven.NewClient.Client.Commands
                     var json = await context.ReadForMemoryAsync(stream, "response/object");
 
                     if (options.ShouldCacheRequest(url))
-                    {
-                        var etag = response.GetEtagHeader();
-                        if (etag.HasValue)
-                            cache.Set(url, etag.Value, json);
-                    }
+                        CacheResponse(cache, options, url, response, json);
 
-                    SetResponse(json);
+                    SetResponse(json, fromCache: false);
+
                     return;
                 }
 
                 var array = await context.ParseArrayToMemoryAsync(stream, "response/array", BlittableJsonDocumentBuilder.UsageMode.None);
-                SetResponse(array.Item1);
+                SetResponse(array.Item1, fromCache: false);
             }
+        }
+
+        protected virtual void CacheResponse(HttpCache cache, RequestExecuterOptions options, string url, HttpResponseMessage response, BlittableJsonReaderObject responseJson)
+        {
+            var etag = response.GetEtagHeader();
+            if (etag.HasValue == false)
+                return;
+
+            cache.Set(url, etag.Value, responseJson);
         }
 
         protected static void ThrowInvalidResponse()

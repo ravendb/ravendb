@@ -987,7 +987,7 @@ namespace Raven.Client.Document
                     });
                     if (responses[i].RequestHasErrors())
                     {
-                        throw new InvalidOperationException("Got an error from server, status code: " + responses[i].Status +
+                        throw new InvalidOperationException("Got an error from server, status code: " + responses[i].StatusCode +
                                                             Environment.NewLine + responses[i].Result);
                     }
                     pendingLazyOperations[i].HandleResponse(responses[i]);

@@ -32,7 +32,7 @@ namespace Raven.NewClient.Client.Commands
             return request;
         }
 
-        public override void SetResponse(BlittableJsonReaderObject response)
+        public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
         {
             Result = JsonDeserializationClient.PutResult(response);
         }

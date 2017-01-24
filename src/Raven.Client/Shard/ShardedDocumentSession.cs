@@ -668,7 +668,7 @@ namespace Raven.Client.Shard
                                              from getResponse in shardResponses
                                              where getResponse.RequestHasErrors()
                                              select getResponse)
-                        sb.AppendFormat("Got an error from server, status code: {0}{1}{2}", response.Status, Environment.NewLine,
+                        sb.AppendFormat("Got an error from server, status code: {0}{1}{2}", response.StatusCode, Environment.NewLine,
                                         response.Result)
                           .AppendLine();
 

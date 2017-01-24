@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using Raven.NewClient.Abstractions.Data;
+using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Connection
 {
@@ -25,6 +26,15 @@ namespace Raven.NewClient.Client.Connection
 
             return EtagHeaderToEtag(value);
         }
+
+        public static long? GetEtagHeader(this BlittableJsonReaderObject headers)
+        {
+            string value;
+            if (headers.TryGet(Constants.MetadataEtagField, out value) == false || value == null)
+                return null;
+
+            return EtagHeaderToEtag(value);
+        }        
 
         internal static long EtagHeaderToEtag(string responseHeader)
         {
