@@ -4,6 +4,8 @@ using Raven.Abstractions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
+using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -15,6 +17,8 @@ namespace Raven.Server.NotificationCenter
 {
     public unsafe class ActionsStorage
     {
+        private static readonly Slice ByCreatedAt;
+
         protected readonly Logger Logger;
 
         private StorageEnvironment _environment;
@@ -22,6 +26,11 @@ namespace Raven.Server.NotificationCenter
         private TransactionContextPool _contextPool;
 
         private readonly TableSchema _actionsSchema = new TableSchema();
+
+        static ActionsStorage()
+        {
+            Slice.From(StorageEnvironment.LabelsContext, "ByCreatedAt", ByteStringType.Immutable, out ByCreatedAt);
+        }
 
         public ActionsStorage(string resourceName)
         {
@@ -31,6 +40,12 @@ namespace Raven.Server.NotificationCenter
             {
                 StartIndex = 0,
                 Count = 1
+            });
+
+            _actionsSchema.DefineIndex(new TableSchema.SchemaIndexDef // might be the same ticks, so duplicates are allowed - cannot use fixed size index
+            {
+                StartIndex = 1,
+                Name = ByCreatedAt
             });
         }
 
@@ -64,7 +79,7 @@ namespace Raven.Server.NotificationCenter
                 if (existing != null)
                 {
                     DateTime postponedUntil;
-                    if (TryGetPostponedUntilDate(existing, out postponedUntil))
+                    if (TryReadDate(existing, nameof(Action.PostponedUntil), out postponedUntil))
                     {
                         if (action.PostponedUntil == null && postponedUntil > SystemTime.UtcNow)
                             action.PostponedUntil = postponedUntil;
@@ -73,39 +88,42 @@ namespace Raven.Server.NotificationCenter
 
                 using (var json = context.ReadObject(action.ToJson(), "action", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    Store(context.GetDiscardableLazyString(action.Id), json, tx);
+                    Store(context.GetDiscardableLazyString(action.Id), action.CreatedAt, json, tx);
                 }
 
                 tx.Commit();
             }
         }
 
-        private void Store(LazyStringValue id, BlittableJsonReaderObject action, RavenTransaction tx)
+        private void Store(LazyStringValue id, DateTime createdAt, BlittableJsonReaderObject action, RavenTransaction tx)
         {
             var table = tx.InnerTransaction.OpenTable(_actionsSchema, ActionsSchema.ActionsTree);
+
+            var createdAtTicks = Bits.SwapBytes(createdAt.Ticks);
 
             var tvb = new TableValueBuilder
                 {
                     {id.Buffer, id.Size},
+                    {(byte*)&createdAtTicks, sizeof(long)},
                     {action.BasePointer, action.Size}
                 };
 
             table.Set(tvb);
         }
 
-        private bool TryGetPostponedUntilDate(BlittableJsonReaderObject action, out DateTime postponedUntil)
+        internal static bool TryReadDate(BlittableJsonReaderObject action, string fieldName, out DateTime date)
         {
-            object postponedUntilString;
-            if (action.TryGetMember(nameof(Action.PostponedUntil), out postponedUntilString) == false || postponedUntilString == null)
+            object dateString;
+            if (action.TryGetMember(fieldName, out dateString) == false || dateString == null)
             {
-                postponedUntil = default(DateTime);
+                date = default(DateTime);
                 return false;
             }
 
-            var lazyStringDate = (LazyStringValue) postponedUntilString;
+            var lazyStringDate = (LazyStringValue) dateString;
 
             DateTimeOffset _;
-            var parsedType = LazyStringParser.TryParseDateTime(lazyStringDate.Buffer, lazyStringDate.Size, out postponedUntil, out _);
+            var parsedType = LazyStringParser.TryParseDateTime(lazyStringDate.Buffer, lazyStringDate.Size, out date, out _);
 
             switch (parsedType)
             {
@@ -118,7 +136,7 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
-        public IDisposable ReadActions(out IEnumerable<BlittableJsonReaderObject> actions)
+        public IDisposable ReadActionsOrderedByCreationDate(out IEnumerable<BlittableJsonReaderObject> actions)
         {
             using (var scope = new DisposeableScope())
             {
@@ -127,19 +145,22 @@ namespace Raven.Server.NotificationCenter
                 scope.EnsureDispose(_contextPool.AllocateOperationContext(out context));
                 scope.EnsureDispose(context.OpenReadTransaction());
 
-                actions = ReadActionsInternal(context);
+                actions = ReadActionsByCreatedAtIndex(context);
 
                 return scope.Delay();
             }
         }
 
-        private IEnumerable<BlittableJsonReaderObject> ReadActionsInternal(TransactionOperationContext context)
+        private IEnumerable<BlittableJsonReaderObject> ReadActionsByCreatedAtIndex(TransactionOperationContext context)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(_actionsSchema, ActionsSchema.ActionsTree);
-
-            foreach (var alertsTvr in table.SeekByPrimaryKey(Slices.BeforeAllKeys))
+            
+            foreach (var it in table.SeekForwardFrom(_actionsSchema.Indexes[ByCreatedAt], Slices.BeforeAllKeys))
             {
-                yield return Read(context, alertsTvr);
+                foreach (var tvr in it.Results)
+                {
+                    yield return Read(context, tvr);
+                }
             }
         }
 
@@ -213,14 +234,18 @@ namespace Raven.Server.NotificationCenter
                 if (item == null)
                     return;
 
+                DateTime createdAt;
+                if (TryReadDate(item, nameof(Action.CreatedAt), out createdAt) == false)
+                    throw new InvalidOperationException($"Stored action does not have created at date. Action: {item}");
+
                 item.Modifications = new DynamicJsonValue
                 {
                     [nameof(Action.PostponedUntil)] = postponeUntil
                 };
 
                 var updated = context.ReadObject(item, "action", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-
-                Store(context.GetDiscardableLazyString(id), updated, tx);
+                
+                Store(context.GetDiscardableLazyString(id), createdAt, updated, tx);
 
                 tx.Commit();
             }
@@ -234,7 +259,8 @@ namespace Raven.Server.NotificationCenter
             {
 #pragma warning disable 169
                 public const int IdIndex = 0;
-                public const int JsonIndex = 1;
+                public const int CreatedAtIndex = 1;
+                public const int JsonIndex = 2;
 #pragma warning restore 169
             }
         }

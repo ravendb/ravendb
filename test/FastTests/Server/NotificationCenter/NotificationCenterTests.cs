@@ -136,12 +136,12 @@ namespace FastTests.Server.NotificationCenter
                 var alert = GetSampleAlert();
                 database.NotificationCenter.Add(alert);
 
-                var dismissUntil = SystemTime.UtcNow.AddDays(1);
+                var postponeUntil = SystemTime.UtcNow.AddDays(1);
 
                 var actions = new AsyncQueue<Action>();
                 using (database.NotificationCenter.TrackActions(actions))
                 {
-                    database.NotificationCenter.Postpone(alert.Id, dismissUntil);
+                    database.NotificationCenter.Postpone(alert.Id, postponeUntil);
                 }
 
                 Assert.Equal(1, actions.Count);
@@ -162,7 +162,7 @@ namespace FastTests.Server.NotificationCenter
                         readAlert[nameof(AlertRaised.CreatedAt)].ToString());
 
                     Assert.Equal(
-                        dismissUntil.GetDefaultRavenFormat(dismissUntil.Kind == DateTimeKind.Utc),
+                        postponeUntil.GetDefaultRavenFormat(postponeUntil.Kind == DateTimeKind.Utc),
                         readAlert[nameof(AlertRaised.PostponedUntil)].ToString());
                 }
             }
@@ -220,6 +220,56 @@ namespace FastTests.Server.NotificationCenter
             }
         }
 
+        [Fact]
+        public void Can_filter_out_postponed_actions()
+        {
+            using (var database = CreateDocumentDatabase())
+            {
+                var alert = GetSampleAlert();
+
+                database.NotificationCenter.Add(alert);
+
+                var actions = new AsyncQueue<Action>();
+                using (database.NotificationCenter.TrackActions(actions))
+                {
+                    var postponeUntil = SystemTime.UtcNow.AddDays(1);
+
+                    database.NotificationCenter.Postpone(alert.Id, postponeUntil);
+
+                    IEnumerable<BlittableJsonReaderObject> alerts;
+                    using (database.NotificationCenter.GetStored(out alerts, excludePostponed: true))
+                    {
+                        var jsonAlerts = alerts.ToList();
+
+                        Assert.Equal(0, jsonAlerts.Count);
+                    }
+                }
+            }
+        }
+
+
+        [Fact]
+        public void Persisten_actions_are_returned_in_creation_order()
+        {
+            using (var database = CreateDocumentDatabase())
+            {
+                var alert1 = GetSampleAlert();
+                var alert2 = GetSampleAlert(customKey: "aaaaaaa");
+
+                database.NotificationCenter.Add(alert1);
+                database.NotificationCenter.Add(alert2);
+
+                IEnumerable<BlittableJsonReaderObject> alerts;
+                using (database.NotificationCenter.GetStored(out alerts))
+                {
+                    var jsonAlerts = alerts.ToList();
+
+                    Assert.Equal(2, jsonAlerts.Count);
+                    Assert.Equal(alert1.Id, jsonAlerts[0][nameof(Action.Id)].ToString());
+                    Assert.Equal(alert2.Id, jsonAlerts[1][nameof(Action.Id)].ToString());
+                }
+            }
+        }
 
         private static AlertRaised GetSampleAlert(string customMessage = null, string customKey = null)
         {

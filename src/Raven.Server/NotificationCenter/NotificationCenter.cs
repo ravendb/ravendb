@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Server.NotificationCenter.Actions;
 using Raven.Server.ServerWide;
@@ -56,9 +58,28 @@ namespace Raven.Server.NotificationCenter
             };
         }
 
-        public IDisposable GetStored(out IEnumerable<BlittableJsonReaderObject> actions)
+        public IDisposable GetStored(out IEnumerable<BlittableJsonReaderObject> actions, bool excludePostponed = false)
         {
-            return _actionsStorage.ReadActions(out actions);
+            var scope = _actionsStorage.ReadActionsOrderedByCreationDate(out actions);
+
+            if (excludePostponed)
+            {
+                var now = SystemTime.UtcNow;
+
+                actions = actions.Where(x =>
+                {
+                    DateTime postponed;
+                    if (ActionsStorage.TryReadDate(x, nameof(Action.PostponedUntil), out postponed) == false)
+                        return true;
+
+                    if (postponed > now)
+                        return false;
+
+                    return true;
+                });
+            }
+
+            return scope;
         }
 
         public long GetAlertCount()
