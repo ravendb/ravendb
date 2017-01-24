@@ -48,7 +48,7 @@ class index {
     isPausedState: KnockoutComputed<boolean>;
 
     isFaulty: KnockoutComputed<boolean>;
-    globalIndexingStatus = ko.observable<Raven.Client.Data.Indexes.IndexRunningStatus>();
+    globalIndexingStatus: KnockoutObservable<Raven.Client.Data.Indexes.IndexRunningStatus>;
     canBePaused: KnockoutComputed<boolean>;
     canBeResumed: KnockoutComputed<boolean>;
     canBeEnabled: KnockoutComputed<boolean>;
@@ -114,8 +114,8 @@ class index {
         });
         this.isDisabledState = ko.pureComputed(() => {
             let stateIsDisabeld = this.state() === "Disabled";
-            let statusIsDisabled = this.globalIndexingStatus() === "Disabled";
-            return stateIsDisabeld || statusIsDisabled;
+            let statusIsDisabeld = this.globalIndexingStatus() === "Disabled";
+            return stateIsDisabeld || statusIsDisabeld;
         });
         this.isPausedState = ko.pureComputed(() => {
             let localStatusIsPaused = this.status() === "Paused";
@@ -124,9 +124,9 @@ class index {
         });
         this.isErrorState = ko.pureComputed(() => this.state() === "Error");
         this.isNormalState = ko.pureComputed(() => {
-            let stateIsNoraml = this.state() === "Normal";
+            let stateIsNormal = this.state() === "Normal";
             let statusIsNotDisabled = this.globalIndexingStatus() === "Running";
-            return stateIsNoraml && statusIsNotDisabled;
+            return stateIsNormal && statusIsNotDisabled;
         });
 
         this.canBePaused = ko.pureComputed(() => {

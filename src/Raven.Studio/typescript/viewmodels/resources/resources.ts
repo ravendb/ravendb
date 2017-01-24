@@ -302,7 +302,7 @@ class resources extends viewModelBase {
     }
 
     toggleDisableDatabaseIndexing(db: databaseInfo) {
-        const enableIndexing = !db.indexingEnabled();
+        const enableIndexing = db.indexingDisabled();
         const message = enableIndexing ? "Enable" : "Disable";
 
         this.confirmationMessage("Are you sure?", message + " indexing?")
