@@ -167,7 +167,7 @@ namespace Raven.NewClient.Client.Smuggler
                 };
             }
 
-            public override void SetResponse(BlittableJsonReaderObject response)
+            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
                 ThrowInvalidResponse();
             }
@@ -207,7 +207,7 @@ namespace Raven.NewClient.Client.Smuggler
                 };
             }
 
-            public override void SetResponse(BlittableJsonReaderObject response)
+            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
             }
         }

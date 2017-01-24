@@ -46,9 +46,9 @@ namespace Raven.Client.Document.Batches
         public bool RequiresRetry { get; private set; }
         public void HandleResponse(GetResponse response)
         {
-            if (response.Status != 200 && response.Status != 304)
+            if (response.StatusCode != 200 && response.StatusCode != 304)
             {
-                throw new InvalidOperationException("Got an unexpected response code for the request: " + response.Status + "\r\n" +
+                throw new InvalidOperationException("Got an unexpected response code for the request: " + response.StatusCode + "\r\n" +
                                                     response.Result);
             }
 

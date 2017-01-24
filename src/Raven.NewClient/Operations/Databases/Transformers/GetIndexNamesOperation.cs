@@ -45,7 +45,7 @@ namespace Raven.NewClient.Client.Operations.Databases.Transformers
                 };
             }
 
-            public override void SetResponse(BlittableJsonReaderObject response)
+            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
                 if (response == null)
                     ThrowInvalidResponse();

@@ -220,8 +220,8 @@ namespace SlowTests.Tests.MultiGet
                 {
                     var result = new StreamReader(stream).ReadToEnd();
                     results = JsonConvert.DeserializeObject<Results>(result, Default.Converters);
-                    Assert.Equal(304, results.results[0].Status);
-                    Assert.Equal(304, results.results[1].Status);
+                    Assert.Equal(304, results.results[0].StatusCode);
+                    Assert.Equal(304, results.results[1].StatusCode);
                 }
             }
         }

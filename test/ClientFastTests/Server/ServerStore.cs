@@ -77,7 +77,7 @@ namespace NewClientTests.NewClient.Server.Basic
                 return message;
             }
 
-            public override void SetResponse(BlittableJsonReaderObject response)
+            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
                 Result = response;
             }
@@ -102,7 +102,7 @@ namespace NewClientTests.NewClient.Server.Basic
                 };
             }
 
-            public override void SetResponse(BlittableJsonReaderObject response)
+            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
                 Result = response;
             }

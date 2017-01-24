@@ -39,7 +39,7 @@ namespace Raven.Client.Document.Batches
         {
             if (response.RequestHasErrors())
             {
-                throw new InvalidOperationException("Got an unexpected response code for the request: " + response.Status + "\r\n" + response.Result);
+                throw new InvalidOperationException("Got an unexpected response code for the request: " + response.StatusCode + "\r\n" + response.Result);
             }
 
             var result = (RavenJObject)response.Result;
