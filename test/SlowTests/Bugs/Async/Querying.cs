@@ -24,7 +24,7 @@ namespace SlowTests.Bugs.Async
                         .ToListAsync();
 
                     var result = queryResultAsync;
-                    Assert.Equal("Ayende", result[0].Name);
+                    Assert.Equal("Ayende", (string)result[0].Name);
                 }
             }
         }
