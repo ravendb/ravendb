@@ -209,6 +209,8 @@ class metrics extends viewModelBase {
     private indexNames = ko.observableArray<string>();
     private filteredIndexNames = ko.observableArray<string>();
     private expandedTracks = ko.observableArray<string>();
+    private isImport = ko.observable<boolean>(false);
+    private importFileName = ko.observable<string>();
 
     private isoParser = d3.time.format.iso;
     private xTickFormat = d3.time.format("%H:%M:%S");
@@ -262,9 +264,7 @@ class metrics extends viewModelBase {
             this.expandedTracks.push(args.indexName);
         }
 
-        return new getIndexesPerformance(this.activeDatabase())
-            .execute()
-            .done(result => this.data = result);
+        return this.getIndexesPerformanceData();        
     }
 
     compositionComplete() {
@@ -385,8 +385,9 @@ class metrics extends viewModelBase {
 
         const canvas = this.canvas.node() as HTMLCanvasElement;
         const context = canvas.getContext("2d");
-        context.drawImage(this.brushSection, 0, 0);
 
+        context.clearRect(0, 0, this.totalWidth, metrics.brushSectionHeight);
+        context.drawImage(this.brushSection, 0, 0);
         this.drawMainSection();
     }
 
@@ -873,16 +874,48 @@ class metrics extends viewModelBase {
             alert(error);
         };
         reader.readAsText(file);
+
+        this.importFileName(fileInput.files[0].name);
+
+        // Must clear the filePicker element value so that user will be able to import the -same- file after closing the imported view...
+        let $input = $("#importFilePicker");
+        $input.val(null);
     }
 
     private dataImported(result: string) {
         this.data = JSON.parse(result);
         this.expandedTracks([]);
         this.draw();
+        this.isImport(true);
+        this.searchText("");
     }
 
-    exportAsJson() {
-        fileDownloader.downloadAsJson(this.data, "perf.json", "perf");
+    closeImport() {      
+        this.getIndexesPerformanceData().done(() => {
+            this.expandedTracks([]);
+            this.draw();
+            this.isImport(false);
+            this.searchText("");
+        });
+    }
+
+    private getIndexesPerformanceData(): JQueryPromise<Raven.Client.Data.Indexes.IndexPerformanceStats[]> {
+        return new getIndexesPerformance(this.activeDatabase())
+            .execute()
+            .done(result => this.data = result);
+    }
+
+    exportAsJson() {  
+        let exportFileName;
+
+        if (this.isImport()) {           
+            exportFileName = this.importFileName().substring(0, this.importFileName().lastIndexOf('.'));                    
+        }
+        else {
+            exportFileName = `indexPerf of ${this.activeDatabase().name} ${moment().format("YYYY-MM-DD HH-mm")}`; 
+        }
+
+        fileDownloader.downloadAsJson(this.data, exportFileName + ".json", exportFileName);
     }
 
 }

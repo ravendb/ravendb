@@ -37,20 +37,19 @@
         <input type="text" accesskey="/" class="form-control" placeholder="Filter" title="Filter indexes (Alt+/)" data-bind="textInput: searchText" />
     </div>
 
-    <button class="btn btn-default" data-bind="click: expandAll, visible: canExpandAll"><span>Expand all</span></button>
-    <button class="btn btn-default" data-bind="click: collapseAll, visible: !canExpandAll()"><span>Collapse all</span></button>
-    
-    
+    <button class="btn btn-default" data-bind="click: expandAll, visible: canExpandAll" title="Expand all indexes performance details"><span>Expand all</span></button>
+    <button class="btn btn-default" data-bind="click: collapseAll, visible: !canExpandAll()" title="Collapse all indexes performance details"><span>Collapse all</span></button>
+    <button class="btn btn-default" data-bind="click: exportAsJson" title="Export current performance graph to a file">
+        <i class="icon-export"></i><span>Export</span>
+    </button>
+    <button class="btn btn-default" data-bind="click: closeImport, visible: isImport" title="Return to currently selected database performance graph">
+        <i class="icon-cancel"></i><span data-bind="text: 'Close import (' + importFileName() + ')'">Close import</span>
+    </button>
 
-    <button class="btn btn-default" data-bind="click: exportAsJson"><i class="icon-export"></i> <span>Export</span></button>
-    
-    
-
-    <div class="input-group file-input">
-        <input required="" type="file" id="importFilePicker" data-bind="event: { change: fileSelected }" tabindex="-1">
-        <label for="importFilePicker" class="btn btn-default">
-            <i class="icon-import"></i>
-            <span>Import</span>
+    <div class="input-group file-input" title="Import performance graph file">
+        <input type="file" id="importFilePicker" data-bind="event: { change: fileSelected }" tabindex="-1" accept=".json">
+        <label for="importFilePicker" class="btn btn-default" data-bind="visible: !isImport()">
+            <i class="icon-import"></i><span>Import</span>
         </label>
     </div>
 </div>
