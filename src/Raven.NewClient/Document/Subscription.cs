@@ -335,10 +335,11 @@ namespace Raven.NewClient.Client.Document
                                         }
                                     }
                                 }
-                                   
+                                SendAck(lastReceivedEtag, tcpStream);
+
                             });
 
-                            SendAck(lastReceivedEtag, tcpStream);
+                            
                         }
                     }
                 }
