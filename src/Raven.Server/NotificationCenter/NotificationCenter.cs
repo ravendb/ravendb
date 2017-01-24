@@ -73,14 +73,14 @@ namespace Raven.Server.NotificationCenter
             if (deleted == false)
                 return;
 
-            Add(NotificationDismissed.Create(id));
+            Add(NotificationUpdated.Create(id, NotificationUpdateType.Dismissed));
         }
 
         public void Postpone(string id, DateTime until)
         {
             _actionsStorage.ChangePostponeDate(id, until);
 
-            Add(NotificationPostponed.Create(id, until));
+            Add(NotificationUpdated.Create(id, NotificationUpdateType.Postponed));
         }
     }
 }

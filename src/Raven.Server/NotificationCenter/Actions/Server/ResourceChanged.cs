@@ -4,7 +4,7 @@ namespace Raven.Server.NotificationCenter.Actions.Server
 {
     public class ResourceChanged : Action
     {
-        private ResourceChanged()
+        private ResourceChanged() : base(ActionType.ResourceChanged)
         {
         }
 
@@ -26,7 +26,6 @@ namespace Raven.Server.NotificationCenter.Actions.Server
         {
             return new ResourceChanged
             {
-                Type = ActionType.Resource,
                 ResourceName = resourceName,
                 ChangeType = change
             };

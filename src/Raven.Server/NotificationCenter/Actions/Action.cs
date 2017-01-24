@@ -12,17 +12,19 @@ namespace Raven.Server.NotificationCenter.Actions
 
         private readonly long _id;
 
-        protected Action()
+        protected Action(ActionType type)
         {
-            CreatedAt = SystemTime.UtcNow;
             _id = Interlocked.Increment(ref _counter);
+
+            CreatedAt = SystemTime.UtcNow;
+            Type = type;
         }
 
         public virtual string Id => $"{GetType().Name}/{_id}";
 
         public DateTime CreatedAt { get; }
 
-        public ActionType Type { get; protected set; }
+        public ActionType Type { get; private set; }
 
         public string Title { get; protected set; }
 

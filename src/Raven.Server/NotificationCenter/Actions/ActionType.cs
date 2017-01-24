@@ -3,10 +3,10 @@
     public enum ActionType
     {
         None,
-        Alert,
-        Operation,
-        Resource,
-        NotificationUpdate
+        AlertRaised,
+        OperationChanged,
+        ResourceChanged,
+        NotificationUpdated
         // performance, hints?
     }
 }

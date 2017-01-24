@@ -7,7 +7,7 @@ namespace Raven.Server.NotificationCenter.Actions
 {
     public class OperationChanged : Action
     {
-        private OperationChanged()
+        private OperationChanged() : base(ActionType.OperationChanged)
         {
         }
 
@@ -33,7 +33,6 @@ namespace Raven.Server.NotificationCenter.Actions
                 State = state,
                 Title = $"{description.TaskType.GetDescription()}",
                 Message = description.Description,
-                Type = ActionType.Operation,
                 IsPersistent = false,
             };
         }

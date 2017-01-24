@@ -145,10 +145,10 @@ namespace FastTests.Server.NotificationCenter
                 }
 
                 Assert.Equal(1, actions.Count);
-                var notification = actions.DequeueAsync().Result as NotificationPostponed;
+                var notification = actions.DequeueAsync().Result as NotificationUpdated;
                 Assert.NotNull(notification);
                 Assert.Equal(alert.Id, notification.ActionId);
-                Assert.Equal(dismissUntil, notification.NotificationDismissedUntil);
+                Assert.Equal(NotificationUpdateType.Postponed, notification.UpdateType);
 
                 IEnumerable<BlittableJsonReaderObject> alerts;
                 using (database.NotificationCenter.GetStored(out alerts))
@@ -192,9 +192,10 @@ namespace FastTests.Server.NotificationCenter
                 }
 
                 Assert.Equal(1, actions.Count);
-                var notification = actions.DequeueAsync().Result as NotificationDismissed;
+                var notification = actions.DequeueAsync().Result as NotificationUpdated;
                 Assert.NotNull(notification);
                 Assert.Equal(alert.Id, notification.ActionId);
+                Assert.Equal(NotificationUpdateType.Dismissed, notification.UpdateType);
             }
         }
 

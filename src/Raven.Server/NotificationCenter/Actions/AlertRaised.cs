@@ -6,7 +6,7 @@ namespace Raven.Server.NotificationCenter.Actions
 {
     public class AlertRaised : Action
     {
-        private AlertRaised()
+        private AlertRaised() : base(ActionType.AlertRaised)
         {
         }
 
@@ -36,7 +36,6 @@ namespace Raven.Server.NotificationCenter.Actions
                 IsPersistent = true,
                 Title = title,
                 Message = msg,
-                Type = ActionType.Alert,
                 AlertType = type,
                 Severity = severity,
                 Key = key,
