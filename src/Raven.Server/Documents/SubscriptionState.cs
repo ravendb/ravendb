@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions.Subscriptions;
@@ -40,6 +41,7 @@ namespace Raven.Server.Documents
             SubscriptionConnection incomingConnection,
             int timeToWait)
         {
+            Console.WriteLine("register sub " + incomingConnection.SubscriptionId + " " + incomingConnection.Strategy);
             try
             {
                 if (await _connectionInUse.WaitAsync(TimeSpan.FromMilliseconds(timeToWait)) == false)
@@ -85,7 +87,10 @@ namespace Raven.Server.Documents
             }
 
             _connectionInUse.Reset();
-            _currentConnection = incomingConnection;
+            var subscriptionConnection = Interlocked.CompareExchange(ref _currentConnection, incomingConnection, null);
+            if(subscriptionConnection != null && subscriptionConnection != incomingConnection)
+                throw new TimeoutException();
+
             return new DisposableAction(() => {
                 while (_recentConnections.Count > 10)
                 {
@@ -94,7 +99,7 @@ namespace Raven.Server.Documents
                 }
                 _recentConnections.Enqueue(incomingConnection);
                 _connectionInUse.SetByAsyncCompletion();
-                _currentConnection = null;
+                Interlocked.CompareExchange(ref _currentConnection, null, incomingConnection);
             });
         }
 

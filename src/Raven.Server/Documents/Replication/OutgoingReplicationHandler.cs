@@ -21,7 +21,6 @@ using Raven.Client.Replication.Messages;
 using Raven.Json.Linq;
 using Raven.NewClient.Client.Exceptions.Database;
 using Raven.Server.Alerts;
-using Raven.Server.Exceptions;
 using Raven.Server.Extensions;
 using Sparrow;
 
@@ -34,7 +33,7 @@ namespace Raven.Server.Documents.Replication
         private readonly Logger _log;
         private readonly AsyncManualResetEvent _waitForChanges = new AsyncManualResetEvent();
         private readonly CancellationTokenSource _cts;
-        private int _minimalHeartbeatInterval = 15 * 1000;// ms - 15 seconds
+        private int _minimalHeartbeatInterval = 15*1000; // ms - 15 seconds
         private Thread _sendingThread;
 
         internal long _lastSentDocumentEtag;
@@ -44,23 +43,27 @@ namespace Raven.Server.Documents.Replication
         internal DateTime _lastDocumentSentTime;
         internal DateTime _lastIndexOrTransformerSentTime;
 
-        internal readonly Dictionary<Guid, long> _destinationLastKnownDocumentChangeVector = new Dictionary<Guid, long>();
-        internal readonly Dictionary<Guid, long> _destinationLastKnownIndexOrTransformerChangeVector = new Dictionary<Guid, long>();
+        internal readonly Dictionary<Guid, long> _destinationLastKnownDocumentChangeVector =
+            new Dictionary<Guid, long>();
+
+        internal readonly Dictionary<Guid, long> _destinationLastKnownIndexOrTransformerChangeVector =
+            new Dictionary<Guid, long>();
 
         internal string _destinationLastKnownDocumentChangeVectorAsString;
         internal string _destinationLastKnownIndexOrTransformerChangeVectorAsString;
 
         private TcpClient _tcpClient;
-        private BlittableJsonTextWriter _writer;
-        private JsonOperationContext.MultiDocumentParser _parser;
-        internal DocumentsOperationContext _documentsContext;
-        internal TransactionOperationContext _configurationContext;
+
+        private readonly AsyncManualResetEvent _connectionDisposed = new AsyncManualResetEvent();
+        private JsonOperationContext.ManagedPinnedBuffer _buffer;
 
         internal CancellationToken CancellationToken => _cts.Token;
 
         internal string DestinationDbId;
 
         public long LastHeartbeatTicks;
+        private NetworkStream _stream;
+        private InterruptibleRead _interruptableRead;
 
         public event Action<OutgoingReplicationHandler, Exception> Failed;
 
@@ -94,20 +97,25 @@ namespace Raven.Server.Documents.Replication
             var convention = new DocumentConvention();
             //since we use it only once when the connection is initialized, no reason to keep requestFactory around for long
             using (var requestFactory = new HttpJsonRequestFactory(1))
-            using (var request = requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, string.Format("{0}/info/tcp",
-                MultiDatabase.GetRootDatabaseUrl(_destination.Url)),
-                HttpMethod.Get,
-                new OperationCredentials(_destination.ApiKey, CredentialCache.DefaultCredentials), convention)
-            {
-                Timeout = TimeSpan.FromSeconds(15)
-            }))
+            using (
+                var request =
+                    requestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null,
+                        string.Format("{0}/info/tcp",
+                            MultiDatabase.GetRootDatabaseUrl(_destination.Url)),
+                        HttpMethod.Get,
+                        new OperationCredentials(_destination.ApiKey, CredentialCache.DefaultCredentials), convention)
+                    {
+                        Timeout = TimeSpan.FromSeconds(15)
+                    }))
             {
 
                 var result = request.ReadResponseJson();
-                var tcpConnectionInfo = convention.CreateSerializer().Deserialize<TcpConnectionInfo>(new RavenJTokenReader(result));
+                var tcpConnectionInfo =
+                    convention.CreateSerializer().Deserialize<TcpConnectionInfo>(new RavenJTokenReader(result));
                 if (_log.IsInfoEnabled)
                 {
-                    _log.Info($"Will replicate to {_destination.Database} @ {_destination.Url} via {tcpConnectionInfo.Url}");
+                    _log.Info(
+                        $"Will replicate to {_destination.Database} @ {_destination.Url} via {tcpConnectionInfo.Url}");
                 }
                 return tcpConnectionInfo;
             }
@@ -123,141 +131,84 @@ namespace Raven.Server.Documents.Replication
                 {
                     ConnectSocket(connectionInfo, _tcpClient);
 
-                    using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out _documentsContext))
-                    using (_database.ConfigurationStorage.ContextPool.AllocateOperationContext(out _configurationContext))
-                    using (var stream = _tcpClient.GetStream())
+                    using (_stream = _tcpClient.GetStream())
+                    using (_interruptableRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream))
+                    using (_buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance())
                     {
-                        var documentSender = new ReplicationDocumentSender(stream, this, _log);
-                        var indexAndTransformerSender = new ReplicationIndexTransformerSender(stream, this, _log);
+                        var documentSender = new ReplicationDocumentSender(_stream, this, _log);
+                        var indexAndTransformerSender = new ReplicationIndexTransformerSender(_stream, this, _log);
 
-                        using (_writer = new BlittableJsonTextWriter(_documentsContext, stream))
-                        using (_parser = _documentsContext.ParseMultiFrom(stream))
+                        WriteHeaderToRemotePeer();
+
+                        //handle initial response to last etag and staff
+                        try
                         {
-                            //send initial connection information
-                            _documentsContext.Write(_writer, new DynamicJsonValue
+                            var response = HandleServerResponse();
+                            if (response.Item1 == ReplicationMessageReply.ReplyType.Error)
                             {
-                                [nameof(TcpConnectionHeaderMessage.DatabaseName)] = _destination.Database,
-                                [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Replication.ToString(),
-                            });
+                                if (response.Item2.Exception.Contains("DatabaseDoesNotExistException"))
+                                    throw new DatabaseDoesNotExistException(response.Item2.Message,
+                                        new InvalidOperationException(response.Item2.Exception));
 
-                            //start request/response for fetching last etag
-                            _documentsContext.Write(_writer, new DynamicJsonValue
-                            {
-                                ["Type"] = "GetLastEtag",
-                                ["SourceDatabaseId"] = _database.DbId.ToString(),
-                                ["SourceDatabaseName"] = _database.Name,
-                                ["SourceUrl"] = _database.Configuration.Core.ServerUrl,
-                                ["MachineName"] = Environment.MachineName,
-                            });
-                            _writer.Flush();
-
-                            //handle initial response to last etag and staff
-                            try
-                            {
-                                using (_configurationContext.OpenReadTransaction())
-                                using (_documentsContext.OpenReadTransaction())
-                                {
-                                    var response = HandleServerResponse();
-                                    if (response.Item1 == ReplicationMessageReply.ReplyType.Error)
-                                    {
-                                        if(response.Item2.Exception.Contains("DatabaseDoesNotExistException"))
-                                            throw new DatabaseDoesNotExistException(response.Item2.Message, new InvalidOperationException(response.Item2.Exception));
-
-                                        throw new InvalidOperationException(response.Item2.Exception);
-                                    }                                    
-                                }
+                                throw new InvalidOperationException(response.Item2.Exception);
                             }
-                            catch (DatabaseDoesNotExistException e)
+                        }
+                        catch (DatabaseDoesNotExistException e)
+                        {
+                            var msg =
+                                $"Failed to parse initial server replication response, because there is no database named {_database.Name} on the other end. " +
+                                "In order for the replication to work, a database with the same name needs to be created at the destination";
+                            if (_log.IsInfoEnabled)
                             {
-                                var msg = $"Failed to parse initial server replication response, because there is no database named {_database.Name} on the other end. " +
-                                          "In order for the replication to work, a database with the same name needs to be created at the destination";
-                                if (_log.IsInfoEnabled)
-                                {
-                                    _log.Info(msg,e);
-                                }
-
-                                using (var txw = _configurationContext.OpenWriteTransaction())
-                                {
-                                    _database.Alerts.AddAlert(new Alert
-                                    {
-                                        Key = FromToString,
-                                        Type = AlertType.Replication,
-                                        Message = msg,
-                                        CreatedAt = DateTime.UtcNow,
-                                        Severity = AlertSeverity.Warning
-                                    }, _configurationContext, txw);
-                                    txw.Commit();
-                                }
-
-                                throw;
-                            }
-                            catch (Exception e)
-                            {
-                                var msg =
-                                    $"Failed to parse initial server response. This is definitely not supposed to happen. Exception thrown: {e}";
-                                if (_log.IsInfoEnabled)
-                                    _log.Info(msg,e);
-
-                                using (var txw = _configurationContext.OpenWriteTransaction())
-                                {
-                                    _database.Alerts.AddAlert(new Alert
-                                    {
-                                        Key = FromToString,
-                                        Type = AlertType.Replication,
-                                        Message = msg,
-                                        CreatedAt = DateTime.UtcNow,
-                                        Severity = AlertSeverity.Error
-                                    }, _configurationContext, txw);
-                                    txw.Commit();
-                                }
-
-                                throw;
+                                _log.Info(msg, e);
                             }
 
-                            while (_cts.IsCancellationRequested == false)
+                            AddAlertOnFailureToReachOtherSide(msg);
+
+                            throw;
+                        }
+                        catch (Exception e)
+                        {
+                            var msg =
+                                $"Failed to parse initial server response. This is definitely not supposed to happen. Exception thrown: {e}";
+                            if (_log.IsInfoEnabled)
+                                _log.Info(msg, e);
+
+                            AddAlertOnFailureToReachOtherSide(msg);
+
+                            throw;
+                        }
+
+                        while (_cts.IsCancellationRequested == false)
+                        {
+                            long currentEtag;
+
+                            Debug.Assert(_database.IndexMetadataPersistence.IsInitialized);
+
+                            currentEtag = GetLastIndexEtag();
+
+                            if (_destination.SkipIndexReplication == false &&
+                                currentEtag != indexAndTransformerSender.LastEtag)
                             {
-                                _parser.Reset();
-                                _documentsContext.ResetAndRenew();                                
-                                _parser.Renew();
-                                long currentEtag;
-
-                                Debug.Assert(_database.IndexMetadataPersistence.IsInitialized);
-
-                                using (_configurationContext.OpenReadTransaction())
-                                    currentEtag = _database.IndexMetadataPersistence.ReadLastEtag(_configurationContext.Transaction.InnerTransaction);
-
-                               
-                                if (_destination.SkipIndexReplication == false &&
-                                    currentEtag != indexAndTransformerSender.LastEtag)
-                                {
-                                    indexAndTransformerSender.ExecuteReplicationOnce();
-                                }
-
-                                var sp = Stopwatch.StartNew();
-                                while (documentSender.ExecuteReplicationOnce())
-                                {
-                                    if (sp.ElapsedMilliseconds > 60 * 1000)
-                                    {
-                                        _waitForChanges.Set();
-                                        break;
-                                    }
-                                }
-               
-                                //if this returns false, this means either timeout or canceled token is activated                    
-                                while (WaitForChanges(_minimalHeartbeatInterval, _cts.Token) == false)
-                                {
-                                    _parser.Reset();
-                                    _configurationContext.ResetAndRenew();
-                                    _documentsContext.ResetAndRenew();
-                                    _parser.Renew();
-                                    using (_documentsContext.OpenReadTransaction())
-                                    using (_configurationContext.OpenReadTransaction())
-                                    {
-                                        SendHeartbeat();
-                                    }
-                                }
-                                _waitForChanges.Reset();
+                                indexAndTransformerSender.ExecuteReplicationOnce();
                             }
+
+                            var sp = Stopwatch.StartNew();
+                            while (documentSender.ExecuteReplicationOnce())
+                            {
+                                if (sp.ElapsedMilliseconds > 60 * 1000)
+                                {
+                                    _waitForChanges.Set();
+                                    break;
+                                }
+                            }
+
+                            //if this returns false, this means either timeout or canceled token is activated                    
+                            while (WaitForChanges(_minimalHeartbeatInterval, _cts.Token) == false)
+                            {
+                                SendHeartbeat();
+                            }
+                            _waitForChanges.Reset();
                         }
                     }
                 }
@@ -284,8 +235,66 @@ namespace Raven.Server.Documents.Replication
             catch (Exception e)
             {
                 if (_log.IsInfoEnabled)
-                    _log.Info($"Unexpected exception occured on replication thread ({FromToString}). Replication stopped (will be retried later).", e);
+                    _log.Info(
+                        $"Unexpected exception occured on replication thread ({FromToString}). Replication stopped (will be retried later).",
+                        e);
                 Failed?.Invoke(this, e);
+            }
+        }
+
+        private long GetLastIndexEtag()
+        {
+            long currentEtag;
+            TransactionOperationContext configurationContext;
+            using (_database.ConfigurationStorage.ContextPool.AllocateOperationContext(out configurationContext))
+            using (configurationContext.OpenReadTransaction())
+                currentEtag =
+                    _database.IndexMetadataPersistence.ReadLastEtag(configurationContext.Transaction.InnerTransaction);
+            return currentEtag;
+        }
+
+        private void AddAlertOnFailureToReachOtherSide(string msg)
+        {
+            TransactionOperationContext configurationContext;
+            using (_database.ConfigurationStorage.ContextPool.AllocateOperationContext(out configurationContext))
+            using (var txw = configurationContext.OpenWriteTransaction())
+            {
+                _database.Alerts.AddAlert(new Alert
+                {
+                    Key = FromToString,
+                    Type = AlertType.Replication,
+                    Message = msg,
+                    CreatedAt = DateTime.UtcNow,
+                    Severity = AlertSeverity.Warning
+                }, configurationContext, txw);
+                txw.Commit();
+            }
+        }
+
+        private void WriteHeaderToRemotePeer()
+        {
+            DocumentsOperationContext documentsContext;
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
+            using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
+            {
+                //send initial connection information
+                documentsContext.Write(writer, new DynamicJsonValue
+                {
+                    [nameof(TcpConnectionHeaderMessage.DatabaseName)] = _destination.Database,
+                    [nameof(TcpConnectionHeaderMessage.Operation)] =
+                    TcpConnectionHeaderMessage.OperationTypes.Replication.ToString(),
+                });
+
+                //start request/response for fetching last etag
+                documentsContext.Write(writer, new DynamicJsonValue
+                {
+                    ["Type"] = "GetLastEtag",
+                    ["SourceDatabaseId"] = _database.DbId.ToString(),
+                    ["SourceDatabaseName"] = _database.Name,
+                    ["SourceUrl"] = _database.Configuration.Core.ServerUrl,
+                    ["MachineName"] = Environment.MachineName,
+                });
+                writer.Flush();
             }
         }
 
@@ -293,35 +302,40 @@ namespace Raven.Server.Documents.Replication
         {
             while (true)
             {
-                int state;
-                using (var interruptibleParseToMemory = _parser.InterruptibleParseToMemory("replication notify message", _waitForChanges, timeout, token, out state))
+                using (var result = _interruptableRead.ParseToMemory(
+                    _waitForChanges, 
+                    "replication notify message",
+                    timeout,
+                    _buffer,
+                    token))
                 {
-                    if (interruptibleParseToMemory != null)
+                    if (result.Document != null)
                     {
-                        using (_documentsContext.OpenReadTransaction())
-                        using (_configurationContext.OpenReadTransaction())
-                        {
-                            HandleServerResponse(interruptibleParseToMemory, allowNotify: true);
-                        }
+                        HandleServerResponse(result.Document, allowNotify: true);
                     }
                     else
                     {
-                        return state != -1; // -1 is timeout
+                        return result.Timeout == false;
                     }
                 }
             }
         }
 
-        internal void WriteToServerAndFlush(DynamicJsonValue val)
+        internal void WriteToServer(DynamicJsonValue val)
         {
-            _documentsContext.Write(_writer, val);
-            _writer.Flush();
+            DocumentsOperationContext documentsContext;
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
+            using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
+            {
+                documentsContext.Write(writer, val);
+            }
         }
 
         private void UpdateDestinationChangeVector(ReplicationMessageReply replicationBatchReply)
         {
             if (replicationBatchReply.MessageType == null)
-                throw new InvalidOperationException("MessageType on replication response is null. This is likely is a symptom of an issue, and should be investigated.");
+                throw new InvalidOperationException(
+                    "MessageType on replication response is null. This is likely is a symptom of an issue, and should be investigated.");
 
             _destinationLastKnownDocumentChangeVector.Clear();
 
@@ -331,7 +345,8 @@ namespace Raven.Server.Documents.Replication
         private void UpdateDestinationChangeVectorHeartbeat(ReplicationMessageReply replicationBatchReply)
         {
             _lastSentDocumentEtag = Math.Max(_lastSentDocumentEtag, replicationBatchReply.LastEtagAccepted);
-            _lastSentIndexOrTransformerEtag = Math.Max(_lastSentIndexOrTransformerEtag, replicationBatchReply.LastIndexTransformerEtagAccepted);
+            _lastSentIndexOrTransformerEtag = Math.Max(_lastSentIndexOrTransformerEtag,
+                replicationBatchReply.LastIndexTransformerEtagAccepted);
             LastAcceptedDocumentEtag = replicationBatchReply.LastEtagAccepted;
 
             _destinationLastKnownDocumentChangeVectorAsString = replicationBatchReply.DocumentsChangeVector.Format();
@@ -348,9 +363,11 @@ namespace Raven.Server.Documents.Replication
                 _destinationLastKnownIndexOrTransformerChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
             }
 
-            //using (_documentsContext.OpenReadTransaction())
+            DocumentsOperationContext documentsContext;
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
+            using (documentsContext.OpenReadTransaction())
             {
-                if (DocumentsStorage.ReadLastEtag(_documentsContext.Transaction.InnerTransaction) !=
+                if (DocumentsStorage.ReadLastEtag(documentsContext.Transaction.InnerTransaction) !=
                     replicationBatchReply.LastEtagAccepted)
                 {
                     // We have changes that the other side doesn't have, this can be because we have writes
@@ -362,64 +379,88 @@ namespace Raven.Server.Documents.Replication
                         _waitForChanges.SetByAsyncCompletion();
                 }
             }
-
-            if (
-                _database.IndexMetadataPersistence.ReadLastEtag(_configurationContext.Transaction.InnerTransaction) !=
-                replicationBatchReply.LastIndexTransformerEtagAccepted)
+            TransactionOperationContext configurationContext;
+            using (_database.ConfigurationStorage.ContextPool.AllocateOperationContext(out configurationContext))
+            using (configurationContext.OpenReadTransaction())
             {
-                if ((DateTime.UtcNow - _lastIndexOrTransformerSentTime).TotalMilliseconds > _minimalHeartbeatInterval)
-                    _waitForChanges.SetByAsyncCompletion();
+                if (
+                    _database.IndexMetadataPersistence.ReadLastEtag(configurationContext.Transaction.InnerTransaction) !=
+                    replicationBatchReply.LastIndexTransformerEtagAccepted)
+                {
+                    if ((DateTime.UtcNow - _lastIndexOrTransformerSentTime).TotalMilliseconds >
+                        _minimalHeartbeatInterval)
+                        _waitForChanges.SetByAsyncCompletion();
+                }
             }
         }
 
-        private string FromToString => $"from {_database.ResourceName} to {_destination.Database} at {_destination.Url}";
+        private string FromToString => $"from {_database.ResourceName} to {_destination.Database} at {_destination.Url}"
+            ;
 
         public ReplicationDestination Destination => _destination;
 
         internal void SendHeartbeat()
         {
-            try
+            DocumentsOperationContext documentsContext;
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
+            using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
             {
-                _documentsContext.Write(_writer, new DynamicJsonValue
+                try
                 {
-                    [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Heartbeat,
-                    [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastSentDocumentEtag,
-                    [nameof(ReplicationMessageHeader.LastIndexOrTransformerEtag)] = _lastSentIndexOrTransformerEtag,
-                    [nameof(ReplicationMessageHeader.ItemCount)] = 0                    
-                });
-                _writer.Flush();
-            }
-            catch (Exception e)
-            {
-                if (_log.IsInfoEnabled)
-                    _log.Info($"Sending heartbeat failed. ({FromToString})", e);
-                throw;
-            }
+                    documentsContext.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Heartbeat,
+                        [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastSentDocumentEtag,
+                        [nameof(ReplicationMessageHeader.LastIndexOrTransformerEtag)] = _lastSentIndexOrTransformerEtag,
+                        [nameof(ReplicationMessageHeader.ItemCount)] = 0
+                    });
+                    writer.Flush();
+                }
+                catch (Exception e)
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info($"Sending heartbeat failed. ({FromToString})", e);
+                    throw;
+                }
 
-            try
-            {
-                HandleServerResponse();
-            }
-            catch (Exception e)
-            {
-                if (_log.IsInfoEnabled)
-                    _log.Info($"Parsing heartbeat result failed. ({FromToString})", e);
-                throw;
+                try
+                {
+                    HandleServerResponse();
+                }
+                catch (Exception e)
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info($"Parsing heartbeat result failed. ({FromToString})", e);
+                    throw;
+                }
             }
         }
 
-        private readonly AsyncManualResetEvent _connectionDisposed = new AsyncManualResetEvent();
+
         internal Tuple<ReplicationMessageReply.ReplyType, ReplicationMessageReply> HandleServerResponse()
         {
             while (true)
             {
-                using (var replicationBatchReplyMessage = _parser.InterruptibleParseToMemory("replication acknowledge message", _connectionDisposed))
+                var timeout = 2 * 60 * 1000;// TODO: configurable
+                using (var replicationBatchReplyMessage = _interruptableRead.ParseToMemory(
+                    _connectionDisposed,
+                    "replication acknowledge message",
+                    timeout, 
+                    _buffer,
+                    CancellationToken))
                 {
-                    if (replicationBatchReplyMessage == null)
+                    if (replicationBatchReplyMessage.Timeout)
+                    {
+                        ThrowTimeout(timeout);
+                    }
+                    if (replicationBatchReplyMessage.Interrupted)
+                    {
                         ThrowConnectionClosed();
+                    }
 
-                    var replicationBatchReply = HandleServerResponse(replicationBatchReplyMessage, allowNotify: false);
-                    if(replicationBatchReply == null)
+                    var replicationBatchReply = HandleServerResponse(replicationBatchReplyMessage.Document,
+                        allowNotify: false);
+                    if (replicationBatchReply == null)
                         continue;
 
                     LastHeartbeatTicks = _database.Time.GetUtcNow().Ticks;
@@ -432,12 +473,20 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
+        private static void ThrowTimeout(int timeout)
+        {
+            throw new TimeoutException("Could not get a server response in a reasonable time " +
+                                       TimeSpan.FromMilliseconds(timeout));
+        }
+
+
         private static void ThrowConnectionClosed()
         {
             throw new OperationCanceledException("The connection has been closed by the Dispose method");
         }
 
-        internal ReplicationMessageReply HandleServerResponse(BlittableJsonReaderObject replicationBatchReplyMessage, bool allowNotify)
+        internal ReplicationMessageReply HandleServerResponse(BlittableJsonReaderObject replicationBatchReplyMessage,
+            bool allowNotify)
         {
             replicationBatchReplyMessage.BlittableValidation();
             var replicationBatchReply = JsonDeserializationServer.ReplicationMessageReply(replicationBatchReplyMessage);
@@ -496,7 +545,9 @@ namespace Raven.Server.Documents.Replication
             catch (SocketException e)
             {
                 if (_log.IsInfoEnabled)
-                    _log.Info($"Failed to connect to remote replication destination {connection.Url}. Socket Error Code = {e.SocketErrorCode}", e);
+                    _log.Info(
+                        $"Failed to connect to remote replication destination {connection.Url}. Socket Error Code = {e.SocketErrorCode}",
+                        e);
                 throw;
             }
             catch (Exception e)
@@ -518,10 +569,11 @@ namespace Raven.Server.Documents.Replication
         {
             if (notification.Type != IndexChangeTypes.IndexAdded &&
                 notification.Type != IndexChangeTypes.IndexRemoved)
-                return;            
+                return;
 
-            if(_log.IsInfoEnabled)
-                _log.Info($"Received index {notification.Type} event, index name = {notification.Name}, etag = {notification.Etag}");
+            if (_log.IsInfoEnabled)
+                _log.Info(
+                    $"Received index {notification.Type} event, index name = {notification.Name}, etag = {notification.Etag}");
 
             if (IncomingReplicationHandler.IsIncomingReplicationThread)
                 return;
@@ -535,7 +587,8 @@ namespace Raven.Server.Documents.Replication
                 return;
 
             if (_log.IsInfoEnabled)
-                _log.Info($"Received transformer {notification.Type} event, transformer name = {notification.Name}, etag = {notification.Etag}");
+                _log.Info(
+                    $"Received transformer {notification.Type} event, transformer name = {notification.Name}, etag = {notification.Etag}");
 
             if (IncomingReplicationHandler.IsIncomingReplicationThread)
                 return;
@@ -544,7 +597,7 @@ namespace Raven.Server.Documents.Replication
 
         public void Dispose()
         {
-            if(_log.IsInfoEnabled)
+            if (_log.IsInfoEnabled)
                 _log.Info($"Disposing OutgoingReplicationHandler ({FromToString})");
 
             _database.Notifications.OnDocumentChange -= OnDocumentChange;
@@ -552,12 +605,13 @@ namespace Raven.Server.Documents.Replication
             _database.Notifications.OnTransformerChange -= OnTransformerChange;
 
             _cts.Cancel();
+          
             try
             {
                 _tcpClient?.Dispose();
             }
             catch (Exception) { }
-            
+
             _connectionDisposed.Set();
 
             if (_sendingThread != Thread.CurrentThread)

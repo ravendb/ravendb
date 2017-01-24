@@ -65,7 +65,11 @@ namespace Sparrow
             }
         }
 
-        public void Set() { _tcs.TrySetResult(true); }
+
+        public void Set()
+        {
+            _tcs.TrySetResult(true);
+        }
 
         public void SetByAsyncCompletion()
         {
@@ -88,7 +92,6 @@ namespace Sparrow
         public void SetAndResetAtomically()
         {
             // we intentionally reset it first to have this operation to behave as atomic
-
             var previousTcs = _tcs;
 
             Reset(force: true);

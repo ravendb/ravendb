@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
@@ -18,14 +16,17 @@ namespace Raven.Server.Documents.Replication
         public void AcceptIncomingConnectionAndRespond(TcpConnectionOptions tcp)
         {
             DocumentsOperationContext context;
-            using (tcp.ReturnContext)
             using (tcp)
-            using (var multiDocumentParser = tcp.MultiDocumentParser)
+            using(tcp.ConnectionProcessingInProgress())
             using (tcp.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
                 TopologyDiscoveryRequest header;
                 var localDbId = tcp.DocumentDatabase.DbId.ToString();
-                using (var headerJson = multiDocumentParser.ParseToMemory("ReplicationTopologDiscovery/read-discovery-header"))
+                using (var headerJson = context.ParseToMemory(
+                    tcp.Stream,
+                    "ReplicationTopologDiscovery/read-discovery-header",
+                    BlittableJsonDocumentBuilder.UsageMode.None,
+                    tcp.PinnedBuffer))
                 {
                     headerJson.BlittableValidation();
                     header = JsonDeserializationServer.TopologyDiscoveryRequest(headerJson);

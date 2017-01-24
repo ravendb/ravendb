@@ -27,7 +27,7 @@ namespace Sparrow.Json
         private readonly byte* _buffer;
         private readonly int _bufferLen;
         private JsonOperationContext.ReturnBuffer _returnBuffer;
-        private JsonOperationContext.ManagedPinnedBuffer _pinnedBuffer;
+        private readonly JsonOperationContext.ManagedPinnedBuffer _pinnedBuffer;
 
         public BlittableJsonTextWriter(JsonOperationContext context, Stream stream)
         {

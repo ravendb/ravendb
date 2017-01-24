@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.Handlers
                     using (var parser = new UnmanagedJsonParser(context, jsonParserState, debugTag))
                     {
                         var result = await receiveAsync;
-                        parser.SetBuffer(segments[index], result.Count);
+                        parser.SetBuffer(segments[index], 0, result.Count);
                         index++;
                         receiveAsync = webSocket.ReceiveAsync(segments[index].Buffer, Database.DatabaseShutdown);
 
@@ -127,7 +127,7 @@ namespace Raven.Server.Documents.Handlers
                                 {
                                     result = await receiveAsync;
 
-                                    parser.SetBuffer(segments[index], result.Count);
+                                    parser.SetBuffer(segments[index], 0, result.Count);
                                     if (++index >= segments.Length)
                                         index = 0;
                                     receiveAsync = webSocket.ReceiveAsync(segments[index].Buffer, Database.DatabaseShutdown);

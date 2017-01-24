@@ -22,13 +22,14 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 100; i++)
             {
-                using (var a = new Full())
+                Console.WriteLine($"{i} started");
+                using (var a = new FastTests.Client.Subscriptions.Subscriptions())
                 {
-                    a.CanBackupAndRestore();
+                    a.SubscriptionSimpleTakeOverStrategy().Wait();
                 }
-                Console.WriteLine(i);
+                Console.WriteLine($"{i} finished");
             }
 
         }
