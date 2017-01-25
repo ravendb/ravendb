@@ -223,7 +223,7 @@ namespace Raven.Server.Utils
                 return (T)value;
             }
 
-            if (value == null)
+            if (value == null || value is DynamicNullObject)
                 return default(T);
 
             if (value is T)

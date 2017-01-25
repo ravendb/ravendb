@@ -24,6 +24,8 @@ namespace Sparrow.Json
 
         private Dictionary<StringSegment, object> _objectsPathCache;
         private Dictionary<int, object> _objectsPathCacheByIndex;
+        public string _allocation;
+        public bool NoCache { get; set; }
 
         public override string ToString()
         {
@@ -51,6 +53,7 @@ namespace Sparrow.Json
             _mem = mem; // get beginning of memory pointer
             _size = size; // get document size
             _context = context;
+            NoCache = NoCache;
 
             byte offset;
             var propOffsetStart = _size - 2;
@@ -112,6 +115,7 @@ namespace Sparrow.Json
             _mem = parent._mem;
             _size = parent._size;
             _propNames = parent._propNames;
+            NoCache = parent.NoCache;
 
             var propNamesOffsetFlag = (BlittableJsonToken)(*_propNames);
             switch (propNamesOffsetFlag)
@@ -379,7 +383,7 @@ namespace Sparrow.Json
             int propertyId;
             GetPropertyTypeAndPosition(index, metadataSize, out token, out position,out propertyId);
             result = GetObject(token, (int)(_objStart - _mem - position));
-            if (result is BlittableJsonReaderBase)
+            if (NoCache == false && result is BlittableJsonReaderBase)
             {
                 AddToCache(name, result, index);
             }
@@ -438,7 +442,7 @@ namespace Sparrow.Json
 
             var value = GetObject(token, (int)(_objStart - _mem - position));
 
-            if (addObjectToCache)
+            if (NoCache == false && addObjectToCache)
             {
                 AddToCache(stringValue.ToString(), value, index);
 

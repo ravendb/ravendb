@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Client.Exceptions;
@@ -179,6 +181,8 @@ namespace Raven.Server.Documents
         // this is only modified by write transactions under lock
         // no need to use thread safe ops
         private long _lastEtag;
+
+        private readonly StringBuilder _keyBuilder = new StringBuilder();
 
         public string DataDirectory;
         public DocumentsContextPool ContextPool;
@@ -1612,12 +1616,19 @@ namespace Raven.Server.Documents
                 knownNewKey = true;
             }
 
-            if (key[key.Length - 1] == '/')
+            switch (key[key.Length - 1])
             {
-                int tries;
-                key = GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, table, context, out tries);
-                knownNewKey = true;
+                case '/':
+                    int tries;
+                    key = GetNextIdentityValueWithoutOverwritingOnExistingDocuments(key, table, context, out tries);
+                    knownNewKey = true;
+                    break;
+                case '|':
+                    key = AppendNumericValueToKey(key, newEtag);
+                    knownNewKey = true;
+                    break;
             }
+
 
             byte* lowerKey;
             int lowerSize;
@@ -1894,7 +1905,7 @@ namespace Raven.Server.Documents
         {
             var identities = context.Transaction.InnerTransaction.ReadTree("Identities");
             var nextIdentityValue = identities.Increment(key, 1);
-            var finalKey = key + nextIdentityValue;
+            var finalKey = AppendIdentityValueToKey(key, nextIdentityValue);
             Slice finalKeySlice;
             tries = 1;
 
@@ -1917,7 +1928,7 @@ namespace Raven.Server.Documents
             while (true)
             {
                 tries++;
-                finalKey = key + maybeFree;
+                finalKey = AppendIdentityValueToKey(key, maybeFree);
                 using (DocumentKeyWorker.GetSliceFromKey(context, finalKey, out finalKeySlice))
                 {
                     if (table.ReadByKey(finalKeySlice) == null)
@@ -1937,6 +1948,24 @@ namespace Raven.Server.Documents
                     }
                 }
             }
+        }
+
+        private string AppendIdentityValueToKey(string key, long val)
+        {
+            _keyBuilder.Length = 0;
+            _keyBuilder.Append(key);
+            _keyBuilder.Append(val);
+            return _keyBuilder.ToString();
+        }
+
+
+        private string AppendNumericValueToKey(string key, long val)
+        {
+            _keyBuilder.Length = 0;
+            _keyBuilder.Append(key);
+            _keyBuilder[_keyBuilder.Length - 1] = '/';
+            _keyBuilder.AppendFormat(CultureInfo.InvariantCulture,"D19", val);
+            return _keyBuilder.ToString();
         }
 
         public long IdentityFor(DocumentsOperationContext ctx, string key)

@@ -128,14 +128,29 @@ namespace Raven.Server.Documents
 
         public void Initialize()
         {
-            DocumentsStorage.Initialize();
-            InitializeInternal();
+            try
+            {
+                DocumentsStorage.Initialize();
+                InitializeInternal();
+            }
+            catch (Exception)
+            {
+                Dispose();
+                throw;
+            }
         }
 
         public void Initialize(StorageEnvironmentOptions options)
         {
-            DocumentsStorage.Initialize(options);
-            InitializeInternal();
+            try
+            {
+                DocumentsStorage.Initialize(options);
+                InitializeInternal();
+            }
+            catch (Exception)
+            {
+                Dispose();
+            }
         }
 
         public DatabaseUsage DatabaseInUse()

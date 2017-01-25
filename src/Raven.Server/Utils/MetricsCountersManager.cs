@@ -5,7 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
-
+using System.Threading;
 using Raven.Server.Utils.Metrics;
 
 using Sparrow.Json.Parsing;
@@ -81,20 +81,6 @@ namespace Raven.Server.Utils
             return metricsStatsJsonValue;
         }
 
-        public static DynamicJsonValue CreateMeterData(this MeterMetric self)
-        {
-            var meterValue = self;
-
-            return new DynamicJsonValue
-            {
-                ["Current"] = Math.Round(meterValue.OneSecondRate, 3),
-                ["Count"] = meterValue.Count,
-                ["MeanRate"] = Math.Round(meterValue.MeanRate, 3),
-                ["OneMinuteRate"] = Math.Round(meterValue.OneMinuteRate, 3),
-                ["FiveMinuteRate"] = Math.Round(meterValue.FiveMinuteRate, 3),
-                ["FifteenMinuteRate"] = Math.Round(meterValue.FifteenMinuteRate, 3),
-            };
-        }
 
 
         public static void SetMinimalHumaneMeterData(this MeterMetric self, string name, DynamicJsonValue obj)
