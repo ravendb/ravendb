@@ -1379,9 +1379,8 @@ namespace Raven.Server.Documents
             return items;
         }
 
-        private static HashSet<string> IgnoredMetadataProperties = new HashSet<string>
+        private static readonly HashSet<string> IgnoredMetadataProperties = new HashSet<string>
         {
-            Constants.Headers.RavenLastModified,
             Constants.Headers.LastModified
         };
         private static readonly HashSet<string> IgnoredDocumentroperties = new HashSet<string>

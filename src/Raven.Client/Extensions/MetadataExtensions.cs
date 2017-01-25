@@ -29,7 +29,6 @@ namespace Raven.Abstractions.Extensions
             "Non-Authoritative-Information",
             "Raven-Timer-Request",
             "Raven-Authenticated-User",
-            Constants.Headers.RavenLastModified,
             "Has-Api-Key",
 
             // COTS
@@ -121,7 +120,6 @@ namespace Raven.Abstractions.Extensions
         private static readonly HashSet<string> HeadersToIgnoreForClient = HeadersToIgnoreClient.Except(new[]
         {
             Constants.Headers.LastModified,
-            Constants.Headers.RavenLastModified
         }).ToHashSet();
 
         private static readonly HashSet<string> PrefixesInHeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)

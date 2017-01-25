@@ -45,7 +45,7 @@ namespace SlowTests.MailingList
                     session.SaveChanges();
                 }
 
-                WaitForUserToContinueTheTest(store);
+                WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

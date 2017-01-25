@@ -217,15 +217,16 @@ namespace Raven.Server.Utils
 
         public static T Convert<T>(object value, bool cast)
         {
+            if (value == null || value is DynamicNullObject)
+                return default(T);
+
+
             if (cast)
             {
                 // HACK
                 return (T)value;
             }
-
-            if (value == null || value is DynamicNullObject)
-                return default(T);
-
+          
             if (value is T)
                 return (T)value;
 

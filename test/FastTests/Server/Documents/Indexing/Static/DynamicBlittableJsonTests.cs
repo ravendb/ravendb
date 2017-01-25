@@ -55,7 +55,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     [Constants.Metadata.Key] = new DynamicJsonValue
                     {
                         [Constants.Headers.RavenEntityName] = "Users",
-                        [Constants.Headers.RavenLastModified] = now.GetDefaultRavenFormat(true)
+                        [Constants.Headers.LastModified] = now.GetDefaultRavenFormat(true)
                     }
                 }, "users/1");
 
@@ -69,7 +69,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 Assert.Equal("Arek", user.LazyName);
                 Assert.Equal(2, user.Friends.Length);
                 Assert.Equal("Users", user[Constants.Metadata.Key][Constants.Headers.RavenEntityName]);
-                Assert.Equal(now, user[Constants.Metadata.Key].Value<DateTime>(Constants.Headers.RavenLastModified));
+                Assert.Equal(now, user[Constants.Metadata.Key].Value<DateTime>(Constants.Headers.LastModified));
                 _ctx.ReturnMemory(stringValue.AllocatedMemoryData);
             }
         }

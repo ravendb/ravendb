@@ -133,8 +133,6 @@ namespace Raven.Abstractions.Data
 
             public const string RavenCreationDate = "Raven-Creation-Date";
 
-            public const string RavenLastModified = "Raven-Last-Modified";
-
             public const string RavenClrType = "Raven-Clr-Type";
 
             public const string RavenEntityName = "Raven-Entity-Name";

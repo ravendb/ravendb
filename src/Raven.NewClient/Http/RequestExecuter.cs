@@ -556,8 +556,8 @@ namespace Raven.NewClient.Client.Http
             Cache.Dispose();
             _authenticator.Dispose();
             ContextPool.Dispose();
-            _updateCurrentTokenTimer.Dispose();
-            _updateFailingNodesStatus.Dispose();
+            _updateCurrentTokenTimer?.Dispose();
+            _updateFailingNodesStatus?.Dispose();
         }
     }
 }

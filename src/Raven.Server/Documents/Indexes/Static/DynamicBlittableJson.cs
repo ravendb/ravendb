@@ -85,6 +85,10 @@ namespace Raven.Server.Documents.Indexes.Static
                         result = _doc.Etag;
                         getResult = true;
                         break;
+                    case Constants.Headers.LastModified:
+                        result = _doc.LastModified;
+                        getResult = true;
+                        break;
                 }
             }
 
@@ -120,9 +124,6 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             get
             {
-                if (string.Compare(Constants.Headers.LastModified, key, StringComparison.Ordinal) == 0) // TODO - avoid two headers for last doc modification
-                    key = Constants.Headers.RavenLastModified;
-
                 object result;
                 if (TryGetByName(key, out result) == false)
                     throw new InvalidOperationException($"Could not get '{key}' value of dynamic object");
