@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Indexes;
 using Xunit;
 
@@ -94,7 +95,7 @@ namespace FastTests.Issues
             }
         }
 
-        private void StoreAnimals(IDocumentStore store)
+        private void StoreAnimals(DocumentStore store)
         {
             using (var session = store.OpenSession())
             {

@@ -1,14 +1,15 @@
-using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
-using Xunit;
-using Raven.Client;
 using System.Linq;
-using Raven.Client.Indexing;
+using FastTests;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Client.Linq;
+using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class ComplexUsage : RavenTestBase
+    public class ComplexUsage : RavenNewTestBase
     {
         [Fact]
         public void ShouldNotOutputNull()
@@ -50,7 +51,7 @@ namespace SlowTests.Bugs.Indexing
 
                 new Accounts_Search().Execute(store);
                 WaitForIndexing(store);
-                
+
                 using (var session = store.OpenSession())
                 {
                     var objects = session.Query<object, Accounts_Search>()
@@ -102,8 +103,8 @@ namespace SlowTests.Bugs.Indexing
         {
             public override IndexDefinition CreateIndexDefinition()
             {
-                var fieldOptions1 = new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed, Storage = FieldStorage.Yes};
-                var fieldOptions2 = new IndexFieldOptions { Indexing = FieldIndexing.Analyzed, Storage = FieldStorage.Yes};
+                var fieldOptions1 = new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed, Storage = FieldStorage.Yes };
+                var fieldOptions2 = new IndexFieldOptions { Indexing = FieldIndexing.Analyzed, Storage = FieldStorage.Yes };
 
                 var index = new IndexDefinition
                 {
@@ -135,7 +136,7 @@ namespace SlowTests.Bugs.Indexing
                             AccountName = g.Where(x=>x.AccountName != null).Select(x=>x.AccountName).FirstOrDefault(),
                             UserName = g.Where(x=>x.UserName != null).Select(x=>x.UserName),
                             DesignName = g.Where(x=>x.DesignName != null).Select(x=>x.DesignName),
-                        }" , 
+                        }",
 
                     Fields =
                     {

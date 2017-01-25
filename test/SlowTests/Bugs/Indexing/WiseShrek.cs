@@ -1,27 +1,17 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexing;
-using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
-using Xunit;
 using System.Linq;
+using FastTests;
 using Lucene.Net.Analysis;
-using Lucene.Net.Analysis.Standard;
-using Lucene.Net.Analysis.Tokenattributes;
-using Lucene.Net.Index;
-using Lucene.Net.Store;
-using Raven.Abstractions.Data;
-using Raven.Client.Indexes;
-using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
+using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class WiseShrek : RavenTestBase
+    public class WiseShrek : RavenNewTestBase
     {
-
         private class Soft
         {
             public int f_platform { get; set; }
@@ -31,7 +21,7 @@ namespace SlowTests.Bugs.Indexing
             public int f_totaldownload { get; set; }
         }
 
-        [Fact (Skip = "Missing features ")]
+        [Fact(Skip = "Missing features ")]
         public void Isolated()
         {
             //var ramDirectory = new RAMDirectory();
@@ -79,10 +69,10 @@ namespace SlowTests.Bugs.Indexing
             using (var session = store.OpenSession())
             {
                 var fieldOptions1 = new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed };
-                var fieldOptions2 = new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed, Sort = SortOptions.NumericLong};
+                var fieldOptions2 = new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed, Sort = SortOptions.NumericLong };
                 var fieldOptions3 = new IndexFieldOptions { Indexing = FieldIndexing.Analyzed, Analyzer = typeof(KeywordAnalyzer).AssemblyQualifiedName };
 
-                store.DatabaseCommands.PutIndex("test", new IndexDefinition
+                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
                 {
                     Maps = { @"from s in docs.Softs select new { s.f_platform, s.f_name, s.f_alias,s.f_License,s.f_totaldownload}" },
 
@@ -91,11 +81,11 @@ namespace SlowTests.Bugs.Indexing
                         { "f_platform" , fieldOptions1 },
                         {"f_License" , fieldOptions2 },
                         {"f_totaldownload" , fieldOptions2 },
-                        {"f_name" , fieldOptions3 }, 
+                        {"f_name" , fieldOptions3 },
                         {"f_alias" , fieldOptions3 }
                     }
 
-                }, true);
+                }));
 
                 Soft entity = new Soft
                 {

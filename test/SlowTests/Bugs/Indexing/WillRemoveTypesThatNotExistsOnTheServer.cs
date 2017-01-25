@@ -1,11 +1,11 @@
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class WillRemoveTypesThatNotExistsOnTheServer : RavenTestBase
+    public class WillRemoveTypesThatNotExistsOnTheServer : RavenNewTestBase
     {
         [Fact]
         public void CanQueryAStronglyTypedIndex()
@@ -14,7 +14,7 @@ namespace SlowTests.Bugs.Indexing
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User {Name = "Hibernating Rhinos", Address = new Address {City = "Hadera"}});
+                    session.Store(new User { Name = "Hibernating Rhinos", Address = new Address { City = "Hadera" } });
                     session.SaveChanges();
                 }
 
@@ -59,12 +59,12 @@ namespace SlowTests.Bugs.Indexing
                 }));
 
                 Reduce = results => from result in results
-                                    group result by new {result.Name, result.Address}
+                                    group result by new { result.Name, result.Address }
                                     into g
                                     select new Result
                                     {
                                         Name = g.Key.Name,
-                                        Address = new Address {City = g.Key.Address.City},
+                                        Address = new Address { City = g.Key.Address.City },
                                     };
             }
         }

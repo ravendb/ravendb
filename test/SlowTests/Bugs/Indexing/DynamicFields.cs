@@ -3,13 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Lucene.Net.Documents;
-using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class DynamicFields : RavenTestBase
+    public class DynamicFields : RavenNewTestBase
     {
         private class Product
         {
@@ -83,7 +82,7 @@ namespace SlowTests.Bugs.Indexing
         {
             using (var store = GetDocumentStore())
             {
-                new Product_ByAttribute().Execute(((IDocumentStore)store).DatabaseCommands, ((IDocumentStore)store).Conventions);
+                new Product_ByAttribute().Execute(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -115,7 +114,7 @@ namespace SlowTests.Bugs.Indexing
         {
             using (var store = GetDocumentStore())
             {
-                new Product_ByNumericAttribute().Execute(((IDocumentStore)store).DatabaseCommands, ((IDocumentStore)store).Conventions);
+                new Product_ByNumericAttribute().Execute(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -147,7 +146,7 @@ namespace SlowTests.Bugs.Indexing
         {
             using (var store = GetDocumentStore())
             {
-                new Product_ByNumericAttributeUsingField().Execute(((IDocumentStore)store).DatabaseCommands, ((IDocumentStore)store).Conventions);
+                new Product_ByNumericAttributeUsingField().Execute(store);
 
                 using (var session = store.OpenSession())
                 {

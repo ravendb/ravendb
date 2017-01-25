@@ -1,13 +1,14 @@
 using System.Linq;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexing;
-using Raven.Client.Linq;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class WithStringReverse : RavenTestBase
+    public class WithStringReverse : RavenNewTestBase
     {
         private class User
         {
@@ -30,20 +31,20 @@ namespace SlowTests.Bugs.Indexing
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.PutIndex("StringReverseIndex",
-                                                new IndexDefinition
-                                                    {
-                                                        Maps = { "from doc in docs select new { doc.Name, ReverseName = doc.Name.Reverse()}" }
-                                                });
+                store.Admin.Send(new PutIndexOperation("StringReverseIndex",
+                    new IndexDefinition
+                    {
+                        Maps = { "from doc in docs select new { doc.Name, ReverseName = doc.Name.Reverse()}" }
+                    }));
 
                 using (IDocumentSession documentSession = store.OpenSession())
                 {
-                    documentSession.Store(new User {Name = "Ayende"});
-                    documentSession.Store(new User {Name = "Itamar"});
-                    documentSession.Store(new User {Name = "Pure Krome"});
-                    documentSession.Store(new User {Name = "John Skeet"});
-                    documentSession.Store(new User {Name = "StackOverflow"});
-                    documentSession.Store(new User {Name = "Wow"});
+                    documentSession.Store(new User { Name = "Ayende" });
+                    documentSession.Store(new User { Name = "Itamar" });
+                    documentSession.Store(new User { Name = "Pure Krome" });
+                    documentSession.Store(new User { Name = "John Skeet" });
+                    documentSession.Store(new User { Name = "StackOverflow" });
+                    documentSession.Store(new User { Name = "Wow" });
                     documentSession.SaveChanges();
                 }
 
@@ -51,7 +52,7 @@ namespace SlowTests.Bugs.Indexing
                 {
                     var users = documentSession
                         .Query<User>("StringReverseIndex")
-                        .Customize(x=>x.WaitForNonStaleResults())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .ToList();
 
                     var db = GetDocumentDatabaseInstanceFor(store).Result;
@@ -70,11 +71,11 @@ namespace SlowTests.Bugs.Indexing
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.PutIndex("StringReverseIndex",
-                                                new IndexDefinition
-                                                {
-                                                    Maps = { "from doc in docs select new { doc.Name, ReverseName = doc.Name.Reverse()}" }
-                                                });
+                store.Admin.Send(new PutIndexOperation("StringReverseIndex",
+                    new IndexDefinition
+                    {
+                        Maps = { "from doc in docs select new { doc.Name, ReverseName = doc.Name.Reverse()}" }
+                    }));
 
                 using (IDocumentSession documentSession = store.OpenSession())
                 {
@@ -92,7 +93,7 @@ namespace SlowTests.Bugs.Indexing
                     var users = documentSession
                         .Query<ReversedResult>("StringReverseIndex")
                         .Customize(x => x.WaitForNonStaleResults())
-                        .Where(x=>x.ReverseName.StartsWith("edn"))
+                        .Where(x => x.ReverseName.StartsWith("edn"))
                         .As<User>()
                         .ToList();
 

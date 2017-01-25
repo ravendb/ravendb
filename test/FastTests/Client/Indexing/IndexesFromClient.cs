@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
 using Lucene.Net.Analysis;
@@ -151,7 +152,16 @@ namespace FastTests.Client.Indexing
                 Assert.Equal(1, indexes.Length);
 
                 var index = indexes[0];
-                var stats = await store.Admin.SendAsync(new GetIndexStatisticsOperation(index.Name));
+                IndexStats stats = null;
+
+                Assert.True(SpinWait.SpinUntil(() =>
+                {
+                    stats = store.Admin.Send(new GetIndexStatisticsOperation(index.Name));
+                    if (stats.MapAttempts == 2)
+                        return true;
+
+                    return false;
+                }, TimeSpan.FromSeconds(5)));
 
                 Assert.Equal(index.IndexId, stats.Id);
                 Assert.Equal(index.Name, stats.Name);
