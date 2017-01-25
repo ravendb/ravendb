@@ -1,13 +1,12 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Indexes;
 using Xunit;
 
-namespace SlowTests.Tests.Queries
+namespace StressTests.Tests.Queries
 {
     public class RavenDb_2239 : RavenTestBase
     {
@@ -66,7 +65,6 @@ namespace SlowTests.Tests.Queries
         {
             new Document_Index().Execute(store);
             new TestDocumentNameTransformer().Execute(store);
-
 
             using (var session = store.OpenSession())
             {

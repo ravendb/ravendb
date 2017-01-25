@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Replication;
 using Xunit;
 
-namespace SlowTests.Issues
+namespace StressTests.Issues
 {
     public class RavenDB_5763 : RavenTestBase
     {

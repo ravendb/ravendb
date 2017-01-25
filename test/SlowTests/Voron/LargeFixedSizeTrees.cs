@@ -290,8 +290,6 @@ namespace SlowTests.Voron
         [Theory]
         [InlineDataWithRandomSeed(250)]
         [InlineDataWithRandomSeed(1000)]
-        [InlineDataWithRandomSeed(94000)]
-        [InlineDataWithRandomSeed(300000)]
         public void CanDeleteRange_TryToFindABranchNextToLeaf(int count, int seed)
         {
             var bytes = new byte[48];
@@ -377,8 +375,6 @@ namespace SlowTests.Voron
         [InlineDataWithRandomSeed(1000)]
         [InlineDataWithRandomSeed(100000)]
         [InlineDataWithRandomSeed(500000)]
-        [InlineDataWithRandomSeed(1000000)]
-        [InlineDataWithRandomSeed(2000000)]
         [InlineData(100000, 1684385375)]// reproduced a bug, do not remove
         public void CanDeleteRange_RandomRanges(int count, int seed)
         {
@@ -437,7 +433,6 @@ namespace SlowTests.Voron
         [InlineDataWithRandomSeed(100)]
         [InlineDataWithRandomSeed(10000)]
         [InlineDataWithRandomSeed(75000)]
-        [InlineDataWithRandomSeed(300000)]
         public void CanDeleteRange_RandomRanges_WithGaps(int count, int seed)
         {
             var bytes = new byte[48];

@@ -7,14 +7,14 @@
 using System;
 using System.IO;
 using SlowTests.Voron;
-using Xunit;
-using Voron;
-using Voron.Impl.Paging;
 using Sparrow.Compression;
+using Voron;
 using Voron.Data.BTrees;
 using Voron.Global;
+using Voron.Impl.Paging;
+using Xunit;
 
-namespace StressTests
+namespace StressTests.Voron
 {
     public class HugeTransactions : StorageTest
     {
@@ -26,8 +26,8 @@ namespace StressTests
 
         [Theory]
         [InlineData(2)]
-        [InlineData(6)]
-        public unsafe void CanWriteBigTransactions(long transactionSizeInGb)
+        [InlineData(6, Skip = "Too large to run on scratch machines. For manual run only")]
+        public void CanWriteBigTransactions(long transactionSizeInGb)
         {
             var tmpFile = Path.Combine(Path.GetTempPath(), "TestBigTx" + transactionSizeInGb);
             try
@@ -39,58 +39,64 @@ namespace StressTests
                 // ignored
             }
 
-            var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(tmpFile);
-            storageEnvironmentOptions.ManualFlushing = true;
-            using (var env = new StorageEnvironment(storageEnvironmentOptions))
+            try
             {
-                var value = new byte[HalfGb];
-                var random = new Random();
-                //var seed = random.Next();
-                //Console.WriteLine(seed);
-                new Random(240130173).NextBytes(value);
-                value[0] = 11;
-                value[HalfGb - 1] = 22;
-                value[(HalfGb / 3) * 2] = 33;
-                value[HalfGb / 2] = 44;
-                value[HalfGb / 3] = 55;
-
-                using (var tx = env.WriteTransaction())
+                var storageEnvironmentOptions = StorageEnvironmentOptions.ForPath(tmpFile);
+                storageEnvironmentOptions.ManualFlushing = true;
+                using (var env = new StorageEnvironment(storageEnvironmentOptions))
                 {
-                    var tree = tx.CreateTree("bigTree");
+                    var value = new byte[HalfGb];
+                    var random = new Random();
+                    //var seed = random.Next();
+                    //Console.WriteLine(seed);
+                    new Random(240130173).NextBytes(value);
+                    value[0] = 11;
+                    value[HalfGb - 1] = 22;
+                    value[(HalfGb / 3) * 2] = 33;
+                    value[HalfGb / 2] = 44;
+                    value[HalfGb / 3] = 55;
 
-                    for (int i = 0; i < transactionSizeInGb * 2; i++)
+                    using (var tx = env.WriteTransaction())
                     {
+                        var tree = tx.CreateTree("bigTree");
+
+                        for (int i = 0; i < transactionSizeInGb * 2; i++)
+                        {
+                            var ms1 = new MemoryStream(value);
+                            ms1.Position = 0;
+                            tree.Add("bigTreeKey" + i, ms1);
+                        }
+                        ValidateTree(transactionSizeInGb, tree);
+                        tx.Commit();
+                    }
+
+                    using (var tx = env.WriteTransaction())
+                    {
+                        var tree = tx.CreateTree("AddtionalTree");
                         var ms1 = new MemoryStream(value);
                         ms1.Position = 0;
-                        tree.Add("bigTreeKey" + i, ms1);
+                        tree.Add("treeKey1", ms1);
+
+                        var ms2 = new MemoryStream(value);
+                        ms2.Position = 0;
+                        tree.Add("treeKey2", ms2);
+
+                        tx.Commit();
                     }
-                    ValidateTree(transactionSizeInGb, tree);
-                    tx.Commit();
-                }
-
-                using (var tx = env.WriteTransaction())
-                {
-                    var tree = tx.CreateTree("AddtionalTree");
-                    var ms1 = new MemoryStream(value);
-                    ms1.Position = 0;
-                    tree.Add("treeKey1", ms1);
-
-                    var ms2 = new MemoryStream(value);
-                    ms2.Position = 0;
-                    tree.Add("treeKey2", ms2);
-
-                    tx.Commit();
-                }
 
 
 
-                using (var snapshot = env.ReadTransaction())
-                {
-                    var tree = snapshot.ReadTree("bigTree");
-                    ValidateTree(transactionSizeInGb, tree);
+                    using (var snapshot = env.ReadTransaction())
+                    {
+                        var tree = snapshot.ReadTree("bigTree");
+                        ValidateTree(transactionSizeInGb, tree);
+                    }
                 }
             }
-            Directory.Delete(tmpFile, true);
+            finally
+            {
+                Directory.Delete(tmpFile, true);
+            }
         }
 
         private static unsafe void ValidateTree(long transactionSizeInGb, Tree tree)
