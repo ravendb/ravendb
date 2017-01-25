@@ -58,21 +58,21 @@ namespace Raven.Server.NotificationCenter
             };
         }
 
-        public IDisposable GetStored(out IEnumerable<BlittableJsonReaderObject> actions, bool excludePostponed = false)
+        public IDisposable GetStored(out IEnumerable<BlittableJsonReaderObject> actions, bool postponed = true)
         {
             var scope = _actionsStorage.ReadActionsOrderedByCreationDate(out actions);
 
-            if (excludePostponed)
+            if (postponed == false)
             {
                 var now = SystemTime.UtcNow;
 
                 actions = actions.Where(x =>
                 {
-                    DateTime postponed;
-                    if (ActionsStorage.TryReadDate(x, nameof(Action.PostponedUntil), out postponed) == false)
+                    DateTime postponedUntil;
+                    if (ActionsStorage.TryReadDate(x, nameof(Action.PostponedUntil), out postponedUntil) == false)
                         return true;
 
-                    if (postponed > now)
+                    if (postponedUntil > now)
                         return false;
 
                     return true;

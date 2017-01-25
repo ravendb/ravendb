@@ -19,7 +19,7 @@ namespace Raven.Server.NotificationCenter.Handlers
                 {
                     IEnumerable<BlittableJsonReaderObject> storedActions;
 
-                    using (Database.NotificationCenter.GetStored(out storedActions))
+                    using (Database.NotificationCenter.GetStored(out storedActions, postponed: false))
                     {
                         foreach (var alert in storedActions)
                         {

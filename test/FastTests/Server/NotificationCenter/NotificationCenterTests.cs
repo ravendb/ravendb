@@ -97,7 +97,7 @@ namespace FastTests.Server.NotificationCenter
         }
 
         [Fact]
-        public void Repeated_alert_should_retain_dismiss_until_date()
+        public void Repeated_alert_should_retain_postpone_until_date()
         {
             using (var database = CreateDocumentDatabase())
             {
@@ -237,7 +237,7 @@ namespace FastTests.Server.NotificationCenter
                     database.NotificationCenter.Postpone(alert.Id, postponeUntil);
 
                     IEnumerable<BlittableJsonReaderObject> alerts;
-                    using (database.NotificationCenter.GetStored(out alerts, excludePostponed: true))
+                    using (database.NotificationCenter.GetStored(out alerts, postponed: false))
                     {
                         var jsonAlerts = alerts.ToList();
 

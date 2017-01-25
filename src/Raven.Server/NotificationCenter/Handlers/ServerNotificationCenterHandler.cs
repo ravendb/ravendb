@@ -17,7 +17,7 @@ namespace Raven.Server.NotificationCenter.Handlers
                 {
                     IEnumerable<BlittableJsonReaderObject> existingAlerts;
 
-                    using (ServerStore.NotificationCenter.GetStored(out existingAlerts))
+                    using (ServerStore.NotificationCenter.GetStored(out existingAlerts, postponed: false))
                     {
                         foreach (var alert in existingAlerts)
                         {
