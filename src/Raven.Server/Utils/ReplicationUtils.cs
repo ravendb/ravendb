@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Abstractions.Replication;
@@ -28,6 +29,8 @@ namespace Raven.Server.Utils
             ReplicationDocument replicationDocument)
         {
             var topologyInfo = new NodeTopologyInfo { DatabaseId = database.DbId.ToString() };
+            topologyInfo.InitializeOSInformation();
+
             var replicationLoader = database.DocumentReplicationLoader;
 
             GetLocalIncomingTopology(replicationLoader, topologyInfo);
