@@ -63,8 +63,19 @@
                 </div>
             </div>
         </div>
+        <div class="pull-right" id="toggleIndexing">
+            <button class="btn btn-default disable-indexing" title="Pause indexing process for ALL indexes until restart"
+                    data-bind="click: stopIndexing, visible: $root.globalIndexingStatus() !== 'Paused', enable: !spinners.globalStartStop() && $root.globalIndexingStatus() !== 'Disabled', css: { 'btn-spinner': spinners.globalStartStop() }">
+                <i class="icon-pause"></i>
+                <span>Pause indexing until restart</span>
+            </button>
+            <button class="btn btn-success enable-indexing" title="Resume indexing process"
+                    data-bind="click: startIndexing, visible: $root.globalIndexingStatus() === 'Paused', enable: !spinners.globalStartStop(), css: { 'btn-spinner': spinners.globalStartStop() }">
+                <i class="icon-play"></i>
+                <span>Resume indexing</span>
+            </button>
+        </div>
     </div>
-
     <div data-bind="foreach: sortedGroups">
         <h2 data-bind="text: entityName, visible: !groupHidden()"></h2>
         <div data-bind="foreach: indexes, visible: !groupHidden()">
@@ -183,7 +194,8 @@
     <span class="properties-label">State:</span>
     <div class="btn-group properties-value">
         <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown"
-                data-bind="css: { 'btn-spinner': _.includes($root.spinners.localState(), name) }, enable: $root.globalIndexingStatus() === 'Running'  && !_.includes($root.spinners.localState(), name)">
+                data-bind="css: { 'btn-spinner': _.includes($root.spinners.localState(), name) }, 
+                enable: $root.globalIndexingStatus() === 'Running'  && !_.includes($root.spinners.localState(), name)">
             <span class="text-warning" data-bind="visible: isPausedState()">
                 <i class="icon-cancel"></i>
                 <span>Paused until restart</span>

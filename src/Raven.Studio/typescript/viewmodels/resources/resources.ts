@@ -312,6 +312,10 @@ class resources extends viewModelBase {
 
                     new toggleDisableIndexingCommand(enableIndexing, db)
                         .execute()
+                        .done(() => {
+                            db.indexingDisabled(!enableIndexing);
+                            db.indexingPaused(false);
+                        })
                         .always(() => this.spinners.disableIndexing.remove(db.qualifiedName));
                 }
             });

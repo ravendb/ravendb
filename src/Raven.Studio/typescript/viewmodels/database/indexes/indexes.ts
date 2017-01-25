@@ -291,36 +291,6 @@ class indexes extends viewModelBase {
         }
     }
 
-    enableIndex(idx: index) {
-        eventsCollector.default.reportEvent("indexes", "set-state", "enabled");
-
-        if (idx.canBeEnabled()) {
-
-            this.spinners.localState.push(idx.name);
-
-            new enableIndexCommand(idx.name, this.activeDatabase())
-                .execute()
-                .done(() => idx.state("Normal"))
-                .always(() => this.spinners.localState.remove(idx.name));
-                
-        }
-    }
-
-    disableIndex(idx: index) {
-        eventsCollector.default.reportEvent("indexes", "set-state", "disabled");
-
-        if (idx.canBeDisabled()) {
-            this.spinners.localState.push(idx.name);
-
-            new disableIndexCommand(idx.name, this.activeDatabase())
-                .execute()
-                .done(() => {
-                    idx.state("Disabled");
-                })
-                .always(() => this.spinners.localState.remove(idx.name));
-        }
-    }
-
     normalPriority(idx: index) {
         eventsCollector.default.reportEvent("index", "priority", "normal");
         this.setIndexPriority(idx, "Normal");
@@ -436,6 +406,9 @@ class indexes extends viewModelBase {
                     this.spinners.globalStartStop(true);
                     new togglePauseIndexingCommand(true, this.activeDatabase())
                         .execute()
+                        .done(() => {
+                            this.globalIndexingStatus("Running");
+                        })
                         .always(() => {
                             this.spinners.globalStartStop(false);
                             this.fetchIndexes();
@@ -452,6 +425,9 @@ class indexes extends viewModelBase {
                     this.spinners.globalStartStop(true);
                     new togglePauseIndexingCommand(false, this.activeDatabase())
                         .execute()
+                        .done(() => {
+                            this.globalIndexingStatus("Paused");
+                        })
                         .always(() => {
                             this.spinners.globalStartStop(false);
                             this.fetchIndexes();
@@ -465,6 +441,9 @@ class indexes extends viewModelBase {
         this.spinners.localState.push(idx.name);
 
         return this.resumeIndexingInternal(idx)
+            .done(() => {
+                idx.status("Running");
+            })
             .always(() => this.spinners.localState.remove(idx.name));
     }
 
@@ -478,8 +457,45 @@ class indexes extends viewModelBase {
         this.spinners.localState.push(idx.name);
 
         new togglePauseIndexingCommand(false, this.activeDatabase(), { name: [idx.name] })
-            .execute()
+            .execute().
+            done(() => {
+                idx.status("Paused");
+            })
             .always(() => this.spinners.localState.remove(idx.name));
+    }
+
+    enableIndex(idx: index) {
+        eventsCollector.default.reportEvent("indexes", "set-state", "enabled");
+
+        if (idx.canBeEnabled()) {
+
+            this.spinners.localState.push(idx.name);
+
+            new enableIndexCommand(idx.name, this.activeDatabase())
+                .execute()
+                .done(() => {
+                    idx.state("Normal");
+                    idx.status("Running");
+                })
+                .always(() => this.spinners.localState.remove(idx.name));
+                
+        }
+    }
+
+    disableIndex(idx: index) {
+        eventsCollector.default.reportEvent("indexes", "set-state", "disabled");
+
+        if (idx.canBeDisabled()) {
+            this.spinners.localState.push(idx.name);
+
+            new disableIndexCommand(idx.name, this.activeDatabase())
+                .execute()
+                .done(() => {
+                    idx.state("Disabled");
+                    idx.status("Disabled");
+                })
+                .always(() => this.spinners.localState.remove(idx.name));
+        }
     }
 
     toggleSelectAll() {
