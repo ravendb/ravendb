@@ -10,6 +10,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Replication
@@ -22,7 +23,7 @@ namespace Raven.Server.Documents.Replication
         private readonly byte[] _tempBuffer = new byte[32 * 1024];
         private readonly Stream _stream;
         private readonly OutgoingReplicationHandler _parent;
-
+        private ReplicationDocument _replicationDocument => _parent._parent.ReplicationDocument;
         public ReplicationDocumentSender(Stream stream, OutgoingReplicationHandler parent, Logger log)
         {
             _log = log;
@@ -258,7 +259,10 @@ namespace Raven.Server.Documents.Replication
                 [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastEtag,
                 [nameof(ReplicationMessageHeader.LastIndexOrTransformerEtag)] = _parent._lastSentIndexOrTransformerEtag,
                 [nameof(ReplicationMessageHeader.ItemCount)] = _orderedReplicaItems.Count,
+                [nameof(ReplicationMessageHeader.ResolverId)] = _replicationDocument?.DefaultResolver?.ResolvingDatabaseId,
+                [nameof(ReplicationMessageHeader.ResolverVersion)] = _replicationDocument?.DefaultResolver?.Version
             };
+
             _parent.WriteToServer(headerJson);
             foreach (var item in _orderedReplicaItems)
             {

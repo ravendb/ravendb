@@ -264,6 +264,7 @@ namespace Raven.Server.Documents
                     tx.CreateTree("LastReplicatedEtags");
                     tx.CreateTree("Identities");
                     tx.CreateTree("ChangeVector");
+                  
                     ConflictsSchema.Create(tx, "Conflicts", 32);
                     CollectionsSchema.Create(tx, "Collections", 32);
 
@@ -1457,7 +1458,7 @@ namespace Raven.Server.Documents
                         Bits.SwapBytes(++_lastEtag),
                         {lazyCollectionName.Buffer, lazyCollectionName.Size}
                     });
-
+                    Interlocked.Increment(ref _hasConflicts);
                     // we delete the data directly, without generating a tombstone, because we have a 
                     // conflict instead
                     EnsureLastEtagIsPersisted(context, existingDoc.Etag);
@@ -1484,7 +1485,7 @@ namespace Raven.Server.Documents
                         Bits.SwapBytes(++_lastEtag),
                         {existingTombstone.Collection.Buffer, existingTombstone.Collection.Size}
                     });
-
+                    Interlocked.Increment(ref _hasConflicts);
                     // we delete the data directly, without generating a tombstone, because we have a 
                     // conflict instead
                     EnsureLastEtagIsPersisted(context, existingTombstone.Etag);

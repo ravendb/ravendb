@@ -59,7 +59,13 @@ namespace Raven.NewClient.Client.Replication
     public class ReplicationDocument : ReplicationDocument<ReplicationDestination>
     {
         public Dictionary<string, ScriptResolver> ResolveByCollection { get; set; }
-        public int HeartbeatInterval { get; set; } = 15 * 1000;
+        public DatabaseResolver DefaultResolver { get; set; }
+    }
+
+    public class DatabaseResolver
+    {
+        public string ResolvingDatabaseId { get; set; }
+        public int Version { get; set; }
     }
 
     public class ScriptResolver
