@@ -6,7 +6,6 @@ namespace Raven.NewClient.Client.Http
     {
         public string Url;
         public string Database;
-        public string ApiKey;
         public string CurrentToken;
         public bool IsFailed;
 
@@ -44,8 +43,7 @@ namespace Raven.NewClient.Client.Http
         private bool Equals(ServerNode other)
         {
             return string.Equals(Url, other.Url) && 
-                string.Equals(Database, other.Database) && 
-                string.Equals(ApiKey, other.ApiKey);
+                string.Equals(Database, other.Database);
         }
 
         public override bool Equals(object obj)
@@ -62,7 +60,6 @@ namespace Raven.NewClient.Client.Http
             {
                 var hashCode = Url?.GetHashCode() ?? 0;
                 hashCode = (hashCode*397) ^ (Database?.GetHashCode() ?? 0);
-                hashCode = (hashCode*397) ^ (ApiKey?.GetHashCode() ?? 0);
                 return hashCode;
             }
         }

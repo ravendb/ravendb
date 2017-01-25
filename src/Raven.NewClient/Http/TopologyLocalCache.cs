@@ -102,8 +102,6 @@ namespace Raven.NewClient.Client.Http
             writer.WriteString(context.GetDiscardableLazyString(node.Url));
             writer.WritePropertyName(context.GetDiscardableLazyString(nameof(ServerNode.Database)));
             writer.WriteString(context.GetDiscardableLazyString(node.Database));
-            writer.WritePropertyName(context.GetDiscardableLazyString(nameof(ServerNode.ApiKey )));
-            writer.WriteString(context.GetDiscardableLazyString(node.ApiKey));
             writer.WriteEndObject();
         }
     }

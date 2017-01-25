@@ -23,6 +23,7 @@ namespace Raven.NewClient.Client.Http
 {
     public class RequestExecuter : IDisposable
     {
+        private readonly string _apiKey;
         private readonly RequestExecuterOptions _options;
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RequestExecuter>("Client");
 
@@ -50,6 +51,7 @@ namespace Raven.NewClient.Client.Http
 
         public RequestExecuter(string url, string databaseName, string apiKey, RequestExecuterOptions options = null)
         {
+            _apiKey = apiKey;
             _options = options ?? new RequestExecuterOptions();
             _topology = new Topology
             {
@@ -57,7 +59,6 @@ namespace Raven.NewClient.Client.Http
                 {
                     Url = url,
                     Database = databaseName,
-                    ApiKey = apiKey,
                 },
                 ReadBehavior = ReadBehavior.LeaderOnly,
                 WriteBehavior = WriteBehavior.LeaderOnly,
@@ -75,9 +76,7 @@ namespace Raven.NewClient.Client.Http
 
         private void UpdateTopologyCallback(object _)
         {
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-            UpdateTopology();
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+            GC.KeepAlive(UpdateTopology());
         }
 
         private async Task UpdateTopology()
@@ -250,7 +249,7 @@ namespace Raven.NewClient.Client.Http
                     return true;
                 case HttpStatusCode.Unauthorized:
                 case HttpStatusCode.PreconditionFailed:
-                    if (string.IsNullOrEmpty(choosenNode.Node.ApiKey))
+                    if (string.IsNullOrEmpty(_apiKey))
                         throw AuthorizationException.EmptyApiKey(url);
                     if (++command.AuthenticationRetries > 1)
                         throw AuthorizationException.Unauthorized(url);
@@ -434,7 +433,7 @@ namespace Raven.NewClient.Client.Http
                 if (string.IsNullOrEmpty(oauthSource))
                     oauthSource = node.Url + "/OAuth/API-Key";
 
-                var currentToken = await _authenticator.AuthenticateAsync(oauthSource, node.ApiKey, context).ConfigureAwait(false);
+                var currentToken = await _authenticator.AuthenticateAsync(oauthSource, _apiKey, context).ConfigureAwait(false);
                 node.CurrentToken = currentToken;
             }
             catch (Exception e)
@@ -557,6 +556,8 @@ namespace Raven.NewClient.Client.Http
             Cache.Dispose();
             _authenticator.Dispose();
             ContextPool.Dispose();
+            _updateCurrentTokenTimer.Dispose();
+            _updateFailingNodesStatus.Dispose();
         }
     }
 }
