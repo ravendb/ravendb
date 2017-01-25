@@ -130,17 +130,18 @@ namespace Raven.Server.Utils.Metrics
                 r["Raw"] = results;
                 var index = Volatile.Read(ref _index) % _m15Rate.Length;
                 var current = DateTime.UtcNow;
+                var now = new TimeSpan(current.Hour, current.Minute, current.Second);
                 for (int i = index; i >= 0 ; i--)
                 {
                     var d = _m15Rate[i];
                     if(Math.Abs(d) > double.Epsilon)
-                        results[current.AddSeconds(-i).GetDefaultRavenFormat()] = Math.Round(d, 3);
+                        results[now.Add(TimeSpan.FromSeconds(-i)).ToString()] = Math.Round(d, 3);
                 }
                 for (int i = _m15Rate.Length - 1; i >= 0; i--)
                 {
                     var d = _m15Rate[i];
                     if (Math.Abs(d) > double.Epsilon)
-                        results[current.AddSeconds(-i).GetDefaultRavenFormat()] = Math.Round(d, 3);
+                        results[now.Add(TimeSpan.FromSeconds(-i)).ToString()] = Math.Round(d, 3);
                 }
             }
             return r;
