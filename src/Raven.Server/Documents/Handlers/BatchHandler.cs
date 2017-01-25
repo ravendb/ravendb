@@ -220,7 +220,7 @@ namespace Raven.Server.Documents.Handlers
         private class MergedBatchCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
         {
             public DynamicJsonArray Reply;
-            public List<BatchRequestParser.CommandData> ParsedCommands;
+            public ArraySegment<BatchRequestParser.CommandData> ParsedCommands;
             public DocumentDatabase Database;
             public long LastEtag;
 
@@ -228,9 +228,9 @@ namespace Raven.Server.Documents.Handlers
 
             public override void Execute(DocumentsOperationContext context, RavenTransaction tx)
             {
-                for (int i = 0; i < ParsedCommands.Count; i++)
+                for (int i = ParsedCommands.Offset; i < ParsedCommands.Count; i++)
                 {
-                    var cmd = ParsedCommands[i];
+                    var cmd = ParsedCommands.Array[ParsedCommands.Offset + i];
                     switch (cmd.Method)
                     {
                         case BatchRequestParser.CommandType.PUT:
@@ -298,6 +298,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     cmd.Document?.Dispose();
                 }
+                BatchRequestParser.ReturnBuffer(ParsedCommands);
             }
         }
 

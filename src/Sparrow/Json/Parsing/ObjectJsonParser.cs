@@ -313,7 +313,7 @@ namespace Sparrow.Json.Parsing
                 {
                     _state.StringBuffer = ldv.Inner.Buffer;
                     _state.StringSize = ldv.Inner.Size;
-                    _state.CompressedSize = -1;// don't even try
+                    _state.CompressedSize = null;// don't even try
                     _state.CurrentTokenType = JsonParserToken.Float;
                     ReadEscapePositions(ldv.Inner.Buffer, ldv.Inner.Size);
                     return;
@@ -441,6 +441,7 @@ namespace Sparrow.Json.Parsing
             fixed (char* pChars = str)
             {
                 _state.StringSize = Utf8Encoding.GetBytes(pChars, str.Length, _state.StringBuffer, byteCount);
+                _state.CompressedSize = null; // don't even try
                 _state.FindEscapePositionsIn(_state.StringBuffer, _state.StringSize, escapePositionsSize);
 
                 var escapePos = _state.StringBuffer + _state.StringSize;

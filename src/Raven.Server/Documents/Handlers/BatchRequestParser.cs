@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Patch;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -19,7 +20,7 @@ namespace Raven.Server.Documents.Handlers
             DELETE
         }
 
-        public class CommandData
+        public struct CommandData
         {
             public CommandType Method;
             // TODO: Change to ID
@@ -30,9 +31,32 @@ namespace Raven.Server.Documents.Handlers
             public long? Etag;
         }
 
-        public static async Task<List<CommandData>> ParseAsync(JsonOperationContext ctx, Stream stream)
+        [ThreadStatic]
+        private static Stack<CommandData[]> _cache;
+
+        private static readonly CommandData[] Empty = new CommandData[0];
+
+        public static void ReturnBuffer(ArraySegment<CommandData> cmds)
         {
-            var results = new List<CommandData>();
+            Array.Clear(cmds.Array, cmds.Offset, cmds.Count);
+            ReturnBuffer(cmds.Array);
+        }
+
+        private static void ReturnBuffer(CommandData[] cmds)
+        {
+            if (_cache == null)
+                _cache = new Stack<CommandData[]>();
+
+            if (_cache.Count > 1024)
+                return;
+            _cache.Push(cmds);
+        }
+
+        public static async Task<ArraySegment<CommandData>> ParseAsync(JsonOperationContext ctx, Stream stream)
+        {
+            CommandData[] cmds = Empty;
+
+            int index = -1;
             var state = new JsonParserState();
             JsonOperationContext.ManagedPinnedBuffer buffer;
             using (ctx.GetManagedBuffer(out buffer))
@@ -59,13 +83,20 @@ namespace Raven.Server.Documents.Handlers
                         ThrowUnexpectedToken(JsonParserToken.StartObject, state);
                     }
 
-                    var cmd = new CommandData();
-                    results.Add(cmd);
+                    index++;
+                    if (index >= cmds.Length)
+                    {
+                        cmds = IncreaseSizeOfCommandsBuffer(index, cmds);
+                    }
 
-                    while (state.CurrentTokenType != JsonParserToken.EndObject)
+                    while (true)
                     {
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser);
+
+                        if (state.CurrentTokenType == JsonParserToken.EndObject)
+                            break;
+
                         if (state.CurrentTokenType != JsonParserToken.String)
                         {
                             ThrowUnexpectedToken(JsonParserToken.String, state);
@@ -79,63 +110,110 @@ namespace Raven.Server.Documents.Handlers
                                 {
                                     ThrowUnexpectedToken(JsonParserToken.String, state);
                                 }
-                                cmd.Method = GetMethodType(state, ctx);
+                                cmds[index].Method = GetMethodType(state, ctx);
                                 break;
                             case CommandPropertyName.Key:
                                 while (parser.Read() == false)
                                     await RefillParserBuffer(stream, buffer, parser);
-                                cmd.Key = GetDocumentKey(state);
+                                switch (state.CurrentTokenType)
+                                {
+                                    case JsonParserToken.Null:
+                                        cmds[index].Key = null;
+                                        break;
+                                    case JsonParserToken.String:
+                                        cmds[index].Key = GetDocumentKey(state);
+                                        break;
+                                    default:
+                                        ThrowUnexpectedToken(JsonParserToken.String, state);
+                                        break;
+                                }
                                 break;
                             case CommandPropertyName.Document:
                                 while (parser.Read() == false)
                                     await RefillParserBuffer(stream, buffer, parser);
-                                cmd.Document = await ReadJsonObject(ctx, stream, cmd, parser, state, buffer);
+                                cmds[index].Document = await ReadJsonObject(ctx, stream, cmds[index].Key, parser, state, buffer);
                                 break;
                             case CommandPropertyName.Patch:
-                                var patch = await ReadJsonObject(ctx, stream, cmd, parser, state, buffer);
-                                cmd.Patch = PatchRequest.Parse(patch);
+                                while (parser.Read() == false)
+                                    await RefillParserBuffer(stream, buffer, parser);
+                                var patch = await ReadJsonObject(ctx, stream, cmds[index].Key, parser, state, buffer);
+                                cmds[index].Patch = PatchRequest.Parse(patch);
                                 break;
-
                             case CommandPropertyName.PatchIfMissing:
-                                var patchIfMissing = await ReadJsonObject(ctx, stream, cmd, parser, state, buffer);
-                                cmd.PatchIfMissing = PatchRequest.Parse(patchIfMissing);
+                                while (parser.Read() == false)
+                                    await RefillParserBuffer(stream, buffer, parser);
+                                var patchIfMissing = await ReadJsonObject(ctx, stream, cmds[index].Key, parser, state, buffer);
+                                cmds[index].PatchIfMissing = PatchRequest.Parse(patchIfMissing);
                                 break;
                             case CommandPropertyName.Etag:
                                 while (parser.Read() == false)
                                     await RefillParserBuffer(stream, buffer, parser);
-                                if (state.CurrentTokenType != JsonParserToken.Integer)
+                                if (state.CurrentTokenType == JsonParserToken.Null)
                                 {
-                                    ThrowUnexpectedToken(JsonParserToken.Integer, state);
+                                    cmds[index].Etag = null;
                                 }
-                                cmd.Etag = state.Long;
+                                else
+                                {
+                                    if (state.CurrentTokenType != JsonParserToken.Integer)
+                                    {
+                                        ThrowUnexpectedToken(JsonParserToken.Integer, state);
+                                    }
+
+                                    cmds[index].Etag = state.Long;
+                                }
+                                break;
+
+                            case CommandPropertyName.NoSuchProperty:
+                                // unknown command - ignore it
+                                while (parser.Read() == false)
+                                    await RefillParserBuffer(stream, buffer, parser);
+                                if (state.CurrentTokenType == JsonParserToken.StartObject ||
+                                    state.CurrentTokenType == JsonParserToken.StartArray)
+                                {
+                                    await ReadJsonObject(ctx, stream, cmds[index].Key, parser, state, buffer);
+                                }
                                 break;
                         }
                     }
 
-                    switch (cmd.Method)
+                    switch (cmds[index].Method)
                     {
                         case CommandType.None:
                             ThrowInvalidMethod();
                             break;
                         case CommandType.PUT:
-                            if(cmd.Document==null)
+                            if (cmds[index].Document == null)
                                 ThrowMissingDocumentProperty();
                             break;
                         case CommandType.PATCH:
-                            if (cmd.Patch == null)
+                            if (cmds[index].Patch == null)
                                 ThrowMissingPatchProperty();
                             break;
                     }
-
-                    while (parser.Read() == false)
-                        await RefillParserBuffer(stream, buffer, parser);
-                    if (state.CurrentTokenType != JsonParserToken.EndObject)
-                    {
-                        ThrowUnexpectedToken(JsonParserToken.EndObject, state);
-                    }
                 }
             }
-            return results;
+            return new ArraySegment<CommandData>(cmds, 0, index + 1);
+        }
+
+        private static CommandData[] IncreaseSizeOfCommandsBuffer(int index, CommandData[] cmds)
+        {
+            if (_cache == null)
+                _cache = new Stack<CommandData[]>();
+            CommandData[] tmp = null;
+            while (_cache.Count > 0)
+            {
+                tmp = _cache.Pop();
+                if (tmp.Length > index)
+                    break;
+                tmp = null;
+            }
+            if (tmp == null)
+                tmp = new CommandData[cmds.Length + 8];
+            Array.Copy(cmds, 0, tmp, 0, index);
+            Array.Clear(cmds, 0, cmds.Length);
+            ReturnBuffer(cmds);
+            cmds = tmp;
+            return cmds;
         }
 
         private static void ThrowInvalidMethod()
@@ -153,15 +231,16 @@ namespace Raven.Server.Documents.Handlers
             throw new InvalidOperationException("PUT command must have a 'Patch' property");
         }
 
-        private static async Task<BlittableJsonReaderObject> ReadJsonObject(JsonOperationContext ctx, Stream stream, CommandData cmd, UnmanagedJsonParser parser,
+        private static async Task<BlittableJsonReaderObject> ReadJsonObject(JsonOperationContext ctx, Stream stream, string key, UnmanagedJsonParser parser,
             JsonParserState state, JsonOperationContext.ManagedPinnedBuffer buffer)
         {
+            if (state.CurrentTokenType == JsonParserToken.Null)
+                return null;
+
             BlittableJsonReaderObject reader;
-
-
             using (var builder = new BlittableJsonDocumentBuilder(ctx,
                 BlittableJsonDocumentBuilder.UsageMode.ToDisk,
-                cmd.Key, parser, state))
+                key, parser, state))
             {
                 ctx.CachedProperties.NewDocument();
                 builder.ReadNestedObject();
@@ -193,6 +272,7 @@ namespace Raven.Server.Documents.Handlers
             Etag,
             Patch,
             PatchIfMissing
+            // other properties are ignore (for legacy support)
         }
 
         private static unsafe CommandPropertyName GetPropertyType(JsonParserState state, JsonOperationContext ctx)
@@ -205,48 +285,40 @@ namespace Raven.Server.Documents.Handlers
 
                     if (*(int*)state.StringBuffer != 1752458573 ||
                        *(short*)(state.StringBuffer + 4) != 25711)
-                        ThrowInvalidProperty(state, ctx);
-
+                        // ThrowInvalidProperty(state, ctx);
+                        return CommandPropertyName.NoSuchProperty;
                     return CommandPropertyName.Method;
 
                 case 3:
                     if (*(short*)state.StringBuffer != 25931 ||
                         state.StringBuffer[2] != (byte)'y')
-                        ThrowInvalidProperty(state, ctx);
-
+                        return CommandPropertyName.NoSuchProperty;
                     return CommandPropertyName.Key;
 
                 case 8:
                     if (*(long*)state.StringBuffer != 8389754676633104196)
-                        ThrowInvalidProperty(state, ctx);
-
+                        return CommandPropertyName.NoSuchProperty;
                     return CommandPropertyName.Document;
 
                 case 4:
-                    if (*(int*)state.StringBuffer == 1734440005)
-                        ThrowInvalidProperty(state, ctx);
-
+                    if (*(int*)state.StringBuffer != 1734440005)
+                        return CommandPropertyName.NoSuchProperty;
                     return CommandPropertyName.Etag;
 
                 case 5:
                     if (*(int*)state.StringBuffer != 1668571472 ||
                        (state.StringBuffer[4]) != (byte)'h')
-                        ThrowInvalidProperty(state, ctx);
-
+                        return CommandPropertyName.NoSuchProperty;
                     return CommandPropertyName.Patch;
 
                 case 14:
-
-                    if (*(long*)state.StringBuffer != 5577225901238935888 ||
-                       *(int*)(state.StringBuffer + 8) != 1769173865 ||
-                       *(short*)(state.StringBuffer + 12) != 26478)
-                        ThrowInvalidProperty(state, ctx);
-
+                    if (*(int*)state.StringBuffer != 1668571472 || 
+                        *(long*)(state.StringBuffer + 4) != 7598543892411468136 || 
+                        *(short*)(state.StringBuffer + 12) != 26478)
+                        return CommandPropertyName.NoSuchProperty;
                     return CommandPropertyName.PatchIfMissing;
 
-
                 default:
-                    ThrowInvalidProperty(state, ctx);
                     return CommandPropertyName.NoSuchProperty;
             }
         }
