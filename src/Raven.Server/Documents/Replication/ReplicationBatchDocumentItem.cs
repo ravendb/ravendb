@@ -3,7 +3,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Replication
 {
-    public struct ReplicationBatchIndexItem
+    public class ReplicationBatchIndexItem
     {
         public string Name;
         public ChangeVectorEntry[] ChangeVector;
@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Replication
         public int Type;
     }
 
-    public struct ReplicationBatchDocumentItem
+    public class ReplicationBatchDocumentItem
     {
         public LazyStringValue Key;
         public ChangeVectorEntry[] ChangeVector;
@@ -20,5 +20,6 @@ namespace Raven.Server.Documents.Replication
         public long Etag;
         public LazyStringValue Collection;
         public short TransactionMarker;
+        public long LastModifiedTicks;
     }
 }

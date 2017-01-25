@@ -1,4 +1,5 @@
-﻿using Raven.Client.Replication.Messages;
+﻿using System;
+using Raven.Client.Replication.Messages;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents
@@ -20,5 +21,7 @@ namespace Raven.Server.Documents
         public ChangeVectorEntry[] ChangeVector;
 
         public short TransactionMarker;
+
+        public DateTime LastModified;
     }
 }

@@ -70,7 +70,7 @@ namespace Raven.Server.Routing
             if (handler == null)
             {
                 context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                await context.Response.WriteAsync("There is no handler for {context.Request.Method} {context.Request.Path}");
+                await context.Response.WriteAsync($"{{'Type':'Error','Exception': 'There is no handler for {context.Request.Method} {context.Request.Path}'}}");
                 return null;
             }
 

@@ -893,6 +893,8 @@ namespace Raven.Server.Documents
 
             result.TransactionMarker = *(short*)tvr.Read(6, out size);
 
+            result.LastModified= new DateTime(*(long*)tvr.Read(7, out size));
+
             return result;
         }
 
@@ -915,6 +917,7 @@ namespace Raven.Server.Documents
             Slice loweredKey,
             string key,
             long? expectedEtag,
+            long? lastModifiedTicks = null,
             ChangeVectorEntry[] changeVector = null)
         {
             var result = GetDocumentOrTombstone(context, loweredKey);
@@ -966,6 +969,7 @@ namespace Raven.Server.Documents
                 doc.Etag,
                 collectionName,
                 doc.ChangeVector,
+                lastModifiedTicks,
                 changeVector);
 
             if (collectionName.IsSystem == false)
@@ -1018,6 +1022,7 @@ namespace Raven.Server.Documents
         public void AddTombstoneOnReplicationIfRelevant(
             DocumentsOperationContext context,
             string key,
+            long lastModifiedTicks,
             ChangeVectorEntry[] changeVector,
             string collection)
         {
@@ -1063,6 +1068,7 @@ namespace Raven.Server.Documents
                         //if doc == null, this means the tombstone does not have a document etag to point to
                         collectionName,
                         doc?.ChangeVector,
+                        lastModifiedTicks,
                         changeVector);
 
                     // not sure if this needs to be done. 
@@ -1132,6 +1138,7 @@ namespace Raven.Server.Documents
             long etag,
             CollectionName collectionName,
             ChangeVectorEntry[] docChangeVector,
+            long? lastModifiedTicks,
             ChangeVectorEntry[] changeVector)
         {
             var newEtag = ++_lastEtag;
@@ -1156,6 +1163,8 @@ namespace Raven.Server.Documents
                 Slice collectionSlice;
                 using (Slice.From(context.Allocator, collectionName.Name, out collectionSlice))
                 {
+                    var transactionMarker = context.GetTransactionMarker();
+                    var modifiedTicks = lastModifiedTicks ?? DateTime.UtcNow.Ticks;
                     var tbv = new TableValueBuilder
                     {
                         {lowerKey, lowerSize},
@@ -1164,7 +1173,8 @@ namespace Raven.Server.Documents
                         {keyPtr, keySize},
                         {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length},
                         collectionSlice,
-                        context.GetTransactionMarker()
+                        transactionMarker,
+                        modifiedTicks
                     };
 
                     var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
@@ -1374,12 +1384,15 @@ namespace Raven.Server.Documents
             Constants.Headers.RavenLastModified,
             Constants.Headers.LastModified
         };
-        private static HashSet<string> IgnoredDocumentroperties = new HashSet<string>
+        private static readonly HashSet<string> IgnoredDocumentroperties = new HashSet<string>
         {
             Constants.Metadata.Key,
         };
 
-        public bool TryResolveIdenticalDocument(DocumentsOperationContext context, string key, BlittableJsonReaderObject incomingDoc, ChangeVectorEntry[] incomingChangeVector)
+        public bool TryResolveIdenticalDocument(DocumentsOperationContext context, string key,
+            BlittableJsonReaderObject incomingDoc, 
+            long lastModifiedTicks,
+            ChangeVectorEntry[] incomingChangeVector)
         {
             var existing = GetDocumentOrTombstone(context, key, throwOnConflict: false);
             var existingDoc = existing.Item1;
@@ -1390,7 +1403,7 @@ namespace Raven.Server.Documents
             {
                 // no real conflict here, both documents have identical content
                 existingDoc.ChangeVector = ReplicationUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector);
-                Put(context, existingDoc.Key, null, existingDoc.Data, existingDoc.ChangeVector);
+                Put(context, existingDoc.Key, null, existingDoc.Data, lastModifiedTicks, existingDoc.ChangeVector);
                 return true;
             }
 
@@ -1399,6 +1412,7 @@ namespace Raven.Server.Documents
                 // Conflict between two tombstones resolves to the local tombstone
                 existingTombstone.ChangeVector = ReplicationUtils.MergeVectors(incomingChangeVector, existingTombstone.ChangeVector);
                 AddTombstoneOnReplicationIfRelevant(context, existingTombstone.Key,
+                    lastModifiedTicks,
                     existingTombstone.ChangeVector,
                     existingTombstone.Collection);
                 return true;
@@ -1583,6 +1597,7 @@ namespace Raven.Server.Documents
 
         public PutOperationResults Put(DocumentsOperationContext context, string key, long? expectedEtag,
             BlittableJsonReaderObject document,
+            long? lastModifiedTicks = null,
             ChangeVectorEntry[] changeVector = null)
         {
             if (context.Transaction == null)
@@ -1646,7 +1661,7 @@ namespace Raven.Server.Documents
             }
 
 
-            var lastModifiedTicks = DateTime.UtcNow.Ticks;
+            var modifiedTicks = lastModifiedTicks ?? DateTime.UtcNow.Ticks;
 
             Slice keySlice;
             using (Slice.External(context.Allocator, lowerKey, (ushort)lowerSize, out keySlice))
@@ -1666,6 +1681,7 @@ namespace Raven.Server.Documents
 
                 fixed (ChangeVectorEntry* pChangeVector = changeVector)
                 {
+                    var transactionMarker = context.GetTransactionMarker();
                     var tbv = new TableValueBuilder
                     {
                         {lowerKey, lowerSize},
@@ -1673,9 +1689,9 @@ namespace Raven.Server.Documents
                         {keyPtr, keySize},
                         {document.BasePointer, document.Size},
                         {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length},
-                        lastModifiedTicks,
+                        modifiedTicks,
                         flags,
-                        context.GetTransactionMarker()
+                        transactionMarker
                     };
 
                     if (oldValue == null)

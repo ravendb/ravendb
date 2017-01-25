@@ -76,7 +76,8 @@ namespace Raven.Server.Documents.Replication
                                 ChangeVector = docsItCurrent.ChangeVector,
                                 Data = docsItCurrent.Data,
                                 Key = docsItCurrent.Key,
-                                TransactionMarker = docsItCurrent.TransactionMarker
+                                TransactionMarker = docsItCurrent.TransactionMarker,
+                                LastModifiedTicks = docsItCurrent.LastModified.Ticks,
                             };
                             if (docsIt.MoveNext() == false)
                                 state &= ~CurrentEnumerationState.HasDocs;
@@ -89,7 +90,8 @@ namespace Raven.Server.Documents.Replication
                                 ChangeVector = tombsItCurrent.ChangeVector,
                                 Collection = tombsItCurrent.Collection,
                                 Key = tombsItCurrent.Key,
-                                TransactionMarker = tombsItCurrent.TransactionMarker
+                                TransactionMarker = tombsItCurrent.TransactionMarker,
+                                LastModifiedTicks = tombsItCurrent.LastModified.Ticks,
                             };
                             if (tombsIt.MoveNext() == false)
                                 state &= ~CurrentEnumerationState.HasTombs;
@@ -103,6 +105,7 @@ namespace Raven.Server.Documents.Replication
                                 Collection = conflictCurrent.Collection,
                                 Data = conflictCurrent.Doc,
                                 Key = conflictCurrent.Key,
+                                LastModifiedTicks = conflictCurrent.LastModified.Ticks,
                                 TransactionMarker = -1// not relevant for conflicts since they are already resolved in separate tx
                             };
                             if (conflictsIt.MoveNext() == false)
@@ -303,6 +306,9 @@ namespace Raven.Server.Documents.Replication
 
                 *(short*)(pTemp + tempBufferPos) = item.TransactionMarker;
                 tempBufferPos += sizeof(short);
+
+                *(long*)(pTemp + tempBufferPos) = item.LastModifiedTicks;
+                tempBufferPos += sizeof(long);
 
                 *(int*)(pTemp + tempBufferPos) = item.Key.Size;
                 tempBufferPos += sizeof(int);

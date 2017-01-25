@@ -695,6 +695,7 @@ namespace Raven.Server.Documents.Replication
                                         _log.Info(
                                             $"Conflict check resolved to Update operation, doing PUT on doc = {doc.Id}, with change vector = {_tempReplicatedChangeVector.Format()}");
                                     _database.DocumentsStorage.Put(documentsContext, doc.Id, null, json,
+                                        doc.LastModifiedTicks,
                                         _tempReplicatedChangeVector);
                                 }
                                 else
@@ -704,6 +705,7 @@ namespace Raven.Server.Documents.Replication
                                             $"Conflict check resolved to Update operation, writing tombstone for doc = {doc.Id}, with change vector = {_tempReplicatedChangeVector.Format()}");
                                     _database.DocumentsStorage.AddTombstoneOnReplicationIfRelevant(
                                         documentsContext, doc.Id,
+                                        doc.LastModifiedTicks,
                                         _tempReplicatedChangeVector,
                                         doc.Collection);
                                 }
@@ -879,6 +881,7 @@ namespace Raven.Server.Documents.Replication
                     docPosition.Id,
                     null,
                     resolved,
+                    docPosition.LastModifiedTicks,
                     merged);
                 resolved.Dispose();
             }
@@ -891,6 +894,7 @@ namespace Raven.Server.Documents.Replication
                 _database.DocumentsStorage.AddTombstoneOnReplicationIfRelevant(
                     documentsContext,
                     docPosition.Id,
+                    docPosition.LastModifiedTicks,
                     merged,
                     collection);
             }
@@ -911,7 +915,8 @@ namespace Raven.Server.Documents.Replication
             if (_database.DocumentsStorage.TryResolveIdenticalDocument(
                 documentsContext, 
                 docPosition.Id, 
-                doc, 
+                doc,
+                docPosition.LastModifiedTicks,
                 _tempReplicatedChangeVector))
 
                 return;
@@ -938,7 +943,7 @@ namespace Raven.Server.Documents.Replication
                     var relevantLocalConflict = documentsContext.DocumentDatabase.DocumentsStorage.GetConflictForChangeVector(documentsContext, docPosition.Id, conflictingVector);
                     if (relevantLocalConflict != null)
                     {
-                        localLastModified = relevantLocalConflict.Doc.GetLastModified();
+                        localLastModified = relevantLocalConflict.LastModified;
                     }
                     else //the conflict is with existing document/tombstone
                     {
@@ -947,7 +952,7 @@ namespace Raven.Server.Documents.Replication
                                 documentsContext,
                                 docPosition.Id);
                         if (relevantLocalDoc.Item1 != null)
-                            localLastModified = relevantLocalDoc.Item1.Data.GetLastModified();
+                            localLastModified = relevantLocalDoc.Item1.LastModified;
                         else if (relevantLocalDoc.Item2 != null)
                         {
                             ResolveConflictToRemote(documentsContext, docPosition, doc, conflictingVector);
@@ -959,7 +964,7 @@ namespace Raven.Server.Documents.Replication
                                 $"Didn't find document neither tombstone for specified id ({docPosition.Id}), this is not supposed to happen and is likely a bug.");
                         }
                     }
-                    var remoteLastModified = doc.GetLastModified();
+                    var remoteLastModified = new DateTime(docPosition.LastModifiedTicks);
                     if (remoteLastModified > localLastModified)
                     {
                         ResolveConflictToRemote(documentsContext, docPosition, doc, conflictingVector);
@@ -1019,7 +1024,7 @@ namespace Raven.Server.Documents.Replication
         {
             var merged = ReplicationUtils.MergeVectors(conflictingVector, _tempReplicatedChangeVector);
             documentsContext.DocumentDatabase.DocumentsStorage.DeleteConflictsFor(documentsContext, doc.Id);
-            _database.DocumentsStorage.Put(documentsContext, doc.Id, null, json, merged);
+            _database.DocumentsStorage.Put(documentsContext, doc.Id, null, json, doc.LastModifiedTicks, merged);
         }
 
         private void ResolveConflictToLocal(
@@ -1048,6 +1053,7 @@ namespace Raven.Server.Documents.Replication
                         doc.Id,
                         null,
                         relevantLocalConflict.Doc,
+                        relevantLocalConflict.LastModified.Ticks,
                         merged);
                 }
                 else //resolving to tombstone
@@ -1055,6 +1061,7 @@ namespace Raven.Server.Documents.Replication
                     _database.DocumentsStorage.AddTombstoneOnReplicationIfRelevant(
                         documentsContext,
                         doc.Id,
+                        doc.LastModifiedTicks,
                         merged,
                         doc.Collection);
                 }
@@ -1160,7 +1167,7 @@ namespace Raven.Server.Documents.Replication
         private readonly List<ReplicationIndexOrTransformerPositions> _replicatedIndexesAndTransformers = new List<ReplicationIndexOrTransformerPositions>();
         private long _lastDocumentEtag;
         private long _lastIndexOrTransformerEtag;
-        private TcpConnectionOptions _connectionOptions;
+        private readonly TcpConnectionOptions _connectionOptions;
 
         public struct ReplicationDocumentsPositions
         {
@@ -1170,6 +1177,7 @@ namespace Raven.Server.Documents.Replication
             public short TransactionMarker;
             public int DocumentSize;
             public string Collection;
+            public long LastModifiedTicks;
         }
 
         public struct ReplicationIndexOrTransformerPositions
@@ -1201,6 +1209,8 @@ namespace Raven.Server.Documents.Replication
                 writeBuffer.Write(ReadExactly(sizeof(ChangeVectorEntry) * curDoc.ChangeVectorCount), sizeof(ChangeVectorEntry)*curDoc.ChangeVectorCount);
 
                 curDoc.TransactionMarker = *(short*)ReadExactly(sizeof(short));
+
+                curDoc.LastModifiedTicks = *(long*)ReadExactly(sizeof(long));
 
                 var keySize = *(int*)ReadExactly(sizeof(int));
                 
