@@ -7,7 +7,7 @@ namespace FastTests.Server.Basic
 {
     public class RavenDB5743 : RavenNewTestBase
     {
-        [Fact]
+        [Fact(Skip = "RavenDB-6193")]
         public async Task WillFilterMetadataPropertiesStartingWithAt()
         {
             var company = new Company { Name = "Company Name" };
