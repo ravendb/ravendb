@@ -6,32 +6,7 @@ namespace Sparrow.Json.Parsing
 {
     public static class UnmanagedJsonParserHelper
     {
-        public static IEnumerable<BlittableJsonDocumentBuilder> ReadArray(JsonOperationContext context, Stream stream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.ManagedPinnedBuffer buffer)
-        {
-            if (Read(stream, parser, state, buffer) == false)
-                ThrowInvalidJson();
-
-            if (state.CurrentTokenType != JsonParserToken.StartArray)
-                ThrowInvalidJson();
-
-            while (true)
-            {
-                if (Read(stream, parser, state, buffer) == false)
-                    ThrowInvalidJson();
-
-                if (state.CurrentTokenType == JsonParserToken.EndArray)
-                    break;
-
-                var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, "multi_get/result", parser, state);
-
-                ReadObject(builder, stream, parser, buffer);
-                context.RegisterForDispose(builder);
-
-                yield return builder;
-            }
-        }
-
-        public static unsafe string ReadProperty(JsonOperationContext context, Stream stream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.ManagedPinnedBuffer buffer)
+        public static unsafe string ReadString(JsonOperationContext context, Stream stream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.ManagedPinnedBuffer buffer)
         {
             if (Read(stream, parser, state, buffer) == false)
                 ThrowInvalidJson();
