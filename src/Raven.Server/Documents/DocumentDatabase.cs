@@ -228,7 +228,8 @@ namespace Raven.Server.Documents
         {
             //before we dispose of the database we take its latest info to be displayed in the studio
             var databaseInfo = GenerateDatabaseInfo();
-            DatabaseInfoCache?.InsertDatabaseInfo(databaseInfo, Name);
+            if (databaseInfo!= null)
+                DatabaseInfoCache?.InsertDatabaseInfo(databaseInfo, Name);
 
             _databaseShutdown.Cancel();
             // we'll wait for 1 minute to drain all the requests
@@ -335,7 +336,10 @@ namespace Raven.Server.Documents
         private static readonly string CachedDatabaseInfo = "CachedDatabaseInfo";
         public DynamicJsonValue GenerateDatabaseInfo()
         {
-            Size size = new Size(GetAllStoragesEnvironment().Sum(env => env.Environment.Stats().AllocatedDataFileSizeInBytes));
+            var envs = GetAllStoragesEnvironment();
+            if (envs.Any(x => x.Environment == null))
+                return null;
+            Size size = new Size(envs.Sum(env => env.Environment.Stats().AllocatedDataFileSizeInBytes));
             var databaseInfo = new DynamicJsonValue
             {
                 [nameof(ResourceInfo.Bundles)] = new DynamicJsonArray(BundleLoader.GetActiveBundles()),
