@@ -624,7 +624,7 @@ namespace Sparrow.Json
         {
             var mem = context.GetMemory(Size);
             CopyTo(mem.Address);
-            return new BlittableJsonReaderObject(mem.Address, Size,context);           
+            return new BlittableJsonReaderObject(mem.Address, Size,context);    
         }
 
         public void BlittableValidation()

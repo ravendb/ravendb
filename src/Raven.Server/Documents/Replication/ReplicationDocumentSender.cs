@@ -10,6 +10,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Replication;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Replication
@@ -22,7 +23,7 @@ namespace Raven.Server.Documents.Replication
         private readonly byte[] _tempBuffer = new byte[32 * 1024];
         private readonly Stream _stream;
         private readonly OutgoingReplicationHandler _parent;
-
+        private ReplicationDocument _replicationDocument => _parent._parent.ReplicationDocument;
         public ReplicationDocumentSender(Stream stream, OutgoingReplicationHandler parent, Logger log)
         {
             _log = log;
@@ -255,14 +256,10 @@ namespace Raven.Server.Documents.Replication
                 [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastEtag,
                 [nameof(ReplicationMessageHeader.LastIndexOrTransformerEtag)] = _parent._lastSentIndexOrTransformerEtag,
                 [nameof(ReplicationMessageHeader.ItemCount)] = _orderedReplicaItems.Count,
+                [nameof(ReplicationMessageHeader.ResolverId)] = _replicationDocument?.DefaultResolver?.ResolvingDatabaseId,
+                [nameof(ReplicationMessageHeader.ResolverVersion)] = _replicationDocument?.DefaultResolver?.Version
             };
-      if (_parent._parent.ResolverLeader.HasLeader())
-                {
-                    headerJson[nameof(ReplicationMessageHeader.ResovlerId)] =
-                        _parent._parent.ResolverLeader.Dbid.ToString();
-                    headerJson[nameof(ReplicationMessageHeader.ResovlerVersion)] =
-                        _parent._parent.ResolverLeader.Version.ToString();
-                }
+
             _parent.WriteToServer(headerJson);
             foreach (var item in _orderedReplicaItems)
             {
@@ -281,11 +278,7 @@ namespace Raven.Server.Documents.Replication
                     $"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents in {sw.ElapsedMilliseconds:#,#;;0} ms. Last sent etag = {_lastEtag}");
 
             _parent._lastDocumentSentTime = DateTime.UtcNow;
-var answer = _parent.HandleServerResponse(serveFullResponse:true);
-                if (answer.Item1 == ReplicationMessageReply.ReplyType.Ok && answer.Item2.ResolverId != null)
-                {
-                    _parent._parent.ResolverLeader.ParseAndUpdate(answer.Item2.ResolverId, answer.Item2.ResolverVersion);
-                }
+            _parent.HandleServerResponse();
         }
 
         private unsafe void WriteDocumentToServer(ReplicationBatchDocumentItem item)

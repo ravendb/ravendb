@@ -10,8 +10,8 @@
 
         public int ItemCount { get; set; }
 
-        public string ResovlerId { get; set; }
+        public string ResolverId { get; set; }
 
-        public string ResovlerVersion { get; set; }
+        public int? ResolverVersion { get; set; }
     }
 }

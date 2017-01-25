@@ -289,16 +289,15 @@ namespace Raven.Server.Documents.Replication
         {
             int itemCount;
             if (!message.TryGet(nameof(ReplicationMessageHeader.ItemCount), out itemCount))
-                throw new InvalidDataException("Expected the 'ItemCount' field, but had no numeric field of this value, this is likely a bug");
+                throw new InvalidDataException(
+                    "Expected the 'ItemCount' field, but had no numeric field of this value, this is likely a bug");
 
             string resovlerId;
-            string resovlerVersion;
-            message.TryGet(nameof(ReplicationMessageHeader.ResovlerId), out resovlerId);
-            message.TryGet(nameof(ReplicationMessageHeader.ResovlerVersion), out resovlerVersion);
-
-            if (resovlerId != null && resovlerVersion != null)
+            int? resolverVersion;
+            if (message.TryGet(nameof(ReplicationMessageHeader.ResolverId), out resovlerId) |
+                message.TryGet(nameof(ReplicationMessageHeader.ResolverVersion), out resolverVersion))
             {
-                _parent.ResolverLeader.ParseAndUpdate(resovlerId, resovlerVersion);
+                _parent.GetReplicationDocument(resovlerId, resolverVersion, ref _parent.SaveReplicationConfig);
             }
 
             ReceiveSingleDocumentsBatch(documentsContext, itemCount, lastDocumentEtag);
@@ -643,7 +642,7 @@ namespace Raven.Server.Documents.Replication
             _connectionOptions.PinnedBuffer.Used += size;
             return result;
         }
-
+        
         private unsafe void ReceiveSingleDocumentsBatch(DocumentsOperationContext documentsContext, int replicatedDocsCount, long lastEtag)
         {
             if (_log.IsInfoEnabled)
@@ -672,6 +671,11 @@ namespace Raven.Server.Documents.Replication
                     foreach (var changeVectorEntry in _database.DocumentsStorage.GetDatabaseChangeVector(documentsContext))
                     {
                         maxReceivedChangeVectorByDatabase[changeVectorEntry.DbId] = changeVectorEntry.Etag;
+                    }
+
+                    if (_parent.SaveReplicationConfig)
+                    {
+                        _parent.SaveReplicatonDocument(documentsContext);
                     }
 
                     foreach (var doc in _replicatedDocs)
@@ -912,8 +916,8 @@ namespace Raven.Server.Documents.Replication
             DocumentsOperationContext context,
             string key)
         {
-            var leader = _parent.ResolverLeader;
-            if (leader?.Dbid == default(Guid))
+            var leader = _parent.ReplicationDocument?.DefaultResolver;
+            if (leader?.ResolvingDatabaseId == null)
             {
                 return false;
             }
@@ -925,7 +929,7 @@ namespace Raven.Server.Documents.Replication
             {
                 foreach (var changeVectorEntry in documentConflict.ChangeVector)
                 {
-                    if (changeVectorEntry.DbId.Equals(leader.Dbid))
+                    if (changeVectorEntry.DbId.Equals(new Guid(leader.ResolvingDatabaseId)))
                     {
                         if (changeVectorEntry.Etag == maxEtag)
                         { 
@@ -945,9 +949,11 @@ namespace Raven.Server.Documents.Replication
 
             if (resolved == null)
                 return false;
-    
-            _database.DocumentsStorage.Put(context, key, null, resolved.Doc.Clone(context));
 
+            using (var clone = resolved.Doc.Clone(context))
+            {
+                _database.DocumentsStorage.Put(context, key, null, clone);
+            }
             return true;
         }
 
@@ -1196,14 +1202,11 @@ namespace Raven.Server.Documents.Replication
                 [nameof(ReplicationMessageReply.Exception)] = null,
                 [nameof(ReplicationMessageReply.DocumentsChangeVector)] = documentChangeVectorAsDynamicJson,
                 [nameof(ReplicationMessageReply.IndexTransformerChangeVector)] = indexesChangeVectorAsDynamicJson,
-                [nameof(ReplicationMessageReply.DatabaseId)] = _database.DbId.ToString()
+                [nameof(ReplicationMessageReply.DatabaseId)] = _database.DbId.ToString(),
+                [nameof(ReplicationMessageReply.ResolverId)] = _replicationDocument?.DefaultResolver?.ResolvingDatabaseId,
+                [nameof(ReplicationMessageReply.ResolverVersion)] = _replicationDocument?.DefaultResolver?.Version
             };
-            if (_parent.ResolverLeader.HasLeader())
-            {
-                heartbeat[nameof(ReplicationMessageReply.ResolverId)] = _parent.ResolverLeader.Dbid.ToString();
-                heartbeat[nameof(ReplicationMessageReply.ResolverVersion)] = _parent.ResolverLeader.Version.ToString();
-            }
-
+           
             documentsContext.Write(writer, heartbeat);
 
             writer.Flush();

@@ -8,10 +8,10 @@ using Xunit;
 
 namespace FastTests.Server.Replication
 {
-    public class ReplicationResolveToLeader : ReplicationTestsBase
+    public class ReplicationResolveToDatabase : ReplicationTestsBase
     {
         [Fact]
-        public async Task ResovleToLeader()
+        public async Task ResovleToDatabase()
         {
             var store1 = GetDocumentStore();
             var store2 = GetDocumentStore();
@@ -33,7 +33,11 @@ namespace FastTests.Server.Replication
 
             SetupReplication(store2, new ReplicationDocument
             {
-                SetAsResolver = true
+                DefaultResolver = new DatabaseResolver
+                {
+                    ResolvingDatabaseId = GetDocumentDatabaseInstanceFor(store2).Result.DbId.ToString(),
+                    Version = 0
+                }
             }, store1);
 
             await Task.Delay(500);
@@ -45,7 +49,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public async Task ResovleToLeaderComplex()
+        public async Task ResovleToDatabaseComplex()
         {
             // store2 <--> store1 --> store3
             var store1 = GetDocumentStore();
@@ -79,7 +83,11 @@ namespace FastTests.Server.Replication
             // store2 <--> store1 <--> store3*
             SetupReplication(store3, new ReplicationDocument
             {
-                SetAsResolver = true
+                DefaultResolver = new DatabaseResolver
+                {
+                    ResolvingDatabaseId = GetDocumentDatabaseInstanceFor(store3).Result.DbId.ToString(),
+                    Version = 0
+                }
             },store1);
 
             var doc1 = WaitForDocument<User>(store1, "foo/bar");
@@ -92,7 +100,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public async Task ChangeLeaderAndResolve()
+        public async Task ChangeDatabaseAndResolve()
         {           
             var store1 = GetDocumentStore();
             var store2 = GetDocumentStore();
@@ -121,25 +129,33 @@ namespace FastTests.Server.Replication
             Assert.Equal(2, WaitUntilHasConflict(store2, "foo/bar")["foo/bar"].Count);
 
             // store2* <--> store1 --> store3
+            
             SetupReplication(store2, new ReplicationDocument
             {
-                SetAsResolver = true
+                DefaultResolver = new DatabaseResolver
+                {
+                    ResolvingDatabaseId = GetDocumentDatabaseInstanceFor(store2).Result.DbId.ToString(),
+                    Version = 0
+                }
             }, store1);
 
             await Task.Delay(delay);
 
             var doc2 = WaitForDocument<User>(store2, "foo/bar");
-            var doc1 = WaitForDocument<User>(store1, "foo/bar");
-            var doc3 = WaitForDocument<User>(store3, "foo/bar");
-
-            Assert.Equal("Oren", doc1.Name);
             Assert.Equal("Oren", doc2.Name);
+            var doc1 = WaitForDocument<User>(store1, "foo/bar");
+            Assert.Equal("Oren", doc1.Name);
+            var doc3 = WaitForDocument<User>(store3, "foo/bar");
             Assert.Equal("Oren", doc3.Name);
 
             // store2 <--> store1 --> store3*
             SetupReplication(store3, new ReplicationDocument
             {
-                SetAsResolver = true
+                DefaultResolver = new DatabaseResolver
+                {
+                    ResolvingDatabaseId = GetDocumentDatabaseInstanceFor(store3).Result.DbId.ToString(),
+                    Version = 1
+                }
             });
 
             using (var session = store3.OpenSession())
@@ -157,7 +173,11 @@ namespace FastTests.Server.Replication
             // store2 <--> store1 --> store3*
             SetupReplication(store3, new ReplicationDocument
             {
-                SetAsResolver = true
+                DefaultResolver = new DatabaseResolver
+                {
+                    ResolvingDatabaseId = GetDocumentDatabaseInstanceFor(store3).Result.DbId.ToString(),
+                    Version = 2
+                }
             },store1);
 
             await Task.Delay(delay);
@@ -172,7 +192,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public async Task UnsetLeader()
+        public async Task UnsetDatabaseResolver()
         {
             var store1 = GetDocumentStore();
             var store2 = GetDocumentStore();
@@ -189,7 +209,11 @@ namespace FastTests.Server.Replication
             // store1* --> store2
             SetupReplication(store1, new ReplicationDocument
             {
-                SetAsResolver = true
+                DefaultResolver = new DatabaseResolver
+                {
+                    ResolvingDatabaseId = GetDocumentDatabaseInstanceFor(store1).Result.DbId.ToString(),
+                    Version = 0
+                }
             }, store2);
 
             await Task.Delay(500);
@@ -197,7 +221,14 @@ namespace FastTests.Server.Replication
             var doc1 = WaitForDocument<User>(store2, "foo/bar");
             Assert.Equal("Karmel", doc1.Name);
 
-            SetupReplication(store1, store2);
+            SetupReplication(store1, new ReplicationDocument
+            {
+                DefaultResolver = new DatabaseResolver
+                {
+                    ResolvingDatabaseId = null,
+                    Version = 1
+                }
+            }, store2);
 
             using (var session = store2.OpenSession())
             {
@@ -214,7 +245,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public async Task SetLeaderAtTwoNodes()
+        public async Task SetDatabaseResolverAtTwoNodes()
         {
             var store1 = GetDocumentStore();
             var store2 = GetDocumentStore();
@@ -232,20 +263,28 @@ namespace FastTests.Server.Replication
 
             SetupReplication(store1, new ReplicationDocument
             {
-                SetAsResolver = true
+                DefaultResolver = new DatabaseResolver
+                {
+                    ResolvingDatabaseId = GetDocumentDatabaseInstanceFor(store1).Result.DbId.ToString(),
+                    Version = 0
+                }
             });
  
             // store2* --> store1*
             SetupReplication(store2, new ReplicationDocument
             {
-                SetAsResolver = true
+                DefaultResolver = new DatabaseResolver
+                {
+                    ResolvingDatabaseId = GetDocumentDatabaseInstanceFor(store2).Result.DbId.ToString(),
+                    Version = 0
+                }
             }, store1);
 
             await Task.Delay(500);
 
             var failures = GetConnectionFaliures(store1);
             Assert.True(failures[store2.DefaultDatabase].Any(
-                v=>v.Contains("Resolver versions are conflicted. Same version 0, but different resolvers")));
+                v=>v.Contains("Resolver versions are conflicted. Same version 0, but different")));
            
         }
     }

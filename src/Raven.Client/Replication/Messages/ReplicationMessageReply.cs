@@ -32,7 +32,7 @@ namespace Raven.Client.Replication.Messages
 
         public string ResolverId { get; set; }
 
-        public string ResolverVersion { get; set; }
+        public int? ResolverVersion { get; set; }
     }
 
     public struct ChangeVectorEntry : IComparable<ChangeVectorEntry>

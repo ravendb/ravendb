@@ -59,7 +59,13 @@ namespace Raven.NewClient.Client.Replication
     public class ReplicationDocument : ReplicationDocument<ReplicationDestination>
     {
         public Dictionary<string, ScriptResolver> ResolveByCollection { get; set; }
-        public bool SetAsResolver { get; set; }
+        public DatabaseResolver DefaultResolver { get; set; }
+    }
+
+    public class DatabaseResolver
+    {
+        public string ResolvingDatabaseId { get; set; }
+        public int Version { get; set; }
     }
 
     public class ScriptResolver

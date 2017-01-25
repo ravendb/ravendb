@@ -1,4 +1,6 @@
-﻿namespace Raven.Client.Replication.Messages
+﻿using System;
+
+namespace Raven.Client.Replication.Messages
 {
     public class ReplicationLatestEtagRequest
     {
@@ -10,7 +12,7 @@
 
         public string SourceMachineName { get; set; }
 
-        public string ResolverVersion { get; set; }
+        public int? ResolverVersion { get; set; }
 
         public string ResolverId { get; set; }
     }

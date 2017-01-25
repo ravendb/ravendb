@@ -29,6 +29,10 @@ namespace Raven.NewClient.Client.Replication.Messages
         public ChangeVectorEntry[] IndexTransformerChangeVector { get; set; }
 
         public string DatabaseId { get; set; }
+
+        public string ResolverId { get; set; }
+
+        public int? ResolverVersion { get; set; }
     }
 
     public struct ChangeVectorEntry : IComparable<ChangeVectorEntry>
