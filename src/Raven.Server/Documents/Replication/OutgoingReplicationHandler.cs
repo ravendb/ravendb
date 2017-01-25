@@ -154,10 +154,9 @@ namespace Raven.Server.Documents.Replication
                             
                             if (response.Item1 == ReplicationMessageReply.ReplyType.Ok)
                             {
-                                _parent.ReplicationDocument =  _parent.GetReplicationDocument(
+                                _parent.UpdateReplicationDocumentWithResolver(
                                     response.Item2.ResolverId, 
-                                    response.Item2.ResolverVersion, 
-                                    ref _parent.SaveReplicationConfig);
+                                    response.Item2.ResolverVersion);
                             }                          
                         }
                         catch (DatabaseDoesNotExistException e)

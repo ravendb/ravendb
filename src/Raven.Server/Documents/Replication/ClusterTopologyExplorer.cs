@@ -121,8 +121,8 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            var replicationDocument = _database.DocumentReplicationLoader.GetReplicationDocument();
-            var localTopology = ReplicationUtils.GetLocalTopology(_database, replicationDocument);
+            var localTopology = ReplicationUtils.GetLocalTopology(_database,
+                _database.DocumentReplicationLoader.ReplicationDocument);
 
             topology.NodesById[localTopology.DatabaseId] = localTopology;
             return topology;

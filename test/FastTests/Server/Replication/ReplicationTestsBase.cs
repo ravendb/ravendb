@@ -112,15 +112,39 @@ namespace FastTests.Server.Replication
             return false;
         }
 
-        protected T WaitForDocument<T>(DocumentStore store,
+        protected bool WaitForDocument<T>(DocumentStore store,
             string docId,
+            Func<T, bool> predicate, 
             int timeout = 10000)
         {
-            Assert.True(WaitForDocument(store, docId, timeout));
+            if (Debugger.IsAttached)
+                timeout *= 100;
+
+            var sw = Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds < timeout)
+            {
+                using (var session = store.OpenSession())
+                {
+                    try
+                    {
+                        var doc = session.Load<T>(docId);
+                        if (doc != null && predicate(doc))
+                            return true;
+                    }
+                    catch (ConflictException)
+                    {
+                        // expected that we might get conflict, ignore and wait
+                    }
+                }
+            }
             using (var session = store.OpenSession())
             {
-                return session.Load<T>(docId);
+                //one last try, and throw if there is still a conflict
+                var doc = session.Load<T>(docId);
+                if (doc != null && predicate(doc))
+                    return true;
             }
+            return false;
         }
 
         protected bool WaitForDocument(DocumentStore store,
@@ -320,7 +344,7 @@ namespace FastTests.Server.Replication
                     Method = HttpMethod.Get
                 };
             }
-            public override void SetResponse(BlittableJsonReaderArray response)
+            public override void SetResponse(BlittableJsonReaderArray response, bool fromCache)
             {
                 List<string> list = new List<string>();
                 Dictionary<string,string[]> result = new Dictionary<string, string[]>();
@@ -344,7 +368,7 @@ namespace FastTests.Server.Replication
                 }
                 Result = result;
             }
-            public override void SetResponse(BlittableJsonReaderObject response)
+            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
                 throw new NotImplementedException();
             }

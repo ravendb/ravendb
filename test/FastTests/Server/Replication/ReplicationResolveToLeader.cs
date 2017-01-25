@@ -1,7 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Diagnostics;
 using System.Linq;
-using System.Threading.Tasks;
+using System.Threading;
 using FastTests.Server.Basic.Entities;
 using Raven.NewClient.Client.Replication;
 using Xunit;
@@ -11,7 +10,7 @@ namespace FastTests.Server.Replication
     public class ReplicationResolveToDatabase : ReplicationTestsBase
     {
         [Fact]
-        public async Task ResovleToDatabase()
+        public void ResovleToDatabase()
         {
             var store1 = GetDocumentStore();
             var store2 = GetDocumentStore();
@@ -40,16 +39,12 @@ namespace FastTests.Server.Replication
                 }
             }, store1);
 
-            await Task.Delay(500);
-
-            var doc1 = WaitForDocument<User>(store1, "foo/bar");
-            var doc2 = WaitForDocument<User>(store2, "foo/bar");
-            Assert.Equal("Oren",doc1.Name);
-            Assert.Equal("Oren",doc2.Name);
+            Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Oren"));
+            Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Oren"));
         }
 
         [Fact]
-        public async Task ResovleToDatabaseComplex()
+        public void ResovleToDatabaseComplex()
         {
             // store2 <--> store1 --> store3
             var store1 = GetDocumentStore();
@@ -74,8 +69,6 @@ namespace FastTests.Server.Replication
             SetupReplication(store1, store2, store3);
             SetupReplication(store2, store1);
 
-            await Task.Delay(500);
-
             Assert.Equal(2,WaitUntilHasConflict(store1,"foo/bar")["foo/bar"].Count);
             Assert.Equal(2,WaitUntilHasConflict(store2,"foo/bar")["foo/bar"].Count);
             Assert.Equal(3,WaitUntilHasConflict(store3,"foo/bar")["foo/bar"].Count);
@@ -90,22 +83,18 @@ namespace FastTests.Server.Replication
                 }
             },store1);
 
-            var doc1 = WaitForDocument<User>(store1, "foo/bar");
-            var doc2 = WaitForDocument<User>(store2, "foo/bar");
-            var doc3 = WaitForDocument<User>(store3, "foo/bar");
 
-            Assert.Equal("Leader", doc1.Name);
-            Assert.Equal("Leader", doc2.Name);
-            Assert.Equal("Leader", doc3.Name);
+            Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Leader"));
+            Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Leader"));
+            Assert.True(WaitForDocument<User>(store3, "foo/bar", u => u.Name == "Leader"));
         }
 
         [Fact]
-        public async Task ChangeDatabaseAndResolve()
+        public void ChangeDatabaseAndResolve()
         {           
             var store1 = GetDocumentStore();
             var store2 = GetDocumentStore();
             var store3 = GetDocumentStore();
-            int delay = 500; 
 
             using (var session = store1.OpenSession())
             {
@@ -139,14 +128,11 @@ namespace FastTests.Server.Replication
                 }
             }, store1);
 
-            await Task.Delay(delay);
 
-            var doc2 = WaitForDocument<User>(store2, "foo/bar");
-            Assert.Equal("Oren", doc2.Name);
-            var doc1 = WaitForDocument<User>(store1, "foo/bar");
-            Assert.Equal("Oren", doc1.Name);
-            var doc3 = WaitForDocument<User>(store3, "foo/bar");
-            Assert.Equal("Oren", doc3.Name);
+            Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Oren"));
+            Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Oren"));
+            Assert.True(WaitForDocument<User>(store3, "foo/bar", u => u.Name == "Oren"));
+
 
             // store2 <--> store1 --> store3*
             SetupReplication(store3, new ReplicationDocument
@@ -180,19 +166,13 @@ namespace FastTests.Server.Replication
                 }
             },store1);
 
-            await Task.Delay(delay);
-
-            doc3 = WaitForDocument<User>(store3, "foo/bar");
-            doc1 = WaitForDocument<User>(store1, "foo/bar");
-            doc2 = WaitForDocument<User>(store2, "foo/bar");
-
-            Assert.Equal("Leader", doc1.Name);
-            Assert.Equal("Leader", doc2.Name);
-            Assert.Equal("Leader", doc3.Name);
+            Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Leader"));
+            Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Leader"));
+            Assert.True(WaitForDocument<User>(store3, "foo/bar", u => u.Name == "Leader"));
         }
 
         [Fact]
-        public async Task UnsetDatabaseResolver()
+        public void UnsetDatabaseResolver()
         {
             var store1 = GetDocumentStore();
             var store2 = GetDocumentStore();
@@ -216,10 +196,7 @@ namespace FastTests.Server.Replication
                 }
             }, store2);
 
-            await Task.Delay(500);
-
-            var doc1 = WaitForDocument<User>(store2, "foo/bar");
-            Assert.Equal("Karmel", doc1.Name);
+            Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Karmel"));
 
             SetupReplication(store1, new ReplicationDocument
             {
@@ -245,7 +222,7 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
-        public async Task SetDatabaseResolverAtTwoNodes()
+        public void SetDatabaseResolverAtTwoNodes()
         {
             var store1 = GetDocumentStore();
             var store2 = GetDocumentStore();
@@ -255,11 +232,21 @@ namespace FastTests.Server.Replication
                 session.Store(new User { Name = "Karmel" }, "foo/bar");
                 session.SaveChanges();
             }
+
             using (var session = store2.OpenSession())
             {
                 session.Store(new User { Name = "Oren" }, "foo/bar");
                 session.SaveChanges();
             }
+
+
+            var mre = new ManualResetEventSlim();
+
+            var database2 = GetDocumentDatabaseInstanceFor(store2).Result;
+            database2.DocumentReplicationLoader.ReplicationFailed += (src, ex) =>
+            {
+                mre.Set();
+            };
 
             SetupReplication(store1, new ReplicationDocument
             {
@@ -269,18 +256,21 @@ namespace FastTests.Server.Replication
                     Version = 0
                 }
             });
- 
-            // store2* --> store1*
-            SetupReplication(store2, new ReplicationDocument
+
+             // store2* --> store1*
+             SetupReplication(store2, new ReplicationDocument
             {
                 DefaultResolver = new DatabaseResolver
                 {
-                    ResolvingDatabaseId = GetDocumentDatabaseInstanceFor(store2).Result.DbId.ToString(),
+                    ResolvingDatabaseId = database2.DbId.ToString(),
                     Version = 0
                 }
             }, store1);
 
-            await Task.Delay(500);
+            var millisecondsTimeout = 1500;
+            if (Debugger.IsAttached)
+                millisecondsTimeout *= 100;
+            Assert.True(mre.Wait(millisecondsTimeout));
 
             var failures = GetConnectionFaliures(store1);
             Assert.True(failures[store2.DefaultDatabase].Any(

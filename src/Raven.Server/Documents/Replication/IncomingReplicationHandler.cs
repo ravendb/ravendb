@@ -38,7 +38,6 @@ namespace Raven.Server.Documents.Replication
         private Thread _incomingThread;
         private readonly CancellationTokenSource _cts;
         private readonly Logger _log;
-        private ReplicationDocument _replicationDocument;
         public event Action<IncomingReplicationHandler, Exception> Failed;
         public event Action<IncomingReplicationHandler> DocumentsReceived;
         public event Action<IncomingReplicationHandler> IndexesAndTransformersReceived;
@@ -294,10 +293,10 @@ namespace Raven.Server.Documents.Replication
 
             string resovlerId;
             int? resolverVersion;
-            if (message.TryGet(nameof(ReplicationMessageHeader.ResolverId), out resovlerId) |
+            if (message.TryGet(nameof(ReplicationMessageHeader.ResolverId), out resovlerId) &&
                 message.TryGet(nameof(ReplicationMessageHeader.ResolverVersion), out resolverVersion))
             {
-                _parent.GetReplicationDocument(resovlerId, resolverVersion, ref _parent.SaveReplicationConfig);
+                _parent.UpdateReplicationDocumentWithResolver(resovlerId, resolverVersion);
             }
 
             ReceiveSingleDocumentsBatch(documentsContext, itemCount, lastDocumentEtag);
@@ -673,11 +672,6 @@ namespace Raven.Server.Documents.Replication
                         maxReceivedChangeVectorByDatabase[changeVectorEntry.DbId] = changeVectorEntry.Etag;
                     }
 
-                    if (_parent.SaveReplicationConfig)
-                    {
-                        _parent.SaveReplicatonDocument(documentsContext);
-                    }
-
                     foreach (var doc in _replicatedDocs)
                     {
                         documentsContext.TransactionMarkerOffset = doc.TransactionMarker;
@@ -916,14 +910,12 @@ namespace Raven.Server.Documents.Replication
             return true;
         }
         
-        private bool TryResolveByLeader(
-            DocumentsOperationContext context,
-            string key)
+        private void TryResolveUsingDefaultResolver(DocumentsOperationContext context, string key)
         {
             var leader = _parent.ReplicationDocument?.DefaultResolver;
             if (leader?.ResolvingDatabaseId == null)
             {
-                return false;
+                return;
             }
 
             var conflicts = _database.DocumentsStorage.GetConflictsFor(context, key);
@@ -938,7 +930,7 @@ namespace Raven.Server.Documents.Replication
                         if (changeVectorEntry.Etag == maxEtag)
                         { 
                             // we have two documents with same etag of the leader
-                            return false;
+                            return;
                         }
 
                         if (changeVectorEntry.Etag < maxEtag)
@@ -952,13 +944,16 @@ namespace Raven.Server.Documents.Replication
             }
 
             if (resolved == null)
-                return false;
+                return;
 
+            // because we are resolving to a conflict, and putting a document will
+            // delete all the conflicts, we have to create a copy of the document
+            // in order to avoid the data we are saving from being removed while
+            // we are saving it
             using (var clone = resolved.Doc.Clone(context))
             {
                 _database.DocumentsStorage.Put(context, key, null, clone);
             }
-            return true;
         }
 
         private void HandleConflictForDocument(
@@ -983,7 +978,7 @@ namespace Raven.Server.Documents.Replication
             if (TryResovleConflictByScript(documentsContext, docPosition, conflictingVector, doc))
                 return;
 
-            switch (ReplicationDocument?.DocumentConflictResolution ?? StraightforwardConflictResolution.None)
+            switch (_parent.ReplicationDocument?.DocumentConflictResolution ?? StraightforwardConflictResolution.None)
             {
                 case StraightforwardConflictResolution.ResolveToLocal:
                     ResolveConflictToLocal(documentsContext, docPosition, conflictingVector);
@@ -1035,7 +1030,7 @@ namespace Raven.Server.Documents.Replication
                     break;
                  default:
                     _database.DocumentsStorage.AddConflict(documentsContext, docPosition.Id, doc, _tempReplicatedChangeVector, docPosition.Collection);
-                    TryResolveByLeader(documentsContext, docPosition.Id);
+                    TryResolveUsingDefaultResolver(documentsContext, docPosition.Id);
                     break;
             }
         }
@@ -1200,6 +1195,7 @@ namespace Raven.Server.Documents.Replication
                 _log.Info(
                     $"Sending heartbeat ok => {FromToString} with last document etag = {lastDocumentEtag}, last index/transformer etag = {lastIndexOrTransformerEtag} and document change vector: {databaseChangeVector.Format()}");
             }
+            var defaultResolver = _parent.ReplicationDocument?.DefaultResolver;
             var heartbeat = new DynamicJsonValue
             {
                 [nameof(ReplicationMessageReply.Type)] = "Ok",
@@ -1210,8 +1206,8 @@ namespace Raven.Server.Documents.Replication
                 [nameof(ReplicationMessageReply.DocumentsChangeVector)] = documentChangeVectorAsDynamicJson,
                 [nameof(ReplicationMessageReply.IndexTransformerChangeVector)] = indexesChangeVectorAsDynamicJson,
                 [nameof(ReplicationMessageReply.DatabaseId)] = _database.DbId.ToString(),
-                [nameof(ReplicationMessageReply.ResolverId)] = _replicationDocument?.DefaultResolver?.ResolvingDatabaseId,
-                [nameof(ReplicationMessageReply.ResolverVersion)] = _replicationDocument?.DefaultResolver?.Version
+                [nameof(ReplicationMessageReply.ResolverId)] = defaultResolver?.ResolvingDatabaseId,
+                [nameof(ReplicationMessageReply.ResolverVersion)] = defaultResolver?.Version
             };
            
             documentsContext.Write(writer, heartbeat);
@@ -1222,9 +1218,6 @@ namespace Raven.Server.Documents.Replication
 
         public string FromToString => $"from {ConnectionInfo.SourceDatabaseName} at {ConnectionInfo.SourceUrl} (into database {_database.Name})";
         public IncomingConnectionInfo ConnectionInfo { get; }
-
-        public ReplicationDocument ReplicationDocument =>
-            _replicationDocument ?? (_replicationDocument = _parent.GetReplicationDocument());
 
         private ChangeVectorEntry[] _tempReplicatedChangeVector = new ChangeVectorEntry[0];
         private readonly List<ReplicationDocumentsPositions> _replicatedDocs = new List<ReplicationDocumentsPositions>();

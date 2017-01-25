@@ -25,16 +25,10 @@ namespace Tryouts
         {
             for (int i = 0; i < 100; i++)
             {
-               using (var a = new ReplicationResolveToDatabase())
-                {
-                    var res =Task.Run(a.ChangeDatabaseAndResolve);
-                    var res2 =Task.Run(a.ResovleToDatabase);
-                    var res3 =Task.Run(a.ResovleToDatabaseComplex);
-                    var res4 =Task.Run(a.SetDatabaseResolverAtTwoNodes);
-                    var res5 =Task.Run(a.UnsetDatabaseResolver);
-
-                    Task.WaitAll(res, res2, res3, res4, res5);
-                }
+               using (var a = new FastTests.Server.Replication.ReplicationResolveToDatabase())
+               {
+                   a.UnsetDatabaseResolver();
+               }
                 Console.WriteLine($"{i} finished");
             }
 

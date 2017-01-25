@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Replication
         private readonly byte[] _tempBuffer = new byte[32 * 1024];
         private readonly Stream _stream;
         private readonly OutgoingReplicationHandler _parent;
-        private ReplicationDocument _replicationDocument => _parent._parent.ReplicationDocument;
+
         public ReplicationDocumentSender(Stream stream, OutgoingReplicationHandler parent, Logger log)
         {
             _log = log;
@@ -253,14 +253,15 @@ namespace Raven.Server.Documents.Replication
                     $"Starting sending replication batch ({_parent._database.Name}) with {_orderedReplicaItems.Count:#,#;;0} docs, and last etag {_lastEtag}");
 
             var sw = Stopwatch.StartNew();
+            var defaultResolver = _parent._parent.ReplicationDocument?.DefaultResolver;
             var headerJson = new DynamicJsonValue
             {
                 [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Documents,
                 [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastEtag,
                 [nameof(ReplicationMessageHeader.LastIndexOrTransformerEtag)] = _parent._lastSentIndexOrTransformerEtag,
                 [nameof(ReplicationMessageHeader.ItemCount)] = _orderedReplicaItems.Count,
-                [nameof(ReplicationMessageHeader.ResolverId)] = _replicationDocument?.DefaultResolver?.ResolvingDatabaseId,
-                [nameof(ReplicationMessageHeader.ResolverVersion)] = _replicationDocument?.DefaultResolver?.Version
+                [nameof(ReplicationMessageHeader.ResolverId)] = defaultResolver?.ResolvingDatabaseId,
+                [nameof(ReplicationMessageHeader.ResolverVersion)] = defaultResolver?.Version
             };
 
             _parent.WriteToServer(headerJson);
