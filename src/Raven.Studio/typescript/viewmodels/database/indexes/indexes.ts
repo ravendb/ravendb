@@ -324,11 +324,10 @@ class indexes extends viewModelBase {
         }
     }
 
-    createNotifications(): Array<changeSubscription> {
-        return [
-            this.changesContext.currentResourceChangesApi().watchAllIndexes((e) => this.processIndexEvent(e)),
-            this.changesContext.currentResourceChangesApi().watchDocsStartingWith(indexReplaceDocument.replaceDocumentPrefix, () => this.processReplaceEvent())
-        ];
+    protected afterClientApiConnected() {
+        const changesApi = this.changesContext.resourceChangesApi();
+        this.addNotification(changesApi.watchAllIndexes(e => this.processIndexEvent(e)));
+        this.addNotification(changesApi.watchDocsStartingWith(indexReplaceDocument.replaceDocumentPrefix, () => this.processReplaceEvent()));
     }
 
     private processReplaceEvent() {

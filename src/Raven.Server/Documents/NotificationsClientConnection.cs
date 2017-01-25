@@ -336,27 +336,8 @@ namespace Raven.Server.Documents
                 });
         }
 
-        private void SendStartTime()
+        public async Task StartSendingNotifications(bool throttleConnection)
         {
-            var value = new DynamicJsonValue
-            {
-                ["Type"] = "ServerStartTimeNotification",
-                ["Value"] = _documentDatabase.StartTime
-            };
-
-            if (_disposeToken.IsCancellationRequested == false)
-                _sendQueue.Enqueue(new NotificationValue
-                {
-                    ValueToSend = value,
-                    AllowSkip = false
-                });
-        }
-
-        public async Task StartSendingNotifications(bool sendStartTime, bool throttleConnection)
-        {
-            if (sendStartTime)
-                SendStartTime();
-
             JsonOperationContext context;
             using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {

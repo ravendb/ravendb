@@ -5,7 +5,7 @@ import appUrl = require("common/appUrl");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import messagePublisher = require("common/messagePublisher");
 
-abstract class abstractWebSocketClient {
+abstract class abstractWebSocketClient<T> {
 
     private static readonly readyStateOpen = 1;
 
@@ -33,12 +33,16 @@ abstract class abstractWebSocketClient {
         }
     }
 
-    protected abstract onMessage(e: any): void;
+    protected abstract onMessage(e: T): void;
 
     protected abstract get connectionDescription(): string;
 
     // it should return something like: /changes?foo=bar&singleUseAuthToken=123
     protected abstract webSocketUrlFactory(token: singleAuthToken): string;
+
+    protected isHeartBeat(e: any): boolean {
+        return !e.data.trim();
+    }
 
     private connect(action: (token: singleAuthToken) => void, recoveringFromWebsocketFailure: boolean = false) {
         if (this.disposed) {
@@ -61,7 +65,7 @@ abstract class abstractWebSocketClient {
                     return;
                 }
                     
-                var error = !!e.responseJSON ? e.responseJSON.Error : e.responseText;
+                const error = !!e.responseJSON ? e.responseJSON.Error : e.responseText;
                 if (e.status === 0) {
                     // Connection has closed so try to reconnect every 3 seconds.
                     setTimeout(() => this.connect(action), 3 * 1000);
@@ -89,7 +93,11 @@ abstract class abstractWebSocketClient {
         const url = wsProtocol + window.location.host + this.resourcePath + queryString;
         this.webSocket = new WebSocket(url);
 
-        this.webSocket.onmessage = (e) => this.onMessage(e);
+        this.webSocket.onmessage = (e) => {
+            if (!this.isHeartBeat(e)) {
+                this.onMessage(JSON.parse(e.data));
+            }
+        }
         this.webSocket.onerror = (e) => {
             if (connectionOpened === false) {
                 this.onError(e);
@@ -111,14 +119,15 @@ abstract class abstractWebSocketClient {
 
     protected onOpen() {
         console.log("Connected to WebSocket changes API (" + this.connectionDescription + ")");
+        
         this.reconnect();
+        this.connectToWebSocketTask.resolve();
     }
 
     private reconnect() {
-        //TODO: don't send watch operations when server is restarted
         //send changes connection args after reconnecting
         this.sentMessages.forEach(args => this.send(args.Command, args.Param, false));
-            
+
         if (abstractWebSocketClient.messageWasShownOnce) {
             messagePublisher.reportSuccess("Successfully reconnected to changes stream!");
             abstractWebSocketClient.messageWasShownOnce = false;
@@ -134,7 +143,7 @@ abstract class abstractWebSocketClient {
 
     protected send(command: string, value?: string, needToSaveSentMessages: boolean = true) {
         this.connectToWebSocketTask.done(() => {
-            var args: chagesApiConfigureRequestDto = {
+            const args: chagesApiConfigureRequestDto = {
                 Command: command
             };
             if (value !== undefined) {

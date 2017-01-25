@@ -1,6 +1,5 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
-import getOperationStatusCommand = require("commands/operations/getOperationStatusCommand");
 import endpoints = require("endpoints");
 
 class evalByQueryCommand extends commandBase {
@@ -10,8 +9,6 @@ class evalByQueryCommand extends commandBase {
     }
 
     execute(): JQueryPromise<operationIdDto> {
-        this.reportInfo("Patching documents...");
-
         const url = endpoints.databases.queries.queries$ + this.indexName;
         const urlParams = "?query=" + encodeURIComponent(this.queryStr) + "&allowStale=true";
         return this.patch(url + urlParams, JSON.stringify(this.patchRequest), this.db)

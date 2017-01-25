@@ -163,12 +163,10 @@ class timeSeriesPoints extends viewModelBase {
         timeSeriesPoints.isInitialized(false);
     }
 
-    createNotifications(): Array<changeSubscription> {
-        return [
-            /*TODO: Implement this in changes api:
-            changesContext.currentResourceChangesApi().watchAllTimeSeries((e: timeSeriesChangeNotification) => this.refreshPoints()),
-            changesContext.currentResourceChangesApi().watchTimeSeriesBulkOperation(() => this.refreshPoints())*/
-        ];
+    afterClientApiConnected(): void {
+        const changesApi = this.changesContext.resourceChangesApi();
+        //TODO: this.addNotification(changesApi.watchAllTimeSeries((e: timeSeriesChangeNotification) => this.refreshPoints()));
+        //TODO: this.addNotification(changesApi.watchTimeSeriesBulkOperation(() => this.refreshPoints()));
     }
 
     createPostboxSubscriptions(): Array<KnockoutSubscription> {

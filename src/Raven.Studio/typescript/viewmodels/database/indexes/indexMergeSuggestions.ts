@@ -42,8 +42,9 @@ class indexMergeSuggestions extends viewModelBase {
         return $.when(fetchIndexMergeSuggestionsTask, fetchStatsTask);
     }
 
-    createNotifications(): Array<changeSubscription> {
-        return [ /* TODO changesContext.currentResourceChangesApi().watchAllIndexes(() => this.fetchIndexMergeSuggestions()) */ ];
+    afterClientApiConnected(): void {
+        const changesApi = this.changesContext.resourceChangesApi();
+        this.addNotification(changesApi.watchAllIndexes(e => this.fetchIndexMergeSuggestions()));
     }
 
     private fetchStats(): JQueryPromise<Raven.Client.Data.DatabaseStatistics> {

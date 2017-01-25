@@ -1,6 +1,5 @@
 import commandBase = require("commands/commandBase");
 import filesystem = require("models/filesystem/filesystem");
-import getOperationStatusCommand = require("commands/operations/getOperationStatusCommand");
 
 class deleteFilesMatchingQueryCommand extends commandBase {
     constructor(private queryText: string, private fs: filesystem) {
@@ -23,9 +22,9 @@ class deleteFilesMatchingQueryCommand extends commandBase {
     }
 
     private waitForOperationToComplete(fs: filesystem, operationId: number, task: JQueryDeferred<any>) {
-        new getOperationStatusCommand(fs, operationId)
+        /* TODO new getOperationStatusCommand(fs, operationId)
             .execute();
-            //TODO: .done((result: operationStatusDto) => this.deletionStatusRetrieved(fs, operationId, result, task));
+            .done((result: operationStatusDto) => this.deletionStatusRetrieved(fs, operationId, result, task));*/
     }
 
     private deletionStatusRetrieved(fs: filesystem, operationId: number, result: operationStatusDto, task: JQueryDeferred<any>) {

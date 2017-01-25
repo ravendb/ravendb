@@ -126,11 +126,11 @@ class counters extends viewModelBase {
         counters.isInitialized(false);
     }
 
-    createNotifications(): Array<changeSubscription> {
-        return [/* TODO
-            changesContext.currentResourceChangesApi().watchAllCounters((e: counterChangeNotification) => this.refreshGroups()),
-            changesContext.currentResourceChangesApi().watchCounterBulkOperation(() => this.refreshGroups()) */
-        ];
+    afterClientApiConnected(): void {
+        /* TODO
+        const changesApi = this.changesContext.resourceChangesApi();
+        this.addNotification(changesApi.watchAllCounters((e: counterChangeNotification) => this.refreshGroups()));
+        this.addNotification(changesApi.watchCounterBulkOperation(() => this.refreshGroups()));*/
     }
 
     createPostboxSubscriptions(): Array<KnockoutSubscription> {

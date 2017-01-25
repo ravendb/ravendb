@@ -23,10 +23,9 @@ class indexErrors extends viewModelBase {
         this.tableNavigation = new tableNavigationTrait<serverErrorDto>("#indexErrorsTableContainer", this.selectedIndexError, this.allIndexErrors, i => "#indexErrorsTableContainer table tbody tr:nth-child(" + (i + 1) + ")");
     }
 
-    createNotifications(): Array<changeSubscription> {
-        return [
-            //TODO: changesContext.currentResourceChangesApi().watchAllIndexes(() => this.fetchIndexErrors())
-        ];
+    afterClientApiConnected(): void {
+        const changesApi = this.changesContext.resourceChangesApi();
+        this.addNotification(changesApi.watchAllIndexes(() => this.fetchIndexErrors()));
     }
 
     activate(args: any) {

@@ -105,8 +105,9 @@ class configuration extends viewModelBase {
         }
     }
 
-    createNotifications(): Array<changeSubscription> {
-        return [ /*TODO: changesContext.currentResourceChangesApi().watchFsConfig((e: filesystemConfigNotification) => this.processFsConfigNotification(e))  */];
+    afterClientApiConnected(): void {
+        const changesApi = this.changesContext.resourceChangesApi();
+        //TODO : this.addNotification(changeApi.watchFsConfig((e: filesystemConfigNotification) => this.processFsConfigNotification(e)));
     }
 
     processFsConfigNotification(e: filesystemConfigNotification) {

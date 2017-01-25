@@ -37,12 +37,22 @@ namespace Raven.Server.NotificationCenter.Handlers
 
         public async Task WriteNotifications()
         {
+            var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
+            var receive = _webSocket.ReceiveAsync(receiveBuffer, _resourceShutdown);
+
             var asyncQueue = new AsyncQueue<Action>();
-            
+
             using (_notificationCenter.TrackActions(asyncQueue))
             {
                 while (_resourceShutdown.IsCancellationRequested == false)
                 {
+                    // we use this to detect client-initialized closure
+                    if (receive.IsCompleted)
+                    {
+                        if (_webSocket.CloseStatus == WebSocketCloseStatus.NormalClosure)
+                            break;
+                    }
+
                     var tuple = await asyncQueue.TryDequeueAsync(TimeSpan.FromSeconds(5));
                     if (tuple.Item1 == false)
                     {
