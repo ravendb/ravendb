@@ -6,14 +6,16 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Commands;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class SecialCharactersInDefinition : RavenTestBase
+    public class SecialCharactersInDefinition : RavenNewTestBase
     {
-        const string FooIndexName = "SomeFooIndexWithSpecialCharacters";
+        private const string FooIndexName = "SomeFooIndexWithSpecialCharacters";
 
         [Fact]
         public void CanContainSecialCharactersInDefinition()
@@ -21,7 +23,7 @@ namespace SlowTests.Bugs.Indexing
             using (var documentStore = GetDocumentStore())
             {
                 new FooIndex().Execute(documentStore);
-                Assert.NotNull(documentStore.DatabaseCommands.GetIndex(FooIndexName));
+                Assert.NotNull(documentStore.Admin.Send(new GetIndexOperation(FooIndexName)));
             }
         }
 
@@ -37,7 +39,7 @@ namespace SlowTests.Bugs.Indexing
                                   Chars = new[]
                                   {
                                     '\n', '\r', '\'', '\b', '\"', '\\', '\t', '\v', '\u0013', '\u1567', '\0'
-                                  }                   
+                                  }
                               };
             }
 

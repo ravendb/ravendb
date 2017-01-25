@@ -1,14 +1,15 @@
 using System;
-using FastTests;
-using Raven.Client.Indexing;
-using Xunit;
 using System.Linq;
-using Raven.Abstractions.Data;
+using FastTests;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Raven.Server.Config;
+using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class CanIndexAllDocsWhenThereAreMoreDocsThanTheBatchSize : RavenTestBase
+    public class CanIndexAllDocsWhenThereAreMoreDocsThanTheBatchSize : RavenNewTestBase
     {
         private class User
         {
@@ -21,34 +22,34 @@ namespace SlowTests.Bugs.Indexing
             public bool Active { get; set; }
         }
 
-        Action<DatabaseDocument> modifyMapTimeout = doc =>
+        private readonly Action<DatabaseDocument> _modifyMapTimeout = doc =>
         {
             doc.Settings[RavenConfiguration.GetKey(x => x.Indexing.MapTimeout)] = "0";
         };
 
         [Fact]
         public void WillIndexAllWhenCreatingIndex()
-        {    
-            using (var store = GetDocumentStore(modifyDatabaseDocument: modifyMapTimeout))
+        {
+            using (var store = GetDocumentStore(modifyDatabaseDocument: _modifyMapTimeout))
             {
                 using (var session = store.OpenSession())
                 {
                     for (int i = 0; i < 15; i++)
                     {
-                        session.Store(new User{Name="1"});
+                        session.Store(new User { Name = "1" });
                     }
                     session.SaveChanges();
                 }
 
-                store.DatabaseCommands.PutIndex("test",
-                                                new IndexDefinition
-                                                {
-                                                    Maps = { "from doc in docs select new { doc.Name}"}
-                                                });
+                store.Admin.Send(new PutIndexOperation("test",
+                    new IndexDefinition
+                    {
+                        Maps = { "from doc in docs select new { doc.Name}" }
+                    }));
 
                 using (var session = store.OpenSession())
                 {
-                    var users = session.Query<User>("test").Customize(x=>x.WaitForNonStaleResults()).ToArray();
+                    var users = session.Query<User>("test").Customize(x => x.WaitForNonStaleResults()).ToArray();
 
                     Assert.Equal(15, users.Length);
                 }
@@ -58,13 +59,13 @@ namespace SlowTests.Bugs.Indexing
         [Fact]
         public void WillIndexAllAfterCreatingIndex()
         {
-            using (var store = GetDocumentStore(modifyDatabaseDocument: modifyMapTimeout))
+            using (var store = GetDocumentStore(modifyDatabaseDocument: _modifyMapTimeout))
             {
-                store.DatabaseCommands.PutIndex("test",
-                                                new IndexDefinition
-                                                {
-                                                    Maps = { "from doc in docs select new { doc.Name}"}
-                                                });
+                store.Admin.Send(new PutIndexOperation("test",
+                    new IndexDefinition
+                    {
+                        Maps = { "from doc in docs select new { doc.Name}" }
+                    }));
 
                 using (var session = store.OpenSession())
                 {
@@ -74,7 +75,7 @@ namespace SlowTests.Bugs.Indexing
                     }
                     session.SaveChanges();
                 }
-                
+
                 using (var session = store.OpenSession())
                 {
                     var users = session.Query<User>("test").Customize(x => x.WaitForNonStaleResults()).ToArray();

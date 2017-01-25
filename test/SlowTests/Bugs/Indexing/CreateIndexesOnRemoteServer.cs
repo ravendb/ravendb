@@ -1,24 +1,27 @@
 ﻿using System.Linq;
 using FastTests;
-using Raven.Client.Document;
-using Raven.Client.Extensions;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Extensions;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Operations.Databases;
 using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class CreateIndexesOnRemoteServer : RavenTestBase
+    public class CreateIndexesOnRemoteServer : RavenNewTestBase
     {
         [Fact]
         public void CanCreateIndex()
         {
             DoNotReuseServer();
-            var name = "CreateIndexesOnRemoteServer_1";
+            const string name = "CreateIndexesOnRemoteServer_1";
             var doc = MultiDatabase.CreateDatabaseDocument(name);
 
-            using (var store = new DocumentStore { Url = UseFiddler(Server.WebUrls[0]), DefaultDatabase = name }.Initialize())
+            using (var store = new DocumentStore { Url = UseFiddler(Server.WebUrls[0]), DefaultDatabase = name })
             {
-                store.DatabaseCommands.GlobalAdmin.CreateDatabase(doc);
+                store.Initialize();
+
+                store.Admin.Send(new CreateDatabaseOperation(doc));
 
                 new SimpleIndex().Execute(store);
                 new SimpleIndex().Execute(store);

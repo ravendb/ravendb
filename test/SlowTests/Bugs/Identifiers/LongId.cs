@@ -3,7 +3,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Identifiers
 {
-    public class LongId : RavenTestBase
+    public class LongId : RavenNewTestBase
     {
         private class Entity
         {
@@ -13,7 +13,7 @@ namespace SlowTests.Bugs.Identifiers
         [Fact]
         public void Can_load_entity()
         {
-            using(var store = GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 object id;
                 using (var session = store.OpenSession())
@@ -26,7 +26,7 @@ namespace SlowTests.Bugs.Identifiers
 
                 using (var session = store.OpenSession())
                 {
-                    var entity1 = session.Load<Entity>("entities/"+id);
+                    var entity1 = session.Load<Entity>("entities/" + id);
                     Assert.NotNull(entity1);
                 }
             }

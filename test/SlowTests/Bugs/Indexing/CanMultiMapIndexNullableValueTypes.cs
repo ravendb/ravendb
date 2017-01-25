@@ -1,12 +1,12 @@
 using System;
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class CanMultiMapIndexNullableValueTypes : RavenTestBase
+    public class CanMultiMapIndexNullableValueTypes : RavenNewTestBase
     {
         private class Company
         {
@@ -18,7 +18,7 @@ namespace SlowTests.Bugs.Indexing
             public Companies_ByTurnover()
             {
                 AddMap<Company>(companies => from c in companies
-                                             select new { c.Turnover });                              
+                                             select new { c.Turnover });
             }
         }
 

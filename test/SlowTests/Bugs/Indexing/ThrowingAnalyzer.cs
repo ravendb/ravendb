@@ -7,16 +7,18 @@
 using System;
 using System.IO;
 using FastTests;
-using Lucene.Net.Analysis;
-using Raven.Client.Indexing;
 using Xunit;
 using System.Linq;
-using Raven.Abstractions.Connection;
-using Raven.Client.Data.Indexes;
+using Lucene.Net.Analysis;
+using Raven.NewClient.Client.Exceptions;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Data.Indexes;
+using Raven.NewClient.Operations.Databases;
+using Raven.NewClient.Operations.Databases.Indexes;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class ThrowingAnalyzer : RavenTestBase
+    public class ThrowingAnalyzer : RavenNewTestBase
     {
         private class User
         {
@@ -32,16 +34,16 @@ namespace SlowTests.Bugs.Indexing
         [Fact]
         public void Should_give_clear_error()
         {
-            var fieldOptions = new IndexFieldOptions {Analyzer = typeof(ThrowingAnalyzerImpl).AssemblyQualifiedName };
+            var fieldOptions = new IndexFieldOptions { Analyzer = typeof(ThrowingAnalyzerImpl).AssemblyQualifiedName };
 
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.PutIndex("foo",
+                store.Admin.Send(new PutIndexOperation("foo",
                                                 new IndexDefinition
                                                 {
-                                                    Maps = { "from doc in docs select new { doc.Name}"},
-                                                    Fields = { { "Name", fieldOptions} }
-                                                });
+                                                    Maps = { "from doc in docs select new { doc.Name}" },
+                                                    Fields = { { "Name", fieldOptions } }
+                                                }));
 
                 using (var session = store.OpenSession())
                 {
@@ -51,12 +53,12 @@ namespace SlowTests.Bugs.Indexing
 
                 using (var session = store.OpenSession())
                 {
-                    Assert.Throws<InvalidOperationException>(() =>
+                    Assert.Throws<RavenException>(() =>
 
-                                                                session.Query<User>("foo")
-                                                                .Customize(x => x.WaitForNonStaleResults())
-                                                                .ToList()
-                                                            );
+                        session.Query<User>("foo")
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .ToList()
+                    );
                 }
 
                 var db = GetDocumentDatabaseInstanceFor(store).Result;
@@ -73,27 +75,25 @@ namespace SlowTests.Bugs.Indexing
 
             using (var store = GetDocumentStore())
             {
-
-                store.DatabaseCommands.PutIndex("foo",
+                store.Admin.Send(new PutIndexOperation("foo",
                     new IndexDefinition
                     {
-                        Maps = {"from doc in docs select new { doc.Name}"},
-                        Fields = {{"Name", fieldOptions}}
-                    });
+                        Maps = { "from doc in docs select new { doc.Name}" },
+                        Fields = { { "Name", fieldOptions } }
+                    }));
 
-
-                    for (var i = 0; i < 20; i++)
+                for (var i = 0; i < 20; i++)
+                {
+                    using (var session = store.OpenSession())
                     {
-                        using (var session = store.OpenSession())
-                        {
-                            session.Store(new User { Name = "Ayende" });
-                            session.SaveChanges();
-                        }
-
-                        Assert.Throws<ErrorResponseException>(() => WaitForIndexing(store));                                                    
+                        session.Store(new User { Name = "Ayende" });
+                        session.SaveChanges();
                     }
-                                                    
-                var fooIndex = store.DatabaseCommands.GetStatistics().Indexes.First(x => x.Name == "foo");
+
+                    Assert.Throws<RavenException>(() => WaitForIndexing(store));
+                }
+
+                var fooIndex = store.Admin.Send(new GetStatisticsOperation()).Indexes.First(x => x.Name == "foo");
 
                 Assert.True(fooIndex.State == IndexState.Error);
 
@@ -105,7 +105,7 @@ namespace SlowTests.Bugs.Indexing
             }
         }
 
-        public class ThrowingAnalyzerImpl : Analyzer
+        private class ThrowingAnalyzerImpl : Analyzer
         {
             public ThrowingAnalyzerImpl()
             {

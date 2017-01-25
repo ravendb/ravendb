@@ -1,11 +1,11 @@
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class CanHaveAnIndexNameThatStartsWithDynamic : RavenTestBase
+    public class CanHaveAnIndexNameThatStartsWithDynamic : RavenNewTestBase
     {
         private class SomeDoc
         {
@@ -33,7 +33,7 @@ namespace SlowTests.Bugs.Indexing
                 Reduce = results => from result in results
                                     group result by result.MyStringProp
                                         into g
-                                        select new { MyStringProp = g.Key, Count = g.Sum(x => x.Count) };
+                                    select new { MyStringProp = g.Key, Count = g.Sum(x => x.Count) };
             }
         }
 
