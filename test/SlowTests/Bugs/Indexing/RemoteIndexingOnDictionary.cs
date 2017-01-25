@@ -1,47 +1,39 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client.Document;
-using Raven.Client.Extensions;
 using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class RemoteIndexingOnDictionary : RavenTestBase
+    public class RemoteIndexingOnDictionary : RavenNewTestBase
     {
         [Fact]
         public void CanIndexOnRangeForNestedValuesForDictionaryAsPartOfDictionary()
         {
-                DoNotReuseServer();            
-                var name = "RemoteIndexingOnDictionary_1";
-                var doc = MultiDatabase.CreateDatabaseDocument(name);
-
-                using (var store = new DocumentStore { Url = UseFiddler(Server.WebUrls[0]), DefaultDatabase = name }.Initialize())
+            using (var store = GetDocumentStore())
+            {
+                using (var s = store.OpenSession())
                 {
-                    store.DatabaseCommands.GlobalAdmin.CreateDatabase(doc);
-
-                    using (var s = store.OpenSession())
+                    s.Store(new UserWithIDictionary
                     {
-                        s.Store(new UserWithIDictionary
-                        {
-                            NestedItems = new Dictionary<string, NestedItem>
+                        NestedItems = new Dictionary<string, NestedItem>
                             {
                                 { "Color", new NestedItem{ Value=50 } }
                             }
-                        });
-                        s.SaveChanges();
-                    }
-
-                    using (var s = store.OpenSession())
-                    {
-                        s.Advanced.DocumentQuery<UserWithIDictionary>()
-                         .WhereEquals("NestedItems,Key", "Color")
-                         .AndAlso()
-                         .WhereGreaterThan("NestedItems,Value.Value", 10)
-                         .ToArray();
-                    }
+                    });
+                    s.SaveChanges();
                 }
-            
+
+                using (var s = store.OpenSession())
+                {
+                    s.Advanced.DocumentQuery<UserWithIDictionary>()
+                     .WhereEquals("NestedItems,Key", "Color")
+                     .AndAlso()
+                     .WhereGreaterThan("NestedItems,Value.Value", 10)
+                     .ToArray();
+                }
+            }
+
         }
 
         #region Nested type: UserWithIDictionary / NestedItem

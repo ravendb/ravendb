@@ -77,7 +77,7 @@ namespace Raven.NewClient.Client.Bundles.MoreLikeThis
             var inMemoryDocumentSessionOperations = ((InMemoryDocumentSessionOperations)advancedSession);
             inMemoryDocumentSessionOperations.IncrementRequestCount();
 
-            var loadOperation = new LoadOperation(inMemoryDocumentSessionOperations, null, null, true);
+            var loadOperation = new LoadOperation(inMemoryDocumentSessionOperations, true);
 
             var command = new MoreLikeThisCommand()
             {
@@ -154,7 +154,7 @@ namespace Raven.NewClient.Client.Bundles.MoreLikeThis
             var inMemoryDocumentSessionOperations = ((InMemoryDocumentSessionOperations)advancedSession);
             inMemoryDocumentSessionOperations.IncrementRequestCount();
 
-            var loadOperation = new LoadOperation(inMemoryDocumentSessionOperations, null, null, true);
+            var loadOperation = new LoadOperation(inMemoryDocumentSessionOperations, true);
 
             var command = new MoreLikeThisCommand()
             {

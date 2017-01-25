@@ -1,11 +1,11 @@
 using System.Linq;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class QueryWithStaticIndexesAndCommonBaseClass : RavenTestBase
+    public class QueryWithStaticIndexesAndCommonBaseClass : RavenNewTestBase
     {
         [Fact]
         public void CanCreateCorrectIndexForNestedObjectWithReferenceId()
@@ -17,12 +17,12 @@ namespace SlowTests.Bugs.Indexing
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Root
-                                      {
-                                          User = new UserReference
-                                                     {
-                                                         Id = "Users/1"
-                                                     }
-                                      });
+                    {
+                        User = new UserReference
+                        {
+                            Id = "Users/1"
+                        }
+                    });
                     session.SaveChanges();
                 }
 

@@ -5,14 +5,15 @@
 // -----------------------------------------------------------------------
 
 using FastTests;
-using Raven.Client.Data.Indexes;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Data.Indexes;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class SetIndexPriority : RavenTestBase
+    public class SetIndexPriority : RavenNewTestBase
     {
         private class FakeIndex : AbstractIndexCreationTask
         {
@@ -20,7 +21,7 @@ namespace SlowTests.Bugs.Indexing
             {
                 return new IndexDefinition()
                 {
-                    Maps = { "from d in docs select new { d.Id }"}
+                    Maps = { "from d in docs select new { d.Id }" }
                 };
             }
         }
@@ -34,12 +35,12 @@ namespace SlowTests.Bugs.Indexing
 
                 foreach (var expected in new[] { IndexPriority.Normal, IndexPriority.High, IndexPriority.Low })
                 {
-                    store.DatabaseCommands.SetIndexPriority("FakeIndex", expected);
+                    store.Admin.Send(new SetIndexPriorityOperation("FakeIndex", expected));
 
-                    var db = GetDocumentDatabaseInstanceFor(store).Result; 
+                    var db = GetDocumentDatabaseInstanceFor(store).Result;
                     var indexInstance = db.IndexStore.GetIndex("FakeIndex");
 
-                    Assert.Equal(expected, indexInstance.Priority);
+                    Assert.Equal((int)expected, (int)indexInstance.Priority);
                 }
             }
         }

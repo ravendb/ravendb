@@ -220,6 +220,8 @@ namespace Raven.NewClient.Client.Json
                 return (decimal)(double)Value;
             if (Value is decimal)
                 return (decimal)Value;
+            if (Value == null)
+                return null;
             return (decimal)Convert.ChangeType(Value, typeof(decimal));
         }
 

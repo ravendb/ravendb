@@ -15,14 +15,10 @@ namespace Raven.NewClient.Client.Commands
         private string[] _ids;
         private string[] _includes;
         private readonly List<string> _idsToCheckOnServer = new List<string>();
-        private bool _withoutIds;
-        public LoadOperation(InMemoryDocumentSessionOperations session, string[] ids = null, string[] includes = null, bool withoutIds = false)
+        private readonly bool _withoutIds;
+        public LoadOperation(InMemoryDocumentSessionOperations session, bool withoutIds = false)
         {
             _session = session;
-            if (ids != null)
-                _ids = ids;
-            if (includes != null)
-                _includes = includes;
             _withoutIds = withoutIds;
         }
 
@@ -45,32 +41,36 @@ namespace Raven.NewClient.Client.Commands
             };
         }
 
-        public void ById(string id)
+        public LoadOperation ById(string id)
         {
             if (id == null)
-                return;
+                return this;
 
             if (_ids == null)
                 _ids = new[] {id};
 
             if (_session.IsLoadedOrDeleted(id))
-                return;
+                return this;
 
             _idsToCheckOnServer.Add(id);
+            return this;
         }
 
-        public void WithIncludes(string[] includes)
+        public LoadOperation WithIncludes(string[] includes)
         {
-            this._includes = includes;
+            _includes = includes;
+            return this;
         }
 
-        public void ByIds(IEnumerable<string> ids)
+        public LoadOperation ByIds(IEnumerable<string> ids)
         {
             _ids = ids.ToArray();
             foreach (var id in _ids.Distinct(StringComparer.OrdinalIgnoreCase))
             {
                 ById(id);
             }
+
+            return this;
         }
 
         public T GetDocument<T>()
@@ -128,7 +128,7 @@ namespace Raven.NewClient.Client.Commands
             foreach (BlittableJsonReaderObject document in result.Results)
             {
                 var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(document);
-                _session.DocumentsById[newDocumentInfo.Id] = newDocumentInfo;
+                _session.DocumentsById.Add(newDocumentInfo);
                 if (_withoutIds)
                     ids.Add(newDocumentInfo.Id);
             }

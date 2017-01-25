@@ -1,24 +1,25 @@
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexing;
-using Raven.Client;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class CanIndexWithCharLiteral : RavenTestBase
+    public class CanIndexWithCharLiteral : RavenNewTestBase
     {
         [Fact]
         public void CanQueryDocumentsIndexWithCharLiteral()
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.PutIndex("test", new IndexDefinition
+                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
                 {
                     Maps = { "from doc in docs select  new { SortVersion = doc.Version.PadLeft(5, '0') }" },
                     Fields = { { "SortVersion", new IndexFieldOptions { Storage = FieldStorage.Yes } } }
-                });
+                }));
 
                 using (var s = store.OpenSession())
                 {

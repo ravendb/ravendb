@@ -104,7 +104,7 @@ namespace Raven.NewClient.Client.Document.Async
             var responses = multiGetCommand.Result;
 
             for (var i = 0; i < pendingLazyOperations.Count; i++)
-            { 
+            {
                 long totalTime;
                 string tempReqTime;
                 var response = responses[i];
@@ -226,21 +226,21 @@ namespace Raven.NewClient.Client.Document.Async
             if (IsLoaded(id))
                 return new Lazy<Task<T>>(() => LoadAsync<T>(id, token));
 
-            var lazyLoadOperation = new LazyLoadOperation<T>(new LoadOperation(this, new[] { id }), id);
+            var lazyLoadOperation = new LazyLoadOperation<T>(this, new LoadOperation(this).ById(id)).ById(id);
             return AddLazyOperation(lazyLoadOperation, onEval, token);
         }
 
         public Lazy<Task<Dictionary<string, T>>> MoreLikeThisAsync<T>(MoreLikeThisQuery query, CancellationToken token = new CancellationToken())
         {
-            var loadOperation = new LoadOperation(this, null, null);
+            var loadOperation = new LoadOperation(this);
             var lazyOp = new LazyMoreLikeThisOperation<T>(loadOperation, query);
             return AddLazyOperation<Dictionary<string, T>>(lazyOp, null, token);
         }
 
         public Lazy<Task<Dictionary<string, T>>> LazyAsyncLoadInternal<T>(string[] ids, string[] includes, Action<Dictionary<string, T>> onEval, CancellationToken token = default(CancellationToken))
         {
-            var loadOperation = new LoadOperation(this, ids, includes);
-            var lazyOp = new LazyLoadOperation<T>(loadOperation, ids, includes);
+            var loadOperation = new LoadOperation(this).ByIds(ids).WithIncludes(includes);
+            var lazyOp = new LazyLoadOperation<T>(this, loadOperation).ByIds(ids).WithIncludes(includes);
             return AddLazyOperation(lazyOp, onEval, token);
         }
 

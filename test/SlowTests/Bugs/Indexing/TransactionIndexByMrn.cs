@@ -1,12 +1,11 @@
 using FastTests;
-using Raven.Client.Indexes;
 using Xunit;
 using System.Linq;
+using Raven.NewClient.Client.Indexes;
 
 namespace SlowTests.Bugs.Indexing
 {
-
-    public class TransactionIndexByMrn : RavenTestBase
+    public class TransactionIndexByMrn : RavenNewTestBase
     {
         private class Transaction
         {
@@ -18,7 +17,7 @@ namespace SlowTests.Bugs.Indexing
             public Transaction_ByMrn()
             {
                 Map = transactions => from transaction in transactions
-                                      select new { MRN = transaction.MRN };                              
+                                      select new { MRN = transaction.MRN };
             }
         }
 

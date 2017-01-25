@@ -8,11 +8,10 @@ using System.Collections.Generic;
 using FastTests;
 using Xunit;
 using System.Linq;
-using Raven.Client.Linq;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class IndexingOnDictionary : RavenTestBase
+    public class IndexingOnDictionary : RavenNewTestBase
     {
         [Fact]
         public void CanIndexValuesForDictionary()
@@ -22,12 +21,12 @@ namespace SlowTests.Bugs.Indexing
                 using (var s = store.OpenSession())
                 {
                     s.Store(new User
-                                {
-                                    Items = new Dictionary<string, string>
+                    {
+                        Items = new Dictionary<string, string>
                                                 {
                                                     {"Color", "Red"}
                                                 }
-                                });
+                    });
 
                     s.SaveChanges();
                 }
@@ -80,7 +79,7 @@ namespace SlowTests.Bugs.Indexing
                 using (var s = store.OpenSession())
                 {
                     s.Store(new User
-                                {
+                    {
                         NestedItems = new Dictionary<string, NestedItem>
                         {
                             { "Color", new NestedItem{ Name="Red" } }
@@ -167,12 +166,12 @@ namespace SlowTests.Bugs.Indexing
                 using (var s = store.OpenSession())
                 {
                     s.Store(new User
-                                {
-                                    Items = new Dictionary<string, string>
+                    {
+                        Items = new Dictionary<string, string>
                                                 {
                                                     {"3", "Red"}
                                                 }
-                                });
+                    });
 
                     s.SaveChanges();
                 }

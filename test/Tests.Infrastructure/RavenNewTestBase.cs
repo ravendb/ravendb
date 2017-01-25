@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Json.Linq;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client;
 using Raven.NewClient.Client.Commands;
@@ -11,6 +13,7 @@ using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Data.Indexes;
 using Raven.NewClient.Operations.Databases;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
@@ -113,27 +116,22 @@ namespace FastTests
 
         }
 
-        public static void WaitForIndexing(IDocumentStore store, string dbName = null, TimeSpan? timeout = null)
+        public static void WaitForIndexing(DocumentStore store, string dbName = null, TimeSpan? timeout = null)
         {
-            JsonOperationContext jsonOperationContext;
-            var requestExecuter = store.GetRequestExecuter(dbName ?? store.DefaultDatabase);
-            requestExecuter.ContextPool.AllocateOperationContext(out jsonOperationContext);
+            var admin = store.Admin.ForDatabase(dbName);
 
             timeout = timeout ?? (Debugger.IsAttached
                           ? TimeSpan.FromMinutes(15)
                           : TimeSpan.FromMinutes(1));
 
-
             var sp = Stopwatch.StartNew();
             while (sp.Elapsed < timeout.Value)
             {
-                var getStatsCommand = new GetStatisticsCommand();
-                requestExecuter.Execute(getStatsCommand, jsonOperationContext);
+                var databaseStatistics = admin.Send(new GetStatisticsOperation());
+                var indexes = databaseStatistics.Indexes
+                    .Where(x => x.State != IndexState.Disabled);
 
-                var databaseStatistics = getStatsCommand.Result;
-
-
-                if (databaseStatistics.Indexes.All(x => x.IsStale == false))
+                if (indexes.All(x => x.IsStale == false))
                     return;
 
                 if (databaseStatistics.Indexes.Any(x => x.State == IndexState.Error))
@@ -143,42 +141,38 @@ namespace FastTests
                 Thread.Sleep(32);
             }
 
-            // TODO iftah
-            /*var request = databaseCommands.CreateRequest("/indexes/performance", HttpMethod.Get);
-            var perf = request.ReadResponseJson();
-            request = databaseCommands.CreateRequest("/indexes/errors", HttpMethod.Get);
-            var errors = request.ReadResponseJson();
+            var perf = admin.Send(new GetIndexPerformanceStatisticsOperation());
+            var errors = admin.Send(new GetIndexErrorsOperation());
+            var stats = admin.Send(new GetIndexesStatisticsOperation());
 
-            var total = new JObject
+            var total = new
             {
-                ["Errors"] = JObject.Parse(errors.ToString()),
-                ["Performance"] = JObject.Parse(perf.ToString())
+                Errors = errors,
+                Stats = stats,
+                Performance = perf
             };
 
-            //var total = new RavenJObject
-            //{
-            //    ["Errors"] = errors,
-            //    ["Performance"] = perf
-            //};
-
             var file = Path.GetTempFileName() + ".json";
-            using (var writer = File.CreateText(file))
+            using (var stream = File.Open(file, FileMode.OpenOrCreate))
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (var writer = new BlittableJsonTextWriter(context, stream))
             {
-                var jsonTextWriter = new JsonTextWriter(writer);
-                total.WriteTo(jsonTextWriter);
-                jsonTextWriter.Flush();
+                var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(total);
+                var json = context.ReadObject(djv, "errors");
+                writer.WriteObject(json);
+                writer.Flush();
             }
 
-            var stats = databaseCommands.GetStatistics();
+            var statistics = admin.Send(new GetStatisticsOperation());
 
-            var corrupted = stats.Indexes.Where(x => x.State == IndexState.Error).ToList();
+            var corrupted = statistics.Indexes.Where(x => x.State == IndexState.Error).ToList();
             if (corrupted.Count > 0)
             {
                 throw new InvalidOperationException(
                     $"The following indexes are with error state: {string.Join(",", corrupted.Select(x => x.Name))} - details at " + file);
             }
 
-            throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value + ", stats at " + file);*/
+            throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value + ", stats at " + file);
         }
 
         public static void WaitForUserToContinueTheTest(DocumentStore documentStore, bool debug = true, int port = 8079)

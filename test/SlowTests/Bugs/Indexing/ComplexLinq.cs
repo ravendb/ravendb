@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class ComplexLinq : RavenTestBase
+    public class ComplexLinq : RavenNewTestBase
     {
         [Fact]
         public void QueryOnNegation()
@@ -33,13 +33,13 @@ namespace SlowTests.Bugs.Indexing
         [Fact]
         public void QueryOnMultipleItems()
         {
-            using(var store = GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                using(var session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     string first = "Ayende";
                     string last = "Rahien";
-                    DateTime birthDate = new DateTime(2001,1,1);
+                    DateTime birthDate = new DateTime(2001, 1, 1);
                     string country = "Israel";
                     var queryable = session.Query<Client>().Where(x =>
                                                                   x.FirstName == first &&

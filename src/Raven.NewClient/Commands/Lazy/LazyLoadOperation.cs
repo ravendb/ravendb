@@ -1,9 +1,12 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
+using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Document.Batches;
 using Raven.NewClient.Client.Json;
 using Sparrow.Json;
@@ -12,36 +15,27 @@ namespace Raven.NewClient.Client.Commands.Lazy
 {
     public class LazyLoadOperation<T> : ILazyOperation
     {
+        private readonly InMemoryDocumentSessionOperations _session;
         private readonly LoadOperation _loadOperation;
-        private readonly string[] _ids;
-        private readonly string _transformer;
-        private readonly string[] _includes;
+        private string[] _ids;
+        private string _transformer;
+        private string[] _includes;
 
         public LazyLoadOperation(
-            LoadOperation loadOperation,
-            string[] ids,
-            string[] includes,
-            string transformer = null)
+            InMemoryDocumentSessionOperations session,
+            LoadOperation loadOperation)
         {
+            _session = session;
             _loadOperation = loadOperation;
-            _ids = ids;
-            _includes = includes;
-            _transformer = transformer;
-        }
-
-        public LazyLoadOperation(
-            LoadOperation loadOperation,
-            string id)
-        {
-            this._loadOperation = loadOperation;
-            _ids = new[] { id };
         }
 
         public GetRequest CreateRequest()
         {
+            var idsToCheckOnServer = _ids.Where(id => _session.IsLoadedOrDeleted(id) == false);
+
             var queryBuilder = new StringBuilder("?");
             _includes.ApplyIfNotNull(include => queryBuilder.AppendFormat("&include={0}", include));
-            _ids.ApplyIfNotNull(id => queryBuilder.AppendFormat("&id={0}", Uri.EscapeDataString(id)));
+            idsToCheckOnServer.ApplyIfNotNull(id => queryBuilder.AppendFormat("&id={0}", Uri.EscapeDataString(id)));
 
             if (string.IsNullOrEmpty(_transformer) == false)
                 queryBuilder.AppendFormat("&transformer={0}", _transformer);
@@ -51,6 +45,36 @@ namespace Raven.NewClient.Client.Commands.Lazy
                 Url = "/docs",
                 Query = queryBuilder.ToString()
             };
+        }
+
+        public LazyLoadOperation<T> ById(string id)
+        {
+            if (id == null)
+                return this;
+
+            if (_ids == null)
+                _ids = new[] { id };
+
+            return this;
+        }
+
+        public LazyLoadOperation<T> ByIds(IEnumerable<string> ids)
+        {
+            _ids = ids.ToArray();
+
+            return this;
+        }
+
+        public LazyLoadOperation<T> WithIncludes(string[] includes)
+        {
+            _includes = includes;
+            return this;
+        }
+
+        public LazyLoadOperation<T> WithTransformer(string transformer)
+        {
+            _transformer = transformer;
+            return this;
         }
 
         public object Result { get; set; }
@@ -72,9 +96,9 @@ namespace Raven.NewClient.Client.Commands.Lazy
 
         private void HandleResponse(GetDocumentResult loadResult)
         {
-            _loadOperation.SetResult(loadResult);
-            if (RequiresRetry == false)
-                Result = _loadOperation.GetDocuments<T>();
+              _loadOperation.SetResult(loadResult);
+              if (RequiresRetry == false)
+                  Result = _loadOperation.GetDocuments<T>();
         }
     }
 }

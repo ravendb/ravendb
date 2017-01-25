@@ -109,15 +109,14 @@ namespace Raven.NewClient.Client.Commands
                 if (state.CurrentTokenType != JsonParserToken.StartObject)
                     ThrowInvalidResponse();
 
-                var property = UnmanagedJsonParserHelper.ReadProperty(context, stream, parser, state, buffer);
+                var property = UnmanagedJsonParserHelper.ReadString(context, stream, parser, state, buffer);
                 if (property != nameof(BlittableArrayResult.Results))
                     ThrowInvalidResponse();
 
                 var i = 0;
                 Result = new List<GetResponse>();
-                foreach (var result in UnmanagedJsonParserHelper.ReadArray(context, stream, parser, state, buffer))
+                foreach (var getResponse in ReadResponses(context, stream, parser, state, buffer))
                 {
-                    var getResponse = ConvertToGetResponse(result);
                     var command = _commands[i];
 
                     MaybeSetCache(getResponse, command, options);
@@ -134,6 +133,100 @@ namespace Raven.NewClient.Client.Commands
                 if (state.CurrentTokenType != JsonParserToken.EndObject)
                     ThrowInvalidResponse();
             }
+        }
+
+        private static IEnumerable<GetResponse> ReadResponses(JsonOperationContext context, Stream stream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.ManagedPinnedBuffer buffer)
+        {
+            if (UnmanagedJsonParserHelper.Read(stream, parser, state, buffer) == false)
+                ThrowInvalidResponse();
+
+            if (state.CurrentTokenType != JsonParserToken.StartArray)
+                ThrowInvalidResponse();
+
+            while (true)
+            {
+                if (UnmanagedJsonParserHelper.Read(stream, parser, state, buffer) == false)
+                    ThrowInvalidResponse();
+
+                if (state.CurrentTokenType == JsonParserToken.EndArray)
+                    break;
+
+                yield return ReadResponse(context, stream, parser, state, buffer);
+            }
+        }
+
+        private static unsafe GetResponse ReadResponse(JsonOperationContext context, Stream stream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.ManagedPinnedBuffer buffer)
+        {
+            if (state.CurrentTokenType != JsonParserToken.StartObject)
+                ThrowInvalidResponse();
+
+            var getResponse = new GetResponse();
+            while (true)
+            {
+                if (UnmanagedJsonParserHelper.Read(stream, parser, state, buffer) == false)
+                    ThrowInvalidResponse();
+
+                if (state.CurrentTokenType == JsonParserToken.EndObject)
+                    break;
+
+                if (state.CurrentTokenType != JsonParserToken.String)
+                    ThrowInvalidResponse();
+
+                var property = new LazyStringValue(null, state.StringBuffer, state.StringSize, context).ToString();
+                switch (property)
+                {
+                    case nameof(GetResponse.Result):
+                        if (UnmanagedJsonParserHelper.Read(stream, parser, state, buffer) == false)
+                            ThrowInvalidResponse();
+
+                        if (state.CurrentTokenType == JsonParserToken.Null)
+                            continue;
+
+                        if (state.CurrentTokenType != JsonParserToken.StartObject)
+                            ThrowInvalidResponse();
+
+                        using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, "multi_get/result", parser, state))
+                        {
+                            UnmanagedJsonParserHelper.ReadObject(builder, stream, parser, buffer);
+                            getResponse.Result = builder.CreateReader();
+                        }
+                        continue;
+                    case nameof(GetResponse.Headers):
+                        if (UnmanagedJsonParserHelper.Read(stream, parser, state, buffer) == false)
+                            ThrowInvalidResponse();
+
+                        if (state.CurrentTokenType == JsonParserToken.Null)
+                            continue;
+
+                        if (state.CurrentTokenType != JsonParserToken.StartObject)
+                            ThrowInvalidResponse();
+
+                        using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, "multi_get/result", parser, state))
+                        {
+                            UnmanagedJsonParserHelper.ReadObject(builder, stream, parser, buffer);
+                            using (var headersJson = builder.CreateReader())
+                            {
+                                foreach (var propertyName in headersJson.GetPropertyNames())
+                                    getResponse.Headers[propertyName] = headersJson[propertyName].ToString();
+                            }
+                        }
+                        continue;
+                    case nameof(GetResponse.StatusCode):
+                        if (UnmanagedJsonParserHelper.Read(stream, parser, state, buffer) == false)
+                            ThrowInvalidResponse();
+
+                        if (state.CurrentTokenType != JsonParserToken.Integer)
+                            ThrowInvalidResponse();
+
+                        getResponse.StatusCode = (HttpStatusCode)state.Long;
+                        continue;
+                    default:
+                        ThrowInvalidResponse();
+                        break;
+                }
+            }
+
+            return getResponse;
         }
 
         private void MaybeReadFromCache(GetResponse getResponse, GetRequest command)
@@ -171,41 +264,7 @@ namespace Raven.NewClient.Client.Commands
             if (etag.HasValue == false)
                 return;
 
-            using (var memoryStream = new MemoryStream()) // how to do it better?
-            {
-                result.WriteJsonTo(memoryStream);
-                memoryStream.Position = 0;
-
-                _cache.Set(cacheKey, etag.Value, _context.ReadForMemory(memoryStream, "multi_get/result"));
-            }
-        }
-
-        private GetResponse ConvertToGetResponse(BlittableJsonDocumentBuilder builder)
-        {
-            var reader = builder.CreateReader();
-
-            HttpStatusCode statusCode;
-            if (reader.TryGet(nameof(GetResponse.StatusCode), out statusCode) == false)
-                ThrowInvalidResponse();
-
-            BlittableJsonReaderObject result;
-            if (reader.TryGet(nameof(GetResponse.Result), out result) == false)
-                ThrowInvalidResponse();
-
-            BlittableJsonReaderObject headersJson;
-            if (reader.TryGet(nameof(GetResponse.Headers), out headersJson) == false)
-                ThrowInvalidResponse();
-
-            var getResponse = new GetResponse
-            {
-                Result = result,
-                StatusCode = statusCode,
-            };
-
-            foreach (var propertyName in headersJson.GetPropertyNames())
-                getResponse.Headers[propertyName] = headersJson[propertyName].ToString();
-
-            return getResponse;
+            _cache.Set(cacheKey, etag.Value, result);
         }
 
         public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)

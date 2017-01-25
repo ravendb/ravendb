@@ -1,11 +1,9 @@
 using FastTests;
-using Raven.Client;
-using Raven.Client.Document;
 using Xunit;
 
 namespace SlowTests.Bugs.Identifiers
 {
-    public class WithBase64Characters : RavenTestBase
+    public class WithBase64Characters : RavenNewTestBase
     {
         private class Entity
         {
@@ -17,7 +15,7 @@ namespace SlowTests.Bugs.Identifiers
         {
             var specialId = "SHA1-UdVhzPmv0o+wUez+Jirt0OFBcUY=";
 
-            using(var store = GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Initialize();
 
@@ -33,7 +31,7 @@ namespace SlowTests.Bugs.Identifiers
                     var entity1 = session.Load<object>(specialId);
                     Assert.NotNull(entity1);
                 }
-            }           
+            }
         }
     }
 }

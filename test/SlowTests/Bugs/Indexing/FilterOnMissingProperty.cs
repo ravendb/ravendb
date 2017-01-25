@@ -1,28 +1,29 @@
-using FastTests;
-using Raven.Client.Indexing;
-using Xunit;
 using System.Linq;
+using FastTests;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
+using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {
-    public class FilterOnMissingProperty : RavenTestBase
+    public class FilterOnMissingProperty : RavenNewTestBase
     {
         [Fact]
         public void CanFilter()
         {
-            using(var store = GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.PutIndex("test",
-                                                new IndexDefinition
-                                                    {
-                                                        Maps = { "from doc in docs where doc.Valid select new { doc.Name }"}
-                                                    });
+                store.Admin.Send(new PutIndexOperation("test",
+                    new IndexDefinition
+                    {
+                        Maps = { "from doc in docs where doc.Valid select new { doc.Name }" }
+                    }));
 
-                using(var session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
-                    session.Store(new { Valid = true, Name = "Oren"});
+                    session.Store(new { Valid = true, Name = "Oren" });
 
-                    session.Store(new { Name = "Ayende "});
+                    session.Store(new { Name = "Ayende " });
 
                     session.SaveChanges();
                 }
