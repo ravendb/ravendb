@@ -17,11 +17,8 @@ using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Logging;
-using Raven.NewClient.Client.Document;
-using Raven.NewClient.Client.Exceptions;
 using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Util;
-using Newtonsoft.Json;
 using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Exceptions.Session;
@@ -73,7 +70,7 @@ namespace Raven.NewClient.Client.Document
         /// <summary>
         /// Translate between a key and its associated entity
         /// </summary>
-        internal readonly Dictionary<string, DocumentInfo> DocumentsById = new Dictionary<string, DocumentInfo>(StringComparer.OrdinalIgnoreCase);
+        internal readonly DocumentsById DocumentsById = new DocumentsById();
 
         /// <summary>
         /// Translate between a key and its associated entity
@@ -212,7 +209,7 @@ namespace Raven.NewClient.Client.Document
             if (!GenerateEntityIdOnTheClient.TryGetIdFromInstance(instance, out id) &&
                 (!(instance is IDynamicMetaObjectProvider) ||
                  !GenerateEntityIdOnTheClient.TryGetIdFromDynamic(instance, out id)))
-                 throw new InvalidOperationException("Could not find the document key for " + instance);
+                throw new InvalidOperationException("Could not find the document key for " + instance);
 
             throw new ArgumentException("Document " + id + " doesn't exist in the session");
         }
@@ -314,9 +311,9 @@ more responsive application.
         public object TrackEntity(Type entityType, DocumentInfo documentFound)
         {
             bool documentDoesNotExist;
-            if(documentFound.Metadata.TryGet(Constants.Headers.RavenDocumentDoesNotExists, out documentDoesNotExist))
+            if (documentFound.Metadata.TryGet(Constants.Headers.RavenDocumentDoesNotExists, out documentDoesNotExist))
             {
-                if(documentDoesNotExist)
+                if (documentDoesNotExist)
                     return null;
             }
 
@@ -332,7 +329,7 @@ more responsive application.
         /// <param name="metadata">The metadata.</param>
         /// <param name="noTracking">Entity tracking is enabled if true, disabled otherwise.</param>
         /// <returns></returns>
-        object TrackEntity(Type entityType, string key, BlittableJsonReaderObject document, BlittableJsonReaderObject metadata, bool noTracking)
+        private object TrackEntity(Type entityType, string key, BlittableJsonReaderObject document, BlittableJsonReaderObject metadata, bool noTracking)
         {
             if (string.IsNullOrEmpty(key))
             {
@@ -344,8 +341,15 @@ more responsive application.
             {
                 // the local instance may have been changed, we adhere to the current Unit of Work
                 // instance, and return that, ignoring anything new.
-                if(docInfo.Entity != null)
-                    return docInfo.Entity;
+                if (docInfo.Entity == null)
+                    docInfo.Entity = ConvertToEntity(entityType, key, document);
+
+                if (noTracking == false)
+                {
+                    includedDocumentsByKey.Remove(key);
+                    DocumentsByEntity[docInfo.Entity] = docInfo;
+                }
+                return docInfo.Entity;
             }
 
             if (includedDocumentsByKey.TryGetValue(key, out docInfo))
@@ -356,7 +360,7 @@ more responsive application.
                 if (noTracking == false)
                 {
                     includedDocumentsByKey.Remove(key);
-                    DocumentsById[key] = docInfo;
+                    DocumentsById.Add(docInfo);
                     DocumentsByEntity[docInfo.Entity] = docInfo;
                 }
                 return docInfo.Entity;
@@ -379,7 +383,7 @@ more responsive application.
                     ETag = etag
                 };
 
-                DocumentsById[key] = newDocumentInfo;
+                DocumentsById.Add(newDocumentInfo);
                 DocumentsByEntity[entity] = newDocumentInfo;
             }
 
@@ -478,7 +482,7 @@ more responsive application.
             }
             KnownMissingIds.Add(id);
             etag = UseOptimisticConcurrency ? etag : null;
-            Defer(new Dictionary<string, object>()
+            Defer(new Dictionary<string, object>
             {
                 [Constants.Command.Key] = id,
                 [Constants.Command.Method] = "DELETE",
@@ -674,12 +678,13 @@ more responsive application.
 
             DocumentsByEntity.Add(entity, documentInfo);
             if (id != null)
-                DocumentsById[id] = documentInfo;
+                DocumentsById.Add(documentInfo);
         }
 
         protected virtual void AssertNoNonUniqueInstance(object entity, string id)
         {
-            if (id == null || id.EndsWith("/") || !DocumentsById.ContainsKey(id) || ReferenceEquals(DocumentsById[id].Entity, entity))
+            DocumentInfo info;
+            if (id == null || id.EndsWith("/") || DocumentsById.TryGetValue(id, out info) == false || ReferenceEquals(info.Entity, entity))
                 return;
 
             throw new NonUniqueObjectException("Attempted to associate a different object with id '" + id + "'.");
@@ -757,7 +762,7 @@ more responsive application.
                 if (!DocumentsByEntity.TryGetValue(deletedEntity, out documentInfo)) continue;
                 if (changes != null)
                 {
-                    var docChanges = new List<DocumentsChanges>() {};
+                    var docChanges = new List<DocumentsChanges>() { };
                     var change = new DocumentsChanges()
                     {
                         FieldNewValue = string.Empty,
@@ -825,7 +830,7 @@ more responsive application.
                 var etag = (UseOptimisticConcurrency &&
                             entity.Value.ConcurrencyCheckMode != ConcurrencyCheckMode.Disabled) ||
                            entity.Value.ConcurrencyCheckMode == ConcurrencyCheckMode.Forced
-                    ? (long?) (entity.Value.ETag ?? 0)
+                    ? (long?)(entity.Value.ETag ?? 0)
                     : null;
 
                 result.Commands.Add(new DynamicJsonValue()
@@ -1086,7 +1091,7 @@ more responsive application.
 
             string entityName;
             if (metadata.TryGet(Constants.Headers.RavenEntityName, out entityName) == false)
-                return ;
+                return;
 
             var idPropName = Conventions.FindIdentityPropertyNameFromEntityName(entityName);
 
@@ -1146,7 +1151,6 @@ more responsive application.
 
                 if (documentInfo.Entity == null)
                     return false;
-                var rawData = DocumentsById[id];
 
                 if (includes == null)
                     continue;
@@ -1154,7 +1158,7 @@ more responsive application.
                 foreach (var include in includes)
                 {
                     var hasAll = true;
-                    IncludesUtil.Include(rawData.Document, include, s =>
+                    IncludesUtil.Include(documentInfo.Document, include, s =>
                     {
                         hasAll &= IsLoaded(s);
                         return true;

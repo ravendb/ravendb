@@ -66,7 +66,7 @@ namespace Raven.NewClient.Client.Document
             if (IsLoaded(id))
                 return new Lazy<T>(() => Load<T>(id));
             //TODO - DisableAllCaching
-            var lazyLoadOperation = new LazyLoadOperation<T>(new LoadOperation(this, new []{id}), id);
+            var lazyLoadOperation = new LazyLoadOperation<T>(this, new LoadOperation(this).ById(id)).ById(id);
             return AddLazyOperation(lazyLoadOperation, onEval);
         }
 
@@ -142,7 +142,7 @@ namespace Raven.NewClient.Client.Document
             Action<TResult> onEval)
         {
             var transformer = new TTransformer().TransformerName;
-            var ids = new[] {id};
+            var ids = new[] { id };
             var configuration = new RavenLoadConfiguration();
             configure?.Invoke(configuration);
 
@@ -210,7 +210,7 @@ namespace Raven.NewClient.Client.Document
         public Lazy<Dictionary<string, TResult>> MoreLikeThis<TResult>(MoreLikeThisQuery query)
         {
             //TODO - DisableAllCaching
-            var loadOperation = new LoadOperation(this, null, null, true);
+            var loadOperation = new LoadOperation(this, true);
             var lazyOp = new LazyMoreLikeThisOperation<TResult>(loadOperation, query);
             return AddLazyOperation<Dictionary<string, TResult>>(lazyOp, null);
         }
@@ -233,8 +233,11 @@ namespace Raven.NewClient.Client.Document
             {
                 return new Lazy<Dictionary<string, T>>(() => ids.ToDictionary(x => x, Load<T>));
             }
-            var loadOperation = new LoadOperation(this, ids, includes);
-            var lazyOp = new LazyLoadOperation<T>(loadOperation, ids, includes);
+            var loadOperation = new LoadOperation(this)
+                .ByIds(ids)
+                .WithIncludes(includes);
+
+            var lazyOp = new LazyLoadOperation<T>(this, loadOperation).ByIds(ids).WithIncludes(includes);
             return AddLazyOperation(lazyOp, onEval);
         }
 

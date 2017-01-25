@@ -83,7 +83,7 @@ namespace Raven.NewClient.Client.Commands
             foreach (BlittableJsonReaderObject document in result.Results)
             {
                 var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(document);
-                _session.DocumentsById[newDocumentInfo.Id] = newDocumentInfo;
+                _session.DocumentsById.Add(newDocumentInfo);
                 _returnedIds.Add(newDocumentInfo.Id);
             }
         }

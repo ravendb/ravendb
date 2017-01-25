@@ -85,7 +85,7 @@ namespace Raven.NewClient.Client.Commands.Lazy
             foreach (BlittableJsonReaderObject document in getDocumentResult.Results)
             {
                 var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(document);
-                _sessionOperations.DocumentsById[newDocumentInfo.Id] = newDocumentInfo;
+                _sessionOperations.DocumentsById.Add(newDocumentInfo);
                 if (newDocumentInfo.Id == null)
                 {
                     finalResults.Add(default(T));
