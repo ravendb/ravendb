@@ -66,7 +66,7 @@ namespace Raven.NewClient.Client.Commands
                 if (batchResult.TryGet("Key", out key))
                 {
                     documentInfo.Id = key;
-                    _session.DocumentsById[key] = documentInfo;
+                    _session.DocumentsById.Add(documentInfo);
                     _session.GenerateEntityIdOnTheClient.TrySetIdentity(entity, key);
                 }
 
