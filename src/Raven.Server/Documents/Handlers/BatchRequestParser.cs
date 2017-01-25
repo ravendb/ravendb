@@ -372,7 +372,7 @@ namespace Raven.Server.Documents.Handlers
             var read = await stream.ReadAsync(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Buffer.Count);
             if (read == 0)
                 ThrowUnexpectedEndOfStream();
-            parser.SetBuffer(buffer, read);
+            parser.SetBuffer(buffer, 0, read);
         }
 
         private static void ThrowUnexpectedEndOfStream()
