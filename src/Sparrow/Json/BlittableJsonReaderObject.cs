@@ -620,6 +620,13 @@ namespace Sparrow.Json
             Memory.Copy(ptr, _mem, _size);
         }
 
+        public BlittableJsonReaderObject Clone(JsonOperationContext context)
+        {
+            var mem = context.GetMemory(Size);
+            CopyTo(mem.Address);
+            return new BlittableJsonReaderObject(mem.Address, Size,context);           
+        }
+
         public void BlittableValidation()
         {
             byte offset;
