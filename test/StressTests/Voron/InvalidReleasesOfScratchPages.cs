@@ -3,10 +3,11 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using FastTests;
+using SlowTests.Voron;
 using Voron;
 using Xunit;
 
-namespace SlowTests.Voron
+namespace StressTests.Voron
 {
     public class InvalidReleasesOfScratchPages : StorageTest
     {

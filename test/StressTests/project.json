@@ -4,6 +4,10 @@
   "buildOptions": {
     "allowUnsafe": true,
     "warningsAsErrors": true,
+    "compile": {
+      "include": [ "**/*.cs", "../../src/CommonAssemblyInfo.cs" ]
+    },
+    "embed": [ "Voron/Data/*.txt" ],
     "copyToOutput": {
       "include": [ "../xunit.runner.json" ]
     }
