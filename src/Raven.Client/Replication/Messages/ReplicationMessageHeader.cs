@@ -9,5 +9,9 @@
         public long LastIndexOrTransformerEtag { get; set; }
 
         public int ItemCount { get; set; }
+
+        public string ResovlerId { get; set; }
+
+        public string ResovlerVersion { get; set; }
     }
 }

@@ -290,8 +290,19 @@ namespace Raven.Server.Documents.Replication
             int itemCount;
             if (!message.TryGet(nameof(ReplicationMessageHeader.ItemCount), out itemCount))
                 throw new InvalidDataException("Expected the 'ItemCount' field, but had no numeric field of this value, this is likely a bug");
-            
+
+            string resovlerId;
+            string resovlerVersion;
+            message.TryGet(nameof(ReplicationMessageHeader.ResovlerId), out resovlerId);
+            message.TryGet(nameof(ReplicationMessageHeader.ResovlerVersion), out resovlerVersion);
+
+            if (resovlerId != null && resovlerVersion != null)
+            {
+                _parent.ResolverLeader.ParseAndUpdate(resovlerId, resovlerVersion);
+            }
+
             ReceiveSingleDocumentsBatch(documentsContext, itemCount, lastDocumentEtag);
+
             OnDocumentsReceived(this);
         }
 
@@ -896,6 +907,49 @@ namespace Raven.Server.Documents.Replication
             }
             return true;
         }
+        
+        private bool TryResolveByLeader(
+            DocumentsOperationContext context,
+            string key)
+        {
+            var leader = _parent.ResolverLeader;
+            if (leader?.Dbid == default(Guid))
+            {
+                return false;
+            }
+
+            var conflicts = _database.DocumentsStorage.GetConflictsFor(context, key);
+            DocumentConflict resolved = null;
+            long maxEtag = -1;
+            foreach (var documentConflict in conflicts)
+            {
+                foreach (var changeVectorEntry in documentConflict.ChangeVector)
+                {
+                    if (changeVectorEntry.DbId.Equals(leader.Dbid))
+                    {
+                        if (changeVectorEntry.Etag == maxEtag)
+                        { 
+                            // we have two documents with same etag of the leader
+                            return false;
+                        }
+
+                        if (changeVectorEntry.Etag < maxEtag)
+                            continue;
+
+                        maxEtag = changeVectorEntry.Etag;
+                        resolved = documentConflict;
+                        break;
+                    }
+                }
+            }
+
+            if (resolved == null)
+                return false;
+    
+            _database.DocumentsStorage.Put(context, key, null, resolved.Doc.Clone(context));
+
+            return true;
+        }
 
         private void HandleConflictForDocument(
             DocumentsOperationContext documentsContext,
@@ -913,7 +967,6 @@ namespace Raven.Server.Documents.Replication
                 docPosition.Id, 
                 doc, 
                 _tempReplicatedChangeVector))
-
                 return;
 
             if (TryResovleConflictByScript(documentsContext, docPosition, conflictingVector, doc))
@@ -970,6 +1023,7 @@ namespace Raven.Server.Documents.Replication
                     }
                     break;
                  default:
+                    TryResolveByLeader(documentsContext, docPosition.Id);
                     _database.DocumentsStorage.AddConflict(documentsContext, docPosition.Id, doc, _tempReplicatedChangeVector, docPosition.Collection);
                     break;
             }
@@ -1133,7 +1187,7 @@ namespace Raven.Server.Documents.Replication
                 _log.Info(
                     $"Sending heartbeat ok => {FromToString} with last document etag = {lastDocumentEtag}, last index/transformer etag = {lastIndexOrTransformerEtag} and document change vector: {databaseChangeVector.Format()}");
             }
-            documentsContext.Write(writer, new DynamicJsonValue
+            var heartbeat = new DynamicJsonValue
             {
                 [nameof(ReplicationMessageReply.Type)] = "Ok",
                 [nameof(ReplicationMessageReply.MessageType)] = handledMessageType,
@@ -1143,7 +1197,14 @@ namespace Raven.Server.Documents.Replication
                 [nameof(ReplicationMessageReply.DocumentsChangeVector)] = documentChangeVectorAsDynamicJson,
                 [nameof(ReplicationMessageReply.IndexTransformerChangeVector)] = indexesChangeVectorAsDynamicJson,
                 [nameof(ReplicationMessageReply.DatabaseId)] = _database.DbId.ToString()
-            });
+            };
+            if (_parent.ResolverLeader.HasLeader())
+            {
+                heartbeat[nameof(ReplicationMessageReply.ResolverId)] = _parent.ResolverLeader.Dbid.ToString();
+                heartbeat[nameof(ReplicationMessageReply.ResolverVersion)] = _parent.ResolverLeader.Version.ToString();
+            }
+
+            _documentsContext.Write(writer, heartbeat);
 
             writer.Flush();
             LastHeartbeatTicks = _database.Time.GetUtcNow().Ticks;

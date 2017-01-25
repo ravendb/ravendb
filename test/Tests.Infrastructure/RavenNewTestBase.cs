@@ -13,6 +13,7 @@ using Raven.NewClient.Data.Indexes;
 using Raven.NewClient.Operations.Databases;
 using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -60,6 +61,8 @@ namespace FastTests
                 hardDelete = false;
                 runInMemory = false;
             }
+
+            Server.Configuration.Replication.ReplicationMinimalHeartbeat = new TimeSetting(100,TimeUnit.Milliseconds);
 
             var doc = MultiDatabase.CreateDatabaseDocument(name);
             doc.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = runInMemory.ToString();

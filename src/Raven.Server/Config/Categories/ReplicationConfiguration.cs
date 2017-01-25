@@ -32,6 +32,12 @@ namespace Raven.Server.Config.Categories
         [LegacyConfigurationEntry("Raven/Replication/ReplicationRequestTimeout")]
         public TimeSetting ReplicationRequestTimeout { get; set; }
 
+        [Description("Minimal time in milliseconds before sending another heartbeat")]
+        [DefaultValue(15 * 1000)]
+        [TimeUnit(TimeUnit.Milliseconds)]
+        [ConfigurationEntry("Raven/Replication/ReplicationMinimalHeartbeat")]
+        public TimeSetting ReplicationMinimalHeartbeat { get; set; }
+
         [Description("Number of seconds before replication topology discovery requests will timeout")]
         [DefaultValue(60)]
         [TimeUnit(TimeUnit.Seconds)]

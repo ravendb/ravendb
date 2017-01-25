@@ -33,9 +33,8 @@ namespace Raven.Server.Documents.Replication
         private readonly Logger _log;
         private readonly AsyncManualResetEvent _waitForChanges = new AsyncManualResetEvent();
         private readonly CancellationTokenSource _cts;
-        private int _minimalHeartbeatInterval = 15*1000; // ms - 15 seconds
         private Thread _sendingThread;
-
+        internal readonly DocumentReplicationLoader _parent;
         internal long _lastSentDocumentEtag;
         public long LastAcceptedDocumentEtag;
         internal long _lastSentIndexOrTransformerEtag;
@@ -69,10 +68,11 @@ namespace Raven.Server.Documents.Replication
 
         public event Action<OutgoingReplicationHandler> SuccessfulTwoWaysCommunication;
 
-        public OutgoingReplicationHandler(
+        public OutgoingReplicationHandler(DocumentReplicationLoader parent,
             DocumentDatabase database,
             ReplicationDestination destination)
         {
+            _parent = parent;
             _database = database;
             _destination = destination;
             _log = LoggingSource.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
@@ -143,14 +143,21 @@ namespace Raven.Server.Documents.Replication
                         //handle initial response to last etag and staff
                         try
                         {
-                            var response = HandleServerResponse();
+                            var response = HandleServerResponse(serveFullResponse: true);
                             if (response.Item1 == ReplicationMessageReply.ReplyType.Error)
                             {
                                 if (response.Item2.Exception.Contains("DatabaseDoesNotExistException"))
                                     throw new DatabaseDoesNotExistException(response.Item2.Message,
                                         new InvalidOperationException(response.Item2.Exception));
-
                                 throw new InvalidOperationException(response.Item2.Exception);
+                            }
+                            if (response.Item1 == ReplicationMessageReply.ReplyType.Ok)
+                                    {
+                                        if (response.Item2?.ResolverId != null)
+                                        {
+                                            _parent.ResolverLeader.ParseAndUpdate(response.Item2.ResolverId, response.Item2.ResolverVersion);
+                                        }
+                                    }
                             }
                         }
                         catch (DatabaseDoesNotExistException e)
@@ -204,7 +211,7 @@ namespace Raven.Server.Documents.Replication
                             }
 
                             //if this returns false, this means either timeout or canceled token is activated                    
-                            while (WaitForChanges(_minimalHeartbeatInterval, _cts.Token) == false)
+                            while (WaitForChanges(_parent._minimalHeartbeatInterval, _cts.Token) == false)
                             {
                                 SendHeartbeat();
                             }
@@ -285,15 +292,23 @@ namespace Raven.Server.Documents.Replication
                     TcpConnectionHeaderMessage.OperationTypes.Replication.ToString(),
                 });
 
-                //start request/response for fetching last etag
-                documentsContext.Write(writer, new DynamicJsonValue
-                {
-                    ["Type"] = "GetLastEtag",
-                    ["SourceDatabaseId"] = _database.DbId.ToString(),
-                    ["SourceDatabaseName"] = _database.Name,
-                    ["SourceUrl"] = _database.Configuration.Core.ServerUrl,
-                    ["MachineName"] = Environment.MachineName,
-                });
+              //start request/response for fetching last etag
+              var request = new DynamicJsonValue
+                            {
+                                ["Type"] = "GetLastEtag",
+                                ["SourceDatabaseId"] = _database.DbId.ToString(),
+                                ["SourceDatabaseName"] = _database.Name,
+                                ["SourceUrl"] = _database.Configuration.Core.ServerUrl,
+                                ["MachineName"] = Environment.MachineName,
+                            };
+                            if (_parent.ResolverLeader.HasLeader())
+                            {
+                                request["ResolverVersion"] = _parent.ResolverLeader.Version.ToString();
+                                request["ResolverId"] = _parent.ResolverLeader.Dbid.ToString();
+                            }
+              
+                
+                documentsContext.Write(writer, request);
                 writer.Flush();
             }
         }
@@ -375,7 +390,7 @@ namespace Raven.Server.Documents.Replication
                     // those up with the remove side, so we'll start the replication loop again.
                     // We don't care if they are locally modified or not, because we filter documents that
                     // the other side already have (based on the change vector).
-                    if ((DateTime.UtcNow - _lastDocumentSentTime).TotalMilliseconds > _minimalHeartbeatInterval)
+                    if ((DateTime.UtcNow - _lastDocumentSentTime).TotalMilliseconds > _parent._minimalHeartbeatInterval)
                         _waitForChanges.SetByAsyncCompletion();
                 }
             }
@@ -388,7 +403,7 @@ namespace Raven.Server.Documents.Replication
                     replicationBatchReply.LastIndexTransformerEtagAccepted)
                 {
                     if ((DateTime.UtcNow - _lastIndexOrTransformerSentTime).TotalMilliseconds >
-                        _minimalHeartbeatInterval)
+                        _parent._minimalHeartbeatInterval)
                         _waitForChanges.SetByAsyncCompletion();
                 }
             }
@@ -407,13 +422,19 @@ namespace Raven.Server.Documents.Replication
             {
                 try
                 {
-                    documentsContext.Write(writer, new DynamicJsonValue
-                    {
-                        [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Heartbeat,
-                        [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastSentDocumentEtag,
-                        [nameof(ReplicationMessageHeader.LastIndexOrTransformerEtag)] = _lastSentIndexOrTransformerEtag,
-                        [nameof(ReplicationMessageHeader.ItemCount)] = 0
-                    });
+                    var heartbeat = new DynamicJsonValue
+                {
+                    [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Heartbeat,
+                    [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastSentDocumentEtag,
+                    [nameof(ReplicationMessageHeader.LastIndexOrTransformerEtag)] = _lastSentIndexOrTransformerEtag,
+                    [nameof(ReplicationMessageHeader.ItemCount)] = 0
+                };
+                if (_parent.ResolverLeader.HasLeader())
+                {
+                    heartbeat[nameof(ReplicationMessageHeader.ResovlerVersion)] = _parent.ResolverLeader.Version.ToString();
+                    heartbeat[nameof(ReplicationMessageHeader.ResovlerId)] = _parent.ResolverLeader.Dbid.ToString();
+                }
+                _documentsContext.Write(_writer, heartbeat);
                     writer.Flush();
                 }
                 catch (Exception e)
@@ -424,9 +445,13 @@ namespace Raven.Server.Documents.Replication
                 }
 
                 try
+            {
+                var response = HandleServerResponse(serveFullResponse:true);
+                if (response.Item2?.ResolverVersion != null)
                 {
-                    HandleServerResponse();
+                    _parent.ResolverLeader.ParseAndUpdate(response.Item2.ResolverId, response.Item2.ResolverVersion);
                 }
+            }
                 catch (Exception e)
                 {
                     if (_log.IsInfoEnabled)
@@ -435,7 +460,6 @@ namespace Raven.Server.Documents.Replication
                 }
             }
         }
-
 
         internal Tuple<ReplicationMessageReply.ReplyType, ReplicationMessageReply> HandleServerResponse()
         {
@@ -465,10 +489,11 @@ namespace Raven.Server.Documents.Replication
 
                     LastHeartbeatTicks = _database.Time.GetUtcNow().Ticks;
 
-                    return Tuple.Create(replicationBatchReply.Type,
-                        replicationBatchReply.Type == ReplicationMessageReply.ReplyType.Error
-                            ? replicationBatchReply
-                            : null);
+                    var sendFullReply = replicationBatchReply.Type == ReplicationMessageReply.ReplyType.Error ||
+                                        serveFullResponse;
+
+                    return Tuple.Create(replicationBatchReply.Type, sendFullReply ? replicationBatchReply : null);
+                   
                 }
             }
         }
@@ -618,11 +643,6 @@ namespace Raven.Server.Documents.Replication
             {
                 _sendingThread?.Join();
             }
-        }
-
-        public void SetMinimalHeartbeat(int time)
-        {
-            _minimalHeartbeatInterval = time;
         }
 
         private void OnSuccessfulTwoWaysCommunication() => SuccessfulTwoWaysCommunication?.Invoke(this);
