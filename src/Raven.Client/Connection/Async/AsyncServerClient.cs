@@ -1019,7 +1019,7 @@ namespace Raven.Client.Connection.Async
                     var getResponse = getResponses[facetResultCounter];
                     if (getResponse.RequestHasErrors())
                     {
-                        throw new InvalidOperationException("Got an error from server, status code: " + getResponse.Status +
+                        throw new InvalidOperationException("Got an error from server, status code: " + getResponse.StatusCode +
                                                        Environment.NewLine + getResponse.Result);
 
                     }

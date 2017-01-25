@@ -11,6 +11,7 @@ import router = require("plugins/router");
 import messagePublisher = require("common/messagePublisher");
 import formatIndexCommand = require("commands/database/index/formatIndexCommand");
 import eventsCollector = require("common/eventsCollector");
+import renameTransformerCommand = require("commands/database/transformers/renameTransformerCommand");
 
 class editTransformer extends viewModelBase {
 
@@ -24,6 +25,9 @@ class editTransformer extends viewModelBase {
     isSaveEnabled: KnockoutComputed<boolean>;
     isEditingExistingTransformer: KnockoutComputed<boolean>;
     isSaving = ko.observable<boolean>(false);
+    renameMode = ko.observable<boolean>(false);
+    renameInProgress = ko.observable<boolean>(false);
+    canEditTransformerName: KnockoutComputed<boolean>;
 
     globalValidationGroup: KnockoutValidationGroup;
     
@@ -113,6 +117,12 @@ class editTransformer extends viewModelBase {
         });
 
         this.isEditingExistingTransformer = ko.pureComputed(() => !!this.loadedTransformerName());
+
+        this.canEditTransformerName = ko.pureComputed(() => {
+            const renameMode = this.renameMode();
+            const editMode = this.isEditingExistingTransformer();
+            return !editMode || renameMode;
+        });
     }
 
     private addTransformerHelpPopover() {
@@ -190,6 +200,32 @@ class editTransformer extends viewModelBase {
         }
     }
 
+    enterRenameMode() {
+        this.renameMode(true);
+    }
+
+    renameTransformer() {
+        const newName = this.editedTransformer().name();
+        const oldName = this.loadedTransformerName();
+
+        this.renameInProgress(true);
+
+        new renameTransformerCommand(oldName, newName, this.activeDatabase())
+            .execute()
+            .always(() => this.renameInProgress(false))
+            .done(() => {
+                this.dirtyFlag().reset();
+
+                this.loadedTransformerName(newName);
+                this.updateUrl(this.editedTransformer().name());
+                this.renameMode(false);
+            });
+    }
+
+    cancelRename() {
+        this.renameMode(false);
+        this.editedTransformer().name(this.loadedTransformerName());
+    }
   
 }
 

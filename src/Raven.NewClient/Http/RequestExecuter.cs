@@ -16,7 +16,6 @@ using Sparrow.Json;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Exceptions;
-using Raven.NewClient.Client.Exceptions.Compilation;
 using Raven.NewClient.Client.Exceptions.Security;
 using Sparrow.Logging;
 
@@ -24,6 +23,7 @@ namespace Raven.NewClient.Client.Http
 {
     public class RequestExecuter : IDisposable
     {
+        private readonly RequestExecuterOptions _options;
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RequestExecuter>("Client");
 
         public readonly JsonContextPool ContextPool;
@@ -37,7 +37,7 @@ namespace Raven.NewClient.Client.Http
 
         public readonly AsyncLocal<AggresiveCacheOptions> AggressiveCaching = new AsyncLocal<AggresiveCacheOptions>();
 
-        private readonly HttpCache _cache = new HttpCache();
+        public readonly HttpCache Cache = new HttpCache();
 
         private readonly HttpClient _httpClient;
 
@@ -48,8 +48,9 @@ namespace Raven.NewClient.Client.Http
         private Timer _updateCurrentTokenTimer;
         private readonly Timer _updateFailingNodesStatus;
 
-        public RequestExecuter(string url, string databaseName, string apiKey)
+        public RequestExecuter(string url, string databaseName, string apiKey, RequestExecuterOptions options = null)
         {
+            _options = options ?? new RequestExecuterOptions();
             _topology = new Topology
             {
                 LeaderNode = new ServerNode
@@ -152,7 +153,7 @@ namespace Raven.NewClient.Client.Http
                     var aggresiveCacheOptions = AggressiveCaching.Value;
                     if (aggresiveCacheOptions != null && cachedItem.Age < aggresiveCacheOptions.Duration)
                     {
-                        command.SetResponse(cachedValue);
+                        command.SetResponse(cachedValue, fromCache: true);
                         return;
                     }
 
@@ -190,8 +191,7 @@ namespace Raven.NewClient.Client.Http
                 if (response.StatusCode == HttpStatusCode.NotModified)
                 {
                     cachedItem.NotModified();
-                    command.SetResponse(cachedValue);
-                    command.ResponseWasFromCache();
+                    command.SetResponse(cachedValue, fromCache: true);
                     return;
                 }
                 if (response.IsSuccessStatusCode == false)
@@ -203,7 +203,7 @@ namespace Raven.NewClient.Client.Http
                 if (response.Content.Headers.ContentLength.HasValue && response.Content.Headers.ContentLength == 0)
                     return;
 
-                await command.ProcessResponse(context, _cache, response, url).ConfigureAwait(false);
+                await command.ProcessResponse(context, Cache, _options, response, url).ConfigureAwait(false);
             }
         }
 
@@ -213,7 +213,7 @@ namespace Raven.NewClient.Client.Http
             {
                 if (request.Method != HttpMethod.Get)
                     url = request.Method + "-" + url;
-                return _cache.Get(context, url, out cachedEtag, out cachedValue);
+                return Cache.Get(context, url, out cachedEtag, out cachedValue);
             }
 
             cachedEtag = 0;
@@ -244,9 +244,9 @@ namespace Raven.NewClient.Client.Http
             {
                 case HttpStatusCode.NotFound:
                     if (command.ResponseType == RavenCommandResponseType.Object)
-                        command.SetResponse((BlittableJsonReaderObject)null);
+                        command.SetResponse((BlittableJsonReaderObject)null, fromCache: false);
                     else
-                        command.SetResponse((BlittableJsonReaderArray)null);
+                        command.SetResponse((BlittableJsonReaderArray)null, fromCache: false);
                     return true;
                 case HttpStatusCode.Unauthorized:
                 case HttpStatusCode.PreconditionFailed:
@@ -554,7 +554,7 @@ namespace Raven.NewClient.Client.Http
 
         public void Dispose()
         {
-            _cache.Dispose();
+            Cache.Dispose();
             _authenticator.Dispose();
             ContextPool.Dispose();
         }

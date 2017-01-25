@@ -6,12 +6,15 @@
 
 using System;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
+using Raven.NewClient.Client.Commands;
 using Raven.Server.Routing;
 using Raven.Server.Web;
 using Sparrow.Json;
@@ -36,12 +39,13 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
                     writer.WriteStartArray();
-                    var resultProperty = context.GetLazyStringForFieldWithCaching("Result");
-                    var statusProperty = context.GetLazyStringForFieldWithCaching("Status");
-                    var headersProperty = context.GetLazyStringForFieldWithCaching("Headers");
+                    var resultProperty = context.GetLazyStringForFieldWithCaching(nameof(MultiGetCommand.Response.Result));
+                    var statusProperty = context.GetLazyStringForFieldWithCaching(nameof(MultiGetCommand.Response.StatusCode));
+                    var headersProperty = context.GetLazyStringForFieldWithCaching(nameof(MultiGetCommand.Response.Headers));
 
                     var features = new FeatureCollection(HttpContext.Features);
-                    features.Set<IHttpResponseFeature>(new MultiGetHttpResponseFeature(HttpContext.Response.Body));
+                    var responseStream = new MultiGetHttpResponseStream(HttpContext.Response.Body);
+                    features.Set<IHttpResponseFeature>(new MultiGetHttpResponseFeature(responseStream));
                     var httpContext = new DefaultHttpContext(features);
 
                     for (int i = 0; i < requests.Length; i++)
@@ -134,6 +138,7 @@ namespace Raven.Server.Documents.Handlers
                             }
                         }
 
+                        var bytesWrittenBeforeRequest = responseStream.BytesWritten;
                         await requestHandler(new RequestHandlerContext
                         {
                             Database = Database,
@@ -143,9 +148,16 @@ namespace Raven.Server.Documents.Handlers
                             AllowResponseCompression = false
                         });
 
+                        if (bytesWrittenBeforeRequest == responseStream.BytesWritten)
+                            writer.WriteNull();
+
+                        var statusCode = httpContext.Response.StatusCode == 0
+                            ? (int)HttpStatusCode.OK
+                            : httpContext.Response.StatusCode;
+
                         writer.WriteComma();
                         writer.WritePropertyName(statusProperty);
-                        writer.WriteInteger(httpContext.Response.StatusCode);
+                        writer.WriteInteger(statusCode);
                         writer.WriteComma();
 
                         writer.WritePropertyName(headersProperty);
@@ -180,7 +192,7 @@ namespace Raven.Server.Documents.Handlers
 
         private class MultiGetHttpResponseFeature : IHttpResponseFeature
         {
-            public MultiGetHttpResponseFeature(Stream body)
+            public MultiGetHttpResponseFeature(MultiGetHttpResponseStream body)
             {
                 Body = body;
                 Headers = new HeaderDictionary();
@@ -199,6 +211,95 @@ namespace Raven.Server.Documents.Handlers
             public IHeaderDictionary Headers { get; set; }
             public Stream Body { get; set; }
             public bool HasStarted { get; private set; }
+        }
+
+        private class MultiGetHttpResponseStream : Stream
+        {
+            private readonly Stream _stream;
+
+            public long BytesWritten { get; private set; }
+
+            public MultiGetHttpResponseStream(Stream stream)
+            {
+                _stream = stream;
+            }
+
+            public override void Flush()
+            {
+                _stream.Flush();
+            }
+
+            public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
+            {
+                throw new NotSupportedException();
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                _stream.Dispose();
+            }
+
+            public override Task FlushAsync(CancellationToken cancellationToken)
+            {
+                return _stream.FlushAsync(cancellationToken);
+            }
+
+            public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+            {
+                throw new NotSupportedException();
+            }
+
+            public override int ReadByte()
+            {
+                throw new NotSupportedException();
+            }
+
+            public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+            {
+                BytesWritten += count;
+                return _stream.WriteAsync(buffer, offset, count, cancellationToken);
+            }
+
+            public override void WriteByte(byte value)
+            {
+                BytesWritten += 1;
+               _stream.WriteByte(value);
+            }
+
+            public override bool CanTimeout => _stream.CanTimeout;
+            public override int ReadTimeout => _stream.ReadTimeout;
+            public override int WriteTimeout => _stream.WriteTimeout;
+
+            public override int Read(byte[] buffer, int offset, int count)
+            {
+                throw new NotSupportedException();
+            }
+
+            public override long Seek(long offset, SeekOrigin origin)
+            {
+                throw new NotSupportedException();
+            }
+
+            public override void SetLength(long value)
+            {
+                throw new NotSupportedException();
+            }
+
+            public override void Write(byte[] buffer, int offset, int count)
+            {
+                BytesWritten += count;
+                _stream.Write(buffer, offset, count);
+            }
+
+            public override bool CanRead => _stream.CanRead;
+            public override bool CanSeek => _stream.CanRead;
+            public override bool CanWrite => _stream.CanRead;
+            public override long Length => _stream.Length;
+            public override long Position
+            {
+                get { return _stream.Position; }
+                set { _stream.Position = value; }
+            }
         }
     }
 }

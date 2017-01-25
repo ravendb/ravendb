@@ -24,7 +24,7 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// Response HTTP status code.
         /// </summary>
-        public int Status { get; set; }
+        public int StatusCode { get; set; }
 
         /// <summary>
         /// Indicates if request should be retried (forced).
@@ -40,7 +40,7 @@ namespace Raven.Abstractions.Data
         /// <returns><c>false</c> if Status is 0, 200, 201, 203, 204, 304 and 404. <c>True</c> otherwise.</returns>
         public bool RequestHasErrors()
         {
-            switch (Status)
+            switch (StatusCode)
             {
                 case 0:   // aggressively cached
                 case 200: // known non error values

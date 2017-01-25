@@ -1,9 +1,6 @@
-using System;
 using System.Collections.Generic;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Document;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.NewClient.Client.Commands
@@ -25,11 +22,7 @@ namespace Raven.NewClient.Client.Commands
 
         public MultiGetCommand CreateRequest(List<GetRequest> requests)
         {
-            return new MultiGetCommand()
-            {
-                GetCommands = requests,
-                Context = _session.Context,
-            };
+            return new MultiGetCommand(_session.Context, _session.RequestExecuter.Cache, requests);
         }
 
         public void SetResult(BlittableArrayResult result)

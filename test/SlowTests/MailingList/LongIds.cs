@@ -14,14 +14,14 @@ namespace SlowTests.MailingList
 {
     public class LongIds : RavenTestBase
     {
-        [Fact(Skip = "TODO: max key length might be too low")]
+        [Fact]
         public void Embedded()
         {
             using (var store = GetDocumentStore())
             {
                 var customer = new TestCustomer
                 {
-                    Id = "LoremipsumdolorsitametconsecteturadipiscingelitPraesentlobortisconguecursusCurabiturconvallisnuncmattisliberomolestieidiaculismagnaimperdietDuisnecenimsednislvestibulumvulputateDonecnuncarcumolestieeutinciduntacfermentumpretiumestAeneannoncondimentumorciDonecsitametanteerossedgravidaestQuisqueturpismaurisplaceratsedaliquamidgravidasednislIntegermetusleoultriciesegetiaculisnonporttitornonlacusProinegetfringillalectusCrasfeugiatloremaauctoregestasmienimpulvinarsemquisbibendumloremvelitnonnullaDonecultriciesfelissednunctinciduntutrutrumtellusmolestieIntegerliberorisusvariusinvehiculaidtristiqueidarcNuncpretiummolestieduicongueauctorloremcursussitametCurabituridmassaeratcursusadipiscingvelitNullaminmaurisestsitametpretiumnislSedmollisultriciespurusNuncaerosnislnonmollislacusIntegerlaciniavariuscommodoNamrutrumerossitametni"
+                    Id = "LoremipsumdolorsitametconsecteturadipiscingelitPraesentlobortisconguecursusCurabiturconvallisnuncmattisliberomolestieidiaculismagnaimperdietDuisnecenimsednislvestibulumvulputateDonecnuncarcumolestieeutinciduntacfermentumpretiumestAeneannoncondimentumorciDonecsitametanteerossedgravidaestQuisqueturpismaurisplaceratsedaliquamidgravidasednislIntegermetusleoultriciesegetiaculisnonporttitornonlacusProinegetfringillalectusCrasfeugiatloremaauctoregestasmienimpulvinarsemquisbibendumloremvelitnonnullaDonecultriciesfe"
                 };
 
                 using (IDocumentSession session = store.OpenSession())
@@ -47,15 +47,16 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "TODO: max key length might be too low")]
+        [Fact]
         public void Remote()
         {
             using (var store = GetDocumentStore())
             {
                 var customer = new TestCustomer
                 {
-                    Id = "LoremipsumdolorsitametconsecteturadipiscingelitPraesentlobortisconguecursusCurabiturconvallisnuncmattisliberomolestieidiaculismagnaimperdietDuisnecenimsednislvestibulumvulputateDonecnuncarcumolestieeutinciduntacfermentumpretiumestAeneannoncondimentumorciDonecsitametanteerossedgravidaestQuisqueturpismaurisplaceratsedaliquamidgravidasednislIntegermetusleoultriciesegetiaculisnonporttitornonlacusProinegetfringillalectusCrasfeugiatloremaauctoregestasmienimpulvinarsemquisbibendumloremvelitnonnullaDonecultriciesfelissednunctinciduntutrutrumtellusmolestieIntegerliberorisusvariusinvehiculaidtristiqueidarcNuncpretiummolestieduicongueauctorloremcursussitametCurabituridmassaeratcursusadipiscingvelitNullaminmaurisestsitametpretiumnislSedmollisultriciespurusNuncaerosnislnonmollislacusIntegerlaciniavariuscommodoNamrutrumerossitametni"
+                    Id = "LoremipsumdolorsitametconsecteturadipiscingelitPraesentlobortisconguecursusCurabiturconvallisnuncmattisliberomolestieidiaculismagnaimperdietDuisnecenimsednislvestibulumvulputateDonecnuncarcumolestieeutinciduntacfermentumpretiumestAeneannoncondimentumorciDonecsitametanteerossedgravidaestQuisqueturpismaurisplaceratsedaliquamidgravidasednislIntegermetusleoultriciesegetiaculisnonporttitornonlacusProinegetfringillalectusCrasfeugiatloremaauctoregestasmienimpulvinarsemquisbibendumloremvelitnonnullaDonecultriciesfe"
                 };
+
                 using (IDocumentSession session = store.OpenSession())
                 {
                     session.Store(customer);

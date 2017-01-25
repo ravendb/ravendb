@@ -23,12 +23,12 @@ namespace Raven.NewClient.Client.Commands
             return request;
         }
 
-        public override void SetResponse(BlittableJsonReaderObject response)
+        public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
         {
             throw new NotSupportedException();
         }
 
-        public override async Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
+        public override async Task ProcessResponse(JsonOperationContext context, HttpCache cache, RequestExecuterOptions options, HttpResponseMessage response, string url)
         {
             Result = new StreamResult
             {

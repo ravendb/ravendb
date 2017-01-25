@@ -119,21 +119,6 @@ namespace Raven.Server.Utils
             return false;
         }
 
-        public static string GetTcpInfo(JsonOperationContext context,
-            string url,
-            string databaseName,
-            string apiKey)
-        {
-            using (var requestExecuter = new RequestExecuter(url, databaseName, apiKey))
-            {
-                var getTcpInfoCommand = new GetTcpInfoCommand();
-                requestExecuter.Execute(getTcpInfoCommand, context);
-
-
-                return getTcpInfoCommand.Result.Url;
-            }
-        }
-
         public static async Task<string> GetTcpInfoAsync(JsonOperationContext context,
         string url,
         string databaseName,

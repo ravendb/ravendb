@@ -54,7 +54,7 @@ namespace Raven.Client.Document.Batches
         public bool RequiresRetry { get; set; }
         public void HandleResponses(GetResponse[] responses, ShardStrategy shardStrategy)
         {
-            var count = responses.Count(x => x.Status == 404);
+            var count = responses.Count(x => x.StatusCode == 404);
             if (count != 0)
             {
                 throw new InvalidOperationException("There is no index named: " + queryOperation.IndexName + " in " + count + " shards");
@@ -83,7 +83,7 @@ namespace Raven.Client.Document.Batches
                 return;
             }
 
-            if (response.Status == 404)
+            if (response.StatusCode == 404)
                 throw new InvalidOperationException("There is no index named: " + queryOperation.IndexName + Environment.NewLine + response.Result);
             var json = (RavenJObject)response.Result;
             var queryResult = SerializationHelper.ToQueryResult(json, response.GetEtagHeader(), response.Headers[Constants.Headers.RequestTime], -1);

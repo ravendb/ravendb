@@ -1,19 +1,25 @@
 <div class="flex-window stretch edit-transformer">
     <div class="flex-window-head">
         <div class="toolbar">
-            <div class="row">
+            <div class="row rename-widget">
                 <div class="col-lg-6">
                     <div class="input-group toolbar" data-bind="validationElement: editedTransformer().name">
                         <div class="input-group-addon">Transformer name</div>
-                        <input class="form-control" data-bind="textInput: editedTransformer().name, disable: isEditingExistingTransformer">
-                        <span class="input-group-btn" data-bind="visible: isEditingExistingTransformer">
-                            <button class="btn btn-default btn-prerelease" disabled="disabled" type="button"><i class="icon-edit"></i> <span>Rename</span></button>
+                        <input class="form-control" data-bind="textInput: editedTransformer().name, enable: canEditTransformerName">
+                        <span class="input-group-btn" data-bind="visible: isEditingExistingTransformer() && !renameMode()">
+                            <button class="btn btn-default" type="button" data-bind="click: enterRenameMode"><i class="icon-edit"></i> <span>Rename</span></button>
+                        </span>
+                        <span class="input-group-btn" data-bind="visible: renameMode">
+                            <button class="btn btn-primary" type="button" data-bind="click: renameTransformer, css: { 'btn-spinner': renameInProgress }, disable: renameInProgress">
+                                <i class="icon-check"></i> <span>Apply</span>
+                            </button>
+                            <button class="btn btn-default" type="button" data-bind="click: cancelRename"><i class="icon-cancel"></i> <span>Cancel</span></button>
                         </span>
                     </div>
                 </div>
             </div>
             
-            <button class="btn btn-primary" data-bind="click: saveTransformer, enable: isSaveEnabled, css: { 'btn-spinner': isSaving }" title="Save the transformer (Alt+S)" accesskey="S">
+            <button class="btn btn-primary" data-bind="click: saveTransformer, enable: isSaveEnabled() && !renameMode(), css: { 'btn-spinner': isSaving }" title="Save the transformer (Alt+S)" accesskey="S">
                 <i class="icon-save"></i>
                 <span>Save</span>
             </button>
@@ -49,3 +55,5 @@
         </div>
     </div>
 </div>
+
+<div class="backdrop" data-bind="css: { 'show': renameMode }"></div>

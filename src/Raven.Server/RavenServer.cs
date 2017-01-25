@@ -305,8 +305,6 @@ namespace Raven.Server
                     }
             }
         }
-
-        
         
         private void ListenToNewTcpConnection(TcpListener listener)
         {
@@ -338,32 +336,35 @@ namespace Raven.Server
                     tcpClient.ReceiveBufferSize = 32 * 1024;
                     tcpClient.SendBufferSize = 4096;
                     var stream = tcpClient.GetStream();
-                    tcp = new TcpConnectionOptions()
+                    tcp = new TcpConnectionOptions
                     {
+                        ContextPool = _tcpContextPool,
                         Stream = stream,
                         TcpClient = tcpClient,
-                        DisposeOnConnectionClose =
-                        {
-                            stream,
-                            tcpClient
-                        }
+                        PinnedBuffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance(),
                     };
-
-                    tcp.ReturnContext = _tcpContextPool.AllocateOperationContext(out tcp.Context);
-
-                    tcp.MultiDocumentParser = tcp.Context.ParseMultiFrom(stream);
 
                     try
                     {
                         TcpConnectionHeaderMessage header;
-                        using (var headerJson = await tcp.MultiDocumentParser.ParseToMemoryAsync())
+                        JsonOperationContext context;
+                        using (_tcpContextPool.AllocateOperationContext(out context))
                         {
-                            header = JsonDeserializationClient.TcpConnectionHeaderMessage(headerJson);
-                            if (_logger.IsInfoEnabled)
+                            using (var headerJson = await context.ParseToMemoryAsync(
+                                stream, 
+                                "tcp-header",
+                                BlittableJsonDocumentBuilder.UsageMode.None, 
+                                tcp.PinnedBuffer
+                                ))
                             {
-                                _logger.Info($"New {header.Operation} TCP connection to {header.DatabaseName} from {tcpClient.Client.RemoteEndPoint}");
+                                header = JsonDeserializationClient.TcpConnectionHeaderMessage(headerJson);
+                                if (_logger.IsInfoEnabled)
+                                {
+                                    _logger.Info($"New {header.Operation} TCP connection to {header.DatabaseName} from {tcpClient.Client.RemoteEndPoint}");
+                                }
                             }
                         }
+
                         tcp.Operation = header.Operation;
                         var databaseLoadingTask = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(header.DatabaseName);
                         if (databaseLoadingTask == null)
@@ -417,9 +418,11 @@ namespace Raven.Server
                         }
                         if (tcp != null)
                         {
-                            using (var errorWriter = new BlittableJsonTextWriter(tcp.Context, tcp.Stream))
+                            JsonOperationContext context;
+                            using (_tcpContextPool.AllocateOperationContext(out context))
+                            using (var errorWriter = new BlittableJsonTextWriter(context, tcp.Stream))
                             {
-                                tcp.Context.Write(errorWriter, new DynamicJsonValue
+                                context.Write(errorWriter, new DynamicJsonValue
                                 {
                                     ["Type"] = "Error",
                                     ["Exception"] = e.ToString(),
@@ -439,10 +442,6 @@ namespace Raven.Server
                 finally
                 {
                     tcp?.Dispose();
-                    // those have to be disposed separatedly, since the thread we spawn
-                    // rely on them being valid
-                    tcp?.MultiDocumentParser?.Dispose();
-                    tcp?.ReturnContext?.Dispose();
                 }
 
             });

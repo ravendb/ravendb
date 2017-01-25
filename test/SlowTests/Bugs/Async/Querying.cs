@@ -4,7 +4,7 @@ using Xunit;
 
 namespace SlowTests.Bugs.Async
 {
-    public class Querying : RavenTestBase
+    public class Querying : RavenNewTestBase
     {
         [Fact]
         public async Task Can_query_using_async_session()
@@ -24,7 +24,7 @@ namespace SlowTests.Bugs.Async
                         .ToListAsync();
 
                     var result = queryResultAsync;
-                    Assert.Equal("Ayende", result[0].Name);
+                    Assert.Equal("Ayende", (string)result[0].Name);
                 }
             }
         }

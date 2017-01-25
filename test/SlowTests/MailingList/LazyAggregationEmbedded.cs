@@ -15,7 +15,7 @@ namespace SlowTests.MailingList
     public class LazyAggregationEmbedded : RavenTestBase
 
     {
-        [Fact(Skip = "Missing feature: Dynamic Aggregation")]
+        [Fact]
         public void Test()
         {
             using (var store = GetDocumentStore())

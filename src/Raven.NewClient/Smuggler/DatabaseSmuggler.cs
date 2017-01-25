@@ -167,12 +167,12 @@ namespace Raven.NewClient.Client.Smuggler
                 };
             }
 
-            public override void SetResponse(BlittableJsonReaderObject response)
+            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
                 ThrowInvalidResponse();
             }
 
-            public override async Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
+            public override async Task ProcessResponse(JsonOperationContext context, HttpCache cache, RequestExecuterOptions options, HttpResponseMessage response, string url)
             {
                 Result = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
             }
@@ -207,7 +207,7 @@ namespace Raven.NewClient.Client.Smuggler
                 };
             }
 
-            public override void SetResponse(BlittableJsonReaderObject response)
+            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
             }
         }

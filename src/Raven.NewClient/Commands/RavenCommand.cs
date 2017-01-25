@@ -26,15 +26,11 @@ namespace Raven.NewClient.Client.Commands
         public RavenCommandResponseType ResponseType { get; protected set; } = RavenCommandResponseType.Object;
 
         public abstract HttpRequestMessage CreateRequest(ServerNode node, out string url);
-        public abstract void SetResponse(BlittableJsonReaderObject response);
+        public abstract void SetResponse(BlittableJsonReaderObject response, bool fromCache);
 
-        public virtual void SetResponse(BlittableJsonReaderArray response)
+        public virtual void SetResponse(BlittableJsonReaderArray response, bool fromCache)
         {
             throw new NotSupportedException($"When {nameof(ResponseType)} is set to Array then please override this method to handle the response.");
-        }
-
-        public virtual void ResponseWasFromCache()
-        {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -54,7 +50,7 @@ namespace Raven.NewClient.Client.Commands
             return FailedNodes != null && FailedNodes.Contains(leaderNode);
         }
 
-        public virtual async Task ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
+        public virtual async Task ProcessResponse(JsonOperationContext context, HttpCache cache, RequestExecuterOptions options, HttpResponseMessage response, string url)
         {
             using (response)
             using (var stream = await response.Content.ReadAsStreamAsync())
@@ -64,17 +60,27 @@ namespace Raven.NewClient.Client.Commands
                     // we intentionally don't dispose the reader here, we'll be using it
                     // in the command, any associated memory will be released on context reset
                     var json = await context.ReadForMemoryAsync(stream, "response/object");
-                    var etag = response.GetEtagHeader();
-                    if (etag.HasValue)
-                        cache.Set(url, etag.Value, json);
 
-                    SetResponse(json);
+                    if (options.ShouldCacheRequest(url))
+                        CacheResponse(cache, options, url, response, json);
+
+                    SetResponse(json, fromCache: false);
+
                     return;
                 }
 
                 var array = await context.ParseArrayToMemoryAsync(stream, "response/array", BlittableJsonDocumentBuilder.UsageMode.None);
-                SetResponse(array.Item1);
+                SetResponse(array.Item1, fromCache: false);
             }
+        }
+
+        protected virtual void CacheResponse(HttpCache cache, RequestExecuterOptions options, string url, HttpResponseMessage response, BlittableJsonReaderObject responseJson)
+        {
+            var etag = response.GetEtagHeader();
+            if (etag.HasValue == false)
+                return;
+
+            cache.Set(url, etag.Value, responseJson);
         }
 
         protected static void ThrowInvalidResponse()

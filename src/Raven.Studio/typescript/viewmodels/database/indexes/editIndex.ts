@@ -49,16 +49,14 @@ class editIndex extends viewModelBase {
     isSaveEnabled: KnockoutComputed<boolean>;
     saveInProgress = ko.observable<boolean>(false);
     indexAutoCompleter: indexAceAutoCompleteProvider;
+    renameMode = ko.observable<boolean>(false);
+    renameInProgress = ko.observable<boolean>(false);
+    canEditIndexName: KnockoutComputed<boolean>;
 
     fieldNames = ko.observableArray<string>([]);
     defaultIndexPath = ko.observable<string>();
     additionalStoragePaths = ko.observableArray<string>([]);
-    selectedIndexPath = ko.pureComputed(() => {
-        const defaultPath = this.defaultIndexPath();
-        const selectedPath = this.editedIndex().indexStoragePath();
-
-        return selectedPath || defaultPath + " (default)";
-    });
+    selectedIndexPath: KnockoutComputed<string>;
 
     queryUrl = ko.observable<string>();
     termsUrl = ko.observable<string>();
@@ -83,13 +81,7 @@ class editIndex extends viewModelBase {
         aceEditorBindingHandler.install();
         autoCompleteBindingHandler.install();
 
-        this.editedIndex.subscribe(indexDef => {
-            const firstMap = indexDef.maps()[0].map;
-
-            firstMap.throttle(1000).subscribe(map => {
-                this.updateIndexFields();
-            });
-        });
+        this.initializeObservables();
 
         /* TODO scripted index
         this.isScriptedIndexBundleActive.subscribe((active: boolean) => {
@@ -121,6 +113,29 @@ class editIndex extends viewModelBase {
             var editedName = this.editedIndex().name();
             return loadedIndex === editedName;
         });*/
+    }
+
+    private initializeObservables() {
+        this.editedIndex.subscribe(indexDef => {
+            const firstMap = indexDef.maps()[0].map;
+
+            firstMap.throttle(1000).subscribe(map => {
+                this.updateIndexFields();
+            });
+        });
+
+        this.selectedIndexPath = ko.pureComputed(() => {
+            const defaultPath = this.defaultIndexPath();
+            const selectedPath = this.editedIndex().indexStoragePath();
+
+            return selectedPath || defaultPath + " (default)";
+        });
+
+        this.canEditIndexName = ko.pureComputed(() => {
+            const renameMode = this.renameMode();
+            const editMode = this.isEditingExistingIndex();
+            return !editMode || renameMode;
+        });
     }
 
     canActivate(unescapedIndexToEditName: string): JQueryPromise<canActivateResultDto> {
@@ -166,6 +181,13 @@ class editIndex extends viewModelBase {
         this.indexAutoCompleter = new indexAceAutoCompleteProvider(this.activeDatabase(), this.editedIndex);
         
         //TODO: scripted index this.checkIfScriptedIndexBundleIsActive();
+    }
+
+    attached() {
+        super.attached();
+        this.addMapHelpPopover();
+        this.addReduceHelpPopover();
+        //TODO: this.addScriptsLabelPopover();
     }
 
     private updateIndexPaths() {
@@ -250,6 +272,23 @@ class editIndex extends viewModelBase {
         this.termsUrl(appUrl.forTerms(indexName, this.activeDatabase()));
         this.queryUrl(appUrl.forQuery(this.activeDatabase(), indexName));
     }
+
+    addMapHelpPopover() {
+        $("#map-title small").popover({
+            html: true,
+            trigger: 'hover',
+            content: 'Maps project the fields to search on or to group by. It uses LINQ query syntax.<br/><br/>Example:</br><pre><span class="code-keyword">from</span> order <span class="code-keyword">in</span> docs.Orders<br/><span class="code-keyword">where</span> order.IsShipped<br/><span class="code-keyword">select new</span><br/>{</br>   order.Date, <br/>   order.Amount,<br/>   RegionId = order.Region.Id <br />}</pre>Each map function should project the same set of fields.',
+        });
+    }
+
+    addReduceHelpPopover() {
+        $("#reduce-title small").popover({
+            html: true,
+            trigger: 'hover',
+            content: 'The Reduce function consolidates documents from the Maps stage into a smaller set of documents. It uses LINQ query syntax.<br/><br/>Example:</br><pre><span class="code-keyword">from</span> result <span class="code-keyword">in</span> results<br/><span class="code-keyword">group</span> result <span class="code-keyword">by new</span> { result.RegionId, result.Date } into g<br/><span class="code-keyword">select new</span><br/>{<br/>  Date = g.Key.Date,<br/>  RegionId = g.Key.RegionId,<br/>  Amount = g.Sum(x => x.Amount)<br/>}</pre>The objects produced by the Reduce function should have the same fields as the inputs.',
+        });
+    }
+
 
     addMap() {
         eventsCollector.default.reportEvent("index", "add-map");
@@ -479,6 +518,33 @@ class editIndex extends viewModelBase {
         this.editedIndex().validationGroup.errors.showAllMessages(false);
     }
 
+    enterRenameMode() {
+        this.renameMode(true);
+    }
+
+    renameIndex() {
+        const newName = this.editedIndex().name();
+        const oldName = this.originalIndexName;
+
+        this.renameInProgress(true);
+
+        new renameIndexCommand(oldName, newName, this.activeDatabase())
+            .execute()
+            .always(() => this.renameInProgress(false))
+            .done(() => {
+                this.dirtyFlag().reset();
+
+                this.originalIndexName = newName;
+                this.updateUrl(this.editedIndex().name());
+                this.renameMode(false);
+            });
+    }
+
+    cancelRename() {
+        this.renameMode(false);
+        this.editedIndex().name(this.originalIndexName);
+    }
+
     /* TODO
     refreshIndex() {
         eventsCollector.default.reportEvent("index", "refresh");
@@ -531,15 +597,6 @@ class editIndex extends viewModelBase {
     }*/
 
     /* TODO
-    private renameIndex(existingIndexName: string, newIndexName: string): JQueryPromise<any> {
-        eventsCollector.default.reportEvent("index", "rename");
-        return new renameIndexCommand(existingIndexName, newIndexName, this.activeDatabase())
-            .execute()
-            .done(() => {
-                this.initializeDirtyFlag();
-                this.updateUrl(newIndexName, false);
-            });
-    }
 
     replaceIndex() {
         eventsCollector.default.reportEvent("index", "replace");

@@ -1,5 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
+import endpoints = require("endpoints");
 
 class renameIndexCommand extends commandBase {
 
@@ -7,9 +8,7 @@ class renameIndexCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<any> {
-        this.reportInfo("Renaming " + this.existingIndexName + "...");
-
+    execute(): JQueryPromise<void> {
         return this.rename()
             .fail((response: JQueryXHR) => {
                 this.reportError("Failed to rename " + this.existingIndexName, response.responseText, response.statusText);
@@ -17,14 +16,14 @@ class renameIndexCommand extends commandBase {
             .done(() => {
                 this.reportSuccess("Renamed " + this.existingIndexName + " to " + this.newIndexName);
             });
-
     }
 
-    private rename(): JQueryPromise<any> {
-        var urlArgs = {
+    private rename(): JQueryPromise<void> {
+        const args = {
+            name: this.existingIndexName,
             newName: this.newIndexName
         };
-        var url = "/indexes-rename/" + this.existingIndexName + this.urlEncodeArgs(urlArgs);//TODO: use endpoints
+        const url = endpoints.databases.index.indexesRename + this.urlEncodeArgs(args);
         return this.post(url, null, this.db, { dataType: undefined });
     }
 }

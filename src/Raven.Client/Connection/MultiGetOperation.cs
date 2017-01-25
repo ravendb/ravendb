@@ -102,12 +102,12 @@ namespace Raven.Client.Connection
             var requestStatuses = new RequestStatus[responses.Length];
             for (int i = 0; i < responses.Length; i++)
             {
-                if (responses[i] == null || responses[i].Status == 304)
+                if (responses[i] == null || responses[i].StatusCode == 304)
                 {
                     hasCachedRequests = true;
 
                     requestStatuses[i] = responses[i] == null ? RequestStatus.AggressivelyCached : RequestStatus.Cached;
-                    responses[i] = responses[i] ?? new GetResponse { Status = 0 };
+                    responses[i] = responses[i] ?? new GetResponse { StatusCode = 0 };
 
                     foreach (string header in cachedData[i].Headers)
                     {
@@ -154,7 +154,7 @@ namespace Raven.Client.Connection
                 var response = responses[index];
                 if (response == null)
                     continue;
-                if (response.RequestHasErrors() && response.Status != 409)
+                if (response.RequestHasErrors() && response.StatusCode != 409)
                     continue;
 
                 var result = response.Result as RavenJObject;
@@ -222,7 +222,7 @@ namespace Raven.Client.Connection
             if (concurrencyException != null)
                 throw concurrencyException;
 
-            response.Status = 200;
+            response.StatusCode = 200;
             response.ForceRetry = true;
         }
     }

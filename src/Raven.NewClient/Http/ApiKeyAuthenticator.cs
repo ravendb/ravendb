@@ -200,7 +200,7 @@ namespace Raven.NewClient.Client.Http
                             throw new EndOfStreamException("Stream ended without reaching end of json content.");
                         }
 
-                        parser.SetBuffer(buffer, result.Count);
+                        parser.SetBuffer(buffer, 0, result.Count);
                     }
                     builder.FinalizeDocument();
 

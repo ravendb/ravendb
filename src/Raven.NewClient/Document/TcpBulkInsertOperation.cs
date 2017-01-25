@@ -190,7 +190,7 @@ namespace Raven.NewClient.Client.Document
 
                 var result = await webSocket.ReceiveAsync(bytes.Buffer, cancellationToken).ConfigureAwait(false);
 
-                parser.SetBuffer(bytes, result.Count);
+                parser.SetBuffer(bytes,0, result.Count);
                 while (writer.Read() == false)
                 {
                     // we got incomplete json response.
@@ -200,7 +200,7 @@ namespace Raven.NewClient.Client.Document
 
                     result = await webSocket.ReceiveAsync(bytes.Buffer, cancellationToken).ConfigureAwait(false);
 
-                    parser.SetBuffer(bytes, result.Count);
+                    parser.SetBuffer(bytes, 0, result.Count);
                 }
                 writer.FinalizeDocument();
                 return writer.CreateReader();
