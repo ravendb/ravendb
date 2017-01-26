@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         {
             base.InitializeInternal();
 
-            _maxNumberOfIndexOutputs = Definition.IndexDefinition.Configuration.MaxIndexOutputsPerDocument ?? Configuration.MaxMapReduceIndexOutputsPerDocument;
+            _maxNumberOfIndexOutputs = Configuration.MaxMapReduceIndexOutputsPerDocument;
         }
 
         public static MapReduceIndex CreateNew(int indexId, IndexDefinition definition, DocumentDatabase documentDatabase)
