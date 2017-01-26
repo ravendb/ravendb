@@ -129,6 +129,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     {
                         resultsCount++;
 
+                        if (EnsureValidNumberOfOutputsForDocument(resultsCount) == false)
+                        {
+                            throw new InvalidOperationException($"Index '{Name}' has already produced {resultsCount} map results for a source document '{documentKey}', " +
+                                                    $"while the allowed max number of outputs is {MaxNumberOfIndexOutputs} per one document. " +
+                                                    $"Please verify this index definition and consider a re-design of your entities or index.");
+                        }
+
                         var reduceKeyHash = mapResult.ReduceKeyHash;
 
                         long id = -1;
