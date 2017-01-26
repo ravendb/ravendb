@@ -10,9 +10,8 @@ class disableIndexCommand extends commandBase {
 
     execute(): JQueryPromise<void> {
         const args = {
-            name: this.indexName, 
-        }
-        this.reportInfo("Disabling " + this.indexName);
+            name: this.indexName
+        };
         const url = endpoints.databases.adminIndex.adminIndexesDisable + this.urlEncodeArgs(args);
         return this.post(url, null, this.db, { dataType: undefined })
             .done(() => {

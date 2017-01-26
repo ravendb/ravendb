@@ -468,7 +468,6 @@ class indexes extends viewModelBase {
         eventsCollector.default.reportEvent("indexes", "set-state", "enabled");
 
         if (idx.canBeEnabled()) {
-
             this.spinners.localState.push(idx.name);
 
             new enableIndexCommand(idx.name, this.activeDatabase())
@@ -478,7 +477,6 @@ class indexes extends viewModelBase {
                     idx.status("Running");
                 })
                 .always(() => this.spinners.localState.remove(idx.name));
-                
         }
     }
 
