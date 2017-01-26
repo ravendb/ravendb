@@ -4,7 +4,6 @@ class configurationItem {
     static readonly ConfigurationOptions = [
         "Raven/Indexing/RunInMemory",
         "Raven/Indexing/MaxTimeForDocumentTransactionToRemainOpenInSec",
-        "Raven/Indexing/MaxIndexOutputsPerDocument",
         "Raven/Indexing/MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory",
         "Raven/Indexing/MapTimeoutInSec",
         "Raven/Indexing/MapTimeoutAfterEtagReachedInMin"

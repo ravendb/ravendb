@@ -27,6 +27,7 @@ class mapItem {
 }
 
 class indexDefinition {
+    static maxIndexOutputsPerDocumentKey = "Raven/Indexing/MaxIndexOutputsPerDocument";
 
     name = ko.observable<string>();
     maps = ko.observableArray<mapItem>();
@@ -68,7 +69,7 @@ class indexDefinition {
         this.lockMode = dto.LockMode;
         this.configuration(this.parseConfiguration(dto.Configuration));
 
-        const existingMaxIndexOutputs = this.configuration().find(x => x.key() === configuration.indexing.maxMapIndexOutputsPerDocument);
+        const existingMaxIndexOutputs = this.configuration().find(x => x.key() === indexDefinition.maxIndexOutputsPerDocumentKey);
         if (existingMaxIndexOutputs) {
             this.maxIndexOutputsPerDocument(parseInt(existingMaxIndexOutputs.value()));
             this.configuration.remove(existingMaxIndexOutputs);
@@ -145,7 +146,7 @@ class indexDefinition {
         });
 
         if (_.isNumber(this.maxIndexOutputsPerDocument())) {
-            result[configuration.indexing.maxMapIndexOutputsPerDocument] = this.maxIndexOutputsPerDocument().toString();
+            result[indexDefinition.maxIndexOutputsPerDocumentKey] = this.maxIndexOutputsPerDocument().toString();
         }
 
         if (this.indexStoragePath()) {
