@@ -76,7 +76,7 @@ select new {
 
                 for (int i = 0; i < values.Length; i++)
                 {
-                    store.DatabaseCommands.Put("blogs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject { { "Raven-Entity-Name", "Blogs" } });
+                    store.DatabaseCommands.Put("blogs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject { { "@collection", "Blogs" } });
                 }
 
                 var q = GetUnstableQueryResult(store, "blog_id:3");
@@ -94,7 +94,7 @@ select new {
 
                 for (int i = 0; i < 1024; i++)
                 {
-                    store.DatabaseCommands.Put("blogs/" + i, null, RavenJObject.Parse("{blog_id: " + i + ", comments: [{},{},{}]}"), new RavenJObject { { "Raven-Entity-Name", "Blogs" } });
+                    store.DatabaseCommands.Put("blogs/" + i, null, RavenJObject.Parse("{blog_id: " + i + ", comments: [{},{},{}]}"), new RavenJObject { { "@collection", "Blogs" } });
                 }
 
                 WaitForIndexing(store);
@@ -146,14 +146,14 @@ select new {
 
                 for (int i = 0; i < values.Length; i++)
                 {
-                    store.DatabaseCommands.Put("blogs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject { { "Raven-Entity-Name", "Blogs" } });
+                    store.DatabaseCommands.Put("blogs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject { { "@collection", "Blogs" } });
                 }
 
                 var q = GetUnstableQueryResult(store, "blog_id:3");
 
                 Assert.Equal(@"{""blog_id"":3,""comments_length"":14}", q.Results[0].ToString(Formatting.None));
 
-                store.DatabaseCommands.Put("blogs/0", null, RavenJObject.Parse("{blog_id: 3, comments: [{}]}"), new RavenJObject { { "Raven-Entity-Name", "Blogs" } });
+                store.DatabaseCommands.Put("blogs/0", null, RavenJObject.Parse("{blog_id: 3, comments: [{}]}"), new RavenJObject { { "@collection", "Blogs" } });
 
                 q = GetUnstableQueryResult(store, "blog_id:3");
 
@@ -186,7 +186,7 @@ select new {
 
                 for (int i = 0; i < values.Length; i++)
                 {
-                    store.DatabaseCommands.Put("blogs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject { { "Raven-Entity-Name", "Blogs" } });
+                    store.DatabaseCommands.Put("blogs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject { { "@collection", "Blogs" } });
                 }
 
                 GetUnstableQueryResult(store, "blog_id:3");
@@ -223,12 +223,12 @@ select new {
 
                 for (int i = 0; i < values.Length; i++)
                 {
-                    store.DatabaseCommands.Put("blogs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject { { "Raven-Entity-Name", "Blogs" } });
+                    store.DatabaseCommands.Put("blogs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject { { "@collection", "Blogs" } });
                 }
 
                 GetUnstableQueryResult(store, "blog_id:3");
 
-                store.DatabaseCommands.Put("blogs/0", null, RavenJObject.Parse("{blog_id: 7, comments: [{}]}"), new RavenJObject { { "Raven-Entity-Name", "Blogs" } });
+                store.DatabaseCommands.Put("blogs/0", null, RavenJObject.Parse("{blog_id: 7, comments: [{}]}"), new RavenJObject { { "@collection", "Blogs" } });
 
                 var q = GetUnstableQueryResult(store, "blog_id:3");
                 Assert.Equal(@"{""blog_id"":3,""comments_length"":11}", q.Results[0].ToString(Formatting.None));

@@ -98,7 +98,7 @@ select new
                                 },
                 [Constants.Metadata.Key] = new DynamicJsonValue
                 {
-                    [Constants.Headers.RavenEntityName] = "Orders"
+                    [Constants.Metadata.Collection] = "Orders"
                 }
             };
         }

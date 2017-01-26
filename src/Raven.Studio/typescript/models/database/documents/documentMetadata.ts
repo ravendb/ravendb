@@ -17,7 +17,7 @@ class documentMetadata {
 
     constructor(dto?: documentMetadataDto) {
         if (dto) {
-            this.ravenEntityName = dto['Raven-Entity-Name'];
+            this.ravenEntityName = dto['@collection'];
             this.ravenClrType = dto['Raven-Clr-Type'];
             this.nonAuthoritativeInfo = dto['Non-Authoritative-Information'];
             this.id = dto['@id'];
@@ -47,7 +47,7 @@ class documentMetadata {
             this.etag(dto['@etag']);
 
             for (var property in dto) {
-                if (property.toUpperCase() !== 'Raven-Entity-Name'.toUpperCase() &&
+                if (property.toUpperCase() !== '@collection'.toUpperCase() &&
                     property.toUpperCase() !== 'Raven-Clr-Type'.toUpperCase() &&
                     property.toUpperCase() !== 'Non-Authoritative-Information'.toUpperCase() &&
                     property.toUpperCase() !== '@id'.toUpperCase() &&
@@ -66,7 +66,7 @@ class documentMetadata {
 
     toDto(): documentMetadataDto {
         var dto: any = {
-            'Raven-Entity-Name': this.ravenEntityName,
+            '@collection': this.ravenEntityName,
             'Raven-Clr-Type': this.ravenClrType,
             'Non-Authoritative-Information': this.nonAuthoritativeInfo,
             '@id': this.id,

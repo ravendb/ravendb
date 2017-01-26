@@ -251,7 +251,7 @@ namespace FastTests
 
             var metadata = new DynamicJsonValue();
             if (tag != null)
-                metadata[Constants.Headers.RavenEntityName] = tag;
+                metadata[Constants.Metadata.Collection] = tag;
 
             documentInfo.Metadata = session.Advanced.Context.ReadObject(metadata, id);
 

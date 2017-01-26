@@ -25,9 +25,9 @@ namespace Tryouts
         {
             for (int i = 0; i < 100; i++)
             {
-               using (var a = new FastTests.Server.Replication.ReplicationResolveToDatabase())
+               using (var a = new FastTests.Server.Basic.MaxSecondsForTaskToWaitForDatabaseToLoad())
                {
-                   a.UnsetDatabaseResolver();
+                   a.ShouldThrow_DatabaseLoadTimeout();
                }
                 Console.WriteLine($"{i} finished");
             }

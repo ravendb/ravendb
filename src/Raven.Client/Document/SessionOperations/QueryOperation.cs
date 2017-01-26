@@ -234,7 +234,7 @@ namespace Raven.Client.Document.SessionOperations
 
             if ((metadata != null && result.Count == 3))
             {
-                var entityName = metadata.Value<string>(Constants.Headers.RavenEntityName);
+                var entityName = metadata.Value<string>(Constants.Metadata.Collection);
 
                 var idPropName = sessionOperations.Conventions.FindIdentityPropertyNameFromEntityName(entityName);
 

@@ -39,7 +39,7 @@ namespace SlowTests.MailingList
    ]
  }
 }"),
-                                           new RavenJObject { { Constants.Headers.RavenEntityName, "TestCases" } });
+                                           new RavenJObject { { Constants.Metadata.Collection, "TestCases" } });
 
                 store.DatabaseCommands.Put("TestCases/TST00002", null,
                                            RavenJObject.Parse(
@@ -48,7 +48,7 @@ namespace SlowTests.MailingList
    ""AccessoryWarnings"": []
  }
 }"),
-                                           new RavenJObject { { Constants.Headers.RavenEntityName, "TestCases" } });
+                                           new RavenJObject { { Constants.Metadata.Collection, "TestCases" } });
 
                 WaitForIndexing(store);
 

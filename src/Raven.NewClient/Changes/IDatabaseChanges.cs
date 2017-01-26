@@ -49,12 +49,12 @@ namespace Raven.NewClient.Client.Changes
         IObservableWithTask<DocumentChangeNotification> ForDocumentsStartingWith(string docIdPrefix);
 
         /// <summary>
-        /// Subscribe to changes for all documents that belong to specified collection (Raven-Entity-Name).
+        /// Subscribe to changes for all documents that belong to specified collection.
         /// </summary>
         IObservableWithTask<DocumentChangeNotification> ForDocumentsInCollection(string collectionName);
 
         /// <summary>
-        /// Subscribe to changes for all documents that belong to specified collection (Raven-Entity-Name).
+        /// Subscribe to changes for all documents that belong to specified collection.
         /// </summary>
         IObservableWithTask<DocumentChangeNotification> ForDocumentsInCollection<TEntity>();
 

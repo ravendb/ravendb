@@ -114,9 +114,9 @@ namespace SlowTests.Bugs.Indexing
                     {
                         @"
                         from doc in docs.WhereEntityIs(""Accounts"", ""Users"", ""Designs"")
-                        let acc = doc[""@metadata""][""Raven-Entity-Name""] == ""Accounts"" ? doc : null
-                        let user = doc[""@metadata""][""Raven-Entity-Name""] == ""Users"" ? doc : null
-                        let design = doc[""@metadata""][""Raven-Entity-Name""] == ""Designs"" ? doc : null
+                        let acc = doc[""@metadata""][""@collection""] == ""Accounts"" ? doc : null
+                        let user = doc[""@metadata""][""@collection""] == ""Users"" ? doc : null
+                        let design = doc[""@metadata""][""@collection""] == ""Designs"" ? doc : null
                         select new 
                         {
                             AccountId = acc != null ? acc.Id : (user != null ? user.AccountId : design.AccountId),

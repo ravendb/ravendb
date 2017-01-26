@@ -90,7 +90,7 @@ namespace Raven.Client.Document
             var metadata = new RavenJObject();
             var tag = documentStore.Conventions.GetDynamicTagName(entity);
             if (tag != null)
-                metadata.Add(Constants.Headers.RavenEntityName, tag);
+                metadata.Add(Constants.Metadata.Collection, tag);
 
             var data = entityToJson.ConvertEntityToJson(id, entity, metadata);
             OnBeforeEntityInsert(id, data, metadata);

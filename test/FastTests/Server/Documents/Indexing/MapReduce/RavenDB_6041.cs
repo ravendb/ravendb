@@ -53,7 +53,7 @@ select new
                                     ["Location"] = randomLocation,
                                     [Constants.Metadata.Key] = new DynamicJsonValue
                                     {
-                                        [Constants.Headers.RavenEntityName] = "Users"
+                                        [Constants.Metadata.Collection] = "Users"
                                     }
                                 };
 

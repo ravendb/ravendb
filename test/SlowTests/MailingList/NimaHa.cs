@@ -32,7 +32,7 @@ namespace SlowTests.MailingList
                                 }";
 
                 const string metadata = @"{ 
-                                    ""Raven-Entity-Name"" : ""Houses"" 
+                                    ""@collection"" : ""Houses"" 
                                  }";
 
                 store.DatabaseCommands.PutIndex("HouseByRent", new IndexDefinition

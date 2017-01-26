@@ -12,7 +12,7 @@ namespace FastTests.Server.Basic
         public void ShouldThrow_DatabaseLoadTimeout()
         {
             DoNotReuseServer();
-            Server.Configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(1, TimeUnit.Milliseconds);
+            Server.Configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(0, TimeUnit.Milliseconds);
             Server.ServerStore.DatabasesLandlord.OnDatabaseLoaded += s => Thread.Sleep(100);// force timeout
             var tryLoad = new Action(delegate
             {

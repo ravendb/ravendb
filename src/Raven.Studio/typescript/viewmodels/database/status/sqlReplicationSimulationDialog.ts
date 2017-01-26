@@ -92,7 +92,7 @@ class sqlReplicationSimulationDialog extends dialogViewModelBase {
     }
 
     getDocCssClass(doc: documentMetadataDto) {
-        return collection.getCollectionCssClass((<any>doc)['@metadata']['Raven-Entity-Name'], this.db);
+        return collection.getCollectionCssClass((<any>doc)['@metadata']['@collection'], this.db);
     }
 
     keyPressedOnDocumentAutocomplete(doc: documentMetadataDto, event: JQueryKeyEventObject) {

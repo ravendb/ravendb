@@ -64,6 +64,8 @@ namespace Raven.NewClient.Abstractions.Data
             {
             }
 
+            public const string Collection = "@collection";
+
             public const string Key = "@metadata";
 
             public const string Id = "@id";
@@ -136,8 +138,6 @@ namespace Raven.NewClient.Abstractions.Data
             public const string RavenCreationDate = "Raven-Creation-Date";
 
             public const string RavenClrType = "Raven-Clr-Type";
-
-            public const string RavenEntityName = "Raven-Entity-Name";
 
             public const string RavenReadOnly = "Raven-Read-Only";
 

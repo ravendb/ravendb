@@ -497,7 +497,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                             ["Age"] = 20 + i,
                             [Constants.Metadata.Key] = new DynamicJsonValue
                             {
-                                [Constants.Headers.RavenEntityName] = "Users"
+                                [Constants.Metadata.Collection] = "Users"
                             }
                         }, $"users/{i}"))
                         {
@@ -558,7 +558,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                             ["Age"] = 30,
                             [Constants.Metadata.Key] = new DynamicJsonValue
                             {
-                                [Constants.Headers.RavenEntityName] = "Users"
+                                [Constants.Metadata.Collection] = "Users"
                             }
                         }, "users/0"))
                         {
@@ -633,7 +633,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                             ["Age"] = 20,
                             [Constants.Metadata.Key] = new DynamicJsonValue
                             {
-                                [Constants.Headers.RavenEntityName] = "Users"
+                                [Constants.Metadata.Collection] = "Users"
                             }
                         }, "users/0"))
                         {
@@ -754,7 +754,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                             },
                             [Constants.Metadata.Key] = new DynamicJsonValue
                             {
-                                [Constants.Headers.RavenEntityName] = "Orders"
+                                [Constants.Metadata.Collection] = "Orders"
                             }
                         }, $"orders/{i}"))
                         {

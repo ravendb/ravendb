@@ -772,7 +772,7 @@ namespace Raven.Server.Documents.Replication
                 $"Reading past the size of buffer! TotalSize {totalSize} but position is {doc.Position} & size is {doc.DocumentSize}!");
         }
 
-        private void EnsureRavenEntityName(BlittableJsonReaderObject obj,string collection)
+        private void EnsureCollection(BlittableJsonReaderObject obj,string collection)
         {
             DynamicJsonValue mutatedMetadata;
             BlittableJsonReaderObject metadata;
@@ -790,9 +790,9 @@ namespace Raven.Server.Documents.Replication
                     [Constants.Metadata.Key] = mutatedMetadata = new DynamicJsonValue()
                 };
             }
-            if (mutatedMetadata[Constants.Headers.RavenEntityName] == null)
+            if (mutatedMetadata[Constants.Metadata.Collection] == null)
             {
-                mutatedMetadata[Constants.Headers.RavenEntityName] = collection;
+                mutatedMetadata[Constants.Metadata.Collection] = collection;
             }
         }
         
@@ -879,7 +879,7 @@ namespace Raven.Server.Documents.Replication
             var merged = ReplicationUtils.MergeVectors(conflictingVector, _tempReplicatedChangeVector);
             if (resolved != null)
             {
-                EnsureRavenEntityName(resolved, collection);
+                EnsureCollection(resolved, collection);
                 if (_log.IsInfoEnabled)
                 {
                     _log.Info($"Conflict resolution script for {collection} collection resolved the conflict for {docPosition.Id}.");

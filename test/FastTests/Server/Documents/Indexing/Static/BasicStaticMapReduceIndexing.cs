@@ -49,7 +49,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                                 ["Location"] = "Poland",
                                 [Constants.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Headers.RavenEntityName] = "Users"
+                                    [Constants.Metadata.Collection] = "Users"
                                 }
                             }))
                             {
@@ -61,7 +61,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                                 ["Location"] = "Poland",
                                 [Constants.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Headers.RavenEntityName] = "Users"
+                                    [Constants.Metadata.Collection] = "Users"
                                 }
                             }))
                             {
@@ -151,7 +151,7 @@ select new
                                 },
                                 [Constants.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Headers.RavenEntityName] = "Orders"
+                                    [Constants.Metadata.Collection] = "Orders"
                                 }
                             }))
                             {
@@ -170,7 +170,7 @@ select new
                                 },
                                 [Constants.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Headers.RavenEntityName] = "Orders"
+                                    [Constants.Metadata.Collection] = "Orders"
                                 }
                             }))
                             {
@@ -254,7 +254,7 @@ select new
                             ["Location"] = "Poland",
                             [Constants.Metadata.Key] = new DynamicJsonValue
                             {
-                                [Constants.Headers.RavenEntityName] = "Users"
+                                [Constants.Metadata.Collection] = "Users"
                             }
                         }))
                         {

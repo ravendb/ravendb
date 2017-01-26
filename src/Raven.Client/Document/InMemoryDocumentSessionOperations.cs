@@ -691,7 +691,7 @@ more responsive application.
             var metadata = new RavenJObject();
             var tag = documentStore.Conventions.GetDynamicTagName(entity);
             if (tag != null)
-                metadata.Add(Constants.Headers.RavenEntityName, tag);
+                metadata.Add(Constants.Metadata.Collection, tag);
             if (id != null)
                 KnownMissingIds.Remove(id);
             StoreEntityInUnitOfWork(id, entity, etag, metadata, forceConcurrencyCheck);
@@ -1291,7 +1291,7 @@ more responsive application.
                 return;
             }
 
-            var entityName = metadata.Value<string>(Constants.Headers.RavenEntityName);
+            var entityName = metadata.Value<string>(Constants.Metadata.Collection);
 
             var idPropName = Conventions.FindIdentityPropertyNameFromEntityName(entityName);
             if (result.ContainsKey(idPropName))

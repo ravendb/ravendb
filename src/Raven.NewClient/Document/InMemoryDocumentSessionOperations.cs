@@ -585,7 +585,7 @@ more responsive application.
             var tag = _documentStore.Conventions.GetDynamicTagName(entity);
             var metadata = new DynamicJsonValue();
             if (tag != null)
-                metadata[Constants.Headers.RavenEntityName] = tag;
+                metadata[Constants.Metadata.Collection] = tag;
             //var clrType = _documentStore.Conventions.GetClrTypeName(entity.GetType());
             //if (clrType != null)
             //    metadata[Constants.Headers.RavenClrType] = clrType;
@@ -1090,7 +1090,7 @@ more responsive application.
             }
 
             string entityName;
-            if (metadata.TryGet(Constants.Headers.RavenEntityName, out entityName) == false)
+            if (metadata.TryGet(Constants.Metadata.Collection, out entityName) == false)
                 return;
 
             var idPropName = Conventions.FindIdentityPropertyNameFromEntityName(entityName);

@@ -19,7 +19,7 @@ namespace SlowTests.MailingList
                     {"FirstName", "Oren"}
                 }, new RavenJObject
                 {
-                    {Constants.Headers.RavenEntityName, "Users"}
+                    {Constants.Metadata.Collection, "Users"}
                 });
 
                 store.DatabaseCommands.Put("b", null, new RavenJObject
@@ -27,7 +27,7 @@ namespace SlowTests.MailingList
                     {"FirstName", "Ayende"}
                 }, new RavenJObject
                 {
-                    {Constants.Headers.RavenEntityName, "users"}
+                    {Constants.Metadata.Collection, "users"}
                 });
 
                 using (var session = store.OpenSession())
@@ -49,7 +49,7 @@ namespace SlowTests.MailingList
                     {"FirstName", "Oren"}
                 }, new RavenJObject
                 {
-                    {Constants.Headers.RavenEntityName, "Users"}
+                    {Constants.Metadata.Collection, "Users"}
                 });
 
                 store.DatabaseCommands.Put("b", null, new RavenJObject
@@ -57,7 +57,7 @@ namespace SlowTests.MailingList
                     {"FirstName", "Ayende"}
                 }, new RavenJObject
                 {
-                    {Constants.Headers.RavenEntityName, "users"}
+                    {Constants.Metadata.Collection, "users"}
                 });
 
                 WaitForIndexing(store);

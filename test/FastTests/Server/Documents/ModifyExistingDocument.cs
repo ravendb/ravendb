@@ -10,7 +10,7 @@ namespace FastTests.Server.Documents
     public class ModifyExistingDocument : RavenNewTestBase
     {
         [Fact]
-        public async Task ShouldThrowIfChangeRavenEntityName()
+        public async Task ShouldThrowIfChangeCollection()
         {
             using (var store = GetDocumentStore())
             {
@@ -20,7 +20,7 @@ namespace FastTests.Server.Documents
                         new { Email = "support@ravendb.net" },
                         new Dictionary<string, string>
                         {
-                            {"Raven-Entity-Name", "Users"}
+                            {"@collection", "Users"}
                         });
 
                     var exception = await Assert.ThrowsAsync<RavenException>(async () =>
@@ -29,7 +29,7 @@ namespace FastTests.Server.Documents
                             new { Email = "support@hibernatingrhinos.com" },
                             new Dictionary<string, string>
                             {
-                                {"Raven-Entity-Name", "UserAddresses"}
+                                {"@collection", "UserAddresses"}
                             });
                     });
 

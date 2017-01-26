@@ -126,7 +126,7 @@ namespace Raven.NewClient.Client.Document
                 var tag = _store.Conventions.GetDynamicTagName(doc.Item1);
                 var metadata = new DynamicJsonValue();
                 if (tag != null)
-                    metadata[Constants.Headers.RavenEntityName] = tag;
+                    metadata[Constants.Metadata.Collection] = tag;
                 metadata[Constants.Metadata.Id] = doc.Item2;
 
                 documentInfo.Metadata = _jsonOperationContext.ReadObject(metadata, doc.Item2);
