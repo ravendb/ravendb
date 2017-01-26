@@ -17,8 +17,7 @@ abstract class abstractNotificationCenterClient extends abstractWebSocketClient<
     protected allAlertsHandlers = ko.observableArray<changesCallback<Raven.Server.NotificationCenter.Actions.AlertRaised>>();
     protected allOperationsHandlers = ko.observableArray<changesCallback<Raven.Server.NotificationCenter.Actions.OperationChanged>>();
     protected watchedOperationsChanged = new Map<number, KnockoutObservableArray<changesCallback<Raven.Server.NotificationCenter.Actions.OperationChanged>>>();
-
-    //TODO: operation dismissed, operation postponed
+    protected allNotificationUpdatedHandlers = ko.observableArray<changesCallback<Raven.Server.NotificationCenter.Actions.NotificationUpdated>>();
 
     protected onOpen() {
         super.onOpen();
@@ -44,6 +43,11 @@ abstract class abstractNotificationCenterClient extends abstractWebSocketClient<
                     this.fireEvents<Raven.Server.NotificationCenter.Actions.OperationChanged>(callbacks(), operationDto, (event) => event.OperationId === key);
                 });
 
+                break;
+
+            case "NotificationUpdated":
+                const notificationUpdatedDto = actionDto as Raven.Server.NotificationCenter.Actions.NotificationUpdated;
+                this.fireEvents<Raven.Server.NotificationCenter.Actions.NotificationUpdated>(this.allNotificationUpdatedHandlers(), notificationUpdatedDto, () => true);
                 break;
             default: 
                 super.onMessage(actionDto);
@@ -97,6 +101,17 @@ abstract class abstractNotificationCenterClient extends abstractWebSocketClient<
             }
         });
     }
+
+    watchAllNotificationUpdated(onChange: (e: Raven.Server.NotificationCenter.Actions.NotificationUpdated) => void) {
+        const callback = new changesCallback<Raven.Server.NotificationCenter.Actions.NotificationUpdated>(onChange);
+
+        this.allNotificationUpdatedHandlers.push(callback);
+
+        return new changeSubscription(() => {
+            this.allNotificationUpdatedHandlers.remove(callback);
+        });
+    }
+
 
 }
 

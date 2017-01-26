@@ -1,6 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 
 import abstractAction = require("common/notifications/actions/abstractAction");
+import resource = require("models/resources/resource");
 
 class alert extends abstractAction {
 
@@ -12,8 +13,8 @@ class alert extends abstractAction {
     isWarning: KnockoutObservable<boolean>;
     isInfo: KnockoutObservable<boolean>;
 
-    constructor(dto: Raven.Server.NotificationCenter.Actions.AlertRaised) {
-        super(dto);
+    constructor(resource: resource, dto: Raven.Server.NotificationCenter.Actions.AlertRaised) {
+        super(resource, dto);
         this.updateWith(dto);
 
         this.initStatus();

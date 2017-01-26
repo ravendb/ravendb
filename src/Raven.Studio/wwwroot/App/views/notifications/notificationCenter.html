@@ -38,11 +38,16 @@
                 <h3 data-bind="text: title"></h3>
                 <p data-bind="text: message"></p>
                 
-                <!-- TODO: 
                 <div class="text-right">
-                    <a href="#" class="btn btn-sm btn-default">Details</a>
-                    <a href="#" data-bind="click: $parent.dismissOperation.bind($parent, operationId, true)" class="btn btn-sm btn-danger"><span class="icon-cancel dismiss-notification"></span>Dismiss</a>
-                </div>-->
+                    <button data-bind="visible: hasDetails(), click: _.partial($parent.openDetails, $data)"
+                            class="btn btn-sm"> 
+                        Details
+                    </button>
+                    <a href="#" class="btn btn-sm" data-bind="click: _.partial($parent.dismiss, $data)">
+                        <i class="icon-cancel"></i>
+                        <span>Dismiss</span>
+                    </a>
+                </div>
             </div>
 
             <div data-bind="if: !isCompleted()">
@@ -59,11 +64,16 @@
                     </div>
                 </div>
 
-                <!-- TODO: 
                 <div class="text-right">
-                    <a href="#" class="btn btn-sm btn-default">Details</a>
-                    <a href="#" data-bind="visible: killable(), click: $parent.killOperation.bind($parent, operationId)" class="btn btn-sm btn-danger"><span class="icon-cancel"></span>Cancel</a>
-                </div>-->
+                    <button data-bind="visible: hasDetails(), click: _.partial($parent.openDetails, $data)"
+                            class="btn btn-sm">
+                        Details
+                    </button>
+                    <a href="#" class="btn btn-sm btn-danger" data-bind="click: _.partial($parent.killOperation, $data), visible: killable()">
+                        <i class="icon-cancel"></i>
+                        <span>Kill</span>
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -75,7 +85,7 @@
             </h3>
             <p data-bind="text: message"></p>
             <div class="text-right">
-                <button data-bind="visible: hasDetails(), click: openDetails"
+                <button data-bind="visible: hasDetails(), click: _.partial($parent.openDetails, $data)"
                         class="btn btn-sm">
                     Details
                 </button>
