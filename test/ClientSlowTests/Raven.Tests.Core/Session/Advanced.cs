@@ -1,8 +1,7 @@
 using System;
-using System.Collections.Generic;
 using FastTests;
-using NewClientTests;
 using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Data.Commands;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Exceptions;
 using Sparrow.Json.Parsing;
@@ -461,29 +460,11 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
             {
                 using (var session = store.OpenSession())
                 {
-                    var commands = new []
+                    var commands = new ICommandData[]
                     {
-                        new Dictionary<string, object>()
-                        {
-                            [Constants.Command.Key] = "company1",
-                            [Constants.Command.Method] = "PUT",
-                            [Constants.Command.Document] = new DynamicJsonValue() { ["Name"] = "company 1" },
-                            [Constants.Command.Etag] = null
-                        },
-                        new Dictionary<string, object>()
-                        {
-                            [Constants.Command.Key] = "company2",
-                            [Constants.Command.Method] = "PUT",
-                            [Constants.Command.Document] = new DynamicJsonValue() { ["Name"] = "company 2" },
-                            [Constants.Command.Etag] = null
-                        },
-                        new Dictionary<string, object>()
-                        {
-                            [Constants.Command.Key] = "company1",
-                            [Constants.Command.Method] = "DELETE",
-                            [Constants.Command.Document] = null,
-                            [Constants.Command.Etag] = null
-                        }
+                        new PutCommandData("company1", null, new DynamicJsonValue { ["Name"] = "company 1" }),
+                        new PutCommandData("company2", null, new DynamicJsonValue { ["Name"] = "company 2" }),
+                        new DeleteCommandData("company1", null)
                     };
 
                     session.Advanced.Defer(commands);

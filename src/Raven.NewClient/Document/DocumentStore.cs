@@ -615,7 +615,7 @@ namespace Raven.NewClient.Client.Document
 
         public DatabaseSmuggler Smuggler => _smuggler ?? (_smuggler = new DatabaseSmuggler(this));
 
-        public AdminOperationExecuter Admin => _adminOperationExecuter ?? (_adminOperationExecuter = new AdminOperationExecuter(this));
+        public override AdminOperationExecuter Admin => _adminOperationExecuter ?? (_adminOperationExecuter = new AdminOperationExecuter(this));
 
         public OperationExecuter Operations => _operationExecuter ?? (_operationExecuter = new OperationExecuter(this));
 

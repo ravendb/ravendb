@@ -115,6 +115,9 @@ namespace Raven.NewClient.Client.Commands
             var queryResult = _currentQueryResults.CreateSnapshot();
             foreach (BlittableJsonReaderObject include in queryResult.Includes)
             {
+                if (include == null)
+                    continue;
+
                 var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(include);
                 _session.includedDocumentsByKey[newDocumentInfo.Id] = newDocumentInfo;
             }

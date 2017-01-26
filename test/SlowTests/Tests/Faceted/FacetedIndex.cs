@@ -178,7 +178,7 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Wait for new client")]
         public void CanPerformFacetedSearch_Remotely_Lazy_can_work_with_others()
         {
             using (var store = GetDocumentStore())

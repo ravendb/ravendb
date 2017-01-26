@@ -71,7 +71,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Wait for new client")]
         public async Task TransformerOverShardedLoad_IdIsNotNull_WithCustomerStrategy()
         {
             using (var shard1 = GetDocumentStore())
