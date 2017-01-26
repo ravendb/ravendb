@@ -27,7 +27,7 @@ class mapItem {
 }
 
 class indexDefinition {
-    static maxIndexOutputsPerDocumentKey = "Raven/Indexing/MaxIndexOutputsPerDocument";
+    static readonly maxIndexOutputsPerDocumentKey = "Raven/Indexing/MaxIndexOutputsPerDocument";
 
     name = ko.observable<string>();
     maps = ko.observableArray<mapItem>();
