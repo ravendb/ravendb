@@ -269,14 +269,10 @@ namespace Raven.Server.Documents.Replication
             using (_database.ConfigurationStorage.ContextPool.AllocateOperationContext(out configurationContext))
             using (var txw = configurationContext.OpenWriteTransaction())
             {
-                _database.Alerts.AddAlert(new Alert
-                {
-                    Key = FromToString,
-                    Type = AlertType.Replication,
-                    Message = msg,
-                    CreatedAt = DateTime.UtcNow,
-                    Severity = AlertSeverity.Warning
-                }, configurationContext, txw);
+                _database.NotificationCenter.AddAfterTransactionCommit(
+                    AlertRaised.Create(AlertTitle, msg, AlertType.Replication, AlertSeverity.Warning, key: FromToString),
+                    txw);
+                
                 txw.Commit();
             }
         }

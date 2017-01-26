@@ -443,8 +443,7 @@ namespace Raven.Server.Documents.Replication
                     // this is severe enough to warrant an alert
                     _database.NotificationCenter.AddAfterTransactionCommit(
                         AlertRaised.Create("Replication conflict", msg, AlertType.Replication,
-                            AlertSeverity.Warning, key: replicationSource),
-                        configurationContext.Transaction);
+                            AlertSeverity.Warning, key: replicationSource), tx);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
