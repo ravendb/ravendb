@@ -14,18 +14,6 @@ namespace FastTests.Server.Replication
     public class AutomaticConflictResolution : ReplicationTestsBase
     {
         [Fact]
-        public void ShouldResolveDocumentConflictInFavorOfLocalVersion()
-        {
-            DocumentConflictResolveTest(StraightforwardConflictResolution.ResolveToLocal);
-        }
-
-        [Fact]
-        public void ShouldResolveDocumentConflictInFavorOfRemoteVersion()
-        {
-            DocumentConflictResolveTest(StraightforwardConflictResolution.ResolveToRemote);
-        }
-
-        [Fact]
         public void ShouldResolveDocumentConflictInFavorOfLatestVersion()
         {
             using (var master = GetDocumentStore())
@@ -155,8 +143,8 @@ namespace FastTests.Server.Replication
                 using (var session = slave.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
-                    Assert.NotNull(user);
-                    Assert.Equal("1st", user.Name);
+                    Assert.Null(user);
+                    //Assert.Equal("1st", user.Name);
                 }
             }
         }
