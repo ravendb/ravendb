@@ -66,7 +66,9 @@ namespace Raven.Server.Documents.Indexes
 
                 writer.Delete(key, stats);
 
-                throw new InvalidOperationException($"Index '{Name}' has already produced {numberOfOutputs} map results for a source document '{key}', while the allowed max number of outputs is {MaxNumberOfIndexOutputs} per one document. Please verify this index definition and consider a re-design of your entities or index.");
+                throw new InvalidOperationException($"Index '{Name}' has already produced {numberOfOutputs} map results for a source document '{key}', " +
+                                                    $"while the allowed max number of outputs is {MaxNumberOfIndexOutputs} per one document. " +
+                                                    $"Please verify this index definition and consider a re-design of your entities or index.");
             }
 
             DocumentDatabase.Metrics.IndexedPerSecond.Mark();

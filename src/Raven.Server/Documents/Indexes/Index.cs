@@ -1983,7 +1983,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected virtual bool EnsureValidNumberOfOutputsForDocument(int numberOfAlreadyProducedOutputs)
         {
-            return numberOfAlreadyProducedOutputs <= MaxNumberOfIndexOutputs;
+            return MaxNumberOfIndexOutputs == -1 || numberOfAlreadyProducedOutputs <= MaxNumberOfIndexOutputs;
         }
 
         public virtual Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()
