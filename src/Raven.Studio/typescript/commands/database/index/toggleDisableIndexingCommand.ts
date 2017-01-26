@@ -10,18 +10,18 @@ class toggleDisableIndexingCommand extends commandBase {
         super();
     }
 
-    updateDocument(basicUrl: string, databaseConfigDocument: any): JQueryPromise<void> {
-        this.start ? delete databaseConfigDocument.Settings[configuration.indexing.disabled] :
-            databaseConfigDocument.Settings[configuration.indexing.disabled] = true;
+    private updateDocument(basicUrl: string, databaseConfigDocument: documentDto): JQueryPromise<void> {
+        this.start ? delete databaseConfigDocument["Settings"][configuration.indexing.disabled] :
+            databaseConfigDocument["Settings"][configuration.indexing.disabled] = true;
+
         const jQueryOptions: JQueryAjaxSettings = {
             headers: { "ETag": databaseConfigDocument["@metadata"]["@etag"] }
-        }
+        };
 
         return this.put(basicUrl, JSON.stringify(databaseConfigDocument), null, jQueryOptions)
             .done(() => {
                 const state = this.start ? "Enabled" : "Disabled";
                 this.reportSuccess(`Indexing is ${state}`);
-                this.db.indexingDisabled(!this.start);
             }).fail((response: JQueryXHR) => this.reportError("Failed to toggle indexing status", response.responseText));
     }
 
@@ -31,7 +31,7 @@ class toggleDisableIndexingCommand extends commandBase {
         };
         const basicUrl = endpoints.global.adminDatabases.adminDatabases + this.urlEncodeArgs(args);
 
-        return this.query(basicUrl, null).then((databaseConfigDocument: any) => 
+        return this.query(basicUrl, null).then((databaseConfigDocument: documentDto) => 
             this.updateDocument(basicUrl, databaseConfigDocument));
     }
 }

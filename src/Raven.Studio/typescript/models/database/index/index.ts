@@ -108,37 +108,37 @@ class index {
         this.isHighPriority = ko.pureComputed(() => this.priority() === "High");
 
         this.isIdleState = ko.pureComputed(() => {
-            let stateIsIdle = this.state() === "Idle";
-            let globalStatusIsNotDisabled = this.globalIndexingStatus() === "Running";
+            const stateIsIdle = this.state() === "Idle";
+            const globalStatusIsNotDisabled = this.globalIndexingStatus() === "Running";
             return stateIsIdle && globalStatusIsNotDisabled;
         });
         this.isDisabledState = ko.pureComputed(() => {
-            let stateIsDisabled = this.state() === "Disabled";
-            let globalStatusIsPaused = this.globalIndexingStatus() === "Paused";
-            let globalStatusIsDisabled = this.globalIndexingStatus() === "Disabled";
+            const stateIsDisabled = this.state() === "Disabled";
+            const globalStatusIsPaused = this.globalIndexingStatus() === "Paused";
+            const globalStatusIsDisabled = this.globalIndexingStatus() === "Disabled";
             return (stateIsDisabled && !globalStatusIsPaused) || globalStatusIsDisabled;
         });
         this.isPausedState = ko.pureComputed(() => {
-            let localStatusIsPaused = this.status() === "Paused";
-            let globalStatusIsPaused = this.globalIndexingStatus() === "Paused";
+            const localStatusIsPaused = this.status() === "Paused";
+            const globalStatusIsPaused = this.globalIndexingStatus() === "Paused";
             return localStatusIsPaused || globalStatusIsPaused;
         });
         this.isErrorState = ko.pureComputed(() => this.state() === "Error");
         this.isNormalState = ko.pureComputed(() => {
-            let stateIsNormal = this.state() === "Normal";
-            let localStatusIsNormal = this.status() === "Running";
-            let globalStatusIsNotDisabled = this.globalIndexingStatus() === "Running";
+            const stateIsNormal = this.state() === "Normal";
+            const localStatusIsNormal = this.status() === "Running";
+            const globalStatusIsNotDisabled = this.globalIndexingStatus() === "Running";
             return stateIsNormal && globalStatusIsNotDisabled && localStatusIsNormal;
         });
 
         this.canBePaused = ko.pureComputed(() => {
-            let localStatusIsNotDisabled = this.status() !== "Disabled";
-            let notInPausedState = !this.isPausedState();
+            const localStatusIsNotDisabled = this.status() !== "Disabled";
+            const notInPausedState = !this.isPausedState();
             return localStatusIsNotDisabled && notInPausedState;
         });
         this.canBeResumed = ko.pureComputed(() => {
-            let localStatusIsNotDisabled = this.status() !== "Disabled";
-            let inPausedState = this.isPausedState();
+            const localStatusIsNotDisabled = this.status() !== "Disabled";
+            const inPausedState = this.isPausedState();
             return localStatusIsNotDisabled && inPausedState;
         });
         this.canBeDisabled = ko.pureComputed(() => {

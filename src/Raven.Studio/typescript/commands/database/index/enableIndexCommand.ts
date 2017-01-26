@@ -11,8 +11,7 @@ class enableIndexCommand extends commandBase {
     execute(): JQueryPromise<void> {
         const args = {
             name: this.indexName
-        }
-        this.reportInfo("Enabling " + this.indexName);
+        };
         const url = endpoints.databases.adminIndex.adminIndexesEnable + this.urlEncodeArgs(args);
         return this.post(url, null, this.db, { dataType: undefined })
             .done(() => {
