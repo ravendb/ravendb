@@ -284,6 +284,9 @@ namespace Raven.Abstractions.Extensions
 
         private static string CaptureHeaderName(string header)
         {
+            if(header[0] == '@')
+                return header;
+            
             var lastWasDash = true;
             var sb = new StringBuilder(header.Length);
 
