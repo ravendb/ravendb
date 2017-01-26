@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using Raven.Abstractions;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Routing;
 
@@ -27,6 +29,27 @@ namespace Raven.Server.NotificationCenter.Handlers
                     await writer.WriteNotifications();
                 }
             }
+        }
+
+        [RavenAction("/notification-center/dismiss", "POST")]
+        public Task DismissPost()
+        {
+            var actionId = GetStringQueryString("id");
+
+            ServerStore.NotificationCenter.Dismiss(actionId);
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/notification-center/postpone", "POST")]
+        public Task PostponePost()
+        {
+            var actionId = GetStringQueryString("id");
+            var timeInSec = GetLongQueryString("timeInSec");
+
+            ServerStore.NotificationCenter.Postpone(actionId, SystemTime.UtcNow.Add(TimeSpan.FromSeconds(timeInSec.Value)));
+
+            return Task.CompletedTask;
         }
     }
 }
