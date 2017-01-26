@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             base.InitializeInternal();
 
-            _maxNumberOfIndexOutputs = Definition.IndexDefinition.Configuration.MaxIndexOutputsPerDocument ?? Configuration.MaxMapIndexOutputsPerDocument;
+            _maxNumberOfIndexOutputs = Configuration.MaxMapIndexOutputsPerDocument;
         }
 
         protected override IIndexingWork[] CreateIndexWorkExecutors()
