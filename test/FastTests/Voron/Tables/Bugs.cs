@@ -59,9 +59,9 @@ namespace FastTests.Voron.Tables
                     var key = i.ToString(Template);
                     Slice slice;
                     Slice.From(tx.Allocator, key, out slice);
-                    var tableReader = docs.ReadByKey(slice);
 
-                    Assert.NotNull(tableReader);
+                    TableValueReader tableReader;
+                    Assert.True(docs.ReadByKey(slice,out tableReader));
 
                     int size;
                     byte* buffer = tableReader.Read(1, out size);
@@ -103,7 +103,7 @@ namespace FastTests.Voron.Tables
                     foreach (var sr in docs.SeekForwardFrom(DocsSchema.Indexes[EtagsSlice], Slices.BeforeAllKeys))
                     {
                         foreach (var tvr in sr.Results)
-                            ids.Add(tvr.Id);
+                            ids.Add(tvr.Reader.Id);
                     }
 
                     foreach (var id in ids)

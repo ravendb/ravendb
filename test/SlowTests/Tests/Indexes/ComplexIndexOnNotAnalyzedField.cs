@@ -23,7 +23,7 @@ namespace SlowTests.Tests.Indexes
             {
                 store.DatabaseCommands.Put("companies/", null,
                        RavenJObject.Parse("{'Name':'Hibernating Rhinos', 'Partners': ['companies/49', 'companies/50']}"),
-                       RavenJObject.Parse("{'Raven-Entity-Name': 'Companies'}"));
+                       RavenJObject.Parse("{'@collection': 'Companies'}"));
 
 
                 store.DatabaseCommands.PutIndex("CompaniesByPartners", new IndexDefinition

@@ -46,7 +46,7 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.Put("FOO", null, new RavenJObject { { "Name", "Ayende" } }, new RavenJObject { { Constants.Headers.RavenEntityName, "Foos" } });
+                store.DatabaseCommands.Put("FOO", null, new RavenJObject { { "Name", "Ayende" } }, new RavenJObject { { Constants.Metadata.Collection, "Foos" } });
 
                 var result = store.DatabaseCommands.Query("dynamic", new IndexQuery
                 {

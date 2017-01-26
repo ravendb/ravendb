@@ -146,7 +146,7 @@ namespace SlowTests.MailingList
                         Id = doc.Id,
                         Slug = doc.Slug,
                         Status = LoadDocument<Credentials>(doc.Id + "/credentials").Status,
-                        DateUpdated = MetadataFor(doc).Value<DateTime>("Last-Modified"),
+                        DateUpdated = MetadataFor(doc).Value<DateTime>(Constants.Metadata.LastModified),
                         ManagedItems =
                             from r in doc.Relations
                             where r.Type == "CaseManagerOf"

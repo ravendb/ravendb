@@ -390,7 +390,7 @@ class editDocument extends viewModelBase {
 
         const meta = updatedDto['@metadata'];
 
-        // Fix up the metadata: if we're a new doc, attach the expected reserved properties like ID, ETag, and RavenEntityName.
+        // Fix up the metadata: if we're a new doc, attach the expected reserved properties like @id, @etag, and @collection.
         // AFAICT, Raven requires these reserved meta properties in order for the doc to be seen as a member of a collection.
         if (this.isCreatingNewDocument()) {
             this.attachReservedMetaProperties(documentId, meta);
@@ -448,7 +448,7 @@ class editDocument extends viewModelBase {
 
     private attachReservedMetaProperties(id: string, target: documentMetadataDto) {
         target['@etag'] = 0;
-        target['Raven-Entity-Name'] = target['Raven-Entity-Name'] || document.getEntityNameFromId(id);
+        target['@collection'] = target['@collection'] || document.getEntityNameFromId(id);
         target['@id'] = id;
     }
 

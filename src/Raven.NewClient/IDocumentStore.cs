@@ -15,6 +15,7 @@ using Raven.NewClient.Client.Connection.Profiling;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Operations;
 
 namespace Raven.NewClient.Client
 {
@@ -207,5 +208,7 @@ namespace Raven.NewClient.Client
         string DefaultDatabase { get; set; }
 
         RequestExecuter GetRequestExecuter(string databaseName);
+
+        AdminOperationExecuter Admin { get; }
     }
 }

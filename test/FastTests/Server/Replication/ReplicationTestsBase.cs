@@ -51,7 +51,7 @@ namespace FastTests.Server.Replication
         protected Dictionary<string, List<ChangeVectorEntry[]>> WaitUntilHasConflict(
                 DocumentStore store,
                 string docId,
-                int count = 1)
+                int count = 2)
         {
             int timeout = 5000;
 

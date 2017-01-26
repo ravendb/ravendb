@@ -34,9 +34,9 @@ namespace SlowTests.Core.Commands
                 var contact2 = new Contact { FirstName = "Expression First Name" };
                 var contact3 = new Contact { FirstName = "First Name" };
 
-                store.DatabaseCommands.Put("contacts/1", null, RavenJObject.FromObject(contact1), new RavenJObject { { "Raven-Entity-Name", "Contacts" } });
-                store.DatabaseCommands.Put("contacts/2", null, RavenJObject.FromObject(contact2), new RavenJObject { { "Raven-Entity-Name", "Contacts" } });
-                store.DatabaseCommands.Put("contacts/3", null, RavenJObject.FromObject(contact3), new RavenJObject { { "Raven-Entity-Name", "Contacts" } });
+                store.DatabaseCommands.Put("contacts/1", null, RavenJObject.FromObject(contact1), new RavenJObject { { "@collection", "Contacts" } });
+                store.DatabaseCommands.Put("contacts/2", null, RavenJObject.FromObject(contact2), new RavenJObject { { "@collection", "Contacts" } });
+                store.DatabaseCommands.Put("contacts/3", null, RavenJObject.FromObject(contact3), new RavenJObject { { "@collection", "Contacts" } });
 
                 store.DatabaseCommands.PutIndex(indexName, new IndexDefinition()
                 {
@@ -103,7 +103,7 @@ namespace SlowTests.Core.Commands
 
                 for (int i = 0; i < 30; i++)
                 {
-                    store.DatabaseCommands.Put("users/" + i, null, RavenJObject.FromObject(new User { Name = "Name" + i }), new RavenJObject { { "Raven-Entity-Name", "Users" } });
+                    store.DatabaseCommands.Put("users/" + i, null, RavenJObject.FromObject(new User { Name = "Name" + i }), new RavenJObject { { "@collection", "Users" } });
                 }
                 WaitForIndexing(store);
 
@@ -139,7 +139,7 @@ namespace SlowTests.Core.Commands
                             Cost = i * 100D,
                             Megapixels = i * 1D
                         }),
-                        new RavenJObject { { "Raven-Entity-Name", "Cameras" } });
+                        new RavenJObject { { "@collection", "Cameras" } });
                 }
                 WaitForIndexing(store);
 
@@ -307,10 +307,10 @@ namespace SlowTests.Core.Commands
                 var index = new Users_ByName();
                 index.Execute(store);
 
-                store.DatabaseCommands.Put("users/1", null, RavenJObject.FromObject(new User { Name = "John Smith" }), new RavenJObject { { "Raven-Entity-Name", "Users" } });
-                store.DatabaseCommands.Put("users/2", null, RavenJObject.FromObject(new User { Name = "Jack Johnson" }), new RavenJObject { { "Raven-Entity-Name", "Users" } });
-                store.DatabaseCommands.Put("users/3", null, RavenJObject.FromObject(new User { Name = "Robery Jones" }), new RavenJObject { { "Raven-Entity-Name", "Users" } });
-                store.DatabaseCommands.Put("users/4", null, RavenJObject.FromObject(new User { Name = "David Jones" }), new RavenJObject { { "Raven-Entity-Name", "Users" } });
+                store.DatabaseCommands.Put("users/1", null, RavenJObject.FromObject(new User { Name = "John Smith" }), new RavenJObject { { "@collection", "Users" } });
+                store.DatabaseCommands.Put("users/2", null, RavenJObject.FromObject(new User { Name = "Jack Johnson" }), new RavenJObject { { "@collection", "Users" } });
+                store.DatabaseCommands.Put("users/3", null, RavenJObject.FromObject(new User { Name = "Robery Jones" }), new RavenJObject { { "@collection", "Users" } });
+                store.DatabaseCommands.Put("users/4", null, RavenJObject.FromObject(new User { Name = "David Jones" }), new RavenJObject { { "@collection", "Users" } });
                 WaitForIndexing(store);
 
                 var suggestions = store.DatabaseCommands.Suggest(index.IndexName, new SuggestionQuery()

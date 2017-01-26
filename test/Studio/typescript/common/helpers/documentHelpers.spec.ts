@@ -41,7 +41,7 @@ describe(helperUnderTest, () => {
         chai.expect(schema.toDto((false))).to.deep.equal({ name: "", address: { zipCode: 0, street: "" }, "@metadata": undefined });
     });
 
-    it('should infer RavenEntityName and ClrType from metadata', () => {
+    it('should infer @collection and ClrType from metadata', () => {
         var doc1: any = document.empty();
         doc1.name = "John";
         doc1.__metadata.ravenEntityName = "People";

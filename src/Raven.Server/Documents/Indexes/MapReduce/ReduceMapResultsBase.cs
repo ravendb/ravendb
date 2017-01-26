@@ -216,7 +216,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             var parentPagesToAggregate = new HashSet<long>();
 
             var page = new TreePage(null, Constants.Storage.PageSize);
-            
+
             foreach (var modifiedPage in modifiedStore.ModifiedPages)
             {
                 token.ThrowIfCancellationRequested();
@@ -260,52 +260,52 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         continue;
                     }
 
-                var parentPage = tree.GetParentPageOf(leafPage);
+                    var parentPage = tree.GetParentPageOf(leafPage);
 
-                stats.RecordReduceAttempts(leafPage.NumberOfEntries);
+                    stats.RecordReduceAttempts(leafPage.NumberOfEntries);
 
-                try
-                {
-                    using (var result = AggregateLeafPage(leafPage, lowLevelTransaction, indexContext, stats, token))
+                    try
                     {
+                        using (var result = AggregateLeafPage(leafPage, lowLevelTransaction, indexContext, stats, token))
+                        {
+                            if (parentPage == -1)
+                            {
+                                writer.DeleteReduceResult(reduceKeyHash, stats);
+
+                                foreach (var output in result.GetOutputs())
+                                {
+                                    writer.IndexDocument(reduceKeyHash, output, stats, indexContext);
+                                }
+                            }
+                            else
+                            {
+                                StoreAggregationResult(leafPage.PageNumber, leafPage.NumberOfEntries, table, result, stats);
+                                parentPagesToAggregate.Add(parentPage);
+                            }
+
+                            _metrics.MapReduceReducedPerSecond.Mark(leafPage.NumberOfEntries);
+
+                            stats.RecordReduceSuccesses(leafPage.NumberOfEntries);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        _index.HandleError(e);
+
+                        var message =
+                            $"Failed to execute reduce function for reduce key '{tree.Name}' on a leaf page #{leafPage} of '{_indexDefinition.Name}' index.";
+
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info(message, e);
+
                         if (parentPage == -1)
                         {
-                            writer.DeleteReduceResult(reduceKeyHash, stats);
-
-                            foreach (var output in result.GetOutputs())
-                            {
-                                writer.IndexDocument(reduceKeyHash, output, stats, indexContext);
-                            }
+                            stats.RecordReduceErrors(leafPage.NumberOfEntries);
+                            stats.AddReduceError(message + $"  Exception: {e}");
                         }
-                        else
-                        {
-                            StoreAggregationResult(leafPage.PageNumber, leafPage.NumberOfEntries, table, result, stats);
-                            parentPagesToAggregate.Add(parentPage);
-                        }
-
-                        _metrics.MapReduceReducedPerSecond.Mark(leafPage.NumberOfEntries);
-
-                        stats.RecordReduceSuccesses(leafPage.NumberOfEntries);
-                    }
-                }
-                catch (Exception e)
-                {
-                    _index.HandleError(e);
-
-                    var message =
-                        $"Failed to execute reduce function for reduce key '{tree.Name}' on a leaf page #{leafPage} of '{_indexDefinition.Name}' index.";
-
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info(message, e);
-
-                    if (parentPage == -1)
-                    {
-                        stats.RecordReduceErrors(leafPage.NumberOfEntries);
-                        stats.AddReduceError(message + $"  Exception: {e}");
                     }
                 }
             }
-        }
 
             long tmp = 0;
             Slice pageNumberSlice;
@@ -421,13 +421,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     TableValueReader tvr;
                     using (Slice.External(indexContext.Allocator, (byte*)&childPageNumber, sizeof(long), out childPageNumberSlice))
                     {
-                        tvr = table.ReadByKey(childPageNumberSlice);
-                        if (tvr == null)
+                        if (table.ReadByKey(childPageNumberSlice, out tvr) == false)
                         {
                             if (remainingBranchesToAggregate.Contains(pageNumber))
                             {
                                 // we have a modified branch page but its children were not modified (branch page splitting) so we didn't aggregated it yet, let's do it now
-
                                 try
                                 {
                                     page.Base = indexContext.Transaction.InnerTransaction.LowLevelTransaction.GetPage(pageNumber).Pointer;
@@ -442,7 +440,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                                     remainingBranchesToAggregate.Remove(pageNumber);
                                 }
 
-                                tvr = table.ReadByKey(childPageNumberSlice);
+                                table.ReadByKey(childPageNumberSlice, out tvr);
                             }
                             else
                             {

@@ -289,7 +289,7 @@ namespace SlowTests.Core.Indexing
                     session.Store(address1);
                     session.Store(address2);
 
-                    session.Advanced.GetMetadataFor(address2)[Constants.Headers.RavenEntityName] = "addresses";
+                    session.Advanced.GetMetadataFor(address2)[Constants.Metadata.Collection] = "addresses";
 
                     var user1 = new User
                     {

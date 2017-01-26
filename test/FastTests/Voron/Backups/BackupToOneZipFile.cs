@@ -60,7 +60,7 @@ namespace FastTests.Voron.Backups
                         ["Name"] = "Edward",
                         [Constants.Metadata.Key] = new DynamicJsonValue
                         {
-                            [Constants.Headers.RavenEntityName] = "Users"
+                            [Constants.Metadata.Collection] = "Users"
                         }
                     });
 
@@ -145,7 +145,7 @@ namespace FastTests.Voron.Backups
                             ["Name"] = "Edward",
                             [Constants.Metadata.Key] = new DynamicJsonValue
                             {
-                                [Constants.Headers.RavenEntityName] = "Users"
+                                [Constants.Metadata.Collection] = "Users"
                             }
                         });
 
@@ -186,7 +186,7 @@ namespace FastTests.Voron.Backups
                             ["Name"] = "Edward",
                             [Constants.Metadata.Key] = new DynamicJsonValue
                             {
-                                [Constants.Headers.RavenEntityName] = "Users"
+                                [Constants.Metadata.Collection] = "Users"
                             }
                         });
 

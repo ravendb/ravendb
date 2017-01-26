@@ -7,7 +7,6 @@ using Raven.NewClient.Abstractions.Indexing;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client;
 using Raven.NewClient.Client.Bundles.MoreLikeThis;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Abstractions.Data;
@@ -15,10 +14,11 @@ using System.Linq;
 using FastTests;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
+using Raven.NewClient.Client.Document;
 
 namespace NewClientTests.NewClient
 {
-    public class MoreLikeThisTests :  RavenNewTestBase
+    public class MoreLikeThisTests : RavenNewTestBase
     {
         private class Transformer1 : AbstractTransformerCreationTask<Data>
         {
@@ -58,11 +58,11 @@ namespace NewClientTests.NewClient
             }
         }
 
-        private readonly IDocumentStore store;
+        private readonly DocumentStore _store;
 
         public MoreLikeThisTests()
         {
-            store = GetDocumentStore();
+            _store = GetDocumentStore();
         }
 
         private static string GetLorem(int numWords)
@@ -100,21 +100,21 @@ namespace NewClientTests.NewClient
         {
             string id;
 
-            new Transformer1().Execute(store);
+            new Transformer1().Execute(_store);
 
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
-                new DataIndex(true, false).Execute(store);
+                new DataIndex(true, false).Execute(_store);
 
                 var list = GetDataList();
                 list.ForEach(session.Store);
                 session.SaveChanges();
 
                 id = session.Advanced.GetDocumentId(list.First());
-                WaitForIndexing(store);
+                WaitForIndexing(_store);
             }
 
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
                 var list = session.Advanced.MoreLikeThis<Transformer1, Transformer1.Result, DataIndex>(new MoreLikeThisQuery
                 {
@@ -135,11 +135,11 @@ namespace NewClientTests.NewClient
         {
             string id;
 
-            new Transformer2().Execute(store);
+            new Transformer2().Execute(_store);
 
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
-                new DataIndex(true, false).Execute(store);
+                new DataIndex(true, false).Execute(_store);
 
                 session.Store(new Person { Name = "Name1" });
 
@@ -148,10 +148,10 @@ namespace NewClientTests.NewClient
                 session.SaveChanges();
 
                 id = session.Advanced.GetDocumentId(list.First());
-                WaitForIndexing(store);
+                WaitForIndexing(_store);
             }
 
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
                 var list = session.Advanced.MoreLikeThis<Transformer2, Transformer2.Result, DataIndex>(new MoreLikeThisQuery
                 {
@@ -179,11 +179,11 @@ namespace NewClientTests.NewClient
         {
             string id;
 
-            new Transformer2().Execute(store);
+            new Transformer2().Execute(_store);
 
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
-                new DataIndex(true, false).Execute(store);
+                new DataIndex(true, false).Execute(_store);
 
                 session.Store(new { Name = "Name1" }, "test");
 
@@ -192,10 +192,10 @@ namespace NewClientTests.NewClient
                 session.SaveChanges();
 
                 id = session.Advanced.GetDocumentId(list.First());
-                WaitForIndexing(store);
+                WaitForIndexing(_store);
             }
 
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
                 var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQuery
                 {
@@ -219,16 +219,16 @@ namespace NewClientTests.NewClient
         {
             string id;
 
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
-                new DataIndex(true, false).Execute(store);
+                new DataIndex(true, false).Execute(_store);
 
                 var list = GetDataList();
                 list.ForEach(session.Store);
                 session.SaveChanges();
 
                 id = session.Advanced.GetDocumentId(list.First());
-                WaitForIndexing(store);
+                WaitForIndexing(_store);
             }
 
             AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(id);
@@ -239,16 +239,16 @@ namespace NewClientTests.NewClient
         {
             string id;
 
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
-                new DataIndex(true, false).Execute(store);
+                new DataIndex(true, false).Execute(_store);
 
                 var list = GetDataList();
                 list.ForEach(session.Store);
                 session.SaveChanges();
 
                 id = session.Advanced.GetDocumentId(list.First());
-                WaitForIndexing(store);
+                WaitForIndexing(_store);
             }
 
             await AssetMoreLikeThisHasMatchesForAsync<Data, DataIndex>(id);
@@ -259,16 +259,16 @@ namespace NewClientTests.NewClient
         {
             string id;
 
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
-                new DataIndex(false, true).Execute(store);
+                new DataIndex(false, true).Execute(_store);
 
                 var list = GetDataList();
                 list.ForEach(session.Store);
                 session.SaveChanges();
 
                 id = session.Advanced.GetDocumentId(list.First());
-                WaitForIndexing(store);
+                WaitForIndexing(_store);
             }
 
             AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(id);
@@ -279,16 +279,16 @@ namespace NewClientTests.NewClient
         {
             string id;
 
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
-                new DataIndex(true, true).Execute(store);
+                new DataIndex(true, true).Execute(_store);
 
                 var list = GetDataList();
                 list.ForEach(session.Store);
                 session.SaveChanges();
 
                 id = session.Advanced.GetDocumentId(list.First());
-                WaitForIndexing(store);
+                WaitForIndexing(_store);
             }
 
             AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(id);
@@ -299,9 +299,9 @@ namespace NewClientTests.NewClient
         {
             string id;
 
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
-                new OtherDataIndex().Execute(store);
+                new OtherDataIndex().Execute(_store);
 
                 var dataQueriedFor = new DataWithIntegerId { Id = 123, Body = "This is a test. Isn't it great? I hope I pass my test!" };
 
@@ -319,7 +319,7 @@ namespace NewClientTests.NewClient
 
                 id = session.Advanced.GetDocumentId(dataQueriedFor);
 
-                WaitForIndexing(store);
+                WaitForIndexing(_store);
             }
 
             Console.WriteLine("Test: '{0}'", id);
@@ -335,14 +335,14 @@ namespace NewClientTests.NewClient
         {
             const string key = "datas/1";
 
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
-                new DataIndex().Execute(store);
+                new DataIndex().Execute(_store);
 
                 var list = GetDataList();
                 list.ForEach(session.Store);
                 session.SaveChanges();
-                WaitForIndexing(store);
+                WaitForIndexing(_store);
             }
 
             AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(key);
@@ -353,24 +353,24 @@ namespace NewClientTests.NewClient
         {
             const string key = "datas/4";
 
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
-                new DataIndex().Execute(store);
+                new DataIndex().Execute(_store);
 
                 var list = GetDataList();
                 list.ForEach(session.Store);
                 session.SaveChanges();
-                WaitForIndexing(store);
+                WaitForIndexing(_store);
             }
 
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
                 var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQuery
                 {
                     DocumentId = key,
                     Fields = new[] { "Body" }
                 });
-                WaitForIndexing(store);
+                WaitForIndexing(_store);
 
                 Assert.Empty(list);
             }
@@ -380,9 +380,9 @@ namespace NewClientTests.NewClient
         public void Test_With_Lots_Of_Random_Data()
         {
             var key = "datas/1";
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
-                new DataIndex().Execute(store);
+                new DataIndex().Execute(_store);
 
                 for (var i = 0; i < 100; i++)
                 {
@@ -391,7 +391,7 @@ namespace NewClientTests.NewClient
                 }
                 session.SaveChanges();
 
-                WaitForIndexing(store);
+                WaitForIndexing(_store);
             }
 
             AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(key);
@@ -401,9 +401,9 @@ namespace NewClientTests.NewClient
         public void Do_Not_Pass_FieldNames()
         {
             var key = "datas/1";
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
-                new DataIndex().Execute(store);
+                new DataIndex().Execute(_store);
 
                 for (var i = 0; i < 10; i++)
                 {
@@ -412,10 +412,10 @@ namespace NewClientTests.NewClient
                 }
                 session.SaveChanges();
 
-                WaitForIndexing(store);
+                WaitForIndexing(_store);
             }
 
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
                 var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key);
 
@@ -427,9 +427,9 @@ namespace NewClientTests.NewClient
         public void Each_Field_Should_Use_Correct_Analyzer()
         {
             var key = "datas/1";
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
-                new DataIndex().Execute(store);
+                new DataIndex().Execute(_store);
 
                 for (var i = 0; i < 10; i++)
                 {
@@ -438,10 +438,10 @@ namespace NewClientTests.NewClient
                 }
                 session.SaveChanges();
 
-                WaitForIndexing(store);
+                WaitForIndexing(_store);
             }
 
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
                 var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key);
 
@@ -449,9 +449,9 @@ namespace NewClientTests.NewClient
             }
 
             key = "datas/11";
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
-                new DataIndex().Execute(store);
+                new DataIndex().Execute(_store);
 
                 for (var i = 0; i < 10; i++)
                 {
@@ -460,10 +460,10 @@ namespace NewClientTests.NewClient
                 }
                 session.SaveChanges();
 
-                WaitForIndexing(store);
+                WaitForIndexing(_store);
             }
 
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
                 var list = session.Advanced.MoreLikeThis<Data, DataIndex>(key);
 
@@ -476,9 +476,9 @@ namespace NewClientTests.NewClient
         {
             const string key = "datas/1";
 
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
-                new DataIndex().Execute(store);
+                new DataIndex().Execute(_store);
 
                 var list = new List<Data>
                 {
@@ -491,10 +491,10 @@ namespace NewClientTests.NewClient
 
                 session.SaveChanges();
 
-                WaitForIndexing(store);
+                WaitForIndexing(_store);
             }
 
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
                 var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQuery
                 {
@@ -512,9 +512,9 @@ namespace NewClientTests.NewClient
         {
             const string key = "datas/1";
 
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
-                new DataIndex().Execute(store);
+                new DataIndex().Execute(_store);
 
                 var list = new List<Data>
                 {
@@ -526,10 +526,10 @@ namespace NewClientTests.NewClient
 
                 session.SaveChanges();
 
-                WaitForIndexing(store);
+                WaitForIndexing(_store);
             }
 
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
                 var list = session.Advanced.MoreLikeThis<Data, DataIndex>(
                     new MoreLikeThisQuery
@@ -551,9 +551,9 @@ namespace NewClientTests.NewClient
         {
             const string key = "datas/1";
 
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
-                new DataIndex().Execute(store);
+                new DataIndex().Execute(_store);
 
                 var list = new List<Data>
                 {
@@ -572,10 +572,10 @@ namespace NewClientTests.NewClient
 
                 session.SaveChanges();
 
-                WaitForIndexing(store);
+                WaitForIndexing(_store);
             }
 
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
                 var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQuery
                 {
@@ -591,9 +591,9 @@ namespace NewClientTests.NewClient
         [Fact(Skip = "RavenDB-6092 Support artificial documents on MoreLikeThisQuery")]
         public void CanMakeDynamicDocumentQueries()
         {
-            new DataIndex().Execute(store);
+            new DataIndex().Execute(_store);
 
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
                 var list = GetDataList();
                 list.ForEach(session.Store);
@@ -601,9 +601,9 @@ namespace NewClientTests.NewClient
                 session.SaveChanges();
             }
 
-            WaitForIndexing(store);
+            WaitForIndexing(_store);
 
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
                 /*var list = session.Advanced.MoreLikeThis<Data, DataIndex>(
                     new MoreLikeThisQuery
@@ -621,9 +621,9 @@ namespace NewClientTests.NewClient
         [Fact(Skip = "RavenDB-6092 Support artificial documents on MoreLikeThisQuery")]
         public void CanMakeDynamicDocumentQueriesWithComplexProperties()
         {
-            new ComplexDataIndex().Execute(store);
+            new ComplexDataIndex().Execute(_store);
 
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
                 session.Store(new ComplexData
                 {
@@ -635,9 +635,9 @@ namespace NewClientTests.NewClient
                 session.SaveChanges();
             }
 
-            WaitForIndexing(store);
+            WaitForIndexing(_store);
 
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
                 /*var list = session.Advanced.MoreLikeThis<ComplexData, ComplexDataIndex>(
                     new MoreLikeThisQuery
@@ -653,7 +653,7 @@ namespace NewClientTests.NewClient
 
         private void AssetMoreLikeThisHasMatchesFor<T, TIndex>(string documentKey) where TIndex : AbstractIndexCreationTask, new()
         {
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
                 var list = session.Advanced.MoreLikeThis<T, TIndex>(new MoreLikeThisQuery
                 {
@@ -667,7 +667,7 @@ namespace NewClientTests.NewClient
 
         private async Task AssetMoreLikeThisHasMatchesForAsync<T, TIndex>(string documentKey) where TIndex : AbstractIndexCreationTask, new()
         {
-            using (var session = store.OpenAsyncSession())
+            using (var session = _store.OpenAsyncSession())
             {
                 var list = await session.Advanced.MoreLikeThisAsync<T, TIndex>(new MoreLikeThisQuery
                 {
@@ -681,9 +681,9 @@ namespace NewClientTests.NewClient
 
         private void InsertData()
         {
-            using (var session = store.OpenSession())
+            using (var session = _store.OpenSession())
             {
-                new DataIndex().Execute(store);
+                new DataIndex().Execute(_store);
 
                 var list = new List<Data>
                 {

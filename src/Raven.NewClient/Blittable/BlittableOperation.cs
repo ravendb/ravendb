@@ -65,7 +65,7 @@ namespace Raven.NewClient.Client.Blittable
             {
                 newBlittable.GetPropertyByIndex(propId, ref newProp);
 
-                if (newProp.Name.Equals(Constants.Headers.RavenLastModified))
+                if (newProp.Name.Equals(Constants.Metadata.LastModified))
                     continue;
 
                 if (newFields.Contains(newProp.Name))

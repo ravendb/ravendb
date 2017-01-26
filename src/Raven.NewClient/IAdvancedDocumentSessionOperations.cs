@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Blittable;
+using Raven.NewClient.Client.Data.Commands;
 using Raven.NewClient.Client.Http;
 using Sparrow.Json;
 
@@ -77,7 +78,7 @@ namespace Raven.NewClient.Client.Document
         ///     Defer commands to be executed on SaveChanges()
         /// </summary>
         /// <param name="commands">Array of comands to be executed.</param>
-        void Defer(params Dictionary<string, object>[] commands);
+        void Defer(params ICommandData[] commands);
 
         /// <summary>
         ///     Evicts the specified entity from the session.

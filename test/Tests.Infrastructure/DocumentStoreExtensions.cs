@@ -5,6 +5,7 @@ using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Data.Commands;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Http;
@@ -166,6 +167,18 @@ namespace FastTests
                 await RequestExecuter.ExecuteAsync(command, Context);
 
                 return command.Result;
+            }
+
+            public void Batch(List<ICommandData> commands)
+            {
+                AsyncHelpers.RunSync(() => BatchAsync(commands));
+            }
+
+            public async Task BatchAsync(List<ICommandData> commands)
+            {
+                var command = new BatchCommand(Context, commands);
+
+                await RequestExecuter.ExecuteAsync(command, Context);
             }
 
             public void Dispose()

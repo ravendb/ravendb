@@ -39,7 +39,7 @@ class consoleJs extends viewModelBase {
         this.predefinedSamples.push({
             Name: "Put document",
             Code: "var doc = Raven.Json.Linq.RavenJObject.Parse('{ \"Name\" : \"Raven\" }');" +
-            "\nvar metadata = Raven.Json.Linq.RavenJObject.Parse('{ \"Raven-Entity-Name\" : \"Docs\" }');" +
+            "\nvar metadata = Raven.Json.Linq.RavenJObject.Parse('{ \"@collection\" : \"Docs\" }');" +
             "\n\ndatabase.Documents.Put('doc/1', null, doc, metadata, null);" });
 
 

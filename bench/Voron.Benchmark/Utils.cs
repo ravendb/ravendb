@@ -214,7 +214,7 @@ namespace Voron.Benchmark
                     foreach (var reader in table.SeekByPrimaryKey(Slices.BeforeAllKeys))
                     {
                         Slice key;
-                        schema.Key.GetSlice(Configuration.Allocator, reader, out key);
+                        schema.Key.GetSlice(Configuration.Allocator, ref reader.Reader, out key);
                         tableKeys.Add(key);
                     }
 

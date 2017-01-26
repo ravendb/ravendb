@@ -96,7 +96,7 @@ namespace SlowTests.Bugs.Indexing
                     f_totaldownload = -1
                 };
                 session.Store(entity);
-                session.Advanced.GetMetadataFor(entity)["Raven-Entity-Name"] = "Softs";
+                session.Advanced.GetMetadataFor(entity)["@collection"] = "Softs";
                 session.SaveChanges();
 
                 List<Soft> tmps = session.Advanced.DocumentQuery<Soft>("test").

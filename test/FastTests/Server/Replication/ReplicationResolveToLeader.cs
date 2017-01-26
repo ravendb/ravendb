@@ -71,7 +71,7 @@ namespace FastTests.Server.Replication
 
             Assert.Equal(2,WaitUntilHasConflict(store1,"foo/bar")["foo/bar"].Count);
             Assert.Equal(2,WaitUntilHasConflict(store2,"foo/bar")["foo/bar"].Count);
-            Assert.Equal(3,WaitUntilHasConflict(store3,"foo/bar")["foo/bar"].Count);
+            Assert.Equal(3,WaitUntilHasConflict(store3,"foo/bar", 3)["foo/bar"].Count);
 
             // store2 <--> store1 <--> store3*
             SetupReplication(store3, new ReplicationDocument

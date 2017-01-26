@@ -8,6 +8,7 @@ using Raven.NewClient.Client;
 using Raven.NewClient.Client.Indexes;
 using Xunit;
 using Raven.NewClient.Client.Data.Queries;
+using Raven.NewClient.Client.Document;
 
 namespace NewClientTests.NewClient
 {
@@ -74,7 +75,7 @@ namespace NewClientTests.NewClient
                 session.SaveChanges();
             }
 
-            WaitForIndexing(store);
+            WaitForIndexing((DocumentStore)store);
 
             using (var session = store.OpenSession())
             {

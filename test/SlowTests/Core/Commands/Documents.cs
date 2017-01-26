@@ -108,7 +108,7 @@ namespace SlowTests.Core.Commands
                     Name = "testname"
                 }), new RavenJObject
                 {
-                    {"Raven-Entity-Name",  "Items"}
+                    {"@collection",  "Items"}
                 });
                 WaitForIndexing(store);
 

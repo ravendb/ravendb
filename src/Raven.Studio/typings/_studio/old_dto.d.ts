@@ -31,7 +31,7 @@ interface logNotificationDto {
 }
 
 interface documentMetadataDto {
-    'Raven-Entity-Name'?: string;
+    '@collection'?: string;
     'Raven-Clr-Type'?: string;
     'Non-Authoritative-Information'?: boolean;
     '@id'?: string;

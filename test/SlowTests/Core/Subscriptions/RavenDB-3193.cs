@@ -54,7 +54,7 @@ namespace SlowTests.Core.Subscriptions
                     foreach (var jsonDocument in docs)
                     {
                         var collection =
-                            jsonDocument[Constants.Metadata.Key].Value<string>(Constants.Headers.RavenEntityName);
+                            jsonDocument[Constants.Metadata.Key].Value<string>(Constants.Metadata.Collection);
                         Assert.True(collection == "Users");
                     }
                 }

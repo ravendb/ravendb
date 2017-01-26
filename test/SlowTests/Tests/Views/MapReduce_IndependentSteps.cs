@@ -73,7 +73,7 @@ select new {
 
                 for (var i = 0; i < values.Length; i++)
                 {
-                    store.DatabaseCommands.Put("blogs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject { { "Raven-Entity-Name", "Blogs" } });
+                    store.DatabaseCommands.Put("blogs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject { { "@collection", "Blogs" } });
                 }
 
                 WaitForIndexing(store);

@@ -208,8 +208,8 @@ class sqlReplication extends document {
         this.__metadata.id = "Raven/SqlReplication/Configuration/" + this.name();
     }*/
 
-    saveNewCollectionName(newRavenEntityName: string) {
-        this.collection(newRavenEntityName);
+    saveNewCollectionName(newCollection: string) {
+        this.collection(newCollection);
     }
 
 

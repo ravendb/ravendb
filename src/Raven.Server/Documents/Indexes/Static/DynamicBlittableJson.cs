@@ -85,7 +85,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         result = _doc.Etag;
                         getResult = true;
                         break;
-                    case Constants.Headers.LastModified:
+                    case Constants.Metadata.LastModified:
                         result = _doc.LastModified;
                         getResult = true;
                         break;

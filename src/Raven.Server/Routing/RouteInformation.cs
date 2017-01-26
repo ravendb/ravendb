@@ -109,7 +109,7 @@ namespace Raven.Server.Routing
                 return true;
             }
             var database = CreateDatabase(context);
-            if (database.IsCompleted)
+            if (database.Status == TaskStatus.RanToCompletion)
             {
                 handler = _request;
                 return true;

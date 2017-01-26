@@ -198,21 +198,21 @@ namespace Raven.Server.Documents.Indexes
 
                 foreach (var sr in table.SeekForwardFrom(_errorsSchema.Indexes[IndexSchema.ErrorTimestampsSlice], Slices.BeforeAllKeys))
                 {
-                    foreach (var tvr in sr.Results)
+                    foreach (var a in sr.Results)
                     {
                         int size;
                         var error = new IndexingError();
 
-                        var ptr = tvr.Read(0, out size);
+                        var ptr = a.Reader.Read(0, out size);
                         error.Timestamp = new DateTime(IPAddress.NetworkToHostOrder(*(long*)ptr), DateTimeKind.Utc);
 
-                        ptr = tvr.Read(1, out size);
+                        ptr = a.Reader.Read(1, out size);
                         error.Document = new LazyStringValue(null, ptr, size, context);
 
-                        ptr = tvr.Read(2, out size);
+                        ptr = a.Reader.Read(2, out size);
                         error.Action = new LazyStringValue(null, ptr, size, context);
 
-                        ptr = tvr.Read(3, out size);
+                        ptr = a.Reader.Read(3, out size);
                         error.Error = new LazyStringValue(null, ptr, size, context);
 
                         errors.Add(error);

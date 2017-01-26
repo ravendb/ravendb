@@ -15,10 +15,16 @@ namespace Voron.Data.Tables
         private readonly int _dataSize;
         private readonly int _elementSize = 1;
 
-        public long Id;
+        public readonly long Id;
 
-        public TableValueReader(byte* ptr, int size)
+        public TableValueReader(byte* ptr, int size) : this(-1, ptr, size)
         {
+            
+        }
+
+        public TableValueReader(long id, byte* ptr, int size)
+        {
+            Id = id;
             Pointer = ptr;
             Size = size;
             if (size > byte.MaxValue)

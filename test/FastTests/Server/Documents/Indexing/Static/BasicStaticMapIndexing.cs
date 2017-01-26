@@ -44,7 +44,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                                 ["Name"] = "John",
                                 [Constants.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Headers.RavenEntityName] = "Users"
+                                    [Constants.Metadata.Collection] = "Users"
                                 }
                             }))
                             {
@@ -56,7 +56,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                                 ["Name"] = "Edward",
                                 [Constants.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Headers.RavenEntityName] = "Users"
+                                    [Constants.Metadata.Collection] = "Users"
                                 }
                             }))
                             {
@@ -276,7 +276,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                                 ["Name"] = "John",
                                 [Constants.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Headers.RavenEntityName] = "Users"
+                                    [Constants.Metadata.Collection] = "Users"
                                 }
                             }))
                             {
@@ -288,7 +288,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                                 ["Name"] = "Edward",
                                 [Constants.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Headers.RavenEntityName] = "People"
+                                    [Constants.Metadata.Collection] = "People"
                                 }
                             }))
                             {
@@ -366,7 +366,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                                 ["Name"] = "John",
                                 [Constants.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Headers.RavenEntityName] = "Users"
+                                    [Constants.Metadata.Collection] = "Users"
                                 }
                             }))
                             {
@@ -378,7 +378,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                                 ["Name"] = "Bob",
                                 [Constants.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Headers.RavenEntityName] = "Users"
+                                    [Constants.Metadata.Collection] = "Users"
                                 }
                             }))
                             {
@@ -390,7 +390,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                                 ["Name"] = "Edward",
                                 [Constants.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Headers.RavenEntityName] = "People"
+                                    [Constants.Metadata.Collection] = "People"
                                 }
                             }))
                             {
@@ -438,7 +438,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                                 ["Name"] = "George",
                                 [Constants.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Headers.RavenEntityName] = "Users"
+                                    [Constants.Metadata.Collection] = "Users"
                                 }
                             }))
                             {
@@ -450,7 +450,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                                 ["Name"] = "Edward",
                                 [Constants.Metadata.Key] = new DynamicJsonValue
                                 {
-                                    [Constants.Headers.RavenEntityName] = "People"
+                                    [Constants.Metadata.Collection] = "People"
                                 }
                             }))
                             {

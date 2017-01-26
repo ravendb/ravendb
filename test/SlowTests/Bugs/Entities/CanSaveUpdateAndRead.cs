@@ -27,7 +27,7 @@ namespace SlowTests.Bugs.Entities
                 using (var s = store.OpenSession())
                 {
                     var e = s.Load<Event>("events/1");
-                    var entityName = s.Advanced.GetMetadataFor(e)[Constants.Headers.RavenEntityName];
+                    var entityName = s.Advanced.GetMetadataFor(e)[Constants.Metadata.Collection];
                     Assert.Equal("Events", entityName);
                 }
             }

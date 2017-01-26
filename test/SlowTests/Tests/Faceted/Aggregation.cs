@@ -58,8 +58,8 @@ namespace SlowTests.Tests.Faceted
 
                     session.Store(obj);
                     session.Store(obj2);
-                    session.Advanced.GetMetadataFor(obj)["Raven-Entity-Name"] = "Orders";
-                    session.Advanced.GetMetadataFor(obj2)["Raven-Entity-Name"] = "Orders";
+                    session.Advanced.GetMetadataFor(obj)["@collection"] = "Orders";
+                    session.Advanced.GetMetadataFor(obj2)["@collection"] = "Orders";
 
                     session.SaveChanges();
                 }
@@ -96,8 +96,8 @@ namespace SlowTests.Tests.Faceted
 
                     session.Store(obj);
                     session.Store(obj2);
-                    session.Advanced.GetMetadataFor(obj)["Raven-Entity-Name"] = "Orders";
-                    session.Advanced.GetMetadataFor(obj2)["Raven-Entity-Name"] = "Orders";
+                    session.Advanced.GetMetadataFor(obj)["@collection"] = "Orders";
+                    session.Advanced.GetMetadataFor(obj2)["@collection"] = "Orders";
 
                     session.SaveChanges();
                 }
@@ -135,8 +135,8 @@ namespace SlowTests.Tests.Faceted
 
                     session.Store(obj);
                     session.Store(obj2);
-                    session.Advanced.GetMetadataFor(obj)["Raven-Entity-Name"] = "Orders";
-                    session.Advanced.GetMetadataFor(obj2)["Raven-Entity-Name"] = "Orders";
+                    session.Advanced.GetMetadataFor(obj)["@collection"] = "Orders";
+                    session.Advanced.GetMetadataFor(obj2)["@collection"] = "Orders";
 
                     session.SaveChanges();
                 }
@@ -174,8 +174,8 @@ namespace SlowTests.Tests.Faceted
 
                     session.Store(obj);
                     session.Store(obj2);
-                    session.Advanced.GetMetadataFor(obj)["Raven-Entity-Name"] = "Orders";
-                    session.Advanced.GetMetadataFor(obj2)["Raven-Entity-Name"] = "Orders";
+                    session.Advanced.GetMetadataFor(obj)["@collection"] = "Orders";
+                    session.Advanced.GetMetadataFor(obj2)["@collection"] = "Orders";
 
                     session.SaveChanges();
                 }

@@ -118,7 +118,7 @@ namespace FastTests.Server.Documents
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
                     {
-                        ["Raven-Entity-Name"] = "Users"
+                        ["@collection"] = "Users"
                     }
                 }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
@@ -129,7 +129,7 @@ namespace FastTests.Server.Documents
                     ["Name"] = "Ayende",
                     ["@metadata"] = new DynamicJsonValue
                     {
-                        ["Raven-Entity-Name"] = "Users"
+                        ["@collection"] = "Users"
                     }
                 }, "users/2", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
@@ -140,7 +140,7 @@ namespace FastTests.Server.Documents
                     ["Name"] = "Arava",
                     ["@metadata"] = new DynamicJsonValue
                     {
-                        ["Raven-Entity-Name"] = "Dogs"
+                        ["@collection"] = "Dogs"
                     }
                 }, "pets/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
@@ -179,7 +179,7 @@ namespace FastTests.Server.Documents
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
                     {
-                        ["Raven-Entity-Name"] = "Users"
+                        ["@collection"] = "Users"
                     }
                 }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
@@ -201,7 +201,7 @@ namespace FastTests.Server.Documents
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
                     {
-                        ["Raven-Entity-Name"] = "Users"
+                        ["@collection"] = "Users"
                     }
                 }, "users/2", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
@@ -225,7 +225,7 @@ namespace FastTests.Server.Documents
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
                     {
-                        ["Raven-Entity-Name"] = "Users"
+                        ["@collection"] = "Users"
                     }
                 }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
@@ -247,7 +247,7 @@ namespace FastTests.Server.Documents
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
                     {
-                        ["Raven-Entity-Name"] = "Users"
+                        ["@collection"] = "Users"
                     }
                 }, "users/2", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
@@ -291,7 +291,7 @@ namespace FastTests.Server.Documents
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
                     {
-                        ["Raven-Entity-Name"] = "Users"
+                        ["@collection"] = "Users"
                     }
                 }, "users/10", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
@@ -302,7 +302,7 @@ namespace FastTests.Server.Documents
                     ["Name"] = "Ayende",
                     ["@metadata"] = new DynamicJsonValue
                     {
-                        ["Raven-Entity-Name"] = "Users"
+                        ["@collection"] = "Users"
                     }
                 }, "users/02", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
@@ -313,7 +313,7 @@ namespace FastTests.Server.Documents
                     ["Name"] = "Arava",
                     ["@metadata"] = new DynamicJsonValue
                     {
-                        ["Raven-Entity-Name"] = "Dogs"
+                        ["@collection"] = "Dogs"
                     }
                 }, "pets/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
@@ -350,7 +350,7 @@ namespace FastTests.Server.Documents
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
                     {
-                        ["Raven-Entity-Name"] = "Users"
+                        ["@collection"] = "Users"
                     }
                 }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
@@ -362,7 +362,7 @@ namespace FastTests.Server.Documents
                     ["Name"] = "Arava",
                     ["@metadata"] = new DynamicJsonValue
                     {
-                        ["Raven-Entity-Name"] = "Dogs"
+                        ["@collection"] = "Dogs"
                     }
                 }, "pets/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
@@ -373,7 +373,7 @@ namespace FastTests.Server.Documents
                     ["Name"] = "Ayende",
                     ["@metadata"] = new DynamicJsonValue
                     {
-                        ["Raven-Entity-Name"] = "Users"
+                        ["@collection"] = "Users"
                     }
                 }, "users/2", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
@@ -410,7 +410,7 @@ namespace FastTests.Server.Documents
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
                     {
-                        ["Raven-Entity-Name"] = "Users"
+                        ["@collection"] = "Users"
                     }
                 }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
@@ -434,7 +434,7 @@ namespace FastTests.Server.Documents
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
                     {
-                        ["Raven-Entity-Name"] = "Users"
+                        ["@collection"] = "Users"
                     }
                 }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
@@ -458,7 +458,7 @@ namespace FastTests.Server.Documents
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
                     {
-                        ["Raven-Entity-Name"] = "Users"
+                        ["@collection"] = "Users"
                     }
                 }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
@@ -495,7 +495,7 @@ namespace FastTests.Server.Documents
                     ["Name"] = "Oren",
                     ["@metadata"] = new DynamicJsonValue
                     {
-                        ["Raven-Entity-Name"] = "Users"
+                        ["@collection"] = "Users"
                     }
                 }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {

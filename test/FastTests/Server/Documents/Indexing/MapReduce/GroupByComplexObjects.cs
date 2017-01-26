@@ -283,7 +283,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     },
                     [Constants.Metadata.Key] = new DynamicJsonValue
                     {
-                        [Constants.Headers.RavenEntityName] = "Users"
+                        [Constants.Metadata.Collection] = "Users"
                     }
                 }))
                 {
@@ -307,7 +307,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     },
                     [Constants.Metadata.Key] = new DynamicJsonValue
                     {
-                        [Constants.Headers.RavenEntityName] = "Users"
+                        [Constants.Metadata.Collection] = "Users"
                     }
                 }))
                 {
@@ -331,7 +331,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     },
                     [Constants.Metadata.Key] = new DynamicJsonValue
                     {
-                        [Constants.Headers.RavenEntityName] = "Users"
+                        [Constants.Metadata.Collection] = "Users"
                     }
                 }))
                 {

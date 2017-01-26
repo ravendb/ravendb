@@ -58,7 +58,7 @@ namespace SlowTests.MailingList
 }"),
                     new RavenJObject
                     {
-                        { Constants.Headers.RavenEntityName, "patrons" }
+                        { Constants.Metadata.Collection, "patrons" }
                     });
 
                 new Index1().Execute(store);

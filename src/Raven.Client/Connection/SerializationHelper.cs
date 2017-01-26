@@ -63,7 +63,7 @@ namespace Raven.Client.Connection
             }
 
             var lastModified = GetLastModified(metadata);
-            metadata[Constants.Headers.LastModified] = lastModified;
+            metadata[Constants.Metadata.LastModified] = lastModified;
             var etag = Extract(metadata, "@etag", 0, (string g) => HttpExtensions.EtagHeaderToEtag(g));
 
             var jsonDocument = new JsonDocument
@@ -82,7 +82,7 @@ namespace Raven.Client.Connection
         {
             if (metadata == null)
                 return SystemTime.UtcNow;
-            return Extract(metadata, Constants.Headers.LastModified, SystemTime.UtcNow, (string d) => ConvertToUtcDate(d));
+            return Extract(metadata, Constants.Metadata.LastModified, SystemTime.UtcNow, (string d) => ConvertToUtcDate(d));
         }
 
         ///<summary>
@@ -197,7 +197,7 @@ namespace Raven.Client.Connection
 
             var etag = headers.ETag.Tag;
             var lastModified = GetLastModifiedDate(headers);
-            metadata[Constants.Headers.LastModified] = lastModified;
+            metadata[Constants.Metadata.LastModified] = lastModified;
 
             return new JsonDocument
             {
@@ -218,7 +218,7 @@ namespace Raven.Client.Connection
 
             var etag = headers[Constants.MetadataEtagField];
             var lastModified = GetLastModifiedDate(headers);
-            metadata[Constants.Headers.LastModified] = lastModified;
+            metadata[Constants.Metadata.LastModified] = lastModified;
 
             return new JsonDocument
             {
@@ -232,10 +232,10 @@ namespace Raven.Client.Connection
 
         private static DateTime? GetLastModifiedDate(NameValueCollection headers)
         {
-            var lastModified = headers.GetValues(Constants.Headers.LastModified);
+            var lastModified = headers.GetValues(Constants.Metadata.LastModified);
             if (lastModified == null || lastModified.Length != 1)
             {
-                var dt = DateTime.ParseExact(headers[Constants.Headers.LastModified], new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+                var dt = DateTime.ParseExact(headers[Constants.Metadata.LastModified], new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
                 return DateTime.SpecifyKind(dt, DateTimeKind.Utc);
             }
             return DateTime.ParseExact(lastModified[0], new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
@@ -243,10 +243,10 @@ namespace Raven.Client.Connection
 
         private static DateTime? GetLastModifiedDate(HttpResponseHeaders headers)
         {
-            var lastModified = headers.GetAllValues(Constants.Headers.LastModified);
+            var lastModified = headers.GetAllValues(Constants.Metadata.LastModified);
             if (lastModified == null || lastModified.Length != 1)
             {
-                var dt = DateTime.ParseExact(headers.GetFirstValue(Constants.Headers.LastModified), new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+                var dt = DateTime.ParseExact(headers.GetFirstValue(Constants.Metadata.LastModified), new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
                 return DateTime.SpecifyKind(dt, DateTimeKind.Utc);
             }
             return DateTime.ParseExact(lastModified[0], new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
@@ -269,10 +269,10 @@ namespace Raven.Client.Connection
                 throw new JsonReaderException("Invalid Json Response", jre);
             }
             var etag = headers.ETag.Tag;
-            string lastModified = headers.GetFirstValue(Constants.Headers.LastModified) ?? headers.GetFirstValue(Constants.Headers.LastModified);
+            string lastModified = headers.GetFirstValue(Constants.Metadata.LastModified);
             var dateTime = DateTime.ParseExact(lastModified, new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
             var lastModifiedDate = DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
-            metadata[Constants.Headers.LastModified] = lastModified;
+            metadata[Constants.Metadata.LastModified] = lastModified;
 
             return new JsonDocumentMetadata
             {
@@ -300,10 +300,10 @@ namespace Raven.Client.Connection
                 throw new JsonReaderException("Invalid Json Response", jre);
             }
             var etag = headers[Constants.MetadataEtagField];
-            string lastModified = headers[Constants.Headers.LastModified] ?? headers[Constants.Headers.LastModified];
+            string lastModified = headers[Constants.Metadata.LastModified];
             var dateTime = DateTime.ParseExact(lastModified, new[] { "o", "r" }, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
             var lastModifiedDate = DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
-            metadata[Constants.Headers.LastModified] = lastModified;
+            metadata[Constants.Metadata.LastModified] = lastModified;
 
             return new JsonDocumentMetadata
             {

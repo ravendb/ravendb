@@ -102,7 +102,7 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        public bool IsMetadataEqualTo(BlittableJsonReaderObject obj, HashSet<string> excludedShallowProperties)
+        public bool IsMetadataEqualTo(BlittableJsonReaderObject obj)
         {
             if (obj == null)
                 return false;
@@ -118,15 +118,15 @@ namespace Raven.Server.Documents
             if (myMetadata == null || objMetadata == null)
                 return false;
 
-            return IsEqualTo(excludedShallowProperties, myMetadata, objMetadata);
+            return ComparePropertiesExceptionStartingWithAt(myMetadata, objMetadata);
         }
 
-        public bool IsEqualTo(BlittableJsonReaderObject obj, HashSet<string> excludedShallowProperties)
+        public bool IsEqualTo(BlittableJsonReaderObject obj)
         {
-            return IsEqualTo(excludedShallowProperties, Data, obj);
+            return ComparePropertiesExceptionStartingWithAt(Data, obj);
         }
 
-        private static bool IsEqualTo(HashSet<string> excludedShallowProperties, BlittableJsonReaderObject myMetadata,
+        private static bool ComparePropertiesExceptionStartingWithAt(BlittableJsonReaderObject myMetadata,
             BlittableJsonReaderObject objMetadata)
         {
             var properties = new HashSet<string>(myMetadata.GetPropertyNames());
@@ -137,7 +137,7 @@ namespace Raven.Server.Documents
 
             foreach (var property in properties)
             {
-                if (excludedShallowProperties.Contains(property))
+                if (property[0] == '@')
                     continue;
 
                 object myProperty;

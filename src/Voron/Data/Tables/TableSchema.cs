@@ -28,14 +28,21 @@ namespace Voron.Data.Tables
         public static readonly Slice PkSlice;
 
         private SchemaIndexDef _primaryKey;
-        private readonly Dictionary<Slice, SchemaIndexDef> _indexes = new Dictionary<Slice, SchemaIndexDef>(SliceComparer.Instance);
-        private readonly Dictionary<Slice, FixedSizeSchemaIndexDef> _fixedSizeIndexes = new Dictionary<Slice, FixedSizeSchemaIndexDef>(SliceComparer.Instance);
+
+        private readonly Dictionary<Slice, SchemaIndexDef> _indexes =
+            new Dictionary<Slice, SchemaIndexDef>(SliceComparer.Instance);
+
+        private readonly Dictionary<Slice, FixedSizeSchemaIndexDef> _fixedSizeIndexes =
+            new Dictionary<Slice, FixedSizeSchemaIndexDef>(SliceComparer.Instance);
 
         static TableSchema()
         {
-            Slice.From(StorageEnvironment.LabelsContext, "Active-Section", ByteStringType.Immutable, out ActiveSectionSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "Inactive-Section", ByteStringType.Immutable, out InactiveSectionSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "Active-Candidate-Section", ByteStringType.Immutable, out ActiveCandidateSectionSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "Active-Section", ByteStringType.Immutable,
+                out ActiveSectionSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "Inactive-Section", ByteStringType.Immutable,
+                out InactiveSectionSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "Active-Candidate-Section", ByteStringType.Immutable,
+                out ActiveCandidateSectionSlice);
             Slice.From(StorageEnvironment.LabelsContext, "Stats", ByteStringType.Immutable, out StatsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "Schemas", ByteStringType.Immutable, out SchemasSlice);
             Slice.From(StorageEnvironment.LabelsContext, "PK", ByteStringType.Immutable, out PkSlice);
@@ -55,11 +62,13 @@ namespace Voron.Data.Tables
             /// without any copying
             /// </summary>
             public int StartIndex = -1;
+
             public int Count = -1;
             public bool IsGlobal;
             public Slice Name;
 
-            public ByteStringContext.ExternalScope GetSlice(ByteStringContext context, TableValueReader value, out Slice slice)
+            public ByteStringContext.ExternalScope GetSlice(ByteStringContext context, ref TableValueReader value,
+                out Slice slice)
             {
                 int totalSize;
                 var ptr = value.Read(StartIndex, out totalSize);
@@ -81,9 +90,53 @@ namespace Voron.Data.Tables
                 if (totalSize < 0 || totalSize > value.Size)
                     throw new ArgumentOutOfRangeException(nameof(value), "Reading a slice that is longer than the value");
                 if (totalSize > ushort.MaxValue)
-                    throw new ArgumentOutOfRangeException(nameof(totalSize), "Reading a slice that too big to be a slice");
+                    throw new ArgumentOutOfRangeException(nameof(totalSize),
+                        "Reading a slice that too big to be a slice");
 #endif
-                return Slice.External(context, ptr, (ushort)totalSize, out slice);
+                return Slice.External(context, ptr, (ushort) totalSize, out slice);
+            }
+
+            public ByteStringContext.Scope GetSlice(ByteStringContext context, TableValueBuilder value,
+                out Slice slice)
+            {
+                if (Count == 1)
+                    return value.SliceFromLocation(context, StartIndex, out slice);
+
+                int totalSize = value.SizeOf(StartIndex);
+                for (int i = 1; i < Count; i++)
+                {
+                    totalSize += value.SizeOf(i + StartIndex);
+                }
+#if DEBUG
+                if (totalSize < 0)
+                    throw new ArgumentOutOfRangeException(nameof(totalSize), "Size cannot be negative");
+#endif
+                var ret = context.Allocate(totalSize);
+                try
+                {
+                    var ptr = ret.Ptr;
+                    Slice val;
+                    using (value.SliceFromLocation(context, StartIndex, out val))
+                    {
+                        val.CopyTo(ptr);
+                        ptr += val.Size;
+                    }
+                    for (var i = 1; i < Count; i++)
+                    {
+                        using (value.SliceFromLocation(context, i + StartIndex, out val))
+                        {
+                            val.CopyTo(ptr);
+                            ptr += val.Size;
+                        }
+                    }
+                    slice = new Slice(ret);
+                    return new ByteStringContext<ByteStringMemoryCache>.Scope(context, ret);
+                }
+                catch (Exception)
+                {
+                    context.Release(ref ret);
+                    throw;
+                }
             }
 
             public byte[] Serialize()
@@ -172,11 +225,20 @@ namespace Voron.Data.Tables
             public bool IsGlobal;
             public Slice Name;
 
-            public long GetValue(TableValueReader value)
+            public long GetValue(ref TableValueReader value)
             {
                 int totalSize;
                 var ptr = value.Read(StartIndex, out totalSize);
-                return EndianBitConverter.Big.ToInt64(ptr);
+                return Bits.SwapBytes(*(long*)ptr);
+            }
+
+            public long GetValue(ByteStringContext context,TableValueBuilder value)
+            {
+                Slice slice;
+                using (value.SliceFromLocation(context, StartIndex,out slice))
+                {
+                    return Bits.SwapBytes(*(long*)slice.Content.Ptr);
+                }
             }
 
             public byte[] Serialize()

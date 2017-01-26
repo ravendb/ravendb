@@ -227,7 +227,7 @@ namespace Raven.Server.Documents.Versioning
             {
                 prefixKeyMem = context.Allocator.Allocate(loweredKey.Size + 1);
                 loweredKey.CopyTo(0, prefixKeyMem.Ptr, 0, loweredKey.Size);
-                prefixKeyMem.Ptr[loweredKey.Size] = (byte) 30; // the record separator                
+                prefixKeyMem.Ptr[loweredKey.Size] = (byte)30; // the record separator                
                 var prefixSlice = new Slice(SliceOptions.Key, prefixKeyMem);
                 table.DeleteForwardFrom(DocsSchema.Indexes[KeyAndEtagSlice], prefixSlice, long.MaxValue);
                 DeleteCountOfRevisions(context, prefixSlice);
@@ -261,7 +261,7 @@ namespace Raven.Server.Documents.Versioning
                         if (take-- <= 0)
                             yield break;
 
-                        var document = TableValueToDocument(context, tvr);
+                        var document = TableValueToDocument(context, ref tvr.Reader);
                         yield return document;
                     }
                     if (take <= 0)
@@ -276,7 +276,7 @@ namespace Raven.Server.Documents.Versioning
 
             foreach (var tvr in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[EtagSlice], etag))
             {
-                var document = TableValueToDocument(context, tvr);
+                var document = TableValueToDocument(context, ref tvr.Reader);
                 yield return document;
 
                 if (take-- <= 0)
@@ -284,7 +284,7 @@ namespace Raven.Server.Documents.Versioning
             }
         }
 
-        private static Document TableValueToDocument(JsonOperationContext context, TableValueReader tvr)
+        private static Document TableValueToDocument(JsonOperationContext context, ref TableValueReader tvr)
         {
             var result = new Document
             {

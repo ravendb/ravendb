@@ -151,7 +151,7 @@ class documentHelpers {
         const ravenClrType = documentHelpers.findCommonValue(metadatas, "ravenClrType");
 
         docDto["@metadata"] = {
-            "Raven-Entity-Name": ravenEntityName,
+            "@collection": ravenEntityName,
             "Raven-Clr-Type": ravenClrType
         }
         return new document(docDto);

@@ -44,6 +44,7 @@ namespace FastTests.Voron.Tables
                 .DefineKey(new TableSchema.SchemaIndexDef
                 {
                     StartIndex = 0,
+                    Count = 1
                 });
         }
 

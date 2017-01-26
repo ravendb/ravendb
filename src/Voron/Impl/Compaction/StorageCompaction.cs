@@ -267,9 +267,9 @@ namespace Voron.Impl.Compaction
                                 foreach (var entry in result.Results)
                                 {
                                     // The table will take care of reconstructing indexes automatically
-                                    outputTable.Insert(entry);
+                                    outputTable.Insert(ref entry.Reader);
                                     copiedEntries++;
-                                    transactionSize += entry.Size;
+                                    transactionSize += entry.Reader.Size;
                                 }
 
                                 // The transaction has surpassed the allowed
@@ -290,15 +290,15 @@ namespace Voron.Impl.Compaction
                             {
 
                                 // The table will take care of reconstructing indexes automatically
-                                outputTable.Insert(entry);
+                                outputTable.Insert(ref entry.Reader);
                                 copiedEntries++;
-                                transactionSize += entry.Size;
+                                transactionSize += entry.Reader.Size;
 
                                 // The transaction has surpassed the allowed
                                 // size before a flush
                                 if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize/2)
                                 {
-                                    lastFixedIndex = index.GetValue(entry);
+                                    lastFixedIndex = index.GetValue(ref entry.Reader);
                                     break;
                                 }
                             }
@@ -310,15 +310,15 @@ namespace Voron.Impl.Compaction
                         foreach (var entry in inputTable.SeekByPrimaryKey(lastSlice))
                         {
                             // The table will take care of reconstructing indexes automatically
-                            outputTable.Insert(entry);
+                            outputTable.Insert(ref entry.Reader);
                             copiedEntries++;
-                            transactionSize += entry.Size;
+                            transactionSize += entry.Reader.Size;
 
                             // The transaction has surpassed the allowed
                             // size before a flush
                             if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize/2)
                             {
-                                schema.Key.GetSlice(txr.Allocator, entry, out lastSlice);
+                                schema.Key.GetSlice(txr.Allocator, ref entry.Reader, out lastSlice);
                                 break;
                             }
                         }

@@ -34,7 +34,7 @@ namespace SlowTests.Issues
                             { "Name", "test #" + i }
                         }, new RavenJObject()
                         {
-                            { Constants.Headers.RavenEntityName, "Users"}
+                            { Constants.Metadata.Collection, "Users"}
                         });
                     }
 

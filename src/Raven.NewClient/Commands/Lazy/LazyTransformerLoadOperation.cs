@@ -61,8 +61,11 @@ namespace Raven.NewClient.Client.Commands.Lazy
                 return;
             }
 
-            var loadTransformerOperation = JsonDeserializationClient.GetDocumentResult((BlittableJsonReaderObject)response.Result);
-            HandleResponse(loadTransformerOperation);
+            var multiLoadResult = response.Result != null
+                ? JsonDeserializationClient.GetDocumentResult((BlittableJsonReaderObject)response.Result)
+                : null;
+
+            HandleResponse(multiLoadResult);
         }
 
         private void HandleResponse(GetDocumentResult loadResult)

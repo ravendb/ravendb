@@ -34,7 +34,7 @@ namespace SlowTests.MailingList
 }"),
                                            new RavenJObject
                                            {
-                                            {Constants.Headers.RavenEntityName, "ClickAllocations"}
+                                            {Constants.Metadata.Collection, "ClickAllocations"}
                                            });
 
                 store.DatabaseCommands.Put("test/2", null,
@@ -56,7 +56,7 @@ namespace SlowTests.MailingList
 }"),
                                        new RavenJObject
                                            {
-                                            {Constants.Headers.RavenEntityName, "ClickAllocations"}
+                                            {Constants.Metadata.Collection, "ClickAllocations"}
                                            });
 
 
@@ -103,7 +103,7 @@ namespace SlowTests.MailingList
 }"),
                                            new RavenJObject
                                            {
-                                            {Constants.Headers.RavenEntityName, "ClickAllocations"}
+                                            {Constants.Metadata.Collection, "ClickAllocations"}
                                            });
 
                 store.DatabaseCommands.Put("test/2", null,
@@ -125,7 +125,7 @@ namespace SlowTests.MailingList
 }"),
                                        new RavenJObject
                                            {
-                                            {Constants.Headers.RavenEntityName, "ClickAllocations"}
+                                            {Constants.Metadata.Collection, "ClickAllocations"}
                                            });
 
 

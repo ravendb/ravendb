@@ -25,9 +25,9 @@ namespace Tryouts
         {
             for (int i = 0; i < 100; i++)
             {
-               using (var a = new FastTests.Server.Replication.ReplicationResolveToDatabase())
+               using (var a = new FastTests.Voron.Tables.CompositeIndex())
                {
-                   a.UnsetDatabaseResolver();
+                   a.CanInsertThenUpdateThenByComposite();
                }
                 Console.WriteLine($"{i} finished");
             }

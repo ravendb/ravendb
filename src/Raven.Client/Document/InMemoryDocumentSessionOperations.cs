@@ -382,9 +382,9 @@ more responsive application.
             {
                 documentFound.Metadata["@etag"] = documentFound.Etag.ToString();
             }
-            if (!documentFound.Metadata.ContainsKey(Constants.Headers.LastModified))
+            if (!documentFound.Metadata.ContainsKey(Constants.Metadata.LastModified))
             {
-                documentFound.Metadata[Constants.Headers.LastModified] = documentFound.LastModified;
+                documentFound.Metadata[Constants.Metadata.LastModified] = documentFound.LastModified;
             }
 
             return TrackEntity(entityType, documentFound.Key, documentFound.DataAsJson, documentFound.Metadata, noTracking: false);
@@ -691,7 +691,7 @@ more responsive application.
             var metadata = new RavenJObject();
             var tag = documentStore.Conventions.GetDynamicTagName(entity);
             if (tag != null)
-                metadata.Add(Constants.Headers.RavenEntityName, tag);
+                metadata.Add(Constants.Metadata.Collection, tag);
             if (id != null)
                 KnownMissingIds.Remove(id);
             StoreEntityInUnitOfWork(id, entity, etag, metadata, forceConcurrencyCheck);
@@ -1291,7 +1291,7 @@ more responsive application.
                 return;
             }
 
-            var entityName = metadata.Value<string>(Constants.Headers.RavenEntityName);
+            var entityName = metadata.Value<string>(Constants.Metadata.Collection);
 
             var idPropName = Conventions.FindIdentityPropertyNameFromEntityName(entityName);
             if (result.ContainsKey(idPropName))

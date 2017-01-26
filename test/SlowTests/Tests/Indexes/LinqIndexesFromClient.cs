@@ -49,13 +49,13 @@ namespace SlowTests.Tests.Indexes
                 GetDocumentFromString(
                 @"
                 {
-                    '@metadata': {'Raven-Entity-Name': 'Orders', '@id': 1},
+                    '@metadata': {'@collection': 'Orders', '@id': 1},
                     'OrderLines': [{'ProductId': 2}, {'ProductId': 3}]
                 }".Replace("\r\n", Environment.NewLine), context),
                   GetDocumentFromString(
                 @"
                 {
-                    '@metadata': {'Raven-Entity-Name': 'Orders', '@id': 2},
+                    '@metadata': {'@collection': 'Orders', '@id': 2},
                     'OrderLines': [{'ProductId': 5}, {'ProductId': 4}]
                 }".Replace("\r\n", Environment.NewLine), context)
             }).Cast<object>().ToArray();

@@ -43,26 +43,13 @@ namespace Raven.NewClient.Abstractions.Data
             public const string MaxMapReduceIndexOutputsPerDocument = "Raven/Indexing/MaxMapIndexOutputsPerDocument";
         }
 
-        public class Command
-        {
-            private Command()
-            {
-            }
-
-            public const string Key = "Key";
-
-            public const string Method = "Method";
-
-            public const string Etag = "Etag";
-
-            public const string Document = "Document";
-        }
-
         public class Metadata
         {
             private Metadata()
             {
             }
+
+            public const string Collection = "@collection";
 
             public const string Key = "@metadata";
 
@@ -71,6 +58,8 @@ namespace Raven.NewClient.Abstractions.Data
             public const string Etag = "@etag";
 
             public const string IndexScore = "@index-score";
+
+            public const string LastModified = "@last-modified";
         }
 
         public class Indexing
@@ -129,17 +118,11 @@ namespace Raven.NewClient.Abstractions.Data
 
             public const string RavenShardId = "Raven-Shard-Id";
 
-            public const string LastModified = "Last-Modified";
-
             public const string CreationDate = "Creation-Date";
 
             public const string RavenCreationDate = "Raven-Creation-Date";
 
-            public const string RavenLastModified = "Raven-Last-Modified";
-
             public const string RavenClrType = "Raven-Clr-Type";
-
-            public const string RavenEntityName = "Raven-Entity-Name";
 
             public const string RavenReadOnly = "Raven-Read-Only";
 

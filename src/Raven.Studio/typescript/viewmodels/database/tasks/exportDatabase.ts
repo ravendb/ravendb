@@ -116,7 +116,7 @@ class exportDatabase extends viewModelBase {
 
             if (!model.includeAllCollections()) {
                 const collections = model.includedCollections();
-                commandTokens.push("--metadata-filter=Raven-Entity-Name=" + exportDatabase.escapeForShell(collections.toString()));
+                commandTokens.push("--metadata-filter=@collection=" + exportDatabase.escapeForShell(collections.toString()));
             }
 
             if (model.transformScript()) {

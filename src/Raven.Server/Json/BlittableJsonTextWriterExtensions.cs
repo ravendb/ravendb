@@ -1010,12 +1010,16 @@ namespace Raven.Server.Json
             var first = true;
             foreach (var document in documents)
             {
-                if (document == null)
-                    continue;
-
                 if (first == false)
                     writer.WriteComma();
                 first = false;
+
+
+                if (document == null)
+                {
+                    writer.WriteNull();
+                    continue;
+                }
 
                 if (document == Document.ExplicitNull)
                 {
@@ -1146,7 +1150,7 @@ namespace Raven.Server.Json
                     writer.WriteComma();
                 }
                 first = false;
-                writer.WritePropertyName(Constants.Headers.LastModified);
+                writer.WritePropertyName(Constants.Metadata.LastModified);
                 writer.WriteString(document.LastModified.GetDefaultRavenFormat());
             }
             writer.WriteEndObject();

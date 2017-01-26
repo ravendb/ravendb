@@ -143,7 +143,8 @@ namespace Raven.Server.Documents
                 Slice subscriptionSlice;
                 using (Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(long), out subscriptionSlice))
                 {
-                    existingSubscription = table.ReadByKey(subscriptionSlice);
+                    if (table.ReadByKey(subscriptionSlice, out existingSubscription) == false)
+                        return;
                 }
                 table.Update(existingSubscription.Id, tvb);
                 tx.Commit();
@@ -204,7 +205,8 @@ namespace Raven.Server.Documents
                 Slice subsriptionSlice;
                 using (Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(long), out subsriptionSlice))
                 {
-                    subscription = table.ReadByKey(subsriptionSlice);
+                    if (table.ReadByKey(subsriptionSlice, out subscription) == false)
+                        return;
                 }
                 table.Delete(subscription.Id);
 
@@ -251,7 +253,7 @@ namespace Raven.Server.Documents
                     if (take-- <= 0)
                         yield break;
 
-                    yield return GetSubscriptionInternal(context, subscriptionTvr, history);
+                    yield return GetSubscriptionInternal(context, ref subscriptionTvr.Reader, history);
                 }
             }
         }
@@ -307,11 +309,11 @@ namespace Raven.Server.Documents
                 Slice subscriptionSlice;
                 using (Slice.External(tx.Allocator, (byte*)&id, sizeof(long), out subscriptionSlice))
                 {
-                    var tvr = table.ReadByKey(subscriptionSlice);
-                    if (tvr == null)
+                    TableValueReader reader;
+                    if (table.ReadByKey(subscriptionSlice, out reader) == false)
                         return null;
 
-                    return GetSubscriptionInternal(context, tvr, history);
+                    return GetSubscriptionInternal(context, ref reader, history);
                 }
             }
         }
@@ -441,7 +443,7 @@ namespace Raven.Server.Documents
             return subscriptionData;
         }
 
-        private DynamicJsonValue GetSubscriptionInternal(JsonOperationContext context, TableValueReader tvr, bool history)
+        private DynamicJsonValue GetSubscriptionInternal(JsonOperationContext context, ref TableValueReader tvr, bool history)
         {
             long id;
             var subscriptionData = ExtractSubscriptionConfigValue(tvr, context, out id);
@@ -463,17 +465,16 @@ namespace Raven.Server.Documents
             var table = tx.OpenTable(_subscriptionsSchema, SubscriptionSchema.SubsTree);
             var subscriptionId = Bits.SwapBytes((ulong)id);
 
-            TableValueReader config;
             Slice subscriptionSlice;
             using (Slice.External(tx.Allocator, (byte*)&subscriptionId, sizeof(long), out subscriptionSlice))
             {
-                config = table.ReadByKey(subscriptionSlice);
+                TableValueReader config;
+                if (table.ReadByKey(subscriptionSlice, out config) == false)
+                    throw new SubscriptionDoesNotExistException(
+                    "There is no subscription configuration for specified identifier (id: " + id + ")");
+                return config;
             }
 
-            if (config == null)
-                throw new SubscriptionDoesNotExistException(
-                    "There is no subscription configuration for specified identifier (id: " + id + ")");
-            return config;
         }
     }
 

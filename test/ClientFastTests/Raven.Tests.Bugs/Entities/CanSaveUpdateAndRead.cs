@@ -26,7 +26,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Entities
                 using (var s = store.OpenSession())
                 {
                     var e = s.Load<Event>("events/1");
-                    var entityName = s.Advanced.GetMetadataFor(e)["Raven-Entity-Name"];
+                    var entityName = s.Advanced.GetMetadataFor(e)["@collection"];
                     Assert.Equal("Events", entityName);
                 }
             }

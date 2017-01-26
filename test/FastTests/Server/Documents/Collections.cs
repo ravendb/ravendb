@@ -24,17 +24,17 @@ namespace FastTests.Server.Documents
                 {
                     commands.Put("orders/1", null, new { }, new Dictionary<string, string>
                     {
-                        {Constants.Headers.RavenEntityName, "Orders"}
+                        {Constants.Metadata.Collection, "Orders"}
                     });
 
                     commands.Put("orders/2", null, new { }, new Dictionary<string, string>
                     {
-                        {Constants.Headers.RavenEntityName, "orders"}
+                        {Constants.Metadata.Collection, "orders"}
                     });
 
                     commands.Put("people/1", null, new { }, new Dictionary<string, string>
                     {
-                        {Constants.Headers.RavenEntityName, "People"}
+                        {Constants.Metadata.Collection, "People"}
                     });
 
                     var collectionStats = store.Admin.Send(new GetCollectionStatisticsOperation());
