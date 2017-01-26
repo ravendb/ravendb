@@ -113,10 +113,10 @@ class index {
             return stateIsIdle && globalStatusIsNotDisabled;
         });
         this.isDisabledState = ko.pureComputed(() => {
-            let stateIsDisabeld = this.state() === "Disabled";
+            let stateIsDisabled = this.state() === "Disabled";
             let globalStatusIsPaused = this.globalIndexingStatus() === "Paused";
             let globalStatusIsDisabled = this.globalIndexingStatus() === "Disabled";
-            return (stateIsDisabeld && !globalStatusIsPaused) || globalStatusIsDisabled;
+            return (stateIsDisabled && !globalStatusIsPaused) || globalStatusIsDisabled;
         });
         this.isPausedState = ko.pureComputed(() => {
             let localStatusIsPaused = this.status() === "Paused";
@@ -134,7 +134,7 @@ class index {
         this.canBePaused = ko.pureComputed(() => {
             let localStatusIsNotDisabled = this.status() !== "Disabled";
             let notInPausedState = !this.isPausedState();
-            return localStatusIsNotDisabled && notInPausedState
+            return localStatusIsNotDisabled && notInPausedState;
         });
         this.canBeResumed = ko.pureComputed(() => {
             let localStatusIsNotDisabled = this.status() !== "Disabled";
@@ -145,7 +145,7 @@ class index {
             return !this.isDisabledState();
         });
         this.canBeEnabled = ko.pureComputed(() => {
-            return this.isDisabledState()
+            return this.isDisabledState();
         });
 
         this.isFaulty = ko.pureComputed(() => {
