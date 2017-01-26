@@ -100,8 +100,16 @@ namespace Voron.Impl.Journal
             }
 
             var pageInfoPtr = (TransactionHeaderPageInfo*)outputPage;
-
             long totalRead = sizeof(TransactionHeaderPageInfo) * current->PageCount;
+            if (totalRead > current->UncompressedSize)
+                throw new InvalidDataException($"Attempted to read position {totalRead} from transaction data while the transaction is size {current->UncompressedSize}");
+
+            for (var i = 0; i < current->PageCount; i++)
+            {
+                if(pageInfoPtr[i].PageNumber > current->LastPageNumber)
+                    throw new InvalidDataException($"Transaction {current->TransactionId} contains refeence to page {pageInfoPtr[i].PageNumber} which is after the last allocated page {current->LastPageNumber}");
+            }
+
             for (var i = 0; i < current->PageCount; i++)
             {
                 if (totalRead > current->UncompressedSize)
