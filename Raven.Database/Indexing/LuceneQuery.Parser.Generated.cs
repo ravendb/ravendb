@@ -4,9 +4,9 @@
 
 // GPPG version 1.5.2
 // Machine:  TAL-PC
-// DateTime: 11/7/2016 3:58:44 PM
+// DateTime: 1/8/2017 5:16:34 PM
 // UserName: Tal
-// Input file <Indexing\LuceneQuery.Language.grammar.y - 11/7/2016 3:57:54 PM>
+// Input file <Indexing\LuceneQuery.Language.grammar.y - 1/8/2017 5:16:22 PM>
 
 // options: no-lines gplex
 
@@ -62,9 +62,9 @@ internal class ScanObj {
 [GeneratedCodeAttribute( "Gardens Point Parser Generator", "1.5.2")]
 internal partial class LuceneQueryParser: ShiftReduceParser<ValueType, LexLocation>
 {
-  // Verbatim content from Indexing\LuceneQuery.Language.grammar.y - 11/7/2016 3:57:54 PM
+  // Verbatim content from Indexing\LuceneQuery.Language.grammar.y - 1/8/2017 5:16:22 PM
 	public LuceneASTNodeBase LuceneAST {get; set;}
-  // End verbatim content from Indexing\LuceneQuery.Language.grammar.y - 11/7/2016 3:57:54 PM
+  // End verbatim content from Indexing\LuceneQuery.Language.grammar.y - 1/8/2017 5:16:22 PM
 
 #pragma warning disable 649
   private static Dictionary<int, string> aliases;
@@ -256,20 +256,20 @@ internal partial class LuceneQueryParser: ShiftReduceParser<ValueType, LexLocati
       case 3: // node -> NOT, node
 {
 		//Console.WriteLine("Found rule node -> NOT node");
-		CurrentSemanticValue.nb = new OperatorLuceneASTNode(ValueStack[ValueStack.Depth-1].nb,null,OperatorLuceneASTNode.Operator.NOT);
+		CurrentSemanticValue.nb = new OperatorLuceneASTNode(ValueStack[ValueStack.Depth-1].nb,null,OperatorLuceneASTNode.Operator.NOT, IsDefaultOperatorAnd);
 	}
         break;
       case 4: // node -> node, operator, node
 {
 		//Console.WriteLine("Found rule node -> node operator node");
-		var res =  new OperatorLuceneASTNode(ValueStack[ValueStack.Depth-3].nb,ValueStack[ValueStack.Depth-1].nb,ValueStack[ValueStack.Depth-2].o);
+		var res =  new OperatorLuceneASTNode(ValueStack[ValueStack.Depth-3].nb,ValueStack[ValueStack.Depth-1].nb,ValueStack[ValueStack.Depth-2].o, IsDefaultOperatorAnd);
 		CurrentSemanticValue.nb = res;
 	}
         break;
       case 5: // node -> node, node
 {
 		//Console.WriteLine("Found rule node -> node node");
-		CurrentSemanticValue.nb = new OperatorLuceneASTNode(ValueStack[ValueStack.Depth-2].nb,ValueStack[ValueStack.Depth-1].nb,OperatorLuceneASTNode.Operator.Implicit);
+		CurrentSemanticValue.nb = new OperatorLuceneASTNode(ValueStack[ValueStack.Depth-2].nb,ValueStack[ValueStack.Depth-1].nb,OperatorLuceneASTNode.Operator.Implicit, IsDefaultOperatorAnd);
 	}
         break;
       case 6: // node -> field_exp

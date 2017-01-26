@@ -136,13 +136,14 @@ namespace Raven.Tests.Raft
             ExtendRaftCluster(3); // 5 nodes
 
             ExtendRaftCluster(2); // 7 nodes
-
-            for (var i = 0; i < servers.Count; i++)
+            var removeIndexes = new List<int> {0,2,3,4,5,6};
+            var rand = new Random();
+            while (removeIndexes.Count>2)
             {
-                if (i == 1) // already deleted
-                    continue;
-
-                RemoveFromCluster(servers[i]);
+                var popIndex = rand.Next(removeIndexes.Count);
+                var popServer = servers[removeIndexes[popIndex]];
+                removeIndexes.RemoveAt(popIndex);
+                RemoveFromCluster(popServer);
             }
         }
 

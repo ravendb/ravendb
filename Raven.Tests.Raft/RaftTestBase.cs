@@ -198,17 +198,30 @@ namespace Raven.Tests.Raft
 
         public void RemoveFromCluster(RavenDbServer serverToRemove)
         {
-            var leader = servers.FirstOrDefault(server => server.Options.ClusterManager.Value.IsLeader());
+            //any tests that fails because of this is invalid.
+            if (servers.Count <= 2)
+                throw new InvalidOperationException("Can't remove node from cluster when there are two nodes in the cluster, you need to brutly remove the node.");
+            var leader = ChooseTheRealLeader();
             if (leader == null)
                 throw new InvalidOperationException("Leader is currently not present, thus can't remove node from cluster");
             if (leader == serverToRemove)
-            {
+            {                
                 leader.Options.ClusterManager.Value.Engine.StepDownAsync().Wait();
-            }
-            else
-            {
-                leader.Options.ClusterManager.Value.Engine.RemoveFromClusterAsync(serverToRemove.Options.ClusterManager.Value.Engine.Options.SelfConnection).Wait(10000);
-            }
+                leader.Server.Options.ClusterManager.Value.Engine.WaitForLeader();
+                leader = ChooseTheRealLeader();
+                leader.Server.Options.ClusterManager.Value.Engine.WaitForLeaderConfirmed();
+                //this is because a leader chosen event is placed wrongly
+                //SpinWait.SpinUntil(()=>leader.Options.ClusterManager.Value.Engine.PersistentState.GetLogEntry(leader.Options.ClusterManager.Value.Engine.CommitIndex).Term
+                //                 == leader.Options.ClusterManager.Value.Engine.PersistentState.CurrentTerm,TimeSpan.FromSeconds(10));
+            }         
+            leader.Options.ClusterManager.Value.Engine.RemoveFromClusterAsync(serverToRemove.Options.ClusterManager.Value.Engine.Options.SelfConnection).Wait(10000);
+        }
+
+        private RavenDbServer ChooseTheRealLeader()
+        {
+            return servers.OrderByDescending(server => server.Options.ClusterManager.Value.Engine.PersistentState.LastLogEntry().Term)
+                .ThenByDescending(server => server.Options.ClusterManager.Value.Engine.PersistentState.LastLogEntry().Index)
+                .FirstOrDefault(server => server.Options.ClusterManager.Value.IsLeader());
         }
 
         private void WaitForClusterToBecomeNonStale(IReadOnlyCollection<RavenDbServer> nodes)

@@ -108,12 +108,12 @@ namespace Rachis.Transport
                     return;// nothing to do
 
                 var httpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK);
-                _tcs.TrySetResult(httpResponseMessage);
+                _tcs?.TrySetResult(httpResponseMessage);
             }
 
             public override void Error(Exception exception)
             {
-                _tcs.TrySetException(exception);
+                _tcs?.TrySetException(exception);
             }
         }
 

@@ -68,6 +68,7 @@ class editDocument extends viewModelBase {
     documentChangeNotificationMessage = ko.observable<string>("");
     changeNotification: changeSubscription;
     isDeleting: boolean = false;
+    collectionLink: KnockoutComputed<string>;
 
     static editDocSelector = "#editDocumentContainer";
     static recentDocumentsInDatabases = ko.observableArray<{ databaseName: string; recentDocuments: KnockoutObservableArray<string> }>();
@@ -92,6 +93,14 @@ class editDocument extends viewModelBase {
                     this.documentText(docText);
                 }
             }
+        });
+
+        this.collectionLink = ko.computed(() => {
+            var metadata = this.metadata();
+            if (!metadata) {
+                return "";
+            }
+            return appUrl.forDocuments(this.generateCollectionName(metadata.ravenEntityName), this.activeDatabase());
         });
 
         this.documentSize = ko.computed(() => {

@@ -61,6 +61,7 @@ namespace Raven.Database.Indexing
                     try
                     {
                         var parser = new LuceneQueryParser();
+                        parser.IsDefaultOperatorAnd = indexQuery.DefaultOperator == QueryOperator.And;
                         parser.Parse(query);
                         var res = parser.LuceneAST.ToQuery(
                             new LuceneASTQueryConfiguration

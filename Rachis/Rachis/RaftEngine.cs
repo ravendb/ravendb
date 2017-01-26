@@ -30,6 +30,7 @@ namespace Rachis
         private readonly RaftEngineOptions _raftEngineOptions;
         private readonly CancellationTokenSource _eventLoopCancellationTokenSource;
         private readonly ManualResetEventSlim _leaderSelectedEvent = new ManualResetEventSlim();
+        private readonly ManualResetEventSlim _leaderConfirmedEvent = new ManualResetEventSlim();
         private TaskCompletionSource<object> _steppingDownCompletionSource;
 
         private Topology _currentTopology;
@@ -54,12 +55,15 @@ namespace Rachis
                 if (_currentLeader == value)
                     return;
                 if (_log.IsDebugEnabled)
-                    _log.Debug("Setting CurrentLeader: {0}", value);
+                    _log.Debug("Setting CurrentLeader: {0} on term {1}", value, PersistentState.CurrentTerm);
                 _currentLeader = value;
 
 
                 if (value == null)
+                {
                     _leaderSelectedEvent.Reset();
+                    _leaderConfirmedEvent.Reset();
+                }
                 else
                 {
                     _leaderSelectedEvent.Set();
@@ -121,8 +125,7 @@ namespace Rachis
         public event Action StateTimeout;
         public event Action<LogEntry[]> EntriesAppended;
         public event Action<long, long> CommitIndexChanged;
-        public event Action ElectedAsLeader;
-
+        public event Action ElectedAsLeader;        
         public event Action<TopologyChangeCommand> TopologyChanged;
         public event Action TopologyChanging;
 
@@ -514,6 +517,11 @@ namespace Rachis
             return _leaderSelectedEvent.Wait(timeout, CancellationToken);
         }
 
+        public bool WaitForLeaderConfirmed(int timeout = 10 * 1000)
+        {
+            return _leaderConfirmedEvent.Wait(timeout, CancellationToken);
+        }
+
         public void AppendCommand(Command command)
         {
             if (command == null) throw new ArgumentNullException("command");
@@ -558,7 +566,15 @@ namespace Rachis
                         // StartTopologyChange(tcc); - not sure why it was needed, see RavenDB-3808 for details
                         CommitTopologyChange(tcc);
                     }
-
+                    var noop = command as NopCommand;
+                    if (noop != null && entry.Term == PersistentState.CurrentTerm)
+                    {
+                        if (_log.IsInfoEnabled)
+                        {
+                            _log.Info($"Raising leaderConfirmedEvent, Term = {entry.Term}, Index = {entry.Index}, Name = {Name}");
+                        }
+                        _leaderConfirmedEvent.Set();
+                    }
                     OnCommitIndexChanged(oldCommitIndex, CommitIndex);
                     OnCommitApplied(command);
                 }

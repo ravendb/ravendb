@@ -1316,7 +1316,11 @@ namespace Raven.Database
         private BatchResult[] ProcessBatch(IList<ICommandData> commands, CancellationToken token)
         {
             var results = new BatchResult[commands.Count];
-            var participatingIds = commands.Select(x => x.Key).ToArray();
+            var participatingIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var command in commands)
+            {
+                participatingIds.Add(command.Key);
+            }
 
             for (int index = 0; index < commands.Count; index++)
             {

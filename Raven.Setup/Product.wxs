@@ -33,6 +33,12 @@
                        Type="raw" />
     </Property>
 
+    <Property Id="WINDOWS_EXPLORER_AVAILABLE">
+      <DirectorySearch Id="CheckWindowsFolderDir" Path="[WindowsFolder]" Depth="0">
+        <FileSearch Id="CheckWindowsExplorerFile" Name="explorer.exe" />
+      </DirectorySearch>
+    </Property>
+
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="INSTALLFOLDER" Name="RavenDB">
         <Component Id="StoreInstallationPath" Guid="{1313C2AF-E8AD-46B6-9EA8-A60C5134CC8F}">

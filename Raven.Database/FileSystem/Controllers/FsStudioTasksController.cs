@@ -35,15 +35,26 @@ namespace Raven.Database.FileSystem.Controllers
     {
         [HttpGet]
         [RavenRoute("fs/{fileSystemName}/studio-tasks/check-sufficient-diskspace")]
-        public async Task<HttpResponseMessage> CheckSufficientDiskspaceBeforeImport(long fileSize)
+        public HttpResponseMessage CheckSufficientDiskspaceBeforeImport(long fileSize)
         {
             string tempRoot = Path.GetPathRoot(FileSystem.Configuration.TempPath);
             var rootPathToDriveInfo = new Dictionary<string, DriveInfo>();
             DriveInfo.GetDrives().ForEach(drive => rootPathToDriveInfo[drive.RootDirectory.FullName] = drive);
+
             DriveInfo tempFolderDrive;
-            if (!rootPathToDriveInfo.TryGetValue(tempRoot, out tempFolderDrive) ||
-                tempFolderDrive.AvailableFreeSpace - (long)(tempFolderDrive.TotalSize*0.1) < fileSize)
-                throw new HttpResponseException(HttpStatusCode.BadRequest);
+            if (rootPathToDriveInfo.TryGetValue(tempRoot, out tempFolderDrive) == false)
+                return GetMessageWithObject(new
+                {
+                    Error = $"Couldn't find the location of the temp drive: {tempRoot}"
+                }, HttpStatusCode.BadRequest);
+
+            var minFreeSpace = Math.Min(fileSize * 3, fileSize + (long)3 * 1024 * 1024 * 1024);
+            if (tempFolderDrive.AvailableFreeSpace < minFreeSpace)
+                return GetMessageWithObject(new
+                {
+                    Error = $"The availiable space is {tempFolderDrive.AvailableFreeSpace * 1.0 / 1024 / 1024 / 1024:0.##}GB " +
+                            $"while we need at least {minFreeSpace / 1024 / 1024 / 1024:0.##}GB"
+                }, HttpStatusCode.BadRequest);
 
             return GetEmptyMessage();
         }

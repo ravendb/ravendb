@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions.FileSystem;
+using Raven.Abstractions.Util;
 using Raven.Client.FileSystem;
 using Raven.Tests.Helpers;
 using Xunit;
@@ -137,9 +138,9 @@ namespace Raven.Tests.FileSystem.Issues
             {
                 await put_files(session, sampleFiles);
 
-                await ThrowsAsync<NotSupportedException>(() => session.Query().OrderBy(x => x.Extension).ToListAsync());
+                Assert.Throws<NotSupportedException>(() => AsyncHelpers.RunSync(() => session.Query().OrderBy(x => x.Extension).ToListAsync()));
 
-                await ThrowsAsync<NotSupportedException>(() => session.Query().OrderByDescending(x => x.Extension).ToListAsync());
+                Assert.Throws<NotSupportedException>(() => AsyncHelpers.RunSync(() => session.Query().OrderByDescending(x => x.Extension).ToListAsync()));
             }
         }
 
@@ -152,9 +153,9 @@ namespace Raven.Tests.FileSystem.Issues
             {
                 await put_files(session, sampleFiles);
 
-                await ThrowsAsync<NotSupportedException>(() => session.Query().OrderBy(x => x.HumaneTotalSize).ToListAsync());
+                Assert.Throws<NotSupportedException>(() => AsyncHelpers.RunSync(() => session.Query().OrderBy(x => x.HumaneTotalSize).ToListAsync()));
 
-                await ThrowsAsync<NotSupportedException>(() => session.Query().OrderByDescending(x => x.HumaneTotalSize).ToListAsync());
+                Assert.Throws<NotSupportedException>(() => AsyncHelpers.RunSync(() => session.Query().OrderByDescending(x => x.HumaneTotalSize).ToListAsync()));
             }
         }
 
@@ -167,9 +168,9 @@ namespace Raven.Tests.FileSystem.Issues
             {
                 await put_files(session, sampleFiles);
 
-                await ThrowsAsync<NotSupportedException>(() => session.Query().OrderBy(x => x.OriginalMetadata).ToListAsync());
+                Assert.Throws<NotSupportedException>(() => AsyncHelpers.RunSync(() => session.Query().OrderBy(x => x.OriginalMetadata).ToListAsync()));
 
-                await ThrowsAsync<NotSupportedException>(() => session.Query().OrderByDescending(x => x.OriginalMetadata).ToListAsync());
+                Assert.Throws<NotSupportedException>(() => AsyncHelpers.RunSync(() => session.Query().OrderByDescending(x => x.OriginalMetadata).ToListAsync()));
             }
         }
 
@@ -182,9 +183,9 @@ namespace Raven.Tests.FileSystem.Issues
             {
                 await put_files(session, sampleFiles);
 
-                await ThrowsAsync<NotSupportedException>(() => session.Query().OrderBy(x => x.IsTombstone).ToListAsync());
+                Assert.Throws<NotSupportedException>(() => AsyncHelpers.RunSync(() => session.Query().OrderBy(x => x.IsTombstone).ToListAsync()));
 
-                await ThrowsAsync<NotSupportedException>(() => session.Query().OrderByDescending(x => x.IsTombstone).ToListAsync());
+                Assert.Throws<NotSupportedException>(() => AsyncHelpers.RunSync(() => session.Query().OrderByDescending(x => x.IsTombstone).ToListAsync()));
             }
         }
 
@@ -197,9 +198,9 @@ namespace Raven.Tests.FileSystem.Issues
             {
                 await put_files(session, sampleFiles);
 
-                await ThrowsAsync<NotSupportedException>(() => session.Query().OrderBy(x => x.UploadedSize).ToListAsync());
+                Assert.Throws<NotSupportedException>(() => AsyncHelpers.RunSync(() => session.Query().OrderBy(x => x.UploadedSize).ToListAsync()));
 
-                await ThrowsAsync<NotSupportedException>(() => session.Query().OrderByDescending(x => x.IsTombstone).ToListAsync());
+                Assert.Throws<NotSupportedException>(() => AsyncHelpers.RunSync(() => session.Query().OrderByDescending(x => x.IsTombstone).ToListAsync()));
             }
         }
 

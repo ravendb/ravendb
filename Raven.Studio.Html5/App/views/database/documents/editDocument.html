@@ -14,7 +14,7 @@
             <a style="display: inline-block" href="#" data-bind="text: $root.isInDocMode()?$root.generateCollectionName(ravenEntityName, true):$root.queryIndex, 
                attr: { 
                    title: ravenEntityName, 
-                   href: '#documents?collection=' + $root.generateCollectionName(ravenEntityName) 
+                   href: $root.collectionLink.bind($root)
                }, 
                click: $root.navigateToCollection.bind($root, $root.generateCollectionName(ravenEntityName))"></a>
         </li>

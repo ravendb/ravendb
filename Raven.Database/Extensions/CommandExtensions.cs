@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
 using Raven.Abstractions.Commands;
@@ -18,7 +19,7 @@ namespace Raven.Database.Extensions
             Execute(self, database, null);
         }
 
-        public static BatchResult ExecuteBatch(this ICommandData self, DocumentDatabase database, string[] participatingIds = null)
+        public static BatchResult ExecuteBatch(this ICommandData self, DocumentDatabase database, IEnumerable<string> participatingIds = null)
         {
             var batchResult = new BatchResult();
 
@@ -33,7 +34,7 @@ namespace Raven.Database.Extensions
             return batchResult;
         }
 
-        private static void Execute(ICommandData self, DocumentDatabase database, BatchResult batchResult, string[] participatingIds = null)
+        private static void Execute(ICommandData self, DocumentDatabase database, BatchResult batchResult, IEnumerable<string> participatingIds = null)
         {
             var deleteCommandData = self as DeleteCommandData;
             if (deleteCommandData != null)

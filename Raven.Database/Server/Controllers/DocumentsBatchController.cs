@@ -150,19 +150,23 @@ namespace Raven.Database.Server.Controllers
             {
                 if (specificIndexes.Count > 0)
                 {
-                    if(specificIndexes.Contains(index.PublicName) == false)
+                    if (specificIndexes.Contains(index.PublicName) == false)
+                    {
+                        nextIndexingRoundsByIndexId.Remove(index.indexId);
                         continue;
+                    }
                 }
 
-                if (allIndexes && index.ViewGenerator.ForEntityNames.Count == 0)
+                if (allIndexes && index.ViewGenerator.ForEntityNames.Count == 0
+                    || index.ViewGenerator.ForEntityNames.Overlaps(modifiedCollections))
+                {
                     indexes.Add(index);
-                if (index.ViewGenerator.ForEntityNames.Overlaps(modifiedCollections))
-                    indexes.Add(index);
+                }
+                else
+                {
+                    nextIndexingRoundsByIndexId.Remove(index.indexId);
+                }
             }
-
-            foreach(var trackedIndex in indexes)
-                if (nextIndexingRoundsByIndexId.ContainsKey(trackedIndex.indexId) == false)
-                    nextIndexingRoundsByIndexId.Remove(trackedIndex.indexId);
 
             var sp = Stopwatch.StartNew();
             var needToWait = true;
@@ -185,13 +189,13 @@ namespace Raven.Database.Server.Controllers
 
                 if (needToWait)
                 {
-                    
+
                     for (int i = 0; i < indexes.Count; i++)
                     {
                         tasks[i] = indexingRounds[i];
                     }
                     var timeSpan = timeout - sp.Elapsed;
-                    if (timeout < TimeSpan.Zero)
+                    if (timeout < TimeSpan.Zero || timeSpan <= TimeSpan.Zero)
                     {
                         if (throwOnTimeout)
                         {
@@ -235,10 +239,20 @@ namespace Raven.Database.Server.Controllers
                 }
                 return;
             }
-            if (lastResultWithEtag != null)
+            //what can we do if we don't have this?
+            if (lastResultWithEtag == null)
+                return;
+
+            int numberOfReplicasToWaitFor = majority ? replicationTask.GetSizeOfMajorityFromActiveReplicationDestination(replicas) : replicas;
+
+            var numberOfReplicatesPast = await replicationTask.WaitForReplicationAsync(lastResultWithEtag.Etag, timeout, numberOfReplicasToWaitFor).ConfigureAwait(false);
+
+            if (numberOfReplicatesPast < numberOfReplicasToWaitFor && throwOnTimeout)
             {
-                await replicationTask.WaitForReplicationAsync(lastResultWithEtag.Etag, timeout, replicas, majority, throwOnTimeout).ConfigureAwait(false);
+                throw new TimeoutException(
+                    $"Could not verify that etag {lastResultWithEtag.Etag} was replicated to {numberOfReplicasToWaitFor} servers in {timeout}. So far, it only replicated to {numberOfReplicatesPast}");
             }
+            //If we got here than we are either ignoring timeouts or we finished replicating to the required amount of servers.
         }
 
         [HttpDelete]

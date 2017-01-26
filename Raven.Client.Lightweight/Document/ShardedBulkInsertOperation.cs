@@ -61,7 +61,10 @@ namespace Raven.Client.Document
                 Bulks.Add(shardId, bulkInsertOperation);
             }
 
-            DatabaseCommands = shard.AsyncDatabaseCommands;
+            DatabaseCommands = string.IsNullOrWhiteSpace(database)
+                ? shard.AsyncDatabaseCommands
+                : shard.AsyncDatabaseCommands.ForDatabase(database);
+
             string id;
             if (generateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id) == false)
             {

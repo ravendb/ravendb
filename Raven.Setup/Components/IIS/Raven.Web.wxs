@@ -235,6 +235,7 @@
 				</RegistryKey>
 			</Component>
 			<Component Id="Raven.Web.Shortcut" Guid="0C2BD57F-4FE3-425E-9E74-D22BF6495041">
+        <Condition>WINDOWS_EXPLORER_AVAILABLE</Condition>
 				<CreateFolder />
 				<util:InternetShortcut
 					Id="IISLocalhostShortcut"

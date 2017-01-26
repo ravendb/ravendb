@@ -84,6 +84,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="DatabaseReloadingTests.cs" />
     <Compile Include="DocumentStoreEmbeddedTests.cs" />
     <Compile Include="AsyncCommit.cs" />
@@ -99,7 +102,6 @@
     <Compile Include="NestedTransactions.cs" />
     <Compile Include="ParallelTxDelete.cs" />
     <Compile Include="PatchingWithDTC.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RavenDB_1562.cs" />
     <Compile Include="RavenDB_2613.cs" />
     <Compile Include="RavenDB_551.cs" />
