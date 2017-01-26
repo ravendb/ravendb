@@ -17,6 +17,11 @@ namespace Raven.Server.Documents
 
         public static DocumentConflict From(Document doc)
         {
+            if (doc == null)
+            {
+                return null;
+            }
+
             return new DocumentConflict
             {
                 LoweredKey = doc.LoweredKey,
@@ -30,6 +35,11 @@ namespace Raven.Server.Documents
 
         public static DocumentConflict From(DocumentTombstone tombstone)
         {
+            if (tombstone == null)
+            {
+                return null;
+            }
+
             return new DocumentConflict
             {
                 LoweredKey = tombstone.LoweredKey,
@@ -37,7 +47,8 @@ namespace Raven.Server.Documents
                 Doc = null,
                 StorageId = tombstone.StorageId,
                 ChangeVector = tombstone.ChangeVector,
-                LastModified = tombstone.LastModified
+                LastModified = tombstone.LastModified,
+                Collection = tombstone.Collection
             };
         }
 

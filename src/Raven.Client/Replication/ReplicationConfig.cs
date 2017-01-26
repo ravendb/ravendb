@@ -19,14 +19,6 @@ namespace Raven.Abstractions.Replication
     {
         None,
         /// <summary>
-        /// Always resolve in favor of a local version
-        /// </summary>
-        ResolveToLocal,
-        /// <summary>
-        /// Always resolve in favor of a remote version
-        /// </summary>
-        ResolveToRemote,
-        /// <summary>
         /// Always resolve in favor of the latest version based on the last modified time
         /// </summary>
         ResolveToLatest,

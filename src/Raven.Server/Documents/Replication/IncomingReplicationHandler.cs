@@ -980,12 +980,6 @@ namespace Raven.Server.Documents.Replication
 
             switch (_parent.ReplicationDocument?.DocumentConflictResolution ?? StraightforwardConflictResolution.None)
             {
-                case StraightforwardConflictResolution.ResolveToLocal:
-                    ResolveConflictToLocal(documentsContext, docPosition, conflictingVector);
-                    break;
-                case StraightforwardConflictResolution.ResolveToRemote:
-                    ResolveConflictToRemote(documentsContext, docPosition, doc, conflictingVector);
-                    break;
                 case StraightforwardConflictResolution.ResolveToLatest:
                     if (conflictingVector == null) //precaution
                     {
@@ -993,40 +987,62 @@ namespace Raven.Server.Documents.Replication
                             "Detected conflict on replication, but could not figure out conflicted vector. This is not supposed to happen and is likely a bug.");
                     }
 
-                    DateTime localLastModified;
-                    var relevantLocalConflict = documentsContext.DocumentDatabase.DocumentsStorage.GetConflictForChangeVector(documentsContext, docPosition.Id, conflictingVector);
-                    if (relevantLocalConflict != null)
+                    var conflicts = new List<DocumentConflict>();
+                    conflicts.AddRange(documentsContext.DocumentDatabase.DocumentsStorage.GetConflictsFor(
+                        documentsContext, docPosition.Id));
+                    var localDocumentTuple =
+                        documentsContext.DocumentDatabase.DocumentsStorage.GetDocumentOrTombstone(documentsContext,
+                            docPosition.Id, throwOnConflict: false);
+                    var local = DocumentConflict.From(localDocumentTuple.Item1) ?? DocumentConflict.From(localDocumentTuple.Item2);
+                    if (local != null)
                     {
-                        localLastModified = relevantLocalConflict.LastModified;
+                        conflicts.Add(local);
                     }
-                    else //the conflict is with existing document/tombstone
+
+                    var latestDoc = new DocumentConflict
                     {
-                        var relevantLocalDoc = documentsContext.DocumentDatabase.DocumentsStorage
-                            .GetDocumentOrTombstone(
-                                documentsContext,
-                                docPosition.Id);
-                        if (relevantLocalDoc.Item1 != null)
-                            localLastModified = relevantLocalDoc.Item1.LastModified;
-                        else if (relevantLocalDoc.Item2 != null)
+                        Doc = doc,
+                        Collection = documentsContext.GetLazyString(docPosition.Collection),
+                        LastModified = new DateTime(docPosition.LastModifiedTicks)
+                    };
+
+                    var latestTime = docPosition.LastModifiedTicks;
+                    
+                    foreach (var documentConflict in conflicts)
+                    {
+                        if (documentConflict.LastModified.Ticks > latestTime)
                         {
-                            ResolveConflictToRemote(documentsContext, docPosition, doc, conflictingVector);
+                            latestDoc = documentConflict;
+                            latestTime = documentConflict.LastModified.Ticks;
+                        }
+                    }
+
+                    var mergedChangeVector = ReplicationUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
+                    mergedChangeVector = ReplicationUtils.MergeVectors(mergedChangeVector, conflictingVector);
+
+                    if (latestDoc.Doc == null)
+                    {
+                        if (local != null && local.Doc == null) // local document is a tombstone
+                        {
+                            // update change vectore
+                            _database.DocumentsStorage.AddTombstoneOnReplicationIfRelevant(
+                            documentsContext, docPosition.Id, latestTime, mergedChangeVector, latestDoc.Collection);
                             return;
                         }
-                        else //precaution, not supposed to get here
-                        {
-                            throw new InvalidOperationException(
-                                $"Didn't find document neither tombstone for specified id ({docPosition.Id}), this is not supposed to happen and is likely a bug.");
-                        }
+                        // the resolved document is a tombstone
+                        _database.DocumentsStorage.DeleteConflictsFor(documentsContext, docPosition.Id);
+                        _database.DocumentsStorage.AddTombstoneOnReplicationIfRelevant(
+                            documentsContext, docPosition.Id, latestTime, mergedChangeVector, latestDoc.Collection);
+                        return;
                     }
-                    var remoteLastModified = new DateTime(docPosition.LastModifiedTicks);
-                    if (remoteLastModified > localLastModified)
+
+                    using (var clone = latestDoc.Doc.Clone(documentsContext))
                     {
-                        ResolveConflictToRemote(documentsContext, docPosition, doc, conflictingVector);
+                        _database.DocumentsStorage.Put(documentsContext, docPosition.Id, null, clone, latestTime, mergedChangeVector);
                     }
-                    else
-                    {
-                        ResolveConflictToLocal(documentsContext, docPosition, conflictingVector);
-                    }
+                    
+
+
                     break;
                  default:
                     _database.DocumentsStorage.AddConflict(documentsContext, docPosition.Id, doc, _tempReplicatedChangeVector, docPosition.Collection);
@@ -1069,58 +1085,6 @@ namespace Raven.Server.Documents.Replication
                 }
             }
             _database.DocumentsStorage.Put(context, docPosition.Id, null, resolvedHiLoDoc);
-        }
-
-        private void ResolveConflictToRemote(
-            DocumentsOperationContext documentsContext,
-            ReplicationDocumentsPositions doc,
-            BlittableJsonReaderObject json,
-            ChangeVectorEntry[] conflictingVector)
-        {
-            var merged = ReplicationUtils.MergeVectors(conflictingVector, _tempReplicatedChangeVector);
-            documentsContext.DocumentDatabase.DocumentsStorage.DeleteConflictsFor(documentsContext, doc.Id);
-            _database.DocumentsStorage.Put(documentsContext, doc.Id, null, json, doc.LastModifiedTicks, merged);
-        }
-
-        private void ResolveConflictToLocal(
-            DocumentsOperationContext documentsContext,
-            ReplicationDocumentsPositions doc, 
-            ChangeVectorEntry[] conflictingVector)
-        {
-            var relevantLocalConflict =
-                documentsContext.DocumentDatabase.DocumentsStorage.GetConflictForChangeVector(
-                    documentsContext,
-                    doc.Id,
-                    conflictingVector);
-
-            var merged = ReplicationUtils.MergeVectors(conflictingVector, _tempReplicatedChangeVector);
-
-            //if we reached the state of conflict, there must be at least one conflicting change vector locally
-            //thus, should not happen
-            if (relevantLocalConflict != null)
-            {
-                documentsContext.DocumentDatabase.DocumentsStorage.DeleteConflictsFor(documentsContext, doc.Id);
-
-                if (relevantLocalConflict.Doc != null)
-                {
-                    _database.DocumentsStorage.Put(
-                        documentsContext,
-                        doc.Id,
-                        null,
-                        relevantLocalConflict.Doc,
-                        relevantLocalConflict.LastModified.Ticks,
-                        merged);
-                }
-                else //resolving to tombstone
-                {
-                    _database.DocumentsStorage.AddTombstoneOnReplicationIfRelevant(
-                        documentsContext,
-                        doc.Id,
-                        doc.LastModifiedTicks,
-                        merged,
-                        doc.Collection);
-                }
-            }
         }
 
         private void ReadChangeVector(ReplicationIndexOrTransformerPositions index, Dictionary<Guid, long> maxReceivedChangeVectorByDatabase)
