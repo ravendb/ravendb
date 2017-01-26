@@ -157,9 +157,7 @@ namespace Raven.NewClient.Abstractions.Json
         {
             if (isMetadataResolver && (
                 propertyName.StartsWith("Raven-Replication-") ||
-                propertyName.StartsWith("@") ||
-                propertyName == "Last-Modified" ||
-                propertyName == "Raven-Last-Modified"
+                propertyName.StartsWith("@") 
                 ) )
             {
                 return;

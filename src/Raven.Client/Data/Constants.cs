@@ -69,6 +69,8 @@ namespace Raven.Abstractions.Data
             public const string Flags = "@flags";
 
             public const string IndexScore = "@index-score";
+
+            public const string LastModified = "@last-modified";
         }
 
         public class Indexing
@@ -126,8 +128,6 @@ namespace Raven.Abstractions.Data
             public const string RavenForcePrimaryServerCheck = "Raven-Force-Primary-Server-Check";
 
             public const string RavenShardId = "Raven-Shard-Id";
-
-            public const string LastModified = "Last-Modified";
 
             public const string CreationDate = "Creation-Date";
 

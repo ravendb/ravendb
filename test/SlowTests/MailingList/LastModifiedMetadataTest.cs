@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using FastTests;
+using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
 using Raven.Client.Linq;
 using Xunit;
@@ -17,7 +18,7 @@ namespace SlowTests.MailingList
                       from doc in docs
                       select new
                       {
-                          LastModified = MetadataFor(doc)["Last-Modified"],
+                          LastModified = MetadataFor(doc)[Constants.Metadata.LastModified],
                       };
             }
         }
@@ -35,8 +36,8 @@ namespace SlowTests.MailingList
                 TransformResults = results => from doc in results
                                               select new
                                               {
-                                                  InternalId = MetadataFor(doc)["@id"],
-                                                  LastModified = MetadataFor(doc)["Last-Modified"],
+                                                  InternalId = MetadataFor(doc)[Constants.Metadata.Id],
+                                                  LastModified = MetadataFor(doc)[Constants.Metadata.LastModified],
                                               };
             }
         }
@@ -69,7 +70,7 @@ namespace SlowTests.MailingList
                     var user3 = session.Load<User>(user1.InternalId);
                     Assert.NotNull(user3);
                     var metadata = session.Advanced.GetMetadataFor(user3);
-                    var lastModified = metadata.Value<DateTime>("Last-Modified");
+                    var lastModified = metadata.Value<DateTime>(Constants.Metadata.LastModified);
 
                     var modifiedDocuments = (from u in session.Query<User, AmazingIndex2>()
                                                 .TransformWith<AmazingTransformer2, AmazingTransformer2.ModifiedDocuments>()

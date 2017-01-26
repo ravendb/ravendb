@@ -71,6 +71,8 @@ namespace Raven.NewClient.Abstractions.Data
             public const string Etag = "@etag";
 
             public const string IndexScore = "@index-score";
+
+            public const string LastModified = "@last-modified";
         }
 
         public class Indexing
@@ -129,13 +131,9 @@ namespace Raven.NewClient.Abstractions.Data
 
             public const string RavenShardId = "Raven-Shard-Id";
 
-            public const string LastModified = "Last-Modified";
-
             public const string CreationDate = "Creation-Date";
 
             public const string RavenCreationDate = "Raven-Creation-Date";
-
-            public const string RavenLastModified = "Raven-Last-Modified";
 
             public const string RavenClrType = "Raven-Clr-Type";
 

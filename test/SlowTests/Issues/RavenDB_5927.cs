@@ -26,7 +26,7 @@ namespace SlowTests.Issues
 from result in results
 select new {
     Id = result[""__document_id""],
-    ConflictDetectedAt = result[""@metadata""].Value<DateTime>(""Last-Modified""),
+    ConflictDetectedAt = result[""@metadata""].Value<DateTime>(""@last-modified""),
                 EntityName = result[""@metadata""][""Raven-Entity-Name""],
                 Versions = result.Conflicts.Select(versionId =>
                 {

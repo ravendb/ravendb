@@ -41,7 +41,7 @@ namespace SlowTests.Issues
                         Assert.NotNull(enumerator.Current.Etag);
                         Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Headers.RavenClrType));
                         Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Headers.RavenEntityName));
-                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Headers.LastModified));
+                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Metadata.LastModified));
                     }
                 }
             }
@@ -77,7 +77,7 @@ namespace SlowTests.Issues
                         Assert.NotNull(enumerator.Current.Etag);
                         Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Headers.RavenClrType));
                         Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Headers.RavenEntityName));
-                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Headers.LastModified));
+                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Metadata.LastModified));
                     }
                 }
             }
@@ -115,7 +115,7 @@ namespace SlowTests.Issues
                         Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Headers.RavenClrType));
                         Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Headers.RavenEntityName));
                         Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Metadata.IndexScore));
-                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Headers.LastModified));
+                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Metadata.LastModified));
                     }
                 }
             }
@@ -153,7 +153,7 @@ namespace SlowTests.Issues
                         Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Headers.RavenClrType));
                         Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Headers.RavenEntityName));
                         Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Metadata.IndexScore));
-                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Headers.LastModified));
+                        Assert.NotNull(enumerator.Current.Metadata.Value<string>(Constants.Metadata.LastModified));
                     }
                 }
             }
@@ -187,7 +187,7 @@ namespace SlowTests.Issues
                     Assert.NotNull(metadata.Value<string>("@etag"));
                     Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenClrType));
                     Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenEntityName));
-                    Assert.NotNull(metadata.Value<string>(Constants.Headers.LastModified));
+                    Assert.NotNull(metadata.Value<string>(Constants.Metadata.LastModified));
                 }
             }
         }
@@ -221,7 +221,7 @@ namespace SlowTests.Issues
                     Assert.NotNull(metadata.Value<string>("@etag"));
                     Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenClrType));
                     Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenEntityName));
-                    Assert.NotNull(metadata.Value<string>(Constants.Headers.LastModified));
+                    Assert.NotNull(metadata.Value<string>(Constants.Metadata.LastModified));
                 }
             }
         }
@@ -254,7 +254,7 @@ namespace SlowTests.Issues
                     Assert.NotNull(metadata.Value<string>("@etag"));
                     Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenClrType));
                     Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenEntityName));
-                    Assert.NotNull(metadata.Value<string>(Constants.Headers.LastModified));
+                    Assert.NotNull(metadata.Value<string>(Constants.Metadata.LastModified));
                 }
             }
         }
@@ -287,7 +287,7 @@ namespace SlowTests.Issues
                     Assert.NotNull(metadata.Value<string>("@etag"));
                     Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenClrType));
                     Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenEntityName));
-                    Assert.NotNull(metadata.Value<string>(Constants.Headers.LastModified));
+                    Assert.NotNull(metadata.Value<string>(Constants.Metadata.LastModified));
                 }
             }
         }
@@ -319,7 +319,7 @@ namespace SlowTests.Issues
                 Assert.NotNull(customer.LastModified);
                 Assert.NotNull(customer.Metadata.Value<string>(Constants.Headers.RavenClrType));
                 Assert.NotNull(customer.Metadata.Value<string>(Constants.Headers.RavenEntityName));
-                Assert.NotNull(customer.Metadata.Value<string>(Constants.Headers.LastModified));
+                Assert.NotNull(customer.Metadata.Value<string>(Constants.Metadata.LastModified));
             }
         }
 
@@ -350,7 +350,7 @@ namespace SlowTests.Issues
                 Assert.NotNull(customer.LastModified);
                 Assert.NotNull(customer.Metadata.Value<string>(Constants.Headers.RavenClrType));
                 Assert.NotNull(customer.Metadata.Value<string>(Constants.Headers.RavenEntityName));
-                Assert.NotNull(customer.Metadata.Value<string>(Constants.Headers.LastModified));
+                Assert.NotNull(customer.Metadata.Value<string>(Constants.Metadata.LastModified));
             }
         }
 
@@ -386,7 +386,7 @@ namespace SlowTests.Issues
                         Assert.NotNull(metadata.Value<string>("@etag"));
                         Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenClrType));
                         Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenEntityName));
-                        Assert.NotNull(metadata.Value<string>(Constants.Headers.LastModified));
+                        Assert.NotNull(metadata.Value<string>(Constants.Metadata.LastModified));
                     }
                 }
             }
@@ -421,7 +421,7 @@ namespace SlowTests.Issues
                     Assert.NotNull(metadata.Value<string>("@etag"));
                     Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenClrType));
                     Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenEntityName));
-                    Assert.NotNull(metadata.Value<string>(Constants.Headers.LastModified));
+                    Assert.NotNull(metadata.Value<string>(Constants.Metadata.LastModified));
                 }
             }
         }
@@ -455,7 +455,7 @@ namespace SlowTests.Issues
                     Assert.NotNull(metadata.Value<string>("@etag"));
                     Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenClrType));
                     Assert.NotNull(metadata.Value<string>(Constants.Headers.RavenEntityName));
-                    Assert.NotNull(metadata.Value<string>(Constants.Headers.LastModified));
+                    Assert.NotNull(metadata.Value<string>(Constants.Metadata.LastModified));
                 }
             }
         }
@@ -486,7 +486,7 @@ namespace SlowTests.Issues
                 Assert.NotNull(customer.LastModified);
                 Assert.NotNull(customer.Metadata.Value<string>(Constants.Headers.RavenClrType));
                 Assert.NotNull(customer.Metadata.Value<string>(Constants.Headers.RavenEntityName));
-                Assert.NotNull(customer.Metadata.Value<string>(Constants.Headers.LastModified));
+                Assert.NotNull(customer.Metadata.Value<string>(Constants.Metadata.LastModified));
             }
         }
 
@@ -516,7 +516,7 @@ namespace SlowTests.Issues
                 Assert.NotNull(customer.LastModified);
                 Assert.NotNull(customer.Metadata.Value<string>(Constants.Headers.RavenClrType));
                 Assert.NotNull(customer.Metadata.Value<string>(Constants.Headers.RavenEntityName));
-                Assert.NotNull(customer.Metadata.Value<string>(Constants.Headers.LastModified));
+                Assert.NotNull(customer.Metadata.Value<string>(Constants.Metadata.LastModified));
             }
         }
 

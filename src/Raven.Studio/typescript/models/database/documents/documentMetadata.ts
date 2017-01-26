@@ -72,7 +72,6 @@ class documentMetadata {
             '@id': this.id,
             'Temp-Index-Score': this.tempIndexScore,
             'Last-Modified': this.lastModified,
-            'Raven-Last-Modified': this.ravenLastModified(),
             '@etag': this.etag()
         };
 

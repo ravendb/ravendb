@@ -1146,7 +1146,7 @@ namespace Raven.Server.Json
                     writer.WriteComma();
                 }
                 first = false;
-                writer.WritePropertyName(Constants.Headers.LastModified);
+                writer.WritePropertyName(Constants.Metadata.LastModified);
                 writer.WriteString(document.LastModified.GetDefaultRavenFormat());
             }
             writer.WriteEndObject();

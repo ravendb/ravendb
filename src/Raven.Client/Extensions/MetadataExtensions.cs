@@ -51,7 +51,7 @@ namespace Raven.Abstractions.Extensions
             "Content-Type",
             "Expires",
             // ignoring this header, we handle this internally
-            Constants.Headers.LastModified,
+            Constants.Metadata.LastModified,
             // Ignoring this header, since it may
             // very well change due to things like encoding,
             // adding metadata, etc
@@ -119,7 +119,7 @@ namespace Raven.Abstractions.Extensions
 
         private static readonly HashSet<string> HeadersToIgnoreForClient = HeadersToIgnoreClient.Except(new[]
         {
-            Constants.Headers.LastModified,
+            Constants.Metadata.LastModified,
         }).ToHashSet();
 
         private static readonly HashSet<string> PrefixesInHeadersToIgnoreClient = new HashSet<string>(StringComparer.OrdinalIgnoreCase)

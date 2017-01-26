@@ -154,13 +154,11 @@ namespace Raven.Abstractions.Json
                 result.Add(prop.Key, conflicted);
         }
 
-        private void WriteToken(JsonTextWriter writer, string propertyName, Object propertyValue)
+        private void WriteToken(JsonTextWriter writer, string propertyName, object propertyValue)
         {
             if (isMetadataResolver && (
                 propertyName.StartsWith("Raven-Replication-") ||
-                propertyName.StartsWith("@") ||
-                propertyName == "Last-Modified" ||
-                propertyName == "Raven-Last-Modified"
+                propertyName.StartsWith("@")
                 ) )
             {
                 return;

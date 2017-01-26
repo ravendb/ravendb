@@ -7,6 +7,7 @@
 using System;
 using System.Linq;
 using FastTests;
+using Raven.Abstractions.Data;
 using Raven.Client.Indexes;
 using Raven.Client.Listeners;
 using Raven.Json.Linq;
@@ -18,7 +19,7 @@ namespace SlowTests.MailingList
     {
         /// <summary>
         /// The only thing i could not recreate here is the fact that the versioning bundle is active.
-        /// So im not sure if the Last-Modified meta-field will ever be filled in this case
+        /// So im not sure if the @last-modified meta-field will ever be filled in this case
         /// </summary>
         [Fact]
         public void CreateDataAndQuery()
@@ -73,7 +74,7 @@ namespace SlowTests.MailingList
                                                     Type = customer.CustomerType.ToString(),
                                                     CreatedOn = customer.CreatedOn.ToLocalTime(),
                                                     ChangedBy = this.MetadataFor(customer).Value<string>("Updated-By"),
-                                                    ChangedOn = this.MetadataFor(customer).Value<DateTime?>("Last-Modified"),
+                                                    ChangedOn = this.MetadataFor(customer).Value<DateTime?>(Constants.Metadata.LastModified),
                                                 };
 
             }

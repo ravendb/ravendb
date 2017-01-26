@@ -1380,15 +1380,6 @@ namespace Raven.Server.Documents
             return items;
         }
 
-        private static readonly HashSet<string> IgnoredMetadataProperties = new HashSet<string>
-        {
-            Constants.Headers.LastModified
-        };
-        private static readonly HashSet<string> IgnoredDocumentroperties = new HashSet<string>
-        {
-            Constants.Metadata.Key,
-        };
-
         public bool TryResolveIdenticalDocument(DocumentsOperationContext context, string key,
             BlittableJsonReaderObject incomingDoc, 
             long lastModifiedTicks,
@@ -1398,8 +1389,8 @@ namespace Raven.Server.Documents
             var existingDoc = existing.Item1;
             var existingTombstone = existing.Item2;
 
-            if (existingDoc != null && existingDoc.IsMetadataEqualTo(incomingDoc, IgnoredMetadataProperties) &&
-                    existingDoc.IsEqualTo(incomingDoc, IgnoredDocumentroperties))
+            if (existingDoc != null && existingDoc.IsMetadataEqualTo(incomingDoc) &&
+                    existingDoc.IsEqualTo(incomingDoc))
             {
                 // no real conflict here, both documents have identical content
                 existingDoc.ChangeVector = ReplicationUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector);

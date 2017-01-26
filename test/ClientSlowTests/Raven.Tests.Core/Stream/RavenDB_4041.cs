@@ -45,8 +45,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Stream
                         Assert.NotNull(enumerator.Current.Key);
                         Assert.NotNull(enumerator.Current.Etag);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.RavenEntityName]);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.RavenLastModified]);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.LastModified]);
+                        Assert.NotNull(enumerator.Current.Metadata[Constants.Metadata.LastModified]);
                     }
                 }
             }
@@ -81,8 +80,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Stream
                         Assert.NotNull(enumerator.Current.Key);
                         Assert.NotNull(enumerator.Current.Etag);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.RavenEntityName]);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.RavenLastModified]);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.LastModified]);
+                        Assert.NotNull(enumerator.Current.Metadata[Constants.Metadata.LastModified]);
                     }
                 }
             }
@@ -118,8 +116,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Stream
                         Assert.NotNull(enumerator.Current.Key);
                         Assert.NotNull(enumerator.Current.Etag);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.RavenEntityName]);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.RavenLastModified]);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.LastModified]);
+                        Assert.NotNull(enumerator.Current.Metadata[Constants.Metadata.LastModified]);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Metadata.IndexScore]);
                     }
                 }
@@ -155,8 +152,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Stream
                         Assert.NotNull(enumerator.Current.Key);
                         Assert.NotNull(enumerator.Current.Etag);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.RavenEntityName]);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.LastModified]);
-                        Assert.NotNull(enumerator.Current.Metadata[Constants.Headers.RavenLastModified]);
+                        Assert.NotNull(enumerator.Current.Metadata[Constants.Metadata.LastModified]);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Metadata.IndexScore]);
                     }
                 }
@@ -191,8 +187,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Stream
                     var metadata = session.Advanced.GetMetadataFor(customer);
                     Assert.NotNull(metadata["@etag"]);
                     Assert.NotNull(metadata[Constants.Headers.RavenEntityName]);
-                    Assert.NotNull(metadata[Constants.Headers.LastModified]);
-                    Assert.NotNull(metadata[Constants.Headers.RavenLastModified]);
+                    Assert.NotNull(metadata[Constants.Metadata.LastModified]);
                 }
             }
         }
@@ -225,8 +220,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Stream
                     var metadata = session.Advanced.GetMetadataFor(customer);
                     Assert.NotNull(metadata["@etag"]);
                     Assert.NotNull(metadata[Constants.Headers.RavenEntityName]);
-                    Assert.NotNull(metadata[Constants.Headers.LastModified]);
-                    Assert.NotNull(metadata[Constants.Headers.RavenLastModified]);
+                    Assert.NotNull(metadata[Constants.Metadata.LastModified]);
                 }
             }
         }

@@ -57,7 +57,7 @@ namespace NewClientTests.NewClient
             }
 
             if (waitForIndexing)
-                WaitForIndexing(store);
+                WaitForIndexing((DocumentStore)store);
         }
 
         public static List<Facet> GetFacets()

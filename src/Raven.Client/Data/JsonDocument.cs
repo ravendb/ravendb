@@ -97,8 +97,7 @@ namespace Raven.Client.Data
 
             if (LastModified != null)
             {
-                metadata[Constants.Headers.LastModified] = LastModified.Value;
-                metadata[Constants.Headers.LastModified] = LastModified.Value.GetDefaultRavenFormat();
+                metadata[Constants.Metadata.LastModified] = LastModified.Value.GetDefaultRavenFormat();
             }
             if (Etag != null)
                 metadata["@etag"] = Etag.ToString();

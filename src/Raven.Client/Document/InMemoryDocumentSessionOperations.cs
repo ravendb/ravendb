@@ -382,9 +382,9 @@ more responsive application.
             {
                 documentFound.Metadata["@etag"] = documentFound.Etag.ToString();
             }
-            if (!documentFound.Metadata.ContainsKey(Constants.Headers.LastModified))
+            if (!documentFound.Metadata.ContainsKey(Constants.Metadata.LastModified))
             {
-                documentFound.Metadata[Constants.Headers.LastModified] = documentFound.LastModified;
+                documentFound.Metadata[Constants.Metadata.LastModified] = documentFound.LastModified;
             }
 
             return TrackEntity(entityType, documentFound.Key, documentFound.DataAsJson, documentFound.Metadata, noTracking: false);

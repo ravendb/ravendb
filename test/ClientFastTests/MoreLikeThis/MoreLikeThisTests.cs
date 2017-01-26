@@ -15,6 +15,7 @@ using System.Linq;
 using FastTests;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
+using Raven.NewClient.Client.Document;
 
 namespace NewClientTests.NewClient
 {
@@ -111,7 +112,7 @@ namespace NewClientTests.NewClient
                 session.SaveChanges();
 
                 id = session.Advanced.GetDocumentId(list.First());
-                WaitForIndexing(store);
+                WaitForIndexing((DocumentStore)store);
             }
 
             using (var session = store.OpenSession())
@@ -148,7 +149,7 @@ namespace NewClientTests.NewClient
                 session.SaveChanges();
 
                 id = session.Advanced.GetDocumentId(list.First());
-                WaitForIndexing(store);
+                WaitForIndexing((DocumentStore)store);
             }
 
             using (var session = store.OpenSession())
@@ -192,7 +193,7 @@ namespace NewClientTests.NewClient
                 session.SaveChanges();
 
                 id = session.Advanced.GetDocumentId(list.First());
-                WaitForIndexing(store);
+                WaitForIndexing((DocumentStore)store);
             }
 
             using (var session = store.OpenSession())
@@ -228,7 +229,7 @@ namespace NewClientTests.NewClient
                 session.SaveChanges();
 
                 id = session.Advanced.GetDocumentId(list.First());
-                WaitForIndexing(store);
+                WaitForIndexing((DocumentStore)store);
             }
 
             AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(id);
@@ -248,7 +249,7 @@ namespace NewClientTests.NewClient
                 session.SaveChanges();
 
                 id = session.Advanced.GetDocumentId(list.First());
-                WaitForIndexing(store);
+                WaitForIndexing((DocumentStore)store);
             }
 
             await AssetMoreLikeThisHasMatchesForAsync<Data, DataIndex>(id);
@@ -268,7 +269,7 @@ namespace NewClientTests.NewClient
                 session.SaveChanges();
 
                 id = session.Advanced.GetDocumentId(list.First());
-                WaitForIndexing(store);
+                WaitForIndexing((DocumentStore)store);
             }
 
             AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(id);
@@ -288,7 +289,7 @@ namespace NewClientTests.NewClient
                 session.SaveChanges();
 
                 id = session.Advanced.GetDocumentId(list.First());
-                WaitForIndexing(store);
+                WaitForIndexing((DocumentStore)store);
             }
 
             AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(id);
@@ -319,7 +320,7 @@ namespace NewClientTests.NewClient
 
                 id = session.Advanced.GetDocumentId(dataQueriedFor);
 
-                WaitForIndexing(store);
+                WaitForIndexing((DocumentStore)store);
             }
 
             Console.WriteLine("Test: '{0}'", id);
@@ -342,7 +343,7 @@ namespace NewClientTests.NewClient
                 var list = GetDataList();
                 list.ForEach(session.Store);
                 session.SaveChanges();
-                WaitForIndexing(store);
+                WaitForIndexing((DocumentStore)store);
             }
 
             AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(key);
@@ -360,7 +361,7 @@ namespace NewClientTests.NewClient
                 var list = GetDataList();
                 list.ForEach(session.Store);
                 session.SaveChanges();
-                WaitForIndexing(store);
+                WaitForIndexing((DocumentStore)store);
             }
 
             using (var session = store.OpenSession())
@@ -370,7 +371,7 @@ namespace NewClientTests.NewClient
                     DocumentId = key,
                     Fields = new[] { "Body" }
                 });
-                WaitForIndexing(store);
+                WaitForIndexing((DocumentStore)store);
 
                 Assert.Empty(list);
             }
@@ -391,7 +392,7 @@ namespace NewClientTests.NewClient
                 }
                 session.SaveChanges();
 
-                WaitForIndexing(store);
+                WaitForIndexing((DocumentStore)store);
             }
 
             AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(key);
@@ -412,7 +413,7 @@ namespace NewClientTests.NewClient
                 }
                 session.SaveChanges();
 
-                WaitForIndexing(store);
+                WaitForIndexing((DocumentStore)store);
             }
 
             using (var session = store.OpenSession())
@@ -438,7 +439,7 @@ namespace NewClientTests.NewClient
                 }
                 session.SaveChanges();
 
-                WaitForIndexing(store);
+                WaitForIndexing((DocumentStore)store);
             }
 
             using (var session = store.OpenSession())
@@ -460,7 +461,7 @@ namespace NewClientTests.NewClient
                 }
                 session.SaveChanges();
 
-                WaitForIndexing(store);
+                WaitForIndexing((DocumentStore)store);
             }
 
             using (var session = store.OpenSession())
@@ -491,7 +492,7 @@ namespace NewClientTests.NewClient
 
                 session.SaveChanges();
 
-                WaitForIndexing(store);
+                WaitForIndexing((DocumentStore)store);
             }
 
             using (var session = store.OpenSession())
@@ -526,7 +527,7 @@ namespace NewClientTests.NewClient
 
                 session.SaveChanges();
 
-                WaitForIndexing(store);
+                WaitForIndexing((DocumentStore)store);
             }
 
             using (var session = store.OpenSession())
@@ -572,7 +573,7 @@ namespace NewClientTests.NewClient
 
                 session.SaveChanges();
 
-                WaitForIndexing(store);
+                WaitForIndexing((DocumentStore)store);
             }
 
             using (var session = store.OpenSession())
@@ -601,7 +602,7 @@ namespace NewClientTests.NewClient
                 session.SaveChanges();
             }
 
-            WaitForIndexing(store);
+            WaitForIndexing((DocumentStore)store);
 
             using (var session = store.OpenSession())
             {
@@ -635,7 +636,7 @@ namespace NewClientTests.NewClient
                 session.SaveChanges();
             }
 
-            WaitForIndexing(store);
+            WaitForIndexing((DocumentStore)store);
 
             using (var session = store.OpenSession())
             {

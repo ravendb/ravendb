@@ -6,6 +6,7 @@
 
 using System;
 using FastTests;
+using Raven.Abstractions.Data;
 using Raven.NewClient.Abstractions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -34,7 +35,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Metadata
                 using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
-                    var lastModified = DateTimeOffset.Parse(session.Advanced.GetMetadataFor(user)["Raven-Last-Modified"]).UtcDateTime;
+                    var lastModified = DateTimeOffset.Parse(session.Advanced.GetMetadataFor(user)[Constants.Metadata.LastModified]).UtcDateTime;
                     Assert.NotNull(lastModified);
                     Assert.InRange(lastModified, before, after);
                     //TODO
