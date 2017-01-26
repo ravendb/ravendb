@@ -13,9 +13,11 @@ namespace Raven.Server.NotificationCenter.Actions
 
         public override string Id => $"{Type}/{OperationId}";
 
-        public long OperationId { get; set; }
+        public long OperationId { get; private set; }
 
-        public OperationState State { get; set; }
+        public OperationState State { get; private set; }
+
+        public bool Killable { get; private set; }
 
         public override DynamicJsonValue ToJson()
         {
@@ -27,7 +29,7 @@ namespace Raven.Server.NotificationCenter.Actions
             return result;
         }
 
-        public static OperationChanged Create(long id, DatabaseOperations.OperationDescription description, OperationState state)
+        public static OperationChanged Create(long id, DatabaseOperations.OperationDescription description, OperationState state, bool killable)
         {
             return new OperationChanged
             {
@@ -36,6 +38,7 @@ namespace Raven.Server.NotificationCenter.Actions
                 Title = $"{description.TaskType.GetDescription()}",
                 Message = description.Description,
                 IsPersistent = false,
+                Killable = killable
             };
         }
     }

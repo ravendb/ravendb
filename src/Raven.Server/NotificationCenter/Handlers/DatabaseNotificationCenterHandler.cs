@@ -28,7 +28,7 @@ namespace Raven.Server.NotificationCenter.Handlers
 
                     foreach (var operation in Database.Operations.GetActive().OrderBy(x => x.Description.StartTime))
                     {
-                        var action = OperationChanged.Create(operation.Id, operation.Description, operation.State);
+                        var action = OperationChanged.Create(operation.Id, operation.Description, operation.State, operation.Killable);
 
                         await writer.WriteToWebSocket(action.ToJson());
                     }

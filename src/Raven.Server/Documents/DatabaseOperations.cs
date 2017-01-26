@@ -165,7 +165,7 @@ namespace Raven.Server.Documents
 
         private void RaiseNotifications(OperationStatusChangeNotification notification, Operation operation)
         {
-            var operationChanged = OperationChanged.Create(notification.OperationId, operation.Description, notification.State);
+            var operationChanged = OperationChanged.Create(notification.OperationId, operation.Description, notification.State, operation.Killable);
 
             operation.NotifyCenter(operationChanged, x => _db.NotificationCenter.Add(x));
 
