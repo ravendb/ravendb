@@ -180,6 +180,11 @@ namespace Raven.Server.Documents.Handlers
             foreach (var id in ids)
             {
                 var document = Database.DocumentsStorage.Get(context, id);
+                if (ids.Count == 1 && document == null)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return;
+                }
 
                 documents.Add(document);
                 includeDocs.Gather(document);

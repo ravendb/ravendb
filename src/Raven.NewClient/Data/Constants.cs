@@ -43,21 +43,6 @@ namespace Raven.NewClient.Abstractions.Data
             public const string MaxMapReduceIndexOutputsPerDocument = "Raven/Indexing/MaxMapIndexOutputsPerDocument";
         }
 
-        public class Command
-        {
-            private Command()
-            {
-            }
-
-            public const string Key = "Key";
-
-            public const string Method = "Method";
-
-            public const string Etag = "Etag";
-
-            public const string Document = "Document";
-        }
-
         public class Metadata
         {
             private Metadata()

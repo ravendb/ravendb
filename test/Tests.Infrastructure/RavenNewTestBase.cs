@@ -118,7 +118,7 @@ namespace FastTests
 
         public static void WaitForIndexing(IDocumentStore store, string dbName = null, TimeSpan? timeout = null)
         {
-            var admin = ((DocumentStore)store).Admin.ForDatabase(dbName);
+            var admin = store.Admin.ForDatabase(dbName);
 
             timeout = timeout ?? (Debugger.IsAttached
                           ? TimeSpan.FromMinutes(15)
