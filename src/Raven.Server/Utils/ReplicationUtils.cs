@@ -313,32 +313,22 @@ namespace Raven.Server.Utils
         {
             var mergedVector = new Dictionary<Guid, long>();
 
-            foreach (var vector in changeVectors)
+            foreach (var changeVector in changeVectors)
             {
-                foreach (var entry in vector)
+                foreach (var changeVectorEntry in changeVector)
                 {
-                    if (mergedVector.ContainsKey(entry.DbId))
-                        continue;
-
-                    long maxEtag = 0;
-                    var hasFoundAny = false;
-                    foreach (var searchVector in changeVectors)
+                    if (!mergedVector.ContainsKey(changeVectorEntry.DbId))
                     {
-                        if (searchVector == vector)
-                            continue;
-                        long etag;
-                        if (searchVector.TryFindEtagByDbId(entry.DbId, out etag) && etag > maxEtag)
-                        {
-                            hasFoundAny = true;
-                            maxEtag = etag;
-                        }
+                        mergedVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
                     }
-
-                    if (hasFoundAny)
-                        mergedVector.Add(entry.DbId, maxEtag);
+                    else
+                    {
+                        mergedVector[changeVectorEntry.DbId] = Math.Max(mergedVector[changeVectorEntry.DbId],
+                            changeVectorEntry.Etag);
+                    }
                 }
             }
-
+            
             return mergedVector.Select(kvp => new ChangeVectorEntry
             {
                 DbId = kvp.Key,

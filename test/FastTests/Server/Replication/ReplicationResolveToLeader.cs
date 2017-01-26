@@ -277,5 +277,43 @@ namespace FastTests.Server.Replication
                 v=>v.Contains("Resolver versions are conflicted. Same version 0, but different")));
            
         }
+
+        [Fact]
+        public void ResolveToTombstone()
+        {
+            var store1 = GetDocumentStore();
+            var store2 = GetDocumentStore();
+            using (var session = store1.OpenSession())
+            {
+                session.Store(new User { Name = "Karmel" }, "foo/bar");
+                session.SaveChanges();
+            }
+            using (var session = store2.OpenSession())
+            {
+                session.Store(new User { Name = "Oren" }, "foo/bar");
+                session.SaveChanges();
+            }
+            using (var session = store2.OpenSession())
+            {
+                session.Delete("foo/bar");
+                session.SaveChanges();
+            }
+            SetupReplication(store1, store2);
+
+            var conflicts = WaitUntilHasConflict(store2, "foo/bar");
+            Assert.Equal(2, conflicts["foo/bar"].Count);
+
+            SetupReplication(store2, new ReplicationDocument
+            {
+                DefaultResolver = new DatabaseResolver
+                {
+                    ResolvingDatabaseId = GetDocumentDatabaseInstanceFor(store2).Result.DbId.ToString(),
+                    Version = 0
+                }
+            }, store1);
+            
+            Assert.Equal(1,WaitUntilHasTombstones(store1).Count);
+            Assert.Equal(1,WaitUntilHasTombstones(store2).Count);
+        }
     }
 }
