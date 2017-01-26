@@ -51,6 +51,11 @@ namespace Voron
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         bool IEqualityComparer<Slice>.Equals(Slice x, Slice y)
         {
+            return AreEqual(x, y);
+        }
+
+        public static bool AreEqual(Slice x, Slice y)
+        {
             Debug.Assert(x.Options == SliceOptions.Key);
             Debug.Assert(y.Options == SliceOptions.Key);
 

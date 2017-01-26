@@ -22,7 +22,7 @@ namespace Voron.Data.Tables
         private FixedSizeTree _fstKey;
         private FixedSizeTree _inactiveSections;
         private FixedSizeTree _activeCandidateSection;
-        
+
         private readonly Dictionary<Slice, Tree> _treesBySliceCache = new Dictionary<Slice, Tree>(SliceComparer.Instance);
         private readonly Dictionary<Slice, Dictionary<Slice, FixedSizeTree>> _fixedSizeTreeCache = new Dictionary<Slice, Dictionary<Slice, FixedSizeTree>>(SliceComparer.Instance);
 
@@ -103,7 +103,7 @@ namespace Voron.Data.Tables
 
             _schema = schema;
             _tx = tx;
-            
+
             _tableTree = tableTree;
             if (_tableTree == null)
                 throw new ArgumentNullException(nameof(tableTree), "Cannot open table " + Name);
@@ -201,12 +201,11 @@ namespace Voron.Data.Tables
                 byte* pos;
                 if (prevIsSmall && ActiveDataSmallSection.TryWriteDirect(id, size, out pos))
                 {
-                    DeleteValueFromIndex(id, new TableValueReader(oldData, oldDataSize));
+                    UpdateValuesFromIndex(id,
+                        new TableValueReader(oldData, oldDataSize),
+                        builder);
 
-                    // MemoryCopy into final position.
                     builder.CopyTo(pos);
-                    InsertIndexValuesFor(id, new TableValueReader(pos, size));
-
                     return id;
                 }
             }
@@ -225,12 +224,11 @@ namespace Voron.Data.Tables
 
                     var pos = page.Pointer + PageHeader.SizeOf;
 
-                    DeleteValueFromIndex(id, new TableValueReader(pos, size));
-
+                    UpdateValuesFromIndex(id,
+                     new TableValueReader(pos, size),
+                     builder);
                     // MemoryCopy into final position.
                     builder.CopyTo(pos);
-
-                    InsertIndexValuesFor(id, new TableValueReader(pos, size));
 
                     return id;
                 }
@@ -309,13 +307,11 @@ namespace Voron.Data.Tables
 
         private void DeleteValueFromIndex(long id, TableValueReader value)
         {
-            //TODO: Avoid all those allocations by using a single buffer
             if (_schema.Key != null)
             {
                 Slice keySlice;
                 using (_schema.Key.GetSlice(_tx.Allocator, value, out keySlice))
                 {
-
                     var pkTree = GetTree(_schema.Key);
                     pkTree.Delete(keySlice);
                 }
@@ -385,6 +381,61 @@ namespace Voron.Data.Tables
 
             return id;
         }
+
+        private void UpdateValuesFromIndex(long id, TableValueReader oldVer, TableValueBuilder newVer)
+        {
+            Slice idAsSlice;
+            using (Slice.External(_tx.Allocator, (byte*)&id, sizeof(long), out idAsSlice))
+            {
+                if (_schema.Key != null)
+                {
+                    Slice oldKeySlice;
+                    Slice newKeySlice;
+                    using (_schema.Key.GetSlice(_tx.Allocator, oldVer, out oldKeySlice))
+                    using (_schema.Key.GetSlice(_tx.Allocator, newVer, out newKeySlice))
+                    {
+                        if (SliceComparer.AreEqual(oldKeySlice, newKeySlice) == false)
+                        {
+                            var pkTree = GetTree(_schema.Key);
+                            pkTree.Delete(oldKeySlice);
+                            pkTree.Add(newKeySlice, idAsSlice);
+                        }
+                    }
+                }
+
+                foreach (var indexDef in _schema.Indexes.Values)
+                {
+                    // For now we wont create secondary indexes on Compact trees.
+                    Slice oldVal;
+                    Slice newVal;
+                    using (indexDef.GetSlice(_tx.Allocator, oldVer, out oldVal))
+                    using (indexDef.GetSlice(_tx.Allocator, newVer, out newVal))
+                    {
+                        if (SliceComparer.AreEqual(oldVal, newVal) == false)
+                        {
+                            var indexTree = GetTree(indexDef);
+                            var fst = GetFixedSizeTree(indexTree, oldVal.Clone(_tx.Allocator), 0);
+                            fst.Delete(id);
+                            fst = GetFixedSizeTree(indexTree, newVal.Clone(_tx.Allocator), 0);
+                            fst.Add(id);
+                        }
+                    }
+                }
+
+                foreach (var indexDef in _schema.FixedSizeIndexes.Values)
+                {
+                    var index = GetFixedSizeTree(indexDef);
+                    var oldKey = indexDef.GetValue(oldVer);
+                    var newKey = indexDef.GetValue(_tx.Allocator, newVer);
+                    if (oldKey != newKey)
+                    {
+                        index.Delete(oldKey);
+                        index.Add(newKey, idAsSlice);
+                    }
+                }
+            }
+        }
+
 
         internal long Insert(TableValueReader reader)
         {

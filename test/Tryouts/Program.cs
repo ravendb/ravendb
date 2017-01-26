@@ -25,9 +25,9 @@ namespace Tryouts
         {
             for (int i = 0; i < 100; i++)
             {
-               using (var a = new SlowTests.Issues.RavenDB_4041())
+               using (var a = new FastTests.Voron.Tables.CompositeIndex())
                {
-                   a.get_returns_metadata();
+                   a.CanInsertThenUpdateThenByComposite();
                }
                 Console.WriteLine($"{i} finished");
             }
