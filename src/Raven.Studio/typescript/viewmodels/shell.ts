@@ -117,7 +117,7 @@ class shell extends viewModelBase {
             // please notice we don't wait here for connection to be established
             // since this invocation is sync we can't end up with race condition
             this.resourcesManager.setupGlobalNotifications();
-            this.notificationCenter.setupGlobalNotifications();
+            this.notificationCenter.setupGlobalNotifications(changesContext.default.serverNotifications());
         });
 
         ko.postbox.subscribe("SetRawJSONUrl", (jsonUrl: string) => this.currentRawUrl(jsonUrl));

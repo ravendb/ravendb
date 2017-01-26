@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading;
 using Raven.Abstractions;
 using Raven.Server.NotificationCenter.Actions.Details;
 using Sparrow.Json.Parsing;
@@ -8,19 +7,13 @@ namespace Raven.Server.NotificationCenter.Actions
 {
     public abstract class Action
     {
-        private static long _counter;
-
-        private readonly long _id;
-
         protected Action(ActionType type)
         {
-            _id = Interlocked.Increment(ref _counter);
-
             CreatedAt = SystemTime.UtcNow;
             Type = type;
         }
 
-        public virtual string Id => $"{GetType().Name}/{_id}";
+        public abstract string Id { get; }
 
         public DateTime CreatedAt { get; }
 

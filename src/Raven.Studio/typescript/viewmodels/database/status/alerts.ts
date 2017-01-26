@@ -1,7 +1,6 @@
 import router = require("plugins/router"); 
 import viewModelBase = require("viewmodels/viewModelBase");
 import moment = require("moment");
-import alert = require("models/database/debug/alert");
 import appUrl = require("common/appUrl");
 import autoRefreshBindingHandler = require("common/bindingHelpers/autoRefreshBindingHandler");
 import tableNavigationTrait = require("common/tableNavigationTrait");
@@ -10,9 +9,9 @@ import eventsCollector = require("common/eventsCollector");
 class alerts extends viewModelBase {
 
     //TODO: alertDoc = ko.observable<alertContainerDto>();
-    allAlerts = ko.observableArray<alert>();
+    //TODO: allAlerts = ko.observableArray<alert>();
     filterLevel = ko.observable("All");
-    selectedAlert = ko.observable<alert>();
+    //TODO: selectedAlert = ko.observable<alert>();
     selectedAlertIndex = ko.observable<number>();
     unreadAlertCount: KnockoutComputed<number>;
     readAlertCount: KnockoutComputed<number>;
@@ -21,7 +20,7 @@ class alerts extends viewModelBase {
     isSaveEnabled: KnockoutComputed<boolean>;
 
     autoRefreshEnabled = ko.observable<boolean>(true);
-    tableNavigation: tableNavigationTrait<alert>;
+    //TODO: tableNavigation: tableNavigationTrait<alert>;
 
     constructor() {
         super();
@@ -33,7 +32,7 @@ class alerts extends viewModelBase {
         this.updateCurrentNowTime();
         //TODO: this.activeDatabase.subscribe(() => this.fetchAlerts());
 
-        this.tableNavigation = new tableNavigationTrait<alert>("#alertTableContainer", this.selectedAlert, this.allAlerts, i => "#alertsContainer table tbody tr:nth-child(" + (i + 1) + ")");
+        //TODO: this.tableNavigation = new tableNavigationTrait<alert>("#alertTableContainer", this.selectedAlert, this.allAlerts, i => "#alertsContainer table tbody tr:nth-child(" + (i + 1) + ")");
     }
 
     activate(args: any) {
@@ -43,12 +42,13 @@ class alerts extends viewModelBase {
         this.updateHelpLink('HL46QE');
         this.selectedAlertIndex(item);
 
+        /* TODO
         this.dirtyFlag = new ko.DirtyFlag([this.allAlerts]);
         this.isSaveEnabled = ko.computed(() => {
             var refresh = this.autoRefreshEnabled();
             var isDirty = this.dirtyFlag().isDirty();
             return !refresh && isDirty;
-        });
+        });*/
     }
 
     deactivate() {
@@ -104,6 +104,7 @@ class alerts extends viewModelBase {
         return ko.computed(() => time);
     }
 
+    /* TODO
     selectAlert(selection: alert) {
         var index = this.allAlerts.indexOf(selection);
         this.selectedAlertIndex(index);
@@ -111,7 +112,7 @@ class alerts extends viewModelBase {
 
         var alertUrl = appUrl.forAlerts(this.activeDatabase()) + "&item=" + this.selectedAlertIndex();
         router.navigate(alertUrl, false);
-    }
+    }*/
 
     setFilterAll() {
         this.filterLevel("All");
@@ -145,7 +146,7 @@ class alerts extends viewModelBase {
     private disableAutoRefresh() {
         this.autoRefreshEnabled(false);
     }
-
+    /* TODO
     deleteSelectedAlert() {
         eventsCollector.default.reportEvent("alerts", "delete", "selected");
 
@@ -168,7 +169,7 @@ class alerts extends viewModelBase {
 
         this.disableAutoRefresh();
         this.allAlerts.removeAll();
-    }
+    }*/
 
     saveAlerts() {
         eventsCollector.default.reportEvent("alerts", "save");

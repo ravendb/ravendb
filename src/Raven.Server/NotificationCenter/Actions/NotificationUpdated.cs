@@ -8,6 +8,8 @@ namespace Raven.Server.NotificationCenter.Actions
         {
         }
 
+        public override string Id => $"{Type}/{UpdateType}/{ActionId}";
+
         public string ActionId { get; private set; }
 
         public NotificationUpdateType UpdateType { get; private set; }

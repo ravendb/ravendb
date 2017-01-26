@@ -8,6 +8,8 @@ namespace Raven.Server.NotificationCenter.Actions.Server
         {
         }
 
+        public override string Id => $"{Type}/{ChangeType}/{ResourceName}";
+
         public string ResourceName { get; private set; }
 
         public ResourceChangeType ChangeType { get; private set; }

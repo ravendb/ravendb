@@ -16,7 +16,7 @@ namespace Raven.Server.NotificationCenter.Actions
 
         public string Key { get; set; }
 
-        public override string Id => string.IsNullOrEmpty(Key) ? Type.ToString() : $"{Type}/{Key}";
+        public override string Id => string.IsNullOrEmpty(Key) ? $"{Type}/{AlertType}" : $"{Type}/{AlertType}/{Key}";
 
         public override DynamicJsonValue ToJson()
         {

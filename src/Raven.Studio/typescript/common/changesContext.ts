@@ -10,6 +10,7 @@ import resourceNotificationCenterClient = require("common/resourceNotificationCe
 import EVENTS = require("common/constants/events");
 
 import resourceDisconnectedEventArgs = require("viewmodels/resources/resourceDisconnectedEventArgs");
+import notificationCenter = require("common/notifications/notificationCenter");
 
 class changesContext {
     static default = new changesContext();
@@ -67,6 +68,7 @@ class changesContext {
 
             this.disconnectFromResourceChangesApi("ChangingResource");
             this.disconnectFromResourceNotificationCenter();
+            notificationCenter.instance.resourceDisconnected();
         }
 
         if (rs.disabled()) { //TODO: or not licensed
@@ -75,6 +77,9 @@ class changesContext {
         }
 
         const notificationsClient = new resourceNotificationCenterClient(rs);
+
+        this.globalResourceSubscriptions.push(...notificationCenter.instance.configureForResource(notificationsClient));
+
         if (globalResourceNotificationCenterSubscriptions) {
             this.globalResourceSubscriptions.push(...globalResourceNotificationCenterSubscriptions(notificationsClient));
         }
@@ -123,6 +128,7 @@ class changesContext {
         }
     }
 
+    //TODO: should it dispose global resource subscriptions?
     disconnectIfCurrent(rs: resource, cause: resourceDisconnectionCause) {
         const currentChanges = this.resourceChangesApi();
 

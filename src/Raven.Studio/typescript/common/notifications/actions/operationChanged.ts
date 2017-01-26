@@ -1,6 +1,46 @@
-﻿import changeSubscription = require("common/changeSubscription");
+/// <reference path="../../../../typings/tsd.d.ts" />
 
-class watchedOperation {
+import abstractAction = require("common/notifications/actions/abstractAction");
+
+class operationChanged extends abstractAction {
+
+    operationId = ko.observable<number>();
+    progress = ko.observable<Raven.Client.Data.IOperationProgress>();
+    result = ko.observable<Raven.Client.Data.IOperationResult>();
+    status = ko.observable<Raven.Client.Data.OperationStatus>();
+
+
+    isSuccess: KnockoutComputed<boolean>;
+    isFailure: KnockoutComputed<boolean>;
+    isCancelled: KnockoutComputed<boolean>;
+    isCompleted: KnockoutComputed<boolean>;
+
+    constructor(dto: Raven.Server.NotificationCenter.Actions.OperationChanged) {
+        super(dto);
+
+        this.operationId(dto.OperationId);
+        this.updateWith(dto);
+        this.initializeObservables();
+    }
+
+    updateWith(incomingChanges: Raven.Server.NotificationCenter.Actions.OperationChanged) {
+        super.updateWith(incomingChanges);
+
+        const stateDto = incomingChanges.State;
+        this.progress(stateDto.Progress);
+        this.result(stateDto.Result);
+        this.status(stateDto.Status);
+    }
+
+    private initializeObservables() {
+        this.isSuccess = ko.pureComputed(() => this.status() === "Completed");
+        this.isCancelled = ko.pureComputed(() => this.status() === "Canceled");
+        this.isFailure = ko.pureComputed(() => this.status() === "Faulted");
+        this.isCompleted = ko.pureComputed(() => this.status() !== "InProgress");
+    }
+
+
+     /* TODO:
     private disposeHandle: changeSubscription;
 
     operationId: number;
@@ -8,12 +48,7 @@ class watchedOperation {
     state = ko.observable<Raven.Client.Data.OperationState>();
     description = ko.observable<Raven.Server.Documents.PendingOperationDescription>();
     killable = ko.observable<boolean>(false);
-    completed: KnockoutComputed<boolean>;
     visible: KnockoutComputed<boolean>;
-
-    isSuccess: KnockoutComputed<boolean>;
-    isFailure: KnockoutComputed<boolean>;
-    isCancelled: KnockoutComputed<boolean>;
 
     constructor(operationId: number, disposeHandle: changeSubscription) {
         this.operationId = operationId;
@@ -27,27 +62,7 @@ class watchedOperation {
             const state = this.state();
             return !!description && !!state;
         });
-        this.completed = ko.pureComputed(() => {
-            var state = this.state();
-            if (state) {
-                return state.Status !== "InProgress";
-            }
-            return false;
-        });
-
-        this.isSuccess = this.statusComparer("Completed");
-        this.isCancelled = this.statusComparer("Canceled");
-        this.isFailure = this.statusComparer("Faulted");
-    }
-
-    private statusComparer(desiredStatus: Raven.Client.Data.OperationStatus): KnockoutComputed<boolean> {
-        return ko.pureComputed(() => {
-            var state = this.state();
-            if (state) {
-                return state.Status === desiredStatus;
-            }
-            return false;
-        });
+       
     }
 
     isPercentageProgress(): boolean {
@@ -74,8 +89,8 @@ class watchedOperation {
         if (state.Status !== "InProgress") {
             this.disposeHandle.off();
         }
-    }
+    }*/
 
 }
 
-export = watchedOperation;
+export = operationChanged;

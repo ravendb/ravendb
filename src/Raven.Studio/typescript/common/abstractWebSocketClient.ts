@@ -33,7 +33,9 @@ abstract class abstractWebSocketClient<T> {
         }
     }
 
-    protected abstract onMessage(e: T): void;
+    protected onMessage(e: T) {
+        console.error("Unhandled message type: " + e);
+    }
 
     protected abstract get connectionDescription(): string;
 

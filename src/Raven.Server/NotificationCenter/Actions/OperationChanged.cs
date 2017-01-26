@@ -11,6 +11,8 @@ namespace Raven.Server.NotificationCenter.Actions
         {
         }
 
+        public override string Id => $"{Type}/{OperationId}";
+
         public long OperationId { get; set; }
 
         public OperationState State { get; set; }

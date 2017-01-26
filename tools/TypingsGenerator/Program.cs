@@ -78,8 +78,7 @@ namespace TypingsGenerator
 
             // actions
             scripter.AddType(typeof(AlertRaised));
-            scripter.AddType(typeof(NotificationDismissed));
-            scripter.AddType(typeof(NotificationPostponed));
+            scripter.AddType(typeof(NotificationUpdated));
             scripter.AddType(typeof(OperationChanged));
             scripter.AddType(typeof(ResourceChanged));
 

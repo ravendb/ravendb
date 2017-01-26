@@ -31,7 +31,7 @@ class serverNotificationCenterClient extends abstractNotificationCenterClient {
         const actionType = actionDto.Type;
 
         switch (actionType) {
-            case "Resource":
+            case "ResourceChanged":
                 const resourceDto = actionDto as Raven.Server.NotificationCenter.Actions.Server.ResourceChanged;
                 this.fireEvents<Raven.Server.NotificationCenter.Actions.Server.ResourceChanged>(this.allResourceChangedHandlers(), resourceDto, () => true);
 

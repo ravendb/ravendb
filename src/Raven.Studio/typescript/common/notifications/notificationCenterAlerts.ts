@@ -1,10 +1,8 @@
 ﻿import resource = require("models/resources/resource");
 import database = require("models/resources/database");
-import alert = require("models/database/debug/alert");
 
 import EVENTS = require("common/constants/events");
 
-import watchedOperation = require("common/notifications/watchedOperation");
 import messagePublisher = require("common/messagePublisher");
 import changesApi = require("common/changesApi");
 import changesContext = require("common/changesContext");
@@ -14,7 +12,7 @@ import killOperationCommand = require("commands/operations/killOperationCommand"
 
 class notificationCenterAlerts {
 
-    alerts = ko.observableArray<alert>();
+    //TODO : alerts = ko.observableArray<alert>();
 
     activeResourceChangesApi: KnockoutObservable<changesApi>;
 
