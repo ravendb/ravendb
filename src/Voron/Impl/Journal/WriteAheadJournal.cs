@@ -55,6 +55,8 @@ namespace Voron.Impl.Journal
         public bool HasDataInLazyTxBuffer() => _lazyTransactionBuffer?.HasDataInBuffer() ?? false;
 
         private readonly object _writeLock = new object();
+        const int NumberOfLastCompressionPagesRequiredTracked = 16;
+        private readonly int[] _lastNumberOfPagesRequiredForCompressionBuffer = new int[NumberOfLastCompressionPagesRequiredTracked];
 
         public WriteAheadJournal(StorageEnvironment env)
         {
@@ -651,7 +653,7 @@ namespace Voron.Impl.Journal
                     return;
                 }
 
-                if (_totalWrittenButUnsyncedBytes > 512*Constants.Size.Megabyte)
+                if (_totalWrittenButUnsyncedBytes > 512 * Constants.Size.Megabyte)
                     _waj._env.QueueForSyncDataFile();
 
                 if (DateTime.UtcNow - _lastSyncTime > TimeSpan.FromMinutes(3))
@@ -789,8 +791,8 @@ namespace Voron.Impl.Journal
 
                     if (_waj._logger.IsInfoEnabled)
                     {
-                        var sizeInKb = (_waj._dataPager.NumberOfAllocatedPages * Constants.Storage.PageSize)/Constants.Size.Kilobyte;
-                        _waj._logger.Info($"Sync of {sizeInKb:#,#} kb with {currentTotalWrittenBytes/Constants.Size.Kilobyte:#,#} kb in {sp.Elapsed}");
+                        var sizeInKb = (_waj._dataPager.NumberOfAllocatedPages * Constants.Storage.PageSize) / Constants.Size.Kilobyte;
+                        _waj._logger.Info($"Sync of {sizeInKb:#,#} kb with {currentTotalWrittenBytes / Constants.Size.Kilobyte:#,#} kb in {sp.Elapsed}");
                     }
 
                     lock (_flushingLock)
@@ -852,8 +854,8 @@ namespace Voron.Impl.Journal
                         meter.IncrementSize(written);
                     }
 
-                    if(_waj._logger.IsInfoEnabled)
-                        _waj._logger.Info($"Flushed {pagesToWrite.Count:#,#} pages with {written/Constants.Size.Kilobyte:#,#} kb in {sp.Elapsed}");
+                    if (_waj._logger.IsInfoEnabled)
+                        _waj._logger.Info($"Flushed {pagesToWrite.Count:#,#} pages with {written / Constants.Size.Kilobyte:#,#} kb in {sp.Elapsed}");
 
                     _totalWrittenButUnsyncedBytes += written;
                 }
@@ -942,7 +944,7 @@ namespace Voron.Impl.Journal
                     if (lastReadTxHeader->TransactionId > readTxHeader->TransactionId)
                         // we got to a trasaction that is smaller than the previous one, this is very 
                         // likely a reused jouranl with old transaction, which we can ignore
-                        break; 
+                        break;
 
                     *lastReadTxHeader = *readTxHeader;
 
@@ -1043,7 +1045,7 @@ namespace Voron.Impl.Journal
         {
             lock (_writeLock)
             {
-                var journalEntry = PrepareToWriteToJournal(tx, _compressionPager, pageCount);
+                var journalEntry = PrepareToWriteToJournal(tx, pageCount);
 
                 if (tx.IsLazyTransaction && _lazyTransactionBuffer == null)
                 {
@@ -1085,7 +1087,7 @@ namespace Voron.Impl.Journal
             }
         }
 
-        private CompressedPagesResult PrepareToWriteToJournal(LowLevelTransaction tx, AbstractPager compressionPager, int pageCountIncludingAllOverflowPages)
+        private CompressedPagesResult PrepareToWriteToJournal(LowLevelTransaction tx, int pageCountIncludingAllOverflowPages)
         {
             var txPages = tx.GetTransactionPages();
             var numberOfPages = txPages.Count;
@@ -1102,12 +1104,13 @@ namespace Voron.Impl.Journal
 
             // The pages required includes the intermediate pages and the required output pages. 
             const int transactionHeaderPageOverhead = 1;
-            int pagesRequired = (transactionHeaderPageOverhead + pageCountIncludingAllOverflowPages + diffOverheadInPages + outputBufferInPages);
-            var pagerState = compressionPager.EnsureContinuous(0, pagesRequired);
+            var pagesRequired = (transactionHeaderPageOverhead + pageCountIncludingAllOverflowPages + diffOverheadInPages + outputBufferInPages);
+            _lastNumberOfPagesRequiredForCompressionBuffer[tx.Id % NumberOfLastCompressionPagesRequiredTracked] = pagesRequired;
+            var pagerState = _compressionPager.EnsureContinuous(0, pagesRequired);
             tx.EnsurePagerStateReference(pagerState);
 
-            compressionPager.EnsureMapped(tx, 0, pagesRequired);
-            var outputBuffer = compressionPager.AcquirePagePointer(tx, 0);
+            _compressionPager.EnsureMapped(tx, 0, pagesRequired);
+            var outputBuffer = _compressionPager.AcquirePagePointer(tx, 0);
 
             var pagesInfo = (TransactionHeaderPageInfo*)outputBuffer;
             var write = outputBuffer + sizeOfPagesHeader;
@@ -1209,20 +1212,31 @@ namespace Voron.Impl.Journal
 
         public void Cleanup()
         {
-            const int bufferSizeLimitBeforeCleanup = 32 * 1024 * 1024;
-            var compressionBufferSize = _compressionPager.NumberOfAllocatedPages * Constants.Storage.PageSize;
-            if (compressionBufferSize <= bufferSizeLimitBeforeCleanup)
+            if (ShouldReduceSizeOfCompressionPager())
                 return;
 
             lock (_writeLock)
             {
-                compressionBufferSize = _compressionPager.NumberOfAllocatedPages * Constants.Storage.PageSize;
-                if (compressionBufferSize <= bufferSizeLimitBeforeCleanup)
+                if (ShouldReduceSizeOfCompressionPager())
                     return;
 
                 _compressionPager.Dispose();
                 _compressionPager = CreateCompressionPager(_env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize);
             }
+        }
+
+        private bool ShouldReduceSizeOfCompressionPager()
+        {
+            const int bufferSizeLimitBeforeCleanup = 32*1024*1024;
+            var compressionBufferSize = _compressionPager.NumberOfAllocatedPages*Constants.Storage.PageSize;
+            if (compressionBufferSize <= bufferSizeLimitBeforeCleanup)
+                return false;
+
+            var maxRecentPagesRequired = _lastNumberOfPagesRequiredForCompressionBuffer.Max();
+
+            // while we are above the limit, we still recently used at least half of it, no point
+            // in reducing size yet, we'll be called again
+            return maxRecentPagesRequired < _compressionPager.NumberOfAllocatedPages/2;
         }
     }
 
