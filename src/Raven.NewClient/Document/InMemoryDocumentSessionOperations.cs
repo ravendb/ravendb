@@ -21,6 +21,7 @@ using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Util;
 using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Commands;
+using Raven.NewClient.Client.Data.Commands;
 using Raven.NewClient.Client.Exceptions.Session;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -137,7 +138,7 @@ namespace Raven.NewClient.Client.Document
         /// <value></value>
         public bool UseOptimisticConcurrency { get; set; }
 
-        private readonly List<Dictionary<string, object>> _deferedCommands = new List<Dictionary<string, object>>();
+        private readonly List<ICommandData> _deferedCommands = new List<ICommandData>();
         private readonly BlittableOperation _blittableOperation;
         public GenerateEntityIdOnTheClient GenerateEntityIdOnTheClient { get; private set; }
         public EntityToBlittable EntityToBlittable { get; private set; }
@@ -482,13 +483,7 @@ more responsive application.
             }
             KnownMissingIds.Add(id);
             etag = UseOptimisticConcurrency ? etag : null;
-            Defer(new Dictionary<string, object>
-            {
-                [Constants.Command.Key] = id,
-                [Constants.Command.Method] = "DELETE",
-                [Constants.Command.Document] = null,
-                [Constants.Command.Etag] = etag
-            });
+            Defer(new DeleteCommandData(id, etag));
         }
 
         //TODO
@@ -571,7 +566,7 @@ more responsive application.
                 GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
             }
 
-            if (_deferedCommands.Any(c => c["Key"].ToString() == id))
+            if (_deferedCommands.Any(c => c.Key == id))
                 throw new InvalidOperationException("Can't store document, there is a deferred command registered for this document in the session. Document id: " + id);
 
             if (DeletedEntities.Contains(entity))
@@ -707,28 +702,12 @@ more responsive application.
             return result;
         }
 
-        private static List<DynamicJsonValue> ConvertDicToDynamicJsonValue(IEnumerable<Dictionary<string, object>> defered)
-        {
-            var list = new List<DynamicJsonValue>();
-
-            foreach (var x in defered)
-            {
-                var dynamicJson = new DynamicJsonValue();
-                foreach (var key in x.Keys)
-                {
-                    dynamicJson[key] = x[key];
-                }
-                list.Add(dynamicJson);
-            }
-            return list;
-        }
-
         public SaveChangesData PrepareForSaveChanges()
         {
             var result = new SaveChangesData
             {
                 Entities = new List<object>(),
-                Commands = ConvertDicToDynamicJsonValue(_deferedCommands),
+                Commands = new List<ICommandData>(_deferedCommands),
                 DeferredCommandsCount = _deferedCommands.Count,
                 Options = _saveChangesOptions
             };
@@ -792,14 +771,7 @@ more responsive application.
                         DocumentsById.Remove(documentInfo.Id);
                     }
                     etag = UseOptimisticConcurrency ? etag : null;
-                    result.Commands.Add(new DynamicJsonValue()
-                    {
-                        [Constants.Command.Key] = documentInfo.Id,
-                        [Constants.Command.Method] = "DELETE",
-                        [Constants.Command.Document] = null,
-                        [Constants.Command.Etag] = etag
-                    });
-
+                    result.Commands.Add(new DeleteCommandData(documentInfo.Id, etag));
                 }
             }
             DeletedEntities.Clear();
@@ -833,13 +805,7 @@ more responsive application.
                     ? (long?)(entity.Value.ETag ?? 0)
                     : null;
 
-                result.Commands.Add(new DynamicJsonValue()
-                {
-                    ["Key"] = entity.Value.Id,
-                    ["Method"] = "PUT",
-                    ["Document"] = document,
-                    ["Etag"] = etag
-                });
+                result.Commands.Add(new PutCommandDataWithBlittableJson(entity.Value.Id, etag, document));
             }
         }
 
@@ -976,7 +942,7 @@ more responsive application.
         /// Defer commands to be executed on SaveChanges()
         /// </summary>
         /// <param name="commands">The commands to be executed</param>
-        public virtual void Defer(params Dictionary<string, object>[] commands)
+        public virtual void Defer(params ICommandData[] commands)
         {
             // Should we remove Defer?
             // and Patch would send Put and Delete and Patch separatly, like { Delete: [], Put: [], Patch: []}
@@ -1246,7 +1212,7 @@ more responsive application.
         {
             public SaveChangesData()
             {
-                Commands = new List<DynamicJsonValue>();
+                Commands = new List<ICommandData>();
                 Entities = new List<object>();
             }
 
@@ -1254,7 +1220,7 @@ more responsive application.
             /// Gets or sets the commands.
             /// </summary>
             /// <value>The commands.</value>
-            public List<DynamicJsonValue> Commands { get; set; }
+            public List<ICommandData> Commands { get; set; }
 
             public BatchOptions Options { get; set; }
 

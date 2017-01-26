@@ -111,12 +111,18 @@ namespace Raven.NewClient.Client.Commands
 
         public void SetResult(GetDocumentResult result)
         {
+            if (result == null)
+                return;
+
             var ids = new List<string>();
             var includes = new List<string>();
             if (result.Includes != null)
             {
                 foreach (BlittableJsonReaderObject include in result.Includes)
                 {
+                    if (include == null)
+                        continue;
+
                     var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(include);
                     _session.includedDocumentsByKey[newDocumentInfo.Id] = newDocumentInfo;
                     if(_withoutIds)
@@ -127,6 +133,9 @@ namespace Raven.NewClient.Client.Commands
 
             foreach (BlittableJsonReaderObject document in result.Results)
             {
+                if (document == null)
+                    continue;
+
                 var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(document);
                 _session.DocumentsById.Add(newDocumentInfo);
                 if (_withoutIds)

@@ -1,18 +1,17 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using FastTests;
-
-using Raven.Abstractions.Commands;
-using Raven.Client.Data;
-using Raven.Json.Linq;
-
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Data.Commands;
+using Sparrow.Json.Parsing;
 using Xunit;
 
 using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Commands
 {
-    public class Batches : RavenTestBase
+    public class Batches : RavenNewTestBase
     {
         [Fact]
         public async Task CanDoBatchOperations()
@@ -26,41 +25,36 @@ namespace SlowTests.Core.Commands
                     await session.SaveChangesAsync();
                 }
 
-                await store.AsyncDatabaseCommands.BatchAsync(new ICommandData[]
+                using (var commands = store.Commands())
                 {
-                    new PutCommandData
+                    await commands.BatchAsync(new List<ICommandData>
                     {
-                        Document = new RavenJObject {{"Name", "James"}},
-                        Id = "users/3"
-                    },
-                    new PatchCommandData
-                    {
-                        Id = "users/1",
-                        Patch = new PatchRequest
+                        new PutCommandData("users/3", null, new DynamicJsonValue
+                        {
+                            ["Name"] = "James"
+                        }),
+                        new PatchCommandData("users/1", null, new PatchRequest
                         {
                             Script = "this.Name = 'Nhoj';"
-                        }
-                    },
-                    new DeleteCommandData()
-                    {
-                        Id = "users/2"
-                    },
-                });
+                        }, null),
+                        new DeleteCommandData("users/2", null)
+                    });
 
-                var multiLoadResult = await store.AsyncDatabaseCommands.GetAsync(new[] { "users/1", "users/2", "users/3" }, null);
+                    dynamic multiLoadResult = await commands.GetAsync(new[] { "users/1", "users/2", "users/3" });
 
-                Assert.Equal(3, multiLoadResult.Results.Count);
+                    Assert.Equal(3, multiLoadResult.Count);
 
-                var user1 = multiLoadResult.Results[0];
-                var user2 = multiLoadResult.Results[1];
-                var user3 = multiLoadResult.Results[2];
+                    var user1 = multiLoadResult[0];
+                    var user2 = multiLoadResult[1];
+                    var user3 = multiLoadResult[2];
 
-                Assert.NotNull(user1);
-                Assert.Null(user2);
-                Assert.NotNull(user3);
+                    Assert.NotNull(user1);
+                    Assert.True(user2 == null);
+                    Assert.NotNull(user3);
 
-                Assert.Equal("Nhoj", user1.Value<string>("Name"));
-                Assert.Equal("James", user3.Value<string>("Name"));
+                    Assert.Equal("Nhoj", user1.Name.ToString());
+                    Assert.Equal("James", user3.Name.ToString());
+                }
             }
         }
     }

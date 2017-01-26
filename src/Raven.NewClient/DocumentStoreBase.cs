@@ -15,6 +15,7 @@ using Raven.NewClient.Abstractions.Util.Encryptors;
 using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Http;
 using Raven.NewClient.Data.Indexes;
+using Raven.NewClient.Operations;
 
 namespace Raven.NewClient.Client
 {
@@ -285,6 +286,6 @@ namespace Raven.NewClient.Client
             session.OnBeforeQueryExecuted += OnBeforeQueryExecuted;
         }
 
-
+        public abstract AdminOperationExecuter Admin { get; }
     }
 }

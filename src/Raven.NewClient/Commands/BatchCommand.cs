@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
 using Raven.NewClient.Client.Blittable;
+using Raven.NewClient.Client.Data.Commands;
 using Raven.NewClient.Client.Json;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Raven.NewClient.Client.Http;
 
 namespace Raven.NewClient.Client.Commands
@@ -16,7 +16,7 @@ namespace Raven.NewClient.Client.Commands
         private readonly BlittableJsonReaderObject[] _commands;
         private readonly BatchOptions _options;
 
-        public BatchCommand(JsonOperationContext context, List<DynamicJsonValue> commands, BatchOptions options = null)
+        public BatchCommand(JsonOperationContext context, List<ICommandData> commands, BatchOptions options = null)
         {
             if (context == null)
                 throw new ArgumentNullException(nameof(context));
@@ -29,7 +29,7 @@ namespace Raven.NewClient.Client.Commands
             for (var i = 0; i < commands.Count; i++)
             {
                 var command = commands[i];
-                _commands[i] = _context.ReadObject(command, "command");
+                _commands[i] = _context.ReadObject(command.ToJson(), "command");
             }
 
             _options = options;

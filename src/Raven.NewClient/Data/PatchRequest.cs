@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Sparrow.Json.Parsing;
 
 namespace Raven.NewClient.Client.Data
 {
@@ -44,6 +45,27 @@ namespace Raven.NewClient.Client.Data
             {
                 return Values.Keys.Aggregate(Script.GetHashCode()*397, (i, s) => i*397 ^ s.GetHashCode());
             }
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            var json = new DynamicJsonValue
+            {
+                [nameof(Script)] = Script
+            };
+
+            if (Values != null)
+            {
+                var values = new DynamicJsonValue();
+                foreach (var kvp in Values)
+                {
+                    values[kvp.Key] = kvp.Value;
+                }
+
+                json[nameof(Values)] = values;
+            }
+
+            return json;
         }
     }
 }

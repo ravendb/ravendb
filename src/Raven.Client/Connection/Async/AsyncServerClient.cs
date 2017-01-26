@@ -655,10 +655,20 @@ namespace Raven.Client.Connection.Async
 
             return ExecuteWithReplication(HttpMethod.Get, async operationMetadata =>
             {
-                var multiLoadResult = await DirectGetAsync(operationMetadata, new[] { key }, null, null, null, metadataOnly, token).ConfigureAwait(false);
-                if (multiLoadResult.Results.Count == 0)
-                    return null;
-                return SerializationHelper.RavenJObjectToJsonDocument(multiLoadResult.Results[0]);
+                try
+                {
+                    var multiLoadResult = await DirectGetAsync(operationMetadata, new[] { key }, null, null, null, metadataOnly, token).ConfigureAwait(false);
+                    if (multiLoadResult.Results.Count == 0)
+                        return null;
+                    return SerializationHelper.RavenJObjectToJsonDocument(multiLoadResult.Results[0]);
+                }
+                catch (ErrorResponseException e)
+                {
+                    if (e.StatusCode == HttpStatusCode.NotFound)
+                        return null;
+
+                    throw;
+                }
             }, token);
         }
 

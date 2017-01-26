@@ -78,7 +78,7 @@ namespace Raven.NewClient.Client.Commands
         public T[] GetTransformedDocuments<T>(GetDocumentResult result)
         {
             if (result == null)
-                return null;
+                return new T[_ids.Length];
 
             if (typeof(T).IsArray)
             {
@@ -99,10 +99,16 @@ namespace Raven.NewClient.Client.Commands
 
         public void SetResult(GetDocumentResult result)
         {
+            if (result == null)
+                return;
+
             if (result.Includes != null)
             {
                 foreach (BlittableJsonReaderObject include in result.Includes)
                 {
+                    if (include == null)
+                        continue;
+
                     var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(include);
                     _session.includedDocumentsByKey[newDocumentInfo.Id] = newDocumentInfo;
                 }

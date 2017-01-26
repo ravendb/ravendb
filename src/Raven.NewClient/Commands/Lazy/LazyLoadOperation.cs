@@ -90,15 +90,18 @@ namespace Raven.NewClient.Client.Commands.Lazy
                 return;
             }
 
-            var multiLoadResult = JsonDeserializationClient.GetDocumentResult((BlittableJsonReaderObject)response.Result);
+            var multiLoadResult = response.Result != null
+                ? JsonDeserializationClient.GetDocumentResult((BlittableJsonReaderObject)response.Result)
+                : null;
+
             HandleResponse(multiLoadResult);
         }
 
         private void HandleResponse(GetDocumentResult loadResult)
         {
-              _loadOperation.SetResult(loadResult);
-              if (RequiresRetry == false)
-                  Result = _loadOperation.GetDocuments<T>();
+            _loadOperation.SetResult(loadResult);
+            if (RequiresRetry == false)
+                Result = _loadOperation.GetDocuments<T>();
         }
     }
 }
