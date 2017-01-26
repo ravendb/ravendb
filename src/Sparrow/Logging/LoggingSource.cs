@@ -16,8 +16,7 @@ namespace Sparrow.Logging
 {
     public class LoggingSource
     {
-        [ThreadStatic]
-        private static string _currentThreadId;
+        [ThreadStatic] private static string _currentThreadId;
 
         private readonly ManualResetEventSlim _hasEntries = new ManualResetEventSlim(false);
         private readonly ThreadLocal<LocalThreadWriterState> _localState;
@@ -46,7 +45,9 @@ namespace Sparrow.Logging
         {
             public LoggingFilter Filter { get; } = new LoggingFilter();
         }
-        private readonly ConcurrentDictionary<WebSocket, WebSocketContext> _listeners = new ConcurrentDictionary<WebSocket, WebSocketContext>();
+
+        private readonly ConcurrentDictionary<WebSocket, WebSocketContext> _listeners =
+            new ConcurrentDictionary<WebSocket, WebSocketContext>();
 
         private LogMode _logMode;
         private LogMode _oldLogMode;
@@ -54,7 +55,7 @@ namespace Sparrow.Logging
         public async Task Register(WebSocket source, WebSocketContext context, CancellationToken token)
         {
             await source.SendAsync(new ArraySegment<byte>(_headerRow), WebSocketMessageType.Text, true,
-               token);
+                token);
 
             lock (this)
             {
@@ -83,8 +84,7 @@ namespace Sparrow.Logging
                     }
                     var chars = Encoding.UTF8.GetChars(arraySegment.Array, 0, result.Count, charBuffer, 0);
                     buffer.Append(charBuffer, 0, chars);
-                }
-                while (!result.EndOfMessage);
+                } while (!result.EndOfMessage);
 
                 var commandResult = context.Filter.ParseInput(buffer.ToString());
                 var maxBytes = Encoding.UTF8.GetMaxByteCount(commandResult.Length);
@@ -105,7 +105,8 @@ namespace Sparrow.Logging
         }
 
 
-        private LoggingSource(string path, LogMode logMode = LogMode.Information, TimeSpan retentionTime = default(TimeSpan))
+        private LoggingSource(string path, LogMode logMode = LogMode.Information,
+            TimeSpan retentionTime = default(TimeSpan))
         {
             _path = path;
             if (retentionTime == default(TimeSpan))
@@ -185,7 +186,8 @@ namespace Sparrow.Logging
                     continue;
                 // TODO: If avialable file size on the disk is too small, emit a warning, and return a Null Stream, instead
                 // TODO: We don't want to have the debug log kill us
-                var fileStream = new FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.Read, 32 * 1024, false);
+                var fileStream = new FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.Read, 32*1024,
+                    false);
                 fileStream.Write(_headerRow, 0, _headerRow.Length);
                 return fileStream;
             }
@@ -202,7 +204,7 @@ namespace Sparrow.Logging
             }
             catch (Exception)
             {
-                return;// this can fail for various reasons, we don't really care for that in most cases
+                return; // this can fail for various reasons, we don't really care for that in most cases
             }
             foreach (var existingLogFile in existingLogFiles)
             {
@@ -273,7 +275,7 @@ namespace Sparrow.Logging
             if (_currentThreadId == null)
             {
                 _currentThreadId = ", " + Thread.CurrentThread.ManagedThreadId.ToString(CultureInfo.InvariantCulture) +
-                                  ", ";
+                                   ", ";
             }
 
             writer.Write(entry.At.GetDefaultRavenFormat(true));
@@ -321,7 +323,7 @@ namespace Sparrow.Logging
                 var threadStates = new List<WeakReference<LocalThreadWriterState>>();
                 while (_keepLogging)
                 {
-                    const int maxFileSize = 1024 * 1024 * 256;
+                    const int maxFileSize = 1024*1024*256;
                     using (var currentFile = GetNewStream(maxFileSize))
                     {
                         var sizeWritten = 0;
@@ -390,35 +392,75 @@ namespace Sparrow.Logging
             _additionalOutput?.Write(bytes.Array, bytes.Offset, bytes.Count);
 
             if (_listeners.Count != 0)
-            { 
-                foreach (var socket in item.WebSocketsList)
-                {
-                    try
-                    {
-                        socket.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None).Wait();
-                    }
-                    catch (Exception)
-                    {
-                        WebSocketContext value;
-                        _listeners.TryRemove(socket, out value);
-                        if (_listeners.Count == 0)
-                        {
-                            lock (this)
-                            {
-                                if (_listeners.Count == 0)
-                                {
-                                    SetupLogMode(_oldLogMode, _path);
-                                }
-                            }
-                        }
-                    }
-                }
+            {
+                // this is rare
+                SendToWebSockets(item, bytes);
             }
 
             item.Data.SetLength(0);
             item.WebSocketsList.Clear();
 
             return bytes.Count;
+        }
+
+        private Task[] _tasks = new Task[0];
+
+        private void SendToWebSockets(WebSocketMessageEntry item, ArraySegment<byte> bytes)
+        {
+            if (_tasks.Length != item.WebSocketsList.Count)
+                _tasks = new Task[item.WebSocketsList.Count];
+
+            for (int i = 0; i < item.WebSocketsList.Count; i++)
+            {
+                var socket = item.WebSocketsList[i];
+                try
+                {
+                    _tasks[i] = socket.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None);
+                }
+                catch (Exception)
+                {
+                    RemoveWebSocket(socket);
+                }
+            }
+
+            bool success;
+            try
+            {
+                success = Task.WaitAll(_tasks, 250);
+            }
+            catch (Exception)
+            {
+                success = false;
+            }
+
+            if (success == false)
+            {
+                for (int i = 0; i < _tasks.Length; i++)
+                {
+                    if (_tasks[i].IsFaulted || _tasks[i].IsCanceled ||
+                        _tasks[i].IsCompleted == false)
+                    {
+                        // this either timed out or errored, removing it.
+                        RemoveWebSocket(item.WebSocketsList[i]);
+                    }
+                }
+            }
+        }
+
+        private void RemoveWebSocket(WebSocket socket)
+        {
+            WebSocketContext value;
+            _listeners.TryRemove(socket, out value);
+            if (_listeners.Count != 0)
+                return;
+
+            lock (this)
+            {
+                if (_listeners.Count == 0)
+                {
+                    SetupLogMode(_oldLogMode, _path);
+                }
+            }
         }
 
         public void EnableConsoleLogging()

@@ -25,9 +25,9 @@ namespace Tryouts
         {
             for (int i = 0; i < 100; i++)
             {
-               using (var a = new FastTests.Server.Basic.MaxSecondsForTaskToWaitForDatabaseToLoad())
+               using (var a = new SlowTests.Issues.RavenDB_4041())
                {
-                   a.ShouldThrow_DatabaseLoadTimeout();
+                   a.get_returns_metadata();
                }
                 Console.WriteLine($"{i} finished");
             }
