@@ -82,7 +82,7 @@ namespace Raven.Server.Documents.Handlers
             var patch = Documents.Patch.PatchRequest.Parse(reader);
 
             ExecuteCollectionOperation((runner, collectionName, options, onProgress, token) => Task.Run(() => runner.ExecutePatch(collectionName, options, patch, context, onProgress, token)),
-                context, returnContextToPool, DatabaseOperations.OperationType.DeleteByCollection);
+                context, returnContextToPool, DatabaseOperations.OperationType.UpdateByCollection);
             return Task.CompletedTask;
 
         }

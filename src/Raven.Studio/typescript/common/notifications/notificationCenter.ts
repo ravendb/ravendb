@@ -2,8 +2,8 @@
 import alertArgs = require("common/alertArgs");
 
 import abstractAction = require("common/notifications/actions/abstractAction");
-import alertRaised = require("common/notifications/actions/alertRaised");
-import operationChanged = require("common/notifications/actions/operationChanged");
+import alert = require("common/notifications/actions/alert");
+import operation = require("common/notifications/actions/operation");
 
 import resourceNotificationCenterClient = require("common/resourceNotificationCenterClient");
 import serverNotificationCenterClient = require("common/serverNotificationCenterClient");
@@ -11,6 +11,13 @@ import changeSubscription = require("common/changeSubscription");
 
 class notificationCenter {
     static instance = new notificationCenter();
+
+    static readonly postponeOptions: valueAndLabelItem<number, string>[] = [
+        { label: "1 hour", value: 3600 },
+        { label: "6 hours", value: 6 * 3600 },
+        { label: "1 day", value: 24 * 3600 },
+        { label: "1 week", value: 7 * 24 * 3600 }
+    ];
 
     showNotifications = ko.observable<boolean>(false);
 
@@ -85,21 +92,21 @@ class notificationCenter {
     }
 
     private onAlertReceived(alertDto: Raven.Server.NotificationCenter.Actions.AlertRaised, alertContainer: KnockoutObservableArray<abstractAction>) {
-        const existingAlert = alertContainer().find(x => x.id === alertDto.Id) as alertRaised;
+        const existingAlert = alertContainer().find(x => x.id === alertDto.Id) as alert;
         if (existingAlert) {
             existingAlert.updateWith(alertDto);
         } else {
-            const alertObject = new alertRaised(alertDto);
+            const alertObject = new alert(alertDto);
             alertContainer.push(alertObject);
         }
     }
 
     private onOperationChangeReceived(operationDto: Raven.Server.NotificationCenter.Actions.OperationChanged, alertContainer: KnockoutObservableArray<abstractAction>) {
-        const existingOperation = alertContainer().find(x => x.id === operationDto.Id) as operationChanged;
+        const existingOperation = alertContainer().find(x => x.id === operationDto.Id) as operation;
         if (existingOperation) {
             existingOperation.updateWith(operationDto);
         } else {
-            const operationChangedObject = new operationChanged(operationDto);
+            const operationChangedObject = new operation(operationDto);
             alertContainer.push(operationChangedObject);
         }
     }
@@ -112,13 +119,19 @@ class notificationCenter {
         return null; //TODO: delete me
     }
 
+    postpone(action: abstractAction, timeInSeconds: number) {
+        //TODO: send request to server 
+        console.log("postpone: " + action + ", time = " + timeInSeconds);
+    }
+
+    dismiss(action: abstractAction) {
+        console.log("dismiss: " + action);
+        //TODO: send request to server 
+    }
+
     /* TODO
     killOperation(operationId: number) {
        this.operations.killOperation(operationId);
-    }
-
-    dismissOperation(operationId: number, saveOperations: boolean = true) {
-        this.operations.dismissOperation(operationId, saveOperations);
     }
 
     dismissRecentError(alert: alertArgs) {

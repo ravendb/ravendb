@@ -46,22 +46,20 @@
             </div>
 
             <div data-bind="if: !isCompleted()">
-                <h3 data-bind="text: title"></h3>
+                <h3>
+                    <span class="global-spinner spinner-xs"></span>
+                    <span data-bind="text: title"></span>
+                </h3>
                 <p data-bind="text: message"></p>
                 
-                <!-- TODO: 
-                <div class="progress" data-bind="visible: !isPercentageProgress(), if: !isPercentageProgress()">
-                    <div class="progress-bar progress-bar-striped" role="progressbar" aria-valuenow="70" aria-valuemin="0" aria-valuemax="100" style="width: 70%">
-                    </div>
-                </div>
-
                 <div class="progress" data-bind="visible: isPercentageProgress(), if: isPercentageProgress()">
                     <div class="progress-bar" role="progressbar"
-                         data-bind="style: {  width: percentageProgress() + '%' }, attr: { 'aria-valuenow': state().Progress.Processed, 'aria-valuemax': state().Progress.Total }" aria-valuemin="0">
+                         data-bind="style: {  width: percentageProgress() + '%' }, attr: { 'aria-valuenow': progress().Processed, 'aria-valuemax': progress().Total }" aria-valuemin="0">
                         <span class="sr-only" data-bind="text: percentageProgress() + '%'"></span>
                     </div>
                 </div>
 
+                <!-- TODO: 
                 <div class="text-right">
                     <a href="#" class="btn btn-sm btn-default">Details</a>
                     <a href="#" data-bind="visible: killable(), click: $parent.killOperation.bind($parent, operationId)" class="btn btn-sm btn-danger"><span class="icon-cancel"></span>Cancel</a>
@@ -76,16 +74,27 @@
             <h3 class="text-warning" data-bind="text: title">
             </h3>
             <p data-bind="text: message"></p>
-            <!-- TODO 
             <div class="text-right">
-                <button data-bind="visible: hasDetails(), enable: canOpenDetails()"
-                        class="btn btn-sm btn-default">
+                <button data-bind="visible: hasDetails(), click: openDetails"
+                        class="btn btn-sm">
                     Details
                 </button>
-
-                <button class="btn btn-sm btn-danger" data-bind="enable: canBeDismissed()"><span class="icon-cancel dismiss-notification"></span>Postpone</button>
+                
+                <div class="dropdown" data-bind="visible: canBePostponed">
+                    <button class="btn btn-sm dropdown-toggle" data-toggle="dropdown">
+                        <span>Postpone</span>
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" data-bind="foreach: $parent.constructor.postponeOptions">
+                        <li><a href="#" data-bind="text: label, click: _.partial($parents[1].postpone, $parent, value)"></a></li>
+                    </ul>
+                </div>
+                
+                <a href="#" class="btn btn-sm" data-bind="click: _.partial($parent.dismiss, $data)">
+                    <i class="icon-cancel"></i>
+                    <span>Dismiss</span>
+                </a>
             </div>
-                -->
         </div>
     </div>
 </script>

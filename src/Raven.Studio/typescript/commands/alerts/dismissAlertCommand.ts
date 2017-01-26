@@ -6,6 +6,7 @@ class dismissAlertCommand extends commandBase {
     constructor(private db: database, private alertUniqueKey: string) {
         super();
     }
+    //TODO: use new endpoint
 
     execute(): JQueryPromise<any> {
         var url = "/operation/alert/dismiss";//TODO: use endpoints

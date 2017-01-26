@@ -2,7 +2,7 @@
 
 import abstractAction = require("common/notifications/actions/abstractAction");
 
-class alertRaised extends abstractAction {
+class alert extends abstractAction {
 
     alertType = ko.observable<Raven.Server.NotificationCenter.Alerts.AlertType>();
     key = ko.observable<string>();
@@ -34,11 +34,6 @@ class alertRaised extends abstractAction {
     }
 
      /* TODO
-    id: string;
-    key: string;
-    read: boolean;
-    content: Raven.Server.Alerts.IAlertContent;
-
     isOpen = ko.observable<boolean>(false);
 
     hasDetails() {
@@ -56,10 +51,8 @@ class alertRaised extends abstractAction {
         return this.type !== 'NewServerVersionAvailable';
     }
 
-    canBeDismissed() {
-        return this.type !== 'NewServerVersionAvailable';
-    }*/
+    */
 
 }
 
-export = alertRaised;
+export = alert;

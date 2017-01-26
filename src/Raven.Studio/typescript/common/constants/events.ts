@@ -20,7 +20,8 @@ const Resource = {
 };
 
 const NotificationCenter = {
-    RecentError: 'NotificationCenter.RecentError'
+    RecentError: 'NotificationCenter.RecentError',
+    OpenDetails: 'NotificationCenter.OpenDetails'
 }
 
 export = {

@@ -1,5 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 
+import EVENTS = require("common/constants/events");
+
 abstract class abstractAction {
 
     id: string;
@@ -10,10 +12,19 @@ abstract class abstractAction {
     postponedUntil = ko.observable<string>();
     title = ko.observable<string>();
     type: Raven.Server.NotificationCenter.Actions.ActionType;
+    hasDetails: KnockoutComputed<boolean>;
+    canBePostponed: KnockoutComputed<boolean>;
 
     constructor(dto: Raven.Server.NotificationCenter.Actions.Action) {
         this.id = dto.Id;
         this.type = dto.Type;
+
+        this.hasDetails = ko.pureComputed(() => !!this.details());
+        this.canBePostponed = ko.pureComputed(() => this.isPersistent());
+    }
+
+    openDetails() {
+        ko.postbox.publish(EVENTS.NotificationCenter.OpenDetails, this);
     }
 
     updateWith(incomingChanges: Raven.Server.NotificationCenter.Actions.Action) {
