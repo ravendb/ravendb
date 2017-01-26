@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Routing;
-using Sparrow.Json;
 
 namespace Raven.Server.NotificationCenter.Handlers
 {
@@ -15,13 +14,13 @@ namespace Raven.Server.NotificationCenter.Handlers
             {
                 using (var writer = new NotificationCenterWebsocketWriter(webSocket, ServerStore.NotificationCenter, ServerStore.ContextPool, ServerStore.ServerShutdown))
                 {
-                    IEnumerable<BlittableJsonReaderObject> existingAlerts;
+                    IEnumerable<ActionTableValue> storedActions;
 
-                    using (ServerStore.NotificationCenter.GetStored(out existingAlerts, postponed: false))
+                    using (ServerStore.NotificationCenter.GetStored(out storedActions, postponed: false))
                     {
-                        foreach (var alert in existingAlerts)
+                        foreach (var action in storedActions)
                         {
-                            await writer.WriteToWebSocket(alert);
+                            await writer.WriteToWebSocket(action.Json);
                         }
                     }
 

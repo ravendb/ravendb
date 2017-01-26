@@ -20,6 +20,8 @@ namespace Raven.Server.NotificationCenter
     {
         private static readonly Slice ByCreatedAt;
 
+        private static readonly Slice ByPostponedUntil;
+
         protected readonly Logger Logger;
 
         private StorageEnvironment _environment;
@@ -31,6 +33,7 @@ namespace Raven.Server.NotificationCenter
         static ActionsStorage()
         {
             Slice.From(StorageEnvironment.LabelsContext, "ByCreatedAt", ByteStringType.Immutable, out ByCreatedAt);
+            Slice.From(StorageEnvironment.LabelsContext, "ByPostponedUntil", ByteStringType.Immutable, out ByPostponedUntil);
         }
 
         public ActionsStorage(string resourceName)
@@ -39,14 +42,20 @@ namespace Raven.Server.NotificationCenter
 
             _actionsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
-                StartIndex = 0,
+                StartIndex = ActionsSchema.ActionsTable.IdIndex,
                 Count = 1
             });
 
             _actionsSchema.DefineIndex(new TableSchema.SchemaIndexDef // might be the same ticks, so duplicates are allowed - cannot use fixed size index
             {
-                StartIndex = 1,
+                StartIndex = ActionsSchema.ActionsTable.CreatedAtIndex,
                 Name = ByCreatedAt
+            });
+
+            _actionsSchema.DefineIndex(new TableSchema.SchemaIndexDef // might be the same ticks, so duplicates are allowed - cannot use fixed size index
+            {
+                StartIndex = ActionsSchema.ActionsTable.PostponedUntilIndex,
+                Name = ByPostponedUntil
             });
         }
 
@@ -77,35 +86,37 @@ namespace Raven.Server.NotificationCenter
                 // if previous action had postponed until value pass this value to newly saved action
                 var existing = Get(action.Id, context, tx);
 
-                if (existing != null)
-                {
-                    DateTime postponedUntil;
-                    if (TryReadDate(existing, nameof(Action.PostponedUntil), out postponedUntil))
-                    {
-                        if (action.PostponedUntil == null && postponedUntil > SystemTime.UtcNow)
-                            action.PostponedUntil = postponedUntil;
-                    }
-                }
+                DateTime? postponeUntil = null;
+
+                if (existing?.PostponedUntil != null && existing.PostponedUntil.Value > SystemTime.UtcNow)
+                    postponeUntil= existing.PostponedUntil;
 
                 using (var json = context.ReadObject(action.ToJson(), "action", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    Store(context.GetDiscardableLazyString(action.Id), action.CreatedAt, json, tx);
+                    Store(context.GetDiscardableLazyString(action.Id), action.CreatedAt, postponeUntil, json, tx);
                 }
 
                 tx.Commit();
             }
         }
 
-        private void Store(LazyStringValue id, DateTime createdAt, BlittableJsonReaderObject action, RavenTransaction tx)
+        private readonly long _postponeDateNotSpecified = Bits.SwapBytes(long.MaxValue);
+
+        private void Store(LazyStringValue id, DateTime createdAt, DateTime? postponedUntil, BlittableJsonReaderObject action, RavenTransaction tx)
         {
             var table = tx.InnerTransaction.OpenTable(_actionsSchema, ActionsSchema.ActionsTree);
 
             var createdAtTicks = Bits.SwapBytes(createdAt.Ticks);
 
+            var postponedUntilTicks = postponedUntil != null
+                ? Bits.SwapBytes(postponedUntil.Value.Ticks)
+                : _postponeDateNotSpecified;
+
             var tvb = new TableValueBuilder
                 {
                     {id.Buffer, id.Size},
                     {(byte*)&createdAtTicks, sizeof(long)},
+                    {(byte*)&postponedUntilTicks, sizeof(long)},
                     {action.BasePointer, action.Size}
                 };
 
@@ -137,7 +148,7 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
-        public IDisposable ReadActionsOrderedByCreationDate(out IEnumerable<BlittableJsonReaderObject> actions)
+        public IDisposable ReadActionsOrderedByCreationDate(out IEnumerable<ActionTableValue> actions)
         {
             using (var scope = new DisposeableScope())
             {
@@ -152,7 +163,23 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
-        private IEnumerable<BlittableJsonReaderObject> ReadActionsByCreatedAtIndex(TransactionOperationContext context)
+        public IDisposable Read(string id, out ActionTableValue value)
+        {
+            using (var scope = new DisposeableScope())
+            {
+                TransactionOperationContext context;
+                RavenTransaction tx;
+
+                scope.EnsureDispose(_contextPool.AllocateOperationContext(out context));
+                scope.EnsureDispose(tx = context.OpenReadTransaction());
+
+                value = Get(id, context, tx);
+
+                return scope.Delay();
+            }
+        }
+
+        private IEnumerable<ActionTableValue> ReadActionsByCreatedAtIndex(TransactionOperationContext context)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(_actionsSchema, ActionsSchema.ActionsTree);
             
@@ -165,7 +192,43 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
-        private BlittableJsonReaderObject Get(string id, TransactionOperationContext context, RavenTransaction tx)
+        public IDisposable ReadPostponedActions(out IEnumerable<ActionTableValue> actions, DateTime cutoff)
+        {
+            using (var scope = new DisposeableScope())
+            {
+                TransactionOperationContext context;
+
+                scope.EnsureDispose(_contextPool.AllocateOperationContext(out context));
+                scope.EnsureDispose(context.OpenReadTransaction());
+
+                actions = ReadPostponedActionsByPostponedUntilIndex(context, cutoff);
+
+                return scope.Delay();
+            }
+        }
+
+        private IEnumerable<ActionTableValue> ReadPostponedActionsByPostponedUntilIndex(TransactionOperationContext context, DateTime cutoff)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(_actionsSchema, ActionsSchema.ActionsTree);
+
+            foreach (var it in table.SeekForwardFrom(_actionsSchema.Indexes[ByPostponedUntil], Slices.BeforeAllKeys))
+            {
+                foreach (var tvr in it.Results)
+                {
+                    var action = Read(context, tvr);
+
+                    if (action.PostponedUntil == null)
+                        continue;
+
+                    if (action.PostponedUntil > cutoff)
+                        break;
+
+                    yield return action;
+                }
+            }
+        }
+
+        private ActionTableValue Get(string id, TransactionOperationContext context, RavenTransaction tx)
         {
             var table = tx.InnerTransaction.OpenTable(_actionsSchema, ActionsSchema.ActionsTree);
 
@@ -217,7 +280,7 @@ namespace Raven.Server.NotificationCenter
                 foreach (var action in ReadActionsByCreatedAtIndex(context))
                 {
                     object type;
-                    if (action.TryGetMember(nameof(Action.Type), out type) == false)
+                    if (action.Json.TryGetMember(nameof(Action.Type), out type) == false)
                         throw new InvalidOperationException($"Could not find action type. Action: {action}");
 
                     var typeLsv = (LazyStringValue) type;
@@ -230,14 +293,29 @@ namespace Raven.Server.NotificationCenter
             return count;
         }
 
-        private BlittableJsonReaderObject Read(JsonOperationContext context, TableValueReader reader)
+        private ActionTableValue Read(JsonOperationContext context, TableValueReader reader)
         {
             int size;
-            var ptr = reader.Read(ActionsSchema.ActionsTable.JsonIndex, out size);
-            return new BlittableJsonReaderObject(ptr, size, context);
+            
+            var createdAt = new DateTime(Bits.SwapBytes(*(long*)reader.Read(ActionsSchema.ActionsTable.CreatedAtIndex, out size)));
+
+            var postponeUntilTicks = *(long*)reader.Read(ActionsSchema.ActionsTable.PostponedUntilIndex, out size);
+
+            DateTime? postponedUntil = null;
+            if (postponeUntilTicks != _postponeDateNotSpecified)
+                postponedUntil = new DateTime(Bits.SwapBytes(postponeUntilTicks));
+
+            var jsonPtr = reader.Read(ActionsSchema.ActionsTable.JsonIndex, out size);
+
+            return new ActionTableValue
+            {
+                CreatedAt = createdAt,
+                PostponedUntil = postponedUntil,
+                Json = new BlittableJsonReaderObject(jsonPtr, size, context)
+            };
         }
 
-        public void ChangePostponeDate(string id, DateTime postponeUntil)
+        public void ChangePostponeDate(string id, DateTime? postponeUntil)
         {
             TransactionOperationContext context;
             using (_contextPool.AllocateOperationContext(out context))
@@ -248,18 +326,7 @@ namespace Raven.Server.NotificationCenter
                 if (item == null)
                     return;
 
-                DateTime createdAt;
-                if (TryReadDate(item, nameof(Action.CreatedAt), out createdAt) == false)
-                    throw new InvalidOperationException($"Stored action does not have created at date. Action: {item}");
-
-                item.Modifications = new DynamicJsonValue
-                {
-                    [nameof(Action.PostponedUntil)] = postponeUntil
-                };
-
-                var updated = context.ReadObject(item, "action", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                
-                Store(context.GetDiscardableLazyString(id), createdAt, updated, tx);
+                Store(context.GetDiscardableLazyString(id), item.CreatedAt, postponeUntil, item.Json, tx);
 
                 tx.Commit();
             }
@@ -274,7 +341,8 @@ namespace Raven.Server.NotificationCenter
 #pragma warning disable 169
                 public const int IdIndex = 0;
                 public const int CreatedAtIndex = 1;
-                public const int JsonIndex = 2;
+                public const int PostponedUntilIndex = 2;
+                public const int JsonIndex = 3;
 #pragma warning restore 169
             }
         }

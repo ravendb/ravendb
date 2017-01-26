@@ -227,6 +227,7 @@ namespace Raven.Server.Documents
             //so replication of both documents and indexes/transformers can be made within one transaction
             ConfigurationStorage.InitializeIndexesEtagsStorage(IndexStore, TransformerStore);
             DocumentReplicationLoader.Initialize();
+            NotificationCenter.Initialize();
         }
 
         public void Dispose()

@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
+using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Actions;
 using Raven.Server.NotificationCenter.Actions.Details;
 using Raven.Server.NotificationCenter.Alerts;
@@ -42,13 +44,15 @@ namespace FastTests.Server.NotificationCenter
 
                 database.NotificationCenter.Add(alert);
 
-                IEnumerable<BlittableJsonReaderObject> actions;
+                IEnumerable<ActionTableValue> actions;
                 using (database.NotificationCenter.GetStored(out actions))
                 {
                     var jsonAlerts = actions.ToList();
 
                     Assert.Equal(1, jsonAlerts.Count);
-                    var readAlert = jsonAlerts[0];
+                    var readAlert = jsonAlerts[0].Json;
+
+                    Assert.Equal(alert.CreatedAt, jsonAlerts[0].CreatedAt);
 
                     Assert.Equal(alert.Id, readAlert[nameof(AlertRaised.Id)].ToString());
                     Assert.Equal(alert.CreatedAt.GetDefaultRavenFormat(alert.CreatedAt.Kind == DateTimeKind.Utc),
@@ -63,7 +67,6 @@ namespace FastTests.Server.NotificationCenter
                     Assert.Equal(alert.Severity.ToString(), readAlert[nameof(AlertRaised.Severity)].ToString());
                     Assert.Equal(alert.AlertType.ToString(), readAlert[nameof(AlertRaised.AlertType)].ToString());
                     Assert.Equal(alert.Key, readAlert[nameof(AlertRaised.Key)].ToString());
-                    Assert.Equal(alert.PostponedUntil, readAlert[nameof(AlertRaised.PostponedUntil)]);
                 }
             }
         }
@@ -80,7 +83,7 @@ namespace FastTests.Server.NotificationCenter
                 var alert2 = GetSampleAlert(customMessage: "updated");
                 database.NotificationCenter.Add(alert2);
 
-                IEnumerable<BlittableJsonReaderObject> alerts;
+                IEnumerable<ActionTableValue> alerts;
                 using (database.NotificationCenter.GetStored(out alerts))
                 {
                     var jsonAlerts = alerts.ToList();
@@ -89,9 +92,12 @@ namespace FastTests.Server.NotificationCenter
 
                     var readAlert = jsonAlerts[0];
 
+                    Assert.Equal(alert2.CreatedAt, jsonAlerts[0].CreatedAt);
+
                     Assert.Equal(alert2.CreatedAt.GetDefaultRavenFormat(alert2.CreatedAt.Kind == DateTimeKind.Utc),
-                        readAlert[nameof(AlertRaised.CreatedAt)].ToString());
-                    Assert.Equal(alert2.Message, readAlert[nameof(AlertRaised.Message)].ToString());
+                        readAlert.Json[nameof(AlertRaised.CreatedAt)].ToString());
+
+                    Assert.Equal(alert2.Message, readAlert.Json[nameof(AlertRaised.Message)].ToString());
                 }
             }
         }
@@ -104,13 +110,13 @@ namespace FastTests.Server.NotificationCenter
                 var alert1 = GetSampleAlert();
                 database.NotificationCenter.Add(alert1);
 
-                var dismissUntil = SystemTime.UtcNow.AddDays(1);
-                database.NotificationCenter.Postpone(alert1.Id, dismissUntil);
+                var postponeUntil = SystemTime.UtcNow.AddDays(1);
+                database.NotificationCenter.Postpone(alert1.Id, postponeUntil);
 
                 var alert2 = GetSampleAlert();
                 database.NotificationCenter.Add(alert2);
 
-                IEnumerable<BlittableJsonReaderObject> alerts;
+                IEnumerable<ActionTableValue> alerts;
                 using (database.NotificationCenter.GetStored(out alerts))
                 {
                     var jsonAlerts = alerts.ToList();
@@ -118,12 +124,11 @@ namespace FastTests.Server.NotificationCenter
                     Assert.Equal(1, jsonAlerts.Count);
                     var readAlert = jsonAlerts[0];
 
-                    Assert.Equal(alert2.CreatedAt.GetDefaultRavenFormat(alert2.CreatedAt.Kind == DateTimeKind.Utc),
-                        readAlert[nameof(AlertRaised.CreatedAt)].ToString());
+                    Assert.Equal(alert2.CreatedAt, jsonAlerts[0].CreatedAt);
+                    Assert.Equal(postponeUntil, jsonAlerts[0].PostponedUntil);
 
-                    Assert.Equal(
-                        dismissUntil.GetDefaultRavenFormat(dismissUntil.Kind == DateTimeKind.Utc),
-                        readAlert[nameof(AlertRaised.PostponedUntil)].ToString());
+                    Assert.Equal(alert2.CreatedAt.GetDefaultRavenFormat(alert2.CreatedAt.Kind == DateTimeKind.Utc),
+                        readAlert.Json[nameof(AlertRaised.CreatedAt)].ToString());
                 }
             }
         }
@@ -150,7 +155,7 @@ namespace FastTests.Server.NotificationCenter
                 Assert.Equal(alert.Id, notification.ActionId);
                 Assert.Equal(NotificationUpdateType.Postponed, notification.UpdateType);
 
-                IEnumerable<BlittableJsonReaderObject> alerts;
+                IEnumerable<ActionTableValue> alerts;
                 using (database.NotificationCenter.GetStored(out alerts))
                 {
                     var jsonAlerts = alerts.ToList();
@@ -158,12 +163,12 @@ namespace FastTests.Server.NotificationCenter
                     Assert.Equal(1, jsonAlerts.Count);
                     var readAlert = jsonAlerts[0];
 
-                    Assert.Equal(alert.CreatedAt.GetDefaultRavenFormat(alert.CreatedAt.Kind == DateTimeKind.Utc),
-                        readAlert[nameof(AlertRaised.CreatedAt)].ToString());
+                    Assert.Equal(alert.CreatedAt, jsonAlerts[0].CreatedAt);
 
-                    Assert.Equal(
-                        postponeUntil.GetDefaultRavenFormat(postponeUntil.Kind == DateTimeKind.Utc),
-                        readAlert[nameof(AlertRaised.PostponedUntil)].ToString());
+                    Assert.Equal(alert.CreatedAt.GetDefaultRavenFormat(alert.CreatedAt.Kind == DateTimeKind.Utc),
+                        readAlert.Json[nameof(AlertRaised.CreatedAt)].ToString());
+
+                    Assert.Equal(postponeUntil, jsonAlerts[0].PostponedUntil);
                 }
             }
         }
@@ -182,7 +187,7 @@ namespace FastTests.Server.NotificationCenter
                 {
                     database.NotificationCenter.Dismiss(alert.Id);
 
-                    IEnumerable<BlittableJsonReaderObject> alerts;
+                    IEnumerable<ActionTableValue> alerts;
                     using (database.NotificationCenter.GetStored(out alerts))
                     {
                         var jsonAlerts = alerts.ToList();
@@ -236,7 +241,7 @@ namespace FastTests.Server.NotificationCenter
 
                     database.NotificationCenter.Postpone(alert.Id, postponeUntil);
 
-                    IEnumerable<BlittableJsonReaderObject> alerts;
+                    IEnumerable<ActionTableValue> alerts;
                     using (database.NotificationCenter.GetStored(out alerts, postponed: false))
                     {
                         var jsonAlerts = alerts.ToList();
@@ -259,14 +264,41 @@ namespace FastTests.Server.NotificationCenter
                 database.NotificationCenter.Add(alert1);
                 database.NotificationCenter.Add(alert2);
 
-                IEnumerable<BlittableJsonReaderObject> alerts;
+                IEnumerable<ActionTableValue> alerts;
                 using (database.NotificationCenter.GetStored(out alerts))
                 {
                     var jsonAlerts = alerts.ToList();
 
                     Assert.Equal(2, jsonAlerts.Count);
-                    Assert.Equal(alert1.Id, jsonAlerts[0][nameof(Action.Id)].ToString());
-                    Assert.Equal(alert2.Id, jsonAlerts[1][nameof(Action.Id)].ToString());
+                    Assert.Equal(alert1.Id, jsonAlerts[0].Json[nameof(Action.Id)].ToString());
+                    Assert.Equal(alert2.Id, jsonAlerts[1].Json[nameof(Action.Id)].ToString());
+                }
+            }
+        }
+
+        [Fact(Skip = "TODO arek")]
+        public async Task Should_get_notification_when_postpone_date_reached()
+        {
+            using (var database = CreateDocumentDatabase())
+            {
+                var alert = GetSampleAlert();
+                database.NotificationCenter.Add(alert);
+
+                var actions = new AsyncQueue<Action>();
+                using (database.NotificationCenter.TrackActions(actions))
+                {
+                    database.NotificationCenter.Postpone(alert.Id, SystemTime.UtcNow.AddMilliseconds(1000));
+
+                    var a = await actions.TryDequeueAsync(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+
+                    a = await actions.TryDequeueAsync(TimeSpan.FromSeconds(20)).ConfigureAwait(false);
+
+                    //Assert.Equal(2, actions.Count);
+                    //var notification = actions.DequeueAsync().Result as NotificationUpdated;
+                    //Assert.NotNull(notification);
+
+                    //var alertRaised = actions.DequeueAsync().Result as AlertRaised;
+                    //Assert.NotNull(alertRaised);
                 }
             }
         }

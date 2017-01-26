@@ -155,6 +155,7 @@ namespace Raven.Server.ServerWide
             _actionsStorage.Initialize(_env, ContextPool);
             DatabaseInfoCache.Initialize(_env, ContextPool);
             LicenseStorage.Initialize(_env, ContextPool);
+            NotificationCenter.Initialize();
         }
 
         public long ReadLastEtag(TransactionOperationContext ctx)

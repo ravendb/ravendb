@@ -25,8 +25,6 @@ namespace Raven.Server.NotificationCenter.Actions
 
         public bool IsPersistent { get; protected set; }
 
-        public DateTime? PostponedUntil { get; set; }
-
         public IActionDetails Details { get; protected set; }
 
         public virtual DynamicJsonValue ToJson()
@@ -39,7 +37,6 @@ namespace Raven.Server.NotificationCenter.Actions
                 [nameof(Title)] = Title,
                 [nameof(Message)] = Message,
                 [nameof(IsPersistent)] = IsPersistent,
-                [nameof(PostponedUntil)] = PostponedUntil,
                 [nameof(Details)] = Details?.ToJson()
             };
         }
