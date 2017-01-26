@@ -169,26 +169,27 @@ namespace FastTests.Voron.Compaction
 
                         foreach (var entry in create)
                         {
-                            var value = table.ReadByKey(entry.Key);
+                            TableValueReader reader;
+                            var hasValue = table.ReadByKey(entry.Key, out reader);
 
                             if (delete.Contains(entry.Key))
                             {
                                 // This key should not be here
-                                Assert.Equal(null, value);
+                                Assert.False(hasValue);
                             }
                             else
                             {
                                 // This key should be there
-                                Assert.NotEqual(null, value);
+                                Assert.True(hasValue);
 
                                 // Data should be the same
                                 int size;
-                                byte* ptr = value.Read(0, out size);
+                                byte* ptr = reader.Read(0, out size);
                                 Slice current;
                                 using (Slice.External(allocator, ptr, size, out current))
                                     Assert.True(SliceComparer.Equals(current, entry.Key));
 
-                                ptr = value.Read(1, out size);
+                                ptr = reader.Read(1, out size);
                                 Assert.Equal(entry.Value, *(long*) ptr);
                             }
                         }

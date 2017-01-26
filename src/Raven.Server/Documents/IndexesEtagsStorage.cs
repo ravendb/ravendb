@@ -207,12 +207,12 @@ namespace Raven.Server.Documents
             TableValueReader tvr;
             Slice nameAsSlice;
             using (DocumentKeyWorker.GetSliceFromKey(context, name, out nameAsSlice))
-                tvr = table.ReadByKey(nameAsSlice);
+            {
+                if (table.ReadByKey(nameAsSlice, out tvr) == false)
+                    return false;
+            }
 
-            if (tvr == null)
-                return false;
-
-            var metadata = TableValueToMetadata(tvr, context, false);
+            var metadata = TableValueToMetadata(ref tvr, context, false);
             WriteEntry(tx, name, metadata.Type, metadata.Id, context, isConflicted: true, allowOverwrite: true);
 
             return true;
@@ -231,13 +231,14 @@ namespace Raven.Server.Documents
             ChangeVectorEntry[] changeVectorForWrite;
             using (DocumentKeyWorker.GetSliceFromKey(context, indexName, out nameAsSlice))
             {
-                var tvr = table.ReadByKey(nameAsSlice);
+                TableValueReader tvr;
+                table.ReadByKey(nameAsSlice, out tvr);
 
                 //SetIndexTransformerChangeVectorForLocalChange also merges vectors if conflicts exist
-                changeVectorForWrite = SetIndexTransformerChangeVectorForLocalChange(tx, context, nameAsSlice, tvr, newEtag, changeVector);
+                changeVectorForWrite = SetIndexTransformerChangeVectorForLocalChange(tx, context, nameAsSlice, ref tvr, newEtag, changeVector);
                 if (tvr != null)
                 {
-                    existing = TableValueToMetadata(tvr, context, false);
+                    existing = TableValueToMetadata(ref tvr, context, false);
                 }
             }
 
@@ -294,9 +295,9 @@ namespace Raven.Server.Documents
             {
                 if (taken++ >= take)
                     break;
-                var metadata = TableValueToMetadata(tvr, context, false);
+                var metadata = TableValueToMetadata(ref tvr.Reader, context, false);
                 if (metadata.Id == -1)
-                    idsToDelete.Add(tvr.Id);
+                    idsToDelete.Add(tvr.Reader.Id);
             }
 
             foreach (var id in idsToDelete)
@@ -309,11 +310,11 @@ namespace Raven.Server.Documents
 
         }
 
-        private ChangeVectorEntry[] SetIndexTransformerChangeVectorForLocalChange(Transaction tx, TransactionOperationContext context, Slice loweredName, TableValueReader oldValue, long newEtag, ChangeVectorEntry[] vector)
+        private ChangeVectorEntry[] SetIndexTransformerChangeVectorForLocalChange(Transaction tx, TransactionOperationContext context, Slice loweredName, ref TableValueReader oldValue, long newEtag, ChangeVectorEntry[] vector)
         {
             if (oldValue != null)
             {
-                var changeVector = ReplicationUtils.GetChangeVectorEntriesFromTableValueReader(oldValue, (int)MetadataFields.ChangeVector);
+                var changeVector = ReplicationUtils.GetChangeVectorEntriesFromTableValueReader(ref oldValue, (int)MetadataFields.ChangeVector);
                 return ReplicationUtils.UpdateChangeVectorWithNewEtag(_environment.DbId, newEtag, changeVector);
             }
 
@@ -394,10 +395,10 @@ namespace Raven.Server.Documents
                     foreach (var tvr in seekResult.Results)
                     {
                         deleted = true;
-                        list.Add(ReplicationUtils.GetChangeVectorEntriesFromTableValueReader(tvr, (int)MetadataFields.ChangeVector));
+                        list.Add(ReplicationUtils.GetChangeVectorEntriesFromTableValueReader(ref tvr.Reader, (int)MetadataFields.ChangeVector));
 
                         //Ids might change due to delete
-                        table.Delete(tvr.Id);
+                        table.Delete(tvr.Reader.Id);
                         break;
                     }
                 }
@@ -433,7 +434,7 @@ namespace Raven.Server.Documents
                         if (taken++ >= take)
                             yield break;
 
-                        yield return TableValueToConflict(tvr, context);
+                        yield return TableValueToConflict(ref tvr.Reader, context);
                     }
             }
         }
@@ -461,7 +462,7 @@ namespace Raven.Server.Documents
                 if (taken++ >= take)
                     break;
 
-                results.Add(TableValueToMetadata(tvr, context, false));
+                results.Add(TableValueToMetadata(ref tvr.Reader, context, false));
             }
 
             return results;
@@ -585,12 +586,15 @@ namespace Raven.Server.Documents
             Slice nameAsSlice;
             TableValueReader tvr;
             using (DocumentKeyWorker.GetSliceFromKey(context, name, out nameAsSlice))
-                tvr = table.ReadByKey(nameAsSlice);
+            {
+                if (table.ReadByKey(nameAsSlice, out tvr) == false)
+                    return null;
+            }
 
-            return tvr == null ? null : TableValueToMetadata(tvr, context, returnNullIfTombstone);
+            return TableValueToMetadata(ref tvr, context, returnNullIfTombstone);
         }
 
-        private IndexEntryMetadata TableValueToMetadata(TableValueReader tvr,
+        private IndexEntryMetadata TableValueToMetadata(ref TableValueReader tvr,
             JsonOperationContext context,
             bool returnNullIfTombstone)
         {
@@ -603,7 +607,7 @@ namespace Raven.Server.Documents
 
             metadata.Name = new LazyStringValue(null, tvr.Read((int)MetadataFields.Name, out size), size, context).ToString();
 
-            metadata.ChangeVector = ReplicationUtils.GetChangeVectorEntriesFromTableValueReader(tvr, (int)MetadataFields.ChangeVector);
+            metadata.ChangeVector = ReplicationUtils.GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)MetadataFields.ChangeVector);
             metadata.Type = (IndexEntryType)(*tvr.Read((int)MetadataFields.Type, out size));
             metadata.Etag = Bits.SwapBytes(*(long*)tvr.Read((int)MetadataFields.Etag, out size));
             metadata.IsConflicted = *(bool*)tvr.Read((int)MetadataFields.IsConflicted, out size);
@@ -611,7 +615,7 @@ namespace Raven.Server.Documents
             return metadata;
         }
 
-        private IndexConflictEntry TableValueToConflict(TableValueReader tvr,
+        private IndexConflictEntry TableValueToConflict(ref TableValueReader tvr,
             JsonOperationContext context)
         {
             var data = new IndexConflictEntry();
@@ -620,7 +624,7 @@ namespace Raven.Server.Documents
 
             data.Name = new LazyStringValue(null, tvr.Read((int)ConflictFields.Name, out size), size, context).ToString();
 
-            data.ChangeVector = ReplicationUtils.GetChangeVectorEntriesFromTableValueReader(tvr, (int)ConflictFields.ChangeVector);
+            data.ChangeVector = ReplicationUtils.GetChangeVectorEntriesFromTableValueReader(ref tvr, (int)ConflictFields.ChangeVector);
             data.Type = (IndexEntryType)(*tvr.Read((int)ConflictFields.Type, out size));
             data.Etag = Bits.SwapBytes(*(long*)tvr.Read((int)ConflictFields.Etag, out size));
 
@@ -650,7 +654,7 @@ namespace Raven.Server.Documents
                 return 0;
 
             int size;
-            return Bits.SwapBytes(*(long*)tvr.Read((int)MetadataFields.Etag, out size));
+            return Bits.SwapBytes(*(long*)tvr.Reader.Read((int)MetadataFields.Etag, out size));
         }
 
         private void DeleteIndexMetadataForRemovedIndexesAndTransformers(Transaction tx, TransactionOperationContext context, IndexStore indexStore,
@@ -661,7 +665,7 @@ namespace Raven.Server.Documents
                 SchemaNameConstants.IndexMetadataTable);
             foreach (var tvr in table.SeekForwardFrom(IndexesTableSchema.FixedSizeIndexes[EtagIndexName], 0))
             {
-                var metadata = TableValueToMetadata(tvr, context, true);
+                var metadata = TableValueToMetadata(ref tvr.Reader, context, true);
                 if (metadata == null) //noting to do if it is a tombstone
                     continue;
 

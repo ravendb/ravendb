@@ -264,7 +264,7 @@ namespace Raven.Server.Documents
                     tx.CreateTree("LastReplicatedEtags");
                     tx.CreateTree("Identities");
                     tx.CreateTree("ChangeVector");
-                  
+
                     ConflictsSchema.Create(tx, "Conflicts", 32);
                     CollectionsSchema.Create(tx, "Collections", 32);
 
@@ -406,7 +406,7 @@ namespace Raven.Server.Documents
                         continue;
                     }
                     docCount++;
-                    var document = TableValueToDocument(context, result);
+                    var document = TableValueToDocument(context, ref result.Reader);
                     string documentKey = document.Key;
                     if (documentKey.StartsWith(prefix, StringComparison.CurrentCultureIgnoreCase) == false)
                         break;
@@ -449,7 +449,7 @@ namespace Raven.Server.Documents
                 }
                 if (take-- <= 0)
                     yield break;
-                yield return TableValueToDocument(context, result);
+                yield return TableValueToDocument(context, ref result.Reader);
             }
         }
 
@@ -476,7 +476,7 @@ namespace Raven.Server.Documents
                 }
                 if (take-- <= 0)
                     yield break;
-                yield return TableValueToDocument(context, result);
+                yield return TableValueToDocument(context, ref result.Reader);
             }
         }
 
@@ -496,7 +496,7 @@ namespace Raven.Server.Documents
                     yield break;
                 }
 
-                yield return TableValueToDocument(context, result);
+                yield return TableValueToDocument(context, ref result.Reader);
             }
         }
 
@@ -507,7 +507,7 @@ namespace Raven.Server.Documents
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], etag))
             {
-                yield return TableValueToDocument(context, result);
+                yield return TableValueToDocument(context, ref result.Reader);
             }
         }
 
@@ -519,8 +519,8 @@ namespace Raven.Server.Documents
             {
                 // id must be lowercased
 
-                var tvr = table.ReadByKey(id);
-                if (tvr == null)
+                TableValueReader reader;
+                if (table.ReadByKey(id, out reader) == false)
                     continue;
 
                 if (start > 0)
@@ -531,7 +531,7 @@ namespace Raven.Server.Documents
                 if (take-- <= 0)
                     yield break;
 
-                yield return TableValueToDocument(context, tvr);
+                yield return TableValueToDocument(context, ref reader);
             }
         }
 
@@ -558,7 +558,7 @@ namespace Raven.Server.Documents
                 }
                 if (take-- <= 0)
                     yield break;
-                yield return TableValueToDocument(context, result);
+                yield return TableValueToDocument(context, ref result.Reader);
             }
         }
 
@@ -567,7 +567,7 @@ namespace Raven.Server.Documents
             var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
             foreach (var tvr in table.SeekForwardFrom(ConflictsSchema.FixedSizeIndexes[AllConflictedDocsEtags], etag))
             {
-                yield return TableValueToConflictDocument(context, tvr);
+                yield return TableValueToConflictDocument(context, ref tvr.Reader);
             }
         }
 
@@ -620,9 +620,10 @@ namespace Raven.Server.Documents
             }
 
             var tombstoneTable = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
-            var tvr = tombstoneTable.ReadByKey(loweredKey);
+            TableValueReader tvr;
+            tombstoneTable.ReadByKey(loweredKey, out tvr);
 
-            return Tuple.Create<Document, DocumentTombstone>(null, TableValueToTombstone(context, tvr));
+            return Tuple.Create<Document, DocumentTombstone>(null, TableValueToTombstone(context, ref tvr));
         }
 
         public Document Get(DocumentsOperationContext context, string key)
@@ -643,15 +644,15 @@ namespace Raven.Server.Documents
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
-            var tvr = table.ReadByKey(loweredKey);
-            if (tvr == null)
+            TableValueReader tvr;
+            if (table.ReadByKey(loweredKey, out tvr) == false)
             {
                 if (_hasConflicts != 0)
                     ThrowDocumentConflictIfNeeded(context, loweredKey);
                 return null;
             }
 
-            var doc = TableValueToDocument(context, tvr);
+            var doc = TableValueToDocument(context, ref tvr);
 
             context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(doc);
 
@@ -678,7 +679,7 @@ namespace Raven.Server.Documents
                 if (take-- <= 0)
                     yield break;
 
-                yield return TableValueToTombstone(context, result);
+                yield return TableValueToTombstone(context, ref result.Reader);
             }
         }
 
@@ -711,7 +712,7 @@ namespace Raven.Server.Documents
                 if (take-- <= 0)
                     yield break;
 
-                yield return TableValueToTombstone(context, result);
+                yield return TableValueToTombstone(context, ref result.Reader);
             }
         }
 
@@ -738,7 +739,7 @@ namespace Raven.Server.Documents
                 return 0;
 
             int size;
-            var ptr = result.Read(1, out size);
+            var ptr = result.Reader.Read(1, out size);
             return IPAddress.NetworkToHostOrder(*(long*)ptr);
         }
 
@@ -764,7 +765,7 @@ namespace Raven.Server.Documents
                 return 0;
 
             int size;
-            var ptr = result.Read(1, out size);
+            var ptr = result.Reader.Read(1, out size);
             return Bits.SwapBytes(*(long*)ptr);
         }
 
@@ -788,7 +789,7 @@ namespace Raven.Server.Documents
 
 
 
-        public static Document TableValueToDocument(JsonOperationContext context, TableValueReader tvr)
+        public static Document TableValueToDocument(JsonOperationContext context, ref TableValueReader tvr)
         {
             var result = new Document
             {
@@ -820,7 +821,7 @@ namespace Raven.Server.Documents
             return result;
         }
 
-        private static DocumentConflict TableValueToConflictDocument(JsonOperationContext context, TableValueReader tvr)
+        private static DocumentConflict TableValueToConflictDocument(JsonOperationContext context, ref TableValueReader tvr)
         {
             var result = new DocumentConflict
             {
@@ -864,7 +865,7 @@ namespace Raven.Server.Documents
             return changeVector;
         }
 
-        private static DocumentTombstone TableValueToTombstone(JsonOperationContext context, TableValueReader tvr)
+        private static DocumentTombstone TableValueToTombstone(JsonOperationContext context, ref TableValueReader tvr)
         {
             if (tvr == null) //precaution
                 return null;
@@ -894,7 +895,7 @@ namespace Raven.Server.Documents
 
             result.TransactionMarker = *(short*)tvr.Read(6, out size);
 
-            result.LastModified= new DateTime(*(long*)tvr.Read(7, out size));
+            result.LastModified = new DateTime(*(long*)tvr.Read(7, out size));
 
             return result;
         }
@@ -1227,15 +1228,15 @@ namespace Raven.Server.Documents
                         deleted = true;
 
                         int size;
-                        var etag = *(long*)tvr.Read((int)ConflictsTable.Etag, out size);
-                        var cve = tvr.Read((int)ConflictsTable.ChangeVector, out size);
+                        var etag = *(long*)tvr.Reader.Read((int)ConflictsTable.Etag, out size);
+                        var cve = tvr.Reader.Read((int)ConflictsTable.ChangeVector, out size);
                         var vector = new ChangeVectorEntry[size / sizeof(ChangeVectorEntry)];
                         fixed (ChangeVectorEntry* pVector = vector)
                         {
                             Memory.Copy((byte*)pVector, cve, size);
                         }
                         list.Add(vector);
-                        conflictsTable.Delete(tvr.Id);
+                        conflictsTable.Delete(tvr.Reader.Id);
                         EnsureLastEtagIsPersisted(context, etag);
                         break;
                     }
@@ -1303,11 +1304,10 @@ namespace Raven.Server.Documents
                     ConflictsSchema.Indexes[KeyAndChangeVectorSlice],
                     loweredKeySlice, true))
                 {
-                    foreach (var tvr in result.Results)
+                    foreach (var r in result.Results)
                     {
-
                         int conflictKeySize;
-                        var conflictKey = tvr.Read((int)ConflictsTable.LoweredKey, out conflictKeySize);
+                        var conflictKey = r.Reader.Read((int)ConflictsTable.LoweredKey, out conflictKeySize);
 
                         if (conflictKeySize != lowerSize)
                             break;
@@ -1316,16 +1316,16 @@ namespace Raven.Server.Documents
                         if (compare != 0)
                             break;
 
-                        var currentChangeVector = GetChangeVectorEntriesFromTableValueReader(tvr, (int)ConflictsTable.ChangeVector);
+                        var currentChangeVector = GetChangeVectorEntriesFromTableValueReader(r.Reader, (int)ConflictsTable.ChangeVector);
                         if (currentChangeVector.SequenceEqual(changeVector))
                         {
                             int size;
-                            var dataPtr = tvr.Read((int)ConflictsTable.Data, out size);
+                            var dataPtr = r.Reader.Read((int)ConflictsTable.Data, out size);
                             return new DocumentConflict
                             {
                                 ChangeVector = currentChangeVector,
-                                Key = new LazyStringValue(key, tvr.Read((int)ConflictsTable.OriginalKey, out size), size, context),
-                                StorageId = tvr.Id,
+                                Key = new LazyStringValue(key, r.Reader.Read((int)ConflictsTable.OriginalKey, out size), size, context),
+                                StorageId = r.Reader.Id,
                                 //size == 0 --> this is a tombstone conflict
                                 Doc = (size == 0) ? null : new BlittableJsonReaderObject(dataPtr, size, context)
                             };
@@ -1364,7 +1364,7 @@ namespace Raven.Server.Documents
                 foreach (var tvr in result.Results)
                 {
                     int conflictKeySize;
-                    var conflictKey = tvr.Read((int)ConflictsTable.LoweredKey, out conflictKeySize);
+                    var conflictKey = tvr.Reader.Read((int)ConflictsTable.LoweredKey, out conflictKeySize);
 
                     if (conflictKeySize != loweredKey.Size)
                         break;
@@ -1373,7 +1373,7 @@ namespace Raven.Server.Documents
                     if (compare != 0)
                         break;
 
-                    items.Add(TableValueToConflictDocument(context, tvr));
+                    items.Add(TableValueToConflictDocument(context, ref tvr.Reader));
                 }
             }
 
@@ -1381,7 +1381,7 @@ namespace Raven.Server.Documents
         }
 
         public bool TryResolveIdenticalDocument(DocumentsOperationContext context, string key,
-            BlittableJsonReaderObject incomingDoc, 
+            BlittableJsonReaderObject incomingDoc,
             long lastModifiedTicks,
             ChangeVectorEntry[] incomingChangeVector)
         {
@@ -1660,7 +1660,7 @@ namespace Raven.Server.Documents
                 TableValueReader oldValue = null;
                 if (knownNewKey == false)
                 {
-                    oldValue = table.ReadByKey(keySlice);
+                    table.ReadByKey(keySlice, out oldValue);
                 }
 
                 if (changeVector == null)
@@ -1918,7 +1918,8 @@ namespace Raven.Server.Documents
 
             using (DocumentKeyWorker.GetSliceFromKey(context, finalKey, out finalKeySlice))
             {
-                if (table.ReadByKey(finalKeySlice) == null)
+                TableValueReader reader;
+                if (table.ReadByKey(finalKeySlice,out reader) == false)
                 {
                     return finalKey;
                 }
@@ -1938,7 +1939,8 @@ namespace Raven.Server.Documents
                 finalKey = AppendIdentityValueToKey(key, maybeFree);
                 using (DocumentKeyWorker.GetSliceFromKey(context, finalKey, out finalKeySlice))
                 {
-                    if (table.ReadByKey(finalKeySlice) == null)
+                    TableValueReader reader;
+                    if (table.ReadByKey(finalKeySlice,out reader) == false)
                     {
                         if (lastKnownBusy + 1 == maybeFree)
                         {
@@ -1971,7 +1973,7 @@ namespace Raven.Server.Documents
             _keyBuilder.Length = 0;
             _keyBuilder.Append(key);
             _keyBuilder[_keyBuilder.Length - 1] = '/';
-            _keyBuilder.AppendFormat(CultureInfo.InvariantCulture,"D19", val);
+            _keyBuilder.AppendFormat(CultureInfo.InvariantCulture, "D19", val);
             return _keyBuilder.ToString();
         }
 
@@ -2232,7 +2234,7 @@ namespace Raven.Server.Documents
                 foreach (var tvr in collections.SeekByPrimaryKey(Slices.BeforeAllKeys))
                 {
                     int size;
-                    var ptr = tvr.Read(0, out size);
+                    var ptr = tvr.Reader.Read(0, out size);
                     var collection = new LazyStringValue(null, ptr, size, context);
 
                     result.Add(collection, new CollectionName(collection));

@@ -41,12 +41,12 @@ namespace Raven.Server.Commercial
             using (contextPool.AllocateOperationContext(out context))
             using (var tx = _environment.WriteTransaction(context.PersistentContext))
             {
-                _licenseStorageSchema.Create(tx, LicenseInfoSchema.LicenseTree,16);
+                _licenseStorageSchema.Create(tx, LicenseInfoSchema.LicenseTree, 16);
 
                 tx.Commit();
             }
         }
-        
+
         public unsafe void SetFirstServerStartDate(DateTime date)
         {
             var firstServerStartDate = new DynamicJsonValue
@@ -61,7 +61,7 @@ namespace Raven.Server.Commercial
                 var table = tx.InnerTransaction.OpenTable(_licenseStorageSchema, LicenseInfoSchema.LicenseTree);
 
                 var id = context.GetDiscardableLazyString(FirstServerStartDateKey);
-                using (var json = context.ReadObject(firstServerStartDate, "DatabaseInfo", 
+                using (var json = context.ReadObject(firstServerStartDate, "DatabaseInfo",
                     BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
                     var tvb = new TableValueBuilder
@@ -88,11 +88,10 @@ namespace Raven.Server.Commercial
                 TableValueReader infoTvr;
                 using (Slice.From(tx.InnerTransaction.Allocator, FirstServerStartDateKey, out keyAsSlice))
                 {
-                    infoTvr = table.ReadByKey(keyAsSlice);
+                    //It seems like the database was shutdown rudly and never wrote it stats onto the disk
+                    if (table.ReadByKey(keyAsSlice, out infoTvr) == false)
+                        return null;
                 }
-                //It seems like the database was shutdown rudly and never wrote it stats onto the disk
-                if (infoTvr == null)
-                    return null;
 
                 using (var firstServerStartDateJson = Read(context, infoTvr))
                 {
@@ -101,7 +100,7 @@ namespace Raven.Server.Commercial
                         return result;
                 }
 
-                return null;                
+                return null;
             }
         }
 
@@ -149,11 +148,9 @@ namespace Raven.Server.Commercial
                 Slice key;
                 using (Slice.From(context.Allocator, LicenseStoargeKey, out key))
                 {
-                    reader = table.ReadByKey(key);
+                    if (table.ReadByKey(key, out reader) == false)
+                        return null;
                 }
-
-                if (reader == null)
-                    return null;
 
                 using (var licenseJson = Read(context, reader))
                 {

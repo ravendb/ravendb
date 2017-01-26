@@ -40,7 +40,8 @@ namespace FastTests.Voron.Tables
                 var docs = tx.OpenTable(DocsSchema, "docs");
                 Slice key;
                 Slice.From(tx.Allocator, "users/1", out key);
-                var handle = docs.ReadByKey(key);
+                TableValueReader handle;
+                Assert.True(docs.ReadByKey(key,out handle));
 
                 int size;
                 var read = handle.Read(3, out size);
@@ -80,7 +81,8 @@ namespace FastTests.Voron.Tables
                 var docs = tx.OpenTable(DocsSchema, "docs");
                 Slice key;
                 Slice.From(tx.Allocator, "users/1", out key);
-                var handle = docs.ReadByKey(key);
+                TableValueReader handle;
+                Assert.True(docs.ReadByKey(key, out handle));
 
                 int size;
                 var read = handle.Read(3, out size);
@@ -125,7 +127,8 @@ namespace FastTests.Voron.Tables
 
                 Slice key;
                 Slice.From(tx.Allocator, "users/1", out key);
-                Assert.Null(docs.ReadByKey(key));
+                TableValueReader reader;
+                Assert.False(docs.ReadByKey(key,out reader));
             }
         }
 

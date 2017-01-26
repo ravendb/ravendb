@@ -137,7 +137,8 @@ namespace Voron.Benchmark.Table
 
                         foreach (var key in _keysPerThread[currentThreadIndex])
                         {
-                            var reader = table.ReadByKey(key);
+                            TableValueReader reader;
+                            table.ReadByKey(key, out reader);
 
                             for (var f = 0; f < reader.Count; f++)
                             {
@@ -180,7 +181,8 @@ namespace Voron.Benchmark.Table
 
                         foreach (var key in _sortedKeysPerThread[currentThreadIndex])
                         {
-                            var reader = table.ReadByKey(key);
+                            TableValueReader reader;
+                            table.ReadByKey(key,out reader);
 
                             for (var f = 0; f < reader.Count; f++)
                             {
@@ -222,12 +224,12 @@ namespace Voron.Benchmark.Table
 
                         foreach (var reader in table.SeekByPrimaryKey(Slices.BeforeAllKeys))
                         {
-                            for (var f = 0; f < reader.Count; f++)
+                            for (var f = 0; f < reader.Reader.Count; f++)
                             {
                                 unsafe
                                 {
                                     int size;
-                                    reader.Read(f, out size);
+                                    reader.Reader.Read(f, out size);
                                 }
                             }
                         }
@@ -260,12 +262,12 @@ namespace Voron.Benchmark.Table
 
                         foreach (var reader in table.SeekByPrimaryKey(_sortedKeysPerThread[currentThreadIndex][0]))
                         {
-                            for (var f = 0; f < reader.Count; f++)
+                            for (var f = 0; f < reader.Reader.Count; f++)
                             {
                                 unsafe
                                 {
                                     int size;
-                                    reader.Read(f, out size);
+                                    reader.Reader.Read(f, out size);
                                 }
                             }
                         }

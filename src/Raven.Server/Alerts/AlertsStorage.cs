@@ -76,10 +76,10 @@ namespace Raven.Server.Alerts
             Slice slice;
             using (Slice.From(tx.InnerTransaction.Allocator, alertId, out slice))
             {
-                var existingTvr = table.ReadByKey(slice);
-                if (existingTvr != null)
+                TableValueReader existingTvr;
+                if (table.ReadByKey(slice, out existingTvr))
                 {
-                    using (var existingAlert = Read(context, existingTvr))
+                    using (var existingAlert = Read(context, ref existingTvr))
                     {
                         object dismissedUntilValue;
                         existingAlert.TryGetMember(nameof(alert.DismissedUntil), out dismissedUntilValue);
@@ -125,7 +125,7 @@ namespace Raven.Server.Alerts
 
                     first = false;
 
-                    var alert = Read(context, alertsTvr);
+                    var alert = Read(context, ref alertsTvr.Reader);
                     writer.WriteObject(alert);
                 }
 
@@ -169,7 +169,7 @@ namespace Raven.Server.Alerts
             }
         }
 
-        private unsafe BlittableJsonReaderObject Read(JsonOperationContext context, TableValueReader reader)
+        private unsafe BlittableJsonReaderObject Read(JsonOperationContext context, ref TableValueReader reader)
         {
             int size;
             var ptr = reader.Read(AlertsSchema.AlertsTable.JsonIndex, out size);

@@ -88,13 +88,13 @@ namespace Raven.Server.Documents
                 TableValueReader infoTvr;
                 using (Slice.From(tx.InnerTransaction.Allocator, databaseName.ToLowerInvariant(), out databaseNameAsSlice))
                 {
-                    infoTvr = table.ReadByKey(databaseNameAsSlice);
+                    if (table.ReadByKey(databaseNameAsSlice, out infoTvr) == false)
+                        return false;
                 }
                 //It seems like the database was shutdown rudly and never wrote it stats onto the disk
-                if (infoTvr == null)
-                    return false;
+             
 
-                using (var databaseInfoJson = Read(context, infoTvr))
+                using (var databaseInfoJson = Read(context, ref infoTvr))
                 {
                     databaseInfoJson.Modifications = new DynamicJsonValue(databaseInfoJson)
                     {
@@ -108,7 +108,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe BlittableJsonReaderObject Read(JsonOperationContext context, TableValueReader reader)
+        private unsafe BlittableJsonReaderObject Read(JsonOperationContext context, ref TableValueReader reader)
         {
             int size;
             var ptr = reader.Read(DatabaseInfoSchema.DatabaseInfoTable.JsonIndex, out size);

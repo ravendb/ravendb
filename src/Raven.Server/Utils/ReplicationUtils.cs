@@ -190,14 +190,14 @@ namespace Raven.Server.Utils
             }
         }
 
-        public static unsafe TEnum GetEnumFromTableValueReader<TEnum>(TableValueReader tvr, int index)
+        public static unsafe TEnum GetEnumFromTableValueReader<TEnum>(ref TableValueReader tvr, int index)
         {
             int size;
             var storageTypeNum = *(int*)tvr.Read(index, out size);
             return (TEnum)Enum.ToObject(typeof(TEnum), storageTypeNum);
         }
 
-        public static unsafe ChangeVectorEntry[] GetChangeVectorEntriesFromTableValueReader(TableValueReader tvr, int index)
+        public static unsafe ChangeVectorEntry[] GetChangeVectorEntriesFromTableValueReader(ref TableValueReader tvr, int index)
         {
             int size;
             var pChangeVector = (ChangeVectorEntry*)tvr.Read(index, out size);

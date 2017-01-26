@@ -139,7 +139,7 @@ namespace Raven.Server.ServerWide
                     else
                     {
                         int size;
-                        _lastEtag = Bits.SwapBytes(*(long*) reader.Read(3, out size));
+                        _lastEtag = Bits.SwapBytes(*(long*) reader.Reader.Read(3, out size));
                     }
                 }
             }
@@ -169,7 +169,7 @@ namespace Raven.Server.ServerWide
                 return 0;
 
             int size;
-            return Bits.SwapBytes(*(long*)reader.Read(3, out size));
+            return Bits.SwapBytes(*(long*)reader.Reader.Read(3, out size));
         }
 
         public BlittableJsonReaderObject Read(TransactionOperationContext ctx, string id, out long etag)
@@ -180,10 +180,9 @@ namespace Raven.Server.ServerWide
             Slice key;
             using (Slice.From(ctx.Allocator, id.ToLowerInvariant(), out key))
             {
-                reader = items.ReadByKey(key);
+                if (items.ReadByKey(key, out reader) == false)
+                    return null;
             }
-            if (reader == null)
-                return null;
             int size;
             etag = Bits.SwapBytes(*(long*) reader.Read(3, out size));
             var ptr = reader.Read(2, out size);
@@ -199,10 +198,9 @@ namespace Raven.Server.ServerWide
             Slice key;
             using (Slice.From(ctx.Allocator, id.ToLowerInvariant(), out key))
             {
-                reader = items.ReadByKey(key);
+                if (items.ReadByKey(key, out reader) == false)
+                    return null;
             }
-            if (reader == null)
-                return null;
             int size;
             var ptr = reader.Read(2, out size);
             return new BlittableJsonReaderObject(ptr, size, ctx);
@@ -216,10 +214,9 @@ namespace Raven.Server.ServerWide
             Slice key;
             using (Slice.From(ctx.Allocator, id.ToLowerInvariant(), out key))
             {
-                reader = items.ReadByKey(key);
+                if (items.ReadByKey(key, out reader) == false)
+                    return null;
             }
-            if (reader == null)
-                return null;
             int size;
             var ptr = reader.Read(2, out size);
             return Tuple.Create(new BlittableJsonReaderObject(ptr, size, ctx),Bits.SwapBytes(*(long*)reader.Read(3,out size)));
@@ -261,12 +258,12 @@ namespace Raven.Server.ServerWide
                     }
                     if (take-- <= 0)
                         yield break;
-                    yield return GetCurrentItem(ctx, result);
+                    yield return GetCurrentItem(ctx, ref result.Reader);
                 }
             }
         }
 
-        private static Item GetCurrentItem(JsonOperationContext ctx, TableValueReader reader)
+        private static Item GetCurrentItem(JsonOperationContext ctx, ref TableValueReader reader)
         {
             int size;
             return new Item
@@ -290,8 +287,8 @@ namespace Raven.Server.ServerWide
                 var newEtagBigEndian = Bits.SwapBytes(newEtag);
                 var itemTable = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
 
-                var oldValue = itemTable.ReadByKey(loweredId);
-                if (oldValue == null)
+                TableValueReader oldValue;
+                if (itemTable.ReadByKey(loweredId,out oldValue) ==false)
                 {
                     if (expectedEtag != null && expectedEtag != 0)
                     {

@@ -359,7 +359,8 @@ namespace Raven.Server.Documents.Indexes.Debugging
             Slice pageNumberSlice;
             using (Slice.External(context.Allocator, (byte*)&tmp, sizeof(long), out pageNumberSlice))
             {
-                var tvr = table.ReadByKey(pageNumberSlice);
+                TableValueReader tvr;
+                table.ReadByKey(pageNumberSlice, out tvr);
 
                 int size;
                 return new BlittableJsonReaderObject(tvr.Read(3, out size), size, context);
