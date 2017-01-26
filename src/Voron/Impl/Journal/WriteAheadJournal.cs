@@ -783,8 +783,15 @@ namespace Voron.Impl.Journal
                             Monitor.Exit(_flushingLock);
                     }
 
+                    var sp = Stopwatch.StartNew();
                     // We do the sync _outside_ of the lock, letting the rest of the stuff proceed
                     _waj._dataPager.Sync();
+
+                    if (_waj._logger.IsInfoEnabled)
+                    {
+                        var sizeInKb = (_waj._dataPager.NumberOfAllocatedPages * Constants.Storage.PageSize)/Constants.Size.Kilobyte;
+                        _waj._logger.Info($"Sync of {sizeInKb:#,#} kb with {currentTotalWrittenBytes/Constants.Size.Kilobyte:#,#} kb in {sp.Elapsed}");
+                    }
 
                     lock (_flushingLock)
                     {
@@ -815,6 +822,7 @@ namespace Voron.Impl.Journal
                 try
                 {
                     long written = 0;
+                    var sp = Stopwatch.StartNew();
                     using (var meter = _waj._dataPager.Options.IoMetrics.MeterIoRate(_waj._dataPager.FileName, IoMetrics.MeterType.DataFlush, 0))
                     {
                         using (var batchWrites = _waj._dataPager.BatchWriter())
@@ -842,8 +850,10 @@ namespace Voron.Impl.Journal
                         }
 
                         meter.IncrementSize(written);
-
                     }
+
+                    if(_waj._logger.IsInfoEnabled)
+                        _waj._logger.Info($"Flushed {pagesToWrite.Count:#,#} pages with {written/Constants.Size.Kilobyte:#,#} kb in {sp.Elapsed}");
 
                     _totalWrittenButUnsyncedBytes += written;
                 }

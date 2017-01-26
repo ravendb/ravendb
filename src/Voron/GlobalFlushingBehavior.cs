@@ -162,8 +162,11 @@ namespace Voron
                 return;
             try
             {
-
+                if(_log.IsInfoEnabled)
+                    _log.Info($"Starting sync of {env.Options.BasePath}");
                 env.Journal.Applicator.SyncDataFile();
+                if(_log.IsInfoEnabled)
+                    _log.Info($"Finished sync of {env.Options.BasePath}");
             }
             catch (Exception e)
             {
@@ -223,10 +226,20 @@ namespace Voron
                     {
                         if (storageEnvironment.Disposed)
                             return;
+                        if (_log.IsInfoEnabled)
+                            _log.Info($"Starting flush of {storageEnvironment.Options.BasePath}");
+
                         storageEnvironment.BackgroundFlushWritesToDataFile();
+
+                        if (_log.IsInfoEnabled)
+                            _log.Info($"Completed flush of {storageEnvironment.Options.BasePath}");
+
                     }
                     catch (Exception e)
                     {
+                        if (_log.IsOperationsEnabled)
+                            _log.Operations($"Failed to flush {storageEnvironment.Options.BasePath}", e);
+
                         storageEnvironment.CatastrophicFailure = ExceptionDispatchInfo.Capture(e);
                     }
                     finally
