@@ -43,14 +43,14 @@ namespace Raven.NewClient.Client.Commands
 
         public List<T> Complete<T>()
         {
-            var results = new List<T>();
+            var results = new List<T>(_result.Results.Length);
             for (var i = 0; i < _result.Results.Length; i++)
             {
                 var document = (BlittableJsonReaderObject)_result.Results[i];
                 var metadata = document.GetMetadata();
                 var id = metadata.GetId();
 
-                results[i] = (T)_session.ConvertToEntity(typeof(T), id, document);
+                results.Add((T) _session.ConvertToEntity(typeof(T), id, document));
             }
 
             return results;

@@ -21,7 +21,7 @@ namespace Raven.NewClient.Client.Document.Async
 
             var command = operation.CreateRequest();
             await RequestExecuter.ExecuteAsync(command, Context).ConfigureAwait(false);
-
+            operation.SetResult(command.Result);
             return operation.Complete<T>();
         }
     }
