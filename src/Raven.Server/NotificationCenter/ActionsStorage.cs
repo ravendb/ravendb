@@ -185,9 +185,9 @@ namespace Raven.Server.NotificationCenter
             
             foreach (var it in table.SeekForwardFrom(_actionsSchema.Indexes[ByCreatedAt], Slices.BeforeAllKeys))
             {
-                foreach (var tvr in it.Results)
+                foreach (var holder in it.Results)
                 {
-                    yield return Read(context, tvr);
+                    yield return Read(context, holder.Reader);
                 }
             }
         }
@@ -213,9 +213,9 @@ namespace Raven.Server.NotificationCenter
 
             foreach (var it in table.SeekForwardFrom(_actionsSchema.Indexes[ByPostponedUntil], Slices.BeforeAllKeys))
             {
-                foreach (var tvr in it.Results)
+                foreach (var holder in it.Results)
                 {
-                    var action = Read(context, tvr);
+                    var action = Read(context, holder.Reader);
 
                     if (action.PostponedUntil == null)
                         continue;
@@ -235,12 +235,11 @@ namespace Raven.Server.NotificationCenter
             Slice slice;
             using (Slice.From(tx.InnerTransaction.Allocator, id, out slice))
             {
-                var read = table.ReadByKey(slice);
-
-                if (read == null)
+                TableValueReader tvr;
+                if (table.ReadByKey(slice, out tvr) == false)
                     return null;
 
-                return Read(context, read);
+                return Read(context, tvr);
             }
         }
 
