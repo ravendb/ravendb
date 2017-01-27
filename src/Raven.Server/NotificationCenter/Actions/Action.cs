@@ -17,15 +17,13 @@ namespace Raven.Server.NotificationCenter.Actions
 
         public DateTime CreatedAt { get; }
 
-        public ActionType Type { get; private set; }
+        public ActionType Type { get; }
 
         public string Title { get; protected set; }
 
         public string Message { get; protected set; }
 
         public bool IsPersistent { get; protected set; }
-
-        public IActionDetails Details { get; protected set; }
 
         public virtual DynamicJsonValue ToJson()
         {
@@ -36,8 +34,7 @@ namespace Raven.Server.NotificationCenter.Actions
                 [nameof(Type)] = Type.ToString(),
                 [nameof(Title)] = Title,
                 [nameof(Message)] = Message,
-                [nameof(IsPersistent)] = IsPersistent,
-                [nameof(Details)] = Details?.ToJson()
+                [nameof(IsPersistent)] = IsPersistent
             };
         }
     }

@@ -10,13 +10,15 @@ namespace Raven.Server.NotificationCenter.Actions
         {
         }
 
-        public AlertSeverity Severity { get; set; }
+        public AlertSeverity Severity { get; private set; }
 
-        public AlertType AlertType { get; set; }
+        public AlertType AlertType { get; private set; }
 
-        public string Key { get; set; }
+        public string Key { get; private set; }
 
         public override string Id => string.IsNullOrEmpty(Key) ? $"{Type}/{AlertType}" : $"{Type}/{AlertType}/{Key}";
+        
+        public IActionDetails Details { get; protected set; }
 
         public override DynamicJsonValue ToJson()
         {
@@ -25,6 +27,7 @@ namespace Raven.Server.NotificationCenter.Actions
             json[nameof(Key)] = Key;
             json[nameof(Severity)] = Severity.ToString();
             json[nameof(AlertType)] = AlertType.ToString();
+            json[nameof(Details)] = Details?.ToJson();
 
             return json;
         }
