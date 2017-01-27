@@ -6,14 +6,11 @@ class documentMetadata {
     nonAuthoritativeInfo: boolean;
     id: string;
     tempIndexScore: number;
-    lastModified: string;
-    nonStandardProps: Array<string>;
+    lastModified = ko.observable<string>();
+    nonStandardProps: Array<keyof documentMetadataDto>;
    
     etag = ko.observable<number>(null);
-    ravenLastModified = ko.observable<string>(null);
     lastModifiedFullDate: KnockoutComputed<string>;
-    lastModifiedAsAgo: KnockoutComputed<string>;
-    now = ko.observable(new Date());
 
     constructor(dto?: documentMetadataDto) {
         if (dto) {
@@ -22,56 +19,42 @@ class documentMetadata {
             this.nonAuthoritativeInfo = dto['Non-Authoritative-Information'];
             this.id = dto['@id'];
             this.tempIndexScore = dto['Temp-Index-Score'];
-            this.lastModified = dto['Last-Modified'];
-
-            setInterval(() => this.now(new Date()), 60*1000);
-           
-            this.ravenLastModified(dto['Raven-Last-Modified']);
-            this.lastModifiedAsAgo = ko.computed(() => {
-                if (!!this.ravenLastModified()) {
-                    const lastModifiedMoment = moment(this.ravenLastModified());
-                    return lastModifiedMoment.from(this.now());
+            this.lastModifiedFullDate = ko.pureComputed(() => {
+                if (this.lastModified()) {
+                    const lastModifiedMoment = moment(this.lastModified());
+                    return lastModifiedMoment.utc().format("DD/MM/YYYY HH:mm (UTC)");
                 }
                 return "";
             });
-
-            this.lastModifiedFullDate = ko.computed(() => {
-                if (!!this.ravenLastModified()) {
-                    const lastModifiedMoment = moment(this.ravenLastModified());
-                    const fullTimeSinceUtc = lastModifiedMoment.utc().format("DD/MM/YYYY HH:mm (UTC)");
-                    return fullTimeSinceUtc;
-                }
-                return "";
-            });
+            this.lastModified(dto['@last-modified']);
 
             this.etag(dto['@etag']);
 
-            for (var property in dto) {
+            for (let property in dto) {
                 if (property.toUpperCase() !== '@collection'.toUpperCase() &&
                     property.toUpperCase() !== 'Raven-Clr-Type'.toUpperCase() &&
                     property.toUpperCase() !== 'Non-Authoritative-Information'.toUpperCase() &&
                     property.toUpperCase() !== '@id'.toUpperCase() &&
                     property.toUpperCase() !== 'Temp-Index-Score'.toUpperCase() &&
-                    property.toUpperCase() !== 'Last-Modified'.toUpperCase() &&
-                    property.toUpperCase() !== 'Raven-Last-Modified'.toUpperCase() &&
+                    property.toUpperCase() !== '@last-modified'.toUpperCase() &&
                     property.toUpperCase() !== '@etag'.toUpperCase() &&
                     property.toUpperCase() !== 'toDto'.toUpperCase()) {
                     this.nonStandardProps = this.nonStandardProps || [];
                     (<any>this)[property] = (<any>dto)[property];
-                    this.nonStandardProps.push(property);
+                    this.nonStandardProps.push(property as any);
                 }
             }
         }
     }
 
     toDto(): documentMetadataDto {
-        var dto: any = {
+        const dto: documentMetadataDto = {
             '@collection': this.ravenEntityName,
             'Raven-Clr-Type': this.ravenClrType,
             'Non-Authoritative-Information': this.nonAuthoritativeInfo,
             '@id': this.id,
             'Temp-Index-Score': this.tempIndexScore,
-            'Last-Modified': this.lastModified,
+            '@last-modified': this.lastModified(),
             '@etag': this.etag()
         };
 
@@ -86,9 +69,9 @@ class documentMetadata {
     static filterMetadata(metaDto: documentMetadataDto, removedProps: any[] = null) {
         // We don't want to show certain reserved properties in the metadata text area.
         // Remove them from the DTO, restore them on save.
-        var metaPropsToRemove = ["@id", "@etag", "Raven-Last-Modified"];
+        const metaPropsToRemove = ["@id", "@etag", "@last-modified"];
 
-        for (var property in metaDto) {
+        for (let property in metaDto) {
             if (metaDto.hasOwnProperty(property) && _.includes(metaPropsToRemove, property)) {
                 if ((<any>metaDto)[property] && removedProps) {
                     removedProps.push({ name: property, value: (<any>metaDto)[property] });

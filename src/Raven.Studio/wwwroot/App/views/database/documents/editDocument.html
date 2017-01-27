@@ -85,7 +85,7 @@
                 <div class="col-md-6">
                     <p class="pull-right-md text-right-md padding padding-xs" data-bind="if: displayLastModifiedDate()">
                         <i class="icon-recent"></i>
-                        <small>Last modified <span data-bind="text: metadata().lastModifiedAsAgo"></span></small>
+                        <small>Last modified <span data-bind="text: $root.lastModifiedAsAgo"></span></small>
                     </p>
                     <p class="pull-right-md bg-warning padding padding-xs" data-bind="visible: displayDocumentChangeNotification()">
                         <small>
