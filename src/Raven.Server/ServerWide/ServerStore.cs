@@ -79,15 +79,17 @@ namespace Raven.Server.ServerWide
 
         public ServerStore(RavenConfiguration configuration)
         {
+            var resourceName = "ServerStore";
+
             if (configuration == null) throw new ArgumentNullException(nameof(configuration));
             IoMetrics = new IoMetrics(8,8); // TODO:: increase this to 256,256 ?
             Configuration = configuration;
-            _logger = LoggingSource.Instance.GetLogger<ServerStore>("ServerStore");
+            _logger = LoggingSource.Instance.GetLogger<ServerStore>(resourceName);
             DatabasesLandlord = new DatabasesLandlord(this);
 
-            _actionsStorage = new ActionsStorage("Raven/Server");
+            _actionsStorage = new ActionsStorage(resourceName);
 
-            NotificationCenter = new NotificationCenter.NotificationCenter(_actionsStorage);
+            NotificationCenter = new NotificationCenter.NotificationCenter(_actionsStorage, resourceName);
 
             DatabaseInfoCache = new DatabaseInfoCache();
 

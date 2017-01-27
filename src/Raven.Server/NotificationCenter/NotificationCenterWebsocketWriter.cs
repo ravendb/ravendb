@@ -7,12 +7,11 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-
 using Action = Raven.Server.NotificationCenter.Actions.Action;
 
-namespace Raven.Server.NotificationCenter.Handlers
+namespace Raven.Server.NotificationCenter
 {
-    public class NotificationCenterWebsocketWriter : IDisposable
+    public class NotificationCenterWebsocketWriter : IWebsocketWriter, IDisposable
     {
         private static readonly ArraySegment<byte> Heartbeat = new ArraySegment<byte>(new[] { (byte)'\r', (byte)'\n' });
 
@@ -42,7 +41,7 @@ namespace Raven.Server.NotificationCenter.Handlers
 
             var asyncQueue = new AsyncQueue<Action>();
 
-            using (_notificationCenter.TrackActions(asyncQueue))
+            using (_notificationCenter.TrackActions(asyncQueue, this))
             {
                 while (_resourceShutdown.IsCancellationRequested == false)
                 {

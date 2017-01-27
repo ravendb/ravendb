@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
@@ -23,8 +24,9 @@ namespace FastTests.Server.NotificationCenter
             using (var database = CreateDocumentDatabase())
             {
                 var actions = new AsyncQueue<Action>();
+                var writer = new TestWebSockerWriter();
 
-                using (database.NotificationCenter.TrackActions(actions))
+                using (database.NotificationCenter.TrackActions(actions, writer))
                 {
                     database.NotificationCenter.Add(GetSampleAlert());
                 }
@@ -144,7 +146,9 @@ namespace FastTests.Server.NotificationCenter
                 var postponeUntil = SystemTime.UtcNow.AddDays(1);
 
                 var actions = new AsyncQueue<Action>();
-                using (database.NotificationCenter.TrackActions(actions))
+                var writer = new TestWebSockerWriter();
+
+                using (database.NotificationCenter.TrackActions(actions, writer))
                 {
                     database.NotificationCenter.Postpone(alert.Id, postponeUntil);
                 }
@@ -183,7 +187,9 @@ namespace FastTests.Server.NotificationCenter
                 database.NotificationCenter.Add(alert);
 
                 var actions = new AsyncQueue<Action>();
-                using (database.NotificationCenter.TrackActions(actions))
+                var writer = new TestWebSockerWriter();
+
+                using (database.NotificationCenter.TrackActions(actions, writer))
                 {
                     database.NotificationCenter.Dismiss(alert.Id);
 
@@ -235,7 +241,9 @@ namespace FastTests.Server.NotificationCenter
                 database.NotificationCenter.Add(alert);
 
                 var actions = new AsyncQueue<Action>();
-                using (database.NotificationCenter.TrackActions(actions))
+                var writer = new TestWebSockerWriter();
+
+                using (database.NotificationCenter.TrackActions(actions, writer))
                 {
                     var postponeUntil = SystemTime.UtcNow.AddDays(1);
 
@@ -276,8 +284,8 @@ namespace FastTests.Server.NotificationCenter
             }
         }
 
-        [Fact(Skip = "TODO arek")]
-        public async Task Should_get_notification_when_postpone_date_reached()
+        [Fact]
+        public void Should_send_postponed_notification_when_postpone_date_reached()
         {
             using (var database = CreateDocumentDatabase())
             {
@@ -285,21 +293,35 @@ namespace FastTests.Server.NotificationCenter
                 database.NotificationCenter.Add(alert);
 
                 var actions = new AsyncQueue<Action>();
-                using (database.NotificationCenter.TrackActions(actions))
+                var writer = new TestWebSockerWriter();
+
+                using (database.NotificationCenter.TrackActions(actions, writer))
                 {
-                    database.NotificationCenter.Postpone(alert.Id, SystemTime.UtcNow.AddMilliseconds(1000));
+                    database.NotificationCenter.Postpone(alert.Id, SystemTime.UtcNow.AddMilliseconds(100));
 
-                    var a = await actions.TryDequeueAsync(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+                    var posponed = actions.DequeueAsync().Result as NotificationUpdated;
 
-                    a = await actions.TryDequeueAsync(TimeSpan.FromSeconds(20)).ConfigureAwait(false);
+                    Assert.NotNull(posponed);
+                    Assert.Equal(NotificationUpdateType.Postponed, posponed.UpdateType);
 
-                    //Assert.Equal(2, actions.Count);
-                    //var notification = actions.DequeueAsync().Result as NotificationUpdated;
-                    //Assert.NotNull(notification);
+                    Assert.True(SpinWait.SpinUntil(() => writer.SentNotifications.Count == 1, TimeSpan.FromSeconds(1)));
 
-                    //var alertRaised = actions.DequeueAsync().Result as AlertRaised;
-                    //Assert.NotNull(alertRaised);
+                    Assert.Equal(alert.Id, writer.SentNotifications[0]);
                 }
+            }
+        }
+
+        private class TestWebSockerWriter : IWebsocketWriter
+        {
+            public List<string> SentNotifications { get; } = new List<string>();
+
+            public Task WriteToWebSocket<TNotification>(TNotification notification)
+            {
+                var blittable = notification as BlittableJsonReaderObject;
+
+                SentNotifications.Add(blittable[nameof(Action.Id)].ToString());
+
+                return Task.CompletedTask;
             }
         }
 

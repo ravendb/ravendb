@@ -68,7 +68,7 @@ namespace Raven.Server.Documents
             HugeDocuments = new HugeDocuments(configuration.Databases.MaxCollectionSizeHugeDocuments,
                 configuration.Databases.MaxWarnSizeHugeDocuments);
             ConfigurationStorage = new ConfigurationStorage(this);
-            NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.ActionsStorage);
+            NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.ActionsStorage, Name);
             DatabaseInfoCache = serverStore?.DatabaseInfoCache;
         }
 
