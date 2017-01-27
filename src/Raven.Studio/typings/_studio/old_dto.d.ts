@@ -36,8 +36,7 @@ interface documentMetadataDto {
     'Non-Authoritative-Information'?: boolean;
     '@id'?: string;
     'Temp-Index-Score'?: number;
-    'Last-Modified'?: string;
-    'Raven-Last-Modified'?: string;
+    '@last-modified'?: string;
     '@etag'?: number;
 }
 

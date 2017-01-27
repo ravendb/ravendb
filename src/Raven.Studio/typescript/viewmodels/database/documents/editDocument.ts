@@ -23,6 +23,7 @@ import deleteDocuments = require("viewmodels/common/deleteDocuments");
 import viewModelBase = require("viewmodels/viewModelBase");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import connectedDocuments = require("viewmodels/database/documents/editDocumentConnectedDocuments");
+import timeHelpers = require("common/timeHelpers");
 
 import eventsCollector = require("common/eventsCollector");
 
@@ -35,6 +36,7 @@ class editDocument extends viewModelBase {
     document = ko.observable<document>();
     documentText = ko.observable("");
     metadata: KnockoutComputed<documentMetadata>;
+    lastModifiedAsAgo: KnockoutComputed<string>;
 
     isCreatingNewDocument = ko.observable(false);
     collectionForNewDocument = ko.observable<string>();
@@ -237,6 +239,12 @@ class editDocument extends viewModelBase {
 
             return hasMetadata && inEditMode && !displayChangedNotification;
         });
+
+        this.lastModifiedAsAgo = ko.pureComputed(() => {
+            const now = timeHelpers.utcNowWithMinutePrecision();
+            const metadata = this.metadata();
+            return metadata ? moment.utc(metadata.lastModified()).from(now) : "";
+        });
     }
 
     enableCustomNameProvider() {
@@ -352,7 +360,6 @@ class editDocument extends viewModelBase {
         // Clear data..
         this.userSpecifiedId("");
         this.metadata().etag(null);
-        this.metadata().ravenLastModified(null);
     }
 
     saveDocument() {       
