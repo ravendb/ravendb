@@ -79,6 +79,7 @@ namespace FastTests.Server.Documents.Expiration
 
         [Theory]
         [InlineData(10)]
+        [InlineData(100)]
         public async Task CanAddALotOfEntitiesWithSameExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry(int count)
         {
             var company = new { Name = "Company Name" };

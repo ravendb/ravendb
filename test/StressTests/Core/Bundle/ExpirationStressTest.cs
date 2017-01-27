@@ -9,12 +9,11 @@ using FastTests;
 using FastTests.Server.Documents.Expiration;
 using Xunit;
 
-namespace SlowTests.Core.Bundles
+namespace StressTests.Core.Bundle
 {
     public class ExpirationStressTest : NoDisposalNeeded
     {
         [Theory]
-        [InlineData(100)]
         [InlineData(1000)]
         [InlineData(10000)]
         public async Task CanAddALotOfEntitiesWithSameExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry(int count)
