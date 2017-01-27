@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Sparrow;
 using Voron.Data.BTrees;
+using Voron.Data.Tables;
 using Voron.Debugging;
 using Voron.Global;
 using Voron.Impl;
@@ -23,6 +24,7 @@ namespace Voron.Data.Fixed
         private readonly Tree _parent;
         private Slice _treeName;
         private readonly ushort _valSize;
+        private readonly NewPageAllocator _newPageAllocator;
         private readonly int _entrySize;
         private readonly int _maxEmbeddedEntries;
 
@@ -101,11 +103,12 @@ namespace Voron.Data.Fixed
                                                   header->RootObjectType);
         }
 
-        public FixedSizeTree(LowLevelTransaction tx, Tree parent, Slice treeName, ushort valSize, bool clone = true, PageLocator pageLocator = null)
+        public FixedSizeTree(LowLevelTransaction tx, Tree parent, Slice treeName, ushort valSize, bool clone = true, NewPageAllocator newPageAllocator = null,PageLocator pageLocator = null)
         {
             _tx = tx;
             _parent = parent;
             _valSize = valSize;
+            _newPageAllocator = newPageAllocator;
 
             _isPageLocatorOwned = pageLocator == null;
             _pageLocator = pageLocator ?? tx.PersistentContext.AllocatePageLocator(tx);
@@ -338,7 +341,7 @@ namespace Voron.Data.Fixed
                 // we cannot recursively call free space handling to ensure that we won't modify a section
                 // relevant for a page which is currently being changed allocated
 
-                var page = _tx.AllocatePage(1);
+                var page = _newPageAllocator?.AllocatePage(1) ?? _tx.AllocatePage(1);
                 allocatePage = new FixedSizeTreePage(page.Pointer, _entrySize, Constants.Storage.PageSize);
             }
 
@@ -359,7 +362,11 @@ namespace Voron.Data.Fixed
             }
             else
             {
-                _tx.FreePage(pageNumber);
+
+                if (_newPageAllocator != null)
+                    _newPageAllocator.FreePage(pageNumber);
+                else
+                    _tx.FreePage(pageNumber);
             }
 
             _pageLocator.Reset(pageNumber);

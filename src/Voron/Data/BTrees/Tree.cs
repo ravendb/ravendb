@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using Sparrow;
 using Voron.Data.Compression;
 using Voron.Data.Fixed;
+using Voron.Data.Tables;
 using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Global;
@@ -28,23 +29,19 @@ namespace Voron.Data.BTrees
 
         public Slice Name { get; set; }
 
-        public TreeMutableState State
-        {
-            get { return _state; }
-        }
+        public TreeMutableState State => _state;
 
         private readonly LowLevelTransaction _llt;
         private readonly Transaction _tx;
+        private readonly NewPageAllocator _newPageAllocator;
 
-        public LowLevelTransaction Llt
-        {
-            get { return _llt; }
-        }
+        public LowLevelTransaction Llt => _llt;
 
-        private Tree(LowLevelTransaction llt, Transaction tx, long root, PageLocator pageLocator = null)
+        private Tree(LowLevelTransaction llt, Transaction tx, long root, NewPageAllocator newPageAllocator = null, PageLocator pageLocator = null)
         {
             _llt = llt;
             _tx = tx;
+            _newPageAllocator = newPageAllocator;
             _recentlyFoundPages = new RecentlyFoundTreePages(llt.Flags == TransactionFlags.Read ? 8 : 2);
             _isPageLocatorOwned = pageLocator == null;
             _pageLocator = pageLocator ?? llt.PersistentContext.AllocatePageLocator(llt);
@@ -72,9 +69,10 @@ namespace Voron.Data.BTrees
             get { return (State.Flags & TreeFlags.LeafsCompressed) == TreeFlags.LeafsCompressed; }
         }
 
-        public static Tree Open(LowLevelTransaction llt, Transaction tx, TreeRootHeader* header, RootObjectType type = RootObjectType.VariableSizeTree, PageLocator pageLocator = null)
+        public static Tree Open(LowLevelTransaction llt, Transaction tx, TreeRootHeader* header, RootObjectType type = RootObjectType.VariableSizeTree,
+             NewPageAllocator newPageAllocator = null, PageLocator pageLocator = null)
         {
-            return new Tree(llt, tx, header->RootPageNumber, pageLocator)
+            return new Tree(llt, tx, header->RootPageNumber, newPageAllocator, pageLocator)
             {
                 _state =
                 {
@@ -90,13 +88,19 @@ namespace Voron.Data.BTrees
             };
         }
 
-        public static Tree Create(LowLevelTransaction llt, Transaction tx, TreeFlags flags = TreeFlags.None, RootObjectType type = RootObjectType.VariableSizeTree, PageLocator pageLocator = null)
+        public static Tree Create(LowLevelTransaction llt, Transaction tx, TreeFlags flags = TreeFlags.None, RootObjectType type = RootObjectType.VariableSizeTree,
+             NewPageAllocator newPageAllocator = null, 
+             PageLocator pageLocator = null)
         {
             if (type != RootObjectType.VariableSizeTree && type != RootObjectType.Table)
                 ThrowInvalidTreeCreateType();
 
-            var newRootPage = AllocateNewPage(llt, TreePageFlags.Leaf, 1);
-            var tree = new Tree(llt, tx, newRootPage.PageNumber, pageLocator)
+            var newPage = newPageAllocator?.AllocatePage(1) ?? llt.AllocatePage(1);
+
+
+            TreePage newRootPage = PrepareTreePage(TreePageFlags.Leaf, 1, newPage);
+            
+            var tree = new Tree(llt, tx, newRootPage.PageNumber, newPageAllocator, pageLocator)
             {
                 _state =
                 {
@@ -410,7 +414,10 @@ namespace Voron.Data.BTrees
         private long WriteToOverflowPages(int overflowSize, out byte* dataPos)
         {
             var numberOfPages = _llt.DataPager.GetNumberOfOverflowPages(overflowSize);
-            var overflowPageStart = AllocateNewPage(_llt, TreePageFlags.Value, numberOfPages);
+            var newPage = _newPageAllocator?.AllocatePage(numberOfPages) ?? _llt.AllocatePage(numberOfPages);
+
+            TreePage overflowPageStart = PrepareTreePage(TreePageFlags.Value, numberOfPages, newPage);
+
             overflowPageStart.Flags = PageFlags.Overflow | PageFlags.VariableSizeTreePage;
             overflowPageStart.OverflowSize = overflowSize;
             dataPos = overflowPageStart.Base + Constants.Tree.PageHeaderSize;
@@ -851,7 +858,10 @@ namespace Voron.Data.BTrees
         
         internal TreePage NewPage(TreePageFlags flags, int num)
         {
-            var page = AllocateNewPage(_llt, flags, num);
+            var newPage = _newPageAllocator?.AllocatePage(num) ?? _llt.AllocatePage(num);
+
+            var page = PrepareTreePage(flags, num, newPage);
+
             State.RecordNewPage(page, num);
 
             PageModified?.Invoke(page.PageNumber, page.Flags);
@@ -859,9 +869,8 @@ namespace Voron.Data.BTrees
             return page;
         }
 
-        private static TreePage AllocateNewPage(LowLevelTransaction tx, TreePageFlags flags, int num, long? pageNumber = null)
+        private static TreePage PrepareTreePage(TreePageFlags flags, int num, Page newPage)
         {
-            var newPage = tx.AllocatePage(num, pageNumber);
             var page = new TreePage(newPage.Pointer, Constants.Storage.PageSize)
             {
                 Flags = PageFlags.VariableSizeTreePage | (num == 1 ? PageFlags.Single : PageFlags.Overflow),
@@ -873,6 +882,7 @@ namespace Voron.Data.BTrees
             return page;
         }
 
+
         internal void FreePage(TreePage p)
         {
             PageFreed?.Invoke(p.PageNumber, p.Flags);
@@ -882,7 +892,10 @@ namespace Voron.Data.BTrees
                 var numberOfPages = _llt.DataPager.GetNumberOfOverflowPages(p.OverflowSize);
                 for (int i = 0; i < numberOfPages; i++)
                 {
-                    _llt.FreePage(p.PageNumber + i);
+                    if (_newPageAllocator != null)
+                        _newPageAllocator.FreePage(p.PageNumber + i);
+                    else
+                        _llt.FreePage(p.PageNumber + i);
                     _pageLocator.Reset(p.PageNumber + i);
                 }
 
@@ -890,7 +903,10 @@ namespace Voron.Data.BTrees
             }
             else
             {
-                _llt.FreePage(p.PageNumber);
+                if (_newPageAllocator != null)
+                    _newPageAllocator.FreePage(p.PageNumber);
+                else
+                    _llt.FreePage(p.PageNumber);
                 _pageLocator.Reset(p.PageNumber);
                 State.RecordFreedPage(p, 1);
             }
@@ -1149,7 +1165,8 @@ namespace Voron.Data.BTrees
 
                     State.RecordFreedPage(readOnlyOverflowPage, overflowsToFree);
 
-                    var writtableOverflowPage = AllocateNewPage(_llt, TreePageFlags.Value, requestedOverflows, updatedNode->PageNumber);
+                    var page = _llt.AllocatePage(requestedOverflows, updatedNode->PageNumber);
+                    var writtableOverflowPage = PrepareTreePage(TreePageFlags.Value, requestedOverflows, page);
 
                     writtableOverflowPage.Flags = PageFlags.Overflow | PageFlags.VariableSizeTreePage;
                     writtableOverflowPage.OverflowSize = len;
@@ -1215,7 +1232,10 @@ namespace Voron.Data.BTrees
 
             foreach (var page in fixedSizeTree.AllPages())
             {
-                _llt.FreePage(page);
+                if (_newPageAllocator != null)
+                    _newPageAllocator.FreePage(page);
+                else
+                    _llt.FreePage(page);
             }
             _fixedSizeTrees.Remove(key);
             Delete(key);

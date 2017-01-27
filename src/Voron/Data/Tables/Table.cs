@@ -31,6 +31,7 @@ namespace Voron.Data.Tables
         public long NumberOfEntries { get; private set; }
 
         private long _overflowPageCount;
+        private NewPageAllocator _tablePageAllocator;
 
         public FixedSizeTree FixedSizeKey
         {
@@ -115,6 +116,7 @@ namespace Voron.Data.Tables
 
             NumberOfEntries = stats->NumberOfEntries;
             _overflowPageCount = stats->OverflowPageCount;
+            _tablePageAllocator = new NewPageAllocator(_tx.LowLevelTransaction);
 
             if (doSchemaValidation)
             {
@@ -607,7 +609,7 @@ namespace Voron.Data.Tables
             if (treeHeader == null)
                 throw new InvalidOperationException($"Cannot find tree {name} in table {Name}");
 
-            tree = Tree.Open(_tx.LowLevelTransaction, _tx, (TreeRootHeader*)treeHeader);
+            tree = Tree.Open(_tx.LowLevelTransaction, _tx, (TreeRootHeader*)treeHeader, newPageAllocator: _tablePageAllocator);
             _treesBySliceCache[name] = tree;
             tree.Name = name;
             return tree;
@@ -616,7 +618,7 @@ namespace Voron.Data.Tables
         private Tree GetTree(TableSchema.SchemaIndexDef idx)
         {
             if (idx.IsGlobal)
-                return _tx.ReadTree(idx.Name);
+                return _tx.ReadTree(idx.Name, newPageAllocator: _tablePageAllocator);
             return GetTree(idx.Name);
         }
 
