@@ -5,12 +5,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
+using Raven.Client.Data;
+using Raven.Server.Documents;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Actions;
 using Raven.Server.NotificationCenter.Actions.Details;
 using Raven.Server.NotificationCenter.Alerts;
 using Sparrow.Collections;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Xunit;
 using Action = Raven.Server.NotificationCenter.Actions.Action;
 
@@ -335,6 +338,24 @@ namespace FastTests.Server.NotificationCenter
             }
         }
 
+        [Fact]
+        public void Should_persist_operation_if_result_requires_persistance()
+        {
+            using (var database = CreateDocumentDatabase())
+            {
+                database.NotificationCenter.Add(OperationChanged.Create(1, new DatabaseOperations.OperationDescription(), new OperationState()
+                {
+                    Result = new PersistableResult()
+                }, false));
+
+                IEnumerable<ActionTableValue> actions;
+                using (database.NotificationCenter.GetStored(out actions))
+                {
+                    Assert.Equal(1, actions.Count());
+                }
+            }
+        }
+
         private class TestWebSockerWriter : IWebsocketWriter
         {
             public List<string> SentNotifications { get; } = new List<string>();
@@ -358,6 +379,18 @@ namespace FastTests.Server.NotificationCenter
                 AlertSeverity.Info,
                 key: customKey ?? "Key",
                 details: new ExceptionDetails(new Exception("Error message")));
+        }
+
+        private class PersistableResult : IOperationResult
+        {
+            public string Message { get; set; }
+
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue();
+            }
+
+            public bool ShouldPersist => true;
         }
     }
 }
