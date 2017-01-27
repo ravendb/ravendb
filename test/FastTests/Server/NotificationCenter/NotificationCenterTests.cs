@@ -311,6 +311,30 @@ namespace FastTests.Server.NotificationCenter
             }
         }
 
+        [Fact]
+        public async Task Duplicated_notification_should_not_arrive_before_postponed_until_date()
+        {
+            using (var database = CreateDocumentDatabase())
+            {
+                var alert = GetSampleAlert();
+                database.NotificationCenter.Add(alert);
+
+                database.NotificationCenter.Postpone(alert.Id, SystemTime.UtcNow.AddDays(1));
+
+                var actions = new AsyncQueue<Action>();
+                var writer = new TestWebSockerWriter();
+                
+                using (database.NotificationCenter.TrackActions(actions, writer))
+                {
+                    database.NotificationCenter.Add(alert);
+                    Assert.False((await actions.TryDequeueAsync(TimeSpan.FromMilliseconds(10))).Item1);
+
+                    database.NotificationCenter.Add(alert);
+                    Assert.False((await actions.TryDequeueAsync(TimeSpan.FromMilliseconds(10))).Item1);
+                }
+            }
+        }
+
         private class TestWebSockerWriter : IWebsocketWriter
         {
             public List<string> SentNotifications { get; } = new List<string>();

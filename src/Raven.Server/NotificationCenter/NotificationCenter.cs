@@ -57,6 +57,13 @@ namespace Raven.Server.NotificationCenter
             if (_watchers.Count == 0)
                 return;
 
+            ActionTableValue existing;
+            using (_actionsStorage.Read(action.Id, out existing))
+            {
+                if (existing?.PostponedUntil > SystemTime.UtcNow)
+                    return;
+            }
+
             foreach (var watcher in _watchers)
             {
                 watcher.ActionsQueue.Enqueue(action);
