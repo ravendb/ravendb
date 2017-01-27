@@ -1,17 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using FastTests;
+﻿using FastTests;
 using FastTests.Utils;
+using FastTests.Voron.FixedSize;
 using Xunit;
 
-namespace SlowTests.Utils
+namespace StressTests.Utils
 {
-    public class SlowChunkedMmapStreamTests : NoDisposalNeeded
+    public class ChunkedMmapStreamStressTests : NoDisposalNeeded
     {
         [Theory]
-        [FastTests.Voron.FixedSize.InlineDataWithRandomSeed(128*1024 + 17, 64)]
+        [InlineDataWithRandomSeed(128*1024 + 17, 64)]
         public void Can_seek_and_read_from_chunked_mmap_file(int totalSize, int chunkSize, int seed)
         {
             using (var chunkedMmapStreamTests = new ChunkedMmapStreamTests())
