@@ -365,6 +365,10 @@ class resources extends viewModelBase {
         this.updateResourceInfo(resource.qualifier, resource.name);
     }
 
+    createNewResource() {
+        this.newDatabase();
+    }
+
     /* TODO: cluster related work
 
     clusterMode = ko.computed(() => shell.clusterMode());
