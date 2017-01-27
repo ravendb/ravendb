@@ -62,12 +62,16 @@ namespace Raven.Server.Documents.TcpHandlers
             if (_isDisposed)
                 return;
 
+
             Stream?.Dispose();
             TcpClient?.Dispose();
 
             _running.Wait();
             try
             {
+                if (_isDisposed)
+                    return;
+
                 _isDisposed = true;
                 MetricsScheduler.Instance.StopTickingMetric(_bytesSentMetric);
                 MetricsScheduler.Instance.StopTickingMetric(_bytesReceivedMetric);
@@ -75,12 +79,16 @@ namespace Raven.Server.Documents.TcpHandlers
                 DocumentDatabase?.RunningTcpConnections.TryRemove(this);
 
                 PinnedBuffer?.Dispose();
+                PinnedBuffer = null;
+                Stream = null;
+                TcpClient = null;
             }
             finally
             {
                 _running.Release();
             }
-            _running.Dispose();
+            // we'll let the _running be finalized, because otherwise we have
+            // a possible race condition on dispose
         }
 
         public void RegisterBytesSent(long bytesAmount)
