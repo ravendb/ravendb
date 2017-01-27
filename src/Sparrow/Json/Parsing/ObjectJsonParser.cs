@@ -409,6 +409,12 @@ namespace Sparrow.Json.Parsing
                     return;
                 }
 
+                if (current is Enum)
+                {
+                    current = current.ToString();
+                    continue;
+                }
+
                 throw new InvalidOperationException("Got unknown type: " + current.GetType() + " " + current);
             }
         }
