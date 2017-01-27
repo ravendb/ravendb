@@ -47,8 +47,6 @@ namespace Voron.Impl.Journal
         {
             long pos = 0;
 
-            var read = false;
-
             foreach (var current in _buffers)
             {
                 if (pos < pageNumber)
@@ -63,10 +61,11 @@ namespace Voron.Impl.Journal
 
                 count -= toRead;
 
-                read = true;
+                if (count == 0)
+                    return true;
             }
 
-            return read;
+            return false;
         }
 
         public void Dispose()
