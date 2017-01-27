@@ -106,8 +106,7 @@ namespace Raven.Server.Documents.Handlers
 
             Thread.Sleep(2000);//TODO: implement me and remove this sleep!
 
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
-            return Task.CompletedTask;
+            return NoContent();
         }
 
         [RavenAction("/databases/*/transformers/set-lock", "POST")]
@@ -129,8 +128,7 @@ namespace Raven.Server.Documents.Handlers
                 transformer.SetLock(mode);
             }
 
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
-            return Task.CompletedTask;
+            return NoContent();
         }
 
         [RavenAction("/databases/*/transformers", "DELETE")]
@@ -140,8 +138,7 @@ namespace Raven.Server.Documents.Handlers
 
             Database.TransformerStore.DeleteTransformer(name);
 
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
-            return Task.CompletedTask;
+            return NoContent();
         }
     }
 }

@@ -20,10 +20,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             var index = Database.IndexStore.GetIndex(name);
             if (index == null)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                return Task.CompletedTask;
-            }
+                return NoContent();
 
             var token = CreateOperationToken();
             var operationId = Database.Operations.GetNextOperationId();
@@ -50,9 +47,8 @@ namespace Raven.Server.Documents.Handlers.Admin
             var names = HttpContext.Request.Query["name"];
             if (types.Count == 0 && names.Count == 0)
             {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
                 Database.IndexStore.StopIndexing();
-                return Task.CompletedTask;
+                return NoContent();
             }
 
             if (types.Count != 0 && names.Count != 0)
@@ -88,8 +84,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 Database.IndexStore.StopIndex(names[0]);
             }
 
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
-            return Task.CompletedTask;
+            return NoContent();
         }
 
         [RavenAction("/databases/*/admin/indexes/start", "POST")]
@@ -99,9 +94,9 @@ namespace Raven.Server.Documents.Handlers.Admin
             var names = HttpContext.Request.Query["name"];
             if (types.Count == 0 && names.Count == 0)
             {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
                 Database.IndexStore.StartIndexing();
-                return Task.CompletedTask;
+
+                return NoContent();
             }
 
             if (types.Count != 0 && names.Count != 0)
@@ -133,8 +128,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 Database.IndexStore.StartIndex(names[0]);
             }
 
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
-            return Task.CompletedTask;
+            return NoContent();
         }
 
         [RavenAction("/databases/*/admin/indexes/enable", "POST")]
@@ -147,8 +141,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             index.Enable();
 
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
-            return Task.CompletedTask;
+            return NoContent();
         }
 
         [RavenAction("/databases/*/admin/indexes/disable", "POST")]
@@ -161,8 +154,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             index.Disable();
 
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
-            return Task.CompletedTask;
+            return NoContent();
         }
     }
 }

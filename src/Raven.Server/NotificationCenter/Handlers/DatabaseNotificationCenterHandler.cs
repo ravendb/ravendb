@@ -47,7 +47,7 @@ namespace Raven.Server.NotificationCenter.Handlers
 
             Database.NotificationCenter.Dismiss(actionId);
 
-            return Task.CompletedTask;
+            return NoContent();
         }
 
         [RavenAction("/databases/*/notification-center/postpone", "POST")]
@@ -58,7 +58,7 @@ namespace Raven.Server.NotificationCenter.Handlers
 
             Database.NotificationCenter.Postpone(actionId, SystemTime.UtcNow.Add(TimeSpan.FromSeconds(timeInSec.Value)));
 
-            return Task.CompletedTask;
+            return NoContent();
         }
     }
 }

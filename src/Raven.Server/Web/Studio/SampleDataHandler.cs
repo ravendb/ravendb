@@ -45,8 +45,7 @@ namespace Raven.Server.Web.Studio
                     }
                 }
 
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
-                return Task.CompletedTask;
+                return NoContent();
             }
         }
 

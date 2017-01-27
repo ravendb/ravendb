@@ -180,7 +180,7 @@ namespace Raven.Server.Documents.Handlers
                 await Database.TxMerger.Enqueue(cmd);
             }
 
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
+            NoContentStatus();
         }
 
         private class MergedHiLoReturnCommand : TransactionOperationsMerger.MergedTransactionCommand

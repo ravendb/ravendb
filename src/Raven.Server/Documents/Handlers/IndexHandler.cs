@@ -121,8 +121,7 @@ namespace Raven.Server.Documents.Handlers
 
             Thread.Sleep(2000);//TODO: implement me and remove this sleep!
 
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
-            return Task.CompletedTask;
+            return NoContent();
         }
 
         [RavenAction("/databases/*/indexes/debug", "GET")]
@@ -330,7 +329,7 @@ namespace Raven.Server.Documents.Handlers
 
             var newIndexId = Database.IndexStore.ResetIndex(name);
 
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
+            NoContentStatus();
 
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
@@ -445,8 +444,7 @@ namespace Raven.Server.Documents.Handlers
                 index.SetLock(mode);
             }
 
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
-            return Task.CompletedTask;
+            return NoContent();
         }
 
         [RavenAction("/databases/*/indexes/set-priority", "POST")]
@@ -468,8 +466,7 @@ namespace Raven.Server.Documents.Handlers
                 index.SetPriority(priority);
             }
 
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
-            return Task.CompletedTask;
+            return NoContent();
         }
 
         [RavenAction("/databases/*/indexes/errors", "GET")]

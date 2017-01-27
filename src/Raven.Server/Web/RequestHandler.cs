@@ -2,7 +2,9 @@
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
+using System.Net;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 
@@ -294,6 +296,19 @@ namespace Raven.Server.Web
             return null; // TODO [ppekrol] we cannot write Headers after response have started without buffering
             //var sw = Stopwatch.StartNew();
             //return new DisposableAction(() => HttpContext.Response.Headers.Add(Constants.Headers.RequestTime, sw.ElapsedMilliseconds.ToString(CultureInfo.InvariantCulture)));
+        }
+
+        protected Task NoContent()
+        {
+            NoContentStatus();
+
+            return Task.CompletedTask;
+        }
+
+        protected void NoContentStatus()
+        {
+            HttpContext.Response.Headers.Remove("Content-Type");
+            HttpContext.Response.StatusCode = (int) HttpStatusCode.NoContent;
         }
     }
 }

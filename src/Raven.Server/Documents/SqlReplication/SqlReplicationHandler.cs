@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.SqlReplication
                 var factoryName = GetStringQueryString("factoryName");
                 var connectionString = GetStringQueryString("connectionString");
                 RelationalDatabaseWriter.TestConnection(factoryName, connectionString);
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent; // No Content
+                NoContentStatus();
             }
             catch (Exception ex)
             {
@@ -152,8 +152,7 @@ namespace Raven.Server.Documents.SqlReplication
                 tx.Commit();
             }
 
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;  // NoContent
-            return Task.CompletedTask;
+            return NoContent();
         }
     }
 }

@@ -51,7 +51,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                 if (string.IsNullOrEmpty(options?.TransformScript))
                 {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
+                    NoContentStatus();
                     return;
                 }
 
@@ -74,7 +74,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     throw new InvalidOperationException("Incorrect transform script", e);
                 }
 
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
+                NoContentStatus();
             }
         }
 

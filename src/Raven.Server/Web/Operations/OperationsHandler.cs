@@ -35,8 +35,7 @@ namespace Raven.Server.Web.Operations
             // ReSharper disable once PossibleInvalidOperationException
             Database.Operations.KillOperation(id.Value);
 
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
-            return Task.CompletedTask;
+            return NoContent();
         }
 
         [RavenAction("/databases/*/operations", "GET")]

@@ -378,7 +378,7 @@ namespace Raven.Server.Documents.Handlers
 
                 cmd.ExceptionDispatchInfo?.Throw();
 
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
+                NoContentStatus();
             }
         }
 
