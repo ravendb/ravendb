@@ -7,11 +7,9 @@
 using System.Threading.Tasks;
 using Xunit;
 using Raven.Tests.Core.Utils.Entities;
-using Raven.NewClient.Client.Bundles.Versioning;
 using System.Linq;
 using FastTests;
 using Raven.NewClient.Client.Exceptions.Versioning;
-using Raven.NewClient.Client.Http;
 
 namespace NewClientTests.NewClient.FastTests.Versioning
 {
@@ -38,7 +36,7 @@ namespace NewClientTests.NewClient.FastTests.Versioning
                 using (var session = store.OpenAsyncSession())
                 {
                     var companiesRevisions = await session.Advanced.GetRevisionsForAsync<Company>(company.Id);
-                    Assert.Equal(2, companiesRevisions.Length);
+                    Assert.Equal(2, companiesRevisions.Count);
                     Assert.Equal("Company Name", companiesRevisions[0].Name);
                     Assert.Equal("Hibernating Rhinos", companiesRevisions[1].Name);
                 }
@@ -75,7 +73,7 @@ namespace NewClientTests.NewClient.FastTests.Versioning
                 using (var session = store.OpenAsyncSession())
                 {
                     var companiesRevisions = await session.Advanced.GetRevisionsForAsync<Company>("companies/1");
-                    Assert.Equal(0, companiesRevisions.Length);
+                    Assert.Equal(0, companiesRevisions.Count);
                 }
             }
         }
@@ -112,7 +110,7 @@ namespace NewClientTests.NewClient.FastTests.Versioning
                 {
                     Assert.Empty(await session.Advanced.GetRevisionsForAsync<Comment>(comment.Id));
                     var users = await session.Advanced.GetRevisionsForAsync<User>(user.Id);
-                    Assert.Equal(1, users.Length);
+                    Assert.Equal(1, users.Count);
                 }
             }
         }
@@ -143,7 +141,7 @@ namespace NewClientTests.NewClient.FastTests.Versioning
                 using (var session = store.OpenAsyncSession())
                 {
                     var companiesRevisions = await session.Advanced.GetRevisionsForAsync<Company>(company.Id);
-                    Assert.Equal(2, companiesRevisions.Length);
+                    Assert.Equal(2, companiesRevisions.Count);
                     Assert.Equal("Company Name", companiesRevisions[0].Name);
                     Assert.Equal("Hibernating Rhinos", companiesRevisions[1].Name);
                 }
@@ -205,7 +203,7 @@ namespace NewClientTests.NewClient.FastTests.Versioning
                 using (var session = store.OpenAsyncSession())
                 {
                     var revisions = await session.Advanced.GetRevisionsForAsync<Company>(company.Id);
-                    Assert.Equal(5, revisions.Length);
+                    Assert.Equal(5, revisions.Count);
                     Assert.Equal("Company #2: 5", revisions[0].Name);
                     Assert.Equal("Company #2: 9", revisions[4].Name);
                 }
@@ -255,7 +253,7 @@ namespace NewClientTests.NewClient.FastTests.Versioning
                 {
                     var companies = await session.Advanced.GetRevisionsForAsync<Company>("companies/1");
                     var users = await session.Advanced.GetRevisionsForAsync<User>("users/1");
-                    Assert.Equal(5, companies.Length);
+                    Assert.Equal(5, companies.Count);
                     Assert.Empty(users);
                 }
 
@@ -269,9 +267,9 @@ namespace NewClientTests.NewClient.FastTests.Versioning
                 {
                     var companies = await session.Advanced.GetRevisionsForAsync<Company>("companies/1");
                     var users = await session.Advanced.GetRevisionsForAsync<User>("users/1");
-                    Assert.Equal(5, companies.Length);
+                    Assert.Equal(5, companies.Count);
                     Assert.Equal("New Company", companies.Last().Name);
-                    Assert.Equal(1, users.Length);
+                    Assert.Equal(1, users.Count);
                 }
             }
         }

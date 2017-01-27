@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Raven.NewClient.Client.Document;
+using Raven.NewClient.Extensions;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -8,26 +9,51 @@ namespace Raven.NewClient.Client.Commands
 {
     public class GetRevisionOperation
     {
-        private static readonly Logger _logger =
-            LoggingSource.Instance.GetLogger<LoadOperation>("Raven.NewClient.Client");
+        private readonly InMemoryDocumentSessionOperations _session;
+        private readonly string _id;
+        private readonly int _start;
+        private readonly int _pageSize;
 
-        public GetRevisionOperation()
+        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<LoadOperation>("Raven.NewClient.Client");
+
+        private BlittableArrayResult _result;
+
+        public GetRevisionOperation(InMemoryDocumentSessionOperations session, string id, int start, int pageSize)
         {
+            if (session == null)
+                throw new ArgumentNullException(nameof(session));
+            if (id == null)
+                throw new ArgumentNullException(nameof(id));
+
+            _session = session;
+            _id = id;
+            _start = start;
+            _pageSize = pageSize;
         }
 
-        protected void LogGetRevision()
+        public GetRevisionCommand CreateRequest()
         {
-            //TODO
+            return new GetRevisionCommand(_id, _start, _pageSize);
         }
 
-        public GetRevisionCommand CreateRequest(string key, int start, int pageSize)
+        public void SetResult(BlittableArrayResult result)
         {
-            return new GetRevisionCommand()
+            _result = result;
+        }
+
+        public List<T> Complete<T>()
+        {
+            var results = new List<T>();
+            for (var i = 0; i < _result.Results.Length; i++)
             {
-                Key = key,
-                Start = start,
-                PageSize = pageSize
-            };
+                var document = (BlittableJsonReaderObject)_result.Results[i];
+                var metadata = document.GetMetadata();
+                var id = metadata.GetId();
+
+                results[i] = (T)_session.ConvertToEntity(typeof(T), id, document);
+            }
+
+            return results;
         }
     }
 }
