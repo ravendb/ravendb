@@ -19,7 +19,7 @@ namespace Raven.Server.NotificationCenter.Actions.Server
             var json = base.ToJson();
 
             json[nameof(ResourceName)] = ResourceName;
-            json[nameof(ChangeType)] = ChangeType.ToString();
+            json[nameof(ChangeType)] = ChangeType;
 
             return json;
         }

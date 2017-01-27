@@ -25,8 +25,8 @@ namespace Raven.Server.NotificationCenter.Actions
             var json = base.ToJson();
             
             json[nameof(Key)] = Key;
-            json[nameof(Severity)] = Severity.ToString();
-            json[nameof(AlertType)] = AlertType.ToString();
+            json[nameof(Severity)] = Severity;
+            json[nameof(AlertType)] = AlertType;
             json[nameof(Details)] = Details?.ToJson();
 
             return json;
