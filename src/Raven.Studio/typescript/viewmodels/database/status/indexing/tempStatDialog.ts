@@ -8,8 +8,18 @@ class tempStatDialog extends dialogViewModelBase {
 
     constructor(private obj: any, replacer: (key: string, value: string) => any = null) {
         super(null);
+
         aceEditorBindingHandler.install();
-        this.json(JSON.stringify(obj, replacer, 4));
+
+        if (ko.isObservable(obj)) {
+            const dynamicObj = obj as KnockoutObservable<any>;
+            this.json(JSON.stringify(obj(), replacer, 4));
+            dynamicObj.subscribe(v => {
+                this.json(JSON.stringify(v, replacer, 4));
+            });
+        } else {
+            this.json(JSON.stringify(obj, replacer, 4));
+        }
     }
 
     close() {

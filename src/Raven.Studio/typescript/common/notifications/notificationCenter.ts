@@ -1,5 +1,6 @@
 ﻿import resource = require("models/resources/resource");
 import alertArgs = require("common/alertArgs");
+import app = require("durandal/app");
 
 import abstractAction = require("common/notifications/actions/abstractAction");
 import alert = require("common/notifications/actions/alert");
@@ -8,9 +9,11 @@ import operation = require("common/notifications/actions/operation");
 import resourceNotificationCenterClient = require("common/resourceNotificationCenterClient");
 import serverNotificationCenterClient = require("common/serverNotificationCenterClient");
 import changeSubscription = require("common/changeSubscription");
+import notificationCenterOperationsWatch = require("common/notifications/notificationCenterOperationsWatch");
 
 import postponeActionCommand = require("commands/operations/postponeActionCommand");
 import dismissActionCommand = require("commands/operations/dismissActionCommand");
+import tempStatDialog = require("viewmodels/database/status/indexing/tempStatDialog");
 
 class notificationCenter {
     static instance = new notificationCenter();
@@ -33,6 +36,9 @@ class notificationCenter {
     //TODO: recent errors 
     globalActions = ko.observableArray<abstractAction>();
     resourceActions = ko.observableArray<abstractAction>();
+
+    globalOperationsWatch = new notificationCenterOperationsWatch();
+    resourceOperationsWatch = new notificationCenterOperationsWatch();
 
     allActions: KnockoutComputed<abstractAction[]>;
 
@@ -84,16 +90,20 @@ class notificationCenter {
     }
 
     setupGlobalNotifications(serverWideClient: serverNotificationCenterClient) {
+        this.globalOperationsWatch.configureFor(null);
         serverWideClient.watchAllAlerts(e => this.onAlertReceived(e, this.globalActions, null));
         serverWideClient.watchAllOperations(e => this.onOperationChangeReceived(e, this.globalActions, null));
         serverWideClient.watchAllNotificationUpdated(e => this.onNotificationUpdated(e, this.globalActions, null));
     }
 
     configureForResource(client: resourceNotificationCenterClient): changeSubscription[] {
+        const rs = client.getResource();
+        this.resourceOperationsWatch.configureFor(rs);
+
         return [
-            client.watchAllAlerts(e => this.onAlertReceived(e, this.resourceActions, client.getResource())),
-            client.watchAllOperations(e => this.onOperationChangeReceived(e, this.resourceActions, client.getResource())),
-            client.watchAllNotificationUpdated(e => this.onNotificationUpdated(e, this.resourceActions, client.getResource()))
+            client.watchAllAlerts(e => this.onAlertReceived(e, this.resourceActions, rs)),
+            client.watchAllOperations(e => this.onOperationChangeReceived(e, this.resourceActions, rs)),
+            client.watchAllNotificationUpdated(e => this.onNotificationUpdated(e, this.resourceActions, rs))
         ];
     }
 
@@ -121,6 +131,8 @@ class notificationCenter {
             const operationChangedObject = new operation(resource, operationDto);
             actionsContainer.push(operationChangedObject);
         }
+
+        this.getOperationsWatch(resource).onOperationChange(operationDto);
     }
 
     private onNotificationUpdated(notificationUpdatedDto: Raven.Server.NotificationCenter.Actions.NotificationUpdated, actionsContainer: KnockoutObservableArray<abstractAction>,
@@ -132,12 +144,16 @@ class notificationCenter {
         }
     }
 
+    private getOperationsWatch(rs: resource) {
+        return rs ? this.resourceOperationsWatch : this.globalOperationsWatch;
+    }
+
     monitorOperation<TProgress extends Raven.Client.Data.IOperationProgress,
         TResult extends Raven.Client.Data.IOperationResult>(rs: resource,
         operationId: number,
         onProgress: (progress: TProgress) => void = null): JQueryPromise<TResult> {
-        //TODO:return this.operations.monitorOperation(rs, operationId, onProgress);
-        return null; //TODO: delete me
+
+        return this.getOperationsWatch(rs).monitorOperation(operationId, onProgress);
     }
 
     postpone(action: abstractAction, timeInSeconds: number) {
@@ -173,7 +189,24 @@ class notificationCenter {
     }
 
     openDetails(action: abstractAction) {
-        console.log("open details");
+
+        //TODO: it is only temporary solution to display progress/details as JSON in dialog 
+
+        if (action instanceof alert) {
+            const currentAlert = action as alert;
+            app.showBootstrapDialog(new tempStatDialog(currentAlert.details));
+        } else if (action instanceof operation) {
+            const op = action as operation;
+
+            const dialogText = ko.pureComputed(() => {
+                const completed = op.isCompleted();
+
+                return completed ? op.result() : op.progress();
+            });
+            app.showBootstrapDialog(new tempStatDialog(dialogText));
+        } else {
+            throw new Error("Unable to handle details for: " + action);
+        }
     }
 
     /* TODO

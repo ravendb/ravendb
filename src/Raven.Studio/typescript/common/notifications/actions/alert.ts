@@ -8,6 +8,7 @@ class alert extends abstractAction {
     alertType = ko.observable<Raven.Server.NotificationCenter.Alerts.AlertType>();
     key = ko.observable<string>();
     severity = ko.observable<Raven.Server.NotificationCenter.Alerts.AlertSeverity>();
+    details = ko.observable<Raven.Server.NotificationCenter.Actions.Details.IActionDetails>();
 
     isError: KnockoutObservable<boolean>;
     isWarning: KnockoutObservable<boolean>;
@@ -18,6 +19,7 @@ class alert extends abstractAction {
         this.updateWith(dto);
 
         this.initStatus();
+        this.hasDetails = ko.pureComputed(() => !!this.details());
     }
 
     private initStatus() {
@@ -31,6 +33,7 @@ class alert extends abstractAction {
 
         this.alertType(incomingChanges.AlertType);
         this.key(incomingChanges.Key);
+        this.details(incomingChanges.Details);
         this.severity(incomingChanges.Severity);
     }
 

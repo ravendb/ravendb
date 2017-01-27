@@ -46,6 +46,11 @@ class operation extends abstractAction {
         this.isCancelled = ko.pureComputed(() => this.status() === "Canceled");
         this.isFailure = ko.pureComputed(() => this.status() === "Faulted");
         this.isCompleted = ko.pureComputed(() => this.status() !== "InProgress");
+        this.hasDetails = ko.pureComputed(() => {
+            const hasResult = !!this.result();
+            const hasProgress = !!this.progress();
+            return hasResult || hasProgress;
+        });
         this.isPercentageProgress = ko.pureComputed(() => {
             const progress = this.progress();
 
