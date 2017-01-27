@@ -101,6 +101,7 @@ class resources extends viewModelBase {
         super.attached();
         this.updateHelpLink("Z8DC3Q");
         ko.postbox.publish("SetRawJSONUrl", appUrl.forDatabasesRawData());
+        this.updateUrl(appUrl.forResources());
     }
 
     private fetchResources(): JQueryPromise<Raven.Client.Data.ResourcesInfo> {
