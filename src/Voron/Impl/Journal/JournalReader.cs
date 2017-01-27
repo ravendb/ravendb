@@ -223,7 +223,7 @@ namespace Voron.Impl.Journal
                     {
                         // TxId is bigger then the last one by nore the '1' but has valid hash which mean we lost transactions in the middle
                         throw new InvalidDataException(
-                            $"Transaction has Valid(!) hash, however Trasaction Id = {current->TransactionId} is invalid. Journal file might be corrupted");
+                            $"Transaction has valid(!) hash with invalid transaction id {current->TransactionId}, the last valid transaction id is {LastTransactionHeader->TransactionId}. Journal file might be corrupted");
                     }
                 }
 
