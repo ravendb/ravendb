@@ -114,12 +114,10 @@ class timeSeriesTypes extends viewModelBase {
         timeSeriesTypes.isInitialized(false);
     }
 
-    createNotifications(): Array<changeSubscription> {
-        return [
-            /*TODO: Implement this in changes api:
-            changesContext.currentResourceChangesApi().watchAllTimeSeries((e: timeSeriesChangeNotification) => this.refreshKeys()),
-            changesContext.currentResourceChangesApi().watchTimeSeriesBulkOperation(() => this.refreshKeys())*/
-        ];
+    afterClientApiConnected(): void {
+        const changesApi = this.changesContext.resourceChangesApi();
+        //TODO: this.addNotification(changesApi.watchAllTimeSeries((e: timeSeriesChangeNotification) => this.refreshKeys()));
+        //TODO: this.addNotification(changesApi.watchTimeSeriesBulkOperation(() => this.refreshKeys()));
     }
 
     createPostboxSubscriptions(): Array<KnockoutSubscription> {

@@ -135,7 +135,7 @@ namespace Raven.Server.Web.System
                 [nameof(ResourceInfo.Errors)] = online
                     ? db.IndexStore.GetIndexes().Sum(index => index.GetErrors().Count)
                     : 0,
-                [nameof(ResourceInfo.Alerts)] = online ? db.Alerts.GetAlertCount() : 0,
+                [nameof(ResourceInfo.Alerts)] = online ? db.NotificationCenter.GetAlertCount() : 0,
                 [nameof(ResourceInfo.UpTime)] = online ? GetUptime(db).ToString() : null,
                 [nameof(ResourceInfo.BackupInfo)] = backupInfo,
                 [nameof(DatabaseInfo.DocumentsCount)] = online

@@ -38,8 +38,9 @@ class status extends viewModelBase {
         this.retrieveLastSynchronizedEtags();
     }
 
-    createNotifications(): Array<changeSubscription> {
-        return [ /* TODO changesContext.currentResourceChangesApi().watchFsSync((e: synchronizationUpdateNotification) => this.processFsSync(e))  */];
+    afterClientApiConnected(): void {
+        const changesApi = this.changesContext.resourceChangesApi();
+        //TODO: this.addNotification(changesApi.watchFsSync((e: synchronizationUpdateNotification) => this.processFsSync(e)));
     }
 
     showException(exception: any) {

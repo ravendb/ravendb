@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client.Data;
-using Raven.Server.Alerts;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
@@ -14,6 +13,8 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.SqlReplication;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.Transformers;
+using Raven.Server.NotificationCenter;
+using Raven.Server.NotificationCenter.Actions;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow;
@@ -66,7 +67,8 @@ namespace Raven.Server.Documents
             TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
             HugeDocuments = new HugeDocuments(configuration.Databases.MaxCollectionSizeHugeDocuments,
                 configuration.Databases.MaxWarnSizeHugeDocuments);
-            ConfigurationStorage = new ConfigurationStorage(this, serverStore);
+            ConfigurationStorage = new ConfigurationStorage(this);
+            NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.ActionsStorage, Name);
             DatabaseInfoCache = serverStore?.DatabaseInfoCache;
         }
 
@@ -100,6 +102,8 @@ namespace Raven.Server.Documents
 
         public DocumentsNotifications Notifications { get; }
 
+        public NotificationCenter.NotificationCenter NotificationCenter { get; }
+
         public DatabaseOperations Operations { get; private set; }
 
         public HugeDocuments HugeDocuments { get; }
@@ -115,8 +119,6 @@ namespace Raven.Server.Documents
         public ConfigurationStorage ConfigurationStorage { get; private set; }
 
         public IndexesEtagsStorage IndexMetadataPersistence => ConfigurationStorage.IndexesEtagsStorage;
-
-        public AlertsStorage Alerts => ConfigurationStorage.AlertsStorage;
 
         public SqlReplicationLoader SqlReplicationLoader { get; private set; }
 
@@ -191,6 +193,9 @@ namespace Raven.Server.Documents
         private void InitializeInternal()
         {
             TxMerger.Start();
+
+            ConfigurationStorage.InitializeActionsStorage();
+
             _indexStoreTask = IndexStore.InitializeAsync();
             _transformerStoreTask = TransformerStore.InitializeAsync();
             SqlReplicationLoader.Initialize();
@@ -220,8 +225,9 @@ namespace Raven.Server.Documents
 
             //Index Metadata Store shares Voron env and context pool with documents storage, 
             //so replication of both documents and indexes/transformers can be made within one transaction
-            ConfigurationStorage.Initialize(IndexStore, TransformerStore);
+            ConfigurationStorage.InitializeIndexesEtagsStorage(IndexStore, TransformerStore);
             DocumentReplicationLoader.Initialize();
+            NotificationCenter.Initialize();
         }
 
         public void Dispose()
@@ -352,7 +358,7 @@ namespace Raven.Server.Documents
                     [nameof(Size.SizeInBytes)] = size.SizeInBytes
                 },
                 [nameof(ResourceInfo.Errors)] = IndexStore.GetIndexes().Sum(index => index.GetErrors().Count),
-                [nameof(ResourceInfo.Alerts)] = Alerts.GetAlertCount(),
+                [nameof(ResourceInfo.Alerts)] = NotificationCenter.GetAlertCount(),
                 [nameof(ResourceInfo.UpTime)] = null, //it is shutting down
                 [nameof(ResourceInfo.BackupInfo)] = BundleLoader.GetBackupInfo(),
                 [nameof(DatabaseInfo.DocumentsCount)] = DocumentsStorage.GetNumberOfDocuments(),

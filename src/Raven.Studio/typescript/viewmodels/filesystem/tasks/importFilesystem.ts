@@ -2,7 +2,6 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import filesystem = require("models/filesystem/filesystem");
 import messagePublisher = require("common/messagePublisher");
 import importFilesystemCommand = require("commands/filesystem/importFilesystemCommand");
-import getOperationStatusCommand = require("commands/operations/getOperationStatusCommand");
 //import fsCheckSufficientDiskSpaceCommand = require("commands/filesystem/fsCheckSufficientDiskSpaceCommand");
 import eventsCollector = require("common/eventsCollector");
 
@@ -103,9 +102,9 @@ class importDatabase extends viewModelBase {
     }
 
     private waitForOperationToComplete(fs: filesystem, operationId: number) {
-        new getOperationStatusCommand(fs, operationId)
+        /* TODO new getOperationStatusCommand(fs, operationId)
             .execute();
-        //TODO: .done((result: dataDumperOperationStatusDto) => this.importStatusRetrieved(fs, operationId, result));
+            .done((result: dataDumperOperationStatusDto) => this.importStatusRetrieved(fs, operationId, result)); */
     }
 
     private importStatusRetrieved(fs: filesystem, operationId: number, result: dataDumperOperationStatusDto) {

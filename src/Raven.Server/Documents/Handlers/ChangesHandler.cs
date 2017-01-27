@@ -91,13 +91,11 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task HandleConnection(WebSocket webSocket, JsonOperationContext context)
         {
-            // this flag can be used to detect if server was restarted between changes connections on client side
-            var sendStartTime = GetBoolValueQueryString("sendServerStartTime", false).GetValueOrDefault(false);
             var throttleConnection = GetBoolValueQueryString("throttleConnection", false).GetValueOrDefault(false);
 
             var connection = new NotificationsClientConnection(webSocket, Database);
             Database.Notifications.Connect(connection);
-            var sendTask = connection.StartSendingNotifications(sendStartTime, throttleConnection);
+            var sendTask = connection.StartSendingNotifications(throttleConnection);
             var debugTag = "changes/" + connection.Id;
             JsonOperationContext.ManagedPinnedBuffer segment1,segment2;
             using (context.GetManagedBuffer(out segment1))
@@ -182,8 +180,7 @@ namespace Raven.Server.Documents.Handlers
                 Database.Notifications.Disconnect(id);
             }
 
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
-            return Task.CompletedTask;
+            return NoContent();
         }
     }
 }

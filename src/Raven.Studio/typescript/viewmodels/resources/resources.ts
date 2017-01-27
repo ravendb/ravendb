@@ -89,8 +89,9 @@ class resources extends viewModelBase {
 
         // we can't use createNotifications here, as it is called after *resource changes API* is connected, but user
         // can enter this view and never select resource
-        this.addNotification(this.changesContext.globalChangesApi().watchItemsStartingWith("db/", (e: Raven.Server.Alerts.GlobalAlertNotification) => this.fetchResource(e)));
-        this.addNotification(this.changesContext.globalChangesApi().watchReconnect(() => this.fetchResources()));
+
+        this.addNotification(this.changesContext.serverNotifications().watchResourceChangeStartingWith("db/", (e: Raven.Server.NotificationCenter.Actions.Server.ResourceChanged) => this.fetchResource(e)));
+        this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.fetchResources()));
 
         // TODO: add notification for fs, cs, ts
 
@@ -110,17 +111,17 @@ class resources extends viewModelBase {
             .done(info => this.resources(new resourcesInfo(info)));
     }
 
-    private fetchResource(e: Raven.Server.Alerts.GlobalAlertNotification) {
-        const qualiferAndName = resourceInfo.extractQualifierAndNameFromNotification(e.Id);
+    private fetchResource(e: Raven.Server.NotificationCenter.Actions.Server.ResourceChanged) {
+        const qualiferAndName = resourceInfo.extractQualifierAndNameFromNotification(e.ResourceName);
 
-        switch (e.Operation) {
-            case "Loaded":
-            case "Write":
+        switch (e.ChangeType) {
+            case "Load":
+            case "Put":
                 this.updateResourceInfo(qualiferAndName.qualifier, qualiferAndName.name);
                 break;
 
             case "Delete":
-                let resource = this.resources().sortedResources().find(rs => rs.qualifiedName === e.Id);
+                const resource = this.resources().sortedResources().find(rs => rs.qualifiedName === e.ResourceName);
                 if (resource) {
                     this.removeResource(resource);
                 }

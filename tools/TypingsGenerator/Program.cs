@@ -10,13 +10,14 @@ using Raven.Client.Data.Queries;
 using Raven.Client.Indexing;
 using Raven.Client.Smuggler;
 using Raven.Json.Linq;
-using Raven.Server.Alerts;
 using Raven.Server.Commercial;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.Documents.SqlReplication;
 using Raven.Server.Documents.PeriodicExport;
+using Raven.Server.NotificationCenter.Actions;
+using Raven.Server.NotificationCenter.Actions.Server;
 using Sparrow.Json;
 using TypeScripter;
 using TypeScripter.TypeScript;
@@ -75,6 +76,12 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DatabaseStatistics));
             scripter.AddType(typeof(IndexDefinition));
 
+            // actions
+            scripter.AddType(typeof(AlertRaised));
+            scripter.AddType(typeof(NotificationUpdated));
+            scripter.AddType(typeof(OperationChanged));
+            scripter.AddType(typeof(ResourceChanged));
+
             // notifications
             scripter.AddType(typeof(OperationStatusChangeNotification));
             scripter.AddType(typeof(DeterminateProgress));
@@ -83,12 +90,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DocumentChangeNotification));
             scripter.AddType(typeof(IndexChangeNotification));
             scripter.AddType(typeof(TransformerChangeNotification));
-            scripter.AddType(typeof(DatabaseOperations.PendingOperation));
-
-            // alerts
-            scripter.AddType(typeof(Alert));
-            scripter.AddType(typeof(GlobalAlertNotification));
-            scripter.AddType(typeof(AlertNotification));
+            scripter.AddType(typeof(DatabaseOperations.Operation));
             
             // indexes
             scripter.AddType(typeof(IndexStats));

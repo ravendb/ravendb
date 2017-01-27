@@ -8,8 +8,6 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client.Data;
-using Raven.Server.Alerts;
-using Raven.Server.Web.Operations;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -48,7 +46,6 @@ namespace Raven.Server.Documents
 
         private int _watchAllDocuments;
         private int _watchAllOperations;
-        private int _watchAllAlerts;
         private int _watchAllIndexes;
         private int _watchAllTransformers;
 
@@ -339,66 +336,8 @@ namespace Raven.Server.Documents
                 });
         }
 
-        private void SendStartTime()
+        public async Task StartSendingNotifications(bool throttleConnection)
         {
-            var value = new DynamicJsonValue
-            {
-                ["Type"] = "ServerStartTimeNotification",
-                ["Value"] = _documentDatabase.StartTime
-            };
-
-            if (_disposeToken.IsCancellationRequested == false)
-                _sendQueue.Enqueue(new NotificationValue
-                {
-                    ValueToSend = value,
-                    AllowSkip = false
-                });
-        }
-
-        public void WatchAllAlerts()
-        {
-            Interlocked.Increment(ref _watchAllAlerts);
-        }
-
-        public void UnwatchAllAlerts()
-        {
-            Interlocked.Decrement(ref _watchAllAlerts);
-        }
-
-        public void SendAlertNotification(AlertNotification notification)
-        {
-            if (_watchAllAlerts > 0)
-            {
-                Send(notification);
-            }
-        }
-
-        private void Send(AlertNotification notification)
-        {
-            var value = new DynamicJsonValue
-            {
-                ["Type"] = "AlertNotification",
-                ["Value"] = new DynamicJsonValue
-                {
-                    [nameof(AlertNotification.Global)] = notification.Global,
-                    [nameof(AlertNotification.Alert)] = notification.Alert.ToJson()
-                }
-            };
-
-            if (_disposeToken.IsCancellationRequested == false)
-                _sendQueue.Enqueue(new NotificationValue
-                {
-                    ValueToSend = value,
-                    AllowSkip = false
-                });
-        }
-
-
-        public async Task StartSendingNotifications(bool sendStartTime, bool throttleConnection)
-        {
-            if (sendStartTime)
-                SendStartTime();
-
             JsonOperationContext context;
             using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
@@ -583,14 +522,6 @@ namespace Raven.Server.Documents
             else if (Equals(command, "unwatch-operations"))
             {
                 UnwatchAllOperations();
-            }
-            else if (Equals(command, "watch-alerts"))
-            {
-                WatchAllAlerts();
-            }
-            else if (Equals(command, "unwatch-alerts"))
-            {
-                UnwatchAllAlerts();
             }
             /*else if (Match(command, "watch-replication-conflicts"))
             {

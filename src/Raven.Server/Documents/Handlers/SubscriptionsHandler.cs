@@ -40,9 +40,7 @@ namespace Raven.Server.Documents.Handlers
 
             Database.SubscriptionStorage.DeleteSubscription(id);
 
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent; // NoContent
-
-            return Task.CompletedTask;
+            return NoContent();
         }
 
         [RavenAction("/databases/*/subscriptions", "GET", "/databases/{databaseName:string}/subscriptions/running")]
@@ -135,8 +133,7 @@ namespace Raven.Server.Documents.Handlers
                 return Task.CompletedTask;
             }
 
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
-            return Task.CompletedTask;
+            return NoContent();
         }
     }
 }

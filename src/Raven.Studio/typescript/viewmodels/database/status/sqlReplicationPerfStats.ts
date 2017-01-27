@@ -63,8 +63,9 @@ class sqlReplicationPerfStats extends viewModelBase {
         this.refreshSubscription = this.refreshGraphObservable.throttle(5000).subscribe((e) => this.refresh());
     }
 
-    createNotifications(): Array<changeSubscription> {
-        return [changesContext.currentResourceChangesApi().watchDocsStartingWith("Raven/SqlReplication/Status", e => this.processUpdate(e)) ];
+    afterClientApiConnected(): void {
+        const changesApi = this.changesContext.resourceChangesApi();
+        this.addNotification(changesApi.watchDocsStartingWith("Raven/SqlReplication/Status", e => this.processUpdate(e)));
     }
 
     processUpdate(e: documentChangeNotificationDto) {

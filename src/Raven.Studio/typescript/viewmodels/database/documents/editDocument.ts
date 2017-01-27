@@ -136,10 +136,8 @@ class editDocument extends viewModelBase {
         return canActivateResult;
     }
 
-    createNotifications(): Array<changeSubscription> {
+    afterClientApiConnected(): void {
         this.syncChangeNotification();
-
-        return [];
     }
 
     private syncChangeNotification() {
@@ -253,7 +251,7 @@ class editDocument extends viewModelBase {
     }
 
     createDocumentChangeNotification(docId: string): changeSubscription {
-        return this.changesContext.currentResourceChangesApi().watchDocument(docId, (n: Raven.Abstractions.Data.DocumentChangeNotification) => this.documentChangeNotification(n));
+        return this.changesContext.resourceChangesApi().watchDocument(docId, (n: Raven.Abstractions.Data.DocumentChangeNotification) => this.documentChangeNotification(n));
     }
 
     documentChangeNotification(n: Raven.Abstractions.Data.DocumentChangeNotification): void {

@@ -5,62 +5,72 @@ import resource = require("models/resources/resource");
 import changeSubscription = require("common/changeSubscription");
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
-import adminWatchClient = require("common/adminWatchClient");
+import serverNotificationCenterClient = require("common/serverNotificationCenterClient");
+import resourceNotificationCenterClient = require("common/resourceNotificationCenterClient");
 import EVENTS = require("common/constants/events");
 
 import resourceDisconnectedEventArgs = require("viewmodels/resources/resourceDisconnectedEventArgs");
+import notificationCenter = require("common/notifications/notificationCenter");
 
 class changesContext {
     static default = new changesContext();
+    
+    serverNotifications = ko.observable<serverNotificationCenterClient>();
+    resourceNotifications = ko.observable<resourceNotificationCenterClient>();
 
-    currentResourceChangesApi = ko.observable<changesApi>();
-    globalChangesApi = ko.observable<adminWatchClient>();
+    resourceChangesApi = ko.observable<changesApi>();
+    afterChangesApiConnection = $.Deferred<changesApi>();
 
-    afterConnection = $.Deferred<changesApi>();
-    afterConnectionResolved = false;
-
-    sentSubscriptions: changeSubscription[];
+    private globalResourceSubscriptions: changeSubscription[] = [];
 
     constructor() {
         window.addEventListener("beforeunload", () => {
             this.disconnectFromResourceChangesApi("ChangingResource");
-            this.globalChangesApi().dispose();
+            this.serverNotifications().dispose();
+
+            if (this.resourceNotifications()) {
+                this.resourceNotifications().dispose();
+            }
         });
 
-        this.currentResourceChangesApi.subscribe(newValue => {
+        this.resourceChangesApi.subscribe(newValue => {
             if (!newValue) {
-                if (this.afterConnectionResolved) {
-                    this.afterConnection = $.Deferred<changesApi>();
-                    this.afterConnectionResolved = false;
+                if (this.afterChangesApiConnection.state() === "resolved") {
+                    this.afterChangesApiConnection = $.Deferred<changesApi>();
                 }
             } else {
-                this.afterConnectionResolved = true;
-                this.afterConnection.resolve(newValue);
+                this.afterChangesApiConnection.resolve(newValue);
             }
         });
     }
 
-    connectGlobalChangesApi(): JQueryPromise<void> {
-        const alreadyHasGlobalChangesApi = this.globalChangesApi();
+    connectServerWideNotificationCenter(): JQueryPromise<void> {
+        const alreadyHasGlobalChangesApi = this.serverNotifications();
         if (alreadyHasGlobalChangesApi) {
             return alreadyHasGlobalChangesApi.connectToWebSocketTask;
         }
 
-        const globalChanges = new adminWatchClient();
-        this.globalChangesApi(globalChanges);
+        const serverClient = new serverNotificationCenterClient();
+        this.serverNotifications(serverClient);
 
-        return globalChanges.connectToWebSocketTask;
+        return serverClient.connectToWebSocketTask;
     }
 
-    updateChangesApi(rs: resource, subscriptions: (changes: changesApi) => changeSubscription[]) {
-        const currentChanges = this.currentResourceChangesApi();
+    changeResource(rs: resource, globalResourceChangesApiSubscriptions?: (changes: changesApi) => changeSubscription[],
+        globalResourceNotificationCenterSubscriptions?: (resourceNotificationCenterClient: resourceNotificationCenterClient) => changeSubscription[]): void {
+        const currentChanges = this.resourceChangesApi();
         if (currentChanges && currentChanges.getResource().qualifiedName === rs.qualifiedName) {
             // nothing to do - already connected to requested changes api
             return;
         }
 
         if (currentChanges) {
+            this.globalResourceSubscriptions.forEach(x => x.off());
+            this.globalResourceSubscriptions = [];
+
             this.disconnectFromResourceChangesApi("ChangingResource");
+            this.disconnectFromResourceNotificationCenter();
+            notificationCenter.instance.resourceDisconnected();
         }
 
         if (rs.disabled()) { //TODO: or not licensed
@@ -68,14 +78,27 @@ class changesContext {
             return;
         }
 
+        const notificationsClient = new resourceNotificationCenterClient(rs);
+
+        this.globalResourceSubscriptions.push(...notificationCenter.instance.configureForResource(notificationsClient));
+
+        if (globalResourceNotificationCenterSubscriptions) {
+            this.globalResourceSubscriptions.push(...globalResourceNotificationCenterSubscriptions(notificationsClient));
+        }
+
         const newChanges = new changesApi(rs);
         newChanges.connectToWebSocketTask.done(() => {
-            this.currentResourceChangesApi(newChanges);
+            this.resourceChangesApi(newChanges);
 
-            this.sentSubscriptions = subscriptions(newChanges);
+            if (globalResourceChangesApiSubscriptions) {
+                this.globalResourceSubscriptions.push(...globalResourceChangesApiSubscriptions(newChanges));
+            }
 
             this.navigateToResourceSpecificPage(rs);
         });
+
+        
+        this.resourceNotifications(notificationsClient);
     }
 
     private navigateToResourceSpecificPage(rs: resource) {
@@ -89,23 +112,31 @@ class changesContext {
         }
     }
 
+    private disconnectFromResourceNotificationCenter() {
+        const currentClient = this.resourceNotifications();
+        if (currentClient) {
+            currentClient.dispose();
+            this.resourceNotifications(null);
+        }
+    }
+
     private disconnectFromResourceChangesApi(cause: resourceDisconnectionCause) {
-        const currentChanges = this.currentResourceChangesApi();
+        const currentChanges = this.resourceChangesApi();
         if (currentChanges) {
-            this.sentSubscriptions.forEach(x => x.off());
-            this.sentSubscriptions = [];
             currentChanges.dispose();
-            this.currentResourceChangesApi(null);
+            this.resourceChangesApi(null);
 
             ko.postbox.publish(EVENTS.Resource.Disconnect, { resource: currentChanges.getResource(), cause: cause } as resourceDisconnectedEventArgs);
         }
     }
 
+    //TODO: should it dispose global resource subscriptions?
     disconnectIfCurrent(rs: resource, cause: resourceDisconnectionCause) {
-        const currentChanges = this.currentResourceChangesApi();
+        const currentChanges = this.resourceChangesApi();
 
         if (currentChanges && currentChanges.getResource().qualifiedName === rs.qualifiedName) {
             this.disconnectFromResourceChangesApi(cause);
+            this.disconnectFromResourceNotificationCenter();
         }
     }
 

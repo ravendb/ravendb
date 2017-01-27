@@ -17,6 +17,9 @@ using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries.Dynamic;
+using Raven.Server.NotificationCenter.Actions;
+using Raven.Server.NotificationCenter.Actions.Details;
+using Raven.Server.NotificationCenter.Alerts;
 using Raven.Server.Utils;
 
 using Voron.Platform.Posix;
@@ -589,10 +592,18 @@ namespace Raven.Server.Documents.Indexes
 
                         var configuration = new FaultyInMemoryIndexConfiguration(path, _documentDatabase.Configuration);
                         var fakeIndex = new FaultyInMemoryIndex(e, indexId, IndexDefinitionBase.TryReadNameFromMetadataFile(indexPath) ?? indexName, configuration);
+                        
+                        var message = $"Could not open index with id {indexId} at '{indexPath}'. Created in-memory, fake instance: {fakeIndex.Name}";
 
                         if (_logger.IsInfoEnabled)
-                            _logger.Info($"Could not open index with id {indexId} at '{indexPath}'. Created in-memory, fake instance: {fakeIndex.Name}", e);
-                        // TODO arek: add alert
+                            _logger.Info(message, e);
+
+                        _documentDatabase.NotificationCenter.Add(AlertRaised.Create("Indexes store initialization error", 
+                            message,
+                            AlertType.IndexStore_IndexCouldNotBeOpened, 
+                            AlertSeverity.Error,
+                            key: fakeIndex.Name,
+                            details: new ExceptionDetails(e)));
 
                         _indexes.Add(fakeIndex);
                     }

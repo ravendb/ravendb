@@ -86,12 +86,10 @@ class types extends viewModelBase {
         types.isInitialized(false);
     }
 
-    createNotifications(): Array<changeSubscription> {
-        return [
-            /*TODO: Implement this in changes api:
-            changesContext.currentResourceChangesApi().watchAllTimeSeries((e: timeSeriesChangeNotification) => this.refreshTypes()),
-            changesContext.currentResourceChangesApi().watchTimeSeriesBulkOperation(() => this.refreshTypes())*/
-        ];
+    afterClientApiConnected(): void {
+        const changesApi = this.changesContext.resourceChangesApi();
+        //TODO: this.addNotification(changesApi.watchAllTimeSeries((e: timeSeriesChangeNotification) => this.refreshTypes()));
+        //TODO: this.addNotification(changesApi.watchTimeSeriesBulkOperation(() => this.refreshTypes()));
     }
 
     createPostboxSubscriptions(): Array<KnockoutSubscription> {

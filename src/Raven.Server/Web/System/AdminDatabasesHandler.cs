@@ -15,6 +15,7 @@ using Raven.Abstractions.Data;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Json;
+using Raven.Server.NotificationCenter.Actions.Server;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -139,6 +140,9 @@ namespace Raven.Server.Web.System
                     {
                         newEtag = hasEtagInRequest ? ServerStore.Write(context, dbId, dbDoc, etag) :
                                                      ServerStore.Write(context, dbId, dbDoc);
+
+                        ServerStore.NotificationCenter.AddAfterTransactionCommit(ResourceChanged.Create(dbId, ResourceChangeType.Put), tx);
+
                         tx.Commit();
                     }
                 });
@@ -223,6 +227,8 @@ namespace Raven.Server.Web.System
                 using (var tx = context.OpenWriteTransaction())
                 {
                     ServerStore.Delete(context, dbId);
+                    ServerStore.NotificationCenter.AddAfterTransactionCommit(ResourceChanged.Create(dbId, ResourceChangeType.Delete), tx);
+
                     tx.Commit();
                 }
 

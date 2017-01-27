@@ -46,12 +46,10 @@ class statistics extends viewModelBase {
                 });
     }
 
-    createNotifications(): Array<changeSubscription> {
-        //TODO: don't bother about this now
-        return [
-            this.changesContext.currentResourceChangesApi().watchAllDocs((e) => this.refreshStatsObservable(new Date().getTime()))
-            //TODO: this.changesContext.currentResourceChangesApi().watchAllIndexes((e) => this.refreshStatsObservable(new Date().getTime()))
-        ];
+    afterClientApiConnected(): void {
+        const changesApi = this.changesContext.resourceChangesApi();
+        this.addNotification(changesApi.watchAllDocs(e => this.refreshStatsObservable(new Date().getTime())));
+        //TODO: this.addNotification(changesApi.watchAllIndexes((e) => this.refreshStatsObservable(new Date().getTime())))
     }
 
     processStatsResults(dbStats: Raven.Client.Data.DatabaseStatistics, indexesStats: Raven.Client.Data.Indexes.IndexStats[]) {
