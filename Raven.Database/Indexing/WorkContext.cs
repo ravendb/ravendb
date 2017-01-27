@@ -342,7 +342,7 @@ namespace Raven.Database.Indexing
                     });
             }
 
-            if (ignored == null || index == ignored.Index)
+            if (ignored == null)
                 return;
 
             if ((SystemTime.UtcNow - ignored.Timestamp).TotalSeconds <= 10)
