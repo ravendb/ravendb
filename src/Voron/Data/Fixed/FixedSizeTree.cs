@@ -111,11 +111,16 @@ namespace Voron.Data.Fixed
             _pageLocator = pageLocator ?? tx.PersistentContext.AllocatePageLocator(tx);
 
             _entrySize = sizeof(long) + _valSize;
-            _maxEmbeddedEntries = 512 / _entrySize;
+            _maxEmbeddedEntries = (Constants.Storage.PageSize / 8) / _entrySize;
             if (_maxEmbeddedEntries == 0)
-                throw new ArgumentException("The value size must be ");
+                ThrowInvalidFixedTreeValueSize();
 
             RepurposeInstance(treeName, clone);
+        }
+
+        private static void ThrowInvalidFixedTreeValueSize()
+        {
+            throw new ArgumentException("The value size must be small than " + (Constants.Storage.PageSize/8));
         }
 
         public long[] Debug(FixedSizeTreePage p)
