@@ -37,8 +37,8 @@ namespace Raven.Server.NotificationCenter.Actions
                 State = state,
                 Title = $"{description.TaskType.GetDescription()}",
                 Message = description.Description,
-                IsPersistent = false,
-                Killable = killable
+                IsPersistent = state.Result?.ShouldPersist ?? false,
+                Killable = killable && state.Status == OperationStatus.InProgress
             };
         }
     }

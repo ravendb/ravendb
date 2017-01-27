@@ -85,7 +85,7 @@ namespace Raven.Server.Documents
             return null;
         }
 
-        public Task<IOperationResult> AddOperation(string description, OperationType opererationType, Func<Action<IOperationProgress>, Task<IOperationResult>> taskFactory,
+        public Task<IOperationResult> AddOperation(string description, OperationType operationType, Func<Action<IOperationProgress>, Task<IOperationResult>> taskFactory,
             long id, OperationCancelToken token = null)
         {
             var operationState = new OperationState
@@ -102,7 +102,7 @@ namespace Raven.Server.Documents
             var operationDescription = new OperationDescription
             {
                 Description = description,
-                TaskType = opererationType,
+                TaskType = operationType,
                 StartTime = SystemTime.UtcNow
             };
 
@@ -138,7 +138,18 @@ namespace Raven.Server.Documents
 
                     var isConflict = innerException is DocumentConflictException || innerException is ConcurrencyException;
                     var status = isConflict ? HttpStatusCode.Conflict : HttpStatusCode.InternalServerError;
-                    operationState.Result = new OperationExceptionResult(innerException, status);
+
+                    var shouldPersist = false;
+
+                    switch (operationType)
+                    {
+                        case OperationType.DatabaseExport:
+                        case OperationType.DatabaseImport:
+                            shouldPersist = true;
+                            break;
+                    }
+
+                    operationState.Result = new OperationExceptionResult(innerException, status, shouldPersist);
                     operationState.Status = OperationStatus.Faulted;
                 }
                 else

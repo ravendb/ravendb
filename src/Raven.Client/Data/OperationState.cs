@@ -31,6 +31,7 @@ namespace Raven.Client.Data
     {
         string Message { get; }
         DynamicJsonValue ToJson();
+        bool ShouldPersist { get; }
     }
 
     public enum OperationStatus

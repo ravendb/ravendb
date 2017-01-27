@@ -72,6 +72,8 @@ namespace Raven.Server.Smuggler.Documents.Data
             return json;
         }
 
+        public bool ShouldPersist => true;
+
         private class SmugglerProgress : SmugglerProgressBase, IOperationProgress
         {
             private readonly SmugglerResult _result;

@@ -18,5 +18,7 @@ namespace Raven.Client.Data
                 ["Message"] = Message,
             };
         }
+
+        public bool ShouldPersist => false;
     }
 }

@@ -199,6 +199,8 @@ namespace FastTests.Server.Documents.Operations
                     ["Message"] = Message
                 };
             }
+
+            public bool ShouldPersist => false;
         }
     }
 }
