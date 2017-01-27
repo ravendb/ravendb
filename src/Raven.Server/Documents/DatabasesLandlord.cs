@@ -72,7 +72,7 @@ namespace Raven.Server.Documents
                     task.ContinueWith(completedTask =>
                     {
                         if (completedTask.IsCompleted)
-                            ServerStore.NotificationCenter.Add(ResourceChanged.Create(Constants.Database.Prefix + databaseName, ResourceChangeType.Load)); // TODO arek: we can pass details here, see ResourceHandler WriteDatabaseInfo
+                            ServerStore.NotificationCenter.Add(ResourceChanged.Create(Constants.Database.Prefix + databaseName, ResourceChangeType.Load));
                     });
 
                     task.Start();
