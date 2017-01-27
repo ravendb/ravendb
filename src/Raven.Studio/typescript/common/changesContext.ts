@@ -16,19 +16,21 @@ class changesContext {
     static default = new changesContext();
     
     serverNotifications = ko.observable<serverNotificationCenterClient>();
+    resourceNotifications = ko.observable<resourceNotificationCenterClient>();
 
     resourceChangesApi = ko.observable<changesApi>();
     afterChangesApiConnection = $.Deferred<changesApi>();
-
-    resourceNotifications = ko.observable<resourceNotificationCenterClient>();
 
     private globalResourceSubscriptions: changeSubscription[] = [];
 
     constructor() {
         window.addEventListener("beforeunload", () => {
             this.disconnectFromResourceChangesApi("ChangingResource");
-            //TODO: disconnect from notification center?
             this.serverNotifications().dispose();
+
+            if (this.resourceNotifications()) {
+                this.resourceNotifications().dispose();
+            }
         });
 
         this.resourceChangesApi.subscribe(newValue => {

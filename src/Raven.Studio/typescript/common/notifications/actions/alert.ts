@@ -36,27 +36,6 @@ class alert extends abstractAction {
         this.details(incomingChanges.Details);
         this.severity(incomingChanges.Severity);
     }
-
-     /* TODO
-    isOpen = ko.observable<boolean>(false);
-
-    hasDetails() {
-        return ["NewServerVersionAvailable"].some(x => x === this.type);
-    }
-
-    openDetails() {
-        if (!this.isOpen()) {
-            ko.postbox.publish("Alerts.DetailsOpen", this);
-            this.isOpen(true);
-        }
-    }
-
-    canOpenDetails() {
-        return this.type !== 'NewServerVersionAvailable';
-    }
-
-    */
-
 }
 
 export = alert;

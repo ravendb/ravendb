@@ -15,8 +15,6 @@ class notificationCenterOperationsWatch {
     private operations = new Map<number, JQueryDeferred<Raven.Client.Data.IOperationResult>>();
     private watchedProgresses = new Map<number, Array<(progress: Raven.Client.Data.IOperationProgress) => void>>();
 
-    //TODO: notify about connection/disconnection
-
     configureFor(resource: resource) {
         this.resource = resource;
         this.operations.clear();

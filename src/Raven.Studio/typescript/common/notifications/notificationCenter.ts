@@ -63,7 +63,9 @@ class notificationCenter {
             const globalActions = this.globalActions();
             const resourceActions = this.resourceActions();
 
-            return globalActions.concat(resourceActions);
+            const mergedActions = globalActions.concat(resourceActions);
+
+            return _.sortBy(mergedActions, x => -1 * x.createdAt().unix());
         });
 
         this.totalItemsCount = ko.pureComputed(() => this.allActions().length);

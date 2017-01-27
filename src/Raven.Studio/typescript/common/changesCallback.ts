@@ -4,7 +4,6 @@
 class changesCallback<T> {
 
     constructor(private onFire: (arg: T) => void) {
-
     }
 
     fire(arg: T) {

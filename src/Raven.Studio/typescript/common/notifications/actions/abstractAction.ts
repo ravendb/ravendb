@@ -8,7 +8,7 @@ abstract class abstractAction {
     resource: resource;
 
     id: string;
-    createdAt = ko.observable<string>();//TODO: use moment for easy sort?
+    createdAt = ko.observable<moment.Moment>();
     isPersistent = ko.observable<boolean>();
     message = ko.observable<string>();
     title = ko.observable<string>();
@@ -25,7 +25,7 @@ abstract class abstractAction {
     }
 
     updateWith(incomingChanges: Raven.Server.NotificationCenter.Actions.Action) {
-        this.createdAt(incomingChanges.CreatedAt);
+        this.createdAt(moment.utc(incomingChanges.CreatedAt));
         this.isPersistent(incomingChanges.IsPersistent);
         this.message(incomingChanges.Message);
         this.title(incomingChanges.Title);
