@@ -16,6 +16,7 @@ using FastTests.Voron.FixedSize;
 using FastTests.Voron.RawData;
 using SlowTests.Tests;
 using SlowTests.Voron;
+using Sparrow.Logging;
 
 namespace Tryouts
 {
@@ -25,14 +26,14 @@ namespace Tryouts
         {
             for (int i = 0; i < 100; i++)
             {
-               using (var a = new FastTests.Voron.Tables.CompositeIndex())
-               {
-                   a.CanInsertThenUpdateThenByComposite();
-               }
+                LoggingSource.Instance.SetupLogMode(LogMode.Information, i + ".log");
+                using (var a = new NewClientTests.NewClient.Subscriptions.Subscriptions())
+                {
+                    a.SubscriptionWaitStrategy().Wait();
+                }
                 Console.WriteLine($"{i} finished");
             }
 
         }
     }
 }
-

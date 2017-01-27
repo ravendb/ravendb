@@ -230,7 +230,7 @@ namespace NewClientTests.NewClient.Subscriptions
                         // wait until we know that connection was established
                         for (var i = 0; i < 5; i++)
                         {
-                            Assert.True(waitingSubscriptionList.TryTake(out thing, 1000));
+                            Assert.True(waitingSubscriptionList.TryTake(out thing, 50000));
                         }
                         Assert.False(waitingSubscriptionList.TryTake(out thing, 50));
                     }

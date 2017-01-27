@@ -27,15 +27,15 @@ namespace NewClientTests.NewClient.Raven.Tests.Bugs.Metadata
                 {
                     session.Store(new User());
 
-                    before = SystemTime.UtcNow;
+                    before = DateTime.UtcNow;
                     session.SaveChanges();
-                    after = SystemTime.UtcNow;
+                    after = DateTime.UtcNow;
                 }
 
                 using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
-                    var lastModified = DateTimeOffset.Parse(session.Advanced.GetMetadataFor(user)[Constants.Metadata.LastModified]).UtcDateTime;
+                    var lastModified = DateTime.Parse(session.Advanced.GetMetadataFor(user)[Constants.Metadata.LastModified]);
                     Assert.NotNull(lastModified);
                     Assert.InRange(lastModified, before, after);
                     //TODO

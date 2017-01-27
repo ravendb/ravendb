@@ -322,11 +322,9 @@ namespace NewClientTests.NewClient
                 WaitForIndexing(_store);
             }
 
-            Console.WriteLine("Test: '{0}'", id);
             AssetMoreLikeThisHasMatchesFor<DataWithIntegerId, OtherDataIndex>(id);
 
             id = id.ToLower();
-            Console.WriteLine("Test with lowercase: '{0}'", id);
             AssetMoreLikeThisHasMatchesFor<DataWithIntegerId, OtherDataIndex>(id);
         }
 

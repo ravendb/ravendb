@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
+using Sparrow.Global;
 using Voron;
 using Xunit;
+using Constants = Voron.Global.Constants;
 
 namespace FastTests.Voron.FixedSize
 {
@@ -10,7 +12,7 @@ namespace FastTests.Voron.FixedSize
         public void Branch_page_collapsing_during_tree_rebalancing()
         {
             var numberOfItems = 10000;
-            ushort valueSize = 256;
+            ushort valueSize = Constants.Storage.PageSize/16;
 
             Slice itemsTree;
 

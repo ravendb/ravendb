@@ -1,4 +1,5 @@
 ﻿using Voron;
+using Voron.Global;
 using Xunit;
 
 namespace FastTests.Voron.Bugs
@@ -11,11 +12,11 @@ namespace FastTests.Voron.Bugs
             using (var tx = Env.WriteTransaction())
             {
                 int numberOfPages;
-                var page1 = tx.LowLevelTransaction.AllocateOverflowRawPage(4092, out numberOfPages, zeroPage: true);
+                var page1 = tx.LowLevelTransaction.AllocateOverflowRawPage(Constants.Storage.PageSize - 4, out numberOfPages, zeroPage: true);
 
                 Assert.Equal(2, numberOfPages);
 
-                var page2 = tx.LowLevelTransaction.AllocateOverflowRawPage(4000, out numberOfPages, zeroPage: true);
+                var page2 = tx.LowLevelTransaction.AllocateOverflowRawPage(Constants.Storage.PageSize - 96, out numberOfPages, zeroPage: true);
 
                 Assert.Equal(1, numberOfPages);
 
@@ -27,7 +28,7 @@ namespace FastTests.Voron.Bugs
                 }
 
                 Assert.Equal(128, page2.PageNumber);
-                Assert.Equal(4000, page2.OverflowSize);
+                Assert.Equal(Constants.Storage.PageSize - 96, page2.OverflowSize);
                 Assert.Equal(PageFlags.Overflow, page2.Flags);
 
                 for (int i = 0; i < 4000; i++)
