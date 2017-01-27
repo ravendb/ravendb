@@ -55,11 +55,11 @@ namespace Voron.Data.BTrees
         {
             using (DisableFreeSpaceUsageIfSplittingRootTree())
             {
-                TreePage rightPage = _tree.NewPage(_page.TreeFlags, 1);
+                TreePage rightPage = _tree.NewPage(_page.TreeFlags);
 
                 if (_cursor.PageCount == 0) // we need to do a root split
                 {
-                    TreePage newRootPage = _tree.NewPage(TreePageFlags.Branch, 1);
+                    TreePage newRootPage = _tree.NewPage(TreePageFlags.Branch);
                     _cursor.Push(newRootPage);
                     _tree.State.RootPageNumber = newRootPage.PageNumber;
                     _tree.State.Depth++;

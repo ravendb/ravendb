@@ -48,14 +48,14 @@ namespace Voron.Impl
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public Tree ReadTree(string treeName, RootObjectType type = RootObjectType.VariableSizeTree, PageLocator pageLocator = null)
+        public Tree ReadTree(string treeName, RootObjectType type = RootObjectType.VariableSizeTree, NewPageAllocator newPageAllocator = null, PageLocator pageLocator = null)
         {
             Slice treeNameSlice;
             Slice.From(Allocator, treeName, ByteStringType.Immutable, out treeNameSlice);
-            return ReadTree(treeNameSlice, type, pageLocator);
+            return ReadTree(treeNameSlice, type, newPageAllocator, pageLocator);
         }
 
-        public Tree ReadTree(Slice treeName, RootObjectType type = RootObjectType.VariableSizeTree, PageLocator pageLocator = null)
+        public Tree ReadTree(Slice treeName, RootObjectType type = RootObjectType.VariableSizeTree, NewPageAllocator newPageAllocator = null, PageLocator pageLocator = null)
         {
             EnsureTrees();
 
@@ -67,9 +67,9 @@ namespace Voron.Impl
             if (header != null)
             {
                 if (header->RootObjectType != type)
-                    throw new InvalidOperationException($"Tried to open {treeName} as a {type}, but it is actually a " + header->RootObjectType);
+                    ThrowInvalidTreeType(treeName, type, header);
 
-                tree = Tree.Open(_lowLevelTransaction, this, header, type, pageLocator);
+                tree = Tree.Open(_lowLevelTransaction, this, header, type, newPageAllocator, pageLocator);
                 tree.Name = treeName;
 
                 if ((tree.State.Flags & TreeFlags.LeafsCompressed) == TreeFlags.LeafsCompressed)
@@ -82,6 +82,12 @@ namespace Voron.Impl
 
             _trees.Add(treeName, null);
             return null;
+        }
+
+        private static unsafe void ThrowInvalidTreeType(Slice treeName, RootObjectType type, TreeRootHeader* header)
+        {
+            throw new InvalidOperationException($"Tried to open {treeName} as a {type}, but it is actually a " +
+                                                header->RootObjectType);
         }
 
         public void Commit()
@@ -296,16 +302,16 @@ namespace Voron.Impl
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public Tree CreateTree(string name, RootObjectType type = RootObjectType.VariableSizeTree, TreeFlags flags = TreeFlags.None, PageLocator pageLocator = null)
+        public Tree CreateTree(string name, RootObjectType type = RootObjectType.VariableSizeTree, TreeFlags flags = TreeFlags.None, NewPageAllocator newPageAllocator = null, PageLocator pageLocator = null)
         {
             Slice treeNameSlice;
             Slice.From(Allocator, name, ByteStringType.Immutable, out treeNameSlice);
-            return CreateTree(treeNameSlice, type, flags, pageLocator);
+            return CreateTree(treeNameSlice, type, flags, newPageAllocator, pageLocator);
         }
 
-        public Tree CreateTree(Slice name, RootObjectType type = RootObjectType.VariableSizeTree, TreeFlags flags = TreeFlags.None, PageLocator pageLocator = null)
+        public Tree CreateTree(Slice name, RootObjectType type = RootObjectType.VariableSizeTree, TreeFlags flags = TreeFlags.None, NewPageAllocator newPageAllocator = null, PageLocator pageLocator = null)
         {
-            Tree tree = ReadTree(name, type, pageLocator);
+            Tree tree = ReadTree(name, type, newPageAllocator, pageLocator);
             if (tree != null)
                 return tree;
 

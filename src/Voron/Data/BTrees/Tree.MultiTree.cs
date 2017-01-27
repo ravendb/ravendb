@@ -235,7 +235,10 @@ namespace Voron.Data.BTrees
                 if (tree.State.NumberOfEntries != 0)
                     return;
                 _tx.TryRemoveMultiValueTree(this, key);
-                _llt.FreePage(tree.State.RootPageNumber);
+                if (_newPageAllocator != null)
+                    _newPageAllocator.FreePage(tree.State.RootPageNumber);
+                else
+                    _llt.FreePage(tree.State.RootPageNumber);
 
                 Delete(key);
             }

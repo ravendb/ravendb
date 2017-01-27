@@ -26,10 +26,9 @@ namespace Tryouts
         {
             for (int i = 0; i < 100; i++)
             {
-                LoggingSource.Instance.SetupLogMode(LogMode.Information, i + ".log");
-                using (var a = new NewClientTests.NewClient.Subscriptions.Subscriptions())
+                using (var a = new SlowTests.Voron.RecoveryMultipleJournals())
                 {
-                    a.SubscriptionWaitStrategy().Wait();
+                    a.CorruptingAllLastTransactionsConsideredAsEndOfJournal();
                 }
                 Console.WriteLine($"{i} finished");
             }
