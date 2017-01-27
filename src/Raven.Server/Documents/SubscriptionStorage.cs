@@ -115,7 +115,7 @@ namespace Raven.Server.Documents
         public SubscriptionState OpenSubscription(SubscriptionConnection connection)
         {
             var subscriptionState = _subscriptionStates.GetOrAdd(connection.SubscriptionId,
-                _ => new SubscriptionState(connection));
+                _ => new SubscriptionState());
             return subscriptionState;
         }
 

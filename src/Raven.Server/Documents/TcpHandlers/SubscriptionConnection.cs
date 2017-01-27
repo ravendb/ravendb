@@ -26,7 +26,9 @@ namespace Raven.Server.Documents.TcpHandlers
         private AsyncManualResetEvent _waitForMoreDocuments;
 
         private SubscriptionConnectionOptions _options;
-        
+
+        public SubscriptionConnectionOptions Options => _options;
+
         public IDisposable DisposeOnDisconnect;
         
         public SubscriptionException ConnectionException;
@@ -135,7 +137,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     if (timeout == 0 && _logger.IsInfoEnabled)
                     {
                         _logger.Info(
-                            $"Subscription Id {SubscriptionId} from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} starts to wait until previous connection from {_state.Connection.TcpConnection.TcpClient.Client.RemoteEndPoint} is released");
+                            $"Subscription Id {SubscriptionId} from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} starts to wait until previous connection from {_state.Connection?.TcpConnection.TcpClient.Client.RemoteEndPoint} is released");
                     }
                     timeout = Math.Max(250, _options.TimeToWaitBeforeConnectionRetryMilliseconds/2);
                     await SendHeartBeat();

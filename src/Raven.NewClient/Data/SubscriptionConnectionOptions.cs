@@ -75,5 +75,8 @@ namespace Raven.NewClient.Abstractions.Data
         public bool IgnoreSubscribersErrors { get; set; }
         public SubscriptionOpeningStrategy Strategy { get; set; }
         public int MaxDocsPerBatch { get; set; }
+        public long ClientSubscriptionId { get; set; } = Interlocked.Increment(ref _counter);
+
+        private static long _counter;
     }        
 }

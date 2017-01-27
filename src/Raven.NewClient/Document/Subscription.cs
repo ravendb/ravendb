@@ -14,7 +14,6 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Extensions;
-using Raven.NewClient.Abstractions.Logging;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Commands;
@@ -23,6 +22,7 @@ using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Client.Json;
 using Raven.NewClient.Client.Util;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 
 namespace Raven.NewClient.Client.Document
@@ -37,7 +37,7 @@ namespace Raven.NewClient.Client.Document
 
     public class Subscription<T> : IObservable<T>, IDisposableAsync, IDisposable where T : class
     {
-        private static readonly ILog Logger = LogManager.GetLogger(typeof(Subscription<T>));
+        private readonly Logger _logger;
         private readonly IDocumentStore _store;
         private readonly DocumentConvention _conventions;
         private readonly string _dbName;
@@ -56,6 +56,7 @@ namespace Raven.NewClient.Client.Document
             DocumentConvention conventions, string dbName)
         {
             _options = options;
+            _logger = LoggingSource.Instance.GetLogger<Subscription<T>>(dbName);
             if (_options.SubscriptionId == 0)
                 throw new ArgumentException(
                     "SubscriptionConnectionOptions must specify the SubscriptionId, but was set to zero.",
@@ -74,8 +75,8 @@ namespace Raven.NewClient.Client.Document
             try
             {
                 CloseTcpClient();
-                Logger.Warn($"Subscription {_options.SubscriptionId} was not disposed properly");
-                //write to log
+                if(_logger.IsInfoEnabled)
+                    _logger.Info($"Subscription {_options.SubscriptionId} was not disposed properly");
             }
             catch
             {
@@ -135,7 +136,8 @@ namespace Raven.NewClient.Client.Document
             }
             catch (Exception ex)
             {
-                Logger.Warn("Error during dispose of subscription", ex);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Error during dispose of subscription", ex);
             }
         }
 
@@ -237,10 +239,11 @@ namespace Raven.NewClient.Client.Document
                 }
                 catch (Exception e)
                 {
-                    Logger.WarnException(
-                        string.Format(
-                            "Subscription #{0}. Subscriber threw an exception while proccessing OnError " + e,
-                            _options.SubscriptionId), ex);
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger.Info(
+                            $"Subscription #{_options.SubscriptionId}. Subscriber threw an exception while proccessing OnError ", ex);
+                    }
                 }
             }
         }
@@ -336,7 +339,6 @@ namespace Raven.NewClient.Client.Document
                                     }
                                 }
                                 SendAck(lastReceivedEtag, tcpStream);
-
                             });
 
                             
@@ -423,6 +425,7 @@ namespace Raven.NewClient.Client.Document
                 blittable.BlittableValidation();
                 var message = JsonDeserializationClient.SubscriptionNextObjectResult(blittable);
                 message.ParentObjectToDispose = blittable;
+                
                 return message;
             }
             catch (Exception)
@@ -439,11 +442,16 @@ namespace Raven.NewClient.Client.Document
             string id;
 
             if (curDoc.TryGet(Constants.Metadata.Key, out metadata) == false)
-                throw new InvalidOperationException("Document must have a metadata");
+                ThrowMetadataRequired();
             if (metadata.TryGet(Constants.Metadata.Id, out id) == false)
-                throw new InvalidOperationException("Document must have an id");
+                ThrowIdRequired();
             if (metadata.TryGet(Constants.Metadata.Etag, out lastReceivedEtag) == false)
-                throw new InvalidOperationException("Document must have an ETag");
+                ThrowEtagRequired();
+
+            if (_logger.IsInfoEnabled)
+            {
+                _logger.Info($"Got {id} (etag: {lastReceivedEtag} on subscription {_options.SubscriptionId}, size {curDoc.Size}");
+            }
 
             T instance;
 
@@ -468,9 +476,11 @@ namespace Raven.NewClient.Client.Document
                 }
                 catch (Exception ex)
                 {
-                    Logger.WarnException(
-                        string.Format(
-                            "Subscription #{0}. Subscriber threw an exception", _options.SubscriptionId), ex);
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger.Info(
+                            $"Subscription #{_options.SubscriptionId}. Subscriber threw an exception", ex);
+                    }
 
                     if (_options.IgnoreSubscribersErrors == false)
                     {
@@ -489,6 +499,21 @@ namespace Raven.NewClient.Client.Document
                     }
                 }
             }
+        }
+
+        private static void ThrowEtagRequired()
+        {
+            throw new InvalidOperationException("Document must have an ETag");
+        }
+
+        private static void ThrowIdRequired()
+        {
+            throw new InvalidOperationException("Document must have an id");
+        }
+
+        private static void ThrowMetadataRequired()
+        {
+            throw new InvalidOperationException("Document must have a metadata");
         }
 
         private void SendAck(long lastReceivedEtag, Stream networkStream)
@@ -512,7 +537,10 @@ namespace Raven.NewClient.Client.Document
                 try
                 {
                     CloseTcpClient();
-                    Logger.Debug(string.Format("Subscription #{0}. Connecting to server...", _options.SubscriptionId));
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger.Info($"Subscription #{_options.SubscriptionId}. Connecting to server...");
+                    }
 
                     _tcpClient = new TcpClient();
                     await ProccessSubscription(firstConnectionCompleted);
@@ -526,15 +554,17 @@ namespace Raven.NewClient.Client.Document
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                     Task.Run(() => firstConnectionCompleted.TrySetException(ex));
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-
-                    Logger.WarnException(
-                        string.Format("Subscription #{0}. Pulling task threw the following exception", _options.SubscriptionId), ex);
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger.Info(
+                            $"Subscription #{_options.SubscriptionId}. Pulling task threw the following exception", ex);
+                    }
 
 
                     if (await TryHandleRejectedConnection(ex, false).ConfigureAwait(false))
                     {
-                        if (Logger.IsDebugEnabled)
-                            Logger.Debug(string.Format("Subscription #{0}.", _options.SubscriptionId));
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info($"Subscription #{_options.SubscriptionId}");
                         return;
                     }
                     await Task.Delay(_options.TimeToWaitBeforeConnectionRetryMilliseconds);
@@ -552,10 +582,10 @@ namespace Raven.NewClient.Client.Document
                 }
                 catch (Exception e)
                 {
-                    Logger.WarnException(
-                        string.Format(
-                            "Subscription #{0}. Exception happened during an attempt to close subscription after it had become faulted",
-                            _options.SubscriptionId), e);
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger.Info($"Subscription #{_options.SubscriptionId}. Exception happened during an attempt to close subscription after it had become faulted", e);
+                    }
                 }
             }
         }

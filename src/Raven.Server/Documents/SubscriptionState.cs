@@ -18,9 +18,8 @@ namespace Raven.Server.Documents
     {
         private readonly AsyncManualResetEvent _connectionInUse = new AsyncManualResetEvent();
 
-        public SubscriptionState(SubscriptionConnection currentConnection)
+        public SubscriptionState()
         {
-            _currentConnection = currentConnection;
             _connectionInUse.Set();
         }
 
@@ -85,10 +84,11 @@ namespace Raven.Server.Documents
                 throw;
             }
 
-            _connectionInUse.Reset();
             var subscriptionConnection = Interlocked.CompareExchange(ref _currentConnection, incomingConnection, null);
-            if(subscriptionConnection != null && subscriptionConnection != incomingConnection)
+            if (subscriptionConnection != null && subscriptionConnection != incomingConnection)
                 throw new TimeoutException();
+
+            _connectionInUse.Reset();
 
             return new DisposableAction(() => {
                 while (_recentConnections.Count > 10)
