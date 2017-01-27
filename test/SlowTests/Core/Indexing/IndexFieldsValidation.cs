@@ -1,15 +1,13 @@
 ﻿using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Basic.Entities;
-using Raven.Abstractions.Connection;
-using Raven.Client.Exceptions;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Exceptions.Compilation;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.Core.Indexing
 {
-    public class IndexFieldsValidation : RavenTestBase
+    public class IndexFieldsValidation : RavenNewTestBase
     {
         private class InvalidMultiMapIndex : AbstractMultiMapIndexCreationTask
         {

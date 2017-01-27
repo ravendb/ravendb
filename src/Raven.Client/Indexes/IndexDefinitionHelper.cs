@@ -7,6 +7,7 @@ using Raven.Client.Document;
 using Raven.Client.Util;
 using Raven.Abstractions;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Compilation;
 
 namespace Raven.Client.Indexes
 {

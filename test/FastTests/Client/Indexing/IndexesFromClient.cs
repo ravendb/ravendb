@@ -7,7 +7,6 @@ using Lucene.Net.Analysis;
 using Raven.NewClient.Abstractions;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client;
-using Raven.NewClient.Client.Bundles.MoreLikeThis;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
@@ -18,7 +17,6 @@ using Raven.NewClient.Operations.Databases.Documents;
 using Raven.NewClient.Operations.Databases.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
-using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Exceptions;
 using Sparrow;
 using Xunit;
@@ -103,7 +101,7 @@ namespace FastTests.Client.Indexing
                 Assert.Equal(IndexRunningStatus.Running, status.Indexes[0].Status);
                 Assert.Equal(IndexRunningStatus.Running, status.Indexes[1].Status);
 
-                await store.Admin.SendAsync(new StopIndexingOperation(status.Indexes[1].Name));
+                await store.Admin.SendAsync(new StopIndexOperation(status.Indexes[1].Name));
 
                 status = await store.Admin.SendAsync(new GetIndexingStatusOperation());
 
@@ -112,7 +110,7 @@ namespace FastTests.Client.Indexing
                 Assert.Equal(IndexRunningStatus.Running, status.Indexes[0].Status);
                 Assert.Equal(IndexRunningStatus.Paused, status.Indexes[1].Status);
 
-                await store.Admin.SendAsync(new StartIndexingOperation(status.Indexes[1].Name));
+                await store.Admin.SendAsync(new StartIndexOperation(status.Indexes[1].Name));
 
                 status = await store.Admin.SendAsync(new GetIndexingStatusOperation());
 
@@ -688,14 +686,15 @@ namespace FastTests.Client.Indexing
 
                     WaitForIndexing(store);
 
-                    var list = session.Advanced.MoreLikeThis<Post>(index.Name, null, new MoreLikeThisQuery
+                    var list = session.Advanced.MoreLikeThis<Post>(new MoreLikeThisQuery
                     {
+                        IndexName = index.Name,
                         DocumentId = "posts/1",
                         MinimumDocumentFrequency = 1,
                         MinimumTermFrequency = 0
                     });
 
-                    Assert.Equal(3, list.Length);
+                    Assert.Equal(3, list.Count);
                     Assert.Equal("doduck", list[0].Title);
                     Assert.Equal("prototype your idea", list[0].Desc);
                     Assert.Equal("doduck", list[1].Title);

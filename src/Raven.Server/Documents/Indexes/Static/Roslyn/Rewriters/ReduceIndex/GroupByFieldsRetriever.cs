@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Compilation;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
 {

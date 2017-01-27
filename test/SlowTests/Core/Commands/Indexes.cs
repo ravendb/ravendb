@@ -9,22 +9,21 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using FastTests;
-
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Data;
-using Raven.Client.Indexing;
-using Raven.Json.Linq;
-
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases;
+using Raven.NewClient.Operations.Databases.Indexes;
 using SlowTests.Core.Utils.Indexes;
-
+using Sparrow.Json;
 using Xunit;
 
 using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Commands
 {
-    public class Indexes : RavenTestBase
+    public class Indexes : RavenNewTestBase
     {
         [Fact]
         public async Task CanPutUpdateAndDeleteMapIndex()
@@ -33,29 +32,24 @@ namespace SlowTests.Core.Commands
             {
                 const string usersByname = "users/byName";
 
-                await store.AsyncDatabaseCommands.PutAsync(
-                    "users/1",
-                    null,
-                    RavenJObject.FromObject(new User
-                    {
-                        Name = "testname"
+                using (var commands = store.Commands())
+                {
+                    await commands.PutAsync("users/1", null, new User { Name = "testname" }, null);
+                }
 
-                    }),
-                    new RavenJObject());
-
-                await store.AsyncDatabaseCommands.PutIndexAsync(usersByname, new IndexDefinition()
+                await store.Admin.SendAsync(new PutIndexOperation(usersByname, new IndexDefinition
                 {
                     Maps = { "from user in docs.Users select new { user.Name }" }
-                }, false);
+                }));
 
-                var index = await store.AsyncDatabaseCommands.GetIndexAsync(usersByname);
+                var index = await store.Admin.SendAsync(new GetIndexOperation(usersByname));
                 Assert.Equal(usersByname, index.Name);
 
-                var indexes = await store.AsyncDatabaseCommands.GetIndexesAsync(0, 5);
+                var indexes = await store.Admin.SendAsync(new GetIndexesOperation(0, 5));
                 Assert.Equal(1, indexes.Length);
 
-                await store.AsyncDatabaseCommands.DeleteIndexAsync(usersByname);
-                Assert.Null(await store.AsyncDatabaseCommands.GetIndexAsync(usersByname));
+                await store.Admin.SendAsync(new DeleteIndexOperation(usersByname));
+                Assert.Null(await store.Admin.SendAsync(new GetIndexOperation(usersByname)));
             }
         }
 
@@ -73,15 +67,15 @@ namespace SlowTests.Core.Commands
                     s.SaveChanges();
                 }
 
-                store.DatabaseCommands.PutIndex("test",
-                                                new IndexDefinition
-                                                {
-                                                    Maps = { "from doc in docs.Users select new { doc.Name }" }
-                                                });
+                store.Admin.Send(new PutIndexOperation("test",
+                    new IndexDefinition
+                    {
+                        Maps = { "from doc in docs.Users select new { doc.Name }" }
+                    }));
 
                 WaitForIndexing(store);
 
-                var terms = store.DatabaseCommands.GetTerms("test", "Name", null, 10)
+                var terms = store.Admin.Send(new GetTermsOperation("test", "Name", null, 10))
                     .OrderBy(x => x)
                     .ToArray();
 
@@ -108,15 +102,15 @@ namespace SlowTests.Core.Commands
                     s.SaveChanges();
                 }
 
-                store.DatabaseCommands.PutIndex("test",
-                                                new IndexDefinition
-                                                {
-                                                    Maps = { "from doc in docs.Users select new { doc.Name }" }
-                                                });
+                store.Admin.Send(new PutIndexOperation("test",
+                    new IndexDefinition
+                    {
+                        Maps = { "from doc in docs.Users select new { doc.Name }" }
+                    }));
 
                 WaitForIndexing(store);
 
-                var terms = store.DatabaseCommands.GetTerms("test", "Name", "user009", 10)
+                var terms = store.Admin.Send(new GetTermsOperation("test", "Name", "user009", 10))
                     .OrderBy(x => x)
                     .ToArray();
 
@@ -143,33 +137,48 @@ namespace SlowTests.Core.Commands
                     s.SaveChanges();
                 }
 
-                store.DatabaseCommands.PutIndex("test",
-                                                new IndexDefinition
-                                                {
-                                                    Maps = { "from doc in docs.Users select new { doc.Name }" },
-                                                    Fields = new Dictionary<string, IndexFieldOptions>
+                store.Admin.Send(new PutIndexOperation("test",
+                    new IndexDefinition
+                    {
+                        Maps = { "from doc in docs.Users select new { doc.Name }" },
+                        Fields = new Dictionary<string, IndexFieldOptions>
                                                                  {
                                                                      { "Name", new IndexFieldOptions { Sort = SortOptions.String } }
                                                                  }
-                                                });
+                    }));
 
                 WaitForIndexing(store);
 
-                var metadataOnly = store.DatabaseCommands.Query("test", new IndexQuery(), metadataOnly: true).Results;
-
-                Assert.True(metadataOnly.TrueForAll(x => x.Keys.Count == 1 && x.Keys.First() == Constants.Metadata.Key));
-
-                var entriesOnly = store.DatabaseCommands.Query("test", new IndexQuery()
+                using (var commands = store.Commands())
                 {
-                    SortedFields = new[] { new SortedField("Name") }
-                }, indexEntriesOnly: true).Results;
+                    var metadataOnly = commands.Query("test", new IndexQuery(), metadataOnly: true).Results;
 
-                for (int i = 0; i < 5; i++)
-                {
-                    Assert.Equal(2, entriesOnly[i].Keys.Count);
+                    foreach (BlittableJsonReaderObject item in metadataOnly)
+                    {
+                        Assert.Equal(1, item.Count);
+                        BlittableJsonReaderObject _;
+                        Assert.True(item.TryGet(Constants.Metadata.Key, out _));
+                    }
 
-                    Assert.Equal("user" + i, entriesOnly[i].Value<string>("Name"));
-                    Assert.Equal("users/" + (i + 1), entriesOnly[i].Value<string>(Constants.Indexing.Fields.DocumentIdFieldName));
+                    var entriesOnly = commands.Query("test", new IndexQuery
+                    {
+                        SortedFields = new[] { new SortedField("Name") }
+                    }, indexEntriesOnly: true).Results;
+
+                    for (int i = 0; i < 5; i++)
+                    {
+                        var item = (BlittableJsonReaderObject)entriesOnly[i];
+
+                        Assert.Equal(2, item.Count);
+
+                        string name;
+                        Assert.True(item.TryGet("Name", out name));
+                        Assert.Equal("user" + i, name);
+
+                        string id;
+                        Assert.True(item.TryGet(Constants.Indexing.Fields.DocumentIdFieldName, out id));
+                        Assert.Equal("users/" + (i + 1), id);
+                    }
                 }
             }
         }
@@ -184,7 +193,7 @@ namespace SlowTests.Core.Commands
                 index1.Execute(store);
                 index2.Execute(store);
 
-                var indexes = await store.AsyncDatabaseCommands.GetIndexNamesAsync(0, 10);
+                var indexes = await store.Admin.SendAsync(new GetIndexNamesOperation(0, 10));
                 Assert.Equal(2, indexes.Length);
                 Assert.Equal(index1.IndexName, indexes[1]);
                 Assert.Equal(index2.IndexName, indexes[0]);
@@ -210,13 +219,13 @@ namespace SlowTests.Core.Commands
 
                 WaitForIndexing(store);
 
-                var stats = await store.AsyncDatabaseCommands.GetStatisticsAsync();
+                var stats = await store.Admin.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(0, stats.StaleIndexes.Length);
 
-                await store.AsyncDatabaseCommands.Admin.StopIndexingAsync();
-                await store.AsyncDatabaseCommands.ResetIndexAsync(index.IndexName);
+                await store.Admin.SendAsync(new StopIndexingOperation());
+                await store.Admin.SendAsync(new ResetIndexOperation(index.IndexName));
 
-                stats = await store.AsyncDatabaseCommands.GetStatisticsAsync();
+                stats = await store.Admin.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(1, stats.StaleIndexes.Length);
                 Assert.Equal(index.IndexName, stats.StaleIndexes[0]);
             }

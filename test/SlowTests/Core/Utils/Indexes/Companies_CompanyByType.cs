@@ -6,8 +6,8 @@
 
 using System;
 using System.Linq;
-using Raven.Abstractions.Data;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Indexes;
 using Company = SlowTests.Core.Utils.Entities.Company;
 
 namespace SlowTests.Core.Utils.Indexes

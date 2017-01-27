@@ -5,9 +5,8 @@
 // ----------------------------------------------------------------------
 
 using System.Linq;
-
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Collation.Cultures;
 using Company = SlowTests.Core.Utils.Entities.Company;
 

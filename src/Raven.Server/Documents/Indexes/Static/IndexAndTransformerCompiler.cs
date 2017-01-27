@@ -24,7 +24,7 @@ using Raven.Server.Documents.Indexes.Static.Roslyn;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex;
 using Raven.Server.Documents.Transformers;
-using IndexCompilationException = Raven.Client.Exceptions.IndexCompilationException;
+using IndexCompilationException = Raven.Client.Exceptions.Compilation.IndexCompilationException;
 
 namespace Raven.Server.Documents.Indexes.Static
 {

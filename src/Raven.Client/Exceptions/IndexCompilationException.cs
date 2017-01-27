@@ -2,7 +2,7 @@ using System;
 
 using Raven.Abstractions.Extensions;
 
-namespace Raven.Client.Exceptions
+namespace Raven.Client.Exceptions.Compilation
 {
     public class IndexCompilationException : Exception
     {

@@ -142,7 +142,7 @@ namespace Raven.NewClient.Client.Commands
                 string id;
                 metadata.TryGetId(out id);
 
-                list.Add(Deserialize<T>(id, document, metadata));
+                list.Add(Deserialize<T>(id, document, metadata, _projectionFields, _disableEntitiesTracking, _session));
             }
 
             if (_disableEntitiesTracking == false)
@@ -154,18 +154,18 @@ namespace Raven.NewClient.Client.Commands
             return _transformResults(_indexQuery, list.Cast<object>()).Cast<T>().ToList();
         }
 
-        private T Deserialize<T>(string id, BlittableJsonReaderObject document, BlittableJsonReaderObject metadata)
+        internal static T Deserialize<T>(string id, BlittableJsonReaderObject document, BlittableJsonReaderObject metadata, string[] projectionFields, bool disableEntitiesTracking, InMemoryDocumentSessionOperations session)
         {
-            if (_projectionFields == null || _projectionFields.Length == 0)
-                return _session.TrackEntity<T>(id, document, metadata, _disableEntitiesTracking);
+            if (projectionFields == null || projectionFields.Length == 0)
+                return session.TrackEntity<T>(id, document, metadata, disableEntitiesTracking);
 
-            if (_projectionFields.Length == 1) // we only select a single field
+            if (projectionFields.Length == 1) // we only select a single field
             {
                 var type = typeof(T);
                 var typeInfo = type.GetTypeInfo();
                 if (type == typeof(string) || typeInfo.IsValueType || typeInfo.IsEnum)
                 {
-                    var projectionField = _projectionFields[0];
+                    var projectionField = projectionFields[0];
                     T value;
                     return document.TryGet(projectionField, out value) == false
                         ? default(T)
@@ -173,16 +173,16 @@ namespace Raven.NewClient.Client.Commands
                 }
             }
 
-            var result = (T)_session.Conventions.DeserializeEntityFromBlittable(typeof(T), document);
+            var result = (T)session.Conventions.DeserializeEntityFromBlittable(typeof(T), document);
 
             if (string.IsNullOrEmpty(id) == false)
             {
                 // we need to make an additional check, since it is possible that a value was explicitly stated
                 // for the identity property, in which case we don't want to override it.
                 object value;
-                var identityProperty = _session.Conventions.GetIdentityProperty(typeof(T));
+                var identityProperty = session.Conventions.GetIdentityProperty(typeof(T));
                 if (identityProperty != null && (document.TryGetMember(identityProperty.Name, out value) == false || value == null))
-                    _session.GenerateEntityIdOnTheClient.TrySetIdentity(result, id);
+                    session.GenerateEntityIdOnTheClient.TrySetIdentity(result, id);
             }
 
             return result;

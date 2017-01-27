@@ -1,7 +1,7 @@
+using System;
 using System.Linq;
-
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Indexes;
 using Company = SlowTests.Core.Utils.Entities.Company;
 
 namespace SlowTests.Core.Utils.Indexes
@@ -15,13 +15,15 @@ namespace SlowTests.Core.Utils.Indexes
 
         public Companies_AllProperties()
         {
-            Map = companies => from company in companies
-                               select new
-                               {
-                                   Query = AsDocument(company).Select(x => x.Value)
-                               };
+            throw new NotImplementedException();
 
-            Index(x => x.Query, FieldIndexing.Analyzed);
+            //Map = companies => from company in companies
+            //                   select new
+            //                   {
+            //                       Query = AsDocument(company).Select(x => x.Value)
+            //                   };
+
+            //Index(x => x.Query, FieldIndexing.Analyzed);
         }
     }
 }
