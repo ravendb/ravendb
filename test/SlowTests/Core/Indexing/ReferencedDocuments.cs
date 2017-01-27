@@ -6,12 +6,11 @@
 
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
 using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Indexes;
 using SlowTests.Core.Utils.Transformers;
@@ -25,7 +24,7 @@ using PostContent = SlowTests.Core.Utils.Entities.PostContent;
 
 namespace SlowTests.Core.Indexing
 {
-    public class ReferencedDocuments : RavenTestBase
+    public class ReferencedDocuments : RavenNewTestBase
     {
         [Fact]
         public void CanUseLoadDocumentToIndexReferencedDocs()
@@ -267,7 +266,7 @@ namespace SlowTests.Core.Indexing
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.PutIndex("Users/ByCity", new IndexDefinition
+                store.Admin.Send(new PutIndexOperation("Users/ByCity", new IndexDefinition
                 {
                     Maps =
                     {
@@ -279,7 +278,7 @@ namespace SlowTests.Core.Indexing
                                    City = address1.City
                                }"
                     }
-                });
+                }));
 
                 using (var session = store.OpenSession())
                 {

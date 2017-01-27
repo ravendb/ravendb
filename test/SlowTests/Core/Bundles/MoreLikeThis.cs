@@ -1,10 +1,5 @@
-using System.Threading.Tasks;
-
 using FastTests;
-
-using Raven.Client.Bundles.MoreLikeThis;
-using Raven.Client.Data.Queries;
-
+using Raven.NewClient.Client.Data.Queries;
 using SlowTests.Core.Utils.Indexes;
 using SlowTests.Core.Utils.Transformers;
 
@@ -17,7 +12,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Bundles
 {
-    public class MoreLikeThis : RavenTestBase
+    public class MoreLikeThis : RavenNewTestBase
     {
         [Fact]
         public void CanUseBasicMoreLikeThis()
@@ -45,7 +40,7 @@ namespace SlowTests.Core.Bundles
                         MinimumTermFrequency = 0
                     });
 
-                    Assert.Equal(3, list.Length);
+                    Assert.Equal(3, list.Count);
                     Assert.Equal("doduck", list[0].Title);
                     Assert.Equal("prototype your idea", list[0].Desc);
                     Assert.Equal("doduck", list[1].Title);
@@ -84,14 +79,16 @@ namespace SlowTests.Core.Bundles
 
                     WaitForIndexing(store);
 
-                    var list = session.Advanced.MoreLikeThis<PostWithContentTransformer.Result>(index.IndexName, transformer.TransformerName, new MoreLikeThisQuery
+                    var list = session.Advanced.MoreLikeThis<PostWithContentTransformer.Result>(new MoreLikeThisQuery
                     {
+                        IndexName = index.IndexName,
+                        Transformer = transformer.TransformerName,
                         DocumentId = "posts/1",
                         MinimumDocumentFrequency = 1,
                         MinimumTermFrequency = 0
                     });
 
-                    Assert.Equal(3, list.Length);
+                    Assert.Equal(3, list.Count);
                     Assert.Equal("doduck", list[0].Title);
                     Assert.Equal("prototype your idea", list[0].Desc);
                     Assert.Equal("transform2", list[0].Content);
@@ -131,7 +128,7 @@ namespace SlowTests.Core.Bundles
                         MinimumTermFrequency = 0
                     });
 
-                    Assert.Equal(1, list.Length);
+                    Assert.Equal(1, list.Count);
                     Assert.Equal("John Doe", list[0].Name);
 
                     var address = session.Load<Address>(list[0].AddressId);

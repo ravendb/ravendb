@@ -8,9 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using FastTests;
-
-using Raven.Client;
-
+using Raven.NewClient.Client;
 using SlowTests.Core.Utils.Indexes;
 
 using Xunit;
@@ -19,7 +17,7 @@ using Company = SlowTests.Core.Utils.Entities.Company;
 
 namespace SlowTests.Core.Indexing
 {
-    public class CustomAnalyzers : RavenTestBase
+    public class CustomAnalyzers : RavenNewTestBase
     {
         [Fact]
         public void CreateAndQuerySimpleIndexWithSortingAndCustomCollateral()

@@ -1,5 +1,4 @@
 using System.Linq;
-using System.Threading.Tasks;
 
 using FastTests;
 
@@ -13,7 +12,7 @@ using ISearchable = SlowTests.Core.Utils.Entities.ISearchable;
 
 namespace SlowTests.Core.Indexing
 {
-    public class MultiMap : RavenTestBase
+    public class MultiMap : RavenNewTestBase
     {
         [Fact]
         public void CanCreateAndSearchMultiMapIndex()

@@ -1,11 +1,12 @@
 ﻿using FastTests;
-using Raven.Client.Data.Indexes;
+using Raven.NewClient.Data.Indexes;
+using Raven.NewClient.Operations.Databases.Indexes;
 using SlowTests.Core.Utils.Indexes;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_5615 : RavenTestBase
+    public class RavenDB_5615 : RavenNewTestBase
     {
         [Fact]
         public void CanEnableAndDisableIndex()
@@ -15,37 +16,37 @@ namespace SlowTests.Issues
                 var index = new Users_ByCity();
                 index.Execute(store);
 
-                var indexStats = store.DatabaseCommands.GetIndexStatistics(index.IndexName);
+                var indexStats = store.Admin.Send(new GetIndexStatisticsOperation(index.IndexName));
                 Assert.Equal(IndexState.Normal, indexStats.State);
                 Assert.Equal(IndexRunningStatus.Running, indexStats.Status);
 
-                store.DatabaseCommands.Admin.EnableIndex(index.IndexName); // no-op
+                store.Admin.Send(new EnableIndexOperation(index.IndexName)); // no-op
 
-                indexStats = store.DatabaseCommands.GetIndexStatistics(index.IndexName);
+                indexStats = store.Admin.Send(new GetIndexStatisticsOperation(index.IndexName));
                 Assert.Equal(IndexState.Normal, indexStats.State);
                 Assert.Equal(IndexRunningStatus.Running, indexStats.Status);
 
-                store.DatabaseCommands.Admin.DisableIndex(index.IndexName);
+                store.Admin.Send(new DisableIndexOperation(index.IndexName));
 
-                indexStats = store.DatabaseCommands.GetIndexStatistics(index.IndexName);
+                indexStats = store.Admin.Send(new GetIndexStatisticsOperation(index.IndexName));
                 Assert.Equal(IndexState.Disabled, indexStats.State);
                 Assert.Equal(IndexRunningStatus.Disabled, indexStats.Status);
 
-                store.DatabaseCommands.Admin.DisableIndex(index.IndexName); // no-op
+                store.Admin.Send(new DisableIndexOperation(index.IndexName)); // no-op
 
-                indexStats = store.DatabaseCommands.GetIndexStatistics(index.IndexName);
+                indexStats = store.Admin.Send(new GetIndexStatisticsOperation(index.IndexName));
                 Assert.Equal(IndexState.Disabled, indexStats.State);
                 Assert.Equal(IndexRunningStatus.Disabled, indexStats.Status);
 
-                store.DatabaseCommands.Admin.StartIndex(index.IndexName); // cannot start disabled index
+                store.Admin.Send(new StartIndexOperation(index.IndexName)); // cannot start disabled index
 
-                indexStats = store.DatabaseCommands.GetIndexStatistics(index.IndexName);
+                indexStats = store.Admin.Send(new GetIndexStatisticsOperation(index.IndexName));
                 Assert.Equal(IndexState.Disabled, indexStats.State);
                 Assert.Equal(IndexRunningStatus.Disabled, indexStats.Status);
 
-                store.DatabaseCommands.Admin.EnableIndex(index.IndexName);
+                store.Admin.Send(new EnableIndexOperation(index.IndexName));
 
-                indexStats = store.DatabaseCommands.GetIndexStatistics(index.IndexName);
+                indexStats = store.Admin.Send(new GetIndexStatisticsOperation(index.IndexName));
                 Assert.Equal(IndexState.Normal, indexStats.State);
                 Assert.Equal(IndexRunningStatus.Running, indexStats.Status);
             }
@@ -59,22 +60,22 @@ namespace SlowTests.Issues
                 var index = new Users_ByCity();
                 index.Execute(store);
 
-                var indexStats = store.DatabaseCommands.GetIndexStatistics(index.IndexName);
+                var indexStats = store.Admin.Send(new GetIndexStatisticsOperation(index.IndexName));
                 Assert.Equal(IndexPriority.Normal, indexStats.Priority);
 
-                store.DatabaseCommands.SetIndexPriority(index.IndexName, IndexPriority.Normal); // no-op
+                store.Admin.Send(new SetIndexPriorityOperation(index.IndexName, IndexPriority.Normal)); // no-op
 
-                indexStats = store.DatabaseCommands.GetIndexStatistics(index.IndexName);
+                indexStats = store.Admin.Send(new GetIndexStatisticsOperation(index.IndexName));
                 Assert.Equal(IndexPriority.Normal, indexStats.Priority);
 
-                store.DatabaseCommands.SetIndexPriority(index.IndexName, IndexPriority.Low);
+                store.Admin.Send(new SetIndexPriorityOperation(index.IndexName, IndexPriority.Low));
 
-                indexStats = store.DatabaseCommands.GetIndexStatistics(index.IndexName);
+                indexStats = store.Admin.Send(new GetIndexStatisticsOperation(index.IndexName));
                 Assert.Equal(IndexPriority.Low, indexStats.Priority);
 
-                store.DatabaseCommands.SetIndexPriority(index.IndexName, IndexPriority.High);
+                store.Admin.Send(new SetIndexPriorityOperation(index.IndexName, IndexPriority.High));
 
-                indexStats = store.DatabaseCommands.GetIndexStatistics(index.IndexName);
+                indexStats = store.Admin.Send(new GetIndexStatisticsOperation(index.IndexName));
                 Assert.Equal(IndexPriority.High, indexStats.Priority);
             }
         }

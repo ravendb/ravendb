@@ -19,7 +19,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
-using IndexCompilationException = Raven.Client.Exceptions.IndexCompilationException;
+using IndexCompilationException = Raven.Client.Exceptions.Compilation.IndexCompilationException;
 using ConflictException = Raven.Client.Exceptions.ConflictException;
 using DocumentConflictException = Raven.Client.Exceptions.DocumentConflictException;
 

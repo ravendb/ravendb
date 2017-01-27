@@ -994,7 +994,7 @@ more responsive application.
 
         public void RegisterMissingIncludes(BlittableJsonReaderArray results, ICollection<string> includes)
         {
-            if (includes == null || includes.Any() == false)
+            if (includes == null || includes.Count == 0)
                 return;
 
             foreach (BlittableJsonReaderObject result in results)

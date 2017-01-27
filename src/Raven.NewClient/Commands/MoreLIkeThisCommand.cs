@@ -1,25 +1,27 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
-using System.Text;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Json;
 using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Commands
 {
-    public class MoreLikeThisCommand : RavenCommand<GetDocumentResult>
+    public class MoreLikeThisCommand : RavenCommand<MoreLikeThisQueryResult>
     {
-        public MoreLikeThisQuery Query;
+        private readonly MoreLikeThisQuery _query;
+
+        public MoreLikeThisCommand(MoreLikeThisQuery query)
+        {
+            if (query == null)
+                throw new ArgumentNullException(nameof(query));
+
+            _query = query;
+        }
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            var requestUrl = Query.GetRequestUri();
+            var requestUrl = _query.GetRequestUri();
             EnsureIsNotNullOrEmpty(requestUrl, "url");
 
             var request = new HttpRequestMessage
@@ -39,7 +41,7 @@ namespace Raven.NewClient.Client.Commands
                 return;
             }
 
-            Result = JsonDeserializationClient.GetDocumentResult(response);
+            Result = JsonDeserializationClient.MoreLikeThisQueryResult(response);
         }
 
         public override bool IsReadRequest => true;

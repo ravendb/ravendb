@@ -16,6 +16,7 @@ using Raven.Client.Connection.Async;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Document;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Compilation;
 
 namespace Raven.Client.Indexes
 {

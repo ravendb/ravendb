@@ -4,8 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System.Threading.Tasks;
-
 using FastTests;
 
 using SlowTests.Core.Utils.Indexes;
@@ -16,7 +14,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Streaming
 {
-    public class QueryStreaming : RavenTestBase
+    public class QueryStreaming : RavenNewTestBase
     {
         [Fact]
         public void CanStreamQueryResults()

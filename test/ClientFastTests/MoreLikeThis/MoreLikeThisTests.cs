@@ -7,7 +7,6 @@ using Raven.NewClient.Abstractions.Indexing;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client.Bundles.MoreLikeThis;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Abstractions.Data;
 using System.Linq;

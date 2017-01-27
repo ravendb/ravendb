@@ -1,8 +1,5 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-
 using FastTests;
 using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Indexes;
@@ -15,7 +12,7 @@ using Post = SlowTests.Core.Utils.Entities.Post;
 
 namespace SlowTests.Core.Indexing
 {
-    public class IndexDefinitionMethods : RavenTestBase
+    public class IndexDefinitionMethods : RavenNewTestBase
     {
         [Fact]
         public void CanUseMetadataFor()
@@ -74,7 +71,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6211")]
         public void CanUseAsDocumentToIndexAllDocumentFields()
         {
             using (var store = GetDocumentStore())

@@ -9,10 +9,8 @@ using System.Dynamic;
 using System.Threading.Tasks;
 
 using FastTests;
-
-using Raven.Abstractions.Extensions;
-using Raven.Client.Exceptions;
-
+using Raven.NewClient.Abstractions.Extensions;
+using Raven.NewClient.Client.Exceptions.Session;
 using SlowTests.Core.Utils.Transformers;
 
 using Xunit;
@@ -24,7 +22,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Session
 {
-    public class Crud : RavenTestBase
+    public class Crud : RavenNewTestBase
     {
         [Fact]
         public async Task CanSaveAndLoad()
@@ -73,7 +71,7 @@ namespace SlowTests.Core.Session
                     var user = await session.LoadAsync<dynamic>("users/1");
 
                     Assert.NotNull(user);
-                    Assert.Equal("Arek", user.Name);
+                    Assert.Equal("Arek", user.Name.ToString());
                 }
             }
         }
@@ -132,7 +130,7 @@ namespace SlowTests.Core.Session
 
                     var users = await session.LoadAsync<User>(new[] { "users/1", "users/2", "users/3" });
 
-                    users.ForEach(Assert.Null);
+                    users.ForEach(kvp => Assert.Null(kvp.Value));
                 }
             }
         }
