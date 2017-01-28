@@ -391,7 +391,7 @@ namespace Voron.Impl
             return val->RootObjectType;
         }
 
-        public FixedSizeTree GetGlobalFixedSizeTree(Slice name, ushort valSize)
+        public FixedSizeTree GetGlobalFixedSizeTree(Slice name, ushort valSize, NewPageAllocator newPageAllocator = null)
         {
             if (_globalFixedSizeTree == null)
                 _globalFixedSizeTree = new Dictionary<Slice, FixedSizeTree>(SliceComparer.Instance);
@@ -399,7 +399,7 @@ namespace Voron.Impl
             FixedSizeTree tree;
             if (_globalFixedSizeTree.TryGetValue(name, out tree) == false)
             {
-                tree = new FixedSizeTree(LowLevelTransaction, LowLevelTransaction.RootObjects, name, valSize);
+                tree = new FixedSizeTree(LowLevelTransaction, LowLevelTransaction.RootObjects, name, valSize, newPageAllocator: newPageAllocator);
                 _globalFixedSizeTree[tree.Name] = tree;
             }
             return tree;

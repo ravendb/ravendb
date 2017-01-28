@@ -14,6 +14,7 @@ using FastTests.Server.Documents.Queries;
 using FastTests.Server.Replication;
 using FastTests.Voron.FixedSize;
 using FastTests.Voron.RawData;
+using FastTests.Voron.Tables;
 using SlowTests.Tests;
 using SlowTests.Voron;
 using Sparrow.Logging;
@@ -24,13 +25,13 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            for (int i = 0; i < 100; i++)
+            //for (int i = 0; i < 100; i++)
             {
-                using (var a = new SlowTests.Voron.RecoveryMultipleJournals())
+                using (var a = new Allocations())
                 {
-                    a.CorruptingAllLastTransactionsConsideredAsEndOfJournal();
+                    a.IndexPagesWillBeNearby();
                 }
-                Console.WriteLine($"{i} finished");
+                //Console.WriteLine($"{i} finished");
             }
 
         }

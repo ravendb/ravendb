@@ -95,7 +95,7 @@ namespace Voron.Data.BTrees
             if (type != RootObjectType.VariableSizeTree && type != RootObjectType.Table)
                 ThrowInvalidTreeCreateType();
 
-            var newPage = newPageAllocator?.AllocatePage() ?? llt.AllocatePage(1);
+            var newPage = newPageAllocator?.AllocateSinglePage(0) ?? llt.AllocatePage(1);
 
 
             TreePage newRootPage = PrepareTreePage(TreePageFlags.Leaf, 1, newPage);
@@ -856,9 +856,9 @@ namespace Voron.Data.BTrees
             return c;
         }
         
-        internal TreePage NewPage(TreePageFlags flags)
+        internal TreePage NewPage(TreePageFlags flags, long nearbyPage)
         {
-            var newPage = _newPageAllocator?.AllocatePage() ?? _llt.AllocatePage(1);
+            var newPage = _newPageAllocator?.AllocateSinglePage(nearbyPage) ?? _llt.AllocatePage(1);
 
             var page = PrepareTreePage(flags, 1, newPage);
 

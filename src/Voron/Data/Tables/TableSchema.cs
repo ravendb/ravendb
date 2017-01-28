@@ -142,16 +142,16 @@ namespace Voron.Data.Tables
             public byte[] Serialize()
             {
                 // We serialize the Type enum as ulong to be "future-proof"
-                var castedType = (long)Type;
+                var castedType = (long) Type;
 
                 var serializer = new TableValueBuilder
-                            {
-                                castedType,
-                                StartIndex,
-                                Count,
-                                IsGlobal,
-                                Name
-                            };
+                {
+                    castedType,
+                    StartIndex,
+                    Count,
+                    IsGlobal,
+                    Name
+                };
 
                 byte[] serialized = new byte[serializer.Size];
 
@@ -170,13 +170,13 @@ namespace Voron.Data.Tables
 
                 int currentSize;
                 byte* currentPtr = input.Read(0, out currentSize);
-                indexDef.Type = (TableIndexType)(*(ulong*)currentPtr);
+                indexDef.Type = (TableIndexType) (*(ulong*) currentPtr);
 
                 currentPtr = input.Read(1, out currentSize);
-                indexDef.StartIndex = *(int*)currentPtr;
+                indexDef.StartIndex = *(int*) currentPtr;
 
                 currentPtr = input.Read(2, out currentSize);
-                indexDef.Count = *(int*)currentPtr;
+                indexDef.Count = *(int*) currentPtr;
 
                 currentPtr = input.Read(3, out currentSize);
                 indexDef.IsGlobal = Convert.ToBoolean(*currentPtr);
@@ -229,26 +229,26 @@ namespace Voron.Data.Tables
             {
                 int totalSize;
                 var ptr = value.Read(StartIndex, out totalSize);
-                return Bits.SwapBytes(*(long*)ptr);
+                return Bits.SwapBytes(*(long*) ptr);
             }
 
-            public long GetValue(ByteStringContext context,TableValueBuilder value)
+            public long GetValue(ByteStringContext context, TableValueBuilder value)
             {
                 Slice slice;
-                using (value.SliceFromLocation(context, StartIndex,out slice))
+                using (value.SliceFromLocation(context, StartIndex, out slice))
                 {
-                    return Bits.SwapBytes(*(long*)slice.Content.Ptr);
+                    return Bits.SwapBytes(*(long*) slice.Content.Ptr);
                 }
             }
 
             public byte[] Serialize()
             {
                 var serializer = new TableValueBuilder
-                    {
-                        StartIndex,
-                        IsGlobal,
-                        Name
-                    };
+                {
+                    StartIndex,
+                    IsGlobal,
+                    Name
+                };
 
                 byte[] serialized = new byte[serializer.Size];
 
@@ -267,7 +267,7 @@ namespace Voron.Data.Tables
 
                 int currentSize;
                 byte* currentPtr = input.Read(0, out currentSize);
-                output.StartIndex = *(int*)currentPtr;
+                output.StartIndex = *(int*) currentPtr;
 
                 currentPtr = input.Read(1, out currentSize);
                 output.IsGlobal = Convert.ToBoolean(*currentPtr);
@@ -372,31 +372,38 @@ namespace Voron.Data.Tables
             // Create raw data. This is where we will actually store the documents
             using (var rawDataActiveSection = ActiveRawDataSmallSection.Create(tx.LowLevelTransaction, name, sizeInPages))
             {
-
-
                 long val = rawDataActiveSection.PageNumber;
                 Slice pageNumber;
-                using (Slice.External(tx.Allocator, (byte*)&val, sizeof(long), ByteStringType.Immutable, out pageNumber))
+                using (
+                    Slice.External(tx.Allocator, (byte*) &val, sizeof(long), ByteStringType.Immutable, out pageNumber))
                 {
                     tableTree.Add(ActiveSectionSlice, pageNumber);
                 }
 
-                var stats = (TableSchemaStats*)tableTree.DirectAdd(StatsSlice, sizeof(TableSchemaStats));
+                var stats = (TableSchemaStats*) tableTree.DirectAdd(StatsSlice, sizeof(TableSchemaStats));
                 stats->NumberOfEntries = 0;
+
+                var tablePageAllocator = new NewPageAllocator(tx.LowLevelTransaction, tableTree);
+                tablePageAllocator.Create();
+
+                var globalPageAllocator = new NewPageAllocator(tx.LowLevelTransaction,
+                    tx.LowLevelTransaction.RootObjects);
+                globalPageAllocator.Create();
 
                 if (_primaryKey != null)
                 {
                     if (_primaryKey.IsGlobal == false)
                     {
-                        using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx))
+                        
+                        using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, newPageAllocator: tablePageAllocator))
                         {
                             var treeHeader = tableTree.DirectAdd(_primaryKey.Name, sizeof(TreeRootHeader));
-                            indexTree.State.CopyTo((TreeRootHeader*)treeHeader);
+                            indexTree.State.CopyTo((TreeRootHeader*) treeHeader);
                         }
                     }
                     else
                     {
-                        tx.CreateTree(_primaryKey.Name.ToString());
+                        tx.CreateTree(_primaryKey.Name.ToString(),newPageAllocator: globalPageAllocator);
                     }
                 }
 
@@ -404,15 +411,15 @@ namespace Voron.Data.Tables
                 {
                     if (indexDef.IsGlobal == false)
                     {
-                        using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx))
+                        using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, newPageAllocator: tablePageAllocator))
                         {
                             var treeHeader = tableTree.DirectAdd(indexDef.Name, sizeof(TreeRootHeader));
-                            indexTree.State.CopyTo((TreeRootHeader*)treeHeader);
+                            indexTree.State.CopyTo((TreeRootHeader*) treeHeader);
                         }
                     }
                     else
                     {
-                        tx.CreateTree(indexDef.Name.ToString());
+                        tx.CreateTree(indexDef.Name.ToString(), newPageAllocator: globalPageAllocator);
                     }
                 }
 
@@ -461,7 +468,6 @@ namespace Voron.Data.Tables
 
             fixed (byte* ptr = packed)
             {
-
                 var serializer = new TableValueBuilder();
 
                 foreach (var member in structure)
@@ -503,7 +509,7 @@ namespace Voron.Data.Tables
 
             // Read common schema indexes
             currentPtr = input.Read(currentIndex++, out currentSize);
-            int indexCount = *(int*)currentPtr;
+            int indexCount = *(int*) currentPtr;
 
             while (indexCount > 0)
             {
@@ -516,7 +522,7 @@ namespace Voron.Data.Tables
 
             // Read fixed size schema indexes
             currentPtr = input.Read(currentIndex++, out currentSize);
-            indexCount = *(int*)currentPtr;
+            indexCount = *(int*) currentPtr;
 
             while (indexCount > 0)
             {
@@ -575,7 +581,6 @@ namespace Voron.Data.Tables
 
                 entry.Value.Validate(index);
             }
-
         }
     }
 }

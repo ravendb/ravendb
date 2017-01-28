@@ -32,6 +32,7 @@ namespace Voron.Data.Tables
 
         private long _overflowPageCount;
         private NewPageAllocator _tablePageAllocator;
+        private NewPageAllocator _globalPageAllocator;
 
         public FixedSizeTree FixedSizeKey
         {
@@ -116,7 +117,8 @@ namespace Voron.Data.Tables
 
             NumberOfEntries = stats->NumberOfEntries;
             _overflowPageCount = stats->OverflowPageCount;
-            _tablePageAllocator = new NewPageAllocator(_tx.LowLevelTransaction);
+            _tablePageAllocator = new NewPageAllocator(_tx.LowLevelTransaction, _tableTree);
+            _globalPageAllocator = new NewPageAllocator(_tx.LowLevelTransaction, _tx.LowLevelTransaction.RootObjects);
 
             if (doSchemaValidation)
             {
@@ -529,7 +531,7 @@ namespace Voron.Data.Tables
         private FixedSizeTree GetFixedSizeTree(TableSchema.FixedSizeSchemaIndexDef indexDef)
         {
             if (indexDef.IsGlobal)
-                return _tx.GetGlobalFixedSizeTree(indexDef.Name, sizeof(long));
+                return _tx.GetGlobalFixedSizeTree(indexDef.Name, sizeof(long), newPageAllocator: _globalPageAllocator);
 
             var tableTree = _tx.ReadTree(Name);
             return GetFixedSizeTree(tableTree, indexDef.Name, sizeof(long));
@@ -548,7 +550,7 @@ namespace Voron.Data.Tables
             FixedSizeTree tree;
             if (cache.TryGetValue(name, out tree) == false)
             {
-                var fixedSizeTree = new FixedSizeTree(_tx.LowLevelTransaction, parent, name, valSize);
+                var fixedSizeTree = new FixedSizeTree(_tx.LowLevelTransaction, parent, name, valSize, newPageAllocator: _tablePageAllocator);
                 return cache[fixedSizeTree.Name] = fixedSizeTree;
             }
 
@@ -615,10 +617,10 @@ namespace Voron.Data.Tables
             return tree;
         }
 
-        private Tree GetTree(TableSchema.SchemaIndexDef idx)
+        internal Tree GetTree(TableSchema.SchemaIndexDef idx)
         {
             if (idx.IsGlobal)
-                return _tx.ReadTree(idx.Name, newPageAllocator: _tablePageAllocator);
+                return _tx.ReadTree(idx.Name, newPageAllocator: _globalPageAllocator);
             return GetTree(idx.Name);
         }
 

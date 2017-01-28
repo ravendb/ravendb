@@ -90,6 +90,11 @@ namespace Voron.Impl.Compaction
                                 copiedTrees++;// we don't copy the fixed size tree
                                 continue;
                             }
+                            if (NewPageAllocator.AllocationStorageName == treeName)
+                            {
+                                copiedTrees++;
+                                continue; // we don't copy the allocator storage
+                            }
 
                             copiedTrees = CopyFixedSizeTrees(compactedEnv, progressReport, txr, rootIterator, treeName, copiedTrees, totalTreesCount, objectType, context);
                             break;
