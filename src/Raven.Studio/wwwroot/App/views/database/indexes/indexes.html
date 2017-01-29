@@ -59,6 +59,41 @@
                             </li>
                         </ul>
                     </div>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-default dropdown-toggle" title="Change the status of selected indexes"
+                                data-bind="enable: $root.globalIndexingStatus() === 'Running' && selectedIndexesName().length && !spinners.globalLockChanges(), css: { 'btn-spinner': spinners.globalLockChanges() }" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <i class="icon-list"></i><span>Toggle status selected</span>
+                            <span class="caret"></span>
+                            <span class="sr-only">Toggle Dropdown</span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li data-bind="click: enableSelectedIndexes">
+                                <a href="#" title="Enable disabled indexes">
+                                    <i class="icon-play"></i>
+                                    <span>Enable disabled indexes</span>
+                                </a>
+                            </li>
+                            <li data-bind="click: disableSelectedIndexes">
+                                <a href="#" title="Disable selected indexes">
+                                    <i class="icon-lock"></i>
+                                    <span>Disable selected indexes</span>
+                                </a>
+                            </li>
+                            <li class="divider"></li>
+                            <li data-bind="click: resumeSelectedIndexes">
+                                <a href="#" title="Resume selected indexes">
+                                    <i class="icon-play"></i>
+                                    <span>Resume paused indexes</span>
+                                </a>
+                            </li>
+                            <li data-bind="click: pauseSelectedIndexes">
+                                <a href="#" title="Pause selected indexes">
+                                    <i class="icon-pause"></i>
+                                    <span>Pause selected indexes</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                     <button class="btn btn-danger" data-bind="click: deleteSelectedIndexes, enable: selectedIndexesName().length"><i class="icon-trash"></i><span>Delete selected</span></button>
                 </div>
             </div>
