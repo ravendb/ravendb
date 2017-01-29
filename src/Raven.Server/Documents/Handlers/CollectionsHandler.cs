@@ -8,6 +8,8 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Raven.Client.Data.Collection;
+using Raven.NewClient.Client.Data.Collections;
+using Raven.NewClient.Client.Operations.Databases.Collections;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -23,8 +25,8 @@ namespace Raven.Server.Documents.Handlers
                 var collections = new DynamicJsonValue();
                 var result = new DynamicJsonValue
                 {
-                    ["NumberOfDocuments"] = Database.DocumentsStorage.GetNumberOfDocuments(context),
-                    ["Collections"] = collections
+                    [nameof(CollectionStatistics.CountOfDocuments)] = Database.DocumentsStorage.GetNumberOfDocuments(context),
+                    [nameof(CollectionStatistics.Collections)] = collections
                 };
 
                 foreach (var collectionStat in Database.DocumentsStorage.GetCollections(context))
