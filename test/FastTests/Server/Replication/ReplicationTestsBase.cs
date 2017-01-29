@@ -312,7 +312,6 @@ namespace FastTests.Server.Replication
                         });
                 session.Store(new ReplicationDocument
                 {
-                    HeartbeatInterval = 100,
                     Destinations = destinations
                 }, Constants.Replication.DocumentReplicationConfiguration);
                 session.SaveChanges();
