@@ -43,6 +43,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     }
                 }, database))
                 {
+                    DocumentQueryResult queryResult;
                     using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                     {
                         Put_docs(context, database);
@@ -51,12 +52,14 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                         var scope = new IndexingStatsScope(batchStats);
                         index.DoIndexingWork(scope, CancellationToken.None);
 
-                        var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
+                        queryResult =
+                            await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
                         Assert.Equal(2, queryResult.Results.Count);
 
-                        context.ResetAndRenew();
-
+                    }
+                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                    {
                         queryResult = await index.Query(new IndexQueryServerSide() { Query = @"Location:Poland" }, context, OperationCancelToken.None);
 
                         var results = queryResult.Results;
@@ -97,6 +100,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     }
                 }, database))
                 {
+                    DocumentQueryResult queryResult;
                     using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                     {
                         Put_docs(context, database);
@@ -105,12 +109,14 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                         var scope = new IndexingStatsScope(batchStats);
                         index.DoIndexingWork(scope, CancellationToken.None);
 
-                        var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
+                        queryResult =
+                            await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
                         Assert.Equal(2, queryResult.Results.Count);
 
-                        context.ResetAndRenew();
-
+                    }
+                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                    {
                         queryResult = await index.Query(new IndexQueryServerSide() { Query = @"Hobbies:music" }, context, OperationCancelToken.None);
 
                         var results = queryResult.Results;
@@ -164,6 +170,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     }
                 }, database))
                 {
+                    DocumentQueryResult queryResult;
                     using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                     {
                         Put_docs(context, database);
@@ -172,14 +179,18 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                         var scope = new IndexingStatsScope(batchStats);
                         while (index.DoIndexingWork(scope, CancellationToken.None))
                         {
-                            
+
                         }
 
-                        var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
+                        queryResult =
+                            await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
                         Assert.Equal(2, queryResult.Results.Count);
 
-                        context.ResetAndRenew();
+                    }
+
+                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                    {
 
                         queryResult = await index.Query(new IndexQueryServerSide() { Query = @"Location:Poland" }, context, OperationCancelToken.None);
 
@@ -229,6 +240,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     }
                 }, database))
                 {
+                    DocumentQueryResult queryResult;
                     using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                     {
                         Put_docs(context, database);
@@ -237,14 +249,17 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                         var scope = new IndexingStatsScope(batchStats);
                         while (index.DoIndexingWork(scope, CancellationToken.None))
                         {
-                            
+
                         }
 
-                        var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
+                        queryResult =
+                            await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
                         Assert.Equal(2, queryResult.Results.Count);
 
-                        context.ResetAndRenew();
+                    }
+                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                    {
 
                         queryResult = await index.Query(new IndexQueryServerSide() { Query = @"Hobbies:music" }, context, OperationCancelToken.None);
 

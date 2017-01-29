@@ -160,9 +160,12 @@ namespace Raven.Server.Documents
 
                 int criteriaSize;
                 var criteriaPtr = config.Read(SubscriptionSchema.SubscriptionTable.CriteriaIndex, out criteriaSize);
-                var criteriaBlittable = new BlittableJsonReaderObject(criteriaPtr, criteriaSize, context);
-                criteria = JsonDeserializationServer.SubscriptionCriteria(criteriaBlittable);
-                startEtag = *(long*)config.Read(SubscriptionSchema.SubscriptionTable.AckEtagIndex, out criteriaSize);
+                using (var criteriaBlittable = new BlittableJsonReaderObject(criteriaPtr, criteriaSize, context))
+                {
+                    criteria = JsonDeserializationServer.SubscriptionCriteria(criteriaBlittable);
+                    startEtag =
+                        *(long*) config.Read(SubscriptionSchema.SubscriptionTable.AckEtagIndex, out criteriaSize);
+                }
             }
         }
 

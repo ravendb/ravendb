@@ -309,7 +309,7 @@ namespace Raven.Server.Smuggler.Documents
                         result.RevisionDocuments.ErroredCount++;
                         continue;
                     }
-
+                    
                     Debug.Assert(document.Key != null);
 
                     actions.WriteDocument(document);
@@ -325,6 +325,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             using (var actions = _destination.Documents())
             {
+                
                 foreach (var doc in _source.GetDocuments(_options.CollectionsToExport, actions))
                 {
                     _token.ThrowIfCancellationRequested();
@@ -335,7 +336,7 @@ namespace Raven.Server.Smuggler.Documents
                         result.AddInfo($"Read {result.Documents.ReadCount} documents.");
                         _onProgress.Invoke(result.Progress);
                     }
-
+                    
                     if (doc == null)
                     {
                         result.Documents.ErroredCount++;
@@ -345,9 +346,9 @@ namespace Raven.Server.Smuggler.Documents
                     if (doc.Key == null)
                         ThrowInvalidData();
 
-                    var document = doc;
+                    var maybePatched = doc;
 
-                    if (_options.IncludeExpired == false && document.Expired(_time.GetUtcNow()))
+                    if (_options.IncludeExpired == false && maybePatched.Expired(_time.GetUtcNow()))
                     {
                         result.Documents.SkippedCount++;
                         continue;
@@ -355,26 +356,29 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (_patcher != null)
                     {
-                        document = _patcher.Transform(document, actions.GetContextForNewDocument());
-                        if (document == null)
+                        maybePatched = _patcher.Transform(maybePatched, actions.GetContextForNewDocument());
+                        if (maybePatched == null)
                         {
                             result.Documents.SkippedCount++;
                             continue;
                         }
                     }
+                        
+                    maybePatched.EnsureMetadata();
 
                     if (_options.DisableVersioningBundle)
                     {
-                        var metadata = (BlittableJsonReaderObject)document.Data[Constants.Metadata.Key];
+                        var metadata = (BlittableJsonReaderObject) maybePatched.Data[Constants.Metadata.Key];
                         if (metadata.Modifications == null)
                             metadata.Modifications = new DynamicJsonValue(metadata);
 
                         metadata.Modifications[Constants.Versioning.RavenDisableVersioning] = true;
                     }
 
-                    actions.WriteDocument(document);
+                    actions.WriteDocument(maybePatched);
 
-                    result.Documents.LastEtag = document.Etag;
+                    result.Documents.LastEtag = maybePatched.Etag;
+                    
                 }
             }
 

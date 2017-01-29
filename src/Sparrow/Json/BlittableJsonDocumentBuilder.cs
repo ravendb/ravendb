@@ -19,7 +19,7 @@ namespace Sparrow.Json
         private readonly JsonParserState _state;
 
         protected WriteToken _writeToken;
-        private string _debugTag;
+        private  string _debugTag;
 
 
         public BlittableJsonDocumentBuilder(JsonOperationContext context, JsonParserState state, IJsonParser reader,
