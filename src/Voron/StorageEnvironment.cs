@@ -450,15 +450,14 @@ namespace Voron
                         flushInProgressReadLockTaken = FlushInProgressLock.TryEnterReadLock(wait);
 
                     txLockTaken = _transactionWriter.Wait(wait);
-                    if (txLockTaken == false || (flushInProgressReadLockTaken == false && FlushInProgressLock.IsWriteLockHeld == false))
+                    if (txLockTaken == false || (flushInProgressReadLockTaken == false && 
+                        FlushInProgressLock.IsWriteLockHeld == false))
                     {
                         GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
                         ThrowOnTimeoutWaitingForWriteTxLock(wait);
                     }
                     _currentTransactionHolder = NativeMemory.ThreadAllocations.Value;
-                    _writeTransactionRunning.SetInAsyncMannerFireAndForget();
-
-                    _lastWorkTimeTicks = DateTime.UtcNow.Ticks;
+                    WriteTransactionStarted();
 
                     if (_endOfDiskSpace != null)
                     {
@@ -508,6 +507,13 @@ namespace Voron
                 }
                 throw;
             }
+        }
+
+        internal void WriteTransactionStarted()
+        {
+            _writeTransactionRunning.SetInAsyncMannerFireAndForget();
+
+            _lastWorkTimeTicks = DateTime.UtcNow.Ticks;
         }
 
         private void ThrowOnTimeoutWaitingForWriteTxLock(TimeSpan wait)
@@ -587,8 +593,6 @@ namespace Voron
             if (tx.Flags != (TransactionFlags.ReadWrite))
                 return;
 
-            _writeTransactionRunning.Reset();
-
             if (tx.FlushedToJournal)
             {
                 var totalPages = 0;
@@ -604,7 +608,11 @@ namespace Voron
                     GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
             }
 
+            if (tx.AsyncCommit != null)
+                return;
+
             _currentTransactionHolder = null;
+            _writeTransactionRunning.Reset();
             _transactionWriter.Release();
             
             if (tx.FlushInProgressLockTaken)

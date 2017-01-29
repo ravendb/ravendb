@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
+using System.Threading.Tasks;
 using Sparrow;
 using Sparrow.Utils;
 using Voron.Data.BTrees;
@@ -35,7 +36,7 @@ namespace Voron.Impl
         private readonly StorageEnvironment _env;
         private readonly long _id;
         private readonly ByteStringContext _allocator;
-        private readonly bool _disposeAllocator;
+        private bool _disposeAllocator;
 
         private Tree _root;
         public Tree RootObjects => _root;
@@ -87,7 +88,6 @@ namespace Voron.Impl
         private int _overflowPagesInTransaction;
         private TransactionHeader* _txHeader;
 
-        private PageFromScratchBuffer _transactionHeaderPage;
         private readonly HashSet<PageFromScratchBuffer> _transactionPages;
         private readonly HashSet<long> _freedPages;
         private readonly List<PageFromScratchBuffer> _unusedScratchPages;
@@ -124,6 +124,55 @@ namespace Voron.Impl
         public ByteStringContext Allocator => _allocator;
 
         public ulong Hash => _txHeader->Hash;
+
+        private LowLevelTransaction(
+            LowLevelTransaction previous)
+        {
+            // this is meant to be used with transaction merging only
+            // so it makes a lot of assumptions about the usage scenario
+            // and what it can do
+
+            Debug.Assert(previous.Flags == TransactionFlags.ReadWrite);
+
+            var env = previous._env;
+            env.AssertNoCatastrophicFailure();
+
+            FlushInProgressLockTaken = previous.FlushInProgressLockTaken;
+            DataPager = env.Options.DataPager;
+            _env = env;
+            _journal = env.Journal;
+            _id = previous.Id + 1;
+            _freeSpaceHandling = previous._freeSpaceHandling;
+            _allocator = previous._allocator;
+            
+            _disposeAllocator = previous._disposeAllocator;
+            previous._disposeAllocator = false;
+
+            PersistentContext = previous.PersistentContext;
+            Flags = TransactionFlags.ReadWrite;
+
+            _pagerStates = new HashSet<PagerState>(ReferenceEqualityComparer<PagerState>.Default);
+
+            foreach (var scratchPagerState in previous._pagerStates)
+            {
+                scratchPagerState.AddRef();
+            }
+
+            EnsureNoDuplicateTransactionId(_id);
+
+            _env.WriteTransactionPool.Reset();
+            _dirtyOverflowPages = _env.WriteTransactionPool.DirtyOverflowPagesPool;
+            _scratchPagesTable = _env.WriteTransactionPool.ScratchPagesTablePool;
+            _dirtyPages = _env.WriteTransactionPool.DirtyPagesPool;
+            _freedPages = new HashSet<long>(NumericEqualityComparer.Instance);
+            _unusedScratchPages = new List<PageFromScratchBuffer>();
+            _transactionPages = new HashSet<PageFromScratchBuffer>(PageFromScratchBufferEqualityComparer.Instance);
+            _pagesToFreeOnCommit = new Stack<long>();
+
+            _state = previous._state.Clone();
+            InitializeRoots();
+            InitTransactionHeader();
+        }
 
         public LowLevelTransaction(StorageEnvironment env, long id, TransactionPersistentContext transactionPersistentContext, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling, ByteStringContext context = null)
         {
@@ -224,13 +273,9 @@ namespace Voron.Impl
 
         private void InitTransactionHeader()
         {
-            var allocation = _env.ScratchBufferPool.Allocate(this, 1);
-            var page = _env.ScratchBufferPool.ReadPage(this, allocation.ScratchFileNumber, allocation.PositionInScratchBuffer);
-
-            _transactionHeaderPage = allocation;
-
-            UnmanagedMemory.Set(page.Pointer, 0, Constants.Storage.PageSize);
-            _txHeader = (TransactionHeader*)page.Pointer;
+            _txHeaderMemory = Allocator.Allocate(sizeof(TransactionHeader));
+            UnmanagedMemory.Set(_txHeaderMemory.Ptr, 0, sizeof(TransactionHeader));
+            _txHeader = (TransactionHeader*)_txHeaderMemory.Ptr;
             _txHeader->HeaderMarker = Constants.TransactionHeaderMarker;
 
             _txHeader->TransactionId = _id;
@@ -245,11 +290,6 @@ namespace Voron.Impl
 
             _allocatedPagesInTransaction = 0;
             _overflowPagesInTransaction = 0;
-        }
-
-        internal PageFromScratchBuffer GetTransactionHeaderPage()
-        {
-            return this._transactionHeaderPage;
         }
 
         internal HashSet<PageFromScratchBuffer> GetTransactionPages()
@@ -555,9 +595,6 @@ namespace Voron.Impl
 
             _disposed = true;
 
-            if (Flags == TransactionFlags.ReadWrite)
-                _env.WriteTransactionPool.Reset();
-
             _env.TransactionCompleted(this);
 
             foreach (var pagerState in _pagerStates)
@@ -633,17 +670,116 @@ namespace Voron.Impl
 
         public void Commit()
         {
-            if (_disposed)
-                throw new ObjectDisposedException("Transaction");
+            if (Flags != TransactionFlags.ReadWrite)
+                return;// nothing to do
 
-            if (Flags != (TransactionFlags.ReadWrite))
-                return; // nothing to do
+            CommitStage1_CompleteTransaction(); 
+
+            var totalNumberOfAllocatedPages = _allocatedPagesInTransaction + _overflowPagesInTransaction;
+            if (WriteToJournalIsRequired(totalNumberOfAllocatedPages))
+            {
+                CommitStage2_WriteToJournal(totalNumberOfAllocatedPages);
+            }
+
+            CommitStage3_DisposeTransactionResources();
+            OnCommit?.Invoke(this);
+        }
+
+        internal Task AsyncCommit;
+
+        /// <summary>
+        /// This begins an async commit and starts a new transaction immediately.
+        /// The current transaction is considered completed in memory but not yet
+        /// committed to disk. This *must* be completed by calling EndAsyncCommit.
+        /// </summary>
+        public LowLevelTransaction BeginAsyncCommitAndStartNewTransaction()
+        {
+            if (Flags != TransactionFlags.ReadWrite)
+               ThrowReadTranscationCannotDoAsyncCommit();
+
+            CommitStage1_CompleteTransaction();
+
+            var totalNumberOfAllocatedPages = _allocatedPagesInTransaction + _overflowPagesInTransaction;
+            if (WriteToJournalIsRequired(totalNumberOfAllocatedPages))
+            {
+                AsyncCommit = Task.Run(() =>
+                {
+                    CommitStage2_WriteToJournal(totalNumberOfAllocatedPages);
+                });
+            }
+            try
+            {
+
+                var nextTx = new LowLevelTransaction(this);
+                _env.WriteTransactionStarted();
+                _env.ActiveTransactions.Add(nextTx);
+                return nextTx;
+            }
+            catch (Exception)
+            {
+                // failure here means that we'll try to complete the current transaction normaly
+                // then throw as if commit was called normally and the next transaction failed
+                EndAsyncCommit();
+
+                AsyncCommit = null;
+
+                throw;
+            }
+        }
+
+        private static void ThrowReadTranscationCannotDoAsyncCommit()
+        {
+            throw new InvalidOperationException("Only write transactions can do async commit");
+        }
+
+        /// <summary>
+        /// Completes the async commit began previously. Must be called *within* the 
+        /// write lock, and must happen *before* the new transaction call its own commit
+        /// method.
+        /// </summary>
+        public void EndAsyncCommit()
+        {
+            if (AsyncCommit == null)
+                return;
+
+            AsyncCommit.Wait();
+
+            CommitStage3_DisposeTransactionResources();
+            OnCommit?.Invoke(this);
+        }
+
+        private bool WriteToJournalIsRequired(int totalNumberOfAllocatedPages)
+        {
+            var writeToJournalRequired = totalNumberOfAllocatedPages > 0 || // nothing changed in this transaction
+                                         // allow call to writeToJournal for flushing lazy tx
+                                         (IsLazyTransaction == false && _journal?.HasDataInLazyTxBuffer() == true);
+            return writeToJournalRequired;
+        }
+
+        private void CommitStage2_WriteToJournal(int totalNumberOfAllocatedPages)
+        {
+            // In the case of non-lazy transactions, we must flush the data from older lazy transactions
+            // to ensure the sequentiality of the data.
+            var numberOfWrittenPages = _journal.WriteToJournal(this, totalNumberOfAllocatedPages + PagesTakenByHeader);
+            FlushedToJournal = true;
+
+            if (_requestedCommitStats != null)
+            {
+                _requestedCommitStats.NumberOfModifiedPages = totalNumberOfAllocatedPages + PagesTakenByHeader;
+                _requestedCommitStats.NumberOfPagesWrittenToDisk = numberOfWrittenPages;
+            }
+        }
+
+        private void CommitStage1_CompleteTransaction()
+        {
+            if (_disposed)
+                ThrowObjectDisposed();
 
             if (Committed)
-                throw new InvalidOperationException("Cannot commit already committed transaction.");
+                ThrowAlreadyCommitted();
 
             if (RolledBack)
-                throw new InvalidOperationException("Cannot commit rolled-back transaction.");
+                ThrowAlreadyRolledBack();
 
             while (_pagesToFreeOnCommit.Count > 0)
             {
@@ -653,24 +789,10 @@ namespace Voron.Impl
             _state.Root.CopyTo(&_txHeader->Root);
 
             _txHeader->TxMarker |= TransactionMarker.Commit;
+        }
 
-            var totalNumberOfAllocatedPages = _allocatedPagesInTransaction + _overflowPagesInTransaction;
-            if (totalNumberOfAllocatedPages > 0 || // nothing changed in this transaction
-                                                   // allow call to writeToJournal for flushing lazy tx
-                (IsLazyTransaction == false && _journal?.HasDataInLazyTxBuffer() == true))
-            {
-                // In the case of non-lazy transactions, we must flush the data from older lazy transactions
-                // to ensure the sequentiality of the data.
-                var numberOfWrittenPages = _journal.WriteToJournal(this, totalNumberOfAllocatedPages + PagesTakenByHeader);
-                FlushedToJournal = true;
-
-                if (_requestedCommitStats != null)
-                {
-                    _requestedCommitStats.NumberOfModifiedPages = totalNumberOfAllocatedPages + PagesTakenByHeader;
-                    _requestedCommitStats.NumberOfPagesWrittenToDisk = numberOfWrittenPages;
-                }
-            }
-
+        private void CommitStage3_DisposeTransactionResources()
+        {
             // an exception being throw after the transaction has been committed to disk 
             // will corrupt the in memory state, and require us to restart (and recover) to 
             // be in a valid state
@@ -678,8 +800,7 @@ namespace Voron.Impl
             {
                 ValidateAllPages();
 
-                // release scratch file page allocated for the transaction header
-                _env.ScratchBufferPool.Free(_transactionHeaderPage.ScratchFileNumber, _transactionHeaderPage.PositionInScratchBuffer, null);
+                Allocator.Release(ref _txHeaderMemory);
 
                 Committed = true;
                 _env.TransactionAfterCommit(this);
@@ -690,7 +811,16 @@ namespace Voron.Impl
 
                 throw;
             }
-            OnCommit?.Invoke(this);
+        }
+
+        private static void ThrowAlreadyRolledBack()
+        {
+            throw new InvalidOperationException("Cannot commit rolled-back transaction.");
+        }
+
+        private static void ThrowAlreadyCommitted()
+        {
+            throw new InvalidOperationException("Cannot commit already committed transaction.");
         }
 
 
@@ -716,7 +846,7 @@ namespace Voron.Impl
             }
 
             // release scratch file page allocated for the transaction header
-            _env.ScratchBufferPool.Free(_transactionHeaderPage.ScratchFileNumber, _transactionHeaderPage.PositionInScratchBuffer, null);
+            Allocator.Release(ref _txHeaderMemory);
 
             _env.ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches();
             _env.Journal.UpdateCacheForJournalSnapshots();
@@ -733,6 +863,7 @@ namespace Voron.Impl
 
         internal ActiveTransactions.Node ActiveTransactionNode;
         internal bool FlushInProgressLockTaken;
+        private ByteString _txHeaderMemory;
 
         public void EnsurePagerStateReference(PagerState state)
         {
@@ -748,7 +879,8 @@ namespace Voron.Impl
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void OnAfterCommitWhenNewReadTransactionsPrevented()
         {
-            // the event cannot be called outside this class while we need to call it in StorageEnvironment.TransactionAfterCommit
+            // the event cannot be called outside this class while we need to call it in 
+            // StorageEnvironment.TransactionAfterCommit
             AfterCommitWhenNewReadTransactionsPrevented?.Invoke();
         }
 
@@ -845,5 +977,10 @@ namespace Voron.Impl
         [Conditional("VALIDATE_PAGES")]
         private void UntrackPage(long pageNumber) { }
 #endif
+
+        internal TransactionHeader* GetTransactionHeader()
+        {
+            return _txHeader;
+        }
     }
 }

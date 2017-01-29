@@ -1175,10 +1175,8 @@ namespace Voron.Impl.Journal
                 UnmanagedMemory.Set(compressionBuffer + totalLength, 0, 4 * Constants.Size.Kilobyte - remainder);
             }
 
-            var txHeaderPage = tx.GetTransactionHeaderPage();
-            var txHeaderBase = tx.Environment.ScratchBufferPool.AcquirePagePointer(tx, txHeaderPage.ScratchFileNumber,
-                txHeaderPage.PositionInScratchBuffer);
-            var txHeader = (TransactionHeader*)txHeaderBase;
+          
+            var txHeader = tx.GetTransactionHeader();
             txHeader->CompressedSize = compressedLen;
             txHeader->UncompressedSize = totalSizeWritten;
             txHeader->PageCount = numberOfPages;
@@ -1191,7 +1189,7 @@ namespace Voron.Impl.Journal
                 NumberOfUncompressedPages = pageCountIncludingAllOverflowPages
             };
             // Copy the transaction header to the output buffer. 
-            Memory.Copy(fullTxBuffer, txHeaderBase, sizeof(TransactionHeader));
+            Memory.Copy(fullTxBuffer, (byte*)txHeader, sizeof(TransactionHeader));
             Debug.Assert(((long)fullTxBuffer % (4 * Constants.Size.Kilobyte)) == 0, "Memory must be 4kb aligned");
             return prepreToWriteToJournal;
         }

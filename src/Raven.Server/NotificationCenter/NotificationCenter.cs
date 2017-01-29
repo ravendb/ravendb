@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
@@ -20,13 +21,16 @@ namespace Raven.Server.NotificationCenter
         private readonly Logger Logger;
 
         private readonly ActionsStorage _actionsStorage;
+        private readonly CancellationToken _shutdown;
         private readonly ConcurrentSet<ConnectedWatcher> _watchers = new ConcurrentSet<ConnectedWatcher>();
-        private readonly AsyncManualResetEvent _postponedNotificationEvent = new AsyncManualResetEvent();
+        private readonly AsyncManualResetEvent _postponedNotificationEvent;
         
-        public NotificationCenter(ActionsStorage actionsStorage, string resourceName)
+        public NotificationCenter(ActionsStorage actionsStorage, string resourceName, CancellationToken shutdown)
         {
             _actionsStorage = actionsStorage;
+            _shutdown = shutdown;
             Logger = LoggingSource.Instance.GetLogger<ActionsStorage>(resourceName);
+            _postponedNotificationEvent = new AsyncManualResetEvent(shutdown);
         }
 
         public void Initialize()
@@ -123,12 +127,12 @@ namespace Raven.Server.NotificationCenter
 
         private async Task PostponedNotificationsSender()
         {
-            while (true)
+            while (_shutdown.IsCancellationRequested == false)
             {
                 try
                 {
                     var notifications = GetPostponedNotifications();
-                    
+
                     TimeSpan wait;
 
                     if (notifications.Count == 0)
@@ -162,6 +166,11 @@ namespace Raven.Server.NotificationCenter
                             }
                         }
                     }
+                }
+                catch (OperationCanceledException)
+                {
+                    // shutdown
+                    return;
                 }
                 catch (Exception e)
                 {

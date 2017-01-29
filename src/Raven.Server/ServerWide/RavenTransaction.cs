@@ -1,5 +1,5 @@
 ﻿using System;
-
+using Raven.Server.Documents;
 using Voron.Impl;
 
 namespace Raven.Server.ServerWide
@@ -13,15 +13,30 @@ namespace Raven.Server.ServerWide
             InnerTransaction = transaction;
         }
 
-        public virtual void Commit()
+        public void Commit()
         {
             InnerTransaction.Commit();
+        }
+
+        public RavenTransaction BeginAsyncCommitAndStartNewTransaction()
+        {
+            var tx = InnerTransaction.BeginAsyncCommitAndStartNewTransaction();
+            return new RavenTransaction(tx);
+        }
+
+        public void EndAsyncCommit()
+        {
+            InnerTransaction.EndAsyncCommit();
         }
 
         public bool Disposed;
         public virtual void Dispose()
         {
+            if (Disposed)
+                return;
+
             Disposed = true;
+
             InnerTransaction?.Dispose();
         }
     }

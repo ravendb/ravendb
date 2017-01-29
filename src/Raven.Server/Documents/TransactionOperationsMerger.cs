@@ -87,22 +87,7 @@ namespace Raven.Server.Documents
                         _waitHandle.Reset();
                     }
 
-                    var pendingOps = GetBufferForPendingOps();
-                    try
-                    {
-                        if (MergeTransactionsOnce(pendingOps))
-                        {
-                            NotifyOnThreadPool(pendingOps);
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        foreach (var op in pendingOps)
-                        {
-                            op.Exception = e;
-                        }
-                        NotifyOnThreadPool(pendingOps);
-                    }
+                    MergeTransactionsOnce();
                 }
 
             }
@@ -173,51 +158,162 @@ namespace Raven.Server.Documents
             }
         }
 
-        private bool MergeTransactionsOnce(List<MergedTransactionCommand> pendingOps)
+        private void MergeTransactionsOnce()
+        {
+            var pendingOps = GetBufferForPendingOps();
+            DocumentsOperationContext context;
+            using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            {
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    PendingOperations result;
+                    try
+                    {
+                        result = ExecutePendingOperationsInTransaction(pendingOps, context, tx);
+                    }
+                    catch (Exception e)
+                    {
+                        tx.Dispose();
+                        NotifyTransactionFailureAndRerunIndependently(pendingOps, e);
+                        return;
+                    }
+
+                    switch (result)
+                    {
+                        case PendingOperations.CompletedAll:
+                            tx.Commit();
+                            tx.Dispose();
+                            NotifyOnThreadPool(pendingOps);
+                            return;
+                        case PendingOperations.HasMore:
+                            MergeTransactionsWithAsycnCommit(tx, context, pendingOps);
+                            return;
+                        default:
+                            Debug.Assert(false, "Should never happen");
+                            return;
+                    }
+                }
+            }
+        }
+
+        private void NotifyTransactionFailureAndRerunIndependently(List<MergedTransactionCommand> pendingOps, Exception e)
+        {
+            if (pendingOps.Count == 1)
+            {
+                pendingOps[0].Exception = e;
+                NotifyOnThreadPool(pendingOps);
+                return;
+            }
+            if (_log.IsInfoEnabled)
+            {
+                _log.Info($"Error when merging {0} transactions, will try running independently", e);
+            }
+            RunEachOperationIndependently(pendingOps);
+        }
+
+        private void MergeTransactionsWithAsycnCommit(
+            RavenTransaction previous, 
+            DocumentsOperationContext context, 
+            List<MergedTransactionCommand> previousPendingOps)
+        {
+            while (true)
+            {
+                var newTx = previous.BeginAsyncCommitAndStartNewTransaction();
+                try
+                {
+                    var currentPendingOps = GetBufferForPendingOps();
+                    PendingOperations result;
+                    try
+                    {
+                        result = ExecutePendingOperationsInTransaction(currentPendingOps, context, newTx);
+                        CompletePreviousTransction(previous, previousPendingOps, throwOnError:true);
+                    }
+                    catch (Exception e)
+                    {
+                        CompletePreviousTransction(previous, previousPendingOps, 
+                            // if this previous threw, it won't throw again
+                            throwOnError: false);
+                        previous.Dispose();
+                        newTx.Dispose();
+                        NotifyTransactionFailureAndRerunIndependently(currentPendingOps, e);
+                        return;
+                    }
+                    previous.Dispose();
+
+                    switch (result)
+                    {
+                        case PendingOperations.CompletedAll:
+                            newTx.Commit();
+                            newTx.Dispose();
+                            NotifyOnThreadPool(currentPendingOps);
+                            return;
+                        case PendingOperations.HasMore:
+                            previousPendingOps = currentPendingOps;
+                            previous = newTx;
+                            newTx = null;
+                            break;
+                        default:
+                            Debug.Assert(false);
+                            return;
+                    }
+
+                }
+                finally
+                {
+                    newTx?.Dispose();
+                }
+            }
+        }
+
+        private void CompletePreviousTransction(
+            RavenTransaction previous, 
+            List<MergedTransactionCommand> previousPendingOps,
+            bool throwOnError)
         {
             try
             {
-                const int maxTimeToWait = 150;
-                DocumentsOperationContext context;
-                using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-                {
-                    using (var tx = context.OpenWriteTransaction())
-                    {
-                        var sp = Stopwatch.StartNew();
-                        do
-                        {
-                            MergedTransactionCommand op;
-                            if (_operations.TryDequeue(out op) == false)
-                                break;
-                            pendingOps.Add(op);
-
-                            op.Execute(context, tx);
-
-                            if (pendingOps.Count % 128 != 0)
-                                continue;
-                            if (sp.ElapsedMilliseconds < maxTimeToWait)
-                                break;
-                        } while (true);
-                        tx.Commit();
-                    }
-                }
-                return true;
+                previous.EndAsyncCommit();
+                NotifyOnThreadPool(previousPendingOps);
             }
             catch (Exception e)
             {
-                if (pendingOps.Count == 1)
+                foreach (var op in previousPendingOps)
                 {
-                    pendingOps[0].Exception = e;
-                    NotifyOnThreadPool(pendingOps);
-                    return false;
+                    op.Exception = e;
                 }
-                if (_log.IsInfoEnabled)
-                {
-                    _log.Info($"Error when merging {0} transactions, will try running independently", e);
-                }
-                RunEachOperationIndependently(pendingOps);
-                return false;
+                NotifyOnThreadPool(previousPendingOps);
+                if (throwOnError)
+                    throw;
             }
+        }
+
+        private enum PendingOperations
+        {
+            CompletedAll,
+            HasMore
+        }
+
+        private PendingOperations ExecutePendingOperationsInTransaction(
+            List<MergedTransactionCommand> pendingOps,
+            DocumentsOperationContext context,
+            RavenTransaction tx)
+        {
+            const int maxTimeToWait = 150;
+            var sp = Stopwatch.StartNew();
+            do
+            {
+                MergedTransactionCommand op;
+                if (_operations.TryDequeue(out op) == false)
+                    break;
+                pendingOps.Add(op);
+
+                op.Execute(context, tx);
+
+                if (sp.ElapsedMilliseconds > maxTimeToWait)
+                    return PendingOperations.HasMore;
+
+            } while (true);
+            return PendingOperations.CompletedAll;
         }
 
         private void NotifyOnThreadPool(MergedTransactionCommand cmd)
