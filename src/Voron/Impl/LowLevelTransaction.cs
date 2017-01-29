@@ -160,10 +160,16 @@ namespace Voron.Impl
 
             EnsureNoDuplicateTransactionId(_id);
 
-            _env.WriteTransactionPool.Reset();
-            _dirtyOverflowPages = _env.WriteTransactionPool.DirtyOverflowPagesPool;
-            _scratchPagesTable = _env.WriteTransactionPool.ScratchPagesTablePool;
-            _dirtyPages = _env.WriteTransactionPool.DirtyPagesPool;
+            // we can reuse those instances, not calling Reset on the pool
+            // because we are going to need to scratch buffer pool
+            _dirtyOverflowPages = previous._dirtyOverflowPages;
+            _dirtyOverflowPages.Clear();
+            _dirtyPages = previous._dirtyPages;
+            _dirtyPages.Clear();
+
+            // intentionally copying it, we need to reuse the translation table here
+            _scratchPagesTable = previous._scratchPagesTable;
+
             _freedPages = new HashSet<long>(NumericEqualityComparer.Instance);
             _unusedScratchPages = new List<PageFromScratchBuffer>();
             _transactionPages = new HashSet<PageFromScratchBuffer>(PageFromScratchBufferEqualityComparer.Instance);
@@ -707,6 +713,10 @@ namespace Voron.Impl
                     CommitStage2_WriteToJournal(totalNumberOfAllocatedPages);
                 });
             }
+            else
+            {
+                AsyncCommit = Task.CompletedTask;
+            }
             try
             {
 
@@ -740,12 +750,20 @@ namespace Voron.Impl
         public void EndAsyncCommit()
         {
             if (AsyncCommit == null)
-                return;
+            {
+                ThrowInvalidAsyncEndWithoutBegin();
+                return;// never reached
+            }
 
             AsyncCommit.Wait();
 
             CommitStage3_DisposeTransactionResources();
             OnCommit?.Invoke(this);
+        }
+
+        private static void ThrowInvalidAsyncEndWithoutBegin()
+        {
+            throw new InvalidOperationException("Cannot call EndAsyncCommit when we don't have an async op running");
         }
 
         private bool WriteToJournalIsRequired(int totalNumberOfAllocatedPages)

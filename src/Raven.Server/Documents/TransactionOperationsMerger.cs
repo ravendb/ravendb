@@ -56,7 +56,7 @@ namespace Raven.Server.Documents
             /// </summary>
             public bool ShouldDisposeAfterCommit = true;
 
-            public abstract void Execute(DocumentsOperationContext context, RavenTransaction tx);
+            public abstract void Execute(DocumentsOperationContext context);
             public TaskCompletionSource<object> TaskCompletionSource = new TaskCompletionSource<object>();
             public Exception Exception;
         }
@@ -169,7 +169,7 @@ namespace Raven.Server.Documents
                     PendingOperations result;
                     try
                     {
-                        result = ExecutePendingOperationsInTransaction(pendingOps, context, tx);
+                        result = ExecutePendingOperationsInTransaction(pendingOps, context);
                     }
                     catch (Exception e)
                     {
@@ -187,7 +187,7 @@ namespace Raven.Server.Documents
                             NotifyOnThreadPool(pendingOps);
                             return;
                         case PendingOperations.HasMore:
-                            MergeTransactionsWithAsycnCommit(tx, context, pendingOps);
+                            MergeTransactionsWithAsycnCommit(context, pendingOps);
                             return;
                         default:
                             Debug.Assert(false, "Should never happen");
@@ -213,57 +213,64 @@ namespace Raven.Server.Documents
         }
 
         private void MergeTransactionsWithAsycnCommit(
-            DocumentsTransaction previous, 
             DocumentsOperationContext context, 
             List<MergedTransactionCommand> previousPendingOps)
         {
-            while (true)
+            var previous = context.Transaction;
+            try
             {
-                var newTx = previous.BeginAsyncCommitAndStartNewTransaction();
-                try
+                while (true)
                 {
-                    var currentPendingOps = GetBufferForPendingOps();
-                    PendingOperations result;
+                    context.Transaction = previous.BeginAsyncCommitAndStartNewTransaction();
                     try
                     {
-                        result = ExecutePendingOperationsInTransaction(currentPendingOps, context, newTx);
-                        CompletePreviousTransction(previous, previousPendingOps, throwOnError:true);
-                    }
-                    catch (Exception e)
-                    {
-                        CompletePreviousTransction(previous, previousPendingOps, 
-                            // if this previous threw, it won't throw again
-                            throwOnError: false);
+                        var currentPendingOps = GetBufferForPendingOps();
+                        PendingOperations result;
+                        try
+                        {
+                            result = ExecutePendingOperationsInTransaction(currentPendingOps, context);
+                            CompletePreviousTransction(previous, previousPendingOps, throwOnError: true);
+                        }
+                        catch (Exception e)
+                        {
+                            CompletePreviousTransction(previous, previousPendingOps,
+                                // if this previous threw, it won't throw again
+                                throwOnError: false);
+                            previous.Dispose();
+                            context.Transaction.Dispose();
+                            NotifyTransactionFailureAndRerunIndependently(currentPendingOps, e);
+                            return;
+                        }
                         previous.Dispose();
-                        newTx.Dispose();
-                        NotifyTransactionFailureAndRerunIndependently(currentPendingOps, e);
-                        return;
-                    }
-                    previous.Dispose();
 
-                    switch (result)
+                        switch (result)
+                        {
+                            case PendingOperations.CompletedAll:
+                            case PendingOperations.ModifiedsSystemDocuments:
+                                context.Transaction.Commit();
+                                context.Transaction.Dispose();
+                                NotifyOnThreadPool(currentPendingOps);
+                                return;
+                            case PendingOperations.HasMore:
+                                previousPendingOps = currentPendingOps;
+                                previous = context.Transaction;
+                                context.Transaction = null;
+                                break;
+                            default:
+                                Debug.Assert(false);
+                                return;
+                        }
+
+                    }
+                    finally
                     {
-                        case PendingOperations.CompletedAll:
-                        case PendingOperations.ModifiedsSystemDocuments:
-                            newTx.Commit();
-                            newTx.Dispose();
-                            NotifyOnThreadPool(currentPendingOps);
-                            return;
-                        case PendingOperations.HasMore:
-                            previousPendingOps = currentPendingOps;
-                            previous = newTx;
-                            newTx = null;
-                            break;
-                        default:
-                            Debug.Assert(false);
-                            return;
+                        context.Transaction?.Dispose();
                     }
-
                 }
-                finally
-                {
-                    newTx?.Dispose();
-                }
+            }
+            finally
+            {
+                previous.Dispose();
             }
         }
 
@@ -298,8 +305,7 @@ namespace Raven.Server.Documents
 
         private PendingOperations ExecutePendingOperationsInTransaction(
             List<MergedTransactionCommand> pendingOps,
-            DocumentsOperationContext context,
-            DocumentsTransaction tx)
+            DocumentsOperationContext context)
         {
             const int maxTimeToWait = 150;
             var sp = Stopwatch.StartNew();
@@ -309,19 +315,19 @@ namespace Raven.Server.Documents
                 if (_operations.TryDequeue(out op) == false)
                     break;
                 pendingOps.Add(op);
+                op.Execute(context);
 
-                op.Execute(context, tx);
-
-                if (sp.ElapsedMilliseconds < maxTimeToWait)
+                if (sp.ElapsedMilliseconds > maxTimeToWait)
                 {
-                    return tx.ModifiedSystemDocuments
-                    // a transaction that modified system documents may cause us to 
-                    // do certain actions (for example, initialize trees for versioning)
-                    // which we can't realy do if we are starting another transaction
-                    // immediately. This way, we skip this optimization for this
-                    // kind of work
-                            ? PendingOperations.ModifiedsSystemDocuments
-                            : PendingOperations.HasMore;
+                    var executePendingOperationsInTransaction = context.Transaction.ModifiedSystemDocuments
+                        // a transaction that modified system documents may cause us to 
+                        // do certain actions (for example, initialize trees for versioning)
+                        // which we can't realy do if we are starting another transaction
+                        // immediately. This way, we skip this optimization for this
+                        // kind of work
+                        ? PendingOperations.ModifiedsSystemDocuments
+                        : PendingOperations.HasMore;
+                    return executePendingOperationsInTransaction;
                 }
 
             } while (true);
@@ -361,7 +367,7 @@ namespace Raven.Server.Documents
                         {
                             using (var tx = context.OpenWriteTransaction())
                             {
-                                op.Execute(context, tx);
+                                op.Execute(context);
                                 tx.Commit();
                             }
                         }

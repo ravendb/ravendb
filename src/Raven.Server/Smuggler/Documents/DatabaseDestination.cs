@@ -254,7 +254,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public JsonOperationContext Context => _context;
 
-            public override void Execute(DocumentsOperationContext context, RavenTransaction tx)
+            public override void Execute(DocumentsOperationContext context)
             {
                 foreach (var document in Documents)
                 {
