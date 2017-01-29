@@ -144,7 +144,7 @@ namespace Voron.Impl
             _id = previous.Id + 1;
             _freeSpaceHandling = previous._freeSpaceHandling;
             _allocator = previous._allocator;
-            
+
             _disposeAllocator = previous._disposeAllocator;
             previous._disposeAllocator = false;
 
@@ -679,7 +679,7 @@ namespace Voron.Impl
             if (Flags != TransactionFlags.ReadWrite)
                 return;// nothing to do
 
-            CommitStage1_CompleteTransaction(); 
+            CommitStage1_CompleteTransaction();
 
             var totalNumberOfAllocatedPages = _allocatedPagesInTransaction + _overflowPagesInTransaction;
             if (WriteToJournalIsRequired(totalNumberOfAllocatedPages))
@@ -701,28 +701,23 @@ namespace Voron.Impl
         public LowLevelTransaction BeginAsyncCommitAndStartNewTransaction()
         {
             if (Flags != TransactionFlags.ReadWrite)
-               ThrowReadTranscationCannotDoAsyncCommit();
+                ThrowReadTranscationCannotDoAsyncCommit();
 
             CommitStage1_CompleteTransaction();
 
             var totalNumberOfAllocatedPages = _allocatedPagesInTransaction + _overflowPagesInTransaction;
-            if (WriteToJournalIsRequired(totalNumberOfAllocatedPages))
-            {
-                AsyncCommit = Task.Run(() =>
-                {
-                    CommitStage2_WriteToJournal(totalNumberOfAllocatedPages);
-                });
-            }
-            else
-            {
-                AsyncCommit = Task.CompletedTask;
-            }
+            var nextTx = new LowLevelTransaction(this);
+            AsyncCommit = WriteToJournalIsRequired(totalNumberOfAllocatedPages)
+                  ? Task.Run(() => { CommitStage2_WriteToJournal(totalNumberOfAllocatedPages); })
+                  : Task.CompletedTask;
             try
             {
 
-                var nextTx = new LowLevelTransaction(this);
                 _env.WriteTransactionStarted();
                 _env.ActiveTransactions.Add(nextTx);
+
+
+
                 return nextTx;
             }
             catch (Exception)
@@ -769,7 +764,7 @@ namespace Voron.Impl
         private bool WriteToJournalIsRequired(int totalNumberOfAllocatedPages)
         {
             var writeToJournalRequired = totalNumberOfAllocatedPages > 0 || // nothing changed in this transaction
-                                         // allow call to writeToJournal for flushing lazy tx
+                                                                            // allow call to writeToJournal for flushing lazy tx
                                          (IsLazyTransaction == false && _journal?.HasDataInLazyTxBuffer() == true);
             return writeToJournalRequired;
         }
