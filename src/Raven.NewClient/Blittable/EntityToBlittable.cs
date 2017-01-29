@@ -81,7 +81,7 @@ namespace Raven.NewClient.Client.Blittable
                 if (documentType != null)
                 {
                     var type = Type.GetType(documentType);
-                    if (type != null)
+                    if (type != null)   
                     {
                         entity = _session.Conventions.DeserializeEntityFromBlittable(type, document);
                     }
@@ -91,7 +91,9 @@ namespace Raven.NewClient.Client.Blittable
                 {
                     entity = _session.Conventions.DeserializeEntityFromBlittable(entityType, document);
                 }
-                _session.GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
+
+                if (id != null)
+                    _session.GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
 
                 return entity;
             }

@@ -114,8 +114,10 @@ namespace Raven.Server.Documents.Queries
                 if (documentId.Equals(EqualPrefix))
                 {
                     var id = q.SubSegment(EqualPrefix.Length);
+                    var idAsString = id.ToString();
+                    idAsString =  idAsString.Replace("\\",string.Empty );
                     Slice key;
-                    Slice.From(_context.Allocator, id, out key);
+                    Slice.From(_context.Allocator, idAsString, out key);
                     _context.Allocator.ToLowerCase(ref key.Content);
 
                     return new List<Slice>
@@ -148,8 +150,11 @@ namespace Raven.Server.Documents.Queries
                     else
                         id = ids;
 
+                    var idAsString = id.ToString();
+                    idAsString = idAsString.Replace("\\", string.Empty);
+
                     Slice key;
-                    Slice.From(_context.Allocator, id, out key);
+                    Slice.From(_context.Allocator, idAsString, out key);
                     _context.Allocator.ToLowerCase(ref key.Content);
 
                     Array.Resize(ref results, results.Length + 1);
