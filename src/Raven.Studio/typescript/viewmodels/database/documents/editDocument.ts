@@ -175,7 +175,7 @@ class editDocument extends viewModelBase {
           
         this.isSaveEnabled = ko.pureComputed(() => {            
             const isSaving = this.isSaving();
-            const isDirty = this.dirtyFlag().isDirty();           
+            const isDirty = this.dirtyFlag().isDirty();
             const etag = this.metadata().etag();
 
             if (isSaving || (!isDirty && etag)) {
@@ -484,8 +484,6 @@ class editDocument extends viewModelBase {
         this.canContinueIfNotDirty("Refresh", "You have unsaved data. Are you sure you want to continue?")
         .done(() => {
             const docId = this.editedDocId();
-            this.document(null);
-            this.documentText(null);
             this.userSpecifiedId("");
             this.loadDocument(docId);
 
