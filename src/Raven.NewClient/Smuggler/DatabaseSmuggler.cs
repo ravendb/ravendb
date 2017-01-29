@@ -117,7 +117,7 @@ namespace Raven.NewClient.Client.Smuggler
             } while (File.Exists(fromFile));
         }
 
-        private async Task ImportAsync(DatabaseSmugglerOptions options, Stream stream, CancellationToken token)
+        public async Task ImportAsync(DatabaseSmugglerOptions options, Stream stream, CancellationToken token = default(CancellationToken))
         {
             if (options == null)
                 throw new ArgumentNullException(nameof(options));
