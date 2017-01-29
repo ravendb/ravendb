@@ -27,17 +27,6 @@ namespace FastTests.Server.Replication
             }
         }
 
-        private void EnsureReplicating(DocumentStore src, DocumentStore dst)
-        {
-            var id = "marker/" + Guid.NewGuid().ToString();
-            using (var s = src.OpenSession())
-            {
-                s.Store(new { }, id);
-                s.SaveChanges();
-            }
-            WaitForDocumentToReplicate<object>(dst, id, 15 * 1000);
-        }
-
         [Fact]
         public async Task Master_slave_full_topology_should_be_correctly_detected()
         {
