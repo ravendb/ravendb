@@ -1066,17 +1066,16 @@ namespace Voron.Impl.Journal
                     CurrentFile = null;
                 }
 
-                var compressionBufferSize = _compressionPager.NumberOfAllocatedPages * Constants.Storage.PageSize;
-                if (compressionBufferSize > _env.Options.MaxScratchBufferSize)
+                if (ShouldReduceSizeOfCompressionPager())
                 {
                     // the compression pager is too large, we probably had a big transaction and now can
                     // free all of that and come back to more reasonable values.
                     if (_logger.IsOperationsEnabled)
                     {
                         _logger.Operations(
-                            $"Compression buffer: {_compressionPager} has reached size {compressionBufferSize / 1024:#,#} kb which is more than the limit " +
-                            $"of {_env.Options.MaxScratchBufferSize / 1024:#,#} kb. Will trim it no to the max size allowed. If this is happen on a regular basis," +
-                            " consider raising the limt (MaxScratchBufferSize option control it), since it can cause performance issues");
+                            $"Compression buffer: {_compressionPager} has reached size {(_compressionPager.NumberOfAllocatedPages * Constants.Storage.PageSize)/ Constants.Size.Kilobyte:#,#} kb which is more than the limit " +
+                            $"of {_env.Options.MaxScratchBufferSize/1024:#,#} kb. Will trim it now to the max size allowed. If this is happen on a regular basis," +
+                            " consider raising the limit (MaxScratchBufferSize option control it), since it can cause performance issues");
                     }
 
                     _compressionPager.Dispose();
@@ -1186,7 +1185,7 @@ namespace Voron.Impl.Journal
             {
                 Base = fullTxBuffer,
                 NumberOf4Kbs = compressed4Kbs,
-                NumberOfUncompressedPages = pageCountIncludingAllOverflowPages
+                NumberOfUncompressedPages = pageCountIncludingAllOverflowPages,
             };
             // Copy the transaction header to the output buffer. 
             Memory.Copy(fullTxBuffer, (byte*)txHeader, sizeof(TransactionHeader));

@@ -221,6 +221,8 @@ namespace Raven.Server.Documents
             {
                 while (true)
                 {
+                    if(_log.IsInfoEnabled)
+                        _log.Info($"More pending operations than can handle quickly, started async commit and proceeding concurrently, has {_operations.Count} additional operations");
                     context.Transaction = previous.BeginAsyncCommitAndStartNewTransaction();
                     try
                     {
@@ -304,13 +306,13 @@ namespace Raven.Server.Documents
             ModifiedsSystemDocuments,
             HasMore
         }
+        int _maxTimeToWait = 1000;
 
         private PendingOperations ExecutePendingOperationsInTransaction(
             List<MergedTransactionCommand> pendingOps, 
             DocumentsOperationContext context, 
             Task previousOperation)
         {
-            const int maxTimeToWait = 150;
             var sp = Stopwatch.StartNew();
             do
             {
@@ -320,17 +322,34 @@ namespace Raven.Server.Documents
                 pendingOps.Add(op);
                 op.Execute(context);
 
-                if (previousOperation != null)
+                if (sp.ElapsedMilliseconds > _maxTimeToWait)
                 {
-                    if (previousOperation.IsCompleted)
-                        return GetPendingOperationsStatus(context);
+                    if (previousOperation != null)
+                    {
+                        _maxTimeToWait += 10;
+                        if (previousOperation.IsCompleted)
+                        {
+                            if (_log.IsInfoEnabled)
+                            {
+                                _log.Info($"Stopping merged operations because previous transaction async commit completed. Took {sp.Elapsed} with {pendingOps.Count} operations and {_operations.Count} remaining operations");
+                            }
+                            _maxTimeToWait -= 10;
+                            return GetPendingOperationsStatus(context);
+                        }
 
-                    continue;
-                }
-
-                if (sp.ElapsedMilliseconds > maxTimeToWait)
+                        continue;
+                    }
+                    if (_log.IsInfoEnabled)
+                    {
+                        _log.Info($"Stopping merged operations because {sp.Elapsed} passed {pendingOps.Count} operations and {_operations.Count} remaining operations");
+                    }
                     return GetPendingOperationsStatus(context);
+                }
             } while (true);
+            if (_log.IsInfoEnabled)
+            {
+                _log.Info($"Merged {pendingOps.Count} operations in {sp.Elapsed} and there is no more work");
+            }
             return PendingOperations.CompletedAll;
         }
 

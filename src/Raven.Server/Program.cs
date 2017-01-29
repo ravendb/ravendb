@@ -134,7 +134,13 @@ namespace Raven.Server
                         Console.Clear();
                         break;
 
+                    case "log no http":
+                    case "log-no-http":
+                        RavenServerStartup.SkipHttpLogging = true;
+                        goto case "log";
+
                     case "log":
+                        
                         LoggingSource.Instance.EnableConsoleLogging();
                         LoggingSource.Instance.SetupLogMode(LogMode.Information,
                             Path.Combine(AppContext.BaseDirectory, configuration.Core.LogsDirectory));
@@ -171,6 +177,7 @@ namespace Raven.Server
                         Console.WriteLine("Avaliable Commands :");
                         Console.WriteLine("[cls] : clear screen");
                         Console.WriteLine("[log]: dump logs to console");
+                        Console.WriteLine("[log no http]: dump logs to console without outputting the http request logs");
                         Console.WriteLine("[nolog]: stop dumping logs to console");
                         Console.WriteLine("[low-mem] : simulate low memory");
                         Console.WriteLine("[stats]: dump statistical information");

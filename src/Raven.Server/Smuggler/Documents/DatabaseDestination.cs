@@ -302,8 +302,10 @@ namespace Raven.Server.Smuggler.Documents
                     return;
 
                 _isDisposed = true;
-                foreach (var doc in Documents)
-                    doc.Data.Dispose();
+                for (int i = Documents.Count - 1; i >= 0; i--)
+                {
+                    Documents[i].Data.Dispose();
+                }
 
                 Documents.Clear();
                 _resetContext?.Dispose();

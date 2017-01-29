@@ -48,6 +48,8 @@ namespace Raven.Server
             app.Run(RequestHandler);
         }
 
+        public static bool SkipHttpLogging;
+
         private async Task RequestHandler(HttpContext context)
         {
             try
@@ -59,7 +61,7 @@ namespace Raven.Server
                 var tenant = await _router.HandlePath(context, context.Request.Method, context.Request.Path.Value);
                 sp.Stop();
 
-                if (_logger.IsInfoEnabled)
+                if (_logger.IsInfoEnabled && SkipHttpLogging == false)
                 {
                     _logger.Info($"{context.Request.Method} {context.Request.Path.Value}?{context.Request.QueryString.Value} - {context.Response.StatusCode} - {sp.ElapsedMilliseconds:#,#;;0} ms");
                 }
