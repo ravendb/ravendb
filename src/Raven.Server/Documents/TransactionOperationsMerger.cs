@@ -169,7 +169,7 @@ namespace Raven.Server.Documents
                     PendingOperations result;
                     try
                     {
-                        result = ExecutePendingOperationsInTransaction(pendingOps, context);
+                        result = ExecutePendingOperationsInTransaction(pendingOps, context, null);
                     }
                     catch (Exception e)
                     {
@@ -228,7 +228,9 @@ namespace Raven.Server.Documents
                         PendingOperations result;
                         try
                         {
-                            result = ExecutePendingOperationsInTransaction(currentPendingOps, context);
+                            result = ExecutePendingOperationsInTransaction(
+                                currentPendingOps, context,
+                                previous.InnerTransaction.LowLevelTransaction.AsyncCommit);
                             CompletePreviousTransction(previous, previousPendingOps, throwOnError: true);
                         }
                         catch (Exception e)
@@ -304,8 +306,9 @@ namespace Raven.Server.Documents
         }
 
         private PendingOperations ExecutePendingOperationsInTransaction(
-            List<MergedTransactionCommand> pendingOps,
-            DocumentsOperationContext context)
+            List<MergedTransactionCommand> pendingOps, 
+            DocumentsOperationContext context, 
+            Task previousOperation)
         {
             const int maxTimeToWait = 150;
             var sp = Stopwatch.StartNew();
@@ -317,21 +320,33 @@ namespace Raven.Server.Documents
                 pendingOps.Add(op);
                 op.Execute(context);
 
-                if (sp.ElapsedMilliseconds > maxTimeToWait)
+                if (previousOperation != null)
                 {
-                    var executePendingOperationsInTransaction = context.Transaction.ModifiedSystemDocuments
-                        // a transaction that modified system documents may cause us to 
-                        // do certain actions (for example, initialize trees for versioning)
-                        // which we can't realy do if we are starting another transaction
-                        // immediately. This way, we skip this optimization for this
-                        // kind of work
-                        ? PendingOperations.ModifiedsSystemDocuments
-                        : PendingOperations.HasMore;
-                    return executePendingOperationsInTransaction;
+                    if (previousOperation.IsCompleted)
+                        return GetPendingOperationsStatus(context);
+
+                    continue;
                 }
 
+                if (sp.ElapsedMilliseconds > maxTimeToWait)
+                    return GetPendingOperationsStatus(context);
             } while (true);
             return PendingOperations.CompletedAll;
+        }
+
+        private  PendingOperations GetPendingOperationsStatus(DocumentsOperationContext context)
+        {
+            if(context.Transaction.ModifiedSystemDocuments)
+                // a transaction that modified system documents may cause us to 
+                // do certain actions (for example, initialize trees for versioning)
+                // which we can't realy do if we are starting another transaction
+                // immediately. This way, we skip this optimization for this
+                // kind of work
+                return PendingOperations.ModifiedsSystemDocuments;
+
+            return _operations.Count == 0
+                ? PendingOperations.CompletedAll
+                : PendingOperations.HasMore;
         }
 
         private void NotifyOnThreadPool(MergedTransactionCommand cmd)
