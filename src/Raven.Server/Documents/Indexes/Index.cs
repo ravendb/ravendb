@@ -1423,10 +1423,10 @@ namespace Raven.Server.Documents.Indexes
                  (transformer != null && transformer.HasInclude)))
                 throw new NotSupportedException("Includes are not supported by this type of query.");
 
-            TransactionOperationContext indexContext;
+            
 
             using (var marker = MarkQueryAsRunning(query, token))
-            using (_contextPool.AllocateOperationContext(out indexContext))
+            
             {
                 var queryDuration = Stopwatch.StartNew();
                 AsyncWaitForIndexing wait = null;
@@ -1441,7 +1441,8 @@ namespace Raven.Server.Documents.Indexes
                     // query the index again. This is important because of: 
                     // http://issues.hibernatingrhinos.com/issue/RavenDB-5576
                     var frozenAwaiter = GetIndexingBatchAwaiter();
-
+                    TransactionOperationContext indexContext;
+                    using (_contextPool.AllocateOperationContext(out indexContext))
                     using (var indexTx = indexContext.OpenReadTransaction())
                     {
                         documentsContext.OpenReadTransaction();
@@ -1456,7 +1457,6 @@ namespace Raven.Server.Documents.Indexes
                         if (WillResultBeAcceptable(isStale, query, wait) == false)
                         {
                             documentsContext.CloseTransaction();
-                            indexContext.ResetAndRenew();
 
                             Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
 
@@ -1549,10 +1549,10 @@ namespace Raven.Server.Documents.Indexes
 
             AssertQueryDoesNotContainFieldsThatAreNotIndexed(query, null);
 
-            TransactionOperationContext indexContext;
+            
 
             using (var marker = MarkQueryAsRunning(query, token))
-            using (_contextPool.AllocateOperationContext(out indexContext))
+            
             {
                 var result = new FacetedQueryResult();
 
@@ -1561,55 +1561,58 @@ namespace Raven.Server.Documents.Indexes
 
                 while (true)
                 {
+                    TransactionOperationContext indexContext;
                     AssertIndexState();
                     marker.HoldLock();
 
-                    // we take the awaiter _before_ the indexing transaction happens, 
-                    // so if there are any changes, it will already happen to it, and we'll 
-                    // query the index again. This is important because of: 
-                    // http://issues.hibernatingrhinos.com/issue/RavenDB-5576
-                    var frozenAwaiter = GetIndexingBatchAwaiter();
-
-                    using (var indexTx = indexContext.OpenReadTransaction())
+                    using (_contextPool.AllocateOperationContext(out indexContext))
                     {
-                        documentsContext.OpenReadTransaction();
-                        // we have to open read tx for mapResults _after_ we open index tx
-
-                        if (query.WaitForNonStaleResultsAsOfNow && query.CutoffEtag == null)
-                            query.CutoffEtag =
-                                Collections.Max(
-                                    x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x));
-
-                        var isStale = IsStale(documentsContext, indexContext, query.CutoffEtag);
-
-                        if (WillResultBeAcceptable(isStale, query, wait) == false)
+                        // we take the awaiter _before_ the indexing transaction happens, 
+                        // so if there are any changes, it will already happen to it, and we'll 
+                        // query the index again. This is important because of: 
+                        // http://issues.hibernatingrhinos.com/issue/RavenDB-5576
+                        var frozenAwaiter = GetIndexingBatchAwaiter();
+                        using (var indexTx = indexContext.OpenReadTransaction())
                         {
+                            documentsContext.OpenReadTransaction();
+                            // we have to open read tx for mapResults _after_ we open index tx
+
+                            if (query.WaitForNonStaleResultsAsOfNow && query.CutoffEtag == null)
+                                query.CutoffEtag =
+                                    Collections.Max(
+                                        x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x));
+
+                            var isStale = IsStale(documentsContext, indexContext, query.CutoffEtag);
+
+                            if (WillResultBeAcceptable(isStale, query, wait) == false)
+                            {
+                                documentsContext.CloseTransaction();
+                                Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
+
+                                if (wait == null)
+                                    wait = new AsyncWaitForIndexing(queryDuration,
+                                        query.WaitForNonStaleResultsTimeout.Value, this);
+
+                                marker.ReleaseLock();
+
+                                await wait.WaitForIndexingAsync(frozenAwaiter).ConfigureAwait(false);
+                                continue;
+                            }
+
+                            FillFacetedQueryResult(result, IsStale(documentsContext, indexContext), facetSetupEtag,
+                                documentsContext, indexContext);
+
                             documentsContext.CloseTransaction();
-                            indexContext.ResetAndRenew();
 
-                            Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
+                            using (var reader = IndexPersistence.OpenFacetedIndexReader(indexTx.InnerTransaction))
+                            {
+                                result.Results = reader.FacetedQuery(query, indexContext, token.Token);
 
-                            if (wait == null)
-                                wait = new AsyncWaitForIndexing(queryDuration, query.WaitForNonStaleResultsTimeout.Value, this);
-
-                            marker.ReleaseLock();
-
-                            await wait.WaitForIndexingAsync(frozenAwaiter).ConfigureAwait(false);
-                            continue;
-                        }
-
-                        FillFacetedQueryResult(result, IsStale(documentsContext, indexContext), facetSetupEtag,
-                            documentsContext, indexContext);
-
-                        documentsContext.CloseTransaction();
-
-                        using (var reader = IndexPersistence.OpenFacetedIndexReader(indexTx.InnerTransaction))
-                        {
-                            result.Results = reader.FacetedQuery(query, indexContext, token.Token);
-
-                            return result;
+                                return result;
+                            }
                         }
                     }
+
                 }
             }
         }

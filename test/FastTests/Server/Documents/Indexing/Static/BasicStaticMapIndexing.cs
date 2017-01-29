@@ -35,6 +35,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     Type = IndexType.Map
                 }, database))
                 {
+                    DocumentQueryResult queryResult;
                     using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                     {
                         using (var tx = context.OpenWriteTransaction())
@@ -74,11 +75,15 @@ namespace FastTests.Server.Documents.Indexing.Static
                         Assert.Equal(2, batchStats.MapSuccesses);
                         Assert.Equal(0, batchStats.MapErrors);
 
-                        var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
+                        queryResult =
+                            await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
                         Assert.Equal(2, queryResult.Results.Count);
 
-                        context.ResetAndRenew();
+                    }
+
+                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                    {
 
                         queryResult = await index.Query(new IndexQueryServerSide() { Query = "Name:John" }, context, OperationCancelToken.None);
 

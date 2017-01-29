@@ -975,7 +975,9 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                 {
                     await index1.Query(new IndexQueryServerSide(), context, OperationCancelToken.None); // last querying time
-                    context.ResetAndRenew();
+                }
+                using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                {
                     await index2.Query(new IndexQueryServerSide(), context, OperationCancelToken.None); // last querying time
                 }
 

@@ -27,7 +27,6 @@ namespace Raven.NewClient.Client.Document
         private static readonly ILog Log = LogManager.GetLogger(typeof(TcpBulkInsertOperation));
         private readonly CancellationTokenSource _cts;
         private readonly Task _getServerResponseTask;
-        private JsonOperationContext _jsonOperationContext;
         private readonly BlockingCollection<Tuple<object,string>> _documents = new BlockingCollection<Tuple<object, string>>();
         private readonly IDocumentStore _store;
         private readonly EntityToBlittable _entityToBlittable;
@@ -39,6 +38,7 @@ namespace Raven.NewClient.Client.Document
         private readonly long _maxDiffSizeBeforeThrottling = 20L * 1024 * 1024; // each buffer is 4M. We allow the use of 5-6 buffers out of 8 possible
         private TcpClient _tcpClient;
         private string _url;
+        private JsonContextPool _contextPool;
 
 
         ~TcpBulkInsertOperation()
@@ -57,11 +57,11 @@ namespace Raven.NewClient.Client.Document
         public TcpBulkInsertOperation(string database, IDocumentStore store, RequestExecuter requestExecuter, CancellationTokenSource cts)
         {
             _throttlingEvent.Set();
-            _jsonOperationContext = new JsonOperationContext(1024 * 1024, 16 * 1024);
             _cts = cts ?? new CancellationTokenSource();
             _tcpClient = new TcpClient();
 
             _store = store;
+            _contextPool = store.GetRequestExecuter(database).ContextPool;
             _entityToBlittable = new EntityToBlittable(null);
             var connectToServerTask = ConnectToServer(requestExecuter);
 
@@ -100,7 +100,7 @@ namespace Raven.NewClient.Client.Document
         private void WriteToServer(string database, Stream serverStream)
         {
             var streamNetworkBuffer = serverStream;
-            var writeToStreamBuffer = new byte[32*1024];
+            
             var header = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new TcpConnectionHeaderMessage
             {
                 DatabaseName = database,
@@ -120,44 +120,50 @@ namespace Raven.NewClient.Client.Document
                     break;
                 }
                 var needToThrottle = _throttlingEvent.Wait(0) == false;
-                _jsonOperationContext.ResetAndRenew();
+                
 
-                var documentInfo = new DocumentInfo();
-                var tag = _store.Conventions.GetDynamicTagName(doc.Item1);
-                var metadata = new DynamicJsonValue();
-                if (tag != null)
-                    metadata[Constants.Metadata.Collection] = tag;
-                metadata[Constants.Metadata.Id] = doc.Item2;
+                JsonOperationContext context;
+                JsonOperationContext.ManagedPinnedBuffer pinnedBuffer;
 
-                documentInfo.Metadata = _jsonOperationContext.ReadObject(metadata, doc.Item2);
-                var data = _entityToBlittable.ConvertEntityToBlittable(doc.Item1, _store.Conventions, _jsonOperationContext, documentInfo);
-                WriteVariableSizeInt(streamNetworkBuffer, data.Size);
-                WriteToStream(streamNetworkBuffer, data, writeToStreamBuffer);
-
-                if (needToThrottle)
+                using (_contextPool.AllocateOperationContext(out context))
+                using (context.GetManagedBuffer(out pinnedBuffer))
                 {
-                    streamNetworkBuffer.Flush();
-                    _throttlingEvent.Wait(500);
+                    var documentInfo = new DocumentInfo();
+
+                    var metadata = new DynamicJsonValue();
+                    var tag = _store.Conventions.GetDynamicTagName(doc.Item1);
+                    if (tag != null)
+                        metadata[Constants.Metadata.Collection] = tag;
+                    metadata[Constants.Metadata.Id] = doc.Item2;
+
+                    documentInfo.Metadata = context.ReadObject(metadata, doc.Item2);
+                    var data = _entityToBlittable.ConvertEntityToBlittable(doc.Item1, _store.Conventions, context, documentInfo);
+                    WriteVariableSizeInt(streamNetworkBuffer, data.Size);
+                    WriteToStream(streamNetworkBuffer, data, pinnedBuffer);
+
+                    if (needToThrottle)
+                    {
+                        streamNetworkBuffer.Flush();
+                        _throttlingEvent.Wait(500);
+                    }
                 }
             }
             streamNetworkBuffer.WriteByte(0); //done
             streamNetworkBuffer.Flush();
         }
 
-        private static unsafe void WriteToStream(Stream networkBufferedStream, BlittableJsonReaderObject reader, byte[] buffer)
+        private static unsafe void WriteToStream(Stream networkBufferedStream, BlittableJsonReaderObject reader, JsonOperationContext.ManagedPinnedBuffer buffer)
         {
-                fixed (byte* pBuffer = buffer)
-                {
-                    var bytes = reader.BasePointer;
-                    var remainingSize = reader.Size;
-                    while (remainingSize > 0)
-                    {
-                        var size = Math.Min(remainingSize, buffer.Length);
-                        Memory.Copy(pBuffer, bytes + (reader.Size - remainingSize), size);
-                        remainingSize -= size;
-                        networkBufferedStream.Write(buffer, 0, size);
-                    }
-                }
+            var bytes = reader.BasePointer;
+            var pBuffer = buffer.Pointer;
+            var remainingSize = reader.Size;
+            while (remainingSize > 0)
+            {
+                var size = Math.Min(remainingSize, buffer.Length);
+                Memory.Copy(pBuffer, bytes + (reader.Size - remainingSize), size);
+                remainingSize -= size;
+                networkBufferedStream.Write(buffer.Buffer.Array, buffer.Buffer.Offset, size);
+            }
         }
 
         public static void WriteVariableSizeInt(Stream stream, int value)
@@ -360,8 +366,6 @@ namespace Raven.NewClient.Client.Document
             finally
             {
                 _tcpClient = null;
-                _jsonOperationContext?.Dispose();
-                _jsonOperationContext = null;
                 GC.SuppressFinalize(this);
             }
         }
