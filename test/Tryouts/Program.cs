@@ -34,67 +34,13 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            if (Directory.Exists(@"C:\temp\ERL"))
-                Directory.Delete(@"C:\temp\ERL", true);
-            var documentDatabase = new DocumentDatabase("foo", new RavenConfiguration
+            for (int i = 0; i < 100; i++)
             {
-                Core =
+                Console.WriteLine(i);
+                using (var a = new FastTests.Server.Replication.ReplicationTopologyDiscoveryTests())
                 {
-                    DataDirectory = @"C:\temp\ERL"
-                },
-            }, null);
-
-            documentDatabase.Initialize();
-            var tableSchema = new TableSchema();
-
-            DocumentsOperationContext context;
-            using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-            {
-                var tx1 = context.OpenWriteTransaction();
-
-                var b = context.ReadForDisk(new MemoryStream(Encoding.UTF8.GetBytes("{}")), "adi");
-
-                documentDatabase.DocumentsStorage.Put(context, "1", null, b);
-                documentDatabase.DocumentsStorage.Put(context, "2", null, b);
-
-                var tx2 = tx1.BeginAsyncCommitAndStartNewTransaction();
-                context.Transaction = tx2;
-
-                documentDatabase.DocumentsStorage.Put(context, "1", null, b);
-                documentDatabase.DocumentsStorage.Put(context, "2", null, b);
-
-                tx1.EndAsyncCommit();
-
-                tx1.Dispose();
-
-                var t2 = tx2.InnerTransaction.OpenTable(tableSchema, "Collection.Tombstones.@empty");
-
-
-                var tx3 = tx2.BeginAsyncCommitAndStartNewTransaction();
-
-                context.Transaction = tx3;
-
-                var t3 = tx3.InnerTransaction.OpenTable(tableSchema, "Collection.Tombstones.@empty");
-
-                tx2.EndAsyncCommit();
-                tx2.Dispose();
-
-                tx3.Commit();
-
-                tx3.Dispose();
-            }
-
-            using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-            {
-                var tx1 = context.OpenWriteTransaction();
-
-                var b = context.ReadForDisk(new MemoryStream(Encoding.UTF8.GetBytes("{}")), "adi2");
-
-                documentDatabase.DocumentsStorage.Put(context, "1", null, b);
-                documentDatabase.DocumentsStorage.Put(context, "2", null, b);
-
-                tx1.Commit();
-
+                    a.Master_with_offline_slaves_should_be_properly_detected_in_full_topology();
+                }
             }
         }
     }

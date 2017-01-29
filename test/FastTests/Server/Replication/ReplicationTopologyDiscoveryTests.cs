@@ -267,9 +267,17 @@ namespace FastTests.Server.Replication
                 Assert.NotNull(topologyInfo); //sanity check
                 Assert.Equal(1, topologyInfo.NodesById.Count);
 
-                Assert.Equal(2, topologyInfo.NodesById.First().Value.Offline.Count);
+                var inactiveNodeStatuses =
+                    topologyInfo.NodesById.First().Value.Offline.Concat(
+                        topologyInfo.FailedToReach
+                        )
+                        .GroupBy(x=>new {x.Url, x.Database})
+                        .Select(g=>g.First())
+                        .ToList();
 
-                var offlineNodes = topologyInfo.NodesById.First().Value.Offline;
+                Assert.Equal(2, inactiveNodeStatuses.Count);
+
+                var offlineNodes = inactiveNodeStatuses;
                 Assert.True(offlineNodes.Any(x => x.Url == "http://foo.bar/:1234" && x.Database == "FooBar"));
                 Assert.True(offlineNodes.Any(x => x.Url == "http://foo.bar/:4567" && x.Database == "FooBar2"));
             }
