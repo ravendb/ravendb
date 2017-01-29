@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Sparrow.Binary;
 using Sparrow.Json.Parsing;
 
@@ -611,8 +612,11 @@ namespace Sparrow.Json
             }
         }
 
+        public string DisposeStack;
+        
         public void Dispose()
         {
+            DisposeStack = Environment.StackTrace;
             if (_mem == null) //double dispose will do nothing
                 return;
             if (_allocatedMemory != null && _buffer.IsDisposed == false)

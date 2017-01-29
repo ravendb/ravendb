@@ -564,7 +564,7 @@ namespace Sparrow.Json
                 _liveReaders.Remove(disposedNode);
         }
 
-        public virtual void ResetAndRenew()
+        protected virtual void InternalResetAndRenew()
         {
             Reset();
             Renew();

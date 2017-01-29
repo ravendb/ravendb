@@ -26,7 +26,7 @@ namespace Raven.Client.Document
         private static readonly ILog Log = LogManager.GetLogger(typeof(TcpBulkInsertOperation));
         private readonly CancellationTokenSource _cts;
         private readonly Task _getServerResponseTask;
-        private JsonOperationContext _jsonOperationContext;
+        
         private readonly BlockingCollection<MemoryStream> _documents = new BlockingCollection<MemoryStream>();
 
         private readonly BlockingCollection<MemoryStream> _buffers =
@@ -59,10 +59,10 @@ namespace Raven.Client.Document
         public TcpBulkInsertOperation(AsyncServerClient asyncServerClient, CancellationTokenSource cts)
         {
             _throttlingEvent.Set();
-            _jsonOperationContext = new JsonOperationContext(1024 * 1024, 16 * 1024);
+            
             _cts = cts ?? new CancellationTokenSource();
             _tcpClient = new TcpClient();
-
+            
             for (int i = 0; i < 64; i++)
             {
                 _buffers.Add(new MemoryStream());
@@ -102,15 +102,16 @@ namespace Raven.Client.Document
             var jsonParserState = new JsonParserState();
             //var streamNetworkBuffer = new BufferedStream(serverStream, 32 * 1024);
             var streamNetworkBuffer = serverStream;
-            var writeToStreamBuffer = new byte[32 * 1024];
+            
             var header = Encoding.UTF8.GetBytes(RavenJObject.FromObject(new TcpConnectionHeaderMessage
             {
                 DatabaseName = MultiDatabase.GetDatabaseName(url),
                 Operation = TcpConnectionHeaderMessage.OperationTypes.BulkInsert
             }).ToString());
             streamNetworkBuffer.Write(header, 0, header.Length);
-            JsonOperationContext.ManagedPinnedBuffer bytes;
-            using (_jsonOperationContext.GetManagedBuffer(out bytes))
+            
+            using (var contextPool = new JsonContextPool())
+            
             {
                 while (_documents.IsCompleted == false)
                 {
@@ -129,13 +130,16 @@ namespace Raven.Client.Document
 
                     var needToThrottle = _throttlingEvent.Wait(0) == false;
 
-                    _jsonOperationContext.ResetAndRenew();
-                    using (var jsonParser = new UnmanagedJsonParser(_jsonOperationContext, jsonParserState, debugTag))
-                    using (var builder = new BlittableJsonDocumentBuilder(_jsonOperationContext,
+                    JsonOperationContext context;
+                    JsonOperationContext.ManagedPinnedBuffer bytes;
+                    using (contextPool.AllocateOperationContext(out context))
+                    using (context.GetManagedBuffer(out bytes))
+                    using (var jsonParser = new UnmanagedJsonParser(context, jsonParserState, debugTag))
+                    using (var builder = new BlittableJsonDocumentBuilder(context,
                         BlittableJsonDocumentBuilder.UsageMode.ToDisk, debugTag,
                         jsonParser, jsonParserState))
                     {
-                        _jsonOperationContext.CachedProperties.NewDocument();
+                        context.CachedProperties.NewDocument();
                         builder.ReadObjectDocument();
                         while (true)
                         {
@@ -149,7 +153,7 @@ namespace Raven.Client.Document
                         _buffers.Add(jsonBuffer);
                         builder.FinalizeDocument();
                         WriteVariableSizeInt(streamNetworkBuffer, builder.SizeInBytes);
-                        WriteToStream(streamNetworkBuffer, builder, writeToStreamBuffer);
+                        WriteToStream(streamNetworkBuffer, builder, bytes);
                     }
 
                     if (needToThrottle)
@@ -164,21 +168,19 @@ namespace Raven.Client.Document
         }
 
         private static unsafe void WriteToStream(Stream stream, BlittableJsonDocumentBuilder builder,
-            byte[] buffer)
+            JsonOperationContext.ManagedPinnedBuffer buffer)
         {
             using (var reader = builder.CreateReader())
             {
-                fixed (byte* pBuffer = buffer)
+                var bytes = reader.BasePointer;
+                var remainingSize = reader.Size;
+                var pBuffer = buffer.Pointer;
+                while (remainingSize > 0)
                 {
-                    var bytes = reader.BasePointer;
-                    var remainingSize = reader.Size;
-                    while (remainingSize > 0)
-                    {
-                        var size = Math.Min(remainingSize, buffer.Length);
-                        Memory.Copy(pBuffer, bytes + (reader.Size - remainingSize), size);
-                        remainingSize -= size;
-                        stream.Write(buffer, 0, size);
-                    }
+                    var size = Math.Min(remainingSize, buffer.Length);
+                    Memory.Copy(pBuffer, bytes + (reader.Size - remainingSize), size);
+                    remainingSize -= size;
+                    stream.Write(buffer.Buffer.Array, buffer.Buffer.Offset, size);
                 }
             }
         }
@@ -397,8 +399,6 @@ namespace Raven.Client.Document
             finally
             {
                 _tcpClient = null;
-                _jsonOperationContext?.Dispose();
-                _jsonOperationContext = null;
                 GC.SuppressFinalize(this);
             }
         }

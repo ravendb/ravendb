@@ -40,6 +40,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                             }"
                 }, database))
                 {
+                    DocumentQueryResult queryResult;
                     using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                     {
                         using (var tx = context.OpenWriteTransaction())
@@ -83,11 +84,14 @@ namespace FastTests.Server.Documents.Indexing.Static
                         Assert.Equal(2, batchStats.ReduceSuccesses);
                         Assert.Equal(0, batchStats.ReduceErrors);
 
-                        var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
+                        queryResult =
+                            await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
                         Assert.Equal(1, queryResult.Results.Count);
 
-                        context.ResetAndRenew();
+                    }
+                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                    {
 
                         queryResult = await index.Query(new IndexQueryServerSide() { Query = "Location:Poland" }, context, OperationCancelToken.None);
 
@@ -130,6 +134,7 @@ select new
                     }
                 }, database))
                 {
+                    DocumentQueryResult queryResult;
                     using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                     {
                         using (var tx = context.OpenWriteTransaction())
@@ -184,15 +189,16 @@ select new
                         var scope = new IndexingStatsScope(batchStats);
                         while (index.DoIndexingWork(scope, CancellationToken.None))
                         {
-                            
+
                         }
 
-                        var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
+                        queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
 
                         Assert.Equal(2, queryResult.Results.Count);
 
-                        context.ResetAndRenew();
-
+                    }
+                    using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                    {
                         queryResult = await index.Query(new IndexQueryServerSide { Query = "Product:Milk" }, context, OperationCancelToken.None);
 
                         Assert.Equal(1, queryResult.Results.Count);
