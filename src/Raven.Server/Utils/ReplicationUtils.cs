@@ -42,6 +42,7 @@ namespace Raven.Server.Utils
 
                 if (TryGetActiveDestination(destination, replicationLoader.OutgoingHandlers, out outgoingHandler))
                 {
+                    
                     topologyInfo.Outgoing.Add(
                         new ActiveNodeStatus
                         {
@@ -49,6 +50,7 @@ namespace Raven.Server.Utils
                             IsCurrentlyConnected = true,
                             Database = destination.Database,
                             Url = destination.Url,
+                            SpecifiedCollections = destination.SpecifiedCollections ?? new Dictionary<string, string>(),
                             LastDocumentEtag = outgoingHandler._lastSentDocumentEtag,
                             LastIndexTransformerEtag = outgoingHandler._lastSentIndexOrTransformerEtag,
                             LastHeartbeatTicks = outgoingHandler.LastHeartbeatTicks,

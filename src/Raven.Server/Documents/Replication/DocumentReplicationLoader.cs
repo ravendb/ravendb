@@ -174,7 +174,8 @@ namespace Raven.Server.Documents.Replication
                         [nameof(ReplicationMessageReply.DocumentsChangeVector)] = documentsChangeVector,
                         [nameof(ReplicationMessageReply.IndexTransformerChangeVector)] = indexesChangeVector,
                         [nameof(ReplicationMessageReply.ResolverId)] = ReplicationDocument?.DefaultResolver?.ResolvingDatabaseId,
-                        [nameof(ReplicationMessageReply.ResolverVersion)] = ReplicationDocument?.DefaultResolver?.Version
+                        [nameof(ReplicationMessageReply.ResolverVersion)] = ReplicationDocument?.DefaultResolver?.Version,
+                        [nameof(ReplicationMessageReply.DatabaseId)] = _database.DbId.ToString()
                     };
 
                     documentsOperationContext.Write(writer, response);
