@@ -27,6 +27,12 @@ namespace Raven.Server.Documents
             _notifications = notifications;
         }
 
+        public DocumentsTransaction BeginAsyncCommitAndStartNewTransaction()
+        {
+            var tx = InnerTransaction.BeginAsyncCommitAndStartNewTransaction();
+            return new DocumentsTransaction(_context, tx, _notifications);
+        }
+
         public void AddAfterCommitNotification(DocumentChangeNotification notification)
         {
             notification.TriggeredByReplicationThread = IncomingReplicationHandler.IsIncomingReplicationThread;
@@ -80,6 +86,8 @@ namespace Raven.Server.Documents
                 RaiseNotifications(); // raise immediately
             }
         }
+
+        public bool ModifiedSystemDocuments => _systemDocumentChangeNotifications?.Count > 0;
 
         private void RaiseNotifications()
         {

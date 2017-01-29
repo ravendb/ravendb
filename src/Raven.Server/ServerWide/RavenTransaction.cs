@@ -18,12 +18,6 @@ namespace Raven.Server.ServerWide
             InnerTransaction.Commit();
         }
 
-        public RavenTransaction BeginAsyncCommitAndStartNewTransaction()
-        {
-            var tx = InnerTransaction.BeginAsyncCommitAndStartNewTransaction();
-            return new RavenTransaction(tx);
-        }
-
         public void EndAsyncCommit()
         {
             InnerTransaction.EndAsyncCommit();
