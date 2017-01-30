@@ -21,6 +21,7 @@ using Voron.Impl;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Logging;
+using Voron.Data;
 using Voron.Util;
 using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
 
@@ -260,6 +261,10 @@ namespace Raven.Server.Documents
 
                 using (var tx = Environment.WriteTransaction())
                 {
+                    NewPageAllocator.MaybePrefetchSections(
+                        tx.LowLevelTransaction.RootObjects,
+                        tx.LowLevelTransaction);
+
                     tx.CreateTree("Docs");
                     tx.CreateTree("LastReplicatedEtags");
                     tx.CreateTree("Identities");
@@ -2227,7 +2232,7 @@ namespace Raven.Server.Documents
             var result = new Dictionary<string, CollectionName>(StringComparer.OrdinalIgnoreCase);
 
             var collections = tx.OpenTable(CollectionsSchema, "Collections");
-
+            
             JsonOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
@@ -2236,6 +2241,12 @@ namespace Raven.Server.Documents
                     int size;
                     var ptr = tvr.Reader.Read(0, out size);
                     var collection = new LazyStringValue(null, ptr, size, context);
+
+                    Slice tableNameSlice;
+                    Slice.External(tx.Allocator, ptr, size, out tableNameSlice);// intentionally not disposing, will be disposed by the tx
+                    var tableTree = tx.CreateTree(tableNameSlice, RootObjectType.Table);
+                    NewPageAllocator.MaybePrefetchSections(tableTree, tx.LowLevelTransaction);
+
 
                     result.Add(collection, new CollectionName(collection));
                 }
