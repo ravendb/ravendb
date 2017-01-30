@@ -10,7 +10,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Data;
 using Raven.Client.Exceptions;
-using Raven.Server.NotificationCenter.Actions;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -93,7 +93,7 @@ namespace Raven.Server.Documents
                 Status = OperationStatus.InProgress
             };
 
-            var notification = new OperationStatusChangeNotification
+            var notification = new OperationStatusChanged
             {
                 OperationId = id,
                 State = operationState
@@ -174,13 +174,13 @@ namespace Raven.Server.Documents
             return operation.Task;
         }
 
-        private void RaiseNotifications(OperationStatusChangeNotification notification, Operation operation)
+        private void RaiseNotifications(OperationStatusChanged change, Operation operation)
         {
-            var operationChanged = OperationChanged.Create(notification.OperationId, operation.Description, notification.State, operation.Killable);
+            var operationChanged = OperationChanged.Create(change.OperationId, operation.Description, change.State, operation.Killable);
 
             operation.NotifyCenter(operationChanged, x => _db.NotificationCenter.Add(x));
 
-            _db.Notifications.RaiseNotifications(notification);
+            _db.Changes.RaiseNotifications(change);
         }
 
         public void KillRunningOperation(long id)
@@ -274,7 +274,7 @@ namespace Raven.Server.Documents
                     return;
                 }
 
-                // let us throttle notifications about the operation progress
+                // let us throttle changes about the operation progress
 
                 var now = SystemTime.UtcNow;
 

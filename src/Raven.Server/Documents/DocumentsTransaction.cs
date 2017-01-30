@@ -14,42 +14,42 @@ namespace Raven.Server.Documents
     {
         private readonly DocumentsOperationContext _context;
 
-        private readonly DocumentsNotifications _notifications;
+        private readonly DocumentsChanges _changes;
 
-        private List<DocumentChangeNotification> _documentNotifications;
+        private List<DocumentChange> _documentNotifications;
 
-        private List<DocumentChangeNotification> _systemDocumentChangeNotifications;
+        private List<DocumentChange> _systemDocumentChangeNotifications;
         private bool _replaced;
 
-        public DocumentsTransaction(DocumentsOperationContext context, Transaction transaction, DocumentsNotifications notifications)
+        public DocumentsTransaction(DocumentsOperationContext context, Transaction transaction, DocumentsChanges changes)
             : base(transaction)
         {
             _context = context;
-            _notifications = notifications;
+            _changes = changes;
         }
 
         public DocumentsTransaction BeginAsyncCommitAndStartNewTransaction()
         {
             _replaced = true;
             var tx = InnerTransaction.BeginAsyncCommitAndStartNewTransaction();
-            return new DocumentsTransaction(_context, tx, _notifications);
+            return new DocumentsTransaction(_context, tx, _changes);
         }
 
-        public void AddAfterCommitNotification(DocumentChangeNotification notification)
+        public void AddAfterCommitNotification(DocumentChange change)
         {
-            notification.TriggeredByReplicationThread = IncomingReplicationHandler.IsIncomingReplicationThread;
+            change.TriggeredByReplicationThread = IncomingReplicationHandler.IsIncomingReplicationThread;
 
-            if (notification.IsSystemDocument)
+            if (change.IsSystemDocument)
             {
                 if (_systemDocumentChangeNotifications == null)
-                    _systemDocumentChangeNotifications = new List<DocumentChangeNotification>();
-                _systemDocumentChangeNotifications.Add(notification);
+                    _systemDocumentChangeNotifications = new List<DocumentChange>();
+                _systemDocumentChangeNotifications.Add(change);
             }
             else
             {
                 if (_documentNotifications == null)
-                    _documentNotifications = new List<DocumentChangeNotification>();
-                _documentNotifications.Add(notification);
+                    _documentNotifications = new List<DocumentChange>();
+                _documentNotifications.Add(change);
             }
         }
 
@@ -80,7 +80,7 @@ namespace Raven.Server.Documents
             {
                 foreach (var notification in _systemDocumentChangeNotifications)
                 {
-                    _notifications.RaiseSystemNotifications(notification);
+                    _changes.RaiseSystemNotifications(notification);
                 }
             }
 
@@ -99,7 +99,7 @@ namespace Raven.Server.Documents
         {
             foreach (var notification in _documentNotifications)
             {
-                _notifications.RaiseNotifications(notification);
+                _changes.RaiseNotifications(notification);
             }
         }
     }

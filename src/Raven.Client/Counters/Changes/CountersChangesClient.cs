@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
+using CounterChange = Raven.Abstractions.Counters.Notifications.CounterChange;
 
 namespace Raven.Client.Counters.Changes
 {
@@ -58,29 +59,29 @@ namespace Raven.Client.Counters.Changes
         {
             switch (type)
             {
-                case "ChangeNotification":
-                    var changeNotification = value.JsonDeserialization<ChangeNotification>();
+                case "CounterChange":
+                    var changeNotification = value.JsonDeserialization<CounterChange>();
                     foreach (var counter in connections)
                     {
                         counter.Send(changeNotification);
                     }
                     break;               
-                case "StartingWithNotification":
-                    var counterStartingWithNotification = value.JsonDeserialization<StartingWithNotification>();
+                case "StartingWithChange":
+                    var counterStartingWithNotification = value.JsonDeserialization<StartingWithChange>();
                     foreach (var counter in connections)
                     {
                         counter.Send(counterStartingWithNotification);
                     }
                     break;
-                case "InGroupNotification":
-                    var countersInGroupNotification = value.JsonDeserialization<InGroupNotification>();
+                case "InGroupChange":
+                    var countersInGroupNotification = value.JsonDeserialization<InGroupChange>();
                     foreach (var counter in connections)
                     {
                         counter.Send(countersInGroupNotification);
                     }
                     break;
-                case "BulkOperationNotification":
-                    var bulkOperationNotification = value.JsonDeserialization<BulkOperationNotification>();
+                case "BulkOperationChange":
+                    var bulkOperationNotification = value.JsonDeserialization<BulkOperationChange>();
                     foreach (var counter in connections)
                     {
                         counter.Send(bulkOperationNotification);
@@ -91,14 +92,14 @@ namespace Raven.Client.Counters.Changes
             }
         }
 
-        public IObservableWithTask<ChangeNotification> ForAllCounters()
+        public IObservableWithTask<CounterChange> ForAllCounters()
         {
             var counter = GetOrAddConnectionState("all-counters", "watch-counter-change", "unwatch-counter-change",
                 () => watchAllCounters = true,
                 () => watchAllCounters = false,
                 null);
 
-            var taskedObservable = new TaskedObservable<ChangeNotification, CountersConnectionState>(
+            var taskedObservable = new TaskedObservable<CounterChange, CountersConnectionState>(
                 counter,
                 notification => true);
 
@@ -108,7 +109,7 @@ namespace Raven.Client.Counters.Changes
             return taskedObservable;
         }
 
-        public IObservableWithTask<ChangeNotification> ForChange(string groupName, string counterName)
+        public IObservableWithTask<CounterChange> ForChange(string groupName, string counterName)
         {
             if (string.IsNullOrWhiteSpace(groupName))
                 throw new ArgumentException("Group name cannot be empty!");
@@ -123,7 +124,7 @@ namespace Raven.Client.Counters.Changes
                 () => watchedChanges.TryRemove(fullCounterName),
                 fullCounterName);
 
-            var taskedObservable = new TaskedObservable<ChangeNotification, CountersConnectionState>(
+            var taskedObservable = new TaskedObservable<CounterChange, CountersConnectionState>(
                                 counter,
                                 notification => string.Equals(notification.GroupName, groupName, StringComparison.OrdinalIgnoreCase) &&
                                                 string.Equals(notification.CounterName, counterName, StringComparison.OrdinalIgnoreCase));
@@ -133,7 +134,7 @@ namespace Raven.Client.Counters.Changes
             return taskedObservable;
         }
 
-        public IObservableWithTask<StartingWithNotification> ForCountersStartingWith(string groupName, string prefixForName)
+        public IObservableWithTask<StartingWithChange> ForCountersStartingWith(string groupName, string prefixForName)
         {
             if (string.IsNullOrWhiteSpace(groupName))
                 throw new ArgumentException("Group name cannot be empty!");
@@ -148,7 +149,7 @@ namespace Raven.Client.Counters.Changes
                 () => watchedPrefixes.TryRemove(counterPrefix),
                 counterPrefix);
 
-            var taskedObservable = new TaskedObservable<StartingWithNotification, CountersConnectionState>(
+            var taskedObservable = new TaskedObservable<StartingWithChange, CountersConnectionState>(
                 counter,
                 notification =>
                 {
@@ -162,7 +163,7 @@ namespace Raven.Client.Counters.Changes
             return taskedObservable;
         }
 
-        public IObservableWithTask<InGroupNotification> ForCountersInGroup(string groupName)
+        public IObservableWithTask<InGroupChange> ForCountersInGroup(string groupName)
         {
             if (string.IsNullOrWhiteSpace(groupName))
                 throw new ArgumentException("Group name cannot be empty!");
@@ -173,7 +174,7 @@ namespace Raven.Client.Counters.Changes
                 () => watchedCountersInGroup.TryRemove(groupName), 
                 groupName);
 
-            var taskedObservable = new TaskedObservable<InGroupNotification, CountersConnectionState>(
+            var taskedObservable = new TaskedObservable<InGroupChange, CountersConnectionState>(
                                 counter,
                                 notification => string.Equals(notification.GroupName, groupName, StringComparison.OrdinalIgnoreCase));
             counter.OnCountersInGroupNotification += taskedObservable.Send;
@@ -182,7 +183,7 @@ namespace Raven.Client.Counters.Changes
             return taskedObservable;
         }
 
-        public IObservableWithTask<BulkOperationNotification> ForBulkOperation(Guid? operationId = null)
+        public IObservableWithTask<BulkOperationChange> ForBulkOperation(Guid? operationId = null)
         {
             var id = operationId != null ? operationId.ToString() : string.Empty;
 
@@ -222,7 +223,7 @@ namespace Raven.Client.Counters.Changes
                     bulkOperationSubscriptionTask);
             });
 
-            var taskedObservable = new TaskedObservable<BulkOperationNotification, CountersConnectionState>(
+            var taskedObservable = new TaskedObservable<BulkOperationChange, CountersConnectionState>(
                 counter,
                 notification => operationId == null || notification.OperationId == operationId);
 

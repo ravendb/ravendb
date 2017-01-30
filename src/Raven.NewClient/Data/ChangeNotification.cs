@@ -10,7 +10,7 @@ using Newtonsoft.Json;
 
 namespace Raven.NewClient.Abstractions.Data
 {
-    public class BulkInsertChangeNotification : DocumentChangeNotification
+    public class BulkInsertChange : DocumentChange
     {
         /// <summary>
         /// BulkInsert operation Id.
@@ -18,7 +18,7 @@ namespace Raven.NewClient.Abstractions.Data
         public Guid OperationId { get; set; }
     }
 
-    public class DocumentChangeNotification : Notification
+    public class DocumentChange : DatabaseChange
     {
         private string _key;
 
@@ -115,7 +115,7 @@ namespace Raven.NewClient.Abstractions.Data
         TransformerRemoved = 2
     }
 
-    public class IndexChangeNotification : Notification
+    public class IndexChange : DatabaseChange
     {
         /// <summary>
         /// Type of change that occurred on index.
@@ -138,7 +138,7 @@ namespace Raven.NewClient.Abstractions.Data
         }
     }
 
-    public class TransformerChangeNotification : Notification
+    public class TransformerChange : DatabaseChange
     {
         /// <summary>
         /// Type of change that occurred on transformer.
@@ -158,7 +158,7 @@ namespace Raven.NewClient.Abstractions.Data
         }
     }
 
-    public class ReplicationConflictNotification : Notification
+    public class ReplicationConflictChange : DatabaseChange
     {
         /// <summary>
         /// Type of conflict that occurred (None, DocumentReplicationConflict).
@@ -208,7 +208,7 @@ namespace Raven.NewClient.Abstractions.Data
         Delete = 2,
     }
 
-    public class TrafficWatchNotification : Notification
+    public class TrafficWatchChange : DatabaseChange
     {
         public DateTime TimeStamp { get; set; }
         public int RequestId { get; set; }
@@ -223,7 +223,7 @@ namespace Raven.NewClient.Abstractions.Data
         public object QueryTimings { get; set; } // TODO: fix this
     }
 
-    public class DataSubscriptionChangeNotification : EventArgs
+    public class DataSubscriptionChange : EventArgs
     {
         /// <summary>
         /// Subscription identifier for which a notification was created

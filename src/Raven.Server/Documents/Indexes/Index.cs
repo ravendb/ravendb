@@ -363,7 +363,7 @@ namespace Raven.Server.Documents.Indexes
 
                     DocumentDatabase.DocumentTombstoneCleaner.Subscribe(this);
 
-                    DocumentDatabase.Notifications.OnIndexChange += HandleIndexChange;
+                    DocumentDatabase.Changes.OnIndexChange += HandleIndexChange;
 
                     InitializeInternal();
 
@@ -490,7 +490,7 @@ namespace Raven.Server.Documents.Indexes
 
                 DocumentDatabase.DocumentTombstoneCleaner.Unsubscribe(this);
 
-                DocumentDatabase.Notifications.OnIndexChange -= HandleIndexChange;
+                DocumentDatabase.Changes.OnIndexChange -= HandleIndexChange;
 
                 var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(Index)} '{Name}'");
 
@@ -635,7 +635,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     _contextPool.SetMostWorkInGoingToHappenonThisThread();
 
-                    DocumentDatabase.Notifications.OnDocumentChange += HandleDocumentChange;
+                    DocumentDatabase.Changes.OnDocumentChange += HandleDocumentChange;
                     _environment.OnLogsApplied += HandleLogsApplied;
 
                     while (true)
@@ -671,8 +671,8 @@ namespace Raven.Server.Documents.Indexes
 
                                 _indexingBatchCompleted.SetAndResetAtomically();
 
-                                DocumentDatabase.Notifications.RaiseNotifications(
-                                    new IndexChangeNotification { Name = Name, Type = IndexChangeTypes.BatchCompleted });
+                                DocumentDatabase.Changes.RaiseNotifications(
+                                    new IndexChange { Name = Name, Type = IndexChangeTypes.BatchCompleted });
 
                                 if (didWork)
                                     ResetErrors();
@@ -785,7 +785,7 @@ namespace Raven.Server.Documents.Indexes
                 finally
                 {
                     _environment.OnLogsApplied -= HandleLogsApplied;
-                    DocumentDatabase.Notifications.OnDocumentChange -= HandleDocumentChange;
+                    DocumentDatabase.Changes.OnDocumentChange -= HandleDocumentChange;
                 }
             }
         }
@@ -1028,18 +1028,18 @@ namespace Raven.Server.Documents.Indexes
         public abstract int HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer,
             TransactionOperationContext indexContext, IndexingStatsScope stats);
 
-        private void HandleIndexChange(IndexChangeNotification notification)
+        private void HandleIndexChange(IndexChange change)
         {
-            if (string.Equals(notification.Name, Name, StringComparison.OrdinalIgnoreCase) == false)
+            if (string.Equals(change.Name, Name, StringComparison.OrdinalIgnoreCase) == false)
                 return;
 
-            if (notification.Type == IndexChangeTypes.IndexMarkedAsErrored)
+            if (change.Type == IndexChangeTypes.IndexMarkedAsErrored)
                 Stop();
         }
 
-        protected virtual void HandleDocumentChange(DocumentChangeNotification notification)
+        protected virtual void HandleDocumentChange(DocumentChange change)
         {
-            if (HandleAllDocs == false && Collections.Contains(notification.CollectionName) == false)
+            if (HandleAllDocs == false && Collections.Contains(change.CollectionName) == false)
                 return;
             _mre.Set();
         }
@@ -1110,7 +1110,7 @@ namespace Raven.Server.Documents.Indexes
 
                 if (notificationType != IndexChangeTypes.None)
                 {
-                    DocumentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification
+                    DocumentDatabase.Changes.RaiseNotifications(new IndexChange
                     {
                         Name = Name,
                         Type = notificationType

@@ -25,7 +25,7 @@ namespace Raven.Server.Documents
         public BundleLoader(DocumentDatabase database)
         {
             _database = database;
-            _database.Notifications.OnSystemDocumentChange += HandleSystemDocumentChange;
+            _database.Changes.OnSystemDocumentChange += HandleSystemDocumentChange;
             _logger = LoggingSource.Instance.GetLogger<BundleLoader>(_database.Name);
             InitializeBundles();
         }
@@ -70,9 +70,9 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void HandleSystemDocumentChange(DocumentChangeNotification notification)
+        public void HandleSystemDocumentChange(DocumentChange change)
         {
-            var key = notification.Key;
+            var key = change.Key;
             if (key.Equals(Constants.Versioning.RavenVersioningConfiguration, StringComparison.OrdinalIgnoreCase))
             {
                 VersioningStorage = VersioningStorage.LoadConfigurations(_database);
@@ -119,7 +119,7 @@ namespace Raven.Server.Documents
 
         public void Dispose()
         {
-            _database.Notifications.OnSystemDocumentChange -= HandleSystemDocumentChange;
+            _database.Changes.OnSystemDocumentChange -= HandleSystemDocumentChange;
 
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(BundleLoader)}");
             exceptionAggregator.Execute(() =>

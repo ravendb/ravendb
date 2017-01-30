@@ -77,7 +77,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 writer.WriteStartArray();
                 var first = true;
-                foreach (var connection in Database.Notifications.Connections)
+                foreach (var connection in Database.Changes.Connections)
                 {
                     if (first == false)
                         writer.WriteComma();
@@ -93,8 +93,8 @@ namespace Raven.Server.Documents.Handlers
         {
             var throttleConnection = GetBoolValueQueryString("throttleConnection", false).GetValueOrDefault(false);
 
-            var connection = new NotificationsClientConnection(webSocket, Database);
-            Database.Notifications.Connect(connection);
+            var connection = new ChangesClientConnection(webSocket, Database);
+            Database.Changes.Connect(connection);
             var sendTask = connection.StartSendingNotifications(throttleConnection);
             var debugTag = "changes/" + connection.Id;
             JsonOperationContext.ManagedPinnedBuffer segment1,segment2;
@@ -160,7 +160,7 @@ namespace Raven.Server.Documents.Handlers
                 }
                 finally
                 {
-                    Database.Notifications.Disconnect(connection.Id);
+                    Database.Changes.Disconnect(connection.Id);
                 }
             }
             await sendTask;
@@ -177,7 +177,7 @@ namespace Raven.Server.Documents.Handlers
                 if (long.TryParse(idStr, NumberStyles.Any, CultureInfo.InvariantCulture, out id) == false)
                     throw new ArgumentException($"Could not parse query string 'id' header as int64, value was: {idStr}");
 
-                Database.Notifications.Disconnect(id);
+                Database.Changes.Disconnect(id);
             }
 
             return NoContent();

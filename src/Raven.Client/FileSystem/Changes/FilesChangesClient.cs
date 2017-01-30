@@ -38,14 +38,14 @@ namespace Raven.Client.FileSystem.Changes
             this.tryResolveConflictByUsingRegisteredConflictListenersAsync = tryResolveConflictByUsingRegisteredConflictListenersAsync;
         }
 
-        public IObservableWithTask<ConfigurationChangeNotification> ForConfiguration()
+        public IObservableWithTask<ConfigurationChange> ForConfiguration()
         {
             var counter = GetOrAddConnectionState("all-fs-config", "watch-config", "unwatch-config",
                 () => watchAllConfigurations = true,
                 () => watchAllConfigurations = false,
                 null);
 
-            var taskedObservable = new TaskedObservable<ConfigurationChangeNotification, FilesConnectionState>(
+            var taskedObservable = new TaskedObservable<ConfigurationChange, FilesConnectionState>(
                 counter,
                 notification => true);
 
@@ -55,14 +55,14 @@ namespace Raven.Client.FileSystem.Changes
             return taskedObservable;
         }
 
-        public IObservableWithTask<ConflictNotification> ForConflicts()
+        public IObservableWithTask<ConflictChange> ForConflicts()
         {
             var counter = GetOrAddConnectionState("all-fs-conflicts", "watch-conflicts", "unwatch-conflicts",
                 () => watchAllConflicts = true,
                 () => watchAllConflicts = false,
                 null);
 
-            var taskedObservable = new TaskedObservable<ConflictNotification, FilesConnectionState>(
+            var taskedObservable = new TaskedObservable<ConflictChange, FilesConnectionState>(
                 counter,
                 notification => true);
 
@@ -72,7 +72,7 @@ namespace Raven.Client.FileSystem.Changes
             return taskedObservable;
         }
 
-        public IObservableWithTask<FileChangeNotification> ForFolder(string folder)
+        public IObservableWithTask<FileChange> ForFolder(string folder)
         {
             if (string.IsNullOrWhiteSpace(folder))
                 throw new ArgumentException("folder cannot be empty");
@@ -87,7 +87,7 @@ namespace Raven.Client.FileSystem.Changes
                 () => watchedFolders.TryRemove(folder),
                 folder);
 
-            var taskedObservable = new TaskedObservable<FileChangeNotification, FilesConnectionState>(
+            var taskedObservable = new TaskedObservable<FileChange, FilesConnectionState>(
                 counter,
                 notification => notification.File.StartsWith(folder, StringComparison.OrdinalIgnoreCase));
 
@@ -97,14 +97,14 @@ namespace Raven.Client.FileSystem.Changes
             return taskedObservable;
         }
 
-        public IObservableWithTask<SynchronizationUpdateNotification> ForSynchronization()
+        public IObservableWithTask<SynchronizationUpdateChange> ForSynchronization()
         {
             var counter = GetOrAddConnectionState("all-fs-sync", "watch-sync", "unwatch-sync",
                 () => watchAllSynchronizations = true,
                 () => watchAllSynchronizations = false,
                 null);
 
-            var taskedObservable = new TaskedObservable<SynchronizationUpdateNotification, FilesConnectionState>(
+            var taskedObservable = new TaskedObservable<SynchronizationUpdateChange, FilesConnectionState>(
                 counter,
                 notification => true);
 
@@ -131,36 +131,36 @@ namespace Raven.Client.FileSystem.Changes
             }
         }
 
-        private ConcurrentDictionary<string, ConflictNotification> delayedConflictNotifications = new ConcurrentDictionary<string, ConflictNotification>();
+        private ConcurrentDictionary<string, ConflictChange> delayedConflictNotifications = new ConcurrentDictionary<string, ConflictChange>();
 
         protected override void NotifySubscribers(string type, RavenJObject value, List<FilesConnectionState> connections)
         {
             switch (type)
             {
-                case "ConfigurationChangeNotification":
-                    var configChangeNotification = value.JsonDeserialization<ConfigurationChangeNotification>();
+                case "ConfigurationChange":
+                    var configChangeNotification = value.JsonDeserialization<ConfigurationChange>();
                     foreach (var counter in connections)
                     {
                         counter.Send(configChangeNotification);
                     }
                     break;
-                case "FileChangeNotification":
-                    var fileChangeNotification = value.JsonDeserialization<FileChangeNotification>();
+                case "FileChange":
+                    var fileChangeNotification = value.JsonDeserialization<FileChange>();
                     foreach (var counter in connections)
                     {
                         counter.Send(fileChangeNotification);
                     }
                     break;
-                case "SynchronizationUpdateNotification":
-                    var synchronizationUpdateNotification = value.JsonDeserialization<SynchronizationUpdateNotification>();
+                case "SynchronizationUpdateChange":
+                    var synchronizationUpdateNotification = value.JsonDeserialization<SynchronizationUpdateChange>();
                     foreach (var counter in connections)
                     {
                         counter.Send(synchronizationUpdateNotification);
                     }
                     break;
 
-                case "ConflictNotification":
-                    var conflictNotification = value.JsonDeserialization<ConflictNotification>();
+                case "ConflictChange":
+                    var conflictNotification = value.JsonDeserialization<ConflictChange>();
                     if (conflictNotification.Status == ConflictStatus.Detected)
                     {
                         // We don't care about this one (this can happen concurrently). 
@@ -177,11 +177,11 @@ namespace Raven.Client.FileSystem.Changes
                                 // We need the lock to avoid a race conditions where a Detected happens and also a Resolved happen before the continuation can take control.. 
                                 lock ( delayedConflictNotifications )
                                 {
-                                    ConflictNotification notification;
-                                    if (delayedConflictNotifications.TryRemove(conflictNotification.FileName, out notification))
+                                    ConflictChange change;
+                                    if (delayedConflictNotifications.TryRemove(conflictNotification.FileName, out change))
                                     {
-                                        if (notification.Status == ConflictStatus.Resolved)
-                                            NotifyConflictSubscribers(connections, notification);
+                                        if (change.Status == ConflictStatus.Resolved)
+                                            NotifyConflictSubscribers(connections, change);
                                     }
                                 }
 
@@ -214,13 +214,13 @@ namespace Raven.Client.FileSystem.Changes
             }
         }
 
-        private static void NotifyConflictSubscribers(List<FilesConnectionState> connections, ConflictNotification conflictNotification)
+        private static void NotifyConflictSubscribers(List<FilesConnectionState> connections, ConflictChange conflictChange)
         {
             // Check if we are delaying the broadcast.
-            if (conflictNotification != null)
+            if (conflictChange != null)
             {
                 foreach (var counter in connections)
-                    counter.Send(conflictNotification);
+                    counter.Send(conflictChange);
             }
         }
         }

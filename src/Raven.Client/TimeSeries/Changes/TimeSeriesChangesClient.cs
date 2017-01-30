@@ -45,15 +45,15 @@ namespace Raven.Client.TimeSeries.Changes
         {
             switch (type)
             {
-                case "KeyChangeNotification":
-                    var changeNotification = value.JsonDeserialization<KeyChangeNotification>();
+                case "KeyChange":
+                    var changeNotification = value.JsonDeserialization<KeyChange>();
                     foreach (var timeSeries in connections)
                     {
                         timeSeries.Send(changeNotification);
                     }
                     break;
-                case "BulkOperationNotification":
-                    var bulkOperationNotification = value.JsonDeserialization<BulkOperationNotification>();
+                case "BulkOperationChange":
+                    var bulkOperationNotification = value.JsonDeserialization<BulkOperationChange>();
                     foreach (var timeSeries in connections)
                     {
                         timeSeries.Send(bulkOperationNotification);
@@ -64,14 +64,14 @@ namespace Raven.Client.TimeSeries.Changes
             }
         }
 
-        public IObservableWithTask<KeyChangeNotification> ForAllTimeSeries()
+        public IObservableWithTask<KeyChange> ForAllTimeSeries()
         {
             var timeSeries = GetOrAddConnectionState("all-time-series", "watch-time-series-key-change", "unwatch-time-series-key-change",
                 () => watchAllTimeSeries = true,
                 () => watchAllTimeSeries = false,
                 null);
 
-            var taskedObservable = new TaskedObservable<KeyChangeNotification, TimeSeriesConnectionState>(
+            var taskedObservable = new TaskedObservable<KeyChange, TimeSeriesConnectionState>(
                 timeSeries,
                 notification => true);
 
@@ -81,7 +81,7 @@ namespace Raven.Client.TimeSeries.Changes
             return taskedObservable;
         }
 
-        public IObservableWithTask<KeyChangeNotification> ForKey(string type, string key)
+        public IObservableWithTask<KeyChange> ForKey(string type, string key)
         {
             if (string.IsNullOrWhiteSpace(type))
                 throw new ArgumentException("Type cannot be empty!");
@@ -95,7 +95,7 @@ namespace Raven.Client.TimeSeries.Changes
                 () => watchedKeysChanges.TryRemove(keyWithType),
                 keyWithType);
 
-            var taskedObservable = new TaskedObservable<KeyChangeNotification, TimeSeriesConnectionState>(
+            var taskedObservable = new TaskedObservable<KeyChange, TimeSeriesConnectionState>(
                 timeSeries,
                 notification => string.Equals(notification.Type, type, StringComparison.OrdinalIgnoreCase) &&
                                 string.Equals(notification.Key, key, StringComparison.OrdinalIgnoreCase));
@@ -105,7 +105,7 @@ namespace Raven.Client.TimeSeries.Changes
             return taskedObservable;
         }
 
-        public IObservableWithTask<BulkOperationNotification> ForBulkOperation(Guid? operationId = null)
+        public IObservableWithTask<BulkOperationChange> ForBulkOperation(Guid? operationId = null)
         {
             var id = operationId != null ? operationId.ToString() : string.Empty;
 
@@ -145,7 +145,7 @@ namespace Raven.Client.TimeSeries.Changes
                     bulkOperationSubscriptionTask);
             });
 
-            var taskedObservable = new TaskedObservable<BulkOperationNotification, TimeSeriesConnectionState>(
+            var taskedObservable = new TaskedObservable<BulkOperationChange, TimeSeriesConnectionState>(
                 timeSeries,
                 notification => operationId == null || notification.OperationId == operationId);
 

@@ -20,12 +20,12 @@ namespace FastTests.Server.Documents.Operations
             {
                 var token = new OperationCancelToken(TimeSpan.FromMinutes(2), CancellationToken.None);
 
-                var notifications = new BlockingCollection<OperationStatusChangeNotification>();
+                var notifications = new BlockingCollection<OperationStatusChanged>();
                 var mre = new ManualResetEventSlim(false);
 
                 var operationId = db.Operations.GetNextOperationId();
 
-                db.Notifications.OnOperationStatusChange += notifications.Add;
+                db.Changes.OnOperationStatusChange += notifications.Add;
 
                 db.Operations.AddOperation("Operations Test", (DatabaseOperations.OperationType) 0, 
                     onProgress => Task.Factory.StartNew<IOperationResult>(() =>
@@ -50,35 +50,35 @@ namespace FastTests.Server.Documents.Operations
                         };
                     }), operationId, token);
 
-                OperationStatusChangeNotification notification;
-                Assert.True(notifications.TryTake(out notification, TimeSpan.FromSeconds(1)));
-                Assert.NotNull(notification.OperationId);
-                Assert.Equal(OperationStatus.InProgress, notification.State.Status);
-                Assert.Null(notification.State.Result);
-                var progress = notification.State.Progress as DeterminateProgress;
+                OperationStatusChanged change;
+                Assert.True(notifications.TryTake(out change, TimeSpan.FromSeconds(1)));
+                Assert.NotNull(change.OperationId);
+                Assert.Equal(OperationStatus.InProgress, change.State.Status);
+                Assert.Null(change.State.Result);
+                var progress = change.State.Progress as DeterminateProgress;
                 Assert.NotNull(progress);
                 Assert.Equal(1024, progress.Total);
                 Assert.Equal(0, progress.Processed);
 
                 mre.Set();
 
-                Assert.True(notifications.TryTake(out notification, TimeSpan.FromSeconds(1)));
-                Assert.NotNull(notification.OperationId);
-                Assert.Equal(OperationStatus.InProgress, notification.State.Status);
-                Assert.Null(notification.State.Result);
-                progress = notification.State.Progress as DeterminateProgress;
+                Assert.True(notifications.TryTake(out change, TimeSpan.FromSeconds(1)));
+                Assert.NotNull(change.OperationId);
+                Assert.Equal(OperationStatus.InProgress, change.State.Status);
+                Assert.Null(change.State.Result);
+                progress = change.State.Progress as DeterminateProgress;
                 Assert.NotNull(progress);
                 Assert.Equal(1024, progress.Total);
                 Assert.Equal(500, progress.Processed);
 
                 mre.Set();
 
-                Assert.True(notifications.TryTake(out notification, TimeSpan.FromSeconds(1)));
-                Assert.NotNull(notification.OperationId);
-                Assert.Equal(OperationStatus.Completed, notification.State.Status);
-                Assert.NotNull(notification.State.Result);
-                Assert.Null(notification.State.Progress);
-                var result = notification.State.Result as SampleOperationResult;
+                Assert.True(notifications.TryTake(out change, TimeSpan.FromSeconds(1)));
+                Assert.NotNull(change.OperationId);
+                Assert.Equal(OperationStatus.Completed, change.State.Status);
+                Assert.NotNull(change.State.Result);
+                Assert.Null(change.State.Progress);
+                var result = change.State.Result as SampleOperationResult;
                 Assert.NotNull(result);
                 Assert.Equal("I'm done", result.Message);
             }
@@ -91,9 +91,9 @@ namespace FastTests.Server.Documents.Operations
             {
                 long operationId = db.Operations.GetNextOperationId();
 
-                var notifications = new BlockingCollection<OperationStatusChangeNotification>();
+                var notifications = new BlockingCollection<OperationStatusChanged>();
 
-                db.Notifications.OnOperationStatusChange += notifications.Add;
+                db.Changes.OnOperationStatusChange += notifications.Add;
 
                 db.Operations.AddOperation("Operations Test", (DatabaseOperations.OperationType)0,
                     onProgress => Task.Factory.StartNew<IOperationResult>(() =>
@@ -101,14 +101,14 @@ namespace FastTests.Server.Documents.Operations
                        throw new Exception("Something bad happened");
                     }), operationId, OperationCancelToken.None);
 
-                OperationStatusChangeNotification notification;
+                OperationStatusChanged change;
 
-                Assert.True(notifications.TryTake(out notification, TimeSpan.FromSeconds(1)));
-                Assert.NotNull(notification.OperationId);
-                Assert.Equal(OperationStatus.Faulted, notification.State.Status);
-                Assert.NotNull(notification.State.Result);
-                Assert.Null(notification.State.Progress);
-                var result = notification.State.Result as OperationExceptionResult;
+                Assert.True(notifications.TryTake(out change, TimeSpan.FromSeconds(1)));
+                Assert.NotNull(change.OperationId);
+                Assert.Equal(OperationStatus.Faulted, change.State.Status);
+                Assert.NotNull(change.State.Result);
+                Assert.Null(change.State.Progress);
+                var result = change.State.Result as OperationExceptionResult;
                 Assert.NotNull(result);
                 Assert.Equal("Something bad happened", result.Message);
                 Assert.IsType<string>(result.Error);
@@ -123,11 +123,11 @@ namespace FastTests.Server.Documents.Operations
                 var token = new OperationCancelToken(TimeSpan.Zero, CancellationToken.None);
                 token.Cancel();
 
-                var notifications = new BlockingCollection<OperationStatusChangeNotification>();
+                var notifications = new BlockingCollection<OperationStatusChanged>();
 
                 var operationId = db.Operations.GetNextOperationId();
 
-                db.Notifications.OnOperationStatusChange += notifications.Add;
+                db.Changes.OnOperationStatusChange += notifications.Add;
 
                 db.Operations.AddOperation("Cancellation Test", (DatabaseOperations.OperationType)0,
                     onProgress => Task.Factory.StartNew<IOperationResult>(() =>
@@ -136,13 +136,13 @@ namespace FastTests.Server.Documents.Operations
                         return null;
                     }, token.Token), operationId, token);
 
-                OperationStatusChangeNotification notification;
+                OperationStatusChanged change;
 
-                Assert.True(notifications.TryTake(out notification, TimeSpan.FromSeconds(1)));
-                Assert.NotNull(notification.OperationId);
-                Assert.Equal(OperationStatus.Canceled, notification.State.Status);
-                Assert.Null(notification.State.Result);
-                Assert.Null(notification.State.Progress);
+                Assert.True(notifications.TryTake(out change, TimeSpan.FromSeconds(1)));
+                Assert.NotNull(change.OperationId);
+                Assert.Equal(OperationStatus.Canceled, change.State.Status);
+                Assert.Null(change.State.Result);
+                Assert.Null(change.State.Progress);
             }
         }
 

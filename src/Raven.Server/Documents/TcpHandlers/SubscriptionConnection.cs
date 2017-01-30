@@ -262,16 +262,16 @@ namespace Raven.Server.Documents.TcpHandlers
         private IDisposable RegisterForNotificationOnNewDocuments(SubscriptionCriteria criteria)
         {
             _waitForMoreDocuments = new AsyncManualResetEvent(CancellationTokenSource.Token);
-            Action<DocumentChangeNotification> registerNotification = notification =>
+            Action<DocumentChange> registerNotification = notification =>
             {
                 if (notification.CollectionName == criteria.Collection)
                     _waitForMoreDocuments.SetByAsyncCompletion();
 
             };
-            TcpConnection.DocumentDatabase.Notifications.OnDocumentChange += registerNotification;
+            TcpConnection.DocumentDatabase.Changes.OnDocumentChange += registerNotification;
             return new DisposableAction(() =>
             {
-                TcpConnection.DocumentDatabase.Notifications.OnDocumentChange -= registerNotification;
+                TcpConnection.DocumentDatabase.Changes.OnDocumentChange -= registerNotification;
             });
         }
 

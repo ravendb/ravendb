@@ -81,9 +81,9 @@ namespace Raven.Server.Documents.Indexes.Static
             return StaticIndexHelper.IsStale(this, databaseContext, indexContext, cutoff);
         }
 
-        protected override void HandleDocumentChange(DocumentChangeNotification notification)
+        protected override void HandleDocumentChange(DocumentChange change)
         {
-            if (HandleAllDocs == false && Collections.Contains(notification.CollectionName) == false && _referencedCollections.Contains(notification.CollectionName) == false)
+            if (HandleAllDocs == false && Collections.Contains(change.CollectionName) == false && _referencedCollections.Contains(change.CollectionName) == false)
                 return;
 
             _mre.Set();

@@ -3,11 +3,11 @@ using System.IO;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Action = Raven.Server.NotificationCenter.Actions.Action;
 
 namespace Raven.Server.NotificationCenter
 {
@@ -39,7 +39,7 @@ namespace Raven.Server.NotificationCenter
             var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
             var receive = _webSocket.ReceiveAsync(receiveBuffer, _resourceShutdown);
 
-            var asyncQueue = new AsyncQueue<Action>();
+            var asyncQueue = new AsyncQueue<Notification>();
 
             using (_notificationCenter.TrackActions(asyncQueue, this))
             {

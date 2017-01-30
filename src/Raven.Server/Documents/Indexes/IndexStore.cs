@@ -17,9 +17,8 @@ using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries.Dynamic;
-using Raven.Server.NotificationCenter.Actions;
-using Raven.Server.NotificationCenter.Actions.Details;
-using Raven.Server.NotificationCenter.Alerts;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Utils;
 
 using Voron.Platform.Posix;
@@ -206,8 +205,8 @@ namespace Raven.Server.Documents.Indexes
 
             var etag = _documentDatabase.IndexMetadataPersistence.OnIndexCreated(index);
 
-            _documentDatabase.Notifications.RaiseNotifications(
-                new IndexChangeNotification
+            _documentDatabase.Changes.RaiseNotifications(
+                new IndexChange
                 {
                     Name = index.Name,
                     Type = IndexChangeTypes.IndexAdded,
@@ -366,7 +365,7 @@ namespace Raven.Server.Documents.Indexes
                 }
 
                 var tombstoneEtag = _documentDatabase.IndexMetadataPersistence.OnIndexDeleted(index);
-                _documentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification
+                _documentDatabase.Changes.RaiseNotifications(new IndexChange
                 {
                     Name = index.Name,
                     Type = IndexChangeTypes.IndexRemoved,

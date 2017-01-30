@@ -5,9 +5,9 @@ namespace Raven.Client.FileSystem
 {
     public interface IFilesChanges : IConnectableChanges<IFilesChanges>
     {
-        IObservableWithTask<ConfigurationChangeNotification> ForConfiguration();
-        IObservableWithTask<ConflictNotification> ForConflicts();
-        IObservableWithTask<FileChangeNotification> ForFolder(string folder);
-        IObservableWithTask<SynchronizationUpdateNotification> ForSynchronization();
+        IObservableWithTask<ConfigurationChange> ForConfiguration();
+        IObservableWithTask<ConflictChange> ForConflicts();
+        IObservableWithTask<FileChange> ForFolder(string folder);
+        IObservableWithTask<SynchronizationUpdateChange> ForSynchronization();
     }
 }

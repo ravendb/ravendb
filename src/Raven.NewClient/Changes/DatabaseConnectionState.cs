@@ -20,55 +20,55 @@ namespace Raven.NewClient.Client.Changes
             return ensureConnection(this);
         }
 
-        public event Action<DocumentChangeNotification> OnDocumentChangeNotification = delegate { };
+        public event Action<DocumentChange> OnDocumentChangeNotification = delegate { };
 
-        public event Action<BulkInsertChangeNotification> OnBulkInsertChangeNotification = delegate { };
+        public event Action<BulkInsertChange> OnBulkInsertChangeNotification = delegate { };
 
-        public event Action<IndexChangeNotification> OnIndexChangeNotification;
+        public event Action<IndexChange> OnIndexChangeNotification;
 
-        public event Action<TransformerChangeNotification> OnTransformerChangeNotification;
+        public event Action<TransformerChange> OnTransformerChangeNotification;
 
-        public event Action<ReplicationConflictNotification> OnReplicationConflictNotification;
+        public event Action<ReplicationConflictChange> OnReplicationConflictNotification;
 
-        public event Action<DataSubscriptionChangeNotification> OnDataSubscriptionNotification;
+        public event Action<DataSubscriptionChange> OnDataSubscriptionNotification;
 
-        public event Action<OperationStatusChangeNotification> OnOperationStatusChangeNotification;
+        public event Action<OperationStatusChange> OnOperationStatusChangeNotification;
 
-        public void Send(DocumentChangeNotification documentChangeNotification)
+        public void Send(DocumentChange documentChange)
         {
-            OnDocumentChangeNotification?.Invoke(documentChangeNotification);
+            OnDocumentChangeNotification?.Invoke(documentChange);
         }
 
-        public void Send(IndexChangeNotification indexChangeNotification)
+        public void Send(IndexChange indexChange)
         {
-            OnIndexChangeNotification?.Invoke(indexChangeNotification);
+            OnIndexChangeNotification?.Invoke(indexChange);
         }
 
-        public void Send(TransformerChangeNotification transformerChangeNotification)
+        public void Send(TransformerChange transformerChange)
         {
-            OnTransformerChangeNotification?.Invoke(transformerChangeNotification);
+            OnTransformerChangeNotification?.Invoke(transformerChange);
         }
 
-        public void Send(ReplicationConflictNotification replicationConflictNotification)
+        public void Send(ReplicationConflictChange replicationConflictChange)
         {
-            OnReplicationConflictNotification?.Invoke(replicationConflictNotification);
+            OnReplicationConflictNotification?.Invoke(replicationConflictChange);
         }
 
-        public void Send(BulkInsertChangeNotification bulkInsertChangeNotification)
+        public void Send(BulkInsertChange bulkInsertChange)
         {
-            OnBulkInsertChangeNotification?.Invoke(bulkInsertChangeNotification);
+            OnBulkInsertChangeNotification?.Invoke(bulkInsertChange);
 
-            Send((DocumentChangeNotification)bulkInsertChangeNotification);
+            Send((DocumentChange)bulkInsertChange);
         }
 
-        public void Send(DataSubscriptionChangeNotification dataSubscriptionChangeNotification)
+        public void Send(DataSubscriptionChange dataSubscriptionChange)
         {
-            OnDataSubscriptionNotification?.Invoke(dataSubscriptionChangeNotification);
+            OnDataSubscriptionNotification?.Invoke(dataSubscriptionChange);
         }
 
-        public void Send(OperationStatusChangeNotification operationStatusChangeNotification)
+        public void Send(OperationStatusChange operationStatusChange)
         {
-            OnOperationStatusChangeNotification?.Invoke(operationStatusChangeNotification);
+            OnOperationStatusChangeNotification?.Invoke(operationStatusChange);
         }
     }
 }
