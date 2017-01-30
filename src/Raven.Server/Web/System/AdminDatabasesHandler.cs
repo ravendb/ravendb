@@ -188,23 +188,35 @@ namespace Raven.Server.Web.System
                     var configuration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(name, ignoreDisabledDatabase: true);
                     if (configuration == null)
                     {
-                        results.Add(new DynamicJsonValue
+                        results.Add(new ResourceDeleteResult
                         {
-                            ["Name"] = name,
-                            ["Deleted"] = false,
-                            ["Reason"] = "database not found",
-                        });
+                            QualifiedName = "db/" + name,
+                            Deleted = false,
+                            Reason = "database not found"
+                        }.ToJson());
 
                         continue;
                     }
 
-                    DeleteDatabase(name, context, isHardDelete, configuration);
-
-                    results.Add(new DynamicJsonValue
+                    try
                     {
-                        ["Name"] = name,
-                        ["Deleted"] = true,
-                    });
+                        DeleteDatabase(name, context, isHardDelete, configuration);
+
+                        results.Add(new ResourceDeleteResult
+                        {
+                            QualifiedName = "db/" + name,
+                            Deleted = true
+                        }.ToJson());
+                    }
+                    catch (Exception ex)
+                    {
+                        results.Add(new ResourceDeleteResult
+                        {
+                            QualifiedName = "db/" + name,
+                            Deleted = false,
+                            Reason = ex.Message
+                        }.ToJson());
+                    }
                 }
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

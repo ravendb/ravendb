@@ -9,10 +9,9 @@ class deleteResourceCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Array<resource>> {
-        const singleResource = this.resources.length === 1;
+    execute(): JQueryPromise<Array<Raven.Server.Web.System.ResourceDeleteResult>> {       
 
-        this.reportInfo(singleResource ? "Deleting " + _.first(this.resources).name + "..." : "Deleting " + this.resources.length + " resources");
+        const singleResource = this.resources.length === 1;
 
         const resourcesByQualifier = _.groupBy(this.resources, x => x.qualifier);
 
@@ -26,17 +25,17 @@ class deleteResourceCommand extends commandBase {
             };
 
             return Promise.resolve(
-                this.del<{ Results: deleteResourceResult[] }>(url + this.urlEncodeArgs(args), null, null, 9000 * this.resources.length)
+                this.del<Raven.Server.Web.System.ResourceDeleteResult[]>(url + this.urlEncodeArgs(args), null, null, 9000 * this.resources.length)
             );
         });
-
-        const result = $.Deferred<Array<resource>>();
+       
+        const result = $.Deferred<Array<Raven.Server.Web.System.ResourceDeleteResult>>();
 
         Promise.all(tasks)
-            .then((results) => {
-                //TODO: display successful message
-                //TODO: check if all resources was deleted! - display dialog with deletion summary in case of failure? 
-                result.resolve(this.resources);
+            .then((results) => {      
+                // Flatten results first, since it is an array of arrays (holding the differenent resources types) 
+                const allResults: Raven.Server.Web.System.ResourceDeleteResult[] = _.flatten(results);                 
+                result.resolve(allResults);
             })
             .catch((response: JQueryXHR) => {
                 this.reportError("Failed to delete resources", response.responseText, response.statusText);

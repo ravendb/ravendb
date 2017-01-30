@@ -112,7 +112,9 @@
                             <div class="btn-toolbar pull-right-sm" role="toolbar">
                                 <div class="btn-group">
                                     <button class="btn btn-default"
-                                            data-bind="click: $root.toggleResource, css: { 'btn-spinner': _.includes($root.spinners.itemTakedowns(), qualifiedName) }, enable: !_.includes($root.spinners.itemTakedowns(), qualifiedName)">
+                                            data-bind="click: $root.toggleResource, 
+                                                       css: { 'btn-spinner': _.includes($root.spinners.itemTakedowns(), qualifiedName) }, 
+                                                       disable: isBeingDeleted || _.includes($root.spinners.itemTakedowns(), qualifiedName)">
 
                                         <i class="icon-unlock" data-bind="visible: disabled()"></i>
                                         <span data-bind="visible: disabled()">Enable</span>
@@ -121,7 +123,8 @@
                                         <span data-bind="visible: !disabled()">Disable</span>
 
                                     </button>
-                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"  
+                                            data-bind="disable: isBeingDeleted || _.includes($root.spinners.itemTakedowns(), qualifiedName)">
                                         <span class="caret"></span>
                                         <span class="sr-only">Toggle Dropdown</span>
                                     </button>
@@ -154,7 +157,7 @@
                                         </li>
                                     </ul>
                                 </div>
-                                <button class="btn btn-danger" data-bind="click: $root.deleteResource">
+                                <button class="btn btn-danger" data-bind="click: $root.deleteResource, disable: isBeingDeleted"> 
                                     <i class="icon-trash"></i>
                                     <span>Delete</span>
                                 </button>

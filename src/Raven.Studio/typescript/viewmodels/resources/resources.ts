@@ -21,6 +21,7 @@ import databaseInfo = require("models/resources/info/databaseInfo");
 import filesystemInfo = require("models/resources/info/filesystemInfo");
 import database = require("models/resources/database");
 import EVENTS = require("common/constants/events");
+import messagePublisher = require("common/messagePublisher");
 
 class resources extends viewModelBase {
 
@@ -215,31 +216,38 @@ class resources extends viewModelBase {
         confirmDeleteViewModel
             .result
             .done((confirmResult: deleteResourceConfirmResult) => {
-                if (confirmResult.can) {
-                    new deleteResourceCommand(toDelete.map(x => x.asResource()), !confirmResult.keepFiles)
-                        .execute()
-                        .done((deletedResources: Array<resource>) => {
-                            deletedResources.forEach(rs => this.onResourceDeleted(rs));
-                        });
+                if (confirmResult.can) {                   
+                    new deleteResourceCommand(toDelete.map((x) => {
+                                                    x.isBeingDeleted(true);                                                    
+                                                    return x.asResource();
+                                              }), !confirmResult.keepFiles)
+                                             .execute()                                            
+                                             .done((deletedResources: Array<Raven.Server.Web.System.ResourceDeleteResult>) => {
+                                                    deletedResources.forEach(rs => this.onResourceDeleted(rs));                            
+                                              });
                 }
             });
 
         app.showBootstrapDialog(confirmDeleteViewModel);
     }
 
-    private onResourceDeleted(deletedResource: resource) {
+    private onResourceDeleted(deletedResourceResult: Raven.Server.Web.System.ResourceDeleteResult) {
         const matchedResource = this.resources()
-            .sortedResources()
-            .find(x => x.qualifiedName.toLowerCase() === deletedResource.qualifiedName.toLowerCase());
+            .sortedResources()           
+            .find(x => x.qualifiedName.toLowerCase() === deletedResourceResult.QualifiedName.toLowerCase());
 
-        if (matchedResource) {
-            this.removeResource(matchedResource);
-        }
+        // Resources will be removed from the the sortedResources in method removeResource through the global changes api flow..
+        // So only enable the 'delete' button and display err msg if relevant                                
+        if (matchedResource && (deletedResourceResult.Reason)) {                           
+                matchedResource.isBeingDeleted(false);
+                messagePublisher.reportError(`Failed to delete ${matchedResource.name}, reason: ${deletedResourceResult.Reason}`);
+        }        
     }
 
     private removeResource(rsInfo: resourceInfo) {
         this.resources().sortedResources.remove(rsInfo);
         this.selectedResources.remove(rsInfo.qualifiedName);
+        messagePublisher.reportSuccess(`Resource ${rsInfo.name} was successfully deleted`);
     }
 
     toggleSelectedResources() {
