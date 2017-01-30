@@ -9,7 +9,6 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -44,7 +43,6 @@ using Raven.Server.Utils.Metrics;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Voron;
 using Sparrow.Logging;
 using Sparrow.Utils;
@@ -2008,36 +2006,21 @@ namespace Raven.Server.Documents.Indexes
 
             _lastWarningExceedingIndexOutputsPerDocument = DateTime.UtcNow;
 
-            var message =
-                $"Index '{Name}' has already produced more than {Configuration.MaxWarnIndexOutputsPerDocument} map results " +
-                $"for {_numberOfExceedingIndexOutputsPerDocument} document{(_numberOfExceedingIndexOutputsPerDocument > 1 ? "s" : string.Empty)}. " +
-                $"For example, document: '{_maxExceedingIndexOutputsPerDocumentId}' has produced {_maxExceedingIndexOutputsPerDocument} results'. " +
-                "Please verify this index definition and consider a re-design of your entities or index.";
-
             var alert = AlertRaised.Create(
                 "Max index outputs warning",
-                $"Max index outputs per documents exceeded {Configuration.MaxWarnIndexOutputsPerDocument}",
+                $"Max index outputs per document exceeded {Configuration.MaxWarnIndexOutputsPerDocument}",
                 AlertType.WarnIndexOutputsPerDocument,
                 AlertSeverity.Warning,
                 details: new WarnIndexOutputsPerDocument
                 {
-                    Message = message
+                    Warning = $"Index '{Name}' has already produced more than {Configuration.MaxWarnIndexOutputsPerDocument} map results",
+                    NumberOfExceedingDocuments = _numberOfExceedingIndexOutputsPerDocument,
+                    SampleDocumentId = _maxExceedingIndexOutputsPerDocumentId,
+                    MaxProducedOutputsForDocument = _maxExceedingIndexOutputsPerDocument,
+                    Suggestion = "Please verify this index definition and consider a re-design of your entities or index"
                 });
 
             DocumentDatabase.NotificationCenter.Add(alert);
-        }
-
-        public class WarnIndexOutputsPerDocument : IActionDetails
-        {
-            public string Message { get; set; }
-
-            public DynamicJsonValue ToJson()
-            {
-                return new DynamicJsonValue(GetType())
-                {
-                    [nameof(Message)] = Message
-                };
-            }
         }
 
         public virtual Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()
