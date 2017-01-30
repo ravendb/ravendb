@@ -90,7 +90,7 @@ class resources extends viewModelBase {
         // we can't use createNotifications here, as it is called after *resource changes API* is connected, but user
         // can enter this view and never select resource
 
-        this.addNotification(this.changesContext.serverNotifications().watchResourceChangeStartingWith("db/", (e: Raven.Server.NotificationCenter.Actions.Server.ResourceChanged) => this.fetchResource(e)));
+        this.addNotification(this.changesContext.serverNotifications().watchResourceChangeStartingWith("db/", (e: Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged) => this.fetchResource(e)));
         this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.fetchResources()));
 
         // TODO: add notification for fs, cs, ts
@@ -111,7 +111,7 @@ class resources extends viewModelBase {
             .done(info => this.resources(new resourcesInfo(info)));
     }
 
-    private fetchResource(e: Raven.Server.NotificationCenter.Actions.Server.ResourceChanged) {
+    private fetchResource(e: Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged) {
         const qualiferAndName = resourceInfo.extractQualifierAndNameFromNotification(e.ResourceName);
 
         switch (e.ChangeType) {

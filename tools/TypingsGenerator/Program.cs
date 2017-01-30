@@ -10,6 +10,7 @@ using Raven.Client.Data.Queries;
 using Raven.Client.Indexing;
 using Raven.Client.Smuggler;
 using Raven.Json.Linq;
+using Raven.NewClient.Client.Data.Collections;
 using Raven.Server.Commercial;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Debugging;
@@ -71,6 +72,7 @@ namespace TypingsGenerator
 
             scripter.UsingTypeFilter(type => ignoredTypes.Contains(type) == false);
             scripter.UsingTypeReader(new TypeReaderWithIgnoreMethods());
+            scripter.AddType(typeof(CollectionStatistics));
 
             scripter.AddType(typeof(DatabaseDocument));
             scripter.AddType(typeof(DatabaseStatistics));

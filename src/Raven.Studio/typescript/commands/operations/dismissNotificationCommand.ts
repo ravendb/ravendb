@@ -2,15 +2,15 @@ import commandBase = require("commands/commandBase");
 import resource = require("models/resources/resource");
 import endpoints = require("endpoints");
 
-class dismissActionCommand extends commandBase {
+class dismissNotificationCommand extends commandBase {
 
-    constructor(private rs: resource, private actionId: string) {
+    constructor(private rs: resource, private notificationId: string) {
         super();
     }
 
     execute(): JQueryPromise<void> {
         const args = {
-            id: this.actionId
+            id: this.notificationId
         };
         const url = this.rs ? endpoints.databases.databaseNotificationCenter.notificationCenterDismiss : endpoints.global.serverNotificationCenter.notificationCenterDismiss;
 
@@ -20,4 +20,4 @@ class dismissActionCommand extends commandBase {
     }
 }
 
-export = dismissActionCommand;
+export = dismissNotificationCommand;

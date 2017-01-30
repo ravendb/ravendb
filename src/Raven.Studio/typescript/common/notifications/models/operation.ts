@@ -1,9 +1,9 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 
-import abstractAction = require("common/notifications/actions/abstractAction");
+import abstractNotification = require("common/notifications/models/abstractNotification");
 import resource = require("models/resources/resource");
 
-class operation extends abstractAction {
+class operation extends abstractNotification {
 
     operationId = ko.observable<number>();
     progress = ko.observable<Raven.Client.Data.IOperationProgress>();
@@ -17,7 +17,7 @@ class operation extends abstractAction {
     isCompleted: KnockoutComputed<boolean>;
     isPercentageProgress: KnockoutComputed<boolean>;
 
-    constructor(resource: resource, dto: Raven.Server.NotificationCenter.Actions.OperationChanged) {
+    constructor(resource: resource, dto: Raven.Server.NotificationCenter.Notifications.OperationChanged) {
         super(resource, dto);
 
         this.operationId(dto.OperationId);
@@ -25,7 +25,7 @@ class operation extends abstractAction {
         this.initializeObservables();
     }
 
-    updateWith(incomingChanges: Raven.Server.NotificationCenter.Actions.OperationChanged) {
+    updateWith(incomingChanges: Raven.Server.NotificationCenter.Notifications.OperationChanged) {
         super.updateWith(incomingChanges);
 
         this.killable(incomingChanges.Killable);

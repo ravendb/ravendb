@@ -10,9 +10,9 @@ import abstractNotificationCenterClient = require("common/abstractNotificationCe
 
 class serverNotificationCenterClient extends abstractNotificationCenterClient {
 
-    protected allResourceChangedHandlers = ko.observableArray<changesCallback<Raven.Server.NotificationCenter.Actions.Server.ResourceChanged>>(); 
-    protected watchedResourceChanged = new Map<string, KnockoutObservableArray<changesCallback<Raven.Server.NotificationCenter.Actions.Server.ResourceChanged>>>();
-    protected watchedResourceChangedPrefixes = new Map<string, KnockoutObservableArray<changesCallback<Raven.Server.NotificationCenter.Actions.Server.ResourceChanged>>>();
+    protected allResourceChangedHandlers = ko.observableArray<changesCallback<Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged>>(); 
+    protected watchedResourceChanged = new Map<string, KnockoutObservableArray<changesCallback<Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged>>>();
+    protected watchedResourceChangedPrefixes = new Map<string, KnockoutObservableArray<changesCallback<Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged>>>();
 
     constructor() {
         super(null);
@@ -27,20 +27,20 @@ class serverNotificationCenterClient extends abstractNotificationCenterClient {
         return endpoints.global.serverNotificationCenter.notificationCenterWatch + connectionString;
     }
 
-    protected onMessage(actionDto: Raven.Server.NotificationCenter.Actions.Action) {
+    protected onMessage(actionDto: Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged) {
         const actionType = actionDto.Type;
 
         switch (actionType) {
             case "ResourceChanged":
-                const resourceDto = actionDto as Raven.Server.NotificationCenter.Actions.Server.ResourceChanged;
-                this.fireEvents<Raven.Server.NotificationCenter.Actions.Server.ResourceChanged>(this.allResourceChangedHandlers(), resourceDto, () => true);
+                const resourceDto = actionDto as Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged;
+                this.fireEvents<Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged>(this.allResourceChangedHandlers(), resourceDto, () => true);
 
                 this.watchedResourceChanged.forEach((callbacks, key) => {
-                    this.fireEvents<Raven.Server.NotificationCenter.Actions.Server.ResourceChanged>(callbacks(), resourceDto, (event) => event.ResourceName != null && event.ResourceName === key);
+                    this.fireEvents<Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged>(callbacks(), resourceDto, (event) => event.ResourceName != null && event.ResourceName === key);
                 });
 
                 this.watchedResourceChangedPrefixes.forEach((callbacks, key) => {
-                    this.fireEvents<Raven.Server.NotificationCenter.Actions.Server.ResourceChanged>(callbacks(), resourceDto, (event) => event.ResourceName != null && event.ResourceName.startsWith(key));
+                    this.fireEvents<Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged>(callbacks(), resourceDto, (event) => event.ResourceName != null && event.ResourceName.startsWith(key));
                 });
                 break;
             default:
@@ -49,8 +49,8 @@ class serverNotificationCenterClient extends abstractNotificationCenterClient {
         }
     }
 
-    watchAllResourceChanges(onChange: (e: Raven.Server.NotificationCenter.Actions.Server.ResourceChanged) => void) {
-        const callback = new changesCallback<Raven.Server.NotificationCenter.Actions.Server.ResourceChanged>(onChange);
+    watchAllResourceChanges(onChange: (e: Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged) => void) {
+        const callback = new changesCallback<Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged>(onChange);
 
         this.allResourceChangedHandlers.push(callback);
 
@@ -59,11 +59,11 @@ class serverNotificationCenterClient extends abstractNotificationCenterClient {
         });
     }
 
-    watchResourceChange(itemId: string, onChange: (e: Raven.Server.NotificationCenter.Actions.Server.ResourceChanged) => void): changeSubscription {
-        const callback = new changesCallback<Raven.Server.NotificationCenter.Actions.Server.ResourceChanged>(onChange);
+    watchResourceChange(itemId: string, onChange: (e: Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged) => void): changeSubscription {
+        const callback = new changesCallback<Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged>(onChange);
 
         if (!this.watchedResourceChanged.has(itemId)) {
-            this.watchedResourceChanged.set(itemId, ko.observableArray<changesCallback<Raven.Server.NotificationCenter.Actions.Server.ResourceChanged>>());
+            this.watchedResourceChanged.set(itemId, ko.observableArray<changesCallback<Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged>>());
         }
 
         const callbacks = this.watchedResourceChanged.get(itemId);
@@ -77,11 +77,11 @@ class serverNotificationCenterClient extends abstractNotificationCenterClient {
         });
     }
 
-    watchResourceChangeStartingWith(itemIdPrefix: string, onChange: (e: Raven.Server.NotificationCenter.Actions.Server.ResourceChanged) => void): changeSubscription {
-        const callback = new changesCallback<Raven.Server.NotificationCenter.Actions.Server.ResourceChanged>(onChange);
+    watchResourceChangeStartingWith(itemIdPrefix: string, onChange: (e: Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged) => void): changeSubscription {
+        const callback = new changesCallback<Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged>(onChange);
 
         if (!this.watchedResourceChangedPrefixes.has(itemIdPrefix)) {
-            this.watchedResourceChangedPrefixes.set(itemIdPrefix, ko.observableArray<changesCallback<Raven.Server.NotificationCenter.Actions.Server.ResourceChanged>>());
+            this.watchedResourceChangedPrefixes.set(itemIdPrefix, ko.observableArray<changesCallback<Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged>>());
         }
 
         const callbacks = this.watchedResourceChangedPrefixes.get(itemIdPrefix);

@@ -99,7 +99,6 @@ class shell extends viewModelBase {
 
         this.studioLoadingFakeRequest = protractedCommandsDetector.instance.requestStarted(0);
 
-        this.preLoadRecentErrorsView();
         extensions.install();
 
         this.showLogOutButton = ko.computed(() => {
@@ -208,11 +207,6 @@ class shell extends viewModelBase {
         this.initializeShellComponents();
 
         registration.showRegistrationDialogIfNeeded(license.licenseStatus());
-    }
-
-    private preLoadRecentErrorsView() {
-        // preload this view as in case of failure server can't serve it.
-        viewLocator.locateView("views/common/recentErrors");
     }
 
     /*

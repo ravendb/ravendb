@@ -16,7 +16,7 @@ class getCollectionsStatsCommand extends commandBase {
 
     execute(): JQueryPromise<collectionsStats> {
         var finalResult = $.Deferred<collectionsStats>();
-        this.query<collectionsStatsDto>(endpoints.databases.collections.collectionsStats, null, this.ownerDb)
+        this.query<Raven.NewClient.Client.Data.Collections.CollectionStatistics>(endpoints.databases.collections.collectionsStats, null, this.ownerDb)
             .done(results => {
                 var stats = new collectionsStats(results, this.ownerDb);
                 finalResult.resolve(stats);

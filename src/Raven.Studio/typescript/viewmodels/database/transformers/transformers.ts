@@ -111,7 +111,7 @@ class transformers extends viewModelBase {
         this.addNotification(changesApi.watchAllTransformers((e) => this.processTransformerEvent(e)));
     }
 
-    private processTransformerEvent(e: Raven.Abstractions.Data.TransformerChangeNotification) {
+    private processTransformerEvent(e: Raven.Abstractions.Data.TransformerChange) {
         if (e.Type === "TransformerRemoved") {
             const existingTransformer = this.findTransformerByName(e.Name);
             if (existingTransformer) {

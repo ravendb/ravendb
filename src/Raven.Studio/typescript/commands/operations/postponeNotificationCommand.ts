@@ -2,15 +2,15 @@ import commandBase = require("commands/commandBase");
 import resource = require("models/resources/resource");
 import endpoints = require("endpoints");
 
-class postponeActionCommand extends commandBase {
+class postponeNotificationCommand extends commandBase {
 
-    constructor(private rs: resource, private actionId: string, private timeInSec: number) {
+    constructor(private rs: resource, private notificationId: string, private timeInSec: number) {
         super();
     }
 
     execute(): JQueryPromise<void> {
         const args = {
-            id: this.actionId,
+            id: this.notificationId,
             timeInSec: this.timeInSec
         };
         const url = this.rs ? endpoints.databases.databaseNotificationCenter.notificationCenterPostpone : endpoints.global.serverNotificationCenter.notificationCenterPostpone;
@@ -21,4 +21,4 @@ class postponeActionCommand extends commandBase {
     }
 }
 
-export = postponeActionCommand;
+export = postponeNotificationCommand;
