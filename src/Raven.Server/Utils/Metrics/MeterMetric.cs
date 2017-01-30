@@ -117,32 +117,36 @@ namespace Raven.Server.Utils.Metrics
 
             var r = new DynamicJsonValue
             {
-                ["Current"] = Math.Round(meterValue.OneSecondRate, 3),
+                ["Current"] = Math.Round(meterValue.OneSecondRate, 1),
                 ["Count"] = meterValue.Count,
-                ["MeanRate"] = Math.Round(meterValue.MeanRate, 3),
-                ["OneMinuteRate"] = Math.Round(meterValue.OneMinuteRate, 3),
-                ["FiveMinuteRate"] = Math.Round(meterValue.FiveMinuteRate, 3),
-                ["FifteenMinuteRate"] = Math.Round(meterValue.FifteenMinuteRate, 3),
+                ["MeanRate"] = Math.Round(meterValue.MeanRate, 1),
+                ["OneMinuteRate"] = Math.Round(meterValue.OneMinuteRate, 1),
+                ["FiveMinuteRate"] = Math.Round(meterValue.FiveMinuteRate, 1),
+                ["FifteenMinuteRate"] = Math.Round(meterValue.FifteenMinuteRate, 1),
             };
-            if (allResults)
+
+            if (allResults == false)
+                return r;
+
+            var results = new DynamicJsonValue();
+            r["Raw"] = results;
+            var index = Volatile.Read(ref _index) % _m15Rate.Length;
+            var current = DateTime.UtcNow;
+            var now = new TimeSpan(current.Hour, current.Minute, current.Second);
+            var oneSec = TimeSpan.FromSeconds(1);
+            for (int i = index; i >= 0 ; i--)
             {
-                var results = new DynamicJsonValue();
-                r["Raw"] = results;
-                var index = Volatile.Read(ref _index) % _m15Rate.Length;
-                var current = DateTime.UtcNow;
-                var now = new TimeSpan(current.Hour, current.Minute, current.Second);
-                for (int i = index; i >= 0 ; i--)
-                {
-                    var d = _m15Rate[i];
-                    if(Math.Abs(d) > double.Epsilon)
-                        results[now.Add(TimeSpan.FromSeconds(-i)).ToString()] = Math.Round(d, 3);
-                }
-                for (int i = _m15Rate.Length - 1; i >= 0; i--)
-                {
-                    var d = _m15Rate[i];
-                    if (Math.Abs(d) > double.Epsilon)
-                        results[now.Add(TimeSpan.FromSeconds(-i)).ToString()] = Math.Round(d, 3);
-                }
+                var d = _m15Rate[i];
+                if(Math.Abs(d) > double.Epsilon)
+                    results[now.ToString()] = Math.Round(d, 1);
+                now = now - oneSec;
+            }
+            for (int i = _m15Rate.Length - 1; i >= 0; i--)
+            {
+                var d = _m15Rate[i];
+                if (Math.Abs(d) > double.Epsilon)
+                    results[now.Add(TimeSpan.FromSeconds(-i)).ToString()] = Math.Round(d, 1);
+                now = now - oneSec;
             }
             return r;
         }
