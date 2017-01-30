@@ -36,12 +36,6 @@ namespace Raven.NewClient.Abstractions.Data
             {
             }
 
-            public const string MaxIndexOutputsPerDocument = "Raven/Indexing/MaxIndexOutputsPerDocument";
-
-            public const string MaxMapIndexOutputsPerDocument = "Raven/Indexing/MaxMapIndexOutputsPerDocument";
-
-            public const string MaxMapReduceIndexOutputsPerDocument = "Raven/Indexing/MaxMapIndexOutputsPerDocument";
-
             public const string RavenIndexingDisable = "Raven/Indexing/Disable";
         }
 

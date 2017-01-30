@@ -16,27 +16,11 @@ namespace Raven.Server.Documents.Indexes.Configuration
         private readonly RavenConfiguration _databaseConfiguration;
 
         public SingleIndexConfiguration(IndexConfiguration clientConfiguration, RavenConfiguration databaseConfiguration)
-            : base(() => databaseConfiguration.DatabaseName, null, null)
+            : base(() => databaseConfiguration.DatabaseName, null, null, databaseConfiguration.PerformanceHints.MaxWarnIndexOutputsPerDocument)
         {
             _databaseConfiguration = databaseConfiguration;
 
-            Initialize(key =>
-            {
-                var clientValue = clientConfiguration.GetValue(key);
-                if (clientValue != null)
-                    return clientValue;
-
-                if (key == Constants.Configuration.Indexing.MaxMapIndexOutputsPerDocument ||
-                    key == Constants.Configuration.Indexing.MaxMapReduceIndexOutputsPerDocument)
-                {
-                    clientValue = clientConfiguration.GetValue(Constants.Configuration.Indexing.MaxIndexOutputsPerDocument);
-                }
-
-                if (clientValue != null)
-                    return clientValue;
-
-                return databaseConfiguration.GetSetting(key);
-            }, throwIfThereIsNoSetMethod: false);
+            Initialize(key => clientConfiguration.GetValue(key) ?? databaseConfiguration.GetSetting(key), throwIfThereIsNoSetMethod: false);
 
             Validate();
         }

@@ -12,7 +12,6 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Document;
@@ -554,8 +553,7 @@ namespace Raven.NewClient.Client.Indexes
                 TermVectors = TermVectors,
                 TermVectorsStrings = TermVectorsStrings,
                 SpatialIndexes = SpatialIndexes,
-                SpatialIndexesStrings = SpatialIndexesStrings,
-                MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument,
+                SpatialIndexesStrings = SpatialIndexesStrings
             }.ToIndexDefinition(Conventions);
 
             var fields = Map.Body.Type.GenericTypeArguments.First().GetProperties();
@@ -597,14 +595,6 @@ namespace Raven.NewClient.Client.Indexes
 
             return indexDefinition;
         }
-
-        /// <summary>
-        /// Index specific setting that limits the number of map outputs that an index is allowed to create for a one source document. If a map operation applied to
-        /// the one document produces more outputs than this number then an index definition will be considered as a suspicious, the indexing of this document 
-        /// will be skipped and the appropriate error message will be added to the indexing errors.
-        /// <para>Default value: null means that the global value from Raven configuration will be taken to detect if number of outputs was exceeded.</para>
-        /// </summary>
-        public int? MaxIndexOutputsPerDocument { get; set; }
 
         /// <summary>
         /// Gets a value indicating whether this instance is map reduce index definition
@@ -713,10 +703,10 @@ namespace Raven.NewClient.Client.Indexes
             throw new NotSupportedException("This can only be run on the server side");
         }
 
-        /// <summary>
+        /*/// <summary>
         /// Allow to get to the metadata of the document
         /// </summary>
-        protected JObject MetadataFor(object doc)
+        protected RavenJObject MetadataFor(object doc)
         {
             throw new NotSupportedException("This is here as a marker only");
         }
@@ -724,9 +714,9 @@ namespace Raven.NewClient.Client.Indexes
         /// <summary>
         /// Allow to access an entity as a document
         /// </summary>
-        protected JObject AsDocument(object doc)
+        protected RavenJObject AsDocument(object doc)
         {
             throw new NotSupportedException("This is here as a marker only");
-        }
+        }*/
     }
 }

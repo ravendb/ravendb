@@ -31,11 +31,7 @@ namespace SlowTests.SlowTests.Issues
             {
                 return new IndexDefinition
                 {
-                    Maps = { @"docs.Users.SelectMany(user => user.Friends, (user, friend) => new {Name = user.Name})" },
-                    Configuration =
-                    {
-                        MaxIndexOutputsPerDocument = 16384
-                    }
+                    Maps = { @"docs.Users.SelectMany(user => user.Friends, (user, friend) => new {Name = user.Name})" }
                 };
             }
         }

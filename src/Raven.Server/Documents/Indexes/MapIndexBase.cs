@@ -60,16 +60,9 @@ namespace Raven.Server.Documents.Indexes
             {
                 writer.IndexDocument(key, mapResult, stats, indexContext);
                 numberOfOutputs++;
-
-                if (EnsureValidNumberOfOutputsForDocument(numberOfOutputs))
-                    continue;
-
-                writer.Delete(key, stats);
-
-                throw new InvalidOperationException($"Index '{Name}' has already produced {numberOfOutputs} map results for a source document '{key}', " +
-                                                    $"while the allowed max number of outputs is {MaxNumberOfIndexOutputs} per one document. " +
-                                                    $"Please verify this index definition and consider a re-design of your entities or index.");
             }
+
+            WarnExceedingIndexOutputsPerDocument(key, numberOfOutputs);
 
             DocumentDatabase.Metrics.IndexedPerSecond.Mark();
             return numberOfOutputs;

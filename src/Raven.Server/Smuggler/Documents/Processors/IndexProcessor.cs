@@ -146,9 +146,6 @@ namespace Raven.Server.Smuggler.Documents.Processors
                 Reduce = legacyIndexDefinition.Reduce
             };
 
-            if (legacyIndexDefinition.MaxIndexOutputsPerDocument.HasValue)
-                indexDefinition.Configuration.MaxIndexOutputsPerDocument = legacyIndexDefinition.MaxIndexOutputsPerDocument;
-
             foreach (var kvp in legacyIndexDefinition.Analyzers)
             {
                 if (indexDefinition.Fields.ContainsKey(kvp.Key) == false)
