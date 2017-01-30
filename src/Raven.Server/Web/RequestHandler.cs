@@ -127,9 +127,24 @@ namespace Raven.Server.Web
             return GetIntValueQueryString(StartParameter, required: false) ?? defaultValue;
         }
 
-        protected int GetPageSize(int defaultValue = 25)
+        protected int GetPageSize(int maxPageSize)
         {
-            return GetIntValueQueryString(PageSizeParameter, required: false) ?? defaultValue;
+            var pageSize = GetIntValueQueryString(PageSizeParameter, required: false);
+            if (pageSize.HasValue == false)
+                return maxPageSize;
+
+            if (pageSize.Value > maxPageSize)
+            {
+                var message = $"Your page size ({pageSize}) is more than the max page size which is {maxPageSize}.";
+                if (RouteMatch.Url.StartsWith("/admin/", StringComparison.OrdinalIgnoreCase) == false)
+                {
+                    message += $"{Environment.NewLine}You can use the streaming feature in order to get all of the results of a query in a performant way. " +
+                               $"See the use of session.Advanced.Stream(query) in the client API for more details.";
+                }
+                throw new InvalidOperationException(message);
+            }
+
+            return pageSize.Value;
         }
 
         protected int? GetIntValueQueryString(string name, bool required = true)
