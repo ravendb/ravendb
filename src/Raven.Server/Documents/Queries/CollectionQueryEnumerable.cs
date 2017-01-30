@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Raven.Abstractions.Data;
+using Raven.Server.Documents.Queries.Parse;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Sorting;
 using Raven.Server.ServerWide.Context;
@@ -105,64 +106,15 @@ namespace Raven.Server.Documents.Queries
                 if (string.IsNullOrWhiteSpace(query.Query))
                     return null;
 
-                var q = new StringSegment(query.Query.Replace(" ", string.Empty), 0);
-
-                if (q.Length <= EqualPrefix.Length)
-                    return null;
-
-                var documentId = q.SubSegment(0, EqualPrefix.Length);
-                if (documentId.Equals(EqualPrefix))
-                {
-                    var id = q.SubSegment(EqualPrefix.Length);
-                    var idAsString = id.ToString();
-                    idAsString =  idAsString.Replace("\\",string.Empty );
-                    Slice key;
-                    Slice.From(_context.Allocator, idAsString, out key);
-                    _context.Allocator.ToLowerCase(ref key.Content);
-
-                    return new List<Slice>
+                return SimpleQueryParser.GetTermValuesForField(query, Constants.Indexing.Fields.DocumentIdFieldName)
+                    .Select(id =>
                     {
-                        key
-                    };
-                }
+                        Slice key;
+                        Slice.From(_context.Allocator, id, out key);
+                        _context.Allocator.ToLowerCase(ref key.Content);
 
-                if (q.Length <= InPrefix.Length)
-                    return null;
-
-                var @in = q.SubSegment(0, InPrefix.Length);
-                if (@in.Equals(InPrefix) == false)
-                    return null;
-
-                var ids = q.SubSegment(InPrefix.Length + 1, q.Length - InPrefix.Length - 2);
-
-                var results = new Slice[0];
-                int indexOfComma;
-                do
-                {
-                    indexOfComma = ids.IndexOfAny(InSeparator, 0);
-
-                    StringSegment id;
-                    if (indexOfComma != -1)
-                    {
-                        id = ids.SubSegment(0, indexOfComma);
-                        ids = ids.SubSegment(indexOfComma + 1);
-                    }
-                    else
-                        id = ids;
-
-                    var idAsString = id.ToString();
-                    idAsString = idAsString.Replace("\\", string.Empty);
-
-                    Slice key;
-                    Slice.From(_context.Allocator, idAsString, out key);
-                    _context.Allocator.ToLowerCase(ref key.Content);
-
-                    Array.Resize(ref results, results.Length + 1);
-                    results[results.Length - 1] = key;
-
-                } while (indexOfComma != -1);
-
-                return results
+                        return key;
+                    })
                     .OrderBy(x => x, SliceComparer.Instance)
                     .ToList();
             }
