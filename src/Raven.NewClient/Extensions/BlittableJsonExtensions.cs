@@ -33,9 +33,14 @@ namespace Raven.NewClient.Extensions
         {
             long etag;
             if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
-                throw new InvalidOperationException($"Metadata does not contain '{Constants.Metadata.Etag}' field.");
+                InvalidMissingEtag();
 
             return etag;
+        }
+
+        private static void InvalidMissingEtag()
+        {
+            throw new InvalidOperationException($"Metadata does not contain '{Constants.Metadata.Etag}' field.");
         }
 
         public static bool TryGetEtag(this BlittableJsonReaderObject metadata, out long etag)

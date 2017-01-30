@@ -310,9 +310,8 @@ namespace Raven.Server.Smuggler.Documents
                     metadata.Modifications.Remove(Constants.Metadata.Id);
                     metadata.Modifications.Remove(Constants.Metadata.Etag);
 
-                    var oldData = document.Data;
-                    document.Data = _context.ReadObject(document.Data, document.Key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                    oldData.Dispose();
+                    using (document.Data)
+                        document.Data = _context.ReadObject(document.Data, document.Key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
                     if (IsRevision)
                     {
