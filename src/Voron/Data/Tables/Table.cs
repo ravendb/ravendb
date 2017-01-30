@@ -1023,5 +1023,66 @@ namespace Voron.Data.Tables
 
             return report;
         }
+
+        public void PrefetchIndexesData()
+        {
+            var pagesToPrefetch = new List<long>();
+
+            var allocatedPages = _tx.LowLevelTransaction.DataPager.NumberOfAllocatedPages;
+
+            foreach (var pages in GetPagesOfIndexes(_tx.LowLevelTransaction.Environment.PrefetchedTables.AccessedGlobalIndexes))
+            {
+                // ReSharper disable once ForCanBeConvertedToForeach
+                // ReSharper disable once LoopCanBeConvertedToQuery
+                for (var i = 0; i < pages.Count; i++)
+                {
+                    if (pages[i] >= allocatedPages)
+                        continue;
+
+                    pagesToPrefetch.Add(pages[i]);
+                }
+            }
+            
+            _tx.LowLevelTransaction.DataPager.MaybePrefetchMemory(pagesToPrefetch);
+        }
+
+        private IEnumerable<List<long>> GetPagesOfIndexes(HashSet<ulong> accessedGlobalIndexes)
+        {
+            if (_schema.Key != null)
+            {
+                if (_schema.Key.IsGlobal == false ||
+                    accessedGlobalIndexes.Add(GetHashOfGlobalIndexName(_schema.Key.Name)))
+                {
+                    var pkTree = GetTree(_schema.Key);
+
+                    yield return pkTree.AllPages();
+                }
+            }
+
+            foreach (var index in _schema.FixedSizeIndexes)
+            {
+                if (index.Value.IsGlobal && accessedGlobalIndexes.Add(GetHashOfGlobalIndexName(index.Key)) == false)
+                    continue;
+
+                var fst = GetFixedSizeTree(index.Value);
+
+                yield return fst.AllPages();
+            }
+
+            foreach (var index in _schema.Indexes)
+            {
+                if (index.Value.IsGlobal && accessedGlobalIndexes.Add(GetHashOfGlobalIndexName(index.Key)) == false)
+                    continue;
+
+                var tree = GetTree(index.Value);
+                yield return tree.AllPages();
+            }
+        }
+
+        private ulong GetHashOfGlobalIndexName(Slice name)
+        {
+            var content = name.Content;
+            return Hashing.XXHash64.Calculate(content.Ptr, (ulong)content.Length);
+        }
     }
 }

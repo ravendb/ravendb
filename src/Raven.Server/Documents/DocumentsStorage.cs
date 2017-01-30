@@ -460,8 +460,7 @@ namespace Raven.Server.Documents
                 yield break;
 
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
-                collectionName.GetTableName(CollectionTableType.Documents),
-                throwIfDoesNotExist: false);
+                collectionName.GetTableName(CollectionTableType.Documents));
 
             if (table == null)
                 yield break;
@@ -542,8 +541,7 @@ namespace Raven.Server.Documents
                 yield break;
 
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
-                collectionName.GetTableName(CollectionTableType.Documents),
-                throwIfDoesNotExist: false);
+                collectionName.GetTableName(CollectionTableType.Documents));
 
             if (table == null)
                 yield break;
@@ -695,8 +693,7 @@ namespace Raven.Server.Documents
                 yield break;
 
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
-                collectionName.GetTableName(CollectionTableType.Tombstones),
-                throwIfDoesNotExist: false);
+                collectionName.GetTableName(CollectionTableType.Tombstones));
 
             if (table == null)
                 yield break;
@@ -723,9 +720,7 @@ namespace Raven.Server.Documents
                 return 0;
 
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
-                collectionName.GetTableName(CollectionTableType.Documents),
-                throwIfDoesNotExist: false
-                );
+                collectionName.GetTableName(CollectionTableType.Documents));
 
             // ReSharper disable once UseNullPropagation
             if (table == null)
@@ -750,8 +745,7 @@ namespace Raven.Server.Documents
                 return 0;
 
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
-                collectionName.GetTableName(CollectionTableType.Tombstones),
-                throwIfDoesNotExist: false);
+                collectionName.GetTableName(CollectionTableType.Tombstones));
 
             // ReSharper disable once UseNullPropagation
             if (table == null)
@@ -776,8 +770,7 @@ namespace Raven.Server.Documents
                 return 0;
 
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
-                collectionName.GetTableName(CollectionTableType.Tombstones),
-                throwIfDoesNotExist: false);
+                collectionName.GetTableName(CollectionTableType.Tombstones));
 
             if (table == null)
                 return 0;
@@ -2007,16 +2000,14 @@ namespace Raven.Server.Documents
             if (tombstones)
             {
                 table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
-                    collectionName.GetTableName(CollectionTableType.Tombstones),
-                    throwIfDoesNotExist: false);
+                    collectionName.GetTableName(CollectionTableType.Tombstones));
 
                 indexDef = TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice];
             }
             else
             {
                 table = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
-                    collectionName.GetTableName(CollectionTableType.Documents),
-                    throwIfDoesNotExist: false);
+                    collectionName.GetTableName(CollectionTableType.Documents));
                 indexDef = DocsSchema.FixedSizeIndexes[CollectionEtagsSlice];
             }
             if (table == null)
@@ -2076,8 +2067,7 @@ namespace Raven.Server.Documents
             }
 
             var collectionTable = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
-                collectionName.GetTableName(CollectionTableType.Documents),
-                throwIfDoesNotExist: false);
+                collectionName.GetTableName(CollectionTableType.Documents));
 
             if (collectionTable == null)
             {
@@ -2102,8 +2092,7 @@ namespace Raven.Server.Documents
                 return;
 
             var table = transaction.OpenTable(TombstonesSchema,
-                collectionName.GetTableName(CollectionTableType.Tombstones),
-                throwIfDoesNotExist: false);
+                collectionName.GetTableName(CollectionTableType.Tombstones));
             if (table == null)
                 return;
 
