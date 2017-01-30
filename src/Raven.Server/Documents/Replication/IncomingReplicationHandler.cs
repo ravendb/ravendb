@@ -784,7 +784,7 @@ namespace Raven.Server.Documents.Replication
                                 docPosition.Id);
                 if (relevantLocalDoc.Item1 != null)
                 {
-                    conflictedDocs.Add(DocumentConflict.From(relevantLocalDoc.Item1));
+                    conflictedDocs.Add(DocumentConflict.From(documentsContext, relevantLocalDoc.Item1));
                 }
                 else if (relevantLocalDoc.Item2 != null)
                 {
@@ -795,17 +795,19 @@ namespace Raven.Server.Documents.Replication
 
             if (conflictedDocs.Count == 0)
             {
-                throw new InvalidDataException($"Invalid number of conflicted documents {conflictedDocs.Count}");
+                InvalidConflictWhenThereIsNone(docPosition);
             }
+
+            var collection = CollectionName.GetCollectionName(docPosition.Id, doc);
 
             conflictedDocs.Add(new DocumentConflict
             {
                 LoweredKey = conflictedDocs[0].LoweredKey,
                 Key = conflictedDocs[0].Key,
+                Collection = documentsContext.GetLazyStringForFieldWithCaching(collection),
                 ChangeVector = _tempReplicatedChangeVector,
                 Doc = doc
             });
-            var collection = CollectionName.GetCollectionName(docPosition.Id, doc);
 
             ScriptResolver scriptResolver;
             var hasScript = _parent.ScriptConflictResolversCache.TryGetValue(collection, out scriptResolver);
@@ -826,6 +828,12 @@ namespace Raven.Server.Documents.Replication
                 hasLocalTombstone: isTomstone);
         }
 
+        private static void InvalidConflictWhenThereIsNone(ReplicationDocumentsPositions docPosition)
+        {
+            throw new InvalidDataException(
+                $"Conflict detected on {docPosition.Id} but there are no conflicts / docs / tombstones for this document");
+        }
+
         private bool TryResolveUsingDefaultResolver(
             DocumentsOperationContext context, 
             ReplicationDocumentsPositions docPosition,
@@ -835,7 +843,7 @@ namespace Raven.Server.Documents.Replication
 
             var conflicts = new List<DocumentConflict>(_database.DocumentsStorage.GetConflictsFor(context, docPosition.Id));
             var localDocumentTuple = _database.DocumentsStorage.GetDocumentOrTombstone(context, docPosition.Id, throwOnConflict: false);
-            var localDoc = DocumentConflict.From(localDocumentTuple.Item1) ??
+            var localDoc = DocumentConflict.From(context, localDocumentTuple.Item1) ??
                            DocumentConflict.From(localDocumentTuple.Item2);
             if (localDoc != null)
             {
@@ -844,7 +852,9 @@ namespace Raven.Server.Documents.Replication
             conflicts.Add(new DocumentConflict
             {
                 ChangeVector = conflictingVector,
-                Collection = context.GetLazyString(docPosition.Collection),
+                Collection = context.GetLazyStringForFieldWithCaching(
+                    docPosition.Collection ?? 
+                    CollectionName.GetCollectionName(docPosition.Id, doc)),
                 Doc = doc,
                 LoweredKey = context.GetLazyString(docPosition.Id)
             });
@@ -903,7 +913,10 @@ namespace Raven.Server.Documents.Replication
                         new DocumentConflict
                         {
                             Doc = doc,
-                            Collection = documentsContext.GetLazyString(docPosition.Collection),
+                            Collection = documentsContext.GetLazyStringForFieldWithCaching(
+                                docPosition.Collection ??
+                                CollectionName.GetCollectionName(doc)
+                                ),
                             LastModified = new DateTime(docPosition.LastModifiedTicks),
                             LoweredKey = documentsContext.GetLazyString(docPosition.Id),
                             ChangeVector = _tempReplicatedChangeVector
@@ -914,7 +927,7 @@ namespace Raven.Server.Documents.Replication
                     var localDocumentTuple =
                         documentsContext.DocumentDatabase.DocumentsStorage.GetDocumentOrTombstone(documentsContext,
                             docPosition.Id, throwOnConflict: false);
-                    var local = DocumentConflict.From(localDocumentTuple.Item1) ?? DocumentConflict.From(localDocumentTuple.Item2);
+                    var local = DocumentConflict.From(documentsContext, localDocumentTuple.Item1) ?? DocumentConflict.From(localDocumentTuple.Item2);
                     if (local != null)
                     {
                         conflicts.Add(local);

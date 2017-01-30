@@ -171,8 +171,6 @@ namespace Raven.Server.Documents.Patch
                                 case BlittableJsonToken.Null:
                                     writer.WriteValueNull();
                                     break;
-                               
-                                
                             }
                         }
                         

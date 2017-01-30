@@ -581,33 +581,35 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<List<DocumentConflict>> GetAllConflictsSortedByKey(DocumentsOperationContext context)
+        public List<DocumentConflict> GetFConflictsBySameKeyAfter(DocumentsOperationContext context, ref Slice lastKey)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
             var list = new List<DocumentConflict>();
-            LazyStringValue currentKey = null;
-            foreach (var tvrs in table.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], ""))
+            LazyStringValue firstKey = null;
+            foreach (var tvrs in table.SeekForwardFrom(ConflictsSchema.Indexes[KeyAndChangeVectorSlice], lastKey))
             {
-                foreach (var tvr in tvrs.Results)
+                var tvr = tvrs.Results.Single();
+                var conflict = TableValueToConflictDocument(context, ref tvr.Reader);
+                if (lastKey.Size == conflict.LoweredKey.Length &&
+                    Memory.Compare(lastKey.Content.Ptr, conflict.LoweredKey.Buffer, lastKey.Size) == 0)
                 {
-                    var conflict = TableValueToConflictDocument(context, ref tvr.Reader);
-                    if (currentKey == null)
-                    {
-                        currentKey = conflict.LoweredKey;
-                    }
-                    else if (!conflict.LoweredKey.Equals(currentKey))
-                    {
-                        yield return list;
-                        currentKey = conflict.LoweredKey;
-                        list.Clear();
-                    }
-                    list.Add(conflict);
+                    // same key as we already seen, skip it
+                    break;
                 }
+                if (firstKey == null)
+                    firstKey = conflict.LoweredKey;
+                list.Add(conflict);
+
+                if (firstKey.Equals(conflict.LoweredKey) == false)
+                    break;
             }
             if (list.Count > 0)
             {
-                yield return list;
+                lastKey.Release(context.Allocator);
+                // we have to clone this, because it might be removed by the time we come back here
+                Slice.From(context.Allocator, list[0].LoweredKey.Buffer, list[0].LoweredKey.Size, out lastKey);
             }
+            return list;
         }
 
         public IEnumerable<DocumentConflict> GetConflictsFrom(DocumentsOperationContext context, long etag)
@@ -1216,7 +1218,7 @@ namespace Raven.Server.Documents
                 using (Slice.From(context.Allocator, collectionName.Name, out collectionSlice))
                 {
                     var transactionMarker = context.GetTransactionMarker();
-                    var modifiedTicks = lastModifiedTicks ?? DateTime.UtcNow.Ticks;
+                    var modifiedTicks = lastModifiedTicks ?? _documentDatabase.Time.GetUtcNow().Ticks;
                     var tbv = new TableValueBuilder
                     {
                         {lowerKey, lowerSize},
@@ -1473,13 +1475,13 @@ namespace Raven.Server.Documents
                 {
                     // update change vector
                     AddTombstoneOnReplicationIfRelevant(
-                    ctx, conflict.LoweredKey, DateTime.UtcNow.Ticks, conflict.ChangeVector, conflict.Collection);
+                    ctx, conflict.LoweredKey, _documentDatabase.Time.GetUtcNow().Ticks, conflict.ChangeVector, conflict.Collection);
                     return;
                 }
                 // the resolved document is a tombstone
                 DeleteConflictsFor(ctx, conflict.LoweredKey);
                 AddTombstoneOnReplicationIfRelevant(
-                    ctx, conflict.LoweredKey, DateTime.UtcNow.Ticks, conflict.ChangeVector, conflict.Collection);
+                    ctx, conflict.LoweredKey, _documentDatabase.Time.GetUtcNow().Ticks, conflict.ChangeVector, conflict.Collection);
                 return;
             }
 
@@ -1501,10 +1503,6 @@ namespace Raven.Server.Documents
             LazyStringValue collection,
             bool hasLocalTombstone)
         {
-            if (scriptResolver == null)
-            {
-                return false;
-            }
             var patch = new PatchConflict(_documentDatabase, conflicts);
             var updatedConflict = conflicts[0];
             var patchRequest = new PatchRequest
@@ -1834,7 +1832,7 @@ namespace Raven.Server.Documents
             }
 
 
-            var modifiedTicks = lastModifiedTicks ?? DateTime.UtcNow.Ticks;
+            var modifiedTicks = lastModifiedTicks ?? _documentDatabase.Time.GetUtcNow().Ticks;
 
             Slice keySlice;
             using (Slice.External(context.Allocator, lowerKey, (ushort)lowerSize, out keySlice))

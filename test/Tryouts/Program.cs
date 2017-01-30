@@ -36,9 +36,9 @@ namespace Tryouts
         {
             for (int i = 0; i < 100; i++)
             {
-                using (var a = new ReplicationResolveConflictsOnConfigurationChange())
+                using (var a = new FastTests.Server.Replication.ReplicationResolveConflictsOnConfigurationChange())
                 {
-                    a.ResolveWhenSettingDatabaseResolver();
+                    a.ResolveWhenChangeToLatest();
                 }
                 Console.WriteLine($"{i} finished");
             }

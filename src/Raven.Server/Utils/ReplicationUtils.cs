@@ -345,41 +345,24 @@ namespace Raven.Server.Utils
 
         public static void EnsureCollectionTag(BlittableJsonReaderObject obj, string collection)
         {
-            DynamicJsonValue mutatedMetadata;
+            string actualCollection;
             BlittableJsonReaderObject metadata;
-            if (obj.TryGet(Constants.Metadata.Key, out metadata))
+            if (obj.TryGet(Constants.Metadata.Key, out metadata) == false ||
+                metadata.TryGet(Constants.Metadata.Collection, out actualCollection) == false ||
+                actualCollection != collection)
             {
-                if (metadata.Modifications == null)
-                    metadata.Modifications = new DynamicJsonValue(metadata);
+                if (collection == CollectionName.EmptyCollection)
+                    return;
 
-                mutatedMetadata = metadata.Modifications;
-            }
-            else
-            {
-                obj.Modifications = new DynamicJsonValue(obj)
-                {
-                    [Constants.Metadata.Key] = mutatedMetadata = new DynamicJsonValue()
-                };
-            }
-            if (mutatedMetadata[Constants.Metadata.Collection] == null)
-            {
-                mutatedMetadata[Constants.Metadata.Collection] = collection;
+                ThrowInvalidCollectionAfterResolve(collection, null);
             }
         }
 
-        private static bool TryFindEtagByDbId(this ChangeVectorEntry[] changeVector, Guid dbId, out long etag)
+        private static void ThrowInvalidCollectionAfterResolve(string collection, string actual)
         {
-            etag = 0;
-            for (int i = 0; i < changeVector.Length; i++)
-            {
-                if (changeVector[i].DbId == dbId)
-                {
-                    etag = changeVector[i].Etag;
-                    return true;
-                }
-            }
-
-            return false;
+            throw new InvalidOperationException(
+                "Resolving script did not setup the appropriate '@collection'. Expeted " + collection + " but got " +
+                actual);
         }
     }
 }
