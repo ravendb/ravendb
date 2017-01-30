@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using Raven.Abstractions.Cluster;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Abstractions.Replication
 {
@@ -186,6 +187,37 @@ namespace Raven.Abstractions.Replication
                     SpecifiedCollections = source.SpecifiedCollections
                 };
             }
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            var json = new DynamicJsonValue
+            {
+                [nameof(ApiKey)] = ApiKey,
+                [nameof(AuthenticationScheme)] = AuthenticationScheme,
+                [nameof(ClientVisibleUrl)] = ClientVisibleUrl,
+                [nameof(Database)] = Database,
+                [nameof(Disabled)] = Disabled,
+                [nameof(Domain)] = Domain,
+                [nameof(Humane)] = Humane,
+                [nameof(IgnoredClient)] = IgnoredClient,
+                [nameof(Password)] = Password,
+                [nameof(SkipIndexReplication)] = SkipIndexReplication,
+                [nameof(TransitiveReplicationBehavior)] = TransitiveReplicationBehavior,
+                [nameof(Url)] = Url,
+                [nameof(Username)] = Username
+            };
+
+            if (SpecifiedCollections != null)
+            {
+                var values = new DynamicJsonValue();
+                foreach (var kvp in SpecifiedCollections)
+                    values[kvp.Key] = kvp.Value;
+
+                json[nameof(SpecifiedCollections)] = values;
+            }
+
+            return json;
         }
     }
 

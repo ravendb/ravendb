@@ -164,8 +164,10 @@ namespace Raven.Server.Documents.Versioning
             PutInternal(context, key, newEtagBigEndian, document, table);
         }
 
-        private void PutInternal(DocumentsOperationContext context, string key, long newEtagBigEndian, BlittableJsonReaderObject document, Table table)
+        private static void PutInternal(JsonOperationContext context, string key, long newEtagBigEndian, BlittableJsonReaderObject document, Table table)
         {
+            DocumentsStorage.AssertNoModifications(document, key);
+
             byte* lowerKey;
             int lowerSize;
             byte* keyPtr;

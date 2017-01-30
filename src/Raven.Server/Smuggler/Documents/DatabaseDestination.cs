@@ -7,10 +7,10 @@ using Raven.Abstractions.Util;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
 using Raven.Client.Smuggler;
+using Raven.NewClient.Extensions;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
@@ -160,12 +160,6 @@ namespace Raven.Server.Smuggler.Documents
                 // apply all the metadata conversions here
                 ConvertRavenEntityName(metadata);
                 RemoveOldProperties(metadata);
-
-                if (metadata.Modifications == null)
-                    return;
-
-                using (document.Data)
-                    document.Data = _command.Context.ReadObject(document.Data, document.Key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
             }
 
             private static void RemoveOldProperties(BlittableJsonReaderObject metadata)
@@ -305,10 +299,10 @@ namespace Raven.Server.Smuggler.Documents
                 foreach (var document in Documents)
                 {
                     var key = document.Key;
+                    var metadata = document.Data.GetMetadata();
 
-                    BlittableJsonReaderObject metadata;
-                    if (document.Data.TryGet(Constants.Metadata.Key, out metadata) == false)
-                        throw new InvalidOperationException("A document must have a metadata");
+                    long etag;
+                    metadata.TryGetEtag(out etag);
 
                     if (metadata.Modifications == null)
                         metadata.Modifications = new DynamicJsonValue(metadata);
@@ -316,20 +310,16 @@ namespace Raven.Server.Smuggler.Documents
                     metadata.Modifications.Remove(Constants.Metadata.Id);
                     metadata.Modifications.Remove(Constants.Metadata.Etag);
 
+                    var oldData = document.Data;
+                    document.Data = _context.ReadObject(document.Data, document.Key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                    oldData.Dispose();
+
                     if (IsRevision)
                     {
-                        long etag;
-                        if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
-                            throw new InvalidOperationException("Document's metadata must include the document's key.");
-
                         _database.BundleLoader.VersioningStorage.PutDirect(context, key, etag, document.Data);
                     }
                     else if (_buildVersion < 40000 && key.Contains("/revisions/"))
                     {
-                        long etag;
-                        if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
-                            throw new InvalidOperationException("Document's metadata must include the document's key.");
-
                         var endIndex = key.IndexOf("/revisions/", StringComparison.OrdinalIgnoreCase);
                         var newKey = key.Substring(0, endIndex);
 
