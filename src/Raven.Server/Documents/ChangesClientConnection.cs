@@ -1,0 +1,592 @@
+﻿using System;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Net.WebSockets;
+using System.Threading;
+using System.Threading.Tasks;
+using Raven.Abstractions;
+using Raven.Abstractions.Data;
+using Raven.Client.Data;
+using Sparrow.Collections;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
+
+namespace Raven.Server.Documents
+{
+
+    public class ChangesClientConnection : IDisposable
+    {
+        private static long _counter;
+
+        private readonly WebSocket _webSocket;
+        private readonly DocumentDatabase _documentDatabase;
+        private readonly AsyncQueue<ChangeValue> _sendQueue = new AsyncQueue<ChangeValue>();
+
+        private readonly CancellationTokenSource _disposeToken = new CancellationTokenSource();
+        private readonly DateTime _startedAt;
+
+        private readonly ConcurrentSet<string> _matchingIndexes =
+            new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        private readonly ConcurrentSet<string> _matchingDocuments =
+            new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        private readonly ConcurrentSet<string> _matchingDocumentPrefixes =
+            new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        private readonly ConcurrentSet<string> _matchingDocumentsInCollection =
+            new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        private readonly ConcurrentSet<string> _matchingDocumentsOfType =
+            new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        private readonly ConcurrentSet<long> _matchingOperations =
+          new ConcurrentSet<long>();
+
+        private int _watchAllDocuments;
+        private int _watchAllOperations;
+        private int _watchAllIndexes;
+        private int _watchAllTransformers;
+
+        public class ChangeValue
+        {
+            public DynamicJsonValue ValueToSend;
+            public bool AllowSkip;
+        }
+
+        public ChangesClientConnection(WebSocket webSocket, DocumentDatabase documentDatabase)
+        {
+            _webSocket = webSocket;
+            _documentDatabase = documentDatabase;
+            _startedAt = SystemTime.UtcNow;
+        }
+
+        public long Id = Interlocked.Increment(ref _counter);
+
+        public TimeSpan Age => SystemTime.UtcNow - _startedAt;
+
+        public void WatchDocument(string docId)
+        {
+            _matchingDocuments.TryAdd(docId);
+        }
+
+        public void UnwatchDocument(string name)
+        {
+            _matchingDocuments.TryRemove(name);
+        }
+
+        public void WatchAllDocuments()
+        {
+            Interlocked.Increment(ref _watchAllDocuments);
+        }
+
+        public void UnwatchAllDocuments()
+        {
+            Interlocked.Decrement(ref _watchAllDocuments);
+        }
+
+        public void WatchDocumentPrefix(string name)
+        {
+            _matchingDocumentPrefixes.TryAdd(name);
+        }
+
+        public void UnwatchDocumentPrefix(string name)
+        {
+            _matchingDocumentPrefixes.TryRemove(name);
+        }
+
+        public void WatchDocumentInCollection(string name)
+        {
+            _matchingDocumentsInCollection.TryAdd(name);
+        }
+
+        public void UnwatchDocumentInCollection(string name)
+        {
+            _matchingDocumentsInCollection.TryRemove(name);
+        }
+
+        public void WatchDocumentOfType(string name)
+        {
+            _matchingDocumentsOfType.TryAdd(name);
+        }
+
+        public void UnwatchDocumentOfType(string name)
+        {
+            _matchingDocumentsOfType.TryRemove(name);
+        }
+
+        public void WatchAllIndexes()
+        {
+            Interlocked.Increment(ref _watchAllIndexes);
+        }
+
+        public void UnwatchAllIndexes()
+        {
+            Interlocked.Decrement(ref _watchAllIndexes);
+        }
+
+        public void WatchIndex(string name)
+        {
+            _matchingIndexes.TryAdd(name);
+        }
+
+        public void UnwatchIndex(string name)
+        {
+            _matchingIndexes.TryRemove(name);
+        }
+
+        public void WatchAllTransformers()
+        {
+            Interlocked.Increment(ref _watchAllTransformers);
+        }
+
+        public void UnwatchAllTransformers()
+        {
+            Interlocked.Decrement(ref _watchAllTransformers);
+        }
+
+        public void SendDocumentChanges(DocumentChange change)
+        {
+            // this is a precaution, in order to overcome an observed race condition between change client disconnection and raising changes
+            if (IsDisposed)
+                return;
+            if (_watchAllDocuments > 0)
+            {
+                Send(change);
+                return;
+            }
+
+            if (change.Key != null && _matchingDocuments.Contains(change.Key))
+            {
+                Send(change);
+                return;
+            }
+
+            var hasPrefix = change.Key != null && _matchingDocumentPrefixes
+                .Any(x => change.Key.StartsWith(x, StringComparison.OrdinalIgnoreCase));
+            if (hasPrefix)
+            {
+                Send(change);
+                return;
+            }
+
+            var hasCollection = change.CollectionName != null && _matchingDocumentsInCollection
+                .Any(x => string.Equals(x, change.CollectionName, StringComparison.OrdinalIgnoreCase));
+            if (hasCollection)
+            {
+                Send(change);
+                return;
+            }
+
+            var hasType = change.TypeName != null && _matchingDocumentsOfType
+                .Any(x => string.Equals(x, change.TypeName, StringComparison.OrdinalIgnoreCase));
+            if (hasType)
+            {
+                Send(change);
+                return;
+            }
+
+            if (change.Key == null && change.CollectionName == null && change.TypeName == null)
+            {
+                Send(change);
+            }
+        }
+
+        public void SendIndexChanges(IndexChange change)
+        {
+            if (_watchAllIndexes > 0)
+            {
+                Send(change);
+                return;
+            }
+
+            if (change.Name != null && _matchingIndexes.Contains(change.Name))
+            {
+                Send(change);
+                return;
+            }
+        }
+
+        public void SendTransformerChanges(TransformerChange change)
+        {
+            if (_watchAllTransformers > 0)
+            {
+                Send(change);
+                return;
+            }
+        }
+
+        private void Send(DocumentChange change)
+        {
+            var value = new DynamicJsonValue
+            {
+                ["Type"] = "DocumentChange",
+                ["Value"] = new DynamicJsonValue
+                {
+                    [nameof(DocumentChange.Type)] = change.Type.ToString(),
+                    [nameof(DocumentChange.Key)] = change.Key,
+                    [nameof(DocumentChange.CollectionName)] = change.CollectionName,
+                    [nameof(DocumentChange.TypeName)] = change.TypeName,
+                    [nameof(DocumentChange.Etag)] = change.Etag,
+                },
+            };
+
+            if (_disposeToken.IsCancellationRequested == false)
+                _sendQueue.Enqueue(new ChangeValue
+                {
+                    ValueToSend = value,
+                    AllowSkip = true
+                });
+        }
+
+        private void Send(IndexChange change)
+        {
+            var value = new DynamicJsonValue
+            {
+                ["Type"] = "IndexChange",
+                ["Value"] = new DynamicJsonValue
+                {
+                    [nameof(IndexChange.Etag)] = change.Etag,
+                    [nameof(IndexChange.Name)] = change.Name,
+                    [nameof(IndexChange.Type)] = change.Type.ToString()
+                }
+            };
+
+            if (_disposeToken.IsCancellationRequested == false)
+                _sendQueue.Enqueue(new ChangeValue
+                {
+                    ValueToSend = value,
+                    AllowSkip = change.Type == IndexChangeTypes.BatchCompleted //TODO: make sure it makes sense
+                });
+        }
+
+        private void Send(TransformerChange change)
+        {
+            var value = new DynamicJsonValue
+            {
+                ["Type"] = "TransformerChange",
+                ["Value"] = new DynamicJsonValue
+                {
+                    [nameof(TransformerChange.Etag)] = change.Etag,
+                    [nameof(TransformerChange.Name)] = change.Name,
+                    [nameof(TransformerChange.Type)] = change.Type.ToString()
+                }
+            };
+
+            if (_disposeToken.IsCancellationRequested == false)
+                _sendQueue.Enqueue(new ChangeValue
+                {
+                    ValueToSend = value,
+                    AllowSkip = false //TODO: are you sure?
+                });
+        }
+
+        public void WatchOperation(long operationId)
+        {
+            _matchingOperations.TryAdd(operationId);
+        }
+
+        public void UnwatchOperation(long operationId)
+        {
+            _matchingOperations.TryRemove(operationId);
+        }
+
+        public void WatchAllOperations()
+        {
+            Interlocked.Increment(ref _watchAllOperations);
+        }
+
+        public void UnwatchAllOperations()
+        {
+            Interlocked.Decrement(ref _watchAllOperations);
+        }
+
+        public void SendOperationStatusChangeNotification(OperationStatusChanged change)
+        {
+            if (_watchAllOperations > 0)
+            {
+                Send(change);
+                return;
+            }
+
+            if (_matchingOperations.Contains(change.OperationId))
+            {
+                Send(change);
+            }
+        }
+
+        private void Send(OperationStatusChanged change)
+        {
+            var value = new DynamicJsonValue
+            {
+                ["Type"] = "OperationStatusChanged",
+                ["Value"] = new DynamicJsonValue
+                {
+                    [nameof(OperationStatusChanged.OperationId)] = (int)change.OperationId,
+                    [nameof(OperationStatusChanged.State)] = change.State.ToJson()
+                },
+            };
+
+            if (_disposeToken.IsCancellationRequested == false)
+                _sendQueue.Enqueue(new ChangeValue
+                {
+                    ValueToSend = value,
+                    AllowSkip = false
+                });
+        }
+
+        public async Task StartSendingNotifications(bool throttleConnection)
+        {
+            JsonOperationContext context;
+            using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            {
+                using (var ms = new MemoryStream())
+                {
+                    var sp = Stopwatch.StartNew();
+                    while (true)
+                    {
+                        if (_disposeToken.IsCancellationRequested)
+                            break;
+
+                        ms.SetLength(0);
+                        using (var writer = new BlittableJsonTextWriter(context, ms))
+                        {
+                            sp.Restart();
+                            do
+                            {
+                                var value = await GetNextMessage(throttleConnection);
+                                if (_disposeToken.IsCancellationRequested)
+                                    break;
+
+                                if (value == null)
+                                {
+                                    break;
+                                }
+
+                                context.Write(writer, value);
+                                writer.WriteNewLine();
+                                if (ms.Length > 16 * 1024)
+                                    break;
+                            } while (_sendQueue.Count > 0 && sp.Elapsed < TimeSpan.FromSeconds(5));
+                        }
+                        if (ms.Length == 0)
+                        {
+                            // ensure that we send _something_ over the network, to keep the 
+                            // connection alive
+                            ms.WriteByte((byte)'\r');
+                            ms.WriteByte((byte)'\n');
+                        }
+
+                        ArraySegment<byte> bytes;
+                        ms.TryGetBuffer(out bytes);
+                        await _webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, _disposeToken.Token);
+                    }
+                }
+            }
+        }
+
+        private DynamicJsonValue _skippedMessage;
+        private DateTime _lastSendMessage;
+
+        private async Task<DynamicJsonValue> GetNextMessage(bool throttleConnection)
+        {
+            while (true)
+            {
+                var nextMessage = await _sendQueue.TryDequeueAsync(TimeSpan.FromSeconds(5));
+                if (nextMessage.Item1 == false)
+                {
+                    var dynamicJsonValue = _skippedMessage;
+                    _skippedMessage = null;
+                    return dynamicJsonValue;
+                }
+                var msg = nextMessage.Item2;
+                if (throttleConnection && msg.AllowSkip)
+                {
+                    if (DateTime.UtcNow - _lastSendMessage < TimeSpan.FromSeconds(5))
+                    {
+                        _skippedMessage = msg.ValueToSend;
+                        continue;
+                    }
+                }
+                _skippedMessage = null;
+                _lastSendMessage = DateTime.UtcNow;
+                return msg.ValueToSend;
+            }
+        }
+
+        private long _isDisposed;
+        public bool IsDisposed => Interlocked.Read(ref _isDisposed) == 1;
+
+        public void Dispose()
+        {
+            Interlocked.Exchange(ref _isDisposed, 1);
+            _disposeToken.Cancel();
+            _sendQueue.Dispose();
+        }
+
+        public void Confirm(int commandId)
+        {
+            _sendQueue.Enqueue(new ChangeValue
+            {
+                ValueToSend = new DynamicJsonValue
+                {
+                    ["CommandId"] = commandId,
+                    ["Type"] = "Confirm"
+                },
+                AllowSkip = false
+            });
+        }
+
+        public void HandleCommand(string command, string commandParameter)
+        {
+            long commandParameterAsLong;
+            long.TryParse(commandParameter, out commandParameterAsLong);
+
+            if (Match(command, "watch-index"))
+            {
+                WatchIndex(commandParameter);
+            }
+            else if (Match(command, "unwatch-index"))
+            {
+                UnwatchIndex(commandParameter);
+            }
+            else if (Match(command, "watch-indexes"))
+            {
+                WatchAllIndexes();
+            }
+            else if (Match(command, "unwatch-indexes"))
+            {
+                UnwatchAllIndexes();
+            }
+            else if (Match(command, "watch-transformers"))
+            {
+                WatchAllTransformers();
+            }
+            else if (Match(command, "unwatch-transformers"))
+            {
+                UnwatchAllTransformers();
+            }
+            else if (Match(command, "watch-doc"))
+            {
+                WatchDocument(commandParameter);
+            }
+            else if (Match(command, "unwatch-doc"))
+            {
+                UnwatchDocument(commandParameter);
+            }
+            else if (Match(command, "watch-docs"))
+            {
+                WatchAllDocuments();
+            }
+            else if (Match(command, "unwatch-docs"))
+            {
+                UnwatchAllDocuments();
+            }
+            else if (Match(command, "watch-prefix"))
+            {
+                WatchDocumentPrefix(commandParameter);
+            }
+            else if (Equals(command, "unwatch-prefix"))
+            {
+                UnwatchDocumentPrefix(commandParameter);
+            }
+            else if (Match(command, "watch-collection"))
+            {
+                WatchDocumentInCollection(commandParameter);
+            }
+            else if (Equals(command, "unwatch-collection"))
+            {
+                UnwatchDocumentInCollection(commandParameter);
+            }
+            else if (Match(command, "watch-type"))
+            {
+                WatchDocumentOfType(commandParameter);
+            }
+            else if (Equals(command, "unwatch-type"))
+            {
+                UnwatchDocumentOfType(commandParameter);
+            }
+            else if (Equals(command, "watch-operation"))
+            {
+                WatchOperation(commandParameterAsLong);
+            }
+            else if (Equals(command, "unwatch-operation"))
+            {
+                UnwatchOperation(commandParameterAsLong);
+            }
+            else if (Equals(command, "watch-operations"))
+            {
+                WatchAllOperations();
+            }
+            else if (Equals(command, "unwatch-operations"))
+            {
+                UnwatchAllOperations();
+            }
+            /*else if (Match(command, "watch-replication-conflicts"))
+            {
+                WatchAllReplicationConflicts();
+            }
+            else if (Match(command, "unwatch-replication-conflicts"))
+            {
+                UnwatchAllReplicationConflicts();
+            }
+            else if (Match(command, "watch-bulk-operation"))
+            {
+                WatchBulkInsert(commandParameter);
+            }
+            else if (Match(command, "unwatch-bulk-operation"))
+            {
+                UnwatchBulkInsert(commandParameter);
+            }
+            else if (Match(command, "watch-data-subscriptions"))
+            {
+                WatchAllDataSubscriptions();
+            }
+            else if (Match(command, "unwatch-data-subscriptions"))
+            {
+                UnwatchAllDataSubscriptions();
+            }
+            else if (Match(command, "watch-data-subscription"))
+            {
+                WatchDataSubscription(long.Parse(commandParameter));
+            }
+            else if (Match(command, "unwatch-data-subscription"))
+            {
+                UnwatchDataSubscription(long.Parse(commandParameter));
+            }*/
+            else
+            {
+                throw new ArgumentOutOfRangeException(nameof(command), "Command argument is not valid");
+            }
+        }
+
+        protected static bool Match(string x, string y)
+        {
+            return string.Equals(x, y, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public DynamicJsonValue GetDebugInfo()
+        {
+            return new DynamicJsonValue
+            {
+                ["Id"] = Id,
+                ["State"] = _webSocket.State.ToString(),
+                ["CloseStatus"] = _webSocket.CloseStatus,
+                ["CloseStatusDescription"] = _webSocket.CloseStatusDescription,
+                ["SubProtocol"] = _webSocket.SubProtocol,
+                ["Age"] = Age,
+                ["WatchAllDocuments"] = _watchAllDocuments > 0,
+                ["WatchAllIndexes"] = false,
+                ["WatchAllTransformers"] = false,
+                /*["WatchConfig"] = _watchConfig > 0,
+                ["WatchConflicts"] = _watchConflicts > 0,
+                ["WatchSync"] = _watchSync > 0,*/
+                ["WatchDocumentPrefixes"] = _matchingDocumentPrefixes.ToArray(),
+                ["WatchDocumentsInCollection"] = _matchingDocumentsInCollection.ToArray(),
+                ["WatchIndexes"] = _matchingIndexes.ToArray(),
+                ["WatchDocuments"] = _matchingDocuments.ToArray(),
+            };
+        }
+    }
+}

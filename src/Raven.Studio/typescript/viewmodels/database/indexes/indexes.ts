@@ -53,7 +53,8 @@ class indexes extends viewModelBase {
             "lowPriority", "highPriority", "normalPriority",
             "resetIndex", "deleteIndex",
             "unlockIndex", "lockIndex", "lockErrorIndex", "lockSideBySide",
-            "enableIndex", "disableIndex",
+            "enableIndex", "disableIndex", "disableSelectedIndexes", "enableSelectedIndexes",
+            "pauseSelectedIndexes", "resumeSelectedIndexes",
             "unlockSelectedIndexes", "lockSelectedIndexes", "lockSideBySideSelectedIndexes", "lockErrorSelectedIndexes",
             "deleteSelectedIndexes", "startIndexing", "stopIndexing", "resumeIndexing", "pauseUntilRestart", "toggleSelectAll"
         );
@@ -192,7 +193,7 @@ class indexes extends viewModelBase {
 
                     // reset index is implemented as delete and insert, so we receive notification about deleted index via changes API
                     // let's issue marker to ignore index delete information for next few seconds because it might be caused by reset.
-                    // Unfortunettely we can't use resetIndexVm.resetTask.done, because we receive event via changes api before resetTask promise 
+                    // Unfortunately we can't use resetIndexVm.resetTask.done, because we receive event via changes api before resetTask promise 
                     // is resolved. 
                     this.resetsInProgress.add(indexToReset.name);
 
@@ -212,7 +213,7 @@ class indexes extends viewModelBase {
         this.resetsInProgress.delete(i.name);
     }
 
-    private processIndexEvent(e: Raven.Abstractions.Data.IndexChangeNotification) {
+    private processIndexEvent(e: Raven.Abstractions.Data.IndexChange) {
         const indexRemovedEvent = "IndexRemoved" as Raven.Abstractions.Data.IndexChangeTypes;
         if (e.Type === indexRemovedEvent) {
             if (!this.resetsInProgress.has(e.Name)) {
@@ -392,6 +393,55 @@ class indexes extends viewModelBase {
             });
     }
 
+    disableSelectedIndexes() {
+        this.toggleDisableSelectedIndexes(false);
+    }
+
+    enableSelectedIndexes() {
+        this.toggleDisableSelectedIndexes(true);
+    }
+
+    private toggleDisableSelectedIndexes(start: boolean) {
+        const status = start ? "enable" : "disable";
+        this.confirmationMessage("Are you sure?", `Do you want to ${status} selected indexes?`)
+            .done(can => {
+                if (can) {
+                    eventsCollector.default.reportEvent("index", "toggle-status", status);
+
+                    this.spinners.globalLockChanges(true);
+
+                    const indexes = this.getSelectedIndexes();
+                    indexes.forEach(i => start ? this.enableIndex(i) : this.disableIndex(i));
+                }
+            })
+            .always(() => this.spinners.globalLockChanges(false));
+    }
+
+
+    pauseSelectedIndexes() {
+        this.togglePauseSelectedIndexes(false);
+    }
+
+    resumeSelectedIndexes() {
+        this.togglePauseSelectedIndexes(true);
+    }
+
+    private togglePauseSelectedIndexes(resume: boolean) {
+        const status = resume ? "resume" : "pause";
+        this.confirmationMessage("Are you sure?", `Do you want to ${status} selected indexes?`)
+            .done(can => {
+                if (can) {
+                    eventsCollector.default.reportEvent("index", "toggle-status", status);
+
+                    this.spinners.globalLockChanges(true);
+
+                    const indexes = this.getSelectedIndexes();
+                    indexes.forEach(i => resume ? this.resumeIndexing(i) : this.pauseUntilRestart(i));
+                }
+            })
+            .always(() => this.spinners.globalLockChanges(false));
+    }
+
     deleteSelectedIndexes() {
         eventsCollector.default.reportEvent("indexes", "delete-selected");
         this.promptDeleteIndexes(this.getSelectedIndexes());
@@ -437,13 +487,15 @@ class indexes extends viewModelBase {
 
     resumeIndexing(idx: index): JQueryPromise<void> {
         eventsCollector.default.reportEvent("indexes", "resume");
-        this.spinners.localState.push(idx.name);
+        if (idx.canBeResumed()) {
+            this.spinners.localState.push(idx.name);
 
-        return this.resumeIndexingInternal(idx)
-            .done(() => {
-                idx.status("Running");
-            })
-            .always(() => this.spinners.localState.remove(idx.name));
+            return this.resumeIndexingInternal(idx)
+                .done(() => {
+                    idx.status("Running");
+                })
+                .always(() => this.spinners.localState.remove(idx.name));
+        }
     }
 
     private resumeIndexingInternal(idx: index): JQueryPromise<void> {
@@ -453,14 +505,16 @@ class indexes extends viewModelBase {
 
     pauseUntilRestart(idx: index) {
         eventsCollector.default.reportEvent("indexes", "pause");
-        this.spinners.localState.push(idx.name);
+        if (idx.canBePaused()) {
+            this.spinners.localState.push(idx.name);
 
-        new togglePauseIndexingCommand(false, this.activeDatabase(), { name: [idx.name] })
-            .execute().
-            done(() => {
-                idx.status("Paused");
-            })
-            .always(() => this.spinners.localState.remove(idx.name));
+            new togglePauseIndexingCommand(false, this.activeDatabase(), { name: [idx.name] })
+                .execute().
+                done(() => {
+                    idx.status("Paused");
+                })
+                .always(() => this.spinners.localState.remove(idx.name));
+        }
     }
 
     enableIndex(idx: index) {

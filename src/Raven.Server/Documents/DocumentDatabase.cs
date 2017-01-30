@@ -13,8 +13,6 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.SqlReplication;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.Transformers;
-using Raven.Server.NotificationCenter;
-using Raven.Server.NotificationCenter.Actions;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow;
@@ -52,7 +50,7 @@ namespace Raven.Server.Documents
             ResourceName = "db/" + name;
             Configuration = configuration;
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
-            Notifications = new DocumentsNotifications();
+            Changes = new DocumentsChanges();
             DocumentsStorage = new DocumentsStorage(this);
             IndexStore = new IndexStore(this);
             TransformerStore = new TransformerStore(this);
@@ -65,10 +63,10 @@ namespace Raven.Server.Documents
             IoMetrics = serverStore?.IoMetrics ?? new IoMetrics(256, 256);
             Patch = new PatchDocument(this);
             TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
-            HugeDocuments = new HugeDocuments(configuration.Databases.MaxCollectionSizeHugeDocuments,
-                configuration.Databases.MaxWarnSizeHugeDocuments);
+            HugeDocuments = new HugeDocuments(configuration.PerformanceHints.MaxCollectionSizeHugeDocuments,
+                configuration.PerformanceHints.MaxWarnSizeHugeDocuments);
             ConfigurationStorage = new ConfigurationStorage(this);
-            NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.ActionsStorage, Name);
+            NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, _databaseShutdown.Token);
             DatabaseInfoCache = serverStore?.DatabaseInfoCache;
         }
 
@@ -100,7 +98,7 @@ namespace Raven.Server.Documents
 
         public DocumentTombstoneCleaner DocumentTombstoneCleaner { get; private set; }
 
-        public DocumentsNotifications Notifications { get; }
+        public DocumentsChanges Changes { get; }
 
         public NotificationCenter.NotificationCenter NotificationCenter { get; }
 
@@ -244,7 +242,7 @@ namespace Raven.Server.Documents
             {
                 if (Interlocked.Read(ref _usages) == 0)
                     break;
-                _waitForUsagesOnDisposal.Wait(100);
+                _waitForUsagesOnDisposal.Wait(1000);
             }
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentDatabase)}");
 

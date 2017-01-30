@@ -55,7 +55,7 @@ namespace Raven.Server.ServerWide.Context
 
         protected abstract TTransaction CreateWriteTransaction();
 
-        public virtual RavenTransaction OpenWriteTransaction()
+        public TTransaction OpenWriteTransaction()
         {
             if (Transaction != null && Transaction.Disposed == false)
             {

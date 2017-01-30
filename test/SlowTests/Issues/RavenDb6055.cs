@@ -54,7 +54,7 @@ namespace SlowTests.Issues
         }
     }
 
-    public class SetTaskOnIndexDelete : IObserver<IndexChangeNotification>
+    public class SetTaskOnIndexDelete : IObserver<IndexChange>
     {
         private readonly TaskCompletionSource<object> _tcs;
 
@@ -72,7 +72,7 @@ namespace SlowTests.Issues
         {
         }
 
-        public void OnNext(IndexChangeNotification value)
+        public void OnNext(IndexChange value)
         {
             if (value.Type == IndexChangeTypes.IndexRemoved)
                 _tcs.TrySetResult(value);

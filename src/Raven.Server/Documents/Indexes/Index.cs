@@ -32,6 +32,9 @@ using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Sorting;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.Exceptions;
+using Raven.Server.NotificationCenter.Actions;
+using Raven.Server.NotificationCenter.Actions.Details;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.LowMemoryNotification;
@@ -137,6 +140,11 @@ namespace Raven.Server.Documents.Indexes
         private readonly ReaderWriterLockSlim _currentlyRunningQueriesLock = new ReaderWriterLockSlim();
         private volatile bool _priorityChanged;
         private volatile bool _hadRealIndexingWorkToDo;
+
+        private long _numberOfExceedingIndexOutputsPerDocument;
+        private DateTime? _lastWarningExceedingIndexOutputsPerDocument;
+        private int _maxExceedingIndexOutputsPerDocument = int.MinValue;
+        private string _maxExceedingIndexOutputsPerDocumentId;
 
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
@@ -363,7 +371,7 @@ namespace Raven.Server.Documents.Indexes
 
                     DocumentDatabase.DocumentTombstoneCleaner.Subscribe(this);
 
-                    DocumentDatabase.Notifications.OnIndexChange += HandleIndexChange;
+                    DocumentDatabase.Changes.OnIndexChange += HandleIndexChange;
 
                     InitializeInternal();
 
@@ -490,7 +498,7 @@ namespace Raven.Server.Documents.Indexes
 
                 DocumentDatabase.DocumentTombstoneCleaner.Unsubscribe(this);
 
-                DocumentDatabase.Notifications.OnIndexChange -= HandleIndexChange;
+                DocumentDatabase.Changes.OnIndexChange -= HandleIndexChange;
 
                 var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(Index)} '{Name}'");
 
@@ -635,7 +643,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     _contextPool.SetMostWorkInGoingToHappenonThisThread();
 
-                    DocumentDatabase.Notifications.OnDocumentChange += HandleDocumentChange;
+                    DocumentDatabase.Changes.OnDocumentChange += HandleDocumentChange;
                     _environment.OnLogsApplied += HandleLogsApplied;
 
                     while (true)
@@ -671,8 +679,8 @@ namespace Raven.Server.Documents.Indexes
 
                                 _indexingBatchCompleted.SetAndResetAtomically();
 
-                                DocumentDatabase.Notifications.RaiseNotifications(
-                                    new IndexChangeNotification { Name = Name, Type = IndexChangeTypes.BatchCompleted });
+                                DocumentDatabase.Changes.RaiseNotifications(
+                                    new IndexChange { Name = Name, Type = IndexChangeTypes.BatchCompleted });
 
                                 if (didWork)
                                     ResetErrors();
@@ -785,7 +793,7 @@ namespace Raven.Server.Documents.Indexes
                 finally
                 {
                     _environment.OnLogsApplied -= HandleLogsApplied;
-                    DocumentDatabase.Notifications.OnDocumentChange -= HandleDocumentChange;
+                    DocumentDatabase.Changes.OnDocumentChange -= HandleDocumentChange;
                 }
             }
         }
@@ -1028,18 +1036,18 @@ namespace Raven.Server.Documents.Indexes
         public abstract int HandleMap(LazyStringValue key, IEnumerable mapResults, IndexWriteOperation writer,
             TransactionOperationContext indexContext, IndexingStatsScope stats);
 
-        private void HandleIndexChange(IndexChangeNotification notification)
+        private void HandleIndexChange(IndexChange change)
         {
-            if (string.Equals(notification.Name, Name, StringComparison.OrdinalIgnoreCase) == false)
+            if (string.Equals(change.Name, Name, StringComparison.OrdinalIgnoreCase) == false)
                 return;
 
-            if (notification.Type == IndexChangeTypes.IndexMarkedAsErrored)
+            if (change.Type == IndexChangeTypes.IndexMarkedAsErrored)
                 Stop();
         }
 
-        protected virtual void HandleDocumentChange(DocumentChangeNotification notification)
+        protected virtual void HandleDocumentChange(DocumentChange change)
         {
-            if (HandleAllDocs == false && Collections.Contains(notification.CollectionName) == false)
+            if (HandleAllDocs == false && Collections.Contains(change.CollectionName) == false)
                 return;
             _mre.Set();
         }
@@ -1110,7 +1118,7 @@ namespace Raven.Server.Documents.Indexes
 
                 if (notificationType != IndexChangeTypes.None)
                 {
-                    DocumentDatabase.Notifications.RaiseNotifications(new IndexChangeNotification
+                    DocumentDatabase.Changes.RaiseNotifications(new IndexChange
                     {
                         Name = Name,
                         Type = notificationType
@@ -1977,13 +1985,42 @@ namespace Raven.Server.Documents.Indexes
 
         public abstract IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch);
 
-        public abstract int? ActualMaxNumberOfIndexOutputs { get; }
-
-        public abstract int MaxNumberOfIndexOutputs { get; }
-
-        protected virtual bool EnsureValidNumberOfOutputsForDocument(int numberOfAlreadyProducedOutputs)
+        protected void WarnExceedingIndexOutputsPerDocument(string documentKey, int numberOfAlreadyProducedOutputs)
         {
-            return MaxNumberOfIndexOutputs == -1 || numberOfAlreadyProducedOutputs <= MaxNumberOfIndexOutputs;
+            if (Configuration.MaxWarnIndexOutputsPerDocument <= 0 || numberOfAlreadyProducedOutputs <= Configuration.MaxWarnIndexOutputsPerDocument)
+                return;
+
+            _numberOfExceedingIndexOutputsPerDocument++;
+            if (_maxExceedingIndexOutputsPerDocument < numberOfAlreadyProducedOutputs)
+            {
+                _maxExceedingIndexOutputsPerDocument = numberOfAlreadyProducedOutputs;
+                _maxExceedingIndexOutputsPerDocumentId = documentKey;
+            }
+                
+            if (_lastWarningExceedingIndexOutputsPerDocument != null &&
+                (DateTime.UtcNow - _lastWarningExceedingIndexOutputsPerDocument.Value).Minutes <= 5)
+            {
+                // save the alert every 5 minutes (at worst case)
+                return;
+            }
+
+            _lastWarningExceedingIndexOutputsPerDocument = DateTime.UtcNow;
+
+            var alert = AlertRaised.Create(
+                "Max index outputs warning",
+                $"Max index outputs per document exceeded {Configuration.MaxWarnIndexOutputsPerDocument}",
+                AlertType.WarnIndexOutputsPerDocument,
+                AlertSeverity.Warning,
+                details: new WarnIndexOutputsPerDocument
+                {
+                    Warning = $"Index '{Name}' has already produced more than {Configuration.MaxWarnIndexOutputsPerDocument} map results",
+                    NumberOfExceedingDocuments = _numberOfExceedingIndexOutputsPerDocument,
+                    SampleDocumentId = _maxExceedingIndexOutputsPerDocumentId,
+                    MaxProducedOutputsForDocument = _maxExceedingIndexOutputsPerDocument,
+                    Suggestion = "Please verify this index definition and consider a re-design of your entities or index"
+                });
+
+            DocumentDatabase.NotificationCenter.Add(alert);
         }
 
         public virtual Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Sparrow;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
@@ -224,6 +225,29 @@ namespace Voron.Data.Tables
         {
             throw new InvalidOperationException("Tried to return " + pageNumber +
                                                 " but there are no values in the allocator section, invalid state.");
+        }
+
+        public static void MaybePrefetchSections(Tree parentTree, LowLevelTransaction llt)
+        {
+            var fst = parentTree.FixedTreeFor(AllocationStorage, valSize: BitmapSize);
+            using (var it = fst.Iterate())
+            {
+                if (it.Seek(long.MinValue) == false)
+                    return;
+
+                var list = new List<long>((int)(fst.NumberOfEntries * NumberOfPagesInSection));
+
+                do
+                {
+                    for (int i = 0; i < NumberOfPagesInSection; i++)
+                    {
+                        list.Add(i + it.CurrentKey);
+                    }
+                    
+                } while (it.MoveNext());
+
+                llt.Environment.Options.DataPager.MaybePrefetchMemory(list);
+            }
         }
     }
 }

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using Raven.Client.Connection;
 using Raven.Json.Linq;
@@ -23,6 +22,17 @@ namespace FastTests.Server.Replication
 {
     public class ReplicationTestsBase : RavenNewTestBase
     {
+        protected void EnsureReplicating(DocumentStore src, DocumentStore dst)
+        {
+            var id = "marker/" + Guid.NewGuid().ToString();
+            using (var s = src.OpenSession())
+            {
+                s.Store(new { }, id);
+                s.SaveChanges();
+            }
+            WaitForDocumentToReplicate<object>(dst, id, 15 * 1000);
+        }
+
 
         protected Dictionary<string,string[]> GetConnectionFaliures(DocumentStore store)
         {
@@ -287,6 +297,28 @@ namespace FastTests.Server.Replication
             }
         }
 
+        protected static void SetupReplication(DocumentStore fromStore, Dictionary<string,string> etlScripts, params DocumentStore[] toStores)
+        {
+            using (var session = fromStore.OpenSession())
+            {
+                var destinations = new List<ReplicationDestination>();
+                foreach (var store in toStores)
+                    destinations.Add(
+                        new ReplicationDestination
+                        {
+                            Database = store.DefaultDatabase,
+                            Url = store.Url,
+                            SpecifiedCollections = etlScripts
+                        });
+                session.Store(new ReplicationDocument
+                {
+                    Destinations = destinations
+                }, Constants.Replication.DocumentReplicationConfiguration);
+                session.SaveChanges();
+            }
+        }
+
+
         protected static void SetupReplication(DocumentStore fromStore, params DocumentStore[] toStores)
         {
             SetupReplication(fromStore, 
@@ -308,7 +340,6 @@ namespace FastTests.Server.Replication
                         {
                             Database = store.DefaultDatabase,
                             Url = store.Url,
-
                         });
                 
                 configOptions.Destinations = destinations;

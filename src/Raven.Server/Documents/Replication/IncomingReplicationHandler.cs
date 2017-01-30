@@ -22,8 +22,7 @@ using System.Net;
 using Raven.Server.Documents.Patch;
 using Constants = Raven.Abstractions.Data.Constants;
 using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.NotificationCenter.Actions;
-using Raven.Server.NotificationCenter.Alerts;
+using Raven.Server.NotificationCenter.Notifications;
 using ThreadState = System.Threading.ThreadState;
 
 namespace Raven.Server.Documents.Replication

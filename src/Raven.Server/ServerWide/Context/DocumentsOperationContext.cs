@@ -52,12 +52,12 @@ namespace Raven.Server.ServerWide.Context
 
         protected override DocumentsTransaction CreateReadTransaction()
         {
-            return new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.ReadTransaction(PersistentContext, Allocator), _documentDatabase.Notifications);
+            return new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.ReadTransaction(PersistentContext, Allocator), _documentDatabase.Changes);
         }
 
         protected override DocumentsTransaction CreateWriteTransaction()
         {
-            var tx = new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.WriteTransaction(PersistentContext, Allocator), _documentDatabase.Notifications);
+            var tx = new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.WriteTransaction(PersistentContext, Allocator), _documentDatabase.Changes);
 
             _currentTxMarker = (short) tx.InnerTransaction.LowLevelTransaction.Id;
 

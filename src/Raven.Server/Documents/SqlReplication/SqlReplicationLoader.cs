@@ -4,9 +4,8 @@ using System.Runtime.CompilerServices;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Server.Json;
-using Raven.Server.NotificationCenter.Actions;
-using Raven.Server.NotificationCenter.Actions.Details;
-using Raven.Server.NotificationCenter.Alerts;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Collections;
 using Sparrow.Json;
@@ -30,8 +29,8 @@ namespace Raven.Server.Documents.SqlReplication
         {
             _database = database;
             _logger = LoggingSource.Instance.GetLogger(_database.Name, GetType().FullName);
-            _database.Notifications.OnDocumentChange += WakeReplication;
-            _database.Notifications.OnSystemDocumentChange += HandleSystemDocumentChange;
+            _database.Changes.OnDocumentChange += WakeReplication;
+            _database.Changes.OnSystemDocumentChange += HandleSystemDocumentChange;
 
         }
 
@@ -109,15 +108,15 @@ namespace Raven.Server.Documents.SqlReplication
             }
         }
 
-        private void WakeReplication(DocumentChangeNotification documentChangeNotification)
+        private void WakeReplication(DocumentChange documentChange)
         {
             foreach (var replication in Replications)
                 replication.WaitForChanges.Set();
         }
 
-        private void HandleSystemDocumentChange(DocumentChangeNotification notification)
+        private void HandleSystemDocumentChange(DocumentChange change)
         {
-            if (ShouldReloadConfiguration(notification.Key))
+            if (ShouldReloadConfiguration(change.Key))
             {
                 foreach (var replication in Replications)
                     replication.Dispose();
@@ -126,7 +125,7 @@ namespace Raven.Server.Documents.SqlReplication
                 LoadConfigurations();
 
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Replication configuration was changed: {notification.Key}");
+                    _logger.Info($"Replication configuration was changed: {change.Key}");
             }
         }
 
@@ -137,8 +136,8 @@ namespace Raven.Server.Documents.SqlReplication
 
         public virtual void Dispose()
         {
-            _database.Notifications.OnDocumentChange -= WakeReplication;
-            _database.Notifications.OnSystemDocumentChange -= HandleSystemDocumentChange;
+            _database.Changes.OnDocumentChange -= WakeReplication;
+            _database.Changes.OnSystemDocumentChange -= HandleSystemDocumentChange;
         }
     }
 }

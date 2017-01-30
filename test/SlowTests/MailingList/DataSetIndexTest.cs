@@ -2,12 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Threading.Tasks;
 using FastTests;
 using Raven.Abstractions.Indexing;
 using Raven.Client;
 using Raven.Client.Indexes;
-using Raven.Server.Config;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -19,7 +17,7 @@ namespace SlowTests.MailingList
         [Fact]
         public void can_execute_query_default()
         {
-            using (var store = GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxMapIndexOutputsPerDocument)] = "100"))
+            using (var store = GetDocumentStore())
             {
                 new DataSetIndex().Execute(store);
 
@@ -47,7 +45,7 @@ namespace SlowTests.MailingList
         [Fact]
         public void can_execute_query_lazily()
         {
-            using (var store = GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxMapIndexOutputsPerDocument)] = "100"))
+            using (var store = GetDocumentStore())
             {
                 new DataSetIndex().Execute(store);
 
@@ -180,8 +178,6 @@ namespace SlowTests.MailingList
                                  { e=>e.Attributes, FieldStorage.Yes},
                                  { e=>e.StationId, FieldStorage.Yes}
                              };
-
-                MaxIndexOutputsPerDocument = MaxNumberOfItemsInDataSet;
             }
         }
 

@@ -99,7 +99,7 @@ namespace Raven.Server.ServerWide.LowMemoryNotification
                     case WAIT_FAILED:
                         if (_logger.IsInfoEnabled)
                             _logger.Info(
-                                "Failure when trying to wait for low memory notification. No low memory notifications will be raised.");
+                                "Failure when trying to wait for low memory notification. No low memory changes will be raised.");
                         break;
                 }
                 // prevent triggering the event too frequent when the low memory notification object is in the signaled state

@@ -197,7 +197,7 @@ namespace Raven.Traffic
                                         throw new InvalidOperationException("Server returned error: " + error);
                                     }
 
-                                    var notification = new TrafficWatchNotification();
+                                    var notification = new TrafficWatchChange();
                                     notification.TimeStamp = GetDateTimeFromJson(reader, "TimeStamp");
                                     notification.RequestId = GetIntFromJson(reader, "RequestId");
                                     notification.HttpMethod = GetStringFromJson(reader, "HttpMethod");

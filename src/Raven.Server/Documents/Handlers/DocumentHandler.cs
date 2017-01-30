@@ -564,7 +564,7 @@ namespace Raven.Server.Documents.Handlers
             public ExceptionDispatchInfo ExceptionDispatchInfo;
             public DocumentsStorage.PutOperationResults PutResult;
 
-            public override void Execute(DocumentsOperationContext context, RavenTransaction tx)
+            public override void Execute(DocumentsOperationContext context)
             {
                 try
                 {
@@ -584,7 +584,7 @@ namespace Raven.Server.Documents.Handlers
             public DocumentDatabase Database;
             public ExceptionDispatchInfo ExceptionDispatchInfo;
 
-            public override void Execute(DocumentsOperationContext context, RavenTransaction tx)
+            public override void Execute(DocumentsOperationContext context)
             {
                 try
                 {

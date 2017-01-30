@@ -175,7 +175,8 @@ namespace Raven.Server.Documents.Replication
                         [nameof(ReplicationMessageReply.DocumentsChangeVector)] = documentsChangeVector,
                         [nameof(ReplicationMessageReply.IndexTransformerChangeVector)] = indexesChangeVector,
                         [nameof(ReplicationMessageReply.ResolverId)] = ReplicationDocument?.DefaultResolver?.ResolvingDatabaseId,
-                        [nameof(ReplicationMessageReply.ResolverVersion)] = ReplicationDocument?.DefaultResolver?.Version
+                        [nameof(ReplicationMessageReply.ResolverVersion)] = ReplicationDocument?.DefaultResolver?.Version,
+                        [nameof(ReplicationMessageReply.DatabaseId)] = _database.DbId.ToString()
                     };
 
                     documentsOperationContext.Write(writer, response);
@@ -288,7 +289,7 @@ namespace Raven.Server.Documents.Replication
 
             _isInitialized = true;
 
-            _database.Notifications.OnSystemDocumentChange += OnSystemDocumentChange;
+            _database.Changes.OnSystemDocumentChange += OnSystemDocumentChange;
 
             InitializeOutgoingReplications();
             InitializeResolvers();
@@ -524,9 +525,9 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void OnSystemDocumentChange(DocumentChangeNotification notification)
+        private void OnSystemDocumentChange(DocumentChange change)
         {
-            if (!notification.Key.Equals(Constants.Replication.DocumentReplicationConfiguration, StringComparison.OrdinalIgnoreCase))
+            if (!change.Key.Equals(Constants.Replication.DocumentReplicationConfiguration, StringComparison.OrdinalIgnoreCase))
                 return;
 
             if (_log.IsInfoEnabled)
@@ -550,7 +551,7 @@ namespace Raven.Server.Documents.Replication
             InitializeResolvers();
             
             if (_log.IsInfoEnabled)
-                _log.Info($"Replication configuration was changed: {notification.Key}");
+                _log.Info($"Replication configuration was changed: {change.Key}");
         }
 
         internal void UpdateReplicationDocumentWithResolver(string uid, int? version)
@@ -560,8 +561,8 @@ namespace Raven.Server.Documents.Replication
                 return; // nothing to do
             }
 
-            if(ReplicationDocument?.DefaultResolver != null && 
-                ReplicationDocument.DefaultResolver.Version == version && 
+            if (ReplicationDocument?.DefaultResolver != null &&
+                ReplicationDocument.DefaultResolver.Version == version &&
                 ReplicationDocument.DefaultResolver.ResolvingDatabaseId != uid)
                 ThrowConflictingResolvers(uid, version, ReplicationDocument.DefaultResolver.ResolvingDatabaseId);
 
@@ -604,19 +605,14 @@ namespace Raven.Server.Documents.Replication
                     replicationDoc.DefaultResolver.ResolvingDatabaseId = uid;
                 }
 
-
                 if (replicationDoc.DefaultResolver.Version == version &&
                     replicationDoc.DefaultResolver.ResolvingDatabaseId != uid)
                     ThrowConflictingResolvers(uid, version, replicationDoc.DefaultResolver.ResolvingDatabaseId);
 
+                var djv = replicationDoc.ToJson();
+                var replicatedBlittable = context.ReadObject(djv, Constants.Replication.DocumentReplicationConfiguration);
 
-                var convertor = new EntityToBlittable(null);
-                var replicatedBlittable = convertor.ConvertEntityToBlittable(
-                    replicationDoc,
-                    new DocumentConvention(), 
-                    context);
-                _database.DocumentsStorage.Put(context, Constants.Replication.DocumentReplicationConfiguration, null,
-                    replicatedBlittable);
+                _database.DocumentsStorage.Put(context, Constants.Replication.DocumentReplicationConfiguration, null, replicatedBlittable);
 
                 context.Transaction.Commit();// will force reload of all connections as side affect
             }
@@ -656,7 +652,7 @@ namespace Raven.Server.Documents.Replication
             _cts.Cancel();
             _reconnectAttemptTimer.Dispose();
 
-            _database.Notifications.OnSystemDocumentChange -= OnSystemDocumentChange;
+            _database.Changes.OnSystemDocumentChange -= OnSystemDocumentChange;
 
             if (_log.IsInfoEnabled)
                 _log.Info("Closing and disposing document replication connections.");

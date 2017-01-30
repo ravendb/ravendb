@@ -59,7 +59,7 @@ class editDocument extends viewModelBase {
     isNewLineFriendlyMode = ko.observable<boolean>(false);
     autoCollapseMode = ko.observable<boolean>(false);
     isSaving = ko.observable<boolean>(false);
-    displayDocumentChangeNotification = ko.observable<boolean>(false);
+    displayDocumentChange = ko.observable<boolean>(false);
     
     private metaPropsToRestoreOnSave: any[] = [];
 
@@ -175,7 +175,7 @@ class editDocument extends viewModelBase {
           
         this.isSaveEnabled = ko.pureComputed(() => {            
             const isSaving = this.isSaving();
-            const isDirty = this.dirtyFlag().isDirty();           
+            const isDirty = this.dirtyFlag().isDirty();
             const etag = this.metadata().etag();
 
             if (isSaving || (!isDirty && etag)) {
@@ -233,7 +233,7 @@ class editDocument extends viewModelBase {
         this.displayLastModifiedDate = ko.pureComputed<boolean>(() => {
             const hasMetadata = !!this.metadata();
             const inEditMode = !this.isCreatingNewDocument();
-            const displayChangedNotification = this.displayDocumentChangeNotification();
+            const displayChangedNotification = this.displayDocumentChange();
 
             return hasMetadata && inEditMode && !displayChangedNotification;
         });
@@ -251,15 +251,15 @@ class editDocument extends viewModelBase {
     }
 
     createDocumentChangeNotification(docId: string): changeSubscription {
-        return this.changesContext.resourceChangesApi().watchDocument(docId, (n: Raven.Abstractions.Data.DocumentChangeNotification) => this.documentChangeNotification(n));
+        return this.changesContext.resourceChangesApi().watchDocument(docId, (n: Raven.Abstractions.Data.DocumentChange) => this.onDocumentChange(n));
     }
 
-    documentChangeNotification(n: Raven.Abstractions.Data.DocumentChangeNotification): void {
+    onDocumentChange(n: Raven.Abstractions.Data.DocumentChange): void {
         if (this.isSaving() || n.Etag === this.metadata().etag()) {
             return;
         }
 
-        this.displayDocumentChangeNotification(true);
+        this.displayDocumentChange(true);
     }
 
     updateNewlineLayoutInDocument(unescapeNewline: boolean) {
@@ -484,12 +484,10 @@ class editDocument extends viewModelBase {
         this.canContinueIfNotDirty("Refresh", "You have unsaved data. Are you sure you want to continue?")
         .done(() => {
             const docId = this.editedDocId();
-            this.document(null);
-            this.documentText(null);
             this.userSpecifiedId("");
             this.loadDocument(docId);
 
-            this.displayDocumentChangeNotification(false);
+            this.displayDocumentChange(false);
         });
     }
 

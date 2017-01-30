@@ -16,11 +16,11 @@ namespace Raven.Server.NotificationCenter.Handlers
             {
                 using (var writer = new NotificationCenterWebsocketWriter(webSocket, ServerStore.NotificationCenter, ServerStore.ContextPool, ServerStore.ServerShutdown))
                 {
-                    IEnumerable<ActionTableValue> storedActions;
+                    IEnumerable<NotificationTableValue> storedNotifications;
 
-                    using (ServerStore.NotificationCenter.GetStored(out storedActions, postponed: false))
+                    using (ServerStore.NotificationCenter.GetStored(out storedNotifications, postponed: false))
                     {
-                        foreach (var action in storedActions)
+                        foreach (var action in storedNotifications)
                         {
                             await writer.WriteToWebSocket(action.Json);
                         }

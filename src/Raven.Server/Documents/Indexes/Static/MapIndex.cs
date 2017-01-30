@@ -21,10 +21,6 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private HandleReferences _handleReferences;
 
-        private int _actualMaxNumberOfIndexOutputs;
-
-        private int _maxNumberOfIndexOutputs;
-
         private MapIndex(int indexId, MapIndexDefinition definition, StaticIndexBase compiled)
             : base(indexId, IndexType.Map, definition)
         {
@@ -43,13 +39,6 @@ namespace Raven.Server.Documents.Indexes.Static
         public override bool HasBoostedFields => _compiled.HasBoostedFields;
 
         public override bool IsMultiMap => _compiled.Maps.Count > 1 || _compiled.Maps.Any(x => x.Value.Count > 1);
-
-        protected override void InitializeInternal()
-        {
-            base.InitializeInternal();
-
-            _maxNumberOfIndexOutputs = Configuration.MaxMapIndexOutputsPerDocument;
-        }
 
         protected override IIndexingWork[] CreateIndexWorkExecutors()
         {
@@ -81,9 +70,9 @@ namespace Raven.Server.Documents.Indexes.Static
             return StaticIndexHelper.IsStale(this, databaseContext, indexContext, cutoff);
         }
 
-        protected override void HandleDocumentChange(DocumentChangeNotification notification)
+        protected override void HandleDocumentChange(DocumentChange change)
         {
-            if (HandleAllDocs == false && Collections.Contains(notification.CollectionName) == false && _referencedCollections.Contains(notification.CollectionName) == false)
+            if (HandleAllDocs == false && Collections.Contains(change.CollectionName) == false && _referencedCollections.Contains(change.CollectionName) == false)
                 return;
 
             _mre.Set();
@@ -105,34 +94,6 @@ namespace Raven.Server.Documents.Indexes.Static
             var writePos = indexEtagBytes + minLength;
 
             return StaticIndexHelper.CalculateIndexEtag(this, length, indexEtagBytes, writePos, documentsContext, indexContext);
-        }
-
-        public override int? ActualMaxNumberOfIndexOutputs
-        {
-            get
-            {
-                if (_actualMaxNumberOfIndexOutputs <= 1)
-                    return null;
-
-                return _actualMaxNumberOfIndexOutputs;
-            }
-        }
-
-        public override int MaxNumberOfIndexOutputs => _maxNumberOfIndexOutputs;
-        protected override bool EnsureValidNumberOfOutputsForDocument(int numberOfAlreadyProducedOutputs)
-        {
-            if (base.EnsureValidNumberOfOutputsForDocument(numberOfAlreadyProducedOutputs) == false)
-                return false;
-
-            if (Definition.IndexDefinition.Configuration.MaxIndexOutputsPerDocument.HasValue)
-            {
-                // user has specifically configured this value, but we don't trust it.
-
-                if (_actualMaxNumberOfIndexOutputs < numberOfAlreadyProducedOutputs)
-                    _actualMaxNumberOfIndexOutputs = numberOfAlreadyProducedOutputs;
-            }
-
-            return true;
         }
 
         public override Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()

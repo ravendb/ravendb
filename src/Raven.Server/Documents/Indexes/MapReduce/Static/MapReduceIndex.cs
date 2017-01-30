@@ -26,9 +26,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         private readonly Dictionary<string, AnonymousObjectToBlittableMapResultsEnumerableWrapper> _enumerationWrappers = new Dictionary<string, AnonymousObjectToBlittableMapResultsEnumerableWrapper>();
 
-        private int _maxNumberOfIndexOutputs;
-        private int _actualMaxNumberOfIndexOutputs;
-
         private MapReduceIndex(int indexId, MapReduceIndexDefinition definition, StaticIndexBase compiled)
             : base(indexId, IndexType.MapReduce, definition)
         {
@@ -47,13 +44,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         public override bool HasBoostedFields => _compiled.HasBoostedFields;
 
         public override bool IsMultiMap => _compiled.Maps.Count > 1 || _compiled.Maps.Any(x => x.Value.Count > 1);
-
-        protected override void InitializeInternal()
-        {
-            base.InitializeInternal();
-
-            _maxNumberOfIndexOutputs = Configuration.MaxMapReduceIndexOutputsPerDocument;
-        }
 
         public static MapReduceIndex CreateNew(int indexId, IndexDefinition definition, DocumentDatabase documentDatabase)
         {
@@ -157,35 +147,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             var writePos = indexEtagBytes + minLength;
 
             return StaticIndexHelper.CalculateIndexEtag(this, length, indexEtagBytes, writePos, documentsContext, indexContext);
-        }
-
-        public override int? ActualMaxNumberOfIndexOutputs
-        {
-            get
-            {
-                if (_actualMaxNumberOfIndexOutputs <= 1)
-                    return null;
-
-                return _actualMaxNumberOfIndexOutputs;
-            }
-        }
-
-        public override int MaxNumberOfIndexOutputs => _maxNumberOfIndexOutputs;
-
-        protected override bool EnsureValidNumberOfOutputsForDocument(int numberOfAlreadyProducedOutputs)
-        {
-            if (base.EnsureValidNumberOfOutputsForDocument(numberOfAlreadyProducedOutputs) == false)
-                return false;
-
-            if (Definition.IndexDefinition.Configuration.MaxIndexOutputsPerDocument.HasValue)
-            {
-                // user has specifically configured this value, but we don't trust it.
-
-                if (_actualMaxNumberOfIndexOutputs < numberOfAlreadyProducedOutputs)
-                    _actualMaxNumberOfIndexOutputs = numberOfAlreadyProducedOutputs;
-            }
-
-            return true;
         }
 
         public override Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()

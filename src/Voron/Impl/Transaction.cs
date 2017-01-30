@@ -99,6 +99,26 @@ namespace Voron.Impl
             _lowLevelTransaction.Commit();
         }
 
+        public Transaction BeginAsyncCommitAndStartNewTransaction()
+        {
+            if (_lowLevelTransaction.Flags != TransactionFlags.ReadWrite)
+                ThrowInvalidAsyncCommitOnRead();
+
+            PrepareForCommit();
+            var tx = _lowLevelTransaction.BeginAsyncCommitAndStartNewTransaction();
+            return new Transaction(tx);
+        }
+
+        private static void ThrowInvalidAsyncCommitOnRead()
+        {
+            throw new InvalidOperationException("Cannot call begin async commit on read tx");
+        }
+
+        public void EndAsyncCommit()
+        {
+            _lowLevelTransaction.EndAsyncCommit();
+        }
+
         [MethodImpl(MethodImplOptions.NoInlining)]
         public Table OpenTable(TableSchema schema, string name, bool throwIfDoesNotExist = true)
         {

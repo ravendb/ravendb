@@ -1,8 +1,7 @@
 using System;
 using Raven.Abstractions;
-using Raven.Server.NotificationCenter.Actions;
-using Raven.Server.NotificationCenter.Actions.Details;
-using Raven.Server.NotificationCenter.Alerts;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.SqlReplication

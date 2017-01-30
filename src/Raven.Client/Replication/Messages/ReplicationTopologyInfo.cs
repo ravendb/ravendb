@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using Raven.Abstractions.Extensions;
 using Sparrow.Json.Parsing;
 
@@ -32,20 +33,45 @@ namespace Raven.Client.Replication.Messages
         }
     }
 
+    public class NotSupportedOSException : Exception
+    {
+    }
+
     public class NodeTopologyInfo
     {
         public string DatabaseId;
+
+        public Architecture ProcessArchitecture;
+
+        public Architecture OSArchitecture;
+
+        public string OSPlatformAsString;
+
+        public OSPlatform OSPlatform => OSPlatform.Create(OSPlatformAsString);
+
+        public string OSDescription;
+
+        public string OSType;
 
         public List<ActiveNodeStatus> Outgoing;
         public List<ActiveNodeStatus> Incoming;
         public List<InactiveNodeStatus> Offline;
 
-        public NodeTopologyInfo()
+        public void InitializeOSInformation()
         {
+            ProcessArchitecture = RuntimeInformation.ProcessArchitecture;
+            OSArchitecture = RuntimeInformation.OSArchitecture;
+            OSPlatformAsString = GetOSPlatform().ToString();
+            OSDescription = RuntimeInformation.OSDescription; //should be OS name and version
+        }
+
+        public NodeTopologyInfo()
+        {            
             Outgoing = new List<ActiveNodeStatus>();
             Incoming = new List<ActiveNodeStatus>();
             Offline = new List<InactiveNodeStatus>();
         }
+
 
         public DynamicJsonValue ToJson()
         {
@@ -70,11 +96,28 @@ namespace Raven.Client.Replication.Messages
             return new DynamicJsonValue
             {
                 [nameof(DatabaseId)] = DatabaseId,
+                [nameof(ProcessArchitecture)] = ProcessArchitecture.ToString(),
+                [nameof(OSArchitecture)] = OSArchitecture.ToString(),
+                [nameof(OSPlatformAsString)] = OSPlatformAsString,
+                [nameof(OSDescription)] = OSDescription,
                 [nameof(Outgoing)] = outgoingJson,
                 [nameof(Incoming)] = incomingJson,
                 [nameof(Offline)] = offlineJson
             };
         }
+
+        private static OSPlatform GetOSPlatform()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return OSPlatform.Windows;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                return OSPlatform.Linux;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                return OSPlatform.OSX;
+
+            throw new NotSupportedOSException();
+        }
+
     }
 
     public class InactiveNodeStatus
@@ -117,6 +160,10 @@ namespace Raven.Client.Replication.Messages
 
         public string Database;
 
+        public Dictionary<string, string> SpecifiedCollections;
+
+        public bool IsETLNode => SpecifiedCollections != null && SpecifiedCollections.Count > 0;
+
         public Status NodeStatus;
 
         public enum Status
@@ -126,9 +173,19 @@ namespace Raven.Client.Replication.Messages
             Error
         }
 
+        public ActiveNodeStatus()
+        {
+            SpecifiedCollections = new Dictionary<string, string>();
+        }
 
         public DynamicJsonValue ToJson()
         {
+            var specifiedCollectionsJson = new DynamicJsonValue();
+            foreach (var key in SpecifiedCollections.Keys)
+            {
+                specifiedCollectionsJson[key] = SpecifiedCollections[key];
+            }
+
             return new DynamicJsonValue
             {
                 [nameof(IsCurrentlyConnected)] = IsCurrentlyConnected,
@@ -140,6 +197,7 @@ namespace Raven.Client.Replication.Messages
                 [nameof(LastDocumentEtag)] = LastDocumentEtag,
                 [nameof(LastIndexTransformerEtag)] = LastIndexTransformerEtag,
                 [nameof(NodeStatus)] = NodeStatus.ToString(),
+                [nameof(SpecifiedCollections)] = specifiedCollectionsJson,
                 ["LastHeartbeat"] = new DateTime(LastHeartbeatTicks).GetDefaultRavenFormat(),
             };
         }

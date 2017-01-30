@@ -2,7 +2,7 @@ using System;
 
 namespace Raven.Abstractions.TimeSeries.Notifications
 {
-    public class KeyChangeNotification : TimeSeriesNotification
+    public class KeyChange : TimeSeriesChange
     {
         public string Type { get; set; }
 
@@ -19,7 +19,7 @@ namespace Raven.Abstractions.TimeSeries.Notifications
         public DateTimeOffset End { get; set; }
     }
 
-    public class RangeKeyNotification : KeyChangeNotification
+    public class RangeKeyChange : KeyChange
     {
         
     }

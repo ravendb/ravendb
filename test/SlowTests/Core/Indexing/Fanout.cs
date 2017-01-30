@@ -27,11 +27,7 @@ namespace SlowTests.Core.Indexing
             {
                 return new IndexDefinition
                 {
-                    Maps = { @"docs.Users.SelectMany(user => user.Friends, (user, friend) => new { Name = user.Name })" },
-                    Configuration =
-                    {
-                        MaxIndexOutputsPerDocument = 16384
-                    }
+                    Maps = { @"docs.Users.SelectMany(user => user.Friends, (user, friend) => new { Name = user.Name })" }
                 };
             }
         }
@@ -41,7 +37,6 @@ namespace SlowTests.Core.Indexing
         {
             var index = new UsersAndFriendsIndex();
             var definition = index.CreateIndexDefinition();
-            definition.Configuration.MaxIndexOutputsPerDocument = 2;
 
             using (var store = GetDocumentStore())
             {

@@ -7,10 +7,10 @@ using Raven.Abstractions.Util;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
 using Raven.Client.Smuggler;
+using Raven.NewClient.Extensions;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
@@ -104,6 +104,12 @@ namespace Raven.Server.Smuggler.Documents
 
         private class DatabaseDocumentActions : IDocumentActions
         {
+            private const string RavenEntityName = "Raven-Entity-Name";
+
+            private const string LastModified = "Last-Modified";
+
+            private const string RavenLastModified = "Raven-Last-Modified";
+
             private readonly DocumentDatabase _database;
             private readonly long _buildVersion;
             private readonly bool _isRevision;
@@ -149,7 +155,41 @@ namespace Raven.Server.Smuggler.Documents
                 if (_buildVersion == 40 || _buildVersion >= 40000)
                     return;
 
+                var metadata = (BlittableJsonReaderObject)document.Data[Constants.Metadata.Key];
+
                 // apply all the metadata conversions here
+                ConvertRavenEntityName(metadata);
+                RemoveOldProperties(metadata);
+            }
+
+            private static void RemoveOldProperties(BlittableJsonReaderObject metadata)
+            {
+                if (metadata.Modifications == null)
+                    metadata.Modifications = new DynamicJsonValue(metadata);
+
+                string _;
+                if (metadata.TryGet(LastModified, out _))
+                    metadata.Modifications.Remove(LastModified);
+
+                if (metadata.TryGet(RavenLastModified, out _))
+                    metadata.Modifications.Remove(RavenLastModified);
+            }
+
+            private static void ConvertRavenEntityName(BlittableJsonReaderObject metadata)
+            {
+                string collection;
+                if (metadata.TryGet(RavenEntityName, out collection) == false)
+                    return;
+
+                if (metadata.Modifications == null)
+                    metadata.Modifications = new DynamicJsonValue(metadata);
+
+                metadata.Modifications.Remove(RavenEntityName);
+
+                if (string.IsNullOrWhiteSpace(collection))
+                    return;
+
+                metadata.Modifications[Constants.Metadata.Collection] = collection;
             }
 
             private void HandleBatchOfDocumentsIfNecessary()
@@ -254,15 +294,15 @@ namespace Raven.Server.Smuggler.Documents
 
             public JsonOperationContext Context => _context;
 
-            public override void Execute(DocumentsOperationContext context, RavenTransaction tx)
+            public override void Execute(DocumentsOperationContext context)
             {
                 foreach (var document in Documents)
                 {
                     var key = document.Key;
+                    var metadata = document.Data.GetMetadata();
 
-                    BlittableJsonReaderObject metadata;
-                    if (document.Data.TryGet(Constants.Metadata.Key, out metadata) == false)
-                        throw new InvalidOperationException("A document must have a metadata");
+                    long etag;
+                    metadata.TryGetEtag(out etag);
 
                     if (metadata.Modifications == null)
                         metadata.Modifications = new DynamicJsonValue(metadata);
@@ -270,20 +310,15 @@ namespace Raven.Server.Smuggler.Documents
                     metadata.Modifications.Remove(Constants.Metadata.Id);
                     metadata.Modifications.Remove(Constants.Metadata.Etag);
 
+                    using (document.Data)
+                        document.Data = _context.ReadObject(document.Data, document.Key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+
                     if (IsRevision)
                     {
-                        long etag;
-                        if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
-                            throw new InvalidOperationException("Document's metadata must include the document's key.");
-
                         _database.BundleLoader.VersioningStorage.PutDirect(context, key, etag, document.Data);
                     }
                     else if (_buildVersion < 40000 && key.Contains("/revisions/"))
                     {
-                        long etag;
-                        if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
-                            throw new InvalidOperationException("Document's metadata must include the document's key.");
-
                         var endIndex = key.IndexOf("/revisions/", StringComparison.OrdinalIgnoreCase);
                         var newKey = key.Substring(0, endIndex);
 
@@ -302,8 +337,10 @@ namespace Raven.Server.Smuggler.Documents
                     return;
 
                 _isDisposed = true;
-                foreach (var doc in Documents)
-                    doc.Data.Dispose();
+                for (int i = Documents.Count - 1; i >= 0; i--)
+                {
+                    Documents[i].Data.Dispose();
+                }
 
                 Documents.Clear();
                 _resetContext?.Dispose();

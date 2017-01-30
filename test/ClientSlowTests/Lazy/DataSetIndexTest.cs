@@ -3,14 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using FastTests;
-using Xunit;
-using Raven.NewClient.Client.Indexes;
-using Raven.NewClient.Client;
-using Raven.NewClient.Client.Document;
-using Raven.Server.Config;
 using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
+using Xunit;
 
-namespace NewClientTests.NewClient
+namespace SlowTests.Lazy
 {
     public class DataSetIndexTest : RavenNewTestBase
     {
@@ -19,7 +17,7 @@ namespace NewClientTests.NewClient
         [Fact]
         public void can_execute_query_default()
         {
-            using (var store = GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxMapIndexOutputsPerDocument)] = "100"))
+            using (var store = GetDocumentStore())
             {
                 new DataSetIndex().Execute(store);
 
@@ -47,7 +45,7 @@ namespace NewClientTests.NewClient
         [Fact]
         public void can_execute_query_lazily()
         {
-            using (var store = GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxMapIndexOutputsPerDocument)] = "100"))
+            using (var store = GetDocumentStore())
             {
                 new DataSetIndex().Execute(store);
 
@@ -180,8 +178,6 @@ namespace NewClientTests.NewClient
                                  { e=>e.Attributes, FieldStorage.Yes},
                                  { e=>e.StationId, FieldStorage.Yes}
                              };
-
-                MaxIndexOutputsPerDocument = MaxNumberOfItemsInDataSet;
             }
         }
     }

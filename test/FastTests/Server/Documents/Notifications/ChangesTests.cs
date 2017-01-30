@@ -26,7 +26,7 @@ namespace FastTests.Server.Documents.Notifications
         {
             using (var store = GetDocumentStore())
             {
-                var list = new BlockingCollection<DocumentChangeNotification>();
+                var list = new BlockingCollection<DocumentChange>();
                 var taskObservable = store.Changes();
                 await taskObservable.ConnectionTask;
                 var observableWithTask = taskObservable.ForDocument("users/1");
@@ -39,12 +39,12 @@ namespace FastTests.Server.Documents.Notifications
                     await session.SaveChangesAsync();
                 }
 
-                DocumentChangeNotification documentChangeNotification;
-                Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(1)));
+                DocumentChange documentChange;
+                Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(1)));
 
-                Assert.Equal("users/1", documentChangeNotification.Key);
-                Assert.Equal(documentChangeNotification.Type, DocumentChangeTypes.Put);
-                Assert.NotNull(documentChangeNotification.Etag);
+                Assert.Equal("users/1", documentChange.Key);
+                Assert.Equal(documentChange.Type, DocumentChangeTypes.Put);
+                Assert.NotNull(documentChange.Etag);
             }
         }
 
@@ -53,7 +53,7 @@ namespace FastTests.Server.Documents.Notifications
         {
             using (var store = GetDocumentStore())
             {
-                var list = new BlockingCollection<DocumentChangeNotification>();
+                var list = new BlockingCollection<DocumentChange>();
                 var taskObservable = store.Changes();
                 await taskObservable.ConnectionTask;
                 var observableWithTask = taskObservable.ForAllDocuments();
@@ -74,10 +74,10 @@ namespace FastTests.Server.Documents.Notifications
                     }
                 }
 
-                DocumentChangeNotification documentChangeNotification;
+                DocumentChange documentChange;
                 int total = docsCount;
                 while (total-- > 0)
-                    Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(10)));
+                    Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(10)));
             }
         }
 
@@ -86,7 +86,7 @@ namespace FastTests.Server.Documents.Notifications
         {
             using (var store = GetDocumentStore())
             {
-                var list = new BlockingCollection<DocumentChangeNotification>();
+                var list = new BlockingCollection<DocumentChange>();
                 var taskObservable = store.Changes();
                 await taskObservable.ConnectionTask;
                 var observableWithTask = taskObservable.ForDocument("users/1");
@@ -103,11 +103,11 @@ namespace FastTests.Server.Documents.Notifications
 
                 store.DatabaseCommands.Delete("users/1", null);
 
-                DocumentChangeNotification documentChangeNotification;
-                Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(2)));
+                DocumentChange documentChange;
+                Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(2)));
 
-                Assert.Equal("users/1", documentChangeNotification.Key);
-                Assert.Equal(documentChangeNotification.Type, DocumentChangeTypes.Delete);
+                Assert.Equal("users/1", documentChange.Key);
+                Assert.Equal(documentChange.Type, DocumentChangeTypes.Delete);
 
                 ((RemoteDatabaseChanges)taskObservable).DisposeAsync().Wait();
             }
@@ -118,7 +118,7 @@ namespace FastTests.Server.Documents.Notifications
         {
             using (var store = GetDocumentStore())
             {
-                var list = new BlockingCollection<DocumentChangeNotification>();
+                var list = new BlockingCollection<DocumentChange>();
                 var taskObservable = store.Changes();
                 await taskObservable.ConnectionTask;
                 var observableWithTask = taskObservable.ForDocument("users/1");
@@ -131,8 +131,8 @@ namespace FastTests.Server.Documents.Notifications
                     await session.SaveChangesAsync();
                 }
 
-                DocumentChangeNotification documentChangeNotification;
-                Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(2)));
+                DocumentChange documentChange;
+                Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(2)));
 
                 observableWithTask = taskObservable.ForDocument("users/2");
                 await observableWithTask.Task;
@@ -144,7 +144,7 @@ namespace FastTests.Server.Documents.Notifications
                     await session.SaveChangesAsync();
                 }
 
-                Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(2)));
+                Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(2)));
             }
         }
 

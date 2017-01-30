@@ -13,7 +13,7 @@
     "compile": {
       "include": [ "**/*.cs", "../CommonAssemblyInfo.cs" ]
     },
-    "define": []
+    "define": [  ]
   },
 
   "configurations": {

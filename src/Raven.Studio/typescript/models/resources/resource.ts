@@ -3,10 +3,11 @@
 import EVENTS = require("common/constants/events");
 
 abstract class resource {
-    isAdminCurrentTenant = ko.observable<boolean>(false);
-    activeBundles = ko.observableArray<string>();
-    name: string;
+    name: string;    
+
+    activeBundles = ko.observableArray<string>();   
     disabled = ko.observable<boolean>(false);
+    isAdminCurrentTenant = ko.observable<boolean>(false);
 
     protected constructor(rsInfo: Raven.Client.Data.ResourceInfo) {
     }

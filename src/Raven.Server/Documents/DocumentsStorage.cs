@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Net;
@@ -23,6 +24,7 @@ using Voron.Impl;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Logging;
+using Voron.Data;
 using Voron.Util;
 using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
 
@@ -273,6 +275,10 @@ namespace Raven.Server.Documents
 
                 using (var tx = Environment.WriteTransaction())
                 {
+                    NewPageAllocator.MaybePrefetchSections(
+                        tx.LowLevelTransaction.RootObjects,
+                        tx.LowLevelTransaction);
+
                     tx.CreateTree("Docs");
                     tx.CreateTree("LastReplicatedEtags");
                     tx.CreateTree("Identities");
@@ -1024,7 +1030,7 @@ namespace Raven.Server.Documents
             }
             table.Delete(doc.StorageId);
 
-            context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
+            context.Transaction.AddAfterCommitNotification(new DocumentChange
             {
                 Type = DocumentChangeTypes.Delete,
                 Etag = expectedEtag,
@@ -1133,7 +1139,7 @@ namespace Raven.Server.Documents
                         docsTable.Delete(doc.StorageId);
                     }
 
-                    context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
+                    context.Transaction.AddAfterCommitNotification(new DocumentChange
                     {
                         Type = DocumentChangeTypes.DeleteOnTombstoneReplication,
                         Etag = _lastEtag,
@@ -1724,7 +1730,7 @@ namespace Raven.Server.Documents
 
             }
 
-            context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
+            context.Transaction.AddAfterCommitNotification(new DocumentChange
             {
                 Etag = _lastEtag,
                 CollectionName = collectionName.Name,
@@ -1770,6 +1776,8 @@ namespace Raven.Server.Documents
                 ThrowPutRequiresTransaction();
                 return default(PutOperationResults);// never reached
             }
+
+            AssertNoModifications(document, key);
 
             var collectionName = ExtractCollectionName(context, key, document);
             var newEtag = ++_lastEtag;
@@ -1897,7 +1905,7 @@ namespace Raven.Server.Documents
                 _documentDatabase.Metrics.BytesPutsPerSecond.MarkSingleThreaded(document.Size);
             }
 
-            context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
+            context.Transaction.AddAfterCommitNotification(new DocumentChange
             {
                 Etag = newEtag,
                 CollectionName = collectionName.Name,
@@ -2401,7 +2409,7 @@ namespace Raven.Server.Documents
             var result = new Dictionary<string, CollectionName>(StringComparer.OrdinalIgnoreCase);
 
             var collections = tx.OpenTable(CollectionsSchema, "Collections");
-
+            
             JsonOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
@@ -2411,11 +2419,43 @@ namespace Raven.Server.Documents
                     var ptr = tvr.Reader.Read(0, out size);
                     var collection = new LazyStringValue(null, ptr, size, context);
 
+                    Slice tableNameSlice;
+                    Slice.External(tx.Allocator, ptr, size, out tableNameSlice);// intentionally not disposing, will be disposed by the tx
+                    var tableTree = tx.CreateTree(tableNameSlice, RootObjectType.Table);
+                    NewPageAllocator.MaybePrefetchSections(tableTree, tx.LowLevelTransaction);
+
+
                     result.Add(collection, new CollectionName(collection));
                 }
             }
 
             return result;
+        }
+
+
+        [Conditional("DEBUG")]
+        internal static void AssertNoModifications(BlittableJsonReaderObject data, string key)
+        {
+            if (data == null)
+                return;
+
+            if (data.Modifications != null)
+            {
+                if (data.Modifications.Removals != null && data.Modifications.Removals.Count > 0)
+                    throw new InvalidOperationException($"Modifications detected in '{key}'. JSON: {data}");
+
+                if (data.Modifications.Properties.Count > 0)
+                    throw new InvalidOperationException($"Modifications detected in '{key}'. JSON: {data}");
+            }
+
+            foreach (var propertyName in data.GetPropertyNames())
+            {
+                var inner = data[propertyName] as BlittableJsonReaderObject;
+                if (inner == null)
+                    continue;
+
+                AssertNoModifications(inner, key);
+            }
         }
     }
 }

@@ -23,12 +23,6 @@ namespace Raven.Abstractions.Data
                 {
                 }
 
-                public const string MaxIndexOutputsPerDocument = "Raven/Indexing/MaxIndexOutputsPerDocument";
-
-                public const string MaxMapIndexOutputsPerDocument = "Raven/Indexing/MaxMapIndexOutputsPerDocument";
-
-                public const string MaxMapReduceIndexOutputsPerDocument = "Raven/Indexing/MaxMapReduceIndexOutputsPerDocument";
-
                 public const string AdditionalStoragePaths = "Raven/Indexing/AdditionalStoragePaths";
 
                 public const string StoragePath = "Raven/Indexing/StoragePath";
