@@ -36,11 +36,11 @@ namespace Tryouts
         {
             for (int i = 0; i < 100; i++)
             {
-                Console.WriteLine(i);
-                using (var a = new FastTests.Server.Replication.ManualConflictResolution())
+                using (var a = new ReplicationResolveConflictsOnConfigurationChange())
                 {
-                    a.CanManuallyResolveConflict();
+                    a.ResolveWhenSettingDatabaseResolver();
                 }
+                Console.WriteLine($"{i} finished");
             }
         }
     }

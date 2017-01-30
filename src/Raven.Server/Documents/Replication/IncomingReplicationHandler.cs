@@ -765,29 +765,9 @@ namespace Raven.Server.Documents.Replication
                 $"Reading past the size of buffer! TotalSize {totalSize} but position is {doc.Position} & size is {doc.DocumentSize}!");
         }
 
-        private void EnsureCollection(BlittableJsonReaderObject obj,string collection)
-        {
-            string actualCollection;
-            BlittableJsonReaderObject metadata;
-            if (obj.TryGet(Constants.Metadata.Key, out metadata) == false ||
-                metadata.TryGet(Constants.Metadata.Collection, out actualCollection) == false || 
-                actualCollection != collection)
-            {
-                if (collection == CollectionName.EmptyCollection)
-                    return;
+        
 
-                ThrowInvalidCollectionAfterResolve(collection, null);
-            }
-        }
-
-        private static void ThrowInvalidCollectionAfterResolve(string collection, string actual)
-        {
-            throw new InvalidOperationException(
-                "Resolving script did not setup the appropriate '@collection'. Expeted " + collection + " but got " +
-                actual);
-        }
-
-        public bool TryResolveConflictByScript(
+        public bool TryResovleConflictByScript(
             DocumentsOperationContext documentsContext,
             ReplicationDocumentsPositions docPosition,
             ChangeVectorEntry[] conflictingVector,
@@ -795,8 +775,6 @@ namespace Raven.Server.Documents.Replication
         {
             List<DocumentConflict> conflictedDocs = new List<DocumentConflict>(documentsContext.DocumentDatabase.DocumentsStorage.GetConflictsFor(documentsContext, docPosition.Id));
             bool isTomstone = false;
-            bool isLocalExists = false;
-            long storageId = -1;
 
             if (conflictedDocs.Count == 0)
             {
@@ -804,16 +782,13 @@ namespace Raven.Server.Documents.Replication
                             .GetDocumentOrTombstone(
                                 documentsContext,
                                 docPosition.Id);
-                isLocalExists = true;
                 if (relevantLocalDoc.Item1 != null)
                 {
                     conflictedDocs.Add(DocumentConflict.From(relevantLocalDoc.Item1));
-                    storageId = relevantLocalDoc.Item1.StorageId;
                 }
                 else if (relevantLocalDoc.Item2 != null)
                 {
                     conflictedDocs.Add(DocumentConflict.From(relevantLocalDoc.Item2));
-                    storageId = relevantLocalDoc.Item2.StorageId;
                     isTomstone = true;
                 }
             }
@@ -830,8 +805,6 @@ namespace Raven.Server.Documents.Replication
                 ChangeVector = _tempReplicatedChangeVector,
                 Doc = doc
             });
-
-            var patch = new PatchConflict(_database, conflictedDocs);
             var collection = CollectionName.GetCollectionName(docPosition.Id, doc);
 
             ScriptResolver scriptResolver;
@@ -845,60 +818,12 @@ namespace Raven.Server.Documents.Replication
                 return false;
             }
 
-            var patchRequest = new PatchRequest
-            {
-                Script = scriptResolver.Script
-            };
-            BlittableJsonReaderObject resolved;
-            if (patch.TryResolveConflict(documentsContext, patchRequest , out resolved) == false)
-            {
-                if (_log.IsInfoEnabled)
-                {
-                    _log.Info($"Conflict resolution script for {collection} collection declined to resolve the conflict for {docPosition.Id}");
-                }
-                return false;
-            }
-            
-            documentsContext.DocumentDatabase.DocumentsStorage.DeleteConflictsFor(documentsContext, docPosition.Id);
-
-            if (isLocalExists)
-            {
-                documentsContext.DocumentDatabase.DocumentsStorage.DeleteWithoutCreatingTombstone(documentsContext,
-              collection, storageId, isTomstone);
-            }
-
-            var merged = ReplicationUtils.MergeVectors(conflictingVector, _tempReplicatedChangeVector);
-            if (resolved != null)
-            {
-                EnsureCollection(resolved, collection);
-                if (_log.IsInfoEnabled)
-                {
-                    _log.Info($"Conflict resolution script for {collection} collection resolved the conflict for {docPosition.Id}.");
-                }
-
-                _database.DocumentsStorage.Put(
-                    documentsContext,
-                    docPosition.Id,
-                    null,
-                    resolved,
-                    docPosition.LastModifiedTicks,
-                    merged);
-                resolved.Dispose();
-            }
-            else //resolving to tombstone
-            {
-                if (_log.IsInfoEnabled)
-                {
-                    _log.Info($"Conflict resolution script for {collection} collection resolved the conflict for {docPosition.Id} by deleting the document, tombstone created");
-                }
-                _database.DocumentsStorage.AddTombstoneOnReplicationIfRelevant(
-                    documentsContext,
-                    docPosition.Id,
-                    docPosition.LastModifiedTicks,
-                    merged,
-                    collection);
-            }
-            return true;
+            return _database.DocumentsStorage.TryResolveConflictByScriptInternal(
+                documentsContext,
+                scriptResolver,
+                conflictedDocs, 
+                documentsContext.GetDiscardableLazyString(collection), 
+                hasLocalTombstone: isTomstone);
         }
 
         private bool TryResolveUsingDefaultResolver(
@@ -924,52 +849,13 @@ namespace Raven.Server.Documents.Replication
                 LoweredKey = context.GetLazyString(docPosition.Id)
             });
 
-            return TryResolveUsingDefaultResolverInternal(context, _database.DocumentsStorage,conflicts, localDocumentTuple.Item2 != null);
+            return _database.DocumentsStorage.TryResolveUsingDefaultResolverInternal(
+                context , 
+                _parent.ReplicationDocument?.DefaultResolver, 
+                conflicts, 
+                localDocumentTuple.Item2 != null);
         }
-        private bool TryResolveUsingDefaultResolverInternal(
-            DocumentsOperationContext context, 
-            DocumentsStorage storage,
-            IReadOnlyList<DocumentConflict> conflicts,
-            bool hasTombstoneInStorage = false)
-        {
-            var leader = _parent.ReplicationDocument?.DefaultResolver;
-            if (leader?.ResolvingDatabaseId == null)
-            {
-                return false;
-            }
-            
-            DocumentConflict resolved = null;
-            long maxEtag = -1;
-            foreach (var documentConflict in conflicts)
-            {
-                foreach (var changeVectorEntry in documentConflict.ChangeVector)
-                {
-                    if (changeVectorEntry.DbId.Equals(new Guid(leader.ResolvingDatabaseId)))
-                    {
-                        if (changeVectorEntry.Etag == maxEtag)
-                        { 
-                            // we have two documents with same etag of the leader
-                            return false;
-                        }
-
-                        if (changeVectorEntry.Etag < maxEtag)
-                            continue;
-
-                        maxEtag = changeVectorEntry.Etag;
-                        resolved = documentConflict;
-                        break;
-                    }
-                }
-            }
-
-            if (resolved == null)
-                return false;
-
-            resolved.ChangeVector = ReplicationUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
-            PutConflictBackToStorage(context, resolved, hasTombstoneInStorage);          
-            return true;
-        }
-
+        
         private void HandleConflictForDocument(
             DocumentsOperationContext documentsContext,
             ReplicationDocumentsPositions docPosition,
@@ -989,7 +875,7 @@ namespace Raven.Server.Documents.Replication
                 _tempReplicatedChangeVector))
                 return;
 
-            if (TryResolveConflictByScript(
+            if (TryResovleConflictByScript(
                 documentsContext, 
                 docPosition, 
                 conflictingVector, 
@@ -1012,7 +898,17 @@ namespace Raven.Server.Documents.Replication
                             "Detected conflict on replication, but could not figure out conflicted vector. This is not supposed to happen and is likely a bug.");
                     }
 
-                    var conflicts = new List<DocumentConflict>();
+                    var conflicts = new List<DocumentConflict>
+                    {
+                        new DocumentConflict
+                        {
+                            Doc = doc,
+                            Collection = documentsContext.GetLazyString(docPosition.Collection),
+                            LastModified = new DateTime(docPosition.LastModifiedTicks),
+                            LoweredKey = documentsContext.GetLazyString(docPosition.Id),
+                            ChangeVector = _tempReplicatedChangeVector
+                        }
+                    };
                     conflicts.AddRange(documentsContext.DocumentDatabase.DocumentsStorage.GetConflictsFor(
                         documentsContext, docPosition.Id));
                     var localDocumentTuple =
@@ -1024,69 +920,14 @@ namespace Raven.Server.Documents.Replication
                         conflicts.Add(local);
                     }
 
-                    var latestDoc = new DocumentConflict
-                    {
-                        Doc = doc,
-                        Collection = documentsContext.GetLazyString(docPosition.Collection),
-                        LastModified = new DateTime(docPosition.LastModifiedTicks),
-                        LoweredKey = documentsContext.GetLazyString(docPosition.Id)
-                    };
-
-                    var latestTime = docPosition.LastModifiedTicks;
-                    
-                    foreach (var documentConflict in conflicts)
-                    {
-                        if (documentConflict.LastModified.Ticks > latestTime)
-                        {
-                            latestDoc = documentConflict;
-                            latestTime = documentConflict.LastModified.Ticks;
-                        }
-                    }
-
-                    var mergedChangeVector = ReplicationUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
-                    mergedChangeVector = ReplicationUtils.MergeVectors(mergedChangeVector, _tempReplicatedChangeVector);
-                    latestDoc.ChangeVector = mergedChangeVector;
-
-                    PutConflictBackToStorage(documentsContext, latestDoc, local != null && local.Doc == null);
-                    
+                    _database.DocumentsStorage.ResolveToLatest(documentsContext, conflicts, local != null && local.Doc == null);
                     break;
                  default:
-                    _database.DocumentsStorage.AddConflict(documentsContext, docPosition.Id, doc, _tempReplicatedChangeVector, docPosition.Collection);
+                    _database.DocumentsStorage.AddConflict(documentsContext, docPosition, doc, _tempReplicatedChangeVector, docPosition.Collection);
                     break;
             }
         }
-
-        private void PutConflictBackToStorage(
-            DocumentsOperationContext ctx, 
-            DocumentConflict conflict,
-            bool hasLocalAsTombstone)
-        {
-            if (conflict.Doc == null)
-            {
-                if (hasLocalAsTombstone) // local document is a tombstone
-                {
-                    // update change vector
-                    _database.DocumentsStorage.AddTombstoneOnReplicationIfRelevant(
-                    ctx, conflict.LoweredKey, DateTime.UtcNow.Ticks, conflict.ChangeVector, conflict.Collection);
-                    return;
-                }
-                // the resolved document is a tombstone
-                _database.DocumentsStorage.DeleteConflictsFor(ctx, conflict.LoweredKey);
-                _database.DocumentsStorage.AddTombstoneOnReplicationIfRelevant(
-                    ctx, conflict.LoweredKey, DateTime.UtcNow.Ticks, conflict.ChangeVector, conflict.Collection);
-                return;
-            }
-
-            // because we are resolving to a conflict, and putting a document will
-            // delete all the conflicts, we have to create a copy of the document
-            // in order to avoid the data we are saving from being removed while
-            // we are saving it
-            using (var clone = conflict.Doc.Clone(ctx))
-            {
-                _database.DocumentsStorage.Put(ctx, conflict.LoweredKey, null, clone, null, conflict.ChangeVector);
-            }
-        }
-
+        
         private void HandleHiloConflict(DocumentsOperationContext context, ReplicationDocumentsPositions docPosition,
             BlittableJsonReaderObject doc)
         {

@@ -18,6 +18,7 @@ using Sparrow.Logging;
 
 using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Document;
+using Sparrow;
 
 
 namespace Raven.Server.Documents.Replication
@@ -292,10 +293,86 @@ namespace Raven.Server.Documents.Replication
 
             InitializeOutgoingReplications();
             InitializeResolvers();
+
+           _resolverThread = new Thread(ResolveConflictsInBackground)
+            {
+               IsBackground = true,
+                Name = $"Automatic resolver at {_database.Name}"
+            };
+            _resolverThread.Start();
+        }
+
+        private readonly ManualResetEvent _resolveConflictsInBackground = new ManualResetEvent(true); // resolve on start-up
+        private Thread _resolverThread;
+        private const int ResolutionBatchSize = 1000;
+
+        private void ResolveConflictsInBackground()
+        {
+            DocumentsOperationContext context;
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            {
+                while (!_cts.IsCancellationRequested)
+                {
+                    int resolvedDocs = 0;
+                    _resolveConflictsInBackground.WaitOne();
+                    if (_cts.IsCancellationRequested)
+                        return;
+                    _resolveConflictsInBackground.Reset();
+                    using (var tx = context.OpenWriteTransaction())
+                    {
+                        foreach (
+                            var conflictList in
+                            _database.DocumentsStorage.GetAllConflictsSortedByKey(context))
+                        {
+                            var collection = conflictList[0].Collection;
+                            ScriptResolver scriptResovler;
+                            ScriptConflictResolversCache.TryGetValue(collection, out scriptResovler);
+                            if (_database.DocumentsStorage.TryResolveConflictByScriptInternal(
+                                context,
+                                scriptResovler,
+                                conflictList,
+                                collection,
+                                hasLocalTombstone: false))
+                            {
+
+                            }
+
+                            else if (_database.DocumentsStorage.TryResolveUsingDefaultResolverInternal(
+                                context,
+                                ReplicationDocument.DefaultResolver,
+                                conflictList,
+                                hasTombstoneInStorage: false))
+                            {
+                                
+                            }
+
+                            else if (ReplicationDocument.DocumentConflictResolution ==
+                                     StraightforwardConflictResolution.ResolveToLatest)
+                            {
+                                _database.DocumentsStorage.ResolveToLatest(context, conflictList, false);
+                            }
+                            resolvedDocs += conflictList.Count;
+                            if (resolvedDocs > ResolutionBatchSize)
+                            {
+                                // we will complete the resolution after the lock is free again.
+                                _resolveConflictsInBackground.Set();
+                                break;
+                            }
+                            if (_cts.IsCancellationRequested)
+                            {
+                                break;
+                            }
+                            
+                        }
+                        tx.Commit();
+                    }
+                }
+            }
         }
 
         private void InitializeResolvers()
         {
+            var hasChanges = false;
             if (ReplicationDocument?.ResolveByCollection == null)
             {
                 if (ScriptConflictResolversCache.Count > 0)
@@ -311,12 +388,18 @@ namespace Raven.Server.Documents.Replication
                 {
                     continue;
                 }
+                hasChanges = !ScriptConflictResolversCache.ContainsKey(collection) || 
+                    String.Compare(ScriptConflictResolversCache[collection].Script, script, StringComparison.Ordinal) != 0;
                 copy[collection] = new ScriptResolver
                 {
                     Script = script
                 };
             }
             ScriptConflictResolversCache = copy;
+            if (hasChanges)
+            {
+                _resolveConflictsInBackground.Set();
+            }
         }
 
         private void InitializeOutgoingReplications()
@@ -354,6 +437,11 @@ namespace Raven.Server.Documents.Replication
 
             if (_log.IsInfoEnabled)
                 _log.Info("Finished initialization of outgoing replications..");
+
+            if (ReplicationDocument?.DocumentConflictResolution != StraightforwardConflictResolution.None)
+            {
+                _resolveConflictsInBackground.Set();
+            }
         }
         private void AddAndStartOutgoingReplication(ReplicationDestination destination)
         {
@@ -461,7 +549,7 @@ namespace Raven.Server.Documents.Replication
             InitializeOutgoingReplications();
 
             InitializeResolvers();
-
+            
             if (_log.IsInfoEnabled)
                 _log.Info($"Replication configuration was changed: {change.Key}");
         }
@@ -528,6 +616,8 @@ namespace Raven.Server.Documents.Replication
 
                 context.Transaction.Commit();// will force reload of all connections as side affect
             }
+            ReplicationDocument = GetReplicationDocument();
+            _resolveConflictsInBackground.Set();
         }
 
         private void ThrowConflictingResolvers(string uid, int? version, string existingResolverDbId)
@@ -572,7 +662,10 @@ namespace Raven.Server.Documents.Replication
 
             foreach (var outgoing in _outgoing)
                 outgoing.Dispose();
-
+            
+            _resolveConflictsInBackground.Set();
+            _resolverThread.Join();
+            
         }
 
         public class IncomingConnectionRejectionInfo
