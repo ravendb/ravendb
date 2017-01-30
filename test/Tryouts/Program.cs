@@ -37,9 +37,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new FastTests.Voron.Backups.BackupToOneZipFile())
+                using (var a = new FastTests.Server.Replication.ManualConflictResolution())
                 {
-                    a.IncrementalBackupToOneZipFile();
+                    a.CanManuallyResolveConflict();
                 }
             }
         }

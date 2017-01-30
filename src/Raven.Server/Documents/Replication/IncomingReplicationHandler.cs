@@ -767,29 +767,27 @@ namespace Raven.Server.Documents.Replication
 
         private void EnsureCollection(BlittableJsonReaderObject obj,string collection)
         {
-            DynamicJsonValue mutatedMetadata;
+            string actualCollection;
             BlittableJsonReaderObject metadata;
-            if (obj.TryGet(Constants.Metadata.Key, out metadata))
+            if (obj.TryGet(Constants.Metadata.Key, out metadata) == false ||
+                metadata.TryGet(Constants.Metadata.Collection, out actualCollection) == false || 
+                actualCollection != collection)
             {
-                if (metadata.Modifications == null)
-                    metadata.Modifications = new DynamicJsonValue(metadata);
+                if (collection == CollectionName.EmptyCollection)
+                    return;
 
-                mutatedMetadata = metadata.Modifications;
-            }
-            else
-            {
-                obj.Modifications = new DynamicJsonValue(obj)
-                {
-                    [Constants.Metadata.Key] = mutatedMetadata = new DynamicJsonValue()
-                };
-            }
-            if (mutatedMetadata[Constants.Metadata.Collection] == null)
-            {
-                mutatedMetadata[Constants.Metadata.Collection] = collection;
+                ThrowInvalidCollectionAfterResolve(collection, null);
             }
         }
-        
-        public bool TryResovleConflictByScript(
+
+        private static void ThrowInvalidCollectionAfterResolve(string collection, string actual)
+        {
+            throw new InvalidOperationException(
+                "Resolving script did not setup the appropriate '@collection'. Expeted " + collection + " but got " +
+                actual);
+        }
+
+        public bool TryResolveConflictByScript(
             DocumentsOperationContext documentsContext,
             ReplicationDocumentsPositions docPosition,
             ChangeVectorEntry[] conflictingVector,
@@ -991,7 +989,7 @@ namespace Raven.Server.Documents.Replication
                 _tempReplicatedChangeVector))
                 return;
 
-            if (TryResovleConflictByScript(
+            if (TryResolveConflictByScript(
                 documentsContext, 
                 docPosition, 
                 conflictingVector, 
