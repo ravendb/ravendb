@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
 using Raven.NewClient.Client.Commands;
@@ -15,6 +16,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
@@ -334,6 +336,30 @@ namespace Raven.Server.Utils
                 DbId = kvp.Key,
                 Etag = kvp.Value
             }).ToArray();
+        }
+
+        public static void EnsureCollectionTag(BlittableJsonReaderObject obj, string collection)
+        {
+            DynamicJsonValue mutatedMetadata;
+            BlittableJsonReaderObject metadata;
+            if (obj.TryGet(Constants.Metadata.Key, out metadata))
+            {
+                if (metadata.Modifications == null)
+                    metadata.Modifications = new DynamicJsonValue(metadata);
+
+                mutatedMetadata = metadata.Modifications;
+            }
+            else
+            {
+                obj.Modifications = new DynamicJsonValue(obj)
+                {
+                    [Constants.Metadata.Key] = mutatedMetadata = new DynamicJsonValue()
+                };
+            }
+            if (mutatedMetadata[Constants.Metadata.Collection] == null)
+            {
+                mutatedMetadata[Constants.Metadata.Collection] = collection;
+            }
         }
 
         private static bool TryFindEtagByDbId(this ChangeVectorEntry[] changeVector, Guid dbId, out long etag)

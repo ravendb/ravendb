@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using Raven.Abstractions.Data;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Voron;
 
 namespace Raven.Server.Documents
@@ -153,13 +154,19 @@ namespace Raven.Server.Documents
         {
             string collectionName;
             BlittableJsonReaderObject metadata;
+           
             if (document == null || 
                 document.TryGet(Constants.Metadata.Key, out metadata) == false ||
                 metadata.TryGet(Constants.Metadata.Collection, out collectionName) == false)
             {
                 collectionName = EmptyCollection;
             }
-            return collectionName;
+
+            if (document?.Modifications?[Constants.Metadata.Key] == null)
+                return collectionName;
+
+            var collection = (DynamicJsonValue)document.Modifications[Constants.Metadata.Key];
+            return (string)collection[Constants.Metadata.Collection];
         }
 
         public static string GetTablePrefix(CollectionTableType type)
