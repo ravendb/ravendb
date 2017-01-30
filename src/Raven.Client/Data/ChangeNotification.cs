@@ -1,16 +1,15 @@
 // -----------------------------------------------------------------------
-//  <copyright file="ChangeNotification.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="CounterChange.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
 
 using System;
 using Raven.Client.Data;
-using Raven.Imports.Newtonsoft.Json;
 
 namespace Raven.Abstractions.Data
 {
-    public class BulkInsertChangeNotification : DocumentChangeNotification
+    public class BulkInsertChange : DocumentChange
     {
         /// <summary>
         /// BulkInsert operation Id.
@@ -18,7 +17,7 @@ namespace Raven.Abstractions.Data
         public Guid OperationId { get; set; }
     }
 
-    public class DocumentChangeNotification : Notification
+    public class DocumentChange : DatabaseChange
     {
         /// <summary>
         /// Type of change that occurred on document.
@@ -98,7 +97,7 @@ namespace Raven.Abstractions.Data
         TransformerRemoved = 2
     }
 
-    public class IndexChangeNotification : Notification
+    public class IndexChange : DatabaseChange
     {
         /// <summary>
         /// Type of change that occurred on index.
@@ -121,7 +120,7 @@ namespace Raven.Abstractions.Data
         }
     }
 
-    public class TransformerChangeNotification : Notification
+    public class TransformerChange : DatabaseChange
     {
         /// <summary>
         /// Type of change that occurred on transformer.
@@ -141,7 +140,7 @@ namespace Raven.Abstractions.Data
         }
     }
 
-    public class ReplicationConflictNotification : Notification
+    public class ReplicationConflictChange : DatabaseChange
     {
         /// <summary>
         /// Type of conflict that occurred (None, DocumentReplicationConflict).
@@ -191,7 +190,7 @@ namespace Raven.Abstractions.Data
         Delete = 2,
     }
 
-    public class TrafficWatchNotification : Notification
+    public class TrafficWatchChange : DatabaseChange
     {
         public DateTime TimeStamp { get; set; }
         public int RequestId { get; set; }
@@ -206,7 +205,7 @@ namespace Raven.Abstractions.Data
         public object QueryTimings { get; set; } // TODO: fix this
     }
 
-    public class DataSubscriptionChangeNotification : EventArgs
+    public class DataSubscriptionChange : EventArgs
     {
         /// <summary>
         /// Subscription identifier for which a notification was created

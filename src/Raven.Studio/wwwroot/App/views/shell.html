@@ -10,8 +10,8 @@
         <div id="navbar">
             <ul class="nav navbar-nav navbar-right">
                 <li data-bind="with: notificationCenter">
-                    <a title="Notifications center" href="#" id="notification-toggle" class="btn-toggle" data-bind="{ click: showNotifications.toggle.bind(showNotifications), css: { 'active': showNotifications() } }">
-                        <span class="icon-notifications"></span>
+                    <a title="Changes center" href="#" id="notification-toggle" class="btn-toggle" data-bind="{ click: showChanges.toggle.bind(showChanges), css: { 'active': showChanges() } }">
+                        <span class="icon-changes"></span>
                         <span class="notification-counter show" data-bind="text: totalItemsCount(), attr: { 'data-count': totalItemsCount() }, css: { 'show': alertCountAnimation() }"></span>
                     </a>
                 </li>
@@ -153,7 +153,7 @@
     </div>
 </nav>
 
-<div class="notification-center-container" data-bind="compose: 'notifications/notificationCenter.html'"></div>
+<div class="notification-center-container" data-bind="compose: 'changes/notificationCenter.html'"></div>
 
 <div id="page-host-root" class="container-fluid content-container">
     <div class="content-container-margin">

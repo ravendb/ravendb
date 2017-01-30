@@ -980,7 +980,7 @@ namespace Raven.Server.Documents
             }
             table.Delete(doc.StorageId);
 
-            context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
+            context.Transaction.AddAfterCommitNotification(new DocumentChange
             {
                 Type = DocumentChangeTypes.Delete,
                 Etag = expectedEtag,
@@ -1089,7 +1089,7 @@ namespace Raven.Server.Documents
                         docsTable.Delete(doc.StorageId);
                     }
 
-                    context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
+                    context.Transaction.AddAfterCommitNotification(new DocumentChange
                     {
                         Type = DocumentChangeTypes.DeleteOnTombstoneReplication,
                         Etag = _lastEtag,
@@ -1550,7 +1550,7 @@ namespace Raven.Server.Documents
 
             }
 
-            context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
+            context.Transaction.AddAfterCommitNotification(new DocumentChange
             {
                 Etag = _lastEtag,
                 CollectionName = collectionName.Name,
@@ -1723,7 +1723,7 @@ namespace Raven.Server.Documents
                 _documentDatabase.Metrics.BytesPutsPerSecond.MarkSingleThreaded(document.Size);
             }
 
-            context.Transaction.AddAfterCommitNotification(new DocumentChangeNotification
+            context.Transaction.AddAfterCommitNotification(new DocumentChange
             {
                 Etag = newEtag,
                 CollectionName = collectionName.Name,

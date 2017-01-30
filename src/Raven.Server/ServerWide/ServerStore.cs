@@ -35,7 +35,7 @@ namespace Raven.Server.ServerWide
 
         private StorageEnvironment _env;
 
-        private readonly ActionsStorage _actionsStorage;
+        private readonly NotificationsStorage _notificationsStorage;
 
         private static readonly TableSchema _itemsSchema;
         
@@ -87,9 +87,9 @@ namespace Raven.Server.ServerWide
             _logger = LoggingSource.Instance.GetLogger<ServerStore>(resourceName);
             DatabasesLandlord = new DatabasesLandlord(this);
 
-            _actionsStorage = new ActionsStorage(resourceName);
+            _notificationsStorage = new NotificationsStorage(resourceName);
 
-            NotificationCenter = new NotificationCenter.NotificationCenter(_actionsStorage, resourceName, ServerShutdown);
+            NotificationCenter = new NotificationCenter.NotificationCenter(_notificationsStorage, resourceName, ServerShutdown);
 
             DatabaseInfoCache = new DatabaseInfoCache();
 
@@ -152,7 +152,7 @@ namespace Raven.Server.ServerWide
 
             ContextPool = new TransactionContextPool(_env);
             _timer = new Timer(IdleOperations, null, _frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
-            _actionsStorage.Initialize(_env, ContextPool);
+            _notificationsStorage.Initialize(_env, ContextPool);
             DatabaseInfoCache.Initialize(_env, ContextPool);
             LicenseStorage.Initialize(_env, ContextPool);
             NotificationCenter.Initialize();

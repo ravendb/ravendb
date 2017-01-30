@@ -70,7 +70,7 @@ namespace Raven.Server
                 {
                     var requestId = Interlocked.Increment(ref _requestId);
 
-                    var twn = new TrafficWatchNotification
+                    var twn = new TrafficWatchChange
                     {
                         TimeStamp = DateTime.UtcNow,
                         RequestId = requestId, // counted only for traffic watch

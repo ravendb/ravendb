@@ -12,7 +12,7 @@ using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Connection
 {
-    public class Operation : IObserver<OperationStatusChangeNotification>
+    public class Operation : IObserver<OperationStatusChange>
     {
         private readonly RequestExecuter _requestExecuter;
         private readonly DocumentConvention _conventions;
@@ -71,32 +71,32 @@ namespace Raven.NewClient.Client.Connection
 
             await _requestExecuter.ExecuteAsync(command, _context);
 
-            OnNext(new OperationStatusChangeNotification
+            OnNext(new OperationStatusChange
             {
                 OperationId = _id,
                 State = command.Result
             });
         }
 
-        public void OnNext(OperationStatusChangeNotification notification)
+        public void OnNext(OperationStatusChange change)
         {
             var onProgress = OnProgressChanged;
 
-            switch (notification.State.Status)
+            switch (change.State.Status)
             {
                 case OperationStatus.InProgress:
-                    if (onProgress != null && notification.State.Progress != null)
+                    if (onProgress != null && change.State.Progress != null)
                     {
-                        onProgress(notification.State.Progress);
+                        onProgress(change.State.Progress);
                     }
                     break;
                 case OperationStatus.Completed:
                     _work = false;
-                    _result.TrySetResult(notification.State.Result);
+                    _result.TrySetResult(change.State.Result);
                     break;
                 case OperationStatus.Faulted:
                     _work = false;
-                    var exceptionResult = (OperationExceptionResult)notification.State.Result;
+                    var exceptionResult = (OperationExceptionResult)change.State.Result;
                     _result.TrySetException(ExceptionDispatcher.Get(exceptionResult.Message, exceptionResult.Error, exceptionResult.Type, exceptionResult.StatusCode));
                     break;
                 case OperationStatus.Canceled:

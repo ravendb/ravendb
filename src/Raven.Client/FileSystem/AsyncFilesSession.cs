@@ -12,7 +12,7 @@ using Raven.Abstractions.Util;
 
 namespace Raven.Client.FileSystem
 {
-    public class AsyncFilesSession : InMemoryFilesSessionOperations, IAsyncFilesSession, IAsyncAdvancedFilesSessionOperations, IObserver<ConflictNotification>
+    public class AsyncFilesSession : InMemoryFilesSessionOperations, IAsyncFilesSession, IAsyncAdvancedFilesSessionOperations, IObserver<ConflictChange>
     {
         private IDisposable conflictCacheRemoval; 
 
@@ -162,7 +162,7 @@ namespace Raven.Client.FileSystem
         {
         }
 
-        public void OnNext(ConflictNotification value)
+        public void OnNext(ConflictChange value)
         {
             if ( value.Status == ConflictStatus.Detected)
             {

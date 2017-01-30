@@ -6,9 +6,8 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
-using Raven.Server.NotificationCenter.Actions;
-using Raven.Server.NotificationCenter.Actions.Details;
-using Raven.Server.NotificationCenter.Alerts;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Platform;
@@ -206,7 +205,7 @@ namespace Raven.Server.Documents.Transformers
 
             transformer.Delete();
             var tombstoneEtag = _documentDatabase.IndexMetadataPersistence.OnTransformerDeleted(transformer);
-            _documentDatabase.Notifications.RaiseNotifications(new TransformerChangeNotification
+            _documentDatabase.Changes.RaiseNotifications(new TransformerChange
             {
                 Name = transformer.Name,
                 Type = TransformerChangeTypes.TransformerRemoved,
@@ -221,7 +220,7 @@ namespace Raven.Server.Documents.Transformers
 
             _transformers.Add(transformer);
             var etag = _documentDatabase.IndexMetadataPersistence.OnTransformerCreated(transformer);
-            _documentDatabase.Notifications.RaiseNotifications(new TransformerChangeNotification
+            _documentDatabase.Changes.RaiseNotifications(new TransformerChange
             {
                 Name = transformer.Name,
                 Type = TransformerChangeTypes.TransformerAdded,

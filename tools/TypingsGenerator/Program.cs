@@ -16,8 +16,8 @@ using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.Documents.SqlReplication;
 using Raven.Server.Documents.PeriodicExport;
-using Raven.Server.NotificationCenter.Actions;
-using Raven.Server.NotificationCenter.Actions.Server;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Server;
 using Sparrow.Json;
 using TypeScripter;
 using TypeScripter.TypeScript;
@@ -82,14 +82,14 @@ namespace TypingsGenerator
             scripter.AddType(typeof(OperationChanged));
             scripter.AddType(typeof(ResourceChanged));
 
-            // notifications
-            scripter.AddType(typeof(OperationStatusChangeNotification));
+            // changes
+            scripter.AddType(typeof(OperationStatusChanged));
             scripter.AddType(typeof(DeterminateProgress));
             scripter.AddType(typeof(IndeterminateProgress));
             scripter.AddType(typeof(OperationExceptionResult));
-            scripter.AddType(typeof(DocumentChangeNotification));
-            scripter.AddType(typeof(IndexChangeNotification));
-            scripter.AddType(typeof(TransformerChangeNotification));
+            scripter.AddType(typeof(DocumentChange));
+            scripter.AddType(typeof(IndexChange));
+            scripter.AddType(typeof(TransformerChange));
             scripter.AddType(typeof(DatabaseOperations.Operation));
             
             // indexes

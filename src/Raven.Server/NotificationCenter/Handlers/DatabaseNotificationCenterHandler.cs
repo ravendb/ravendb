@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Server.Documents;
-using Raven.Server.NotificationCenter.Actions;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Routing;
 
 namespace Raven.Server.NotificationCenter.Handlers
@@ -18,11 +18,11 @@ namespace Raven.Server.NotificationCenter.Handlers
             {
                 using (var writer = new NotificationCenterWebsocketWriter(webSocket, Database.NotificationCenter, ContextPool, Database.DatabaseShutdown))
                 {
-                    IEnumerable<ActionTableValue> storedActions;
+                    IEnumerable<NotificationTableValue> storedNotifications;
 
-                    using (Database.NotificationCenter.GetStored(out storedActions, postponed: false))
+                    using (Database.NotificationCenter.GetStored(out storedNotifications, postponed: false))
                     {
-                        foreach (var alert in storedActions)
+                        foreach (var alert in storedNotifications)
                         {
                             await writer.WriteToWebSocket(alert.Json);
                         }

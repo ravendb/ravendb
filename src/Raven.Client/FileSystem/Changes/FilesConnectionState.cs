@@ -20,36 +20,36 @@ namespace Raven.Client.FileSystem.Changes
             return ensureConnection(this);
         }
 
-        public event Action<ConfigurationChangeNotification> OnConfigurationChangeNotification = (x) => { };
-        public void Send(ConfigurationChangeNotification configurationChangeNotification)
+        public event Action<ConfigurationChange> OnConfigurationChangeNotification = (x) => { };
+        public void Send(ConfigurationChange configurationChange)
         {
             var onConfigurationChangeNotification = OnConfigurationChangeNotification;
             if (onConfigurationChangeNotification != null)
-                onConfigurationChangeNotification(configurationChangeNotification);
+                onConfigurationChangeNotification(configurationChange);
         }
 
-        public event Action<ConflictNotification> OnConflictsNotification = (x) => { };
-        public void Send(ConflictNotification conflictsNotification)
+        public event Action<ConflictChange> OnConflictsNotification = (x) => { };
+        public void Send(ConflictChange conflictsChange)
         {
             var onConflictNotification = OnConflictsNotification;
             if (onConflictNotification != null)
-                onConflictNotification(conflictsNotification);
+                onConflictNotification(conflictsChange);
         }
 
-        public event Action<SynchronizationUpdateNotification> OnSynchronizationNotification = (x) => { };
-        public void Send(SynchronizationUpdateNotification synchronizationNotification)
+        public event Action<SynchronizationUpdateChange> OnSynchronizationNotification = (x) => { };
+        public void Send(SynchronizationUpdateChange synchronizationChange)
         {
             var onSynchronizationNotification = OnSynchronizationNotification;
             if (onSynchronizationNotification != null)
-                onSynchronizationNotification(synchronizationNotification);
+                onSynchronizationNotification(synchronizationChange);
         }
 
-        public event Action<FileChangeNotification> OnFileChangeNotification = (x) => { };
-        public void Send(FileChangeNotification fileChangeNotification)
+        public event Action<FileChange> OnFileChangeNotification = (x) => { };
+        public void Send(FileChange fileChange)
         {
             var onFileChangeNotification = OnFileChangeNotification;
             if (onFileChangeNotification != null)
-                onFileChangeNotification(fileChangeNotification);
+                onFileChangeNotification(fileChange);
         }
     }
 }

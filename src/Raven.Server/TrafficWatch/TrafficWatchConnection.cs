@@ -30,7 +30,7 @@ namespace Raven.Server.TrafficWatch
         private readonly CancellationTokenSource _cancellationTokenSource;
 
 
-        private readonly ConcurrentQueue<TrafficWatchNotification> _msgs = new ConcurrentQueue<TrafficWatchNotification>();
+        private readonly ConcurrentQueue<TrafficWatchChange> _msgs = new ConcurrentQueue<TrafficWatchChange>();
         private readonly MemoryStream _bufferStream = new MemoryStream();
 
         public TrafficWatchConnection(WebSocket webSocket, CancellationToken ctk, string resourceName)
@@ -59,7 +59,7 @@ namespace Raven.Server.TrafficWatch
 
                     _manualResetEvent.Reset();
 
-                    TrafficWatchNotification message;
+                    TrafficWatchChange message;
                     while (_msgs.TryDequeue(out message))
                     {
                         if (_cancellationTokenSource.IsCancellationRequested)
@@ -88,20 +88,20 @@ namespace Raven.Server.TrafficWatch
             }
         }
 
-        private ArraySegment<byte> ToByteArraySegment(TrafficWatchNotification notification)
+        private ArraySegment<byte> ToByteArraySegment(TrafficWatchChange change)
         {
             var json = new DynamicJsonValue
             {
-                ["TimeStamp"] = notification.TimeStamp,
-                ["RequestId"] = notification.RequestId,
-                ["HttpMethod"] = notification.HttpMethod,
-                ["ElapsedMilliseconds"] = notification.ElapsedMilliseconds,
-                ["ResponseStatusCode"] = notification.ResponseStatusCode,
-                ["RequestUri"] = notification.RequestUri,
-                ["AbsoluteUri"] = notification.AbsoluteUri,
-                ["TenantName"] = notification.TenantName,
-                ["CustomInfo"] = notification.CustomInfo,
-                ["InnerRequestsCount"] = notification.InnerRequestsCount,
+                ["TimeStamp"] = change.TimeStamp,
+                ["RequestId"] = change.RequestId,
+                ["HttpMethod"] = change.HttpMethod,
+                ["ElapsedMilliseconds"] = change.ElapsedMilliseconds,
+                ["ResponseStatusCode"] = change.ResponseStatusCode,
+                ["RequestUri"] = change.RequestUri,
+                ["AbsoluteUri"] = change.AbsoluteUri,
+                ["TenantName"] = change.TenantName,
+                ["CustomInfo"] = change.CustomInfo,
+                ["InnerRequestsCount"] = change.InnerRequestsCount,
                 //["QueryTimings"] = notification.QueryTimings // TODO :: implement this
             };
 
@@ -130,7 +130,7 @@ namespace Raven.Server.TrafficWatch
             await _websocket.SendAsync(message, WebSocketMessageType.Text, true, _cancellationTokenSource.Token);
         }
 
-        public void EnqueMsg(TrafficWatchNotification msg)
+        public void EnqueMsg(TrafficWatchChange msg)
         {
             _msgs.Enqueue(msg);
             _manualResetEvent.Set();

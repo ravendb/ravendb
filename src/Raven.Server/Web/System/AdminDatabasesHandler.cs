@@ -15,7 +15,7 @@ using Raven.Abstractions.Data;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Json;
-using Raven.Server.NotificationCenter.Actions.Server;
+using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;

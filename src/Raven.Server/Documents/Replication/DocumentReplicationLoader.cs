@@ -288,7 +288,7 @@ namespace Raven.Server.Documents.Replication
 
             _isInitialized = true;
 
-            _database.Notifications.OnSystemDocumentChange += OnSystemDocumentChange;
+            _database.Changes.OnSystemDocumentChange += OnSystemDocumentChange;
 
             InitializeOutgoingReplications();
             InitializeResolvers();
@@ -437,9 +437,9 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void OnSystemDocumentChange(DocumentChangeNotification notification)
+        private void OnSystemDocumentChange(DocumentChange change)
         {
-            if (!notification.Key.Equals(Constants.Replication.DocumentReplicationConfiguration, StringComparison.OrdinalIgnoreCase))
+            if (!change.Key.Equals(Constants.Replication.DocumentReplicationConfiguration, StringComparison.OrdinalIgnoreCase))
                 return;
 
             if (_log.IsInfoEnabled)
@@ -463,7 +463,7 @@ namespace Raven.Server.Documents.Replication
             InitializeResolvers();
 
             if (_log.IsInfoEnabled)
-                _log.Info($"Replication configuration was changed: {notification.Key}");
+                _log.Info($"Replication configuration was changed: {change.Key}");
         }
 
         internal void UpdateReplicationDocumentWithResolver(string uid, int? version)
@@ -567,7 +567,7 @@ namespace Raven.Server.Documents.Replication
             _cts.Cancel();
             _reconnectAttemptTimer.Dispose();
 
-            _database.Notifications.OnSystemDocumentChange -= OnSystemDocumentChange;
+            _database.Changes.OnSystemDocumentChange -= OnSystemDocumentChange;
 
             if (_log.IsInfoEnabled)
                 _log.Info("Closing and disposing document replication connections.");

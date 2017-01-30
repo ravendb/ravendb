@@ -8,14 +8,12 @@ using Raven.Abstractions.Extensions;
 using Raven.Client.Data;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter;
-using Raven.Server.NotificationCenter.Actions;
-using Raven.Server.NotificationCenter.Actions.Details;
-using Raven.Server.NotificationCenter.Alerts;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
-using Action = Raven.Server.NotificationCenter.Actions.Action;
 
 namespace FastTests.Server.NotificationCenter
 {
@@ -26,7 +24,7 @@ namespace FastTests.Server.NotificationCenter
         {
             using (var database = CreateDocumentDatabase())
             {
-                var actions = new AsyncQueue<Action>();
+                var actions = new AsyncQueue<Notification>();
                 var writer = new TestWebSockerWriter();
 
                 using (database.NotificationCenter.TrackActions(actions, writer))
@@ -49,7 +47,7 @@ namespace FastTests.Server.NotificationCenter
 
                 database.NotificationCenter.Add(alert);
 
-                IEnumerable<ActionTableValue> actions;
+                IEnumerable<NotificationTableValue> actions;
                 using (database.NotificationCenter.GetStored(out actions))
                 {
                     var jsonAlerts = actions.ToList();
@@ -88,7 +86,7 @@ namespace FastTests.Server.NotificationCenter
                 var alert2 = GetSampleAlert(customMessage: "updated");
                 database.NotificationCenter.Add(alert2);
 
-                IEnumerable<ActionTableValue> alerts;
+                IEnumerable<NotificationTableValue> alerts;
                 using (database.NotificationCenter.GetStored(out alerts))
                 {
                     var jsonAlerts = alerts.ToList();
@@ -121,7 +119,7 @@ namespace FastTests.Server.NotificationCenter
                 var alert2 = GetSampleAlert();
                 database.NotificationCenter.Add(alert2);
 
-                IEnumerable<ActionTableValue> alerts;
+                IEnumerable<NotificationTableValue> alerts;
                 using (database.NotificationCenter.GetStored(out alerts))
                 {
                     var jsonAlerts = alerts.ToList();
@@ -148,7 +146,7 @@ namespace FastTests.Server.NotificationCenter
 
                 var postponeUntil = SystemTime.UtcNow.AddDays(1);
 
-                var actions = new AsyncQueue<Action>();
+                var actions = new AsyncQueue<Notification>();
                 var writer = new TestWebSockerWriter();
 
                 using (database.NotificationCenter.TrackActions(actions, writer))
@@ -162,7 +160,7 @@ namespace FastTests.Server.NotificationCenter
                 Assert.Equal(alert.Id, notification.ActionId);
                 Assert.Equal(NotificationUpdateType.Postponed, notification.UpdateType);
 
-                IEnumerable<ActionTableValue> alerts;
+                IEnumerable<NotificationTableValue> alerts;
                 using (database.NotificationCenter.GetStored(out alerts))
                 {
                     var jsonAlerts = alerts.ToList();
@@ -189,14 +187,14 @@ namespace FastTests.Server.NotificationCenter
 
                 database.NotificationCenter.Add(alert);
 
-                var actions = new AsyncQueue<Action>();
+                var actions = new AsyncQueue<Notification>();
                 var writer = new TestWebSockerWriter();
 
                 using (database.NotificationCenter.TrackActions(actions, writer))
                 {
                     database.NotificationCenter.Dismiss(alert.Id);
 
-                    IEnumerable<ActionTableValue> alerts;
+                    IEnumerable<NotificationTableValue> alerts;
                     using (database.NotificationCenter.GetStored(out alerts))
                     {
                         var jsonAlerts = alerts.ToList();
@@ -243,7 +241,7 @@ namespace FastTests.Server.NotificationCenter
 
                 database.NotificationCenter.Add(alert);
 
-                var actions = new AsyncQueue<Action>();
+                var actions = new AsyncQueue<Notification>();
                 var writer = new TestWebSockerWriter();
 
                 using (database.NotificationCenter.TrackActions(actions, writer))
@@ -252,7 +250,7 @@ namespace FastTests.Server.NotificationCenter
 
                     database.NotificationCenter.Postpone(alert.Id, postponeUntil);
 
-                    IEnumerable<ActionTableValue> alerts;
+                    IEnumerable<NotificationTableValue> alerts;
                     using (database.NotificationCenter.GetStored(out alerts, postponed: false))
                     {
                         var jsonAlerts = alerts.ToList();
@@ -275,14 +273,14 @@ namespace FastTests.Server.NotificationCenter
                 database.NotificationCenter.Add(alert1);
                 database.NotificationCenter.Add(alert2);
 
-                IEnumerable<ActionTableValue> alerts;
+                IEnumerable<NotificationTableValue> alerts;
                 using (database.NotificationCenter.GetStored(out alerts))
                 {
                     var jsonAlerts = alerts.ToList();
 
                     Assert.Equal(2, jsonAlerts.Count);
-                    Assert.Equal(alert1.Id, jsonAlerts[0].Json[nameof(Action.Id)].ToString());
-                    Assert.Equal(alert2.Id, jsonAlerts[1].Json[nameof(Action.Id)].ToString());
+                    Assert.Equal(alert1.Id, jsonAlerts[0].Json[nameof(Notification.Id)].ToString());
+                    Assert.Equal(alert2.Id, jsonAlerts[1].Json[nameof(Notification.Id)].ToString());
                 }
             }
         }
@@ -295,7 +293,7 @@ namespace FastTests.Server.NotificationCenter
                 var alert = GetSampleAlert();
                 database.NotificationCenter.Add(alert);
 
-                var actions = new AsyncQueue<Action>();
+                var actions = new AsyncQueue<Notification>();
                 var writer = new TestWebSockerWriter();
 
                 using (database.NotificationCenter.TrackActions(actions, writer))
@@ -324,7 +322,7 @@ namespace FastTests.Server.NotificationCenter
 
                 database.NotificationCenter.Postpone(alert.Id, SystemTime.UtcNow.AddDays(1));
 
-                var actions = new AsyncQueue<Action>();
+                var actions = new AsyncQueue<Notification>();
                 var writer = new TestWebSockerWriter();
                 
                 using (database.NotificationCenter.TrackActions(actions, writer))
@@ -348,7 +346,7 @@ namespace FastTests.Server.NotificationCenter
                     Result = new PersistableResult()
                 }, false));
 
-                IEnumerable<ActionTableValue> actions;
+                IEnumerable<NotificationTableValue> actions;
                 using (database.NotificationCenter.GetStored(out actions))
                 {
                     Assert.Equal(1, actions.Count());
@@ -364,7 +362,7 @@ namespace FastTests.Server.NotificationCenter
             {
                 var blittable = notification as BlittableJsonReaderObject;
 
-                SentNotifications.Add(blittable[nameof(Action.Id)].ToString());
+                SentNotifications.Add(blittable[nameof(Notification.Id)].ToString());
 
                 return Task.CompletedTask;
             }
