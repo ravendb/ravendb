@@ -113,6 +113,8 @@ namespace Sparrow.Json
         private readonly ObjectJsonParser _objectJsonParser;
         private readonly BlittableJsonDocumentBuilder _documentBuilder;
 
+        public long AllocatedMemory => _arenaAllocator.TotalUsed;
+
         public static JsonOperationContext ShortTermSingleUse()
         {
             return new JsonOperationContext(4096, 1024);

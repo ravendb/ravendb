@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using Sparrow.Binary;
+using Sparrow.Collections;
 using Sparrow.Logging;
-using Sparrow.Platform;
 using Sparrow.Utils;
 
 namespace Sparrow.Json
@@ -26,6 +26,8 @@ namespace Sparrow.Json
         private NativeMemory.ThreadStats _allocatingThread;
         private readonly int _initialSize;
 
+        public long TotalUsed;
+
         public long Allocated
         {
             get
@@ -48,6 +50,7 @@ namespace Sparrow.Json
             _ptrStart = _ptrCurrent = NativeMemory.AllocateMemory(initialSize, out _allocatingThread);
             _allocated = initialSize;
             _used = 0;
+            TotalUsed = 0;
 
             if (Logger.IsInfoEnabled)
                 Logger.Info($"ArenaMemoryAllocator was created with initial capacity of {initialSize:#,#;;0} bytes");
@@ -66,6 +69,7 @@ namespace Sparrow.Json
 
             _ptrCurrent += sizeIncrease;
             _used += sizeIncrease;
+            TotalUsed += sizeIncrease;
             allocation.SizeInBytes += sizeIncrease;
             return true;
         }
@@ -92,6 +96,7 @@ namespace Sparrow.Json
 
             _ptrCurrent += size;
             _used += size;
+            TotalUsed += size;
 
             return allocation;
 #endif
@@ -144,6 +149,7 @@ namespace Sparrow.Json
                 return;
             _ptrStart = _ptrCurrent = NativeMemory.AllocateMemory(_allocated, out _allocatingThread);
             _used = 0;
+            TotalUsed = 0;
         }
 
         public void ResetArena()
@@ -154,12 +160,22 @@ namespace Sparrow.Json
             _fragements?.Clear();
 #endif
 
-            // Free old buffers not being used anymore
             if (_olderBuffers == null)
             {
+                // there were no new allocations in this round
+                if (_allocated / 2 > _used && _allocated > _initialSize * 2)
+                {
+                    // we used less than half the memory we have, so let us reduce it
+
+                    NativeMemory.Free(_ptrStart, _allocated, _allocatingThread);
+                    _allocated = Math.Max(_allocated / 2, _initialSize);
+                    _ptrCurrent = _ptrStart = null;
+                }
                 _used = 0;
+                TotalUsed = 0;
                 return;
             }
+            // Free old buffers not being used anymore
             foreach (var unusedBuffer in _olderBuffers)
             {
                 _used += unusedBuffer.Item2;
@@ -169,6 +185,7 @@ namespace Sparrow.Json
             if (_used <= _allocated)
             {
                 _used = 0;
+                TotalUsed = 0;
                 return;
             }
             // we'll likely need more memory in the next round, let us increase the size we hold on to
@@ -182,6 +199,7 @@ namespace Sparrow.Json
 
             _allocated = newSize;
             _used = 0;
+            TotalUsed = 0;
             if (_allocated > MaxArenaSize)
                 _allocated = MaxArenaSize;
             _ptrCurrent = _ptrStart = null;
@@ -197,7 +215,7 @@ namespace Sparrow.Json
 
         public override string ToString()
         {
-            return $"Allocated {Sizes.Humane(_allocated)}, Used {Sizes.Humane(_used)}";
+            return $"Allocated {Sizes.Humane(Allocated)}, Used {Sizes.Humane(_used)}";
         }
 
         public void Dispose()
@@ -246,6 +264,7 @@ namespace Sparrow.Json
             // since the returned allocation is at the end of the arena, we can just move
             // the pointer back
             _used -= allocation.SizeInBytes;
+            TotalUsed -= allocation.SizeInBytes;
             _ptrCurrent -= allocation.SizeInBytes;
 
             if (_fragements == null)
@@ -266,6 +285,7 @@ namespace Sparrow.Json
                     continue;
                 }
                 _used -= highest.SizeInBytes;
+                TotalUsed -= highest.SizeInBytes;
                 _ptrCurrent -= highest.SizeInBytes;
             }
 #endif

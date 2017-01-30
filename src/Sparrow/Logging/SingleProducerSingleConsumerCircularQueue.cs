@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.WebSockets;
+using System.Text;
 using System.Threading;
 
 namespace Sparrow.Logging
@@ -10,6 +11,11 @@ namespace Sparrow.Logging
     {
         public MemoryStream Data { get; set; }
         public readonly List<WebSocket> WebSocketsList = new List<WebSocket>();
+
+        public override string ToString()
+        {
+            return Encoding.UTF8.GetString(Data.ToArray());
+        }
     }
 
     public class SingleProducerSingleConsumerCircularQueue<T>
