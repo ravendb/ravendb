@@ -22,7 +22,7 @@ namespace Raven.NewClient.Client.Document
     /// <summary>
     ///     Advanced synchronous session operations
     /// </summary>
-    public interface ISyncAdvancedSessionOperation : IAdvancedDocumentSessionOperations
+    public partial interface ISyncAdvancedSessionOperation : IAdvancedDocumentSessionOperations
     {
         /// <summary>
         ///     Access the eager operations

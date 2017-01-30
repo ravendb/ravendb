@@ -5,8 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System.Linq;
-
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Post = SlowTests.Core.Utils.Entities.Post;
 using PostContent = SlowTests.Core.Utils.Entities.PostContent;
 

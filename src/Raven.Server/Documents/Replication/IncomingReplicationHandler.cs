@@ -12,7 +12,6 @@ using Sparrow.Logging;
 using System.Text;
 using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
-using Raven.Server.Alerts;
 using Raven.Server.ServerWide;
 using Raven.Server.Smuggler.Documents.Processors;
 using Raven.Server.Utils;
@@ -20,11 +19,11 @@ using Sparrow;
 using Sparrow.Json.Parsing;
 using System.Linq;
 using System.Net;
-using Lucene.Net.Util;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Exceptions;
 using Constants = Raven.Abstractions.Data.Constants;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.NotificationCenter.Actions;
+using Raven.Server.NotificationCenter.Alerts;
 using ThreadState = System.Threading.ThreadState;
 
 namespace Raven.Server.Documents.Replication
@@ -441,15 +440,10 @@ namespace Raven.Server.Documents.Replication
                     _database.IndexMetadataPersistence.AddConflict(configurationContext, configurationContext.Transaction.InnerTransaction,
                         item.Name, item.Type, conflictingVector, definition);
 
-                    //this is severe enough to warrant an alert
-                    _database.Alerts.AddAlert(new Alert
-                    {
-                        Key = replicationSource,
-                        Type = AlertType.Replication,
-                        Message = msg,
-                        CreatedAt = DateTime.UtcNow,
-                        Severity = AlertSeverity.Warning
-                    }, configurationContext, tx);
+                    // this is severe enough to warrant an alert
+                    _database.NotificationCenter.AddAfterTransactionCommit(
+                        AlertRaised.Create("Replication conflict", msg, AlertType.Replication,
+                            AlertSeverity.Warning, key: replicationSource), tx);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();

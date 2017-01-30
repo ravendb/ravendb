@@ -1,21 +1,26 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net.Http;
-using Raven.NewClient.Client.Blittable;
-using Raven.NewClient.Client.Extensions;
 using Raven.NewClient.Client.Json;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Raven.NewClient.Client.Http;
 
 namespace Raven.NewClient.Client.Commands
 {
     public class GetRevisionCommand : RavenCommand<BlittableArrayResult>
     {
+        private readonly string _id;
+        private readonly int _start;
+        private readonly int _pageSize;
 
-        public string Key;
-        public int Start;
-        public int PageSize;
+        public GetRevisionCommand(string id, int start, int pageSize)
+        {
+            if (id == null)
+                throw new ArgumentNullException(nameof(id));
+
+            _id = id;
+            _start = start;
+            _pageSize = pageSize;
+        }
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
@@ -24,10 +29,9 @@ namespace Raven.NewClient.Client.Commands
                 Method = HttpMethod.Get,
             };
 
-            url = $"{node.Url}/databases/{node.Database}/revisions?id={Uri.EscapeDataString(Key)}&start={Start.ToInvariantString()}&pageSize={PageSize.ToInvariantString()}";
+            url = $"{node.Url}/databases/{node.Database}/revisions?id={Uri.EscapeUriString(_id)}&start={_start}&pageSize={_pageSize}";
             return request;
         }
-
 
         public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
         {

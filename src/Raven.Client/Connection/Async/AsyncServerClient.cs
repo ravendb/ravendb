@@ -43,6 +43,7 @@ using Raven.Client.Changes;
 using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Data.Queries;
+using Raven.Client.Exceptions.Compilation;
 using Raven.Client.Indexing;
 
 namespace Raven.Client.Connection.Async

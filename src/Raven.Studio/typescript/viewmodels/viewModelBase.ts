@@ -15,6 +15,7 @@ import downloader = require("common/downloader");
 import resourcesManager = require("common/shell/resourcesManager");
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 import eventsCollector = require("common/eventsCollector");
+import changesApi = require("common/changesApi");
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active resource and providing a means to add keyboard shortcuts.
@@ -76,16 +77,16 @@ class viewModelBase {
 
     activate(args: any, isShell = false) {
         // create this ko.computed once to avoid creation and subscribing every 50 ms - thus creating memory leak.
-        var adminArea = this.appUrls.isAreaActive("admin");
+        const adminArea = this.appUrls.isAreaActive("admin");
 
         oauthContext.enterApiKeyTask.done(() => {
             if (isShell || adminArea())
                 return;
 
             this.changesContext
-                .afterConnection
+                .afterChangesApiConnection
                 .done(() => {
-                    this.notifications.push(...this.createNotifications());
+                    this.afterClientApiConnected();
                 });
         });
 
@@ -169,8 +170,8 @@ class viewModelBase {
         this.disposableActions.push(() => $element.off(event as any, handler as any));
     }
 
-    createNotifications(): Array<changeSubscription> {
-        return [];
+    protected afterClientApiConnected(): void {
+        // empty here
     }
 
     cleanupNotifications() {

@@ -1,4 +1,5 @@
-﻿using Raven.NewClient.Client.Data;
+﻿using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Indexing;
 using Raven.NewClient.Data.Indexes;
 
@@ -18,6 +19,10 @@ namespace Raven.NewClient.Operations.Databases.Responses
     }
 
     public class GetIndexesResponse : ResultsResponse<IndexDefinition>
+    {
+    }
+
+    public class GetTransformersResponse : ResultsResponse<TransformerDefinition>
     {
     }
 

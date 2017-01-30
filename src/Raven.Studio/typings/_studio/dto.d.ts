@@ -77,11 +77,6 @@ interface chagesApiConfigureRequestDto {
     Param?: string;
 }
 
-interface localStorageOperationsDto {
-    ServerStartTime: string;
-    Operations: Array<number>;    
-}
-
 interface saveDocumentResponseDto {
     Results: Array<saveDocumentResponseItemDto>;
 }

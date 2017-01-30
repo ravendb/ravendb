@@ -105,10 +105,8 @@ namespace Raven.Server.Smuggler.Documents
 
         public IEnumerable<Document> GetDocuments(List<string> collectionsToExport, INewDocumentActions actions)
         {
-            foreach (var builder in ReadArray(actions))
+            foreach (var data in ReadArray(actions))
             {
-                var data = builder.CreateReader();
-
                 BlittableJsonReaderObject metadata;
                 if (data.TryGet(Constants.Metadata.Key, out metadata) == false || metadata == null)
                     ThrowInvalidJson();
@@ -128,17 +126,12 @@ namespace Raven.Server.Smuggler.Documents
 
         public IEnumerable<Document> GetRevisionDocuments(List<string> collectionsToExport, INewDocumentActions actions, int limit)
         {
-            foreach (var builder in ReadArray(actions))
+            foreach (var data in ReadArray(actions))
             {
-                //if (limit-- <= 0)
-                //    continue;
-
-                var data = builder.CreateReader();
-
                 BlittableJsonReaderObject metadata;
                 if (data.TryGet(Constants.Metadata.Key, out metadata) == false || metadata == null)
                     ThrowInvalidJson();
-
+                Debug.Assert(metadata != null);
                 LazyStringValue id;
                 if (metadata.TryGet(Constants.Metadata.Id, out id) == false)
                     ThrowInvalidJson();
@@ -153,60 +146,64 @@ namespace Raven.Server.Smuggler.Documents
 
         public IEnumerable<IndexDefinitionAndType> GetIndexes()
         {
-            foreach (var builder in ReadArray())
+            foreach (var reader in ReadArray())
             {
-                IndexType type;
-                object indexDefinition;
-
-                try
+                using (reader)
                 {
-                    using (var reader = builder.CreateReader())
+                    IndexType type;
+                    object indexDefinition;
+
+                    try
+                    {
                         indexDefinition = IndexProcessor.ReadIndexDefinition(reader, _buildVersion, out type);
-                }
-                catch (Exception e)
-                {
-                    _result.Indexes.ErroredCount++;
-                    _result.AddWarning($"Could not read index definition. Message: {e.Message}");
+                    }
+                    catch (Exception e)
+                    {
+                        _result.Indexes.ErroredCount++;
+                        _result.AddWarning($"Could not read index definition. Message: {e.Message}");
 
-                    continue;
-                }
+                        continue;
+                    }
 
-                yield return new IndexDefinitionAndType
-                {
-                    Type = type,
-                    IndexDefinition = indexDefinition
-                };
+                    yield return new IndexDefinitionAndType
+                    {
+                        Type = type,
+                        IndexDefinition = indexDefinition
+                    };
+                }
             }
         }
 
         public IEnumerable<TransformerDefinition> GetTransformers()
         {
-            foreach (var builder in ReadArray())
+            foreach (var reader in ReadArray())
             {
-                TransformerDefinition transformerDefinition;
-
-                try
+                using (reader)
                 {
-                    using (var reader = builder.CreateReader())
+                    TransformerDefinition transformerDefinition;
+
+                    try
+                    {
                         transformerDefinition = TransformerProcessor.ReadTransformerDefinition(reader, _buildVersion);
-                }
-                catch (Exception e)
-                {
-                    _result.Transformers.ErroredCount++;
-                    _result.AddWarning($"Could not read transformer definition. Message: {e.Message}");
+                    }
+                    catch (Exception e)
+                    {
+                        _result.Transformers.ErroredCount++;
+                        _result.AddWarning($"Could not read transformer definition. Message: {e.Message}");
 
-                    continue;
-                }
+                        continue;
+                    }
 
-                yield return transformerDefinition;
+                    yield return transformerDefinition;
+                }
             }
         }
 
         public IEnumerable<KeyValuePair<string, long>> GetIdentities()
         {
-            foreach (var builder in ReadArray())
+            foreach (var reader in ReadArray())
             {
-                using (var reader = builder.CreateReader())
+                using (reader)
                 {
                     string identityKey;
                     string identityValueString;
@@ -285,7 +282,7 @@ namespace Raven.Server.Smuggler.Documents
             return count;
         }
 
-        private IEnumerable<BlittableJsonDocumentBuilder> ReadArray(INewDocumentActions actions = null)
+        private IEnumerable<BlittableJsonReaderObject> ReadArray(INewDocumentActions actions = null)
         {
             if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
                 ThrowInvalidJson();
@@ -304,12 +301,16 @@ namespace Raven.Server.Smuggler.Documents
                     break;
 
                 var context = actions == null ? _context : actions.GetContextForNewDocument();
-                var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "import/object", _parser, _state);
+                using (
+                    var builder = new BlittableJsonDocumentBuilder(context,
+                        BlittableJsonDocumentBuilder.UsageMode.ToDisk, "import/object", _parser, _state))
+                {
 
-                ReadObject(builder);
-                context.RegisterForDispose(builder);
+                    ReadObject(builder);
 
-                yield return builder;
+                    yield return builder.CreateReader();
+                }
+
             }
         }
 

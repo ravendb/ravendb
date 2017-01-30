@@ -135,6 +135,7 @@ namespace Voron
             IdleFlushTimeout = 5000; // 5 seconds
 
             OwnsPagers = true;
+
             IncrementalBackupEnabled = false;
 
             IoMetrics = new IoMetrics(256, 256);

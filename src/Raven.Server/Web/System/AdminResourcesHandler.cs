@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
+using Raven.Server.NotificationCenter.Actions.Server;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -110,6 +111,8 @@ namespace Raven.Server.Web.System
                     var newDoc2 = context.ReadObject(dbDoc, dbId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
                     ServerStore.Write(context, dbId, newDoc2);
+                    ServerStore.NotificationCenter.AddAfterTransactionCommit(ResourceChanged.Create(dbId, ResourceChangeType.Put), tx);
+
                     databasesToUnload.Add(name);
 
                     context.Write(writer, new DynamicJsonValue

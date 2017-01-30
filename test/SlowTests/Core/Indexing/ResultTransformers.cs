@@ -6,13 +6,9 @@
 
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 using FastTests;
-
-using Raven.Abstractions.Data;
-using Raven.Client.Linq;
-using Raven.Json.Linq;
+using Raven.NewClient.Client.Operations.Databases.Transformers;
 using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Indexes;
 using SlowTests.Core.Utils.Transformers;
@@ -27,7 +23,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Indexing
 {
-    public class ResultTransformers : RavenTestBase
+    public class ResultTransformers : RavenNewTestBase
     {
         [Fact]
         public void BasicTransformer()
@@ -38,7 +34,7 @@ namespace SlowTests.Core.Indexing
                 transformer1.Execute(store);
 
                 var transformerDefinition = transformer1.CreateTransformerDefinition();
-                var serverDefinition = store.DatabaseCommands.GetTransformer(transformer1.TransformerName);
+                var serverDefinition = store.Admin.Send(new GetTransformerOperation(transformer1.TransformerName));
 
                 Assert.True(transformerDefinition.Equals(serverDefinition));
 
@@ -46,7 +42,7 @@ namespace SlowTests.Core.Indexing
                 transformer2.Execute(store);
 
                 transformerDefinition = transformer2.CreateTransformerDefinition();
-                serverDefinition = store.DatabaseCommands.GetTransformer(transformer2.TransformerName);
+                serverDefinition = store.Admin.Send(new GetTransformerOperation(transformer2.TransformerName));
 
                 Assert.True(transformerDefinition.Equals(serverDefinition));
 
@@ -125,7 +121,7 @@ namespace SlowTests.Core.Indexing
                 transformer.Execute(store);
 
                 var transformerDefinition = transformer.CreateTransformerDefinition();
-                var serverDefinition = store.DatabaseCommands.GetTransformer(transformer.TransformerName);
+                var serverDefinition = store.Admin.Send(new GetTransformerOperation(transformer.TransformerName));
 
                 Assert.True(transformerDefinition.Equals(serverDefinition));
 
@@ -385,7 +381,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6211")]
         public void CanUseAsDocumentInTransformer()
         {
             using (var store = GetDocumentStore())
@@ -402,16 +398,16 @@ namespace SlowTests.Core.Indexing
 
                     session.SaveChanges();
 
-                    var post =
-                        session.Query<Post>()
-                            .Where(x => x.Title == "Result Transformers")
-                            .Customize(x => x.WaitForNonStaleResults())
-                            .TransformWith<PostWithAsDocumentTransformer, PostWithAsDocumentTransformer.Result>()
-                            .First();
+                    //var post =
+                    //    session.Query<Post>()
+                    //        .Where(x => x.Title == "Result Transformers")
+                    //        .Customize(x => x.WaitForNonStaleResults())
+                    //        .TransformWith<PostWithAsDocumentTransformer, PostWithAsDocumentTransformer.Result>()
+                    //        .First();
 
-                    Assert.NotNull(post.RawDocument);
-                    var metadata = (RavenJObject)post.RawDocument[Constants.Metadata.Key];
-                    Assert.Equal("posts/1", metadata.Value<string>(Constants.Metadata.Id));
+                    //Assert.NotNull(post.RawDocument);
+                    //var metadata = (RavenJObject)post.RawDocument[Constants.Metadata.Key];
+                    //Assert.Equal("posts/1", metadata.Value<string>(Constants.Metadata.Id));
                 }
             }
         }

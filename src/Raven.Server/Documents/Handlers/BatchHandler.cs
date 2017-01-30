@@ -5,6 +5,7 @@ using System.IO;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Hosting.Internal;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
@@ -226,7 +227,21 @@ namespace Raven.Server.Documents.Handlers
 
             public HashSet<string> ModifiedCollections;
 
-            public override void Execute(DocumentsOperationContext context, RavenTransaction tx)
+            public override string ToString()
+            {
+                var sb = new StringBuilder($"{ParsedCommands.Count} commands").AppendLine();
+                foreach (var cmd in ParsedCommands)
+                {
+                    sb.Append("\t")
+                        .Append(cmd.Method)
+                        .Append(" ")
+                        .Append(cmd.Key)
+                        .AppendLine();
+                }
+                return sb.ToString();
+            }
+
+            public override void Execute(DocumentsOperationContext context)
             {
                 for (int i = ParsedCommands.Offset; i < ParsedCommands.Count; i++)
                 {

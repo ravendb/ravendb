@@ -37,8 +37,8 @@ namespace Raven.Server.Web.Studio
             }
 
             await LicenseManager.RegisterForFreeLicense(userInfo).ConfigureAwait(false);
-
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
+            
+            NoContentStatus();
         }
 
         [RavenAction("/license/activate", "POST")]
@@ -54,8 +54,7 @@ namespace Raven.Server.Web.Studio
 
             LicenseManager.Activate(license);
 
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
-            return Task.CompletedTask;
+            return NoContent();
         }
     }
 }

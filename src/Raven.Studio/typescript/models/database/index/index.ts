@@ -114,14 +114,14 @@ class index {
         });
         this.isDisabledState = ko.pureComputed(() => {
             const stateIsDisabled = this.state() === "Disabled";
-            const globalStatusIsPaused = this.globalIndexingStatus() === "Paused";
             const globalStatusIsDisabled = this.globalIndexingStatus() === "Disabled";
-            return (stateIsDisabled && !globalStatusIsPaused) || globalStatusIsDisabled;
+            return stateIsDisabled || globalStatusIsDisabled;
         });
         this.isPausedState = ko.pureComputed(() => {
             const localStatusIsPaused = this.status() === "Paused";
             const globalStatusIsPaused = this.globalIndexingStatus() === "Paused";
-            return localStatusIsPaused || globalStatusIsPaused;
+            const isInDisableState = this.isDisabledState();
+            return (localStatusIsPaused || globalStatusIsPaused) && !isInDisableState;
         });
         this.isErrorState = ko.pureComputed(() => this.state() === "Error");
         this.isNormalState = ko.pureComputed(() => {

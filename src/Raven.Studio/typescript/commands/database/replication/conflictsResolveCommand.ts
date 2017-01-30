@@ -3,7 +3,6 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import conflictsInfo = require("models/database/replication/conflictsInfo");
 import appUrl = require("common/appUrl");
-import getOperationStatusCommand = require('commands/operations/getOperationStatusCommand');
 
 class conflictsResolveCommand extends commandBase {
 
@@ -32,9 +31,9 @@ class conflictsResolveCommand extends commandBase {
 
 
     private monitorOperation(parentPromise: JQueryDeferred<any>, operationId: number) {
-        new getOperationStatusCommand(this.ownerDb, operationId)
+        /* TODO new getOperationStatusCommand(this.ownerDb, operationId)
             .execute();
-        /* TODO.done((result: operationStatusDto) => {
+        .done((result: operationStatusDto) => {
         if (result.Completed) {
             if (result.Faulted || result.Canceled) {
                 this.reportError("Failed to perform conflict resolution!", result.State.Error);

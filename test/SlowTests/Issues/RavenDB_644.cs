@@ -8,6 +8,7 @@ using System.Linq;
 using FastTests;
 using Raven.Abstractions.Exceptions;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Compilation;
 using Raven.Client.Indexes;
 using Raven.Client.Indexing;
 using Xunit;

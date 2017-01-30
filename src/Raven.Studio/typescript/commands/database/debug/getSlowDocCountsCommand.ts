@@ -1,7 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import debugDocumentStats = require("models/database/debug/debugDocumentStats");
-import getOperationStatusCommand = require("commands/operations/getOperationStatusCommand");
 
 class getSlowDocCountsCommand extends commandBase {
 
@@ -22,9 +21,9 @@ class getSlowDocCountsCommand extends commandBase {
     }
 
     private monitorOperation(operationId: number) {
-        new getOperationStatusCommand(this.db, operationId)
+        /* TODO new getOperationStatusCommand(this.db, operationId)
             .execute();
-            /* TODO .done((result: debugDocumentStatsStateDto) => {
+            .done((result: debugDocumentStatsStateDto) => {
                 this.updateProgress(result.State.Progress);
 
                 if (result.Completed) {

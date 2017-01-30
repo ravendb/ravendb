@@ -155,14 +155,14 @@ namespace FastTests
                 return new DynamicArray(command.Result.Results);
             }
 
-            public QueryResult Query(string indexName, IndexQuery query)
+            public QueryResult Query(string indexName, IndexQuery query, bool metadataOnly = false, bool indexEntriesOnly = false)
             {
-                return AsyncHelpers.RunSync(() => QueryAsync(indexName, query));
+                return AsyncHelpers.RunSync(() => QueryAsync(indexName, query, metadataOnly, indexEntriesOnly));
             }
 
-            public async Task<QueryResult> QueryAsync(string indexName, IndexQuery query)
+            public async Task<QueryResult> QueryAsync(string indexName, IndexQuery query, bool metadataOnly = false, bool indexEntriesOnly = false)
             {
-                var command = new QueryCommand(_store.Conventions, Context, indexName, query);
+                var command = new QueryCommand(_store.Conventions, Context, indexName, query, metadataOnly: metadataOnly, indexEntriesOnly: indexEntriesOnly);
 
                 await RequestExecuter.ExecuteAsync(command, Context);
 

@@ -91,8 +91,9 @@ class synchronizationConflicts extends viewModelBase {
         this.fetchConflicts(this.activeFilesystem());
     }
 
-    createNotifications(): Array<changeSubscription> {
-        return [ /* TODO changesContext.currentResourceChangesApi().watchFsConflicts((e: synchronizationConflictNotification) => this.processFsConflicts(e)) */ ];
+    afterClientApiConnected(): void {
+        const changesApi = this.changesContext.resourceChangesApi();
+        //TODO: this.addNotification(changesApi.watchFsConflicts((e: synchronizationConflictNotification) => this.processFsConflicts(e)));
     }
 
     private processFsConflicts(e: synchronizationConflictNotification) {

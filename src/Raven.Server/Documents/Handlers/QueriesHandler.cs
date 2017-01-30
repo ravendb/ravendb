@@ -236,7 +236,7 @@ namespace Raven.Server.Documents.Handlers
             var returnContextToPool = ContextPool.AllocateOperationContext(out context); // we don't dispose this as operation is async
 
             ExecuteQueryOperation((runner, indexName, query, options, onProgress, token) => runner.ExecuteDeleteQuery(indexName, query, options, context, onProgress, token),
-                context, returnContextToPool, DatabaseOperations.PendingOperationType.DeleteByIndex);
+                context, returnContextToPool, DatabaseOperations.OperationType.DeleteByIndex);
             return Task.CompletedTask;
 
         }
@@ -251,11 +251,11 @@ namespace Raven.Server.Documents.Handlers
             var patch = PatchRequest.Parse(reader);
 
             ExecuteQueryOperation((runner, indexName, query, options, onProgress, token) => runner.ExecutePatchQuery(indexName, query, options, patch, context, onProgress, token),
-                context, returnContextToPool, DatabaseOperations.PendingOperationType.UpdateByIndex);
+                context, returnContextToPool, DatabaseOperations.OperationType.UpdateByIndex);
             return Task.CompletedTask;
         }
 
-        private void ExecuteQueryOperation(Func<QueryRunner, string, IndexQueryServerSide, QueryOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, DatabaseOperations.PendingOperationType operationType)
+        private void ExecuteQueryOperation(Func<QueryRunner, string, IndexQueryServerSide, QueryOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, DatabaseOperations.OperationType operationType)
         {
             var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
 

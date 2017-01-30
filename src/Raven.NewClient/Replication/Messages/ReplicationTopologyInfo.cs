@@ -117,6 +117,10 @@ namespace Raven.NewClient.Client.Replication.Messages
 
         public string Database;
 
+        public Dictionary<string, string> SpecifiedCollections;
+
+        public bool IsETLNode => SpecifiedCollections != null && SpecifiedCollections.Count > 0;
+
         public Status NodeStatus;
 
         public enum Status
@@ -126,9 +130,19 @@ namespace Raven.NewClient.Client.Replication.Messages
             Error
         }
 
+        public ActiveNodeStatus()
+        {
+            SpecifiedCollections = new Dictionary<string, string>();
+        }
 
         public DynamicJsonValue ToJson()
         {
+            var specifiedCollectionsJson = new DynamicJsonValue();
+            foreach (var key in SpecifiedCollections.Keys)
+            {
+                specifiedCollectionsJson[key] = SpecifiedCollections[key];
+            }
+
             return new DynamicJsonValue
             {
                 [nameof(IsCurrentlyConnected)] = IsCurrentlyConnected,
@@ -140,6 +154,7 @@ namespace Raven.NewClient.Client.Replication.Messages
                 [nameof(LastDocumentEtag)] = LastDocumentEtag,
                 [nameof(LastIndexTransformerEtag)] = LastIndexTransformerEtag,
                 [nameof(NodeStatus)] = NodeStatus.ToString(),
+                [nameof(SpecifiedCollections)] = specifiedCollectionsJson,
                 ["LastHeartbeat"] = new DateTime(LastHeartbeatTicks).GetDefaultRavenFormat(),
             };
         }

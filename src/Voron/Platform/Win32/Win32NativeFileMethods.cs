@@ -143,7 +143,16 @@ namespace Voron.Platform.Win32
 
                     var fullFilePath = filePath.ToString();
                     var driveLetter = Path.GetPathRoot(fullFilePath);
-                    var driveInfo = new DriveInfo(driveLetter);
+
+                    DriveInfo driveInfo;
+                    try
+                    {
+                        driveInfo = new DriveInfo(driveLetter);
+                    }
+                    catch (Exception)
+                    {
+                        driveInfo = null; // probably network path
+                    }
 
                     throw new DiskFullException(driveInfo, fullFilePath, length);
                 }

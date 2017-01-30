@@ -1,6 +1,5 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import killOperationComamnd = require('commands/operations/killOperationCommand');
-import getOperationsCommand = require("commands/operations/getOperationsCommand");
 import moment = require("moment");
 import document = require("models/database/documents/document");
 import runningTask = require("models/database/debug/runningTask");

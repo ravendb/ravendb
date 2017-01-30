@@ -24,23 +24,28 @@ namespace Voron.Data.BTrees
         public long NumberOfEntries;
 
         public TreeMutableState(LowLevelTransaction tx)
-	    {
-		    _tx = tx;
-	    }
+        {
+            _tx = tx;
+        }
 
-	    public bool IsModified
+        public bool IsModified
         {
             get { return _isModified; }
             set
             {
                 if (_tx.Flags != TransactionFlags.ReadWrite)
-                    throw new InvalidOperationException("Invalid operation outside of a write transaction");
+                    ThrowCanOnlyModifyInWriteTransaction();
                 _isModified = value;
             }
         }
 
-	    public void CopyTo(TreeRootHeader* header)
-	    {
+        private static void ThrowCanOnlyModifyInWriteTransaction()
+        {
+            throw new InvalidOperationException("Invalid operation outside of a write transaction");
+        }
+
+        public void CopyTo(TreeRootHeader* header)
+        {
             header->RootObjectType = RootObjectType;
             header->Flags = Flags;
             header->BranchPages = BranchPages;
@@ -63,50 +68,50 @@ namespace Voron.Data.BTrees
                     LeafPages = LeafPages,
                     OverflowPages = OverflowPages,
                     PageCount = PageCount,
-					Flags = Flags,
+                    Flags = Flags,
                     RootPageNumber = RootPageNumber,
                 };
         }
 
-		public void RecordNewPage(TreePage p, int num)
-		{
-			PageCount += num;
+        public void RecordNewPage(TreePage p, int num)
+        {
+            PageCount += num;
 
-			if (p.IsBranch)
-			{
-				BranchPages++;
-			}
-			else if (p.IsLeaf)
-			{
-				LeafPages++;
-			}
-			else if (p.IsOverflow)
-			{
-				OverflowPages += num;
-			}
-		}
+            if (p.IsBranch)
+            {
+                BranchPages++;
+            }
+            else if (p.IsLeaf)
+            {
+                LeafPages++;
+            }
+            else if (p.IsOverflow)
+            {
+                OverflowPages += num;
+            }
+        }
 
-		public void RecordFreedPage(TreePage p, int num)
-		{
-			PageCount -= num;
-			Debug.Assert(PageCount >= 0);
+        public void RecordFreedPage(TreePage p, int num)
+        {
+            PageCount -= num;
+            Debug.Assert(PageCount >= 0);
 
-			if (p.IsBranch)
-			{
-				BranchPages--;
-				Debug.Assert(BranchPages >= 0);
-			}
-			else if (p.IsLeaf)
-			{
-				LeafPages--;
-				Debug.Assert(LeafPages >= 0);
-			}
-			else if (p.IsOverflow)
-			{
-				OverflowPages -= num;
-				Debug.Assert(OverflowPages >= 0);
-			}
-		}
+            if (p.IsBranch)
+            {
+                BranchPages--;
+                Debug.Assert(BranchPages >= 0);
+            }
+            else if (p.IsLeaf)
+            {
+                LeafPages--;
+                Debug.Assert(LeafPages >= 0);
+            }
+            else if (p.IsOverflow)
+            {
+                OverflowPages -= num;
+                Debug.Assert(OverflowPages >= 0);
+            }
+        }
 
         public override string ToString()
         {

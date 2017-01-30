@@ -5,19 +5,16 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
-using Raven.Abstractions.Extensions;
-using Raven.Server.Alerts;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
-using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
+using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.LowMemoryNotification;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Voron;
 using Sparrow;
-using Sparrow.Collections;
 using Sparrow.Logging;
 using Voron.Data.Tables;
 using Voron.Exceptions;
@@ -30,7 +27,7 @@ namespace Raven.Server.ServerWide
     /// </summary>
     public unsafe class ServerStore : IDisposable
     {
-        private CancellationTokenSource _shutdownNotification;
+        private CancellationTokenSource _shutdownNotification = new CancellationTokenSource();
 
         public CancellationToken ServerShutdown => _shutdownNotification.Token;
 
@@ -38,29 +35,28 @@ namespace Raven.Server.ServerWide
 
         private StorageEnvironment _env;
 
+        private readonly ActionsStorage _actionsStorage;
+
         private static readonly TableSchema _itemsSchema;
-
-        public readonly DatabasesLandlord DatabasesLandlord;
-
+        
         private readonly IList<IDisposable> toDispose = new List<IDisposable>();
         private static readonly Slice EtagIndexName;
 
         public readonly RavenConfiguration Configuration;
         public readonly IoMetrics IoMetrics;
-        public readonly AlertsStorage Alerts;
+        public readonly DatabasesLandlord DatabasesLandlord;
+        public readonly NotificationCenter.NotificationCenter NotificationCenter;
+
         public static LicenseStorage LicenseStorage { get; } = new LicenseStorage();
 
         // this is only modified by write transactions under lock
         // no need to use thread safe ops
         private long _lastEtag;
-        private readonly ConcurrentSet<AsyncQueue<GlobalAlertNotification>> _changes = new ConcurrentSet<AsyncQueue<GlobalAlertNotification>>();
 
         private readonly TimeSpan _frequencyToCheckForIdleDatabases;
 
         static ServerStore()
         {
-            
-
             Slice.From(StorageEnvironment.LabelsContext, "EtagIndexName", out EtagIndexName);
 
             _itemsSchema = new TableSchema();
@@ -83,13 +79,17 @@ namespace Raven.Server.ServerWide
 
         public ServerStore(RavenConfiguration configuration)
         {
+            var resourceName = "ServerStore";
+
             if (configuration == null) throw new ArgumentNullException(nameof(configuration));
             IoMetrics = new IoMetrics(8,8); // TODO:: increase this to 256,256 ?
             Configuration = configuration;
-            _logger = LoggingSource.Instance.GetLogger<ServerStore>("ServerStore");
+            _logger = LoggingSource.Instance.GetLogger<ServerStore>(resourceName);
             DatabasesLandlord = new DatabasesLandlord(this);
 
-            Alerts = new AlertsStorage("Raven/Server", this);
+            _actionsStorage = new ActionsStorage(resourceName);
+
+            NotificationCenter = new NotificationCenter.NotificationCenter(_actionsStorage, resourceName, ServerShutdown);
 
             DatabaseInfoCache = new DatabaseInfoCache();
 
@@ -105,8 +105,6 @@ namespace Raven.Server.ServerWide
 
         public void Initialize()
         {
-            _shutdownNotification = new CancellationTokenSource();
-
             AbstractLowMemoryNotification.Initialize(ServerShutdown, Configuration);
 
             if (_logger.IsInfoEnabled)
@@ -154,9 +152,10 @@ namespace Raven.Server.ServerWide
 
             ContextPool = new TransactionContextPool(_env);
             _timer = new Timer(IdleOperations, null, _frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
-            Alerts.Initialize(_env, ContextPool);
+            _actionsStorage.Initialize(_env, ContextPool);
             DatabaseInfoCache.Initialize(_env, ContextPool);
             LicenseStorage.Initialize(_env, ContextPool);
+            NotificationCenter.Initialize();
         }
 
         public long ReadLastEtag(TransactionOperationContext ctx)
@@ -224,8 +223,6 @@ namespace Raven.Server.ServerWide
 
         public void Delete(TransactionOperationContext ctx, string id)
         {
-            TrackChangeAfterTransactionCommit(ctx, "Delete", id);
-
             var items = ctx.Transaction.InnerTransaction.OpenTable(_itemsSchema, "Items");
             Slice key;
             using (Slice.From(ctx.Allocator, id.ToLowerInvariant(), out key))
@@ -276,7 +273,6 @@ namespace Raven.Server.ServerWide
 
         public long Write(TransactionOperationContext ctx, string id, BlittableJsonReaderObject doc, long? expectedEtag = null)
         {
-            TrackChangeAfterTransactionCommit(ctx, "Write", id);
             var newEtag = _lastEtag + 1;
 
             Slice idAsSlice;
@@ -425,53 +421,5 @@ namespace Raven.Server.ServerWide
 
             return ((now - maxLastWork).TotalMinutes > 5) || ((now - database.LastIdleTime).TotalMinutes > 10);
         }
-
-        public IDisposable TrackChanges(AsyncQueue<GlobalAlertNotification> asyncQueue)
-        {
-            _changes.TryAdd(asyncQueue);
-            return new DisposableAction(() => _changes.TryRemove(asyncQueue));
-        }
-
-        public void TrackChange(string operation, string id)
-        {
-            if (_changes.Count == 0)
-                return;
-
-            var djv = new GlobalAlertNotification
-            {
-                Operation = operation,
-                Id = id
-            };
-            foreach (var asyncQueue in _changes)
-            {
-                asyncQueue.Enqueue(djv);
-            }
-        }
-
-        public void TrackChangeAfterTransactionCommit(TransactionOperationContext ctx, string operation, string id)
-        {
-            if (_changes.Count == 0)
-                return;
-
-            var llt = ctx.Transaction.InnerTransaction.LowLevelTransaction;
-          
-
-            // need to do this after the transaction is over
-            llt.OnDispose += _ =>
-            {
-                if (llt.Committed == false)
-                    return;
-                var djv = new GlobalAlertNotification
-                {
-                    Operation = operation,
-                    Id = id
-                };
-                foreach (var asyncQueue in _changes)
-                {
-                    asyncQueue.Enqueue(djv);
-                }
-            };
-        }
-
     }
 }

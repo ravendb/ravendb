@@ -68,8 +68,8 @@ namespace Voron.Impl.Journal
             }
 
             var transactionSizeIn4Kb =
-                (current->CompressedSize + sizeof(TransactionHeader))/ (4*Constants.Size.Kilobyte) +
-                (current->CompressedSize + sizeof(TransactionHeader)%(4*Constants.Size.Kilobyte) == 0 ? 0 : 1);
+                (current->CompressedSize + sizeof(TransactionHeader)) / (4*Constants.Size.Kilobyte) +
+                ((current->CompressedSize + sizeof(TransactionHeader)) % (4*Constants.Size.Kilobyte) == 0 ? 0 : 1);
 
 
             if (current->TransactionId <= _lastSyncedTransactionId)
@@ -223,7 +223,8 @@ namespace Voron.Impl.Journal
                     {
                         // TxId is bigger then the last one by nore the '1' but has valid hash which mean we lost transactions in the middle
                         throw new InvalidDataException(
-                            $"Transaction has Valid(!) hash, however Trasaction Id = {current->TransactionId} is invalid. Journal file might be corrupted");
+                            $"Transaction has valid(!) hash with invalid transaction id {current->TransactionId}, the last valid transaction id is {LastTransactionHeader->TransactionId}." +
+                            $" Journal file {_journalPager.FileName} might be corrupted");
                     }
                 }
 

@@ -170,7 +170,7 @@ namespace Raven.NewClient.Client.Document.Batches
         /// </param>
         Lazy<TResult[]> LoadStartingWith<TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null);
 
-        Lazy<Dictionary<string, TResult>> MoreLikeThis<TResult>(MoreLikeThisQuery query);
+        Lazy<List<TResult>> MoreLikeThis<TResult>(MoreLikeThisQuery query);
     }
 
     /// <summary>
@@ -319,7 +319,7 @@ namespace Raven.NewClient.Client.Document.Batches
         /// <param name="token">The cancellation token.</param>
         Lazy<Task<TResult[]>> LoadStartingWithAsync<TResult>(string keyPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null, RavenPagingInformation pagingInformation = null, string skipAfter = null, CancellationToken token = default (CancellationToken));
 
-        Lazy<Task<Dictionary<string, TResult>>> MoreLikeThisAsync<TResult>(MoreLikeThisQuery query, CancellationToken token = default (CancellationToken));
+        Lazy<Task<List<TResult>>> MoreLikeThisAsync<TResult>(MoreLikeThisQuery query, CancellationToken token = default (CancellationToken));
     }
 
     /// <summary>

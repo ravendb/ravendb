@@ -8,10 +8,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Imports.Newtonsoft.Json;
-using Raven.Server.Alerts;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.BackgroundTasks;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Server.Commercial
@@ -180,30 +178,6 @@ namespace Raven.Server.Commercial
             {
                 if (lockTaken)
                     Monitor.Exit(LeaseLicenseLock);
-            }
-        }
-
-        public class InitializationErrorAlertContent : IAlertContent
-        {
-            public InitializationErrorAlertContent(Exception e)
-            {
-                Exception = e;
-            }
-
-            public Exception Exception { get; set; }
-            public DynamicJsonValue ToJson()
-            {
-                return new DynamicJsonValue(GetType())
-                {
-                    [nameof(Exception)] = Exception.ToString()
-                };
-            }
-
-            public static string FormatMessage()
-            {
-                return $@"
-            <h3>License manager initialization error!</h3>
-            <p>Could not intitalize the license manager</p>";
             }
         }
     }

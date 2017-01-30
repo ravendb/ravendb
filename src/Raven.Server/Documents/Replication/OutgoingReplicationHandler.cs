@@ -20,14 +20,18 @@ using Raven.Client.Extensions;
 using Raven.Client.Replication.Messages;
 using Raven.Json.Linq;
 using Raven.NewClient.Client.Exceptions.Database;
-using Raven.Server.Alerts;
+using Raven.Server.Exceptions;
 using Raven.Server.Extensions;
+using Raven.Server.NotificationCenter.Actions;
+using Raven.Server.NotificationCenter.Alerts;
 using Sparrow;
 
 namespace Raven.Server.Documents.Replication
 {
     public class OutgoingReplicationHandler : IDisposable
     {
+        public const string AlertTitle = "Replication";
+
         internal readonly DocumentDatabase _database;
         internal readonly ReplicationDestination _destination;
         private readonly Logger _log;
@@ -265,14 +269,10 @@ namespace Raven.Server.Documents.Replication
             using (_database.ConfigurationStorage.ContextPool.AllocateOperationContext(out configurationContext))
             using (var txw = configurationContext.OpenWriteTransaction())
             {
-                _database.Alerts.AddAlert(new Alert
-                {
-                    Key = FromToString,
-                    Type = AlertType.Replication,
-                    Message = msg,
-                    CreatedAt = DateTime.UtcNow,
-                    Severity = AlertSeverity.Warning
-                }, configurationContext, txw);
+                _database.NotificationCenter.AddAfterTransactionCommit(
+                    AlertRaised.Create(AlertTitle, msg, AlertType.Replication, AlertSeverity.Warning, key: FromToString),
+                    txw);
+                
                 txw.Commit();
             }
         }

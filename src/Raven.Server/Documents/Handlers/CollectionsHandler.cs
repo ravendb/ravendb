@@ -8,6 +8,8 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Raven.Client.Data.Collection;
+using Raven.NewClient.Client.Data.Collections;
+using Raven.NewClient.Client.Operations.Databases.Collections;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -23,8 +25,8 @@ namespace Raven.Server.Documents.Handlers
                 var collections = new DynamicJsonValue();
                 var result = new DynamicJsonValue
                 {
-                    ["NumberOfDocuments"] = Database.DocumentsStorage.GetNumberOfDocuments(context),
-                    ["Collections"] = collections
+                    [nameof(CollectionStatistics.CountOfDocuments)] = Database.DocumentsStorage.GetNumberOfDocuments(context),
+                    [nameof(CollectionStatistics.Collections)] = collections
                 };
 
                 foreach (var collectionStat in Database.DocumentsStorage.GetCollections(context))
@@ -67,7 +69,7 @@ namespace Raven.Server.Documents.Handlers
             var returnContextToPool = ContextPool.AllocateOperationContext(out context);
 
             ExecuteCollectionOperation((runner, collectionName, options, onProgress, token) => Task.Run(() => runner.ExecuteDelete(collectionName, options, context, onProgress, token)),
-                context, returnContextToPool, DatabaseOperations.PendingOperationType.DeleteByCollection);
+                context, returnContextToPool, DatabaseOperations.OperationType.DeleteByCollection);
             return Task.CompletedTask;
 
         }
@@ -82,12 +84,12 @@ namespace Raven.Server.Documents.Handlers
             var patch = Documents.Patch.PatchRequest.Parse(reader);
 
             ExecuteCollectionOperation((runner, collectionName, options, onProgress, token) => Task.Run(() => runner.ExecutePatch(collectionName, options, patch, context, onProgress, token)),
-                context, returnContextToPool, DatabaseOperations.PendingOperationType.DeleteByCollection);
+                context, returnContextToPool, DatabaseOperations.OperationType.UpdateByCollection);
             return Task.CompletedTask;
 
         }
 
-        private void ExecuteCollectionOperation(Func<CollectionRunner, string, CollectionOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, DatabaseOperations.PendingOperationType operationType)
+        private void ExecuteCollectionOperation(Func<CollectionRunner, string, CollectionOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, DatabaseOperations.OperationType operationType)
         {
             var collectionName = GetStringQueryString("name");
 

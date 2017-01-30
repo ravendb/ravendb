@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
@@ -13,18 +14,18 @@ namespace Raven.NewClient.Client.Document.Batches
 {
     public class LazyMoreLikeThisOperation<T> : ILazyOperation
     {
-        private readonly LoadOperation _loadOperation;
-        private readonly MoreLikeThisQuery query;
+        private readonly MoreLikeThisQuery _query;
+        private readonly MoreLikeThisOperation<T> _operation;
 
-        public LazyMoreLikeThisOperation(LoadOperation loadOperation, MoreLikeThisQuery query)
+        public LazyMoreLikeThisOperation(InMemoryDocumentSessionOperations session, MoreLikeThisQuery query)
         {
-            _loadOperation = loadOperation;
-            this.query = query;
+            _query = query;
+            _operation = new MoreLikeThisOperation<T>(session, query);
         }
 
         public GetRequest CreateRequest()
         {
-            var uri = query.GetRequestUri();
+            var uri = _query.GetRequestUri();
             var separator = uri.IndexOf('?');
             return new GetRequest()
             {
@@ -52,9 +53,10 @@ namespace Raven.NewClient.Client.Document.Batches
                 return;
             }
 
-            var res = JsonDeserializationClient.GetDocumentResult((BlittableJsonReaderObject)response.Result);
-            _loadOperation.SetResult(res);
-            Result = _loadOperation.GetDocuments<T>();
+            var result = JsonDeserializationClient.MoreLikeThisQueryResult((BlittableJsonReaderObject)response.Result);
+            _operation.SetResult(result);
+
+            Result = _operation.Complete<T>();
         }
     }
 }

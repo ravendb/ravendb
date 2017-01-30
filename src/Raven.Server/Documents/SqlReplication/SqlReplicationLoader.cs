@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
-using Raven.Server.Alerts;
 using Raven.Server.Json;
+using Raven.Server.NotificationCenter.Actions;
+using Raven.Server.NotificationCenter.Actions.Details;
+using Raven.Server.NotificationCenter.Alerts;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Collections;
 using Sparrow.Json;
@@ -96,19 +98,13 @@ namespace Raven.Server.Documents.SqlReplication
             {
                 return new DynamicJsonValue
                 {
-                    ["LastAlert"] = new Alert
-                    {
-                        Type = AlertType.SqlReplicationError, 
-                        Severity = AlertSeverity.Error,
-                        CreatedAt = SystemTime.UtcNow,
-                        Key = simulateSqlReplication.Configuration.Name,
-                        Message = "SQL replication error",
-                        Content = new ExceptionAlertContent
-                        {
-                            Message = "Last SQL replication operation for " + simulateSqlReplication.Configuration.Name + " was failed",
-                            Exception = e.ToString()
-                        }
-                    }
+                    ["LastAlert"] =
+                    AlertRaised.Create(SqlReplication.AlertTitle,
+                        $"Last SQL replication operation for {simulateSqlReplication.Configuration.Name} was failed",
+                        AlertType.SqlReplication_Error,
+                        AlertSeverity.Error,
+                        key: simulateSqlReplication.Configuration.Name,
+                        details: new ExceptionDetails(e)).ToJson()
                 };
             }
         }

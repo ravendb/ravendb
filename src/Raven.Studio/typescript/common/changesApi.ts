@@ -8,25 +8,20 @@ import EVENTS = require("common/constants/events");
 
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
 
-class changesApi extends abstractWebSocketClient {
+class changesApi extends abstractWebSocketClient<changesApiEventDto> {
 
     constructor(rs: resource) {
         super(rs);
     }
-
-    serverStartTime = ko.observable<string>();
 
     //TODO: private allReplicationConflicts = ko.observableArray<changesCallback<replicationConflictNotificationDto>>();
     private allDocsHandlers = ko.observableArray<changesCallback<Raven.Abstractions.Data.DocumentChangeNotification>>();
     private allIndexesHandlers = ko.observableArray<changesCallback<Raven.Abstractions.Data.IndexChangeNotification>>();
     private allTransformersHandlers = ko.observableArray<changesCallback<Raven.Abstractions.Data.TransformerChangeNotification>>();
     //TODO: private allBulkInsertsHandlers = ko.observableArray<changesCallback<bulkInsertChangeNotificationDto>>();
-    private allOperationsHandlers = ko.observableArray<changesCallback<Raven.Client.Data.OperationStatusChangeNotification>>();
-    private allAlertsHandlers = ko.observableArray<changesCallback<Raven.Server.Alerts.AlertNotification>>();
 
     private watchedDocuments = new Map<string, KnockoutObservableArray<changesCallback<Raven.Abstractions.Data.DocumentChangeNotification>>>();
     private watchedPrefixes = new Map<string, KnockoutObservableArray<changesCallback<Raven.Abstractions.Data.DocumentChangeNotification>>>();
-    private watchedOperations = new Map<number, KnockoutObservableArray<changesCallback<Raven.Client.Data.OperationStatusChangeNotification>>>();
     private watchedIndexes = new Map<string, KnockoutObservableArray<changesCallback<Raven.Abstractions.Data.IndexChangeNotification>>>();
 
     /* TODO:
@@ -45,44 +40,25 @@ class changesApi extends abstractWebSocketClient {
     private watchedTimeSeries: dictionary<KnockoutObservableArray<changesCallback<timeSeriesKeyChangeNotification>>> = {};
     private allTimeSeriesBulkOperationsHandlers = ko.observableArray<changesCallback<timeSeriesBulkOperationNotificationDto>>();*/
 
-    private onServerStartTimeReceived(startTime: string) {
-        this.serverStartTime(startTime);
-    }
-
     get connectionDescription() {
         return this.rs.fullTypeName + " = " + this.rs.name;
     }
 
     protected webSocketUrlFactory(token: singleAuthToken) {
-        const connectionString = "singleUseAuthToken=" + token.Token + "&sendServerStartTime=true&throttleConnection=true";
+        const connectionString = "singleUseAuthToken=" + token.Token + "&throttleConnection=true";
         return "/changes?" + connectionString;
     }
 
-    protected onError(e: any) {
-        super.onError(e);
-        this.serverStartTime(null);
+    protected onOpen() {
+        super.onOpen();
+        ko.postbox.publish(EVENTS.ChangesApi.Reconnected, this.rs);
     }
 
-    protected onClose(e: CloseEvent) {
-        super.onClose(e);
-        this.serverStartTime(null);
-    }
-
-    protected onMessage(e: any) {
-        if (!e.data.trim()) {
-            // it is heartbeat only
-            return;
-        }
-        const eventDto: changesApiEventDto = JSON.parse(e.data);
+    protected onMessage(eventDto: changesApiEventDto) {
         const eventType = eventDto.Type;
         const value = eventDto.Value;
 
         switch (eventType) {
-            case "ServerStartTimeNotification":
-                this.onServerStartTimeReceived(value as string);
-                this.connectToWebSocketTask.resolve();
-                ko.postbox.publish(EVENTS.ChangesApi.Reconnected, this.rs);
-                break;
             case "DocumentChangeNotification":
                 this.fireEvents<Raven.Abstractions.Data.DocumentChangeNotification>(this.allDocsHandlers(), value, () => true);
 
@@ -107,12 +83,6 @@ class changesApi extends abstractWebSocketClient {
             /* TODO: case "BulkInsertChangeNotification":
                 this.fireEvents(this.allBulkInsertsHandlers(), value, () => true);
                 break; */
-            case "OperationStatusChangeNotification":
-                this.fireEvents<Raven.Client.Data.OperationStatusChangeNotification>(this.allOperationsHandlers(), value, () => true);
-
-                this.watchedOperations.forEach((callbacks, key) =>
-                    this.fireEvents<Raven.Client.Data.OperationStatusChangeNotification>(callbacks(), value, (event) => event.OperationId === key));
-                break;
             default:
                 console.log("Unhandled Changes API notification type: " + eventType);
         }
@@ -264,60 +234,6 @@ class changesApi extends abstractWebSocketClient {
             if (callbacks().length === 0) {
                 this.watchedPrefixes.delete(docIdPrefix);
                 this.send("unwatch-prefix", docIdPrefix);
-            }
-        });
-    }
-
-    watchOperation(operationId: number, onChange: (e: Raven.Client.Data.OperationStatusChangeNotification) => void): changeSubscription {
-        let callback = new changesCallback<Raven.Client.Data.OperationStatusChangeNotification>(onChange);
-
-        if (!this.watchedOperations.has(operationId)) {
-            this.send("watch-operation", operationId.toString());
-            this.watchedOperations.set(operationId, ko.observableArray<changesCallback<Raven.Client.Data.OperationStatusChangeNotification>>());
-        }
-
-        let callbacks = this.watchedOperations.get(operationId);
-        callbacks.push(callback);
-
-        return new changeSubscription(() => {
-            callbacks.remove(callback);
-            if (callbacks().length === 0) {
-                this.watchedOperations.delete(operationId);
-                this.send("unwatch-operation", operationId.toString());
-            }
-        });
-    }
-
-    watchOperations(onChange: (e: Raven.Client.Data.OperationStatusChangeNotification) => void): changeSubscription {
-        const callback = new changesCallback<Raven.Client.Data.OperationStatusChangeNotification>(onChange);
-
-        if (this.allOperationsHandlers().length === 0) {
-            this.send("watch-operations");
-        }
-
-        this.allOperationsHandlers.push(callback);
-
-        return new changeSubscription(() => {
-            this.allOperationsHandlers.remove(callback);
-            if (this.allOperationsHandlers().length === 0) {
-                this.send("unwatch-operations");
-            }
-        });
-    }
-
-    watchAlerts(onChange: (e: Raven.Server.Alerts.AlertNotification) => void): changeSubscription {
-        const callback = new changesCallback<Raven.Server.Alerts.AlertNotification>(onChange);
-
-        if (this.allAlertsHandlers().length === 0) {
-            this.send("watch-alerts");
-        }
-
-        this.allAlertsHandlers.push(callback);
-
-        return new changeSubscription(() => {
-            this.allAlertsHandlers.remove(callback);
-            if (this.allAlertsHandlers().length === 0) {
-                this.send("unwatch-alerts");
             }
         });
     }

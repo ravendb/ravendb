@@ -13,17 +13,18 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.DependencyInjection;
 using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Abstractions.Replication;
 using Raven.Client.Data;
 using Raven.Client.Json;
 using Raven.NewClient.Client.Exceptions.Database;
-using Raven.Server.Alerts;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Exceptions;
+using Raven.Server.NotificationCenter.Actions;
+using Raven.Server.NotificationCenter.Actions.Details;
+using Raven.Server.NotificationCenter.Actions.Server;
+using Raven.Server.NotificationCenter.Alerts;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.BackgroundTasks;
@@ -182,14 +183,13 @@ namespace Raven.Server
                 if (_logger.IsInfoEnabled)
                     _logger.Info("Could not setup license check.", e);
 
-                ServerStore.Alerts.AddAlert(new Alert
-                {
-                    Type = AlertType.LicenseManagerInitializationError,
-                    Key = nameof(AlertType.LicenseManagerInitializationError),
-                    Severity = AlertSeverity.Info,
-                    Content = new LicenseManager.InitializationErrorAlertContent(e),
-                    Message = LicenseManager.InitializationErrorAlertContent.FormatMessage()
-                });
+                var alert = AlertRaised.Create("License manager initialization error",
+                    "Could not intitalize the license manager", 
+                    AlertType.LicenseManager_InitializationError,
+                    AlertSeverity.Info, 
+                    details: new ExceptionDetails(e));
+
+                ServerStore.NotificationCenter.Add(alert);
             }
         }
 

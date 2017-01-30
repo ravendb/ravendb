@@ -19,12 +19,20 @@ namespace Raven.Server.Documents
         private List<DocumentChangeNotification> _documentNotifications;
 
         private List<DocumentChangeNotification> _systemDocumentChangeNotifications;
+        private bool _replaced;
 
         public DocumentsTransaction(DocumentsOperationContext context, Transaction transaction, DocumentsNotifications notifications)
             : base(transaction)
         {
             _context = context;
             _notifications = notifications;
+        }
+
+        public DocumentsTransaction BeginAsyncCommitAndStartNewTransaction()
+        {
+            _replaced = true;
+            var tx = InnerTransaction.BeginAsyncCommitAndStartNewTransaction();
+            return new DocumentsTransaction(_context, tx, _notifications);
         }
 
         public void AddAfterCommitNotification(DocumentChangeNotification notification)
@@ -47,10 +55,14 @@ namespace Raven.Server.Documents
 
         public override void Dispose()
         {
-            if (_context.Transaction != null && _context.Transaction != this)
-                ThrowInvalidTransactionUsage();
+            if (_replaced == false)
+            {
+                if (_context.Transaction != null && _context.Transaction != this)
+                    ThrowInvalidTransactionUsage();
 
-            _context.Transaction = null;
+                _context.Transaction = null;
+            }
+
             base.Dispose();
 
             if (InnerTransaction.LowLevelTransaction.Committed)
@@ -80,6 +92,8 @@ namespace Raven.Server.Documents
                 RaiseNotifications(); // raise immediately
             }
         }
+
+        public bool ModifiedSystemDocuments => _systemDocumentChangeNotifications?.Count > 0;
 
         private void RaiseNotifications()
         {

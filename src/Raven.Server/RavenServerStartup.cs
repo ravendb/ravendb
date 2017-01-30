@@ -19,7 +19,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
-using IndexCompilationException = Raven.Client.Exceptions.IndexCompilationException;
+using IndexCompilationException = Raven.Client.Exceptions.Compilation.IndexCompilationException;
 using ConflictException = Raven.Client.Exceptions.ConflictException;
 using DocumentConflictException = Raven.Client.Exceptions.DocumentConflictException;
 
@@ -48,6 +48,8 @@ namespace Raven.Server
             app.Run(RequestHandler);
         }
 
+        public static bool SkipHttpLogging;
+
         private async Task RequestHandler(HttpContext context)
         {
             try
@@ -59,7 +61,7 @@ namespace Raven.Server
                 var tenant = await _router.HandlePath(context, context.Request.Method, context.Request.Path.Value);
                 sp.Stop();
 
-                if (_logger.IsInfoEnabled)
+                if (_logger.IsInfoEnabled && SkipHttpLogging == false)
                 {
                     _logger.Info($"{context.Request.Method} {context.Request.Path.Value}?{context.Request.QueryString.Value} - {context.Response.StatusCode} - {sp.ElapsedMilliseconds:#,#;;0} ms");
                 }

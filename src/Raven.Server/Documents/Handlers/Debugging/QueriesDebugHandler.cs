@@ -35,8 +35,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             query.Token.Cancel();
 
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
-            return Task.CompletedTask;
+            return NoContent();
         }
 
         [RavenAction("/databases/*/debug/queries/running", "GET")]

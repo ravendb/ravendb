@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using Sparrow.Json;
 using Voron;
 using Sparrow;
@@ -57,7 +55,7 @@ namespace Raven.Server.ServerWide.Context
 
         protected abstract TTransaction CreateWriteTransaction();
 
-        public virtual RavenTransaction OpenWriteTransaction()
+        public TTransaction OpenWriteTransaction()
         {
             if (Transaction != null && Transaction.Disposed == false)
             {

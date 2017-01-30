@@ -17,7 +17,6 @@ using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Data.Queries;
 using Raven.Client.Indexing;
-using Raven.Server.Alerts;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Includes;
@@ -34,6 +33,9 @@ using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Sorting;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.Exceptions;
+using Raven.Server.NotificationCenter.Actions;
+using Raven.Server.NotificationCenter.Actions.Details;
+using Raven.Server.NotificationCenter.Alerts;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.LowMemoryNotification;
@@ -2012,20 +2014,20 @@ namespace Raven.Server.Documents.Indexes
                 $"For example, document: '{_maxExceedingIndexOutputsPerDocumentId}' has produced {_maxExceedingIndexOutputsPerDocument} results'. " +
                 "Please verify this index definition and consider a re-design of your entities or index.";
 
-            DocumentDatabase.Alerts.AddAlert(new Alert
-            {
-                Type = AlertType.WarnIndexOutputsPerDocument,
-                Message = $"Max index outputs per documents exceeded {Configuration.MaxWarnIndexOutputsPerDocument}",
-                CreatedAt = SystemTime.UtcNow,
-                Severity = AlertSeverity.Warning,
-                Content = new WarnIndexOutputsPerDocument
+            var alert = AlertRaised.Create(
+                "Max index outputs warning",
+                $"Max index outputs per documents exceeded {Configuration.MaxWarnIndexOutputsPerDocument}",
+                AlertType.WarnIndexOutputsPerDocument,
+                AlertSeverity.Warning,
+                details: new WarnIndexOutputsPerDocument
                 {
                     Message = message
-                }
-            });
+                });
+
+            DocumentDatabase.NotificationCenter.Add(alert);
         }
 
-        public class WarnIndexOutputsPerDocument : IAlertContent
+        public class WarnIndexOutputsPerDocument : IActionDetails
         {
             public string Message { get; set; }
 

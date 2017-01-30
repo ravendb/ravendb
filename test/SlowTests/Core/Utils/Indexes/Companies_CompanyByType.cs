@@ -6,8 +6,8 @@
 
 using System;
 using System.Linq;
-using Raven.Abstractions.Data;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Indexes;
 using Company = SlowTests.Core.Utils.Entities.Company;
 
 namespace SlowTests.Core.Utils.Indexes
@@ -34,12 +34,12 @@ namespace SlowTests.Core.Utils.Indexes
             Reduce = results => from result in results
                                 group result by result.Type
                                     into g
-                                    select new
-                                    {
-                                        Type = g.Key,
-                                        ContactsCount = g.Sum(x => x.ContactsCount),
-                                        LastModified = g.Select(x => x.LastModified).First()
-                                    };
+                                select new
+                                {
+                                    Type = g.Key,
+                                    ContactsCount = g.Sum(x => x.ContactsCount),
+                                    LastModified = g.Select(x => x.LastModified).First()
+                                };
         }
     }
 }

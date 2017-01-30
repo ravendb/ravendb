@@ -230,11 +230,10 @@ namespace Raven.NewClient.Client.Document.Async
             return AddLazyOperation(lazyLoadOperation, onEval, token);
         }
 
-        public Lazy<Task<Dictionary<string, T>>> MoreLikeThisAsync<T>(MoreLikeThisQuery query, CancellationToken token = new CancellationToken())
+        Lazy<Task<List<T>>> IAsyncLazySessionOperations.MoreLikeThisAsync<T>(MoreLikeThisQuery query, CancellationToken token = new CancellationToken())
         {
-            var loadOperation = new LoadOperation(this);
-            var lazyOp = new LazyMoreLikeThisOperation<T>(loadOperation, query);
-            return AddLazyOperation<Dictionary<string, T>>(lazyOp, null, token);
+            var lazyOp = new LazyMoreLikeThisOperation<T>(this, query);
+            return AddLazyOperation<List<T>>(lazyOp, null, token);
         }
 
         public Lazy<Task<Dictionary<string, T>>> LazyAsyncLoadInternal<T>(string[] ids, string[] includes, Action<Dictionary<string, T>> onEval, CancellationToken token = default(CancellationToken))

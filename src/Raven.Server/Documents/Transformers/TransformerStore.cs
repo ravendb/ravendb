@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
+using Raven.Server.NotificationCenter.Actions;
+using Raven.Server.NotificationCenter.Actions.Details;
+using Raven.Server.NotificationCenter.Alerts;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Platform;
@@ -94,9 +97,17 @@ namespace Raven.Server.Documents.Transformers
 
                         var fakeTransformer = new FaultyInMemoryTransformer(transformerId, Transformer.TryReadNameFromFile(transformerFile.Name));
 
+                        var message = $"Could not open transformer with id {transformerId}. Created in-memory, fake instance: {fakeTransformer.Name}";
+
                         if (_log.IsOperationsEnabled)
-                            _log.Operations($"Could not open transformer with id {transformerId}. Created in-memory, fake instance: {fakeTransformer.Name}", e);
-                        //TODO arek: add alert
+                            _log.Operations(message, e);
+
+                        _documentDatabase.NotificationCenter.Add(AlertRaised.Create("Transformers store initialization error",
+                            message,
+                            AlertType.TransformerStore_TransformerCouldNotBeOpened,
+                            AlertSeverity.Error,
+                            key: fakeTransformer.Name,
+                            details: new ExceptionDetails(e)));
 
                         _transformers.Add(fakeTransformer);
                     }

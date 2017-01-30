@@ -24,6 +24,7 @@ namespace Sparrow.Json
         private bool _isDisposed;
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ArenaMemoryAllocator>("ArenaMemoryAllocator");
         private NativeMemory.ThreadStats _allocatingThread;
+        private readonly int _initialSize;
 
         public long Allocated
         {
@@ -43,6 +44,7 @@ namespace Sparrow.Json
 
         public ArenaMemoryAllocator(int initialSize = 1024 * 1024)
         {
+            _initialSize = initialSize;
             _ptrStart = _ptrCurrent = NativeMemory.AllocateMemory(initialSize, out _allocatingThread);
             _allocated = initialSize;
             _used = 0;
@@ -106,19 +108,17 @@ namespace Sparrow.Json
                 throw new ArgumentOutOfRangeException(nameof(requestedSize));
 
             // we need the next allocation to cover at least the next expansion (also doubling)
-            // so we'll allocate 3 times as much as was requested, or twice as much as we already have
+            // so we'll allocate 3 times as much as was requested, or as much as we already have
             // the idea is that a single allocation can server for multiple (increasing in size) calls
-            long newSize = Math.Max(Bits.NextPowerOf2(requestedSize) * 3, _allocated);
+            long newSize = Math.Max(Bits.NextPowerOf2(requestedSize) * 3, _initialSize);
             if (newSize > MaxArenaSize)
                 newSize = MaxArenaSize;
 
             if (Logger.IsInfoEnabled)
             {
                 if (newSize > 512 * 1024 * 1024)
-                    Logger.Info(
-                        $"Arena main buffer reached size of {newSize:#,#;0} bytes (previously {_allocated:#,#;0} bytes), check if you forgot to reset the context. From now on we grow this arena in 1GB chunks.");
-                Logger.Info(
-                    $"Increased size of buffer from {_allocated:#,#;0} to {newSize:#,#;0} because we need {requestedSize:#,#;0}. _used={_used:#,#;0}");
+                    Logger.Info($"Arena main buffer reached size of {newSize:#,#;0} bytes (previously {_allocated:#,#;0} bytes), check if you forgot to reset the context. From now on we grow this arena in 1GB chunks.");
+                Logger.Info($"Allocated additional {newSize:#,#;0} because we need {requestedSize:#,#;0}.");
             }
 
             NativeMemory.ThreadStats thread;

@@ -97,7 +97,7 @@ namespace Raven.Server.Documents.Handlers
             public string Prefix;
             public long OldMax;
 
-            public override void Execute(DocumentsOperationContext context, RavenTransaction tx)
+            public override void Execute(DocumentsOperationContext context)
             {
                 var hiLoDocumentKey = RavenKeyGeneratorsHilo + Key;
                 var prefix = Key + Separator;
@@ -180,7 +180,7 @@ namespace Raven.Server.Documents.Handlers
                 await Database.TxMerger.Enqueue(cmd);
             }
 
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
+            NoContentStatus();
         }
 
         private class MergedHiLoReturnCommand : TransactionOperationsMerger.MergedTransactionCommand
@@ -190,7 +190,7 @@ namespace Raven.Server.Documents.Handlers
             public long End;
             public long Last;
 
-            public override void Execute(DocumentsOperationContext context, RavenTransaction tx)
+            public override void Execute(DocumentsOperationContext context)
             {
                 var hiLoDocumentKey = RavenKeyGeneratorsHilo + Key;
 

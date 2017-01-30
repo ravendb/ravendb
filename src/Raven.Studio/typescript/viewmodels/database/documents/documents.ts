@@ -21,7 +21,6 @@ import getCollectionsStatsCommand = require("commands/database/documents/getColl
 
 import getCustomColumnsCommand = require("commands/database/documents/getCustomColumnsCommand");
 import getEffectiveCustomFunctionsCommand = require("commands/database/globalConfig/getEffectiveCustomFunctionsCommand");
-import getOperationStatusCommand = require("commands/operations/getOperationStatusCommand");
 import generateClassCommand = require("commands/database/documents/generateClassCommand");
 
 import eventsCollector = require("common/eventsCollector");
@@ -227,12 +226,12 @@ class documents extends viewModelBase {
         ];
     }
 
-    createNotifications(): Array<changeSubscription> {
-        return [
-            //TODO: this.changesContext.currentResourceChangesApi().watchAllIndexes(() => this.refreshCollections()),
-            this.changesContext.currentResourceChangesApi().watchAllDocs(() => this.refreshCollections()),
-            //TODO: this.changesContext.currentResourceChangesApi().watchBulks(() => this.refreshCollections())
-        ];
+    afterClientApiConnected(): void {
+        const changesApi = this.changesContext.resourceChangesApi();
+        this.addNotification(changesApi.watchAllDocs(() => this.refreshCollections()));
+
+        //TODO: this.addNotification(changesApi.watchAllIndexes(() => this.refreshCollections()));
+        //TODO: this.addNotification(changesApi.watchBulks(() => this.refreshCollections()));
     }
 
     exportCsv() {
@@ -338,9 +337,9 @@ class documents extends viewModelBase {
     }
 
     private updateGridAfterOperationComplete(collection: collection, operationId: number) {
-        var getOperationStatusTask = new getOperationStatusCommand(collection.ownerDatabase, operationId);
+        /* TODO var getOperationStatusTask = new getOperationStatusCommand(collection.ownerDatabase, operationId);
         getOperationStatusTask.execute()
-            /* TODO .done((result: bulkOperationStatusDto) => {
+             .done((result: bulkOperationStatusDto) => {
                 if (result.Completed) {
                     var selectedCollection: collection = this.selectedCollection();
 

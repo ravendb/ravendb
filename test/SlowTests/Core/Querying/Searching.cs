@@ -7,16 +7,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 using FastTests;
-
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexing;
-
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
 using SlowTests.Core.Utils.Indexes;
 
 using Xunit;
@@ -28,18 +26,18 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Querying
 {
-    public class Searching : RavenTestBase
+    public class Searching : RavenNewTestBase
     {
         [Fact]
         public void CanSearchByMultipleTerms()
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.PutIndex("Posts/ByTitle", new IndexDefinition
+                store.Admin.Send(new PutIndexOperation("Posts/ByTitle", new IndexDefinition
                 {
                     Maps = { "from post in docs.Posts select new { post.Title }" },
                     Fields = { { "Title", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed } } }
-                });
+                }));
 
                 using (var session = store.OpenSession())
                 {
@@ -89,7 +87,7 @@ namespace SlowTests.Core.Querying
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.PutIndex("Posts/ByTitleAndDescription", new IndexDefinition
+                store.Admin.Send(new PutIndexOperation("Posts/ByTitleAndDescription", new IndexDefinition
                 {
                     Maps = { "from post in docs.Posts select new { post.Title, post.Desc }" },
                     Fields =
@@ -97,7 +95,7 @@ namespace SlowTests.Core.Querying
                         { "Title", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed} },
                         { "Desc", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed} }
                     }
-                });
+                }));
 
                 using (var session = store.OpenSession())
                 {
@@ -271,7 +269,7 @@ namespace SlowTests.Core.Querying
                     var users = session.Query<User, Users_ByName>()
                         .Where(x => x.Name == "Bob" || x.LastName == "Bob")
                         .ToArray();
-                    WaitForUserToContinueTheTest(store);
+                    
                     Assert.Equal(2, users.Length);
                     Assert.Equal("Name", users[0].Name);
                     Assert.Equal("Bob", users[1].Name);
@@ -316,17 +314,17 @@ namespace SlowTests.Core.Querying
                     Assert.Equal("jones", suggestionResult.Suggestions[1]);
                     Assert.Equal("johnson", suggestionResult.Suggestions[2]);
 
+                    throw new NotImplementedException();
+                    //Lazy<SuggestionQueryResult> lazySuggestionResult = users.SuggestLazy();
 
-                    Lazy<SuggestionQueryResult> lazySuggestionResult = users.SuggestLazy();
+                    //Assert.False(lazySuggestionResult.IsValueCreated);
 
-                    Assert.False(lazySuggestionResult.IsValueCreated);
+                    //suggestionResult = lazySuggestionResult.Value;
 
-                    suggestionResult = lazySuggestionResult.Value;
-
-                    Assert.Equal(3, suggestionResult.Suggestions.Length);
-                    Assert.Equal("john", suggestionResult.Suggestions[0]);
-                    Assert.Equal("jones", suggestionResult.Suggestions[1]);
-                    Assert.Equal("johnson", suggestionResult.Suggestions[2]);
+                    //Assert.Equal(3, suggestionResult.Suggestions.Length);
+                    //Assert.Equal("john", suggestionResult.Suggestions[0]);
+                    //Assert.Equal("jones", suggestionResult.Suggestions[1]);
+                    //Assert.Equal("johnson", suggestionResult.Suggestions[2]);
                 }
             }
         }

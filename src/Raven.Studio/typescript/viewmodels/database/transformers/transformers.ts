@@ -106,10 +106,9 @@ class transformers extends viewModelBase {
             });
     }
 
-    createNotifications(): Array<changeSubscription> {
-        return [
-            this.changesContext.currentResourceChangesApi().watchAllTransformers((e) => this.processTransformerEvent(e))
-        ];
+    afterClientApiConnected(): void {
+        const changesApi = this.changesContext.resourceChangesApi();
+        this.addNotification(changesApi.watchAllTransformers((e) => this.processTransformerEvent(e)));
     }
 
     private processTransformerEvent(e: Raven.Abstractions.Data.TransformerChangeNotification) {

@@ -51,11 +51,6 @@ class resourcesManager {
     timeSeries = ko.computed<timeSeries[]>(() => this.resources().filter(x => x instanceof timeSeries) as timeSeries[]);
 
     constructor() { 
-        this.changesContext.connectGlobalChangesApi()
-            .done(() => {
-                this.changesContext.globalChangesApi().watchReconnect(() => this.refreshResources());
-            });
-
         ko.postbox.subscribe(EVENTS.ChangesApi.Reconnected, (rs: resource) => this.reloadDataAfterReconnection(rs));
 
         ko.postbox.subscribe(EVENTS.Resource.Activate, ({ resource }: resourceActivatedEventArgs) => {
@@ -192,21 +187,22 @@ class resourcesManager {
     private activateDatabase(db: database) {
         //TODO: this.fecthStudioConfigForDatabase(db);
 
-        this.changesContext.updateChangesApi(db, (changes: changesApi) => {
-            changes.watchAllIndexes(e => this.onIndexNofitication(db, e));
+        this.changesContext.changeResource(db, (changes: changesApi) => {
             /* TODO
             changes.watchAllDocs(() => this.refreshResources()); //TODO: use cooldown - and move to footer?
             changes.watchAllIndexes(() => this.fetchDbStats(db)),
             changes.watchBulks(() => this.fetchDbStats(db))*/
 
-            return [] as changeSubscription[];
+            return [
+                changes.watchAllIndexes(e => this.onIndexNofitication(db, e))
+            ] as changeSubscription[];
         });
     }
 
     private activateFileSystem(fs: filesystem) {
         //TODO: ???? this.fecthStudioConfigForDatabase(new database(fs.name));
 
-        this.changesContext.updateChangesApi(fs, (changes: changesApi) => {
+        this.changesContext.changeResource(fs, (changes: changesApi) => {
             //TODO: watchFsFolders("", () => this.fetchFsStats(fs))
             return [] as changeSubscription[];
         });
@@ -310,25 +306,27 @@ class resourcesManager {
         throw new Error("Unhandled resource type: " + qualifer);
     }
 
-    createGlobalNotifications(): Array<changeSubscription> {
-        const globalChanges = changesContext.default.globalChangesApi();
+    // Please remember those notifications are setup before connection to websocket
+    setupGlobalNotifications(): Array<changeSubscription> {
+        const serverWideClient = changesContext.default.serverNotifications();
 
         return [
-            globalChanges.watchItemsStartingWith("db/", e => this.onResourceUpdateReceivedViaChangesApi(e)),
+            serverWideClient.watchResourceChangeStartingWith("db/", e => this.onResourceUpdateReceivedViaChangesApi(e)),
+            serverWideClient.watchReconnect(() => this.refreshResources())
 
             //TODO: fs, cs, ts
              //TODO: DO: this.globalChangesApi.watchDocsStartingWith(shell.studioConfigDocumentId, () => shell.fetchStudioConfig()),*/
         ];
     }
 
-    private onResourceUpdateReceivedViaChangesApi(event: Raven.Server.Alerts.GlobalAlertNotification) {
-        let resource = this.getResourceByQualifiedName(event.Id);
-        if (event.Operation === "Delete" && resource) {
+    private onResourceUpdateReceivedViaChangesApi(event: Raven.Server.NotificationCenter.Actions.Server.ResourceChanged) {
+        let resource = this.getResourceByQualifiedName(event.ResourceName);
+        if (event.ChangeType === "Delete" && resource) {
             
             this.onResourceDeleted(resource);
 
-        } else if (event.Operation === "Write") {
-            const [prefix, name] = event.Id.split("/", 2);
+        } else if (event.ChangeType === "Put") {
+            const [prefix, name] = event.ResourceName.split("/", 2);
             new getResourceCommand(prefix, name)
                 .execute()
                 .done((rsInfo: Raven.Client.Data.ResourceInfo) => {
@@ -346,7 +344,7 @@ class resourcesManager {
 
                     const toActivate = this.resourceToActivate();
 
-                    if (toActivate && toActivate === event.Id) {
+                    if (toActivate && toActivate === event.ResourceName) {
                         updatedResource.activate();
                         this.resourceToActivate(null);
                     }

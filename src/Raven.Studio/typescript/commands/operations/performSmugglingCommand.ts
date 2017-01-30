@@ -1,7 +1,6 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
-import getOperationStatusCommand = require("commands/operations/getOperationStatusCommand");
  
 class performSmugglingCommand extends commandBase {
 
@@ -23,9 +22,9 @@ class performSmugglingCommand extends commandBase {
     }
 
     private monitorOperation(parentPromise: JQueryDeferred<any>, operationId: number) {
-        new getOperationStatusCommand(this.db, operationId)
+        /* TODOnew getOperationStatusCommand(this.db, operationId)
             .execute()
-            /* TODO.done((result: serverSmugglingOperationStateDto) => {
+            .done((result: serverSmugglingOperationStateDto) => {
             this.updateMigrationStatus(result);
             if (result.Completed) {
                 if (result.Faulted || result.Canceled) {

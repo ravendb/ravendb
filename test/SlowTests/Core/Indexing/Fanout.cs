@@ -1,14 +1,16 @@
 ﻿using System.Collections.Generic;
 using FastTests;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
+
 using Xunit;
 using System.Linq;
 using System.Threading;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
 
 namespace SlowTests.Core.Indexing
 {
-    public class Fanout : RavenTestBase
+    public class Fanout : RavenNewTestBase
     {
         private class User
         {
@@ -77,13 +79,13 @@ namespace SlowTests.Core.Indexing
                     session.SaveChanges();
                 }
 
-                store.DatabaseCommands.PutIndex(index.IndexName, definition);
+                store.Admin.Send(new PutIndexOperation(index.IndexName, definition));
 
                 WaitForIndexing(store);
 
-                SpinWait.SpinUntil(() => store.DatabaseCommands.GetIndexErrors(index.IndexName).Errors.Length > 0, 1000);
+                SpinWait.SpinUntil(() => store.Admin.Send(new GetIndexErrorsOperation(new[] { index.IndexName }))[0].Errors.Length > 0, 1000);
 
-                var errors = store.DatabaseCommands.GetIndexErrors(index.IndexName);
+                var errors = store.Admin.Send(new GetIndexErrorsOperation(new[] { index.IndexName }))[0];
 
                 Assert.Equal(1, errors.Errors.Length);
                 Assert.Contains("Index 'UsersAndFriends' has already produced 3 map results for a source document 'users/2'", errors.Errors[0].Error);

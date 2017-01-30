@@ -20,5 +20,7 @@ namespace Raven.Server.Documents.Indexes
                 ["Message"] = Message
             };
         }
+
+        public bool ShouldPersist => false;
     }
 }
