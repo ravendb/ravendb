@@ -855,7 +855,7 @@ namespace Voron.Impl.Journal
                     }
 
                     if (_waj._logger.IsInfoEnabled)
-                        _waj._logger.Info($"Flushed {pagesToWrite.Count:#,#} pages with {written / Constants.Size.Kilobyte:#,#} kb in {sp.Elapsed}");
+                        _waj._logger.Info($"Flushed {pagesToWrite.Count:#,#} pages to { _waj._dataPager.FileName} with {written / Constants.Size.Kilobyte:#,#} kb in {sp.Elapsed}");
 
                     _totalWrittenButUnsyncedBytes += written;
                 }

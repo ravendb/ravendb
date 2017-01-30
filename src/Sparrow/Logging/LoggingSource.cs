@@ -21,7 +21,7 @@ namespace Sparrow.Logging
         private readonly ManualResetEventSlim _hasEntries = new ManualResetEventSlim(false);
         private readonly ThreadLocal<LocalThreadWriterState> _localState;
         private Thread _loggingThread;
-
+        private int _generation;
         private readonly ConcurrentQueue<WeakReference<LocalThreadWriterState>> _newThreadStates =
             new ConcurrentQueue<WeakReference<LocalThreadWriterState>>();
 
@@ -225,7 +225,13 @@ namespace Sparrow.Logging
 
         private LocalThreadWriterState GenerateThreadWriterState()
         {
-            var state = new LocalThreadWriterState();
+            var currentThread = Thread.CurrentThread;
+            var state = new LocalThreadWriterState
+            {
+                OwnerThread = currentThread.Name,
+                ThreadId = currentThread.ManagedThreadId,
+                Generation = _generation
+            };
             _newThreadStates.Enqueue(new WeakReference<LocalThreadWriterState>(state));
             return state;
         }
@@ -241,6 +247,10 @@ namespace Sparrow.Logging
 #endif
             WebSocketMessageEntry item;
             var state = _localState.Value;
+            if (state.Generation != _generation)
+            {
+                _localState.Value = GenerateThreadWriterState();
+            }
 
             if (state.Free.Dequeue(out item))
             {
@@ -320,6 +330,7 @@ namespace Sparrow.Logging
         {
             try
             {
+                Interlocked.Increment(ref _generation);
                 var threadStates = new List<WeakReference<LocalThreadWriterState>>();
                 while (_keepLogging)
                 {
@@ -349,6 +360,7 @@ namespace Sparrow.Logging
                                 LocalThreadWriterState threadState;
                                 if (threadStateWeakRef.TryGetTarget(out threadState) == false)
                                 {
+                                    Console.WriteLine("Removing!");
                                     threadStates.Remove(threadStateWeakRef);
                                     break; // so we won't try to iterate over the mutated collection
                                 }
@@ -478,6 +490,8 @@ namespace Sparrow.Logging
 
         private class LocalThreadWriterState
         {
+            public int Generation;
+
             public readonly ForwardingStream ForwardingStream;
 
             public readonly SingleProducerSingleConsumerCircularQueue<WebSocketMessageEntry> Free =
@@ -494,6 +508,10 @@ namespace Sparrow.Logging
                 Writer = new StreamWriter(ForwardingStream);
             }
 
+#pragma warning disable 414
+            public string OwnerThread;
+            public int ThreadId;
+#pragma warning restore 414
         }
 
 
