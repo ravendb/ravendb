@@ -44,7 +44,7 @@ namespace SlowTests.Tests.Indexes
                     session.SaveChanges();
                 }
 
-                Assert.True(store.DatabaseCommands.Query(index.IndexName, new IndexQuery
+                Assert.True(store.DatabaseCommands.Query(index.IndexName, new IndexQuery(store.Conventions)
                 {
                     PageSize = 2,
                     Start = 0,

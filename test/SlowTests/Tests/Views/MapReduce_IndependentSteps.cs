@@ -78,7 +78,7 @@ select new {
 
                 WaitForIndexing(store);
 
-                QueryResult q = store.DatabaseCommands.Query("CommentsCountPerBlog", new IndexQuery
+                QueryResult q = store.DatabaseCommands.Query("CommentsCountPerBlog", new IndexQuery(store.Conventions)
                 {
                     Query = "blog_id:3",
                     Start = 0,

@@ -796,7 +796,7 @@ namespace Raven.NewClient.Client.Document
         {
             if (queryOperation == null)
             {
-               Take(0);
+                Take(0);
                 queryOperation = InitializeQueryOperation();
             }
 

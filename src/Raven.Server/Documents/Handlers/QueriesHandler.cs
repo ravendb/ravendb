@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task FacetedQuery(DocumentsOperationContext context, string indexName, OperationCancelToken token)
         {
-            var query = FacetQuery.Parse(HttpContext.Request.Query, GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize));
+            var query = FacetQuery.Parse(HttpContext.Request.Query, GetStart(), GetPageSize(Database.Configuration.Core.MaxPageSize), null);
 
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
             long? facetsEtag = null;

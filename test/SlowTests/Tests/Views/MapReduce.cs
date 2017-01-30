@@ -109,7 +109,7 @@ select new {
         private QueryResult GetUnstableQueryResult(IDocumentStore store, string query)
         {
             WaitForIndexing(store);
-            var q = store.DatabaseCommands.Query("CommentsCountPerBlog", new IndexQuery
+            var q = store.DatabaseCommands.Query("CommentsCountPerBlog", new IndexQuery(store.Conventions)
             {
                 Query = query,
                 Start = 0,

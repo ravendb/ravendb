@@ -7,6 +7,7 @@ using System;
 using System.Globalization;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data;
+using Raven.Client.Document;
 
 namespace Raven.Abstractions.Data
 {
@@ -57,7 +58,7 @@ namespace Raven.Abstractions.Data
         /// Initializes a new instance of the <see cref="SpatialIndexQuery"/> class.
         /// </summary>
         /// <param name="query">The query.</param>
-        public SpatialIndexQuery(IndexQuery query) : this()
+        public SpatialIndexQuery(IndexQuery query) : this(query.Conventions)
         {
             Query = query.Query;
             Start = query.Start;
@@ -85,7 +86,7 @@ namespace Raven.Abstractions.Data
         /// <summary>
         /// Initializes a new instance of the <see cref="SpatialIndexQuery"/> class.
         /// </summary>
-        public SpatialIndexQuery()
+        public SpatialIndexQuery(DocumentConvention conventions) : base(conventions)
         {
             DistanceErrorPercentage = Constants.DefaultSpatialDistanceErrorPct;
         }

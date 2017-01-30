@@ -11,7 +11,7 @@ namespace SlowTests.MailingList
          {
              using(var store = GetDocumentStore())
              {
-                 store.DatabaseCommands.Query("dynamic", new IndexQuery
+                 store.DatabaseCommands.Query("dynamic", new IndexQuery(store.Conventions)
                  {
                      Query = "PortalId:0 AND Query:(*) QueryBoosted:(*)"
                  });

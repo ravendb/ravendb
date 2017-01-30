@@ -53,7 +53,7 @@ namespace Indexing.Benchmark
                 //    } while ((result != null && result.IsStale == false) || sw.Elapsed > stalenessTimeout);
                 //}, TaskCreationOptions.LongRunning);
 
-                result = _store.DatabaseCommands.Query(test.Index.IndexName, new IndexQuery()
+                result = _store.DatabaseCommands.Query(test.Index.IndexName, new IndexQuery(_store.Conventions)
                 {
                     WaitForNonStaleResultsTimeout = stalenessTimeout,
                     PageSize = 0,

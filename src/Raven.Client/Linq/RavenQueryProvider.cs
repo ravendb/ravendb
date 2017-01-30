@@ -117,7 +117,6 @@ namespace Raven.Client.Linq
 
         public Type OriginalQueryType { get; set; }
 
-
         /// <summary>
         /// Set the fields to rename
         /// </summary>

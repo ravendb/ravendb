@@ -12,11 +12,10 @@ namespace SlowTests.Issues
         [Fact(Skip = "RavenDB-5988")]
         public void SparialSearchWithDistanceErrorPercent()
         {
-            using (var documentStore = GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                using (var session = documentStore.OpenSession())
+                using (var session = store.OpenSession())
                 {
-
                     //Point(12.556675672531128 55.675285554217), corner of the bounding rectangle below
                     var nearbyPoints1 = (RavenQueryInspector<Entity>)session.Query<Entity, EntitySpatialIndex>()
                         .Customize(x =>

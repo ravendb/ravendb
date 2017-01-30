@@ -34,6 +34,43 @@ namespace FastTests.Client.Queries
             }
         }
 
+        [Fact]
+        public async Task ImplicitTakeWillBeConfigurableAndByDefault25()
+        {
+            using (var store = GetDocumentStore())
+            using (var session = store.OpenAsyncSession())
+            {
+                for (int i = 1; i <= 30; i++)
+                {
+                    await session.StoreAsync(new Item { Index = i });
+                }
+                await session.SaveChangesAsync();
+
+                var items = await session.Query<Item>()
+                        .Customize(customization => customization.WaitForNonStaleResults())
+                        .ToListAsync();
+                Assert.Equal(25, items.Count);
+
+                store.Conventions.ImplicitTakeAmount = 15;
+                items = await session.Query<Item>()
+                        .Customize(customization => customization.WaitForNonStaleResults())
+                        .ToListAsync();
+                Assert.Equal(15, items.Count);
+
+                store.Conventions.ImplicitTakeAmount = 29;
+                items = await session.Query<Item>()
+                        .Customize(customization => customization.WaitForNonStaleResults())
+                        .ToListAsync();
+                Assert.Equal(29, items.Count);
+
+                items = await session.Query<Item>()
+                        .Customize(customization => customization.WaitForNonStaleResults())
+                        .Take(28)
+                        .ToListAsync();
+                Assert.Equal(28, items.Count);
+            }
+        }
+
         private class Item
         {
             public string Id { get; set; }

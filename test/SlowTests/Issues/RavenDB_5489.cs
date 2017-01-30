@@ -52,7 +52,7 @@ namespace SlowTests.Issues
                 var result = SpinWait.SpinUntil(() => store.DatabaseCommands.GetStatistics().Indexes[0].State == IndexState.Error, TimeSpan.FromSeconds(5));
                 Assert.True(result);
 
-                var e = Assert.Throws<InvalidOperationException>(() => store.DatabaseCommands.Query(new Users_ByName().IndexName, new IndexQuery()));
+                var e = Assert.Throws<InvalidOperationException>(() => store.DatabaseCommands.Query(new Users_ByName().IndexName, new IndexQuery(store.Conventions)));
                 Assert.Contains("Simulated corruption", e.InnerException.Message);
 
                 var errors = store.DatabaseCommands.GetIndexErrors(new Users_ByName().IndexName);

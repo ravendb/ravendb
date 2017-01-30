@@ -43,6 +43,8 @@ namespace Raven.Client.Connection
         /// </summary>
         InMemoryDocumentSessionOperations Session { get; }
 
+        DocumentConvention Conventions { get; }
+
         /// <summary>
         /// The last term that we asked the query to use equals on
         /// </summary>

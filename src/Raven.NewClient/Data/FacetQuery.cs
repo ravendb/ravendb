@@ -15,6 +15,7 @@ using Microsoft.Extensions.Primitives;
 #endif
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Util;
+using Raven.NewClient.Client.Document;
 using Sparrow.Json.Parsing;
 
 
@@ -24,6 +25,10 @@ namespace Raven.NewClient.Client.Data
     {
         private IReadOnlyList<Facet> _facets;
         private DynamicJsonArray _facetsAsDynamicJsonArray;
+
+        public FacetQuery(DocumentConvention conventions) : base(conventions)
+        {
+        }
 
         /// <summary>
         /// Index name to run facet query on.
@@ -71,8 +76,7 @@ namespace Raven.NewClient.Client.Data
             if (Start != 0)
                 path.Append("&start=").Append(Start);
 
-            if (PageSizeSet)
-                path.Append("&pageSize=").Append(PageSize);
+            path.Append("&pageSize=").Append(PageSize);
 
             if (string.IsNullOrEmpty(Query) == false)
                 path.Append("&query=").Append(EscapingHelper.EscapeLongDataString(Query));
@@ -109,9 +113,9 @@ namespace Raven.NewClient.Client.Data
         }
 
 #if !NET46
-        public static FacetQuery Parse(IQueryCollection query, int start, int pageSize)
+        public static FacetQuery Parse(IQueryCollection query, int start, int pageSize, DocumentConvention conventions)
         {
-            var result = new FacetQuery
+            var result = new FacetQuery(conventions)
             {
                 Start = start,
                 PageSize = pageSize
@@ -149,9 +153,9 @@ namespace Raven.NewClient.Client.Data
         }
 #endif
 
-        public static FacetQuery Create(string indexName, IndexQueryBase query, string facetSetupDoc, List<Facet> facets,  int start, int? pageSize)
+        public static FacetQuery Create(string indexName, IndexQueryBase query, string facetSetupDoc, List<Facet> facets,  int start, int? pageSize, DocumentConvention conventions)
         {
-            var result = new FacetQuery
+            var result = new FacetQuery(conventions)
             {
                 IndexName = indexName,
                 CutoffEtag = query.CutoffEtag,

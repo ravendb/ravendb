@@ -224,7 +224,7 @@ namespace SlowTests.Issues
                         .Customize(x => x.WaitForNonStaleResults())
                         .ToList();
 
-                var arrayResult = store.DatabaseCommands.Query(indexName, new IndexQuery(), metadataOnly: false, indexEntriesOnly: true);
+                var arrayResult = store.DatabaseCommands.Query(indexName, new IndexQuery(store.Conventions), metadataOnly: false, indexEntriesOnly: true);
 
                 Assert.Equal(expectedNumberOfResults, arrayResult.Results.Count);
             }

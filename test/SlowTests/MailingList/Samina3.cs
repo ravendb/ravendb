@@ -64,7 +64,7 @@ namespace SlowTests.MailingList
 
                     var result = query.ToList();
 
-                    var facetResults = store.DatabaseCommands.GetFacets(new FacetQuery
+                    var facetResults = store.DatabaseCommands.GetFacets(new FacetQuery(store.Conventions)
                     {
                         IndexName = "PropertiesSearchIndex",
                         Query = query.ToString(),

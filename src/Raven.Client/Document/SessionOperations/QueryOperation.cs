@@ -48,10 +48,13 @@ namespace Raven.Client.Document.SessionOperations
 
         private Stopwatch sp;
 
-        public QueryOperation(InMemoryDocumentSessionOperations sessionOperations, string indexName, IndexQuery indexQuery,
-                              string[] projectionFields, bool waitForNonStaleResults, TimeSpan? timeout,
-                              Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResults,
-                              bool disableEntitiesTracking)
+        public QueryOperation(InMemoryDocumentSessionOperations sessionOperations,
+            string indexName,
+            IndexQuery indexQuery,
+            string[] projectionFields, bool waitForNonStaleResults,
+            TimeSpan? timeout,
+            Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResults,
+            bool disableEntitiesTracking)
         {
             this.indexQuery = indexQuery;
             this.waitForNonStaleResults = waitForNonStaleResults;

@@ -60,7 +60,7 @@ namespace SlowTests.SlowTests.Bugs
 
                 await (await store.AsyncDatabaseCommands.UpdateByIndexAsync(
                     stats.IndexName,
-                    new IndexQuery { Query = string.Empty },
+                    new IndexQuery(store.Conventions) { Query = string.Empty },
                     new PatchRequest
                     {
                         Script = "this.FullName = this.FirstName + ' ' + this.LastName;"

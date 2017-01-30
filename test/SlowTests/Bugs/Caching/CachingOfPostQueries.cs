@@ -144,7 +144,7 @@ namespace SlowTests.Bugs.Caching
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.Advanced.MultiFacetedSearchAsync(new FacetQuery
+                    await session.Advanced.MultiFacetedSearchAsync(new FacetQuery(store.Conventions)
                     {
                         Query = "Name:Johnny",
                         IndexName = "PersonsIndex",
@@ -161,7 +161,7 @@ namespace SlowTests.Bugs.Caching
 
                     Assert.Equal(1, session.Advanced.RequestExecuter.Cache.NumberOfItems);
 
-                    await session.Advanced.MultiFacetedSearchAsync(new FacetQuery
+                    await session.Advanced.MultiFacetedSearchAsync(new FacetQuery(store.Conventions)
                     {
                         Query = "Name:Johnny",
                         IndexName = "PersonsIndex",

@@ -34,7 +34,7 @@ namespace SlowTests.Tests.Indexes
                 QueryResult queryResult;
                 do
                 {
-                    queryResult = store.DatabaseCommands.Query("CompaniesByPartners", new IndexQuery
+                    queryResult = store.DatabaseCommands.Query("CompaniesByPartners", new IndexQuery(store.Conventions)
                     {
                         Query = "Partner:companies/49",
                         PageSize = 10

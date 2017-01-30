@@ -69,7 +69,7 @@ namespace SlowTests.MailingList
 
         private static FacetedQueryResult ExecuteTest(IDocumentStore store)
         {
-            FacetedQueryResult result = store.DatabaseCommands.GetFacets(new FacetQuery
+            FacetedQueryResult result = store.DatabaseCommands.GetFacets(new FacetQuery(store.Conventions)
             {
                 IndexName = "Product/AvailableForSale2",
                 Query = "MyName1",

@@ -7,10 +7,10 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Util;
+using Raven.Client.Document;
 using Raven.Client.Indexing;
 using Raven.Json.Linq;
 
@@ -21,7 +21,9 @@ namespace Raven.Client.Data
     /// </summary>
     public class IndexQuery : IndexQuery<Dictionary<string, RavenJToken>>
     {
-        public static int DefaultPageSize = 128;
+        public IndexQuery(DocumentConvention conventions) : base(conventions)
+        {
+        }
 
         public override bool Equals(IndexQuery<Dictionary<string, RavenJToken>> other)
         {
@@ -184,6 +186,10 @@ namespace Raven.Client.Data
 
     public abstract class IndexQuery<T> : IndexQueryBase, IEquatable<IndexQuery<T>>
     {
+        protected IndexQuery(DocumentConvention conventions) : base(conventions)
+        {
+        }
+
         /// <summary>
         /// Parameters that will be passed to transformer (if specified).
         /// </summary>
@@ -332,13 +338,13 @@ namespace Raven.Client.Data
     {
         private int _pageSize;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="IndexQueryBase"/> class.
-        /// </summary>
-        protected IndexQueryBase()
+        protected IndexQueryBase(DocumentConvention conventions)
         {
-            _pageSize = IndexQuery.DefaultPageSize;
+            Conventions = conventions;
+            _pageSize = Conventions?.ImplicitTakeAmount ?? 25;
         }
+
+        protected internal DocumentConvention Conventions { get; }
 
         /// <summary>
         /// Whatever the page size was explicitly set or still at its default value
@@ -365,10 +371,7 @@ namespace Raven.Client.Data
         /// </summary>
         public int PageSize
         {
-            get
-            {
-                return _pageSize;
-            }
+            get { return _pageSize; }
             set
             {
                 _pageSize = value;
@@ -489,6 +492,7 @@ namespace Raven.Client.Data
 
     public interface IIndexQuery
     {
+        int PageSize { set; get; }
     }
 
     public enum QueryOperator

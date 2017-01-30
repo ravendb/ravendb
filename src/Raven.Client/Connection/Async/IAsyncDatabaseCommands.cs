@@ -52,6 +52,8 @@ namespace Raven.Client.Connection.Async
         /// </summary>
         IAsyncInfoDatabaseCommands Info { get; }
 
+        DocumentConvention Conventions { get; }
+
         /// <summary>
         ///     Gets or sets the operations headers
         /// </summary>

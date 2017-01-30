@@ -280,7 +280,7 @@ namespace FastTests.Server.Replication
 
                 WaitUntilHasConflict(store2, "foo/bar");
 
-                var operation = store2.Operations.Send(new DeleteByIndexOperation(userIndex.IndexName, new IndexQuery { Query = string.Empty }));
+                var operation = store2.Operations.Send(new DeleteByIndexOperation(userIndex.IndexName, new IndexQuery(store1.Conventions) { Query = string.Empty }));
 
                 Assert.Throws<DocumentConflictException>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(15)));
             }
@@ -312,7 +312,7 @@ namespace FastTests.Server.Replication
                 WaitUntilHasConflict(store2, "foo/bar");
 
                 // /indexes/Raven/DocumentsByEntityName
-                var operation = store2.Operations.Send(new PatchByIndexOperation(userIndex.IndexName, new IndexQuery
+                var operation = store2.Operations.Send(new PatchByIndexOperation(userIndex.IndexName, new IndexQuery(store1.Conventions)
                 {
                     Query = string.Empty
                 }, new Raven.NewClient.Client.Data.PatchRequest

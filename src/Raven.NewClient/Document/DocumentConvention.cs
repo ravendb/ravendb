@@ -105,7 +105,7 @@ namespace Raven.NewClient.Client.Document
             {
                 serializer.Binder = new ClientSerializationBinder();
             };
-            FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] { IdentityPartsSeparator }, StringSplitOptions.RemoveEmptyEntries).Last();
+            FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] {IdentityPartsSeparator}, StringSplitOptions.RemoveEmptyEntries).Last();
             ShouldAggressiveCacheTrackChanges = true;
             ShouldSaveChangesForceAggressiveCacheCheck = true;
             IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.Indexes | IndexAndTransformerReplicationMode.Transformers;
@@ -113,11 +113,11 @@ namespace Raven.NewClient.Client.Document
             RequestTimeThresholdInMilliseconds = 100;
 
             SerializeEntityToJsonStream = (entity, streamWriter) =>
-           {
-               var jsonSerializer = CreateSerializer();
-               jsonSerializer.Serialize(streamWriter, entity);
-               streamWriter.Flush();
-           };
+            {
+                var jsonSerializer = CreateSerializer();
+                jsonSerializer.Serialize(streamWriter, entity);
+                streamWriter.Flush();
+            };
 
             DeserializeEntityFromBlittable = new JsonNetBlittableEntitySerializer(this).EntityFromJsonStream;
         }
@@ -266,6 +266,12 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         /// <value>The max number of requests per session.</value>
         public int MaxNumberOfRequestsPerSession { get; set; }
+
+        /// <summary>
+        /// Gets or sets the implicit take amount (page size) that will be used for .Queries() without explicit .Take().
+        /// </summary>
+        /// <value>The max number of requests per session.</value>
+        public int ImplicitTakeAmount { get; set; } = 25;
 
         /// <summary>
         /// Gets or sets the default max length of a query using the GET method against a server.

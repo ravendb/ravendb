@@ -68,7 +68,7 @@ namespace SlowTests.MailingList
                     .DatabaseCommands
                     .UpdateByIndex(
                         new Index1().IndexName,
-                        new IndexQuery { Query = string.Empty },
+                        new IndexQuery(store.Conventions) { Query = string.Empty },
                         new PatchRequest
                         {
                             Script = "this.Privilege[0].Level = 'Gold'"

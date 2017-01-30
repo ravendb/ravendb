@@ -15,7 +15,7 @@ namespace Raven.Client.Bundles.MoreLikeThis
         public static T[] MoreLikeThis<T, TIndexCreator>(this ISyncAdvancedSessionOperation advancedSession, string documentId) where TIndexCreator : AbstractIndexCreationTask, new()
         {
             var indexCreator = new TIndexCreator();
-            return MoreLikeThis<T>(advancedSession, indexCreator.IndexName, null, new MoreLikeThisQuery
+            return MoreLikeThis<T>(advancedSession, indexCreator.IndexName, null, new MoreLikeThisQuery(advancedSession.Conventions)
             {
                 DocumentId = documentId
             });
@@ -29,7 +29,7 @@ namespace Raven.Client.Bundles.MoreLikeThis
 
         public static T[] MoreLikeThis<T>(this ISyncAdvancedSessionOperation advancedSession, string index, string documentId)
         {
-            return MoreLikeThis<T>(advancedSession, index, null, new MoreLikeThisQuery
+            return MoreLikeThis<T>(advancedSession, index, null, new MoreLikeThisQuery(advancedSession.Conventions)
             {
                 DocumentId = documentId
             });
@@ -41,7 +41,7 @@ namespace Raven.Client.Bundles.MoreLikeThis
         {
             var indexCreator = new TIndexCreator();
             var transformer = new TTransformer();
-            return MoreLikeThis<T>(advancedSession, indexCreator.IndexName, transformer.TransformerName, new MoreLikeThisQuery
+            return MoreLikeThis<T>(advancedSession, indexCreator.IndexName, transformer.TransformerName, new MoreLikeThisQuery(advancedSession.Conventions)
             {
                 DocumentId = documentId
             });
@@ -58,7 +58,7 @@ namespace Raven.Client.Bundles.MoreLikeThis
 
         public static T[] MoreLikeThis<T>(this ISyncAdvancedSessionOperation advancedSession, string index, string transformer, string documentId)
         {
-            return MoreLikeThis<T>(advancedSession, index, transformer, new MoreLikeThisQuery
+            return MoreLikeThis<T>(advancedSession, index, transformer, new MoreLikeThisQuery(advancedSession.Conventions)
             {
                 DocumentId = documentId
             });
@@ -100,7 +100,7 @@ namespace Raven.Client.Bundles.MoreLikeThis
         public static Task<T[]> MoreLikeThisAsync<T, TIndexCreator>(this IAsyncAdvancedSessionOperations advancedSession, string documentId) where TIndexCreator : AbstractIndexCreationTask, new()
         {
             var indexCreator = new TIndexCreator();
-            return MoreLikeThisAsync<T>(advancedSession, indexCreator.IndexName, null, new MoreLikeThisQuery
+            return MoreLikeThisAsync<T>(advancedSession, indexCreator.IndexName, null, new MoreLikeThisQuery(advancedSession.Conventions)
             {
                 DocumentId = documentId
             });
@@ -114,7 +114,7 @@ namespace Raven.Client.Bundles.MoreLikeThis
 
         public static Task<T[]> MoreLikeThisAsync<T>(this IAsyncAdvancedSessionOperations advancedSession, string index, string documentId)
         {
-            return MoreLikeThisAsync<T>(advancedSession, index, null, new MoreLikeThisQuery
+            return MoreLikeThisAsync<T>(advancedSession, index, null, new MoreLikeThisQuery(advancedSession.Conventions)
             {
                 DocumentId = documentId
             });
@@ -126,7 +126,7 @@ namespace Raven.Client.Bundles.MoreLikeThis
         {
             var indexCreator = new TIndexCreator();
             var transformer = new TTransformer();
-            return MoreLikeThisAsync<T>(advancedSession, indexCreator.IndexName, transformer.TransformerName, new MoreLikeThisQuery
+            return MoreLikeThisAsync<T>(advancedSession, indexCreator.IndexName, transformer.TransformerName, new MoreLikeThisQuery(advancedSession.Conventions)
             {
                 DocumentId = documentId
             });
@@ -143,7 +143,7 @@ namespace Raven.Client.Bundles.MoreLikeThis
 
         public static Task<T[]> MoreLikeThisAsync<T>(this IAsyncAdvancedSessionOperations advancedSession, string index, string transformer, string documentId)
         {
-            return MoreLikeThisAsync<T>(advancedSession, index, transformer, new MoreLikeThisQuery
+            return MoreLikeThisAsync<T>(advancedSession, index, transformer, new MoreLikeThisQuery(advancedSession.Conventions)
             {
                 DocumentId = documentId
             });

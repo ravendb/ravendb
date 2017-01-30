@@ -11,6 +11,7 @@ using System.Text;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Util;
+using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Indexing;
 
 
@@ -21,7 +22,9 @@ namespace Raven.NewClient.Client.Data
     /// </summary>
     public class IndexQuery : IndexQuery<Dictionary<string, object>>
     {
-        public static int DefaultPageSize = 128;
+        public IndexQuery(DocumentConvention conventions) : base(conventions)
+        {
+        }
 
         public override bool Equals(IndexQuery<Dictionary<string, object>> other)
         {
@@ -184,6 +187,10 @@ namespace Raven.NewClient.Client.Data
 
     public abstract class IndexQuery<T> : IndexQueryBase, IEquatable<IndexQuery<T>>
     {
+        public IndexQuery(DocumentConvention conventions) : base(conventions)
+        {
+        }
+
         /// <summary>
         /// Parameters that will be passed to transformer (if specified).
         /// </summary>
@@ -328,17 +335,17 @@ namespace Raven.NewClient.Client.Data
         }
     }
 
-    public abstract class IndexQueryBase : IEquatable<IndexQueryBase>
+    public abstract class IndexQueryBase : IIndexQuery, IEquatable<IndexQueryBase>
     {
         private int _pageSize;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="IndexQueryBase"/> class.
-        /// </summary>
-        protected IndexQueryBase()
+        protected IndexQueryBase(DocumentConvention conventions)
         {
-            _pageSize = IndexQuery.DefaultPageSize;
+            Conventions = conventions;
+            _pageSize = conventions.ImplicitTakeAmount;
         }
+
+        protected internal DocumentConvention Conventions { get; }
 
         /// <summary>
         /// Whatever the page size was explicitly set or still at its default value
@@ -365,10 +372,7 @@ namespace Raven.NewClient.Client.Data
         /// </summary>
         public int PageSize
         {
-            get
-            {
-                return _pageSize;
-            }
+            get { return _pageSize; }
             set
             {
                 _pageSize = value;
@@ -439,6 +443,7 @@ namespace Raven.NewClient.Client.Data
                 return true;
 
             return PageSizeSet.Equals(other.PageSizeSet) &&
+                   PageSize == other.PageSize &&
                    string.Equals(Query, other.Query) &&
                    Start == other.Start &&
                    IsDistinct == other.IsDistinct &&
@@ -463,6 +468,7 @@ namespace Raven.NewClient.Client.Data
             unchecked
             {
                 var hashCode = PageSizeSet.GetHashCode();
+                hashCode = (hashCode * 397) ^ PageSize.GetHashCode();
                 hashCode = (hashCode * 397) ^ (Query?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ Start;
                 hashCode = (hashCode * 397) ^ (IsDistinct ? 1 : 0);
@@ -485,6 +491,11 @@ namespace Raven.NewClient.Client.Data
         {
             return Equals(left, right) == false;
         }
+    }
+
+    public interface IIndexQuery
+    {
+        int PageSize { set; get; }
     }
 
     public enum QueryOperator

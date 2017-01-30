@@ -3,11 +3,16 @@ using System.Collections.Generic;
 using System.Text;
 
 using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Document;
 
 namespace Raven.NewClient.Client.Data.Queries
 {
     public class MoreLikeThisQuery : MoreLikeThisQuery<Dictionary<string, object>>
     {
+        public MoreLikeThisQuery(DocumentConvention conventions) : base(conventions)
+        {
+        }
+
         protected override void CreateRequestUri(StringBuilder uri)
         {
             base.CreateRequestUri(uri);
@@ -16,18 +21,15 @@ namespace Raven.NewClient.Client.Data.Queries
         }
     }
 
-    public abstract class MoreLikeThisQuery<T>
+    public abstract class MoreLikeThisQuery<T> : IIndexQuery
         where T : class
     {
-        private int _pageSize;
+        public DocumentConvention Conventions { get; }
 
-        private bool _pageSizeSet;
-
-        protected MoreLikeThisQuery()
+        protected MoreLikeThisQuery(DocumentConvention conventions)
         {
-            _pageSize = IndexQuery.DefaultPageSize;
-            _pageSizeSet = false;
-
+            Conventions = conventions;
+            PageSize = conventions.ImplicitTakeAmount;
             MapGroupFields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
 
@@ -141,15 +143,7 @@ namespace Raven.NewClient.Client.Data.Queries
         /// <summary>
         /// Maximum number of records that will be retrieved.
         /// </summary>
-        public int PageSize
-        {
-            get { return _pageSize; }
-            set
-            {
-                _pageSize = value;
-                _pageSizeSet = true;
-            }
-        }
+        public int PageSize { get; set; }
 
         protected virtual void CreateRequestUri(StringBuilder uri)
         {
@@ -192,8 +186,7 @@ namespace Raven.NewClient.Client.Data.Queries
             if (string.IsNullOrEmpty(Transformer) == false)
                 uri.AppendFormat("&transformer={0}", Uri.EscapeDataString(Transformer));
 
-            if (_pageSizeSet)
-                uri.AppendFormat("&pageSize=" + PageSize);
+            uri.AppendFormat("&pageSize=" + PageSize);
 
             Fields.ApplyIfNotNull(f => uri.AppendFormat("&field={0}", f));
             Includes.ApplyIfNotNull(i => uri.AppendFormat("&include={0}", i));

@@ -129,7 +129,7 @@ namespace SlowTests.MailingList
                 WaitForIndexing(store);
                 //I use this patch to update the consultant name to "Subha" in the Proficiencies collection.
                 store.DatabaseCommands.UpdateByIndex("Proficiencies/ConsultantId",
-                    new IndexQuery
+                    new IndexQuery(store.Conventions)
                     {
                         Query = "Consultant_Id:1"
                     },

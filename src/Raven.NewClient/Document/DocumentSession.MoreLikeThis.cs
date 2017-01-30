@@ -23,7 +23,7 @@ namespace Raven.NewClient.Client.Document
                 throw new ArgumentNullException(nameof(documentId));
 
             var index = new TIndexCreator();
-            return MoreLikeThis<T>(new MoreLikeThisQuery { IndexName = index.IndexName, DocumentId = documentId });
+            return MoreLikeThis<T>(new MoreLikeThisQuery(Conventions) { IndexName = index.IndexName, DocumentId = documentId });
         }
 
         public List<T> MoreLikeThis<T, TIndexCreator>(MoreLikeThisQuery query) where TIndexCreator : AbstractIndexCreationTask, new()
@@ -44,7 +44,7 @@ namespace Raven.NewClient.Client.Document
             var index = new TIndexCreator();
             var transformer = new TTransformer();
 
-            return MoreLikeThis<T>(new MoreLikeThisQuery
+            return MoreLikeThis<T>(new MoreLikeThisQuery(Conventions)
             {
                 IndexName = index.IndexName,
                 Transformer = transformer.TransformerName,
@@ -68,7 +68,7 @@ namespace Raven.NewClient.Client.Document
 
         public List<T> MoreLikeThis<T>(string index, string documentId, string transformer = null, Dictionary<string, object> transformerParameters = null)
         {
-            return MoreLikeThis<T>(new MoreLikeThisQuery
+            return MoreLikeThis<T>(new MoreLikeThisQuery(Conventions)
             {
                 IndexName = index,
                 DocumentId = documentId,
