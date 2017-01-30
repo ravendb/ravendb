@@ -8,9 +8,9 @@ namespace Raven.Server.NotificationCenter.Notifications
         {
         }
 
-        public override string Id => $"{Type}/{UpdateType}/{ActionId}";
+        public override string Id => $"{Type}/{UpdateType}/{NotificationId}";
 
-        public string ActionId { get; private set; }
+        public string NotificationId { get; private set; }
 
         public NotificationUpdateType UpdateType { get; private set; }
 
@@ -18,7 +18,7 @@ namespace Raven.Server.NotificationCenter.Notifications
         {
             var result = base.ToJson();
 
-            result[nameof(ActionId)] = ActionId;
+            result[nameof(NotificationId)] = NotificationId;
             result[nameof(Type)] = Type;
 
             return result;
@@ -28,7 +28,7 @@ namespace Raven.Server.NotificationCenter.Notifications
         {
             return new NotificationUpdated
             {
-                ActionId = id,
+                NotificationId = id,
                 UpdateType = type
             };
         }

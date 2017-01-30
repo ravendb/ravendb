@@ -1,20 +1,20 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 
-import abstractAction = require("common/notifications/actions/abstractAction");
+import abstractNotification = require("common/notifications/models/abstractNotification");
 import resource = require("models/resources/resource");
 
-class alert extends abstractAction {
+class alert extends abstractNotification {
 
-    alertType = ko.observable<Raven.Server.NotificationCenter.Alerts.AlertType>();
+    alertType = ko.observable<Raven.Server.NotificationCenter.Notifications.AlertType>();
     key = ko.observable<string>();
-    severity = ko.observable<Raven.Server.NotificationCenter.Alerts.AlertSeverity>();
-    details = ko.observable<Raven.Server.NotificationCenter.Actions.Details.IActionDetails>();
+    severity = ko.observable<Raven.Server.NotificationCenter.Notifications.AlertSeverity>();
+    details = ko.observable<Raven.Server.NotificationCenter.Notifications.Details.INotificationDetails>();
 
     isError: KnockoutObservable<boolean>;
     isWarning: KnockoutObservable<boolean>;
     isInfo: KnockoutObservable<boolean>;
 
-    constructor(resource: resource, dto: Raven.Server.NotificationCenter.Actions.AlertRaised) {
+    constructor(resource: resource, dto: Raven.Server.NotificationCenter.Notifications.AlertRaised) {
         super(resource, dto);
         this.updateWith(dto);
 
@@ -28,7 +28,7 @@ class alert extends abstractAction {
         this.isInfo = ko.pureComputed(() => this.severity() === "Info");
     }
 
-    updateWith(incomingChanges: Raven.Server.NotificationCenter.Actions.AlertRaised) {
+    updateWith(incomingChanges: Raven.Server.NotificationCenter.Notifications.AlertRaised) {
         super.updateWith(incomingChanges);
 
         this.alertType(incomingChanges.AlertType);

@@ -63,11 +63,6 @@ interface menuItem {
 
 type dynamicHashType = KnockoutObservable<string> | (() => string);
 
-interface collectionsStatsDto {
-    NumberOfDocuments: number;
-    Collections: dictionary<number>;
-}
-
 interface singleAuthToken {
     Token: string;
 }
@@ -222,3 +217,9 @@ type resourceDisconnectionCause = "Error" | "ResourceDeleted" | "ResourceDisable
 type alertType = "Info" | "Success" | "Error" | "Warning";
 
 type querySortType = "Ascending" | "Descending" | "Range Ascending" | "Range Descending";
+
+interface recentErrorDto extends Raven.Server.NotificationCenter.Notifications.Notification {
+    Details: string;
+    HttpStatus?: string;
+    Severity: alertType;
+}

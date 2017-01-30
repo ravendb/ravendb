@@ -47,7 +47,7 @@ class notificationCenterOperationsWatch {
         }
     }
 
-    onOperationChange(operationDto: Raven.Server.NotificationCenter.Actions.OperationChanged) {
+    onOperationChange(operationDto: Raven.Server.NotificationCenter.Notifications.OperationChanged) {
         const operationId = operationDto.OperationId;
         const state = operationDto.State;
 

@@ -6,7 +6,8 @@
         AlertRaised,
         OperationChanged,
         ResourceChanged,
-        NotificationUpdated
+        NotificationUpdated,
+        RecentError, // used in studio
         // performance, hints?
     }
 }

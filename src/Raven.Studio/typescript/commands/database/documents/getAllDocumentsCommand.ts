@@ -42,7 +42,7 @@ class getAllDocumentsCommand extends commandBase {
 
     private fetchTotalResultCount(): JQueryPromise<number> {
         var url = endpoints.databases.collections.collectionsStats;
-        var countSelector = (dto: collectionsStatsDto) => dto.NumberOfDocuments;
+        var countSelector = (dto: Raven.NewClient.Client.Data.Collections.CollectionStatistics) => dto.CountOfDocuments;
         return this.query(url, null, this.ownerDatabase, countSelector);
     }
 }

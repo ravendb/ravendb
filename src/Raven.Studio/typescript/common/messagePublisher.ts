@@ -1,6 +1,6 @@
-import alertArgs = require("common/alertArgs");
 import EVENTS = require("common/constants/events");
 import toastr = require("toastr");
+import recentError = require("common/notifications/models/recentError");
 
 class messagePublisher {
 
@@ -33,17 +33,19 @@ class messagePublisher {
     }
 
     private static reportProgress(type: alertType, title: string, details?: string, httpStatusText?: string, displayInRecentErrors: boolean = false) {
-        const alert = new alertArgs(type, title, details, httpStatusText);
+        const toastrMethod = messagePublisher.getDisplayMethod(type);
 
-        const toastrMethod = messagePublisher.getDisplayMethod(alert.type);
+        const messageAndOptionalException = recentError.tryExtractMessageAndException(details);
 
-        toastrMethod(alert.errorMessage, alert.title, {
-            showDuration: messagePublisher.getDisplayDuration(alert.type),
+        toastrMethod(messageAndOptionalException.message, title, {
+            showDuration: messagePublisher.getDisplayDuration(type),
             closeButton: true
         });
 
         if (displayInRecentErrors) {
-            ko.postbox.publish(EVENTS.NotificationCenter.RecentError, alert);
+            const error = recentError.create(type, title, details, httpStatusText);
+
+            ko.postbox.publish(EVENTS.NotificationCenter.RecentError, error);
         }
     }
 

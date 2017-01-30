@@ -157,7 +157,7 @@ namespace FastTests.Server.NotificationCenter
                 Assert.Equal(1, actions.Count);
                 var notification = actions.DequeueAsync().Result as NotificationUpdated;
                 Assert.NotNull(notification);
-                Assert.Equal(alert.Id, notification.ActionId);
+                Assert.Equal(alert.Id, notification.NotificationId);
                 Assert.Equal(NotificationUpdateType.Postponed, notification.UpdateType);
 
                 IEnumerable<NotificationTableValue> alerts;
@@ -206,7 +206,7 @@ namespace FastTests.Server.NotificationCenter
                 Assert.Equal(1, actions.Count);
                 var notification = actions.DequeueAsync().Result as NotificationUpdated;
                 Assert.NotNull(notification);
-                Assert.Equal(alert.Id, notification.ActionId);
+                Assert.Equal(alert.Id, notification.NotificationId);
                 Assert.Equal(NotificationUpdateType.Dismissed, notification.UpdateType);
             }
         }
