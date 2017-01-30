@@ -473,8 +473,8 @@ namespace Raven.Server.Documents.Replication
                 return; // nothing to do
             }
 
-            if(ReplicationDocument?.DefaultResolver != null && 
-                ReplicationDocument.DefaultResolver.Version == version && 
+            if (ReplicationDocument?.DefaultResolver != null &&
+                ReplicationDocument.DefaultResolver.Version == version &&
                 ReplicationDocument.DefaultResolver.ResolvingDatabaseId != uid)
                 ThrowConflictingResolvers(uid, version, ReplicationDocument.DefaultResolver.ResolvingDatabaseId);
 
@@ -517,19 +517,14 @@ namespace Raven.Server.Documents.Replication
                     replicationDoc.DefaultResolver.ResolvingDatabaseId = uid;
                 }
 
-
                 if (replicationDoc.DefaultResolver.Version == version &&
                     replicationDoc.DefaultResolver.ResolvingDatabaseId != uid)
                     ThrowConflictingResolvers(uid, version, replicationDoc.DefaultResolver.ResolvingDatabaseId);
 
+                var djv = replicationDoc.ToJson();
+                var replicatedBlittable = context.ReadObject(djv, Constants.Replication.DocumentReplicationConfiguration);
 
-                var convertor = new EntityToBlittable(null);
-                var replicatedBlittable = convertor.ConvertEntityToBlittable(
-                    replicationDoc,
-                    new DocumentConvention(), 
-                    context);
-                _database.DocumentsStorage.Put(context, Constants.Replication.DocumentReplicationConfiguration, null,
-                    replicatedBlittable);
+                _database.DocumentsStorage.Put(context, Constants.Replication.DocumentReplicationConfiguration, null, replicatedBlittable);
 
                 context.Transaction.Commit();// will force reload of all connections as side affect
             }

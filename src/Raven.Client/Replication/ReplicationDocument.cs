@@ -9,6 +9,7 @@ using System.Collections.Generic;
 
 using Raven.Abstractions.Cluster;
 using Raven.Abstractions.Data;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Abstractions.Replication
 {
@@ -60,18 +61,68 @@ namespace Raven.Abstractions.Replication
     {
         public Dictionary<string, ScriptResolver> ResolveByCollection { get; set; }
         public DatabaseResolver DefaultResolver { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            var json = new DynamicJsonValue
+            {
+                [nameof(Id)] = Id,
+                [nameof(Source)] = Source,
+                [nameof(ClientConfiguration)] = ClientConfiguration?.ToJson(),
+                [nameof(DocumentConflictResolution)] = DocumentConflictResolution,
+                [nameof(DefaultResolver)] = DefaultResolver?.ToJson()
+            };
+
+            if (Destinations != null)
+            {
+                var values = new DynamicJsonArray();
+                foreach (var destination in Destinations)
+                    values.Add(destination.ToJson());
+
+                json[nameof(Destinations)] = values;
+            }
+
+            if (ResolveByCollection != null)
+            {
+                var values = new DynamicJsonValue();
+                foreach (var kvp in ResolveByCollection)
+                    values[kvp.Key] = kvp.Value?.ToJson();
+
+                json[nameof(ResolveByCollection)] = values;
+            }
+
+            return json;
+        }
     }
 
     public class DatabaseResolver
     {
         public string ResolvingDatabaseId { get; set; }
         public int Version { get; set; } = -1;
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(ResolvingDatabaseId)] = ResolvingDatabaseId,
+                [nameof(Version)] = Version
+            };
+        }
     }
 
     public class ScriptResolver
     {
         public string Script { get; set; }
         public DateTime LastModifiedTime { get; } = DateTime.UtcNow;
+
+        public object ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Script)] = Script,
+                [nameof(LastModifiedTime)] = LastModifiedTime
+            };
+        }
     }
 
     public class ReplicationDocumentWithClusterInformation : ReplicationDocument<ReplicationDestination.ReplicationDestinationWithClusterInformation>
