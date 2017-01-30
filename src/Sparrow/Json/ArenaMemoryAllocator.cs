@@ -292,23 +292,44 @@ namespace Sparrow.Json
         }
     }
 
-    public unsafe class AllocatedMemoryData
+    public unsafe class AllocatedMemoryData 
     {
-        public byte* Address;
+        private byte* _address;
         public int SizeInBytes;
         public int ContextGeneration;
-        public NativeMemory.ThreadStats AllocatingThread;
-#if MEM_GUARD
-        ~AllocatedMemoryData(){
-            System.Console.WriteLine("Memory was not freed and was leaked " + 
-#if MEM_GUARD_STACK
-            AllocatedBy
-#else
-    ""
-#endif
-            );
+
+        public bool IsLongLived;
+
+        public JsonOperationContext Parent;
+
+        public byte* Address
+        {
+            get
+            {
+                if(IsLongLived == false && 
+                   Parent != null && 
+                   ContextGeneration != Parent.Generation)
+                    ThrowObjectDisposedException();
+
+                return _address;
+            }
+            set
+            {
+                if (IsLongLived == false && 
+                    Parent != null && 
+                    ContextGeneration != Parent.Generation)
+                    ThrowObjectDisposedException();
+
+                _address = value;
+            }
         }
-#endif
+
+        private void ThrowObjectDisposedException()
+        {
+            throw new ObjectDisposedException(nameof(AllocatedMemoryData));
+        }
+
+        public NativeMemory.ThreadStats AllocatingThread;      
 
 #if MEM_GUARD_STACK
         public string AllocatedBy = Environment.StackTrace;

@@ -11,6 +11,7 @@ namespace Sparrow.Json
 {
     public unsafe class BlittableJsonReaderObject : BlittableJsonReaderBase, IDisposable
     {
+        private readonly AllocatedMemoryData _allocatedMemory;
         private UnmanagedWriteBuffer _buffer;
         private byte* _metadataPtr;
         private readonly int _size;
@@ -43,6 +44,14 @@ namespace Sparrow.Json
             _context.Write(stream, this);
         }
 
+        public BlittableJsonReaderObject(
+            AllocatedMemoryData allocatedMemory, JsonOperationContext context)
+            : this(allocatedMemory.Address, allocatedMemory.SizeInBytes, context)
+        {
+            _allocatedMemory = allocatedMemory;
+        }
+
+        
         public BlittableJsonReaderObject(byte* mem, int size, JsonOperationContext context,
             UnmanagedWriteBuffer buffer = default(UnmanagedWriteBuffer))
         {
@@ -604,9 +613,13 @@ namespace Sparrow.Json
 
         public void Dispose()
         {
+            if(_allocatedMemory != null && _buffer.IsDisposed == false)
+                _context.ReturnMemory(_allocatedMemory);
+
             _mem = null;
             _metadataPtr = null;
             _objStart = null;
+
             if (_objectsPathCache != null)
             {
                 foreach (var property in _objectsPathCache)
@@ -630,7 +643,7 @@ namespace Sparrow.Json
         {
             var mem = context.GetMemory(Size);
             CopyTo(mem.Address);
-            var cloned = new BlittableJsonReaderObject(mem.Address, Size, context);
+            var cloned =  BlittableJsonReaderObject(mem, context);    
             if (Modifications != null)
             {
                 cloned.Modifications = new DynamicJsonValue(cloned);
