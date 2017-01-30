@@ -48,14 +48,6 @@ namespace Raven.Server.Documents
 
         public abstract class MergedTransactionCommand
         {
-            /// <summary>
-            /// By default the transaction merger will dispose the command after 
-            /// it has been applied.
-            /// Setting this to false will cause it to skip that (in case you still
-            /// need it afterward).
-            /// </summary>
-            public bool ShouldDisposeAfterCommit = true;
-
             public abstract void Execute(DocumentsOperationContext context);
             public TaskCompletionSource<object> TaskCompletionSource = new TaskCompletionSource<object>();
             public Exception Exception;
@@ -135,8 +127,6 @@ namespace Raven.Server.Documents
 
         private void DoCommandNotification(MergedTransactionCommand cmd)
         {
-            DisposeIfRelevant(cmd);
-
             if (cmd.Exception != null)
             {
                 cmd.TaskCompletionSource.TrySetException(cmd.Exception);
@@ -146,16 +136,6 @@ namespace Raven.Server.Documents
                 cmd.TaskCompletionSource.TrySetResult(null);
             }
 
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void DisposeIfRelevant(MergedTransactionCommand op)
-        {
-            var disposable = op as IDisposable;
-            if (disposable != null && op.ShouldDisposeAfterCommit)
-            {
-                disposable.Dispose();
-            }
         }
 
         private void MergeTransactionsOnce()

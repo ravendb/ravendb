@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
@@ -10,11 +11,11 @@ using Raven.Client.Smuggler;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 
 namespace Raven.Server.Smuggler.Documents
 {
@@ -23,9 +24,12 @@ namespace Raven.Server.Smuggler.Documents
         private readonly DocumentDatabase _database;
         private long _buildVersion;
 
+        private Logger _log;
+
         public DatabaseDestination(DocumentDatabase database)
         {
             _database = database;
+            _log = LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name);
         }
 
         public IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, long buildVersion)
@@ -36,12 +40,12 @@ namespace Raven.Server.Smuggler.Documents
 
         public IDocumentActions Documents()
         {
-            return new DatabaseDocumentActions(_database, _buildVersion, isRevision: false);
+            return new DatabaseDocumentActions(_database, _buildVersion, isRevision: false, log: _log);
         }
 
         public IDocumentActions RevisionDocuments()
         {
-            return new DatabaseDocumentActions(_database, _buildVersion, isRevision: true);
+            return new DatabaseDocumentActions(_database, _buildVersion, isRevision: true, log: _log);
         }
 
         public IIdentityActions Identities()
@@ -113,18 +117,20 @@ namespace Raven.Server.Smuggler.Documents
             private readonly DocumentDatabase _database;
             private readonly long _buildVersion;
             private readonly bool _isRevision;
+            private readonly Logger _log;
             private MergedBatchPutCommand _command;
             private MergedBatchPutCommand _prevCommand;
             private Task _prevCommandTask;
 
-            private readonly Size _enqueueThreshold = new Size(16, SizeUnit.Megabytes);
+            private readonly Size _enqueueThreshold = new Size(32, SizeUnit.Megabytes);
 
-            public DatabaseDocumentActions(DocumentDatabase database, long buildVersion, bool isRevision)
+            public DatabaseDocumentActions(DocumentDatabase database, long buildVersion, bool isRevision, Logger log)
             {
                 _database = database;
                 _buildVersion = buildVersion;
                 _isRevision = isRevision;
-                _command = new MergedBatchPutCommand(database, buildVersion)
+                _log = log;
+                _command = new MergedBatchPutCommand(database, buildVersion, log)
                 {
                     IsRevision = isRevision
                 };
@@ -152,10 +158,10 @@ namespace Raven.Server.Smuggler.Documents
 
             private void ModifyDocumentIfNecessary(Document document)
             {
-                if (_buildVersion == 40 || _buildVersion >= 40000)
+            
+                BlittableJsonReaderObject metadata;
+                if (document.Data.TryGet(Constants.Metadata.Key, out metadata) == false)
                     return;
-
-                var metadata = (BlittableJsonReaderObject)document.Data[Constants.Metadata.Key];
 
                 // apply all the metadata conversions here
                 ConvertRavenEntityName(metadata);
@@ -200,20 +206,27 @@ namespace Raven.Server.Smuggler.Documents
 
             private void HandleBatchOfDocumentsIfNecessary()
             {
-                if (_command.TotalSize < _enqueueThreshold)
+                if (_command.Context.AllocatedMemory < _enqueueThreshold.GetValue(SizeUnit.Bytes))
                     return;
 
-                if (_prevCommand != null)
+                var prevCmd = _prevCommand;
+
+                _prevCommand = _command;
+                _prevCommandTask = _database.TxMerger.Enqueue(_command);
+
+                if (prevCmd != null)
                 {
-                    using (_prevCommand)
+                    using (prevCmd)
+                    {
                         AsyncHelpers.RunSync(() => _prevCommandTask);
+                        Debug.Assert(prevCmd.IsDisposed == false,
+                            "we rely on reusing this context on the next batch, so it has to be disposed here");
+                    }
                 }
 
-                _prevCommandTask = _database.TxMerger.Enqueue(_command);
-                _prevCommand = _command;
-                _command = new MergedBatchPutCommand(_database, _buildVersion)
+                _command = new MergedBatchPutCommand(_database, _buildVersion, _log)
                 {
-                    IsRevision = _isRevision
+                    IsRevision = _isRevision,
                 };
             }
 
@@ -283,18 +296,23 @@ namespace Raven.Server.Smuggler.Documents
 
             private readonly DocumentDatabase _database;
             private readonly long _buildVersion;
+            private readonly Logger _log;
 
             public Size TotalSize = new Size(0, SizeUnit.Bytes);
 
             public readonly List<Document> Documents = new List<Document>();
             private IDisposable _resetContext;
             private bool _isDisposed;
+
+            public bool IsDisposed => _isDisposed;
+
             private readonly DocumentsOperationContext _context;
 
-            public MergedBatchPutCommand(DocumentDatabase database, long buildVersion)
+            public MergedBatchPutCommand(DocumentDatabase database, long buildVersion, Logger log)
             {
                 _database = database;
                 _buildVersion = buildVersion;
+                _log = log;
                 _resetContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
             }
 
@@ -302,13 +320,16 @@ namespace Raven.Server.Smuggler.Documents
 
             public override void Execute(DocumentsOperationContext context)
             {
+                if(_log.IsInfoEnabled)
+                    _log.Info($"Importing {Documents.Count:#,#} documents");
+
                 foreach (var document in Documents)
                 {
                     var key = document.Key;
 
                     BlittableJsonReaderObject metadata;
                     if (document.Data.TryGet(Constants.Metadata.Key, out metadata) == false)
-                        throw new InvalidOperationException("A document must have a metadata");
+                        ThrowDocumentMustHaveMetadata();
 
                     if (metadata.Modifications == null)
                         metadata.Modifications = new DynamicJsonValue(metadata);
@@ -340,6 +361,11 @@ namespace Raven.Server.Smuggler.Documents
                         _database.DocumentsStorage.Put(context, key, null, document.Data);
                     }
                 }
+            }
+
+            private static void ThrowDocumentMustHaveMetadata()
+            {
+                throw new InvalidOperationException("A document must have a metadata");
             }
 
             public void Dispose()

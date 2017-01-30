@@ -44,11 +44,6 @@ namespace Raven.Server.Documents.Handlers
                         Database = Database,
                         ParsedCommands = cmds,
                         Reply = new DynamicJsonArray(),
-
-                        //in this particular case we should not let TxMerger dispose this command
-                        //because it is also used _after_ we pass it to TxMerger
-                        //instead we dispose it by ourselves after we finish using it
-                        ShouldDisposeAfterCommit = false
                     })
                     {
 

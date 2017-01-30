@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.Linq;
 
 namespace Raven.Server.Config.Settings
@@ -50,6 +51,7 @@ namespace Raven.Server.Config.Settings
             }
         }
 
+        [Pure]
         public long GetValue(SizeUnit requestedUnit)
         {
             switch (requestedUnit)
@@ -65,8 +67,14 @@ namespace Raven.Server.Config.Settings
                 case SizeUnit.Terabytes:
                     return _valueInBytes / OneTb;
                 default:
-                    throw new NotSupportedException("Not supported size unit: " + _unit);
+                    ThrowUnsupportedSize();
+                    return -1;// never hit
             }
+        }
+
+        private void ThrowUnsupportedSize()
+        {
+            throw new NotSupportedException("Not supported size unit: " + _unit);
         }
 
         public void Add(int value, SizeUnit unit)

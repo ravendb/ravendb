@@ -197,7 +197,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         private async Task BulkImport(BlockingCollection<Func<Task<Stream>>> files, string directory)
         {
             var results = new ConcurrentQueue<SmugglerResult>();
-            var tasks = new Task[Environment.ProcessorCount];
+            var tasks = new Task[Math.Max(1, Environment.ProcessorCount / 2)];
 
             var finalResult = new SmugglerResult();
 
