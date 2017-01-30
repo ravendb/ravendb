@@ -34,7 +34,7 @@ using Raven.Server.Documents.Transformers;
 using Raven.Server.Exceptions;
 using Raven.Server.NotificationCenter.Actions;
 using Raven.Server.NotificationCenter.Actions.Details;
-using Raven.Server.NotificationCenter.Alerts;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.LowMemoryNotification;

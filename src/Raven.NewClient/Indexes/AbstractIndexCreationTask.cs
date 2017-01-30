@@ -12,6 +12,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Document;
@@ -703,10 +704,10 @@ namespace Raven.NewClient.Client.Indexes
             throw new NotSupportedException("This can only be run on the server side");
         }
 
-        /*/// <summary>
+        /// <summary>
         /// Allow to get to the metadata of the document
         /// </summary>
-        protected RavenJObject MetadataFor(object doc)
+        protected JObject MetadataFor(object doc)
         {
             throw new NotSupportedException("This is here as a marker only");
         }
@@ -714,9 +715,9 @@ namespace Raven.NewClient.Client.Indexes
         /// <summary>
         /// Allow to access an entity as a document
         /// </summary>
-        protected RavenJObject AsDocument(object doc)
+        protected JObject AsDocument(object doc)
         {
             throw new NotSupportedException("This is here as a marker only");
-        }*/
+        }
     }
 }

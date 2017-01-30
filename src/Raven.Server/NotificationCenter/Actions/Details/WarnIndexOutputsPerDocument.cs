@@ -1,8 +1,9 @@
-﻿using Sparrow.Json.Parsing;
+﻿using Raven.Server.NotificationCenter.Notifications.Details;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Actions.Details
 {
-    public class WarnIndexOutputsPerDocument : IActionDetails
+    public class WarnIndexOutputsPerDocument : INotificationDetails
     {
         public string Warning { get; set; }
         public long NumberOfExceedingDocuments { get; set; }
