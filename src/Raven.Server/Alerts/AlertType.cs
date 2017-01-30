@@ -13,6 +13,7 @@
         PeriodicExport,
         Replication,
         NewServerVersionAvailable,
-        LicenseManagerInitializationError
+        LicenseManagerInitializationError,
+        WarnIndexOutputsPerDocument
     }
 }

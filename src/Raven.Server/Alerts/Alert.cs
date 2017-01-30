@@ -21,7 +21,6 @@ namespace Raven.Server.Alerts
         /// </summary>
         public string Key { get; set; }
 
-
         /// <summary>
         /// Alert id
         /// </summary>

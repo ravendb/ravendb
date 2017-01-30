@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -16,6 +17,7 @@ using Raven.Client.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Data.Queries;
 using Raven.Client.Indexing;
+using Raven.Server.Alerts;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Includes;
@@ -40,6 +42,7 @@ using Raven.Server.Utils.Metrics;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Voron;
 using Sparrow.Logging;
 using Sparrow.Utils;
@@ -137,6 +140,11 @@ namespace Raven.Server.Documents.Indexes
         private readonly ReaderWriterLockSlim _currentlyRunningQueriesLock = new ReaderWriterLockSlim();
         private volatile bool _priorityChanged;
         private volatile bool _hadRealIndexingWorkToDo;
+
+        private long _numberOfExceedingIndexOutputsPerDocument;
+        private DateTime? _lastWarningExceedingIndexOutputsPerDocument;
+        private int _maxExceedingIndexOutputsPerDocument = int.MinValue;
+        private string _maxExceedingIndexOutputsPerDocumentId;
 
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
@@ -1977,13 +1985,57 @@ namespace Raven.Server.Documents.Indexes
 
         public abstract IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch);
 
-        public abstract int? ActualMaxNumberOfIndexOutputs { get; }
-
-        public abstract int MaxNumberOfIndexOutputs { get; }
-
-        protected virtual bool EnsureValidNumberOfOutputsForDocument(int numberOfAlreadyProducedOutputs)
+        protected void WarnExceedingIndexOutputsPerDocument(string documentKey, int numberOfAlreadyProducedOutputs)
         {
-            return MaxNumberOfIndexOutputs == -1 || numberOfAlreadyProducedOutputs <= MaxNumberOfIndexOutputs;
+            if (Configuration.MaxWarnIndexOutputsPerDocument <= 0 || numberOfAlreadyProducedOutputs <= Configuration.MaxWarnIndexOutputsPerDocument)
+                return;
+
+            _numberOfExceedingIndexOutputsPerDocument++;
+            if (_maxExceedingIndexOutputsPerDocument < numberOfAlreadyProducedOutputs)
+            {
+                _maxExceedingIndexOutputsPerDocument = numberOfAlreadyProducedOutputs;
+                _maxExceedingIndexOutputsPerDocumentId = documentKey;
+            }
+                
+            if (_lastWarningExceedingIndexOutputsPerDocument != null &&
+                (DateTime.UtcNow - _lastWarningExceedingIndexOutputsPerDocument.Value).Minutes <= 5)
+            {
+                // save the alert every 5 minutes (at worst case)
+                return;
+            }
+
+            _lastWarningExceedingIndexOutputsPerDocument = DateTime.UtcNow;
+
+            var message =
+                $"Index '{Name}' has already produced more than {Configuration.MaxWarnIndexOutputsPerDocument} map results " +
+                $"for {_numberOfExceedingIndexOutputsPerDocument} document{(_numberOfExceedingIndexOutputsPerDocument > 1 ? "s" : string.Empty)}. " +
+                $"For example, document: '{_maxExceedingIndexOutputsPerDocumentId}' has produced {_maxExceedingIndexOutputsPerDocument} results'. " +
+                "Please verify this index definition and consider a re-design of your entities or index.";
+
+            DocumentDatabase.Alerts.AddAlert(new Alert
+            {
+                Type = AlertType.WarnIndexOutputsPerDocument,
+                Message = $"Max index outputs per documents exceeded {Configuration.MaxWarnIndexOutputsPerDocument}",
+                CreatedAt = SystemTime.UtcNow,
+                Severity = AlertSeverity.Warning,
+                Content = new WarnIndexOutputsPerDocument
+                {
+                    Message = message
+                }
+            });
+        }
+
+        public class WarnIndexOutputsPerDocument : IAlertContent
+        {
+            public string Message { get; set; }
+
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue(GetType())
+                {
+                    [nameof(Message)] = Message
+                };
+            }
         }
 
         public virtual Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()

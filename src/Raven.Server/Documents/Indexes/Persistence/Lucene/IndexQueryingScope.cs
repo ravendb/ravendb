@@ -30,11 +30,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private int _alreadyScannedForDuplicates;
 
-        public bool HasMultipleIndexOutputs { get; private set; }
-
-        public int MaxNumberOfIndexOutputs { get; }
-
-        public IndexQueryingScope(IndexType indexType, IndexQueryServerSide query, FieldsToFetch fieldsToFetch, IndexSearcher searcher, IQueryResultRetriever retriever, int maxIndexOutputsPerDocument, int? actualMaxIndexOutputsPerDocument)
+        public IndexQueryingScope(IndexType indexType, IndexQueryServerSide query, FieldsToFetch fieldsToFetch, IndexSearcher searcher, IQueryResultRetriever retriever)
         {
             _indexType = indexType;
             _query = query;
@@ -45,19 +41,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (_fieldsToFetch.IsDistinct)
                 _alreadySeenProjections = new HashSet<ulong>();
-
-            if (actualMaxIndexOutputsPerDocument.HasValue)
-            {
-                HasMultipleIndexOutputs = true;
-                MaxNumberOfIndexOutputs = actualMaxIndexOutputsPerDocument.Value;
-            }
-            else
-            {
-                MaxNumberOfIndexOutputs = maxIndexOutputsPerDocument;
-
-                if (MaxNumberOfIndexOutputs == -1) // configuration was set to disable output count check, probably because there exist fanout indexes
-                    MaxNumberOfIndexOutputs = 50;
-            }
         }
 
         public void Dispose()
@@ -87,7 +70,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         var alreadyPagedKey = document.Get(Constants.Indexing.Fields.DocumentIdFieldName);
 
                         _alreadySeenDocumentKeysInPreviousPage.Add(alreadyPagedKey);
-                        HasMultipleIndexOutputs = true;
                     }
                 }
                 else
@@ -98,7 +80,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     var alreadyPagedKey = document.Get(Constants.Indexing.Fields.DocumentIdFieldName);
 
                     _alreadySeenDocumentKeysInPreviousPage.Add(alreadyPagedKey);
-                    HasMultipleIndexOutputs = true;
                 }
             }
 
@@ -127,14 +108,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 return true;
 
             if (_fieldsToFetch.IsProjection && _alreadySeenDocumentKeysInPreviousPage.Contains(key))
-            {
-                HasMultipleIndexOutputs = true;
                 return false;
-            }
 
             if (_fieldsToFetch.IsProjection == false && _alreadySeenDocumentKeysInPreviousPage.Add(key) == false)
             {
-                HasMultipleIndexOutputs = true;
                 if (_fieldsToFetch.IsTransformation && _query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer)
                     return true;
 

@@ -12,8 +12,6 @@ namespace Raven.Server.Documents.Indexes.Auto
         private AutoMapIndex(int indexId, AutoMapIndexDefinition definition)
             : base(indexId, IndexType.AutoMap, definition)
         {
-            ActualMaxNumberOfIndexOutputs = null;
-            MaxNumberOfIndexOutputs = 1;
         }
 
         public static AutoMapIndex CreateNew(int indexId, AutoMapIndexDefinition definition, DocumentDatabase documentDatabase)
@@ -42,8 +40,5 @@ namespace Raven.Server.Documents.Indexes.Auto
         {
             throw new NotSupportedException($"{Type} index does not support updating it's definition and configuration.");
         }
-
-        public override int? ActualMaxNumberOfIndexOutputs { get; }
-        public override int MaxNumberOfIndexOutputs { get; }
     }
 }

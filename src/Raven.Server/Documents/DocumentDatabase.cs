@@ -64,8 +64,8 @@ namespace Raven.Server.Documents
             IoMetrics = serverStore?.IoMetrics ?? new IoMetrics(256, 256);
             Patch = new PatchDocument(this);
             TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
-            HugeDocuments = new HugeDocuments(configuration.Databases.MaxCollectionSizeHugeDocuments,
-                configuration.Databases.MaxWarnSizeHugeDocuments);
+            HugeDocuments = new HugeDocuments(configuration.PerformanceHints.MaxCollectionSizeHugeDocuments,
+                configuration.PerformanceHints.MaxWarnSizeHugeDocuments);
             ConfigurationStorage = new ConfigurationStorage(this, serverStore);
             DatabaseInfoCache = serverStore?.DatabaseInfoCache;
         }
@@ -238,7 +238,7 @@ namespace Raven.Server.Documents
             {
                 if (Interlocked.Read(ref _usages) == 0)
                     break;
-                _waitForUsagesOnDisposal.Wait(100);
+                _waitForUsagesOnDisposal.Wait(1000);
             }
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentDatabase)}");
 

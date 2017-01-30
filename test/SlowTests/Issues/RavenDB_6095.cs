@@ -75,10 +75,6 @@ select new {
     Coding = g.SelectMany(x1 => x1.Coding),
     System = g.SelectMany(x2 => x2.System)
 }",
-                    Configuration =
-                    {
-                        MaxIndexOutputsPerDocument = -1
-                    },
                     Fields =
                     {
                         {"__all_fields", new IndexFieldOptions { Storage =  FieldStorage.Yes} },
