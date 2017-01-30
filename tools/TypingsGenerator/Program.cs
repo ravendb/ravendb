@@ -17,8 +17,11 @@ using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.Documents.SqlReplication;
 using Raven.Server.Documents.PeriodicExport;
+using Raven.Server.Web.System;
+using Raven.Server.NotificationCenter.Actions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Server;
+using Raven.Server.NotificationCenter.Actions.Server;
 using Sparrow.Json;
 using TypeScripter;
 using TypeScripter.TypeScript;
@@ -69,7 +72,6 @@ namespace TypingsGenerator
                 typeof(IEquatable<>)
             };
 
-
             scripter.UsingTypeFilter(type => ignoredTypes.Contains(type) == false);
             scripter.UsingTypeReader(new TypeReaderWithIgnoreMethods());
             scripter.AddType(typeof(CollectionStatistics));
@@ -107,12 +109,10 @@ namespace TypingsGenerator
             // transformers
             scripter.AddType(typeof(TransformerDefinition));
 
-
             // patch
             scripter.AddType(typeof(PatchRequest));
 
             scripter.AddType(typeof(ResourcesInfo));
-
 
             // smuggler
             scripter.AddType(typeof(DatabaseSmugglerOptions));
@@ -129,7 +129,6 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SqlReplicationStatistics));
             scripter.AddType(typeof(SimulateSqlReplication));
 
-
             // periodic export
             scripter.AddType(typeof(PeriodicExportConfiguration));
 
@@ -144,6 +143,9 @@ namespace TypingsGenerator
             scripter.AddType(typeof(License));
             scripter.AddType(typeof(UserRegistrationInfo));
             scripter.AddType(typeof(LicenseStatus));
+
+            // database admin
+            scripter.AddType(typeof(ResourceDeleteResult));
 
             return scripter;
         }
