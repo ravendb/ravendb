@@ -31,7 +31,11 @@ namespace Sparrow.Json
             byte* ptr;
             int size;
             _unmanagedWriteBuffer.EnsureSingleChunk(out ptr, out size);
-            var reader = new BlittableJsonReaderObject(ptr, size, _context, (UnmanagedWriteBuffer)(object)_unmanagedWriteBuffer);
+            var reader = new BlittableJsonReaderObject(
+                ptr, 
+                size, 
+                _context, 
+                (UnmanagedWriteBuffer)(object)_unmanagedWriteBuffer);
 
             //Make sure to dispose the writer later, otherwise we might leave "hanging" reference.
             //We do not dispose this immediately since the blittable json returned from this method
@@ -408,12 +412,21 @@ namespace Sparrow.Json
             int size = Encoding.UTF8.GetMaxByteCount(str.Length)
                        + escapePositionsMaxSize;
 
-            var buffer = _context.GetNativeTempBuffer(size);
-            fixed (char* pChars = str)
+            AllocatedMemoryData buffer = null;
+            try
             {
-                var stringSize = Utf8Encoding.GetBytes(pChars, str.Length, buffer, size);
-                JsonParserState.FindEscapePositionsIn(_intBuffer, buffer, stringSize, escapePositionsMaxSize);
-                return WriteValue(buffer, stringSize, _intBuffer, out token, mode, null);
+                buffer = _context.GetMemory(size);
+                fixed (char* pChars = str)
+                {
+                    var stringSize = Utf8Encoding.GetBytes(pChars, str.Length, buffer.Address, size);
+                    JsonParserState.FindEscapePositionsIn(_intBuffer, buffer.Address, stringSize, escapePositionsMaxSize);
+                    return WriteValue(buffer.Address, stringSize, _intBuffer, out token, mode, null);
+                }
+            }
+            finally
+            {
+                if(buffer != null)
+                    _context.ReturnMemory(buffer);
             }
         }
 

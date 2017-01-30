@@ -181,6 +181,11 @@ namespace Sparrow.Json
                 Used = 0,
                 Previous = null
             };
+
+#if MEM_GUARD_STACK
+            AllocatedBy = Environment.StackTrace;
+            FreedBy = null;
+#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -196,6 +201,8 @@ namespace Sparrow.Json
         {
             throw new ObjectDisposedException(nameof(UnmanagedWriteBuffer));
         }
+
+        public bool IsDisposed => _current == null;
 
         public void Write(byte* buffer, int length)
         {
@@ -327,7 +334,7 @@ namespace Sparrow.Json
         }
 
         public void Dispose()
-        {
+        {            
             var start = _current;
             while (_current != null &&
                 _current.Address != null) //prevent double dispose
@@ -337,7 +344,17 @@ namespace Sparrow.Json
                 _current = _current.PreviousAllocated;
             }
             GC.KeepAlive(start);
+
+#if MEM_GUARD_STACK
+            if(FreedBy == null) //if already disposed, keep the "FreedBy"
+                FreedBy = Environment.StackTrace;
+#endif
         }
+
+#if MEM_GUARD_STACK
+        public string AllocatedBy;
+        public string FreedBy;
+#endif
 
         public void EnsureSingleChunk(JsonParserState state)
         {

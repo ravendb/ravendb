@@ -51,23 +51,32 @@ namespace Sparrow.Json
             if (self.String != null)
                 return self.String;
 
-            var tempBuffer = self.DecompressToTempBuffer();
+            AllocatedMemoryData allocated;
+            var tempBuffer = self.DecompressToTempBuffer(out allocated);
 
-            var charCount = self._context.Encoding.GetCharCount(tempBuffer, self.UncompressedSize);
-            var str = new string(' ', charCount);
-            fixed (char* pStr = str)
+            try
             {
-                self._context.Encoding.GetChars(tempBuffer, self.UncompressedSize, pStr, charCount);
-                self.String = str;
-                return str;
+                var charCount = self._context.Encoding.GetCharCount(tempBuffer, self.UncompressedSize);
+                var str = new string(' ', charCount);
+                fixed (char* pStr = str)
+                {
+                    self._context.Encoding.GetChars(tempBuffer, self.UncompressedSize, pStr, charCount);
+                    self.String = str;
+                    return str;
+                }
+            }
+            finally
+            {
+                if(allocated != null) //precaution
+                    self._context.ReturnMemory(allocated);
             }
         }
 
-        public byte* DecompressToTempBuffer()
+        public byte* DecompressToTempBuffer(out AllocatedMemoryData allocatedData)
         {
             var sizeOfEscapePositions = GetSizeOfEscapePositions();
-            var tempBuffer = _context.GetNativeTempBuffer(UncompressedSize + sizeOfEscapePositions);
-            return DecompressToBuffer(tempBuffer, sizeOfEscapePositions);
+            allocatedData = _context.GetMemory(UncompressedSize + sizeOfEscapePositions);
+            return DecompressToBuffer(allocatedData.Address, sizeOfEscapePositions);
         }
 
         public AllocatedMemoryData DecompressToAllocatedMemoryData()
@@ -75,6 +84,7 @@ namespace Sparrow.Json
             var sizeOfEscapePositions = GetSizeOfEscapePositions();
             var allocatedBuffer = _context.GetMemory(UncompressedSize + sizeOfEscapePositions);
             DecompressToBuffer(allocatedBuffer.Address, sizeOfEscapePositions);
+
             return allocatedBuffer;
         }
 

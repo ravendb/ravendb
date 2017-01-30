@@ -229,31 +229,40 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void WriteString(LazyCompressedStringValue str)
         {
-            var strBuffer = str.DecompressToTempBuffer();
+            AllocatedMemoryData allocated;
+            var strBuffer = str.DecompressToTempBuffer(out allocated);
 
-            var size = str.UncompressedSize;
-
-            EnsureBuffer(1);
-            _buffer[_pos++] = Quote;
-            var escapeSequencePos = str.CompressedSize;
-            var numberOfEscapeSequences = BlittableJsonReaderBase.ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
-            while (numberOfEscapeSequences > 0)
+            try
             {
-                numberOfEscapeSequences--;
-                var bytesToSkip = BlittableJsonReaderBase.ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
-                WriteRawString(strBuffer, bytesToSkip);
-                strBuffer += bytesToSkip;
-                size -= bytesToSkip + 1 /*for the escaped char we skip*/;
-                var b = *(strBuffer++);
-                EnsureBuffer(2);
-                _buffer[_pos++] = (byte)'\\';
-                _buffer[_pos++] = GetEscapeCharacter(b);
-            }
-            // write remaining (or full string) to the buffer in one shot
-            WriteRawString(strBuffer, size);
+                var size = str.UncompressedSize;
 
-            EnsureBuffer(1);
-            _buffer[_pos++] = Quote;
+                EnsureBuffer(1);
+                _buffer[_pos++] = Quote;
+                var escapeSequencePos = str.CompressedSize;
+                var numberOfEscapeSequences = BlittableJsonReaderBase.ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
+                while (numberOfEscapeSequences > 0)
+                {
+                    numberOfEscapeSequences--;
+                    var bytesToSkip = BlittableJsonReaderBase.ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
+                    WriteRawString(strBuffer, bytesToSkip);
+                    strBuffer += bytesToSkip;
+                    size -= bytesToSkip + 1 /*for the escaped char we skip*/;
+                    var b = *(strBuffer++);
+                    EnsureBuffer(2);
+                    _buffer[_pos++] = (byte)'\\';
+                    _buffer[_pos++] = GetEscapeCharacter(b);
+                }
+                // write remaining (or full string) to the buffer in one shot
+                WriteRawString(strBuffer, size);
+
+                EnsureBuffer(1);
+                _buffer[_pos++] = Quote;
+            }
+            finally
+            {
+                if(allocated != null) //precaution
+                    _context.ReturnMemory(allocated);
+            }
         }
 
 

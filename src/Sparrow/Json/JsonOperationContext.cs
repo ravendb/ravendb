@@ -113,6 +113,11 @@ namespace Sparrow.Json
         private readonly ObjectJsonParser _objectJsonParser;
         private readonly BlittableJsonDocumentBuilder _documentBuilder;
 
+        public int Generation
+        {
+            get { return _generation; }
+        }
+
         public long AllocatedMemory => _arenaAllocator.TotalUsed;
 
         public static JsonOperationContext ShortTermSingleUse()
@@ -195,28 +200,7 @@ namespace Sparrow.Json
             }
         }
 
-        /// <summary>
-        /// Returns memory buffer to work with, be aware, this buffer is not thread safe
-        /// </summary>
-        /// <param name="requestedSize"></param>
-        /// <returns></returns>
-        public unsafe byte* GetNativeTempBuffer(int requestedSize)
-        {
-            if (_tempBuffer == null ||
-                _tempBuffer.Address == null ||
-                _tempBuffer.SizeInBytes < requestedSize)
-            {
-                if (_tempBuffer != null && _tempBuffer.Address != null)
-                {
-                    _arenaAllocator.Return(_tempBuffer);
-                    _tempBuffer = null;
-                }
-                _tempBuffer = GetMemory(Math.Max(_tempBuffer?.SizeInBytes ?? 0, requestedSize));
-            }
-
-            return _tempBuffer.Address;
-        }
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public AllocatedMemoryData GetMemory(int requestedSize)
         {
             return GetMemory(requestedSize, longLived: false);
@@ -231,7 +215,9 @@ namespace Sparrow.Json
                                         ? _arenaAllocatorForLongLivedValues.Allocate(requestedSize)
                                         : _arenaAllocator.Allocate(requestedSize);
 
-            allocatedMemory.ContextGeneration = _generation;
+            allocatedMemory.ContextGeneration = Generation;
+            allocatedMemory.Parent = this;
+            allocatedMemory.IsLongLived = longLived;
 
             return allocatedMemory;
         }
@@ -254,9 +240,9 @@ namespace Sparrow.Json
             ElectricFencedMemory.DecrementConext();
             ElectricFencedMemory.UnRegisterContextAllocation(this);
 #endif
+
             Reset(true);
 
-            _objectJsonParser.Dispose();
             _documentBuilder.Dispose();
 
             _arenaAllocator.Dispose();
@@ -584,7 +570,7 @@ namespace Sparrow.Json
             Renew();
         }
 
-        protected internal virtual unsafe void Renew()
+        protected internal virtual void Renew()
         {
             _arenaAllocator.RenewArena();
             if (_arenaAllocatorForLongLivedValues == null)
@@ -592,10 +578,6 @@ namespace Sparrow.Json
                 _arenaAllocatorForLongLivedValues = new ArenaMemoryAllocator(_longLivedSize);
                 CachedProperties = new CachedProperties(this);
             }
-
-            if (_tempBuffer != null)
-                GetNativeTempBuffer(_tempBuffer.SizeInBytes);
-
         }
 
         protected internal virtual unsafe void Reset(bool forceReleaseLongLivedAllocator = false)
@@ -656,8 +638,8 @@ namespace Sparrow.Json
                 CachedProperties = null; // need to release this so can be collected
             }
             _arenaAllocator.ResetArena();
-
-            _generation++;
+            _objectJsonParser.Reset(null);
+            _generation = _generation + 1;
         }
 
         public void Write(Stream stream, BlittableJsonReaderObject json)
@@ -804,8 +786,9 @@ namespace Sparrow.Json
 
         public void ReturnMemory(AllocatedMemoryData allocation)
         {
-            //if (_generation != allocation.ContextGeneration)
-            //    ThrowUseAfterFree();
+            if (allocation.IsLongLived == false && 
+                _generation != allocation.ContextGeneration)
+                ThrowUseAfterFree();
 
             _arenaAllocator.Return(allocation);
         }
