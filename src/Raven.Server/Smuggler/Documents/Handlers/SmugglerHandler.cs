@@ -85,7 +85,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                var operationId = GetIntValueQueryString("operationId", required: false);
+                var operationId = GetLongQueryString("operationId", required: false);
 
                 var stream = TryGetRequestFormStream("DownloadOptions") ?? RequestBodyStream();
 

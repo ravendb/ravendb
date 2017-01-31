@@ -25,6 +25,7 @@ namespace Raven.Server.NotificationCenter.Notifications
 
             result[nameof(OperationId)] = OperationId;
             result[nameof(State)] = State.ToJson();
+            result[nameof(Killable)] = Killable;
 
             return result;
         }

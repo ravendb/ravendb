@@ -21,10 +21,10 @@
                             class="btn btn-sm"> 
                         Details
                     </button>
-                    <a href="#" class="btn btn-sm" data-bind="click: _.partial($parent.dismiss, $data)">
+                    <button class="btn btn-sm" data-bind="click: _.partial($parent.dismiss, $data), enable: !_.includes($parent.spinners.dismiss(), id), css: { 'btn-spinner': _.includes($parent.spinners.dismiss(), id) }">
                         <i class="icon-cancel"></i>
                         <span>Dismiss</span>
-                    </a>
+                    </button>
                 </div>
             </div>
 
@@ -47,10 +47,10 @@
                             class="btn btn-sm">
                         Details
                     </button>
-                    <a href="#" class="btn btn-sm btn-danger" data-bind="click: _.partial($parent.killOperation, $data), visible: killable()">
+                    <button class="btn btn-sm btn-danger" data-bind="click: _.partial($parent.killOperation, $data), visible: killable(), enable: !_.includes($parent.spinners.kill(), id), css: { 'btn-spinner': _.includes($parent.spinners.kill(), id) }">
                         <i class="icon-cancel"></i>
                         <span>Kill</span>
-                    </a>
+                    </button>
                 </div>
             </div>
         </div>
@@ -69,7 +69,7 @@
                 </button>
                 
                 <div class="dropdown" data-bind="visible: canBePostponed">
-                    <button class="btn btn-sm dropdown-toggle" data-toggle="dropdown">
+                    <button class="btn btn-sm dropdown-toggle" data-toggle="dropdown" data-bind="enable: !_.includes($parent.spinners.postpone(), id), css: { 'btn-spinner': _.includes($parent.spinners.postpone(), id) }">
                         <span>Postpone</span>
                         <span class="caret"></span>
                     </button>
@@ -78,10 +78,10 @@
                     </ul>
                 </div>
                 
-                <a href="#" class="btn btn-sm" data-bind="click: _.partial($parent.dismiss, $data)">
+                <button class="btn btn-sm" data-bind="click: _.partial($parent.dismiss, $data), enable: !_.includes($parent.spinners.dismiss(), id), css: { 'btn-spinner': _.includes($parent.spinners.dismiss(), id) }">
                     <i class="icon-cancel"></i>
                     <span>Dismiss</span>
-                </a>
+                </button>
             </div>
         </div>
     </div>
@@ -97,10 +97,10 @@
                     Details
                 </button>
 
-                <a href="#" class="btn btn-sm" data-bind="click: _.partial($parent.dismiss, $data)">
+                <button class="btn btn-sm" data-bind="click: _.partial($parent.dismiss, $data)">
                     <i class="icon-cancel"></i>
                     <span>Dismiss</span>
-                </a>
+                </button>
             </div>
         </div>
     </div>

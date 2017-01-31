@@ -10,8 +10,6 @@ class importDatabaseCommand extends commandBase {
     }
 
     execute(): JQueryPromise<operationIdDto> {
-        this.reportInfo("Importing data...");
-
         const urlArgs = {
             operationId: this.operationId,
             singleUseAuthToken: this.token.Token
@@ -30,7 +28,6 @@ class importDatabaseCommand extends commandBase {
         formData.append("file", this.file);
 
         return this.post(url, formData, this.db, ajaxOptions, 0)
-            .done(() => this.reportInfo("Data was uploaded successfully, processing..."))
             .fail((response: JQueryXHR) => this.reportError("Failed to upload data", response.responseText, response.statusText));
     }
 }

@@ -129,6 +129,8 @@ namespace Raven.Server.Smuggler.Documents.Data
         {
             public bool Skipped { get; set; }
 
+            public bool Processed { get; set; }
+
             public long ReadCount { get; set; }
 
             public long ErroredCount { get; set; }
@@ -137,6 +139,7 @@ namespace Raven.Server.Smuggler.Documents.Data
             {
                 return new DynamicJsonValue
                 {
+                    [nameof(Processed)] = Processed,
                     [nameof(Skipped)] = Skipped,
                     [nameof(ReadCount)] = ReadCount,
                     [nameof(ErroredCount)] = ErroredCount
