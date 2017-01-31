@@ -350,17 +350,18 @@ namespace Raven.Server.Documents
 
         private  PendingOperations GetPendingOperationsStatus(DocumentsOperationContext context)
         {
-            if(context.Transaction.ModifiedSystemDocuments)
-                // a transaction that modified system documents may cause us to 
-                // do certain actions (for example, initialize trees for versioning)
-                // which we can't realy do if we are starting another transaction
-                // immediately. This way, we skip this optimization for this
-                // kind of work
-                return PendingOperations.ModifiedsSystemDocuments;
+            //if(context.Transaction.ModifiedSystemDocuments)
+            //    // a transaction that modified system documents may cause us to 
+            //    // do certain actions (for example, initialize trees for versioning)
+            //    // which we can't realy do if we are starting another transaction
+            //    // immediately. This way, we skip this optimization for this
+            //    // kind of work
+            //    return PendingOperations.ModifiedsSystemDocuments;
 
-            return _operations.Count == 0
-                ? PendingOperations.CompletedAll
-                : PendingOperations.HasMore;
+            //return _operations.Count == 0
+            //    ? PendingOperations.CompletedAll
+            //    : PendingOperations.HasMore;
+            return PendingOperations.CompletedAll;
         }
 
         private void NotifyOnThreadPool(MergedTransactionCommand cmd)
