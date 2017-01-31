@@ -372,7 +372,7 @@ namespace Raven.Server.Documents.PeriodicExport
                 _database.NotificationCenter.Add(AlertRaised.Create("Periodic Export",
                     message,
                     AlertType.PeriodicExport,
-                    AlertSeverity.Error,
+                    NotificationSeverity.Error,
                     details: new ExceptionDetails(e)));
             }
         }

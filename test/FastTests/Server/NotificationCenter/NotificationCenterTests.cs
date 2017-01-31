@@ -374,7 +374,7 @@ namespace FastTests.Server.NotificationCenter
                 "title",
                 customMessage ?? "Alert #1",
                 0, //use any type
-                AlertSeverity.Info,
+                NotificationSeverity.Info,
                 key: customKey ?? "Key",
                 details: new ExceptionDetails(new Exception("Error message")));
         }

@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Indexes.Configuration
         private readonly RavenConfiguration _databaseConfiguration;
 
         public SingleIndexConfiguration(IndexConfiguration clientConfiguration, RavenConfiguration databaseConfiguration)
-            : base(() => databaseConfiguration.DatabaseName, null, null, databaseConfiguration.PerformanceHints.MaxWarnIndexOutputsPerDocument)
+            : base(() => databaseConfiguration.DatabaseName, null, null)
         {
             _databaseConfiguration = databaseConfiguration;
 

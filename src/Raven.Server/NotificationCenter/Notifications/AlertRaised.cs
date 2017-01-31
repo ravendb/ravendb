@@ -8,9 +8,7 @@ namespace Raven.Server.NotificationCenter.Notifications
         private AlertRaised() : base(NotificationType.AlertRaised)
         {
         }
-
-        public AlertSeverity Severity { get; private set; }
-
+        
         public AlertType AlertType { get; private set; }
 
         public string Key { get; private set; }
@@ -24,14 +22,13 @@ namespace Raven.Server.NotificationCenter.Notifications
             var json = base.ToJson();
             
             json[nameof(Key)] = Key;
-            json[nameof(Severity)] = Severity;
             json[nameof(AlertType)] = AlertType;
             json[nameof(Details)] = Details?.ToJson();
 
             return json;
         }
 
-        public static AlertRaised Create(string title, string msg, AlertType type, AlertSeverity severity, string key = null, INotificationDetails details = null)
+        public static AlertRaised Create(string title, string msg, AlertType type, NotificationSeverity severity, string key = null, INotificationDetails details = null)
         {
             return new AlertRaised
             {

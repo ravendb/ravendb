@@ -184,7 +184,7 @@ namespace Raven.Server
                 var alert = AlertRaised.Create("License manager initialization error",
                     "Could not intitalize the license manager", 
                     AlertType.LicenseManager_InitializationError,
-                    AlertSeverity.Info, 
+                    NotificationSeverity.Info, 
                     details: new ExceptionDetails(e));
 
                 ServerStore.NotificationCenter.Add(alert);

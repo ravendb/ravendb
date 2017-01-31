@@ -1,4 +1,5 @@
-﻿using Raven.Client.Data;
+using System;
+using Raven.Client.Data;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
@@ -32,6 +33,26 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         public static OperationChanged Create(long id, DatabaseOperations.OperationDescription description, OperationState state, bool killable)
         {
+            NotificationSeverity severity;
+
+            switch (state.Status)
+            {
+                case OperationStatus.InProgress:
+                    severity = NotificationSeverity.None;
+                    break;
+                case OperationStatus.Canceled:
+                    severity = NotificationSeverity.Warning;
+                    break;
+                case OperationStatus.Completed:
+                    severity = NotificationSeverity.Info;
+                    break;
+                case OperationStatus.Faulted:
+                    severity = NotificationSeverity.Error;
+                    break;
+                default:
+                    throw new ArgumentException($"Unknown operation status: {state.Status}");
+            }
+
             return new OperationChanged
             {
                 OperationId = id,
@@ -39,7 +60,8 @@ namespace Raven.Server.NotificationCenter.Notifications
                 Title = $"{description.TaskType.GetDescription()}",
                 Message = description.Description,
                 IsPersistent = state.Result?.ShouldPersist ?? false,
-                Killable = killable && state.Status == OperationStatus.InProgress
+                Killable = killable && state.Status == OperationStatus.InProgress,
+                Severity = severity
             };
         }
     }

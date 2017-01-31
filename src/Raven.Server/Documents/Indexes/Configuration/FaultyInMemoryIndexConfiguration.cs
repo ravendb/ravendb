@@ -8,7 +8,7 @@ namespace Raven.Server.Documents.Indexes.Configuration
         private readonly string _storagePath;
 
         public FaultyInMemoryIndexConfiguration(string storagePath, RavenConfiguration databaseConfiguration)
-            : base(() => databaseConfiguration.DatabaseName, null, null, databaseConfiguration.PerformanceHints.MaxWarnIndexOutputsPerDocument)
+            : base(() => databaseConfiguration.DatabaseName, null, null)
         {
             _storagePath = storagePath;
         }
