@@ -96,6 +96,21 @@ namespace Raven.Server.Documents
                         e);
                 }
                 Interlocked.Exchange(ref _edi, ExceptionDispatchInfo.Capture(e));
+                // cautionary, we make sure that stuff that is waiting on the 
+                // queue is notified about this catasropic error and we wait
+                // just a bit more to verify that nothing racy can still get 
+                // there
+                for (int i = 0; i < 3; i++)
+                {
+                    MergedTransactionCommand result;
+                    while (_operations.TryDequeue(out result))
+                    {
+                        result.Exception = e;
+                        NotifyOnThreadPool(result);
+                    }
+                    _waitHandle.Wait(50, _shutdown);
+                    _waitHandle.Reset();
+                }
             }
         }
 

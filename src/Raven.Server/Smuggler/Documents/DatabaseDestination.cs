@@ -158,7 +158,6 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     using (_prevCommand)
                     {
-
                         _prevCommandTask.Wait();
                         Debug.Assert(_prevCommand.IsDisposed == false,
                             "we rely on reusing this context on the next batch, so it has to be disposed here");
