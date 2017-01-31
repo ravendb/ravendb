@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Exceptions;
 using Raven.NewClient.Extensions;
 using Raven.NewClient.Json.Utilities;
 using Sparrow.Json;
@@ -208,6 +209,19 @@ namespace Raven.NewClient.Client.Commands
 
             _currentQueryResults = result;
             _currentQueryResults.EnsureSnapshot();
+
+            if (_session.Conventions.ThrowIfImplicitTakeAmountExceeded &&
+                IndexQuery.PageSizeSet == false &&
+                _currentQueryResults.TotalResults > IndexQuery.PageSize)
+            {
+                var message = $"The query has more results ({_currentQueryResults.TotalResults}) than the implicity take ammount " +
+                              $"which is .Take({_session.Conventions.ImplicitTakeAmount}).{Environment.NewLine}" +
+                              $"You can solve this error in the following ways:{Environment.NewLine}" +
+                              $"1. Have an explicit .Take() on your query. This is the recommended solution." +
+                              $"2. Set store.Conventions.ThowIfImplicitTakeAmountExceeded to false{Environment.NewLine}" +
+                              $"3. Increase the value of store.Conventions.ImplicitTakeAmount.";
+                throw new RavenException(message);
+            }
 
             if (_logger.IsInfoEnabled)
             {

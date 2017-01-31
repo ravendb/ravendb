@@ -216,6 +216,13 @@ namespace Raven.NewClient.Client.Document
         public int ImplicitTakeAmount { get; set; } = 25;
 
         /// <summary>
+        /// Gets or sets whether we should throw if implicit take amount is exceeded. 
+        /// The default is true and is recommended in order to make the user use an explicit .Take().
+        /// </summary>
+        /// <value>The max number of requests per session.</value>
+        public bool ThrowIfImplicitTakeAmountExceeded { get; set; } = true;
+
+        /// <summary>
         /// Gets or sets the default max length of a query using the GET method against a server.
         /// </summary>
         public int MaxLengthOfQueryUsingGetUrl { get; set; }

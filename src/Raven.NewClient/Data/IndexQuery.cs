@@ -350,7 +350,7 @@ namespace Raven.NewClient.Client.Data
         /// <summary>
         /// Whatever the page size was explicitly set or still at its default value
         /// </summary>
-        protected bool PageSizeSet { get; private set; }
+        protected internal bool PageSizeSet { get; private set; }
 
         /// <summary>
         /// Whatever we should apply distinct operation to the query on the server side
