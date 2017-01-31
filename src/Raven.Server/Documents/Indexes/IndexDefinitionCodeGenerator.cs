@@ -1,6 +1,5 @@
 ﻿using Raven.Client.Indexing;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -8,7 +7,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Raven.Abstractions.Extensions;
-using Raven.Client.Indexes;
 using Raven.Server.Documents.Indexes.Static.Roslyn;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
@@ -19,7 +17,6 @@ namespace Raven.Server.Documents.Indexes
     {
         private readonly IndexDefinition _indexDefinition;
         private const string IndexName = "IndexName";
-        private const string CreateIndexDefinition = "CreateIndexDefinition";
 
         private static readonly UsingDirectiveSyntax[] Usings =
         {
@@ -33,7 +30,8 @@ namespace Raven.Server.Documents.Indexes
             UsingDirective(IdentifierName("Raven.Abstractions")),
             UsingDirective(IdentifierName("Raven.Abstractions.Indexing")),
             UsingDirective(IdentifierName("Raven.Abstractions.Data")),
-            UsingDirective(IdentifierName("Raven.Client.Indexes"))
+            UsingDirective(IdentifierName("Raven.NewClient.Client.Indexes")),
+            UsingDirective(IdentifierName("Raven.NewClient.Client.Indexing"))
         };
 
         public IndexDefinitionCodeGenerator(IndexDefinition indexDefinition)
@@ -43,19 +41,15 @@ namespace Raven.Server.Documents.Indexes
 
         public string Generate()
         {
-            var indexClass = CreateClass(_indexDefinition.Name, _indexDefinition);
-            return GetText(indexClass);
+            return GetText(_indexDefinition.Name, _indexDefinition);
         }
 
-        private static MemberDeclarationSyntax CreateClass(string indexName, IndexDefinition indexDefinition)
+        private static string GetText(string indexName, IndexDefinition indexDefinition)
         {
-            var safeName = GetCSharpSafeName(indexName);
+            StringBuilder sb = new StringBuilder();
+            var usings = RoslynHelper.CreateUsings(Usings);
 
-            //Create a class
-            var @class = RoslynHelper.PublicClass(safeName)
-                .WithBaseClass<AbstractIndexCreationTask>();
-
-            // Create a IndexName get property
+                // Create a IndexName get property
             PropertyDeclarationSyntax indexNameProperty =
                 PropertyDeclaration(ParseTypeName("string"), Identifier(IndexName))
                 .AddModifiers(Token(SyntaxKind.PublicKeyword), Token(SyntaxKind.OverrideKeyword))
@@ -64,75 +58,38 @@ namespace Raven.Server.Documents.Indexes
                         List(new[] { ReturnStatement(IdentifierName($"\"{indexName}\"")) }
                         ))));
 
-            // Add the property to the class
-            @class = @class.AddMembers(indexNameProperty);
-
-            //Create CreateIndexDefinition method
-            MethodDeclarationSyntax indexDefinitionMethod =
-                MethodDeclaration(ParseTypeName(typeof(IndexDefinition).Name), Identifier(CreateIndexDefinition))
-                    .AddModifiers(Token(SyntaxKind.PublicKeyword), Token(SyntaxKind.OverrideKeyword))
-                    .WithBody(Block(SingletonList<StatementSyntax>(
-                        ReturnStatement(ObjectCreationExpression(IdentifierName(typeof(IndexDefinition).Name))
-                        .WithInitializer(InitializerExpression(SyntaxKind.ObjectInitializerExpression,
-                        SeparatedList<ExpressionSyntax>(CreateStatements(indexDefinition))))))));
-
-            // Add the Method to the class
-            @class = @class.AddMembers(indexDefinitionMethod);
-
-            return @class;
-        }
-
-        private static string GetText(MemberDeclarationSyntax indexClassDefinition)
-        {
-            StringBuilder sb = new StringBuilder();
-            var u = RoslynHelper.CreateUsings(Usings);
-
-            u.ForEach(item => sb.Append($"{item.NormalizeWhitespace()}{Environment.NewLine}"));
-            sb.Append(Environment.NewLine);
-            sb.Append(indexClassDefinition.NormalizeWhitespace().ToFullString());
-
-            return sb.ToString();
-        }
-
-        private static List<AssignmentExpressionSyntax> CreateStatements(IndexDefinition indexDefinition)
-        {
-            List<AssignmentExpressionSyntax> expressions = new List<AssignmentExpressionSyntax>();
-
             var maps = indexDefinition.Maps.ToList();
-            if (maps.Count > 0)
+            var safeName = GetCSharpSafeName(indexName);
+            var nl = Environment.NewLine;
+
+            usings.ForEach(item => sb.Append($"{item.NormalizeWhitespace()}{nl}"));
+            sb.Append($"{nl}public class {safeName} : AbstractIndexCreationTask{nl}{{{nl}");
+            sb.Append($"{indexNameProperty.NormalizeWhitespace()}{nl}{nl}");
+            sb.Append($"public override IndexDefinition CreateIndexDefinition(){nl}{{{nl}");
+            sb.Append($"return new IndexDefinition{nl}{{{nl}");
+            sb.Append($"Maps = {{@");
+            var mapsWrite = 0;
+            foreach (var map in maps)
             {
-                expressions.Add(
-                    AssignmentExpression(SyntaxKind.SimpleAssignmentExpression,
-                        IdentifierName("Maps"),
-                        InitializerExpression(
-                            SyntaxKind.CollectionInitializerExpression,
-                            SeparatedList<ExpressionSyntax>(maps.Select(
-                            map =>
-                                LiteralExpression(SyntaxKind.StringLiteralExpression,
-                                    Literal(CleanString(map))))))
-                    .WithOpenBraceToken(Token(SyntaxKind.OpenBraceToken))
-                    .WithCloseBraceToken(Token(SyntaxKind.CloseBraceToken))));
+                sb.Append($"\"{map}\"");
+                mapsWrite++;
+                if (mapsWrite != maps.Count)
+                    sb.Append($",{nl}");
             }
+            sb.Append($"}},{nl}");
 
             if (indexDefinition.Reduce != null)
             {
-                var reduce = CleanString(indexDefinition.Reduce);
-                expressions.Add(AssignmentExpression(SyntaxKind.SimpleAssignmentExpression,
-                IdentifierName("Reduce"), LiteralExpression(
-                        SyntaxKind.StringLiteralExpression, Literal(reduce))));
+                sb.Append($"Reduce = @\"{indexDefinition.Reduce}\"");
             }
 
-            return expressions;
+            sb.Append($"{nl}}};{nl}}}{nl}}}");
+            return sb.ToString();
         }
 
         private static string GetCSharpSafeName(string name)
         {
             return $"Index_{Regex.Replace(name, @"[^\w\d]", "_")}";
-        }
-
-        private static string CleanString(string item)
-        {
-            return Regex.Replace(item, @"(\\r\\n)?(\s{2,})?", "");
         }
     }
 }

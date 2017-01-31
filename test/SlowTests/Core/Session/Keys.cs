@@ -20,7 +20,7 @@ using UserWithoutId = SlowTests.Core.Utils.Entities.UserWithoutId;
 
 namespace SlowTests.Core.Session
 {
-    public class Keys : RavenTestBase
+    public class Keys : RavenNewTestBase
     {
         [Fact]
         public void GetDocumentId()
@@ -49,30 +49,29 @@ namespace SlowTests.Core.Session
         {
             using (var store = GetDocumentStore())
             {
-                store.Conventions.RegisterIdConvention<User>((databaseName, commands, entity) => "abc");
-                store.Conventions.RegisterAsyncIdConvention<User>((databaseName, commands, entity) => new CompletedTask<string>("def"));
+                store.Conventions.RegisterAsyncIdConvention<User>((databaseName, entity) => new CompletedTask<string>("def/" + entity.Name));
 
                 using (var session = store.OpenSession())
                 {
                     var user = new User { Name = "John" };
                     session.Store(user);
 
-                    Assert.Equal("abc", user.Id);
+                    Assert.Equal("def/John", user.Id);
                 }
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var user = new User { Name = "John" };
+                    var user = new User { Name = "Bob" };
                     await session.StoreAsync(user);
 
-                    Assert.Equal("def", user.Id);
+                    Assert.Equal("def/Bob", user.Id);
                 }
 
-                Assert.Equal("abc", store.Conventions.GenerateDocumentKey(store.DefaultDatabase, store.DatabaseCommands, new User()));
-                Assert.Equal("def", await store.Conventions.GenerateDocumentKeyAsync(store.DefaultDatabase, store.AsyncDatabaseCommands, new User()));
+                Assert.Equal("def/", store.Conventions.GenerateDocumentKey(store.DefaultDatabase, new User()));
+                Assert.Equal("def/", await store.Conventions.GenerateDocumentKeyAsync(store.DefaultDatabase, new User()));
 
-                Assert.Equal("addresses/1", store.Conventions.GenerateDocumentKey(store.DefaultDatabase, store.DatabaseCommands, new Address()));
-                Assert.Equal("companies/1", await store.Conventions.GenerateDocumentKeyAsync(store.DefaultDatabase, store.AsyncDatabaseCommands, new Company()));
+                Assert.Equal("addresses/1", store.Conventions.GenerateDocumentKey(store.DefaultDatabase, new Address()));
+                Assert.Equal("companies/1", await store.Conventions.GenerateDocumentKeyAsync(store.DefaultDatabase, new Company()));
             }
         }
 
@@ -81,7 +80,7 @@ namespace SlowTests.Core.Session
         {
             using (var store = GetDocumentStore())
             {
-                store.Conventions.RegisterIdConvention<TShirt>((databaseName, commands, entity) => "ts/" + entity.ReleaseYear);
+                store.Conventions.RegisterAsyncIdConvention<TShirt>((databaseName, entity) => new CompletedTask<string>("ts/" + entity.ReleaseYear));
                 store.Conventions.RegisterIdLoadConvention<TShirt>(id => "ts/" + id);
 
                 using (var session = store.OpenSession())
@@ -93,7 +92,7 @@ namespace SlowTests.Core.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var shirt = session.Load<TShirt>(1999);
+                    var shirt = session.Load<TShirt>("ts/1999");
                     Assert.Equal(shirt.Manufacturer, "Test1");
                     Assert.Equal(shirt.ReleaseYear, 1999);
                 }

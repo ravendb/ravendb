@@ -5,13 +5,12 @@ using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Basic.Entities;
 using FastTests.Server.Documents.Notifications;
-using Raven.Abstractions.Data;
-using Raven.Json.Linq;
+using Raven.NewClient.Abstractions.Data;
 using Xunit;
 
 namespace SlowTests.Core.Subscriptions
 {
-    public class RavenDB_3193 : RavenTestBase
+    public class RavenDB_3193 : RavenNewTestBase
     {
         [Fact]
         public async Task ShouldRespectCollectionCriteria()
@@ -41,7 +40,7 @@ namespace SlowTests.Core.Subscriptions
                     SubscriptionId = id
                 }))
                 {
-                    var docs = new List<RavenJObject>();
+                    var docs = new List<dynamic>();
 
                     subscription.Subscribe(docs.Add);
 
@@ -49,7 +48,6 @@ namespace SlowTests.Core.Subscriptions
 
                     SpinWait.SpinUntil(() => docs.Count >= 100, TimeSpan.FromSeconds(60));
                     Assert.Equal(100, docs.Count);
-
 
                     foreach (var jsonDocument in docs)
                     {

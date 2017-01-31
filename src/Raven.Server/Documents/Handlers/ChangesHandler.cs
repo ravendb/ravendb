@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class ChangesHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/changes", "GET", "/databases/{databaseName:string}/changes")]
+        [RavenAction("/databases/*/changes", "GET", "/databases/{databaseName:string}/changes", SkipUsagesCount = true)]
         public async Task GetChanges()
         {
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
@@ -110,6 +110,8 @@ namespace Raven.Server.Documents.Handlers
                     using (var parser = new UnmanagedJsonParser(context, jsonParserState, debugTag))
                     {
                         var result = await receiveAsync;
+                        Database.DatabaseShutdown.ThrowIfCancellationRequested();
+
                         parser.SetBuffer(segments[index], 0, result.Count);
                         index++;
                         receiveAsync = webSocket.ReceiveAsync(segments[index].Buffer, Database.DatabaseShutdown);
@@ -124,6 +126,7 @@ namespace Raven.Server.Documents.Handlers
                                 while (builder.Read() == false)
                                 {
                                     result = await receiveAsync;
+                                    Database.DatabaseShutdown.ThrowIfCancellationRequested();
 
                                     parser.SetBuffer(segments[index], 0, result.Count);
                                     if (++index >= segments.Length)

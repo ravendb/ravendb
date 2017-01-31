@@ -69,7 +69,7 @@ namespace Raven.NewClient.Client.Document.Async
                 var entity = Parent.ConvertToEntity(typeof(T), key, res);
                 var stremResult = new StreamResult<T>
                 {
-                    Etag = etag,
+                    Etag = etag.Value,
                     Key = key,
                     Document = (T)entity,
                     Metadata = new MetadataAsDictionary(metadata)

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
-using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Commands
 {
@@ -22,7 +21,7 @@ namespace Raven.NewClient.Client.Commands
         /// <summary>
         /// Document etag.
         /// </summary>
-        public long? Etag { get; set; }
+        public long Etag { get; set; }
 
         /// <summary>
         /// Document metadata.

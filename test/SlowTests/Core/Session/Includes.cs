@@ -4,8 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System.Threading.Tasks;
-
 using FastTests;
 
 using Xunit;
@@ -15,7 +13,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Session
 {
-    public class Includes : RavenTestBase
+    public class Includes : RavenNewTestBase
     {
         [Fact]
         public void BasicInclude()

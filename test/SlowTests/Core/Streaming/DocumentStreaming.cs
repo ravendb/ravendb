@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System.Collections.Generic;
 using FastTests;
 
 using Xunit;
@@ -12,7 +13,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Streaming
 {
-    public class DocumentStreaming : RavenTestBase
+    public class DocumentStreaming : RavenNewTestBase
     {
         [Fact]
         public void CanStreamDocumentsStartingWith()
@@ -44,7 +45,7 @@ namespace SlowTests.Core.Streaming
             }
         }
 
-        [Fact(Skip = "TODO")]
+        [Fact]
         public void CanStreamDocumentsFromSpecifiedEtag()
         {
             using (var store = GetDocumentStore())
@@ -60,7 +61,7 @@ namespace SlowTests.Core.Streaming
                         var user = new User();
                         session.Store(user);
 
-                        if (i == 99)
+                        if (i == 100)
                         {
                             hundredthUser = user;
                         }
@@ -71,6 +72,7 @@ namespace SlowTests.Core.Streaming
                 }
 
                 int count = 0;
+                var keys = new List<KeyValuePair<string, long>>();
                 using (var session = store.OpenSession())
                 {
                     using (var reader = session.Advanced.Stream<User>(fromEtag: fromEtag))
@@ -78,6 +80,7 @@ namespace SlowTests.Core.Streaming
                         while (reader.MoveNext())
                         {
                             count++;
+                            keys.Add(new KeyValuePair<string, long>(reader.Current.Key, reader.Current.Etag));
                             Assert.IsType<User>(reader.Current.Document);
                         }
                     }
