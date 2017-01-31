@@ -588,12 +588,13 @@ namespace Raven.Server.Documents.Replication
                         throw new EndOfStreamException();
 
                     _connectionOptions.PinnedBuffer.Valid = read;
-                    _connectionOptions.PinnedBuffer.Valid = 0;
+                    _connectionOptions.PinnedBuffer.Used = 0;
+                    continue;
                 }
                 var min = Math.Min(size, available);
                 var result = _connectionOptions.PinnedBuffer.Pointer + _connectionOptions.PinnedBuffer.Used;
-                into.Write(result, size);
-                _connectionOptions.PinnedBuffer.Used += size;
+                into.Write(result, min);
+                _connectionOptions.PinnedBuffer.Used += min;
                 size -= min;
             }
         }
