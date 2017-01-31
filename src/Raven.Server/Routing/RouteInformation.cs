@@ -18,6 +18,7 @@ namespace Raven.Server.Routing
         public readonly string Path;
 
         public readonly bool NoAuthorizationRequired;
+        public readonly bool SkipUsagesCount;
 
         private HandleRequest _request;
         private RouteType _typeOfRoute;
@@ -28,11 +29,12 @@ namespace Raven.Server.Routing
             Databases
         }
 
-        public RouteInformation(string method, string path, bool noAuthorizationRequired)
+        public RouteInformation(string method, string path, bool noAuthorizationRequired, bool skipUsagesCount)
         {
             Method = method;
             Path = path;
             NoAuthorizationRequired = noAuthorizationRequired;
+            SkipUsagesCount = skipUsagesCount;
         }
 
         public void Build(MethodInfo action)
