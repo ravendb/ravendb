@@ -139,8 +139,6 @@ namespace Raven.Server.Smuggler.Documents
 
             public void WriteDocument(Document document)
             {
-                ModifyDocumentIfNecessary(document);
-
                 _command.Add(document);
 
                 HandleBatchOfDocumentsIfNecessary();
@@ -155,48 +153,6 @@ namespace Raven.Server.Smuggler.Documents
             public void Dispose()
             {
                 FinishBatchOfDocuments();
-            }
-
-            private void ModifyDocumentIfNecessary(Document document)
-            {
-            
-                BlittableJsonReaderObject metadata;
-                if (document.Data.TryGet(Constants.Metadata.Key, out metadata) == false)
-                    return;
-
-                // apply all the metadata conversions here
-                ConvertRavenEntityName(metadata);
-                RemoveOldProperties(metadata);
-            }
-
-            private static void RemoveOldProperties(BlittableJsonReaderObject metadata)
-            {
-                if (metadata.Modifications == null)
-                    metadata.Modifications = new DynamicJsonValue(metadata);
-
-                string _;
-                if (metadata.TryGet(LastModified, out _))
-                    metadata.Modifications.Remove(LastModified);
-
-                if (metadata.TryGet(RavenLastModified, out _))
-                    metadata.Modifications.Remove(RavenLastModified);
-            }
-
-            private static void ConvertRavenEntityName(BlittableJsonReaderObject metadata)
-            {
-                string collection;
-                if (metadata.TryGet(RavenEntityName, out collection) == false)
-                    return;
-
-                if (metadata.Modifications == null)
-                    metadata.Modifications = new DynamicJsonValue(metadata);
-
-                metadata.Modifications.Remove(RavenEntityName);
-
-                if (string.IsNullOrWhiteSpace(collection))
-                    return;
-
-                metadata.Modifications[Constants.Metadata.Collection] = collection;
             }
 
             private void HandleBatchOfDocumentsIfNecessary()
@@ -320,20 +276,10 @@ namespace Raven.Server.Smuggler.Documents
                 foreach (var document in Documents)
                 {
                     var key = document.Key;
-                    var metadata = document.Data.GetMetadata();
-
-              
-                    if (metadata.Modifications == null)
-                        metadata.Modifications = new DynamicJsonValue(metadata);
-
-                    metadata.Modifications.Remove(Constants.Metadata.Id);
-                    metadata.Modifications.Remove(Constants.Metadata.Etag);
-
+             
                     using (document.Data)
                     {
-                        document.Data = _context.ReadObject(document.Data, document.Key,
-                            BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-
+                  
                         if (IsRevision)
                         {
                             _database.BundleLoader.VersioningStorage.PutDirect(context, key,  document.Data);

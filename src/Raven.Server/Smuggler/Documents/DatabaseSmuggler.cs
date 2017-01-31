@@ -301,7 +301,6 @@ namespace Raven.Server.Smuggler.Documents
                     }
 
                     Debug.Assert(document.Key != null);
-                    document.EnsureMetadata();
 
                     actions.WriteDocument(document);
 
@@ -352,8 +351,6 @@ namespace Raven.Server.Smuggler.Documents
                             continue;
                         }
                     }
-
-                    document.EnsureMetadata();
 
                     if (_options.DisableVersioningBundle)
                     {

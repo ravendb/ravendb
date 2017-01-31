@@ -11,6 +11,7 @@ using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -103,45 +104,231 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
+        public class BlittableMetadataModifier : IDisposable, IBlittableDocumentModifier
+        {
+            private bool _readingMetadataObject;
+            private int _depth;
+            private State _state = State.None;
+
+            public LazyStringValue Id;
+
+            private readonly JsonOperationContext _ctx;
+
+            private readonly List<AllocatedMemoryData> _allocations = new List<AllocatedMemoryData>();
+
+            public BlittableMetadataModifier(JsonOperationContext ctx)
+            {
+                _ctx = ctx;
+            }
+            private unsafe LazyStringValue CreateLazyStringValueFromParserState(JsonParserState state)
+            {
+                var maxSizeOfEscapePos = state.EscapePositions.Count * 5 // max size of var int
+                                         + JsonParserState.VariableSizeIntSize(state.EscapePositions.Count);
+
+                var mem = _ctx.GetMemory(maxSizeOfEscapePos + state.StringSize);
+
+                Memory.Copy(mem.Address, state.StringBuffer, state.StringSize);
+                var lazyStringValueFromParserState = new LazyStringValue(null, mem.Address, state.StringSize, _ctx);
+                if (state.EscapePositions.Count > 0)
+                {
+                    lazyStringValueFromParserState.EscapePositions = state.EscapePositions.ToArray();
+                }
+                return lazyStringValueFromParserState;
+            }
+
+            private enum State
+            {
+                None,
+                ReadingId,
+                IgnorePropertyEtag,
+                IgnoreProperty
+            }
+
+            public void StartObject()
+            {
+                if (_readingMetadataObject == false)
+                    return;
+                _depth++;
+            }
+
+            public void EndOBject()
+            {
+                if (_readingMetadataObject == false)
+                    return;
+                _depth--;
+                Debug.Assert(_depth >= 0);
+                if (_depth == 0)
+                    _readingMetadataObject = false;
+            }
+
+
+            public unsafe bool AboutToReadPropertyName(IJsonParser reader, JsonParserState state)
+            {
+                switch (_state)
+                {
+                    case State.None:
+                        break;
+                    case State.IgnoreProperty:
+                        if (reader.Read() == false)
+                            return false;
+                        if (state.CurrentTokenType == JsonParserToken.StartArray ||
+                            state.CurrentTokenType == JsonParserToken.StartObject)
+                            ThrowInvalidMetadataProperty(state);
+                        break;
+                    case State.IgnorePropertyEtag:
+                        if (reader.Read() == false)
+                            return false;
+                        if (state.CurrentTokenType != JsonParserToken.String &&
+                            state.CurrentTokenType != JsonParserToken.Integer)
+                            ThrowInvalidEtagType(state);
+                        break;
+                    case State.ReadingId:
+                        if (reader.Read() == false)
+                            return false;
+                        if (state.CurrentTokenType != JsonParserToken.String)
+                            ThrowInvalidIdType(state);
+                        Id = CreateLazyStringValueFromParserState(state);
+                        break;
+                }
+                _state = State.None;
+
+                while (true)
+                {
+
+                    if (reader.Read() == false)
+                        return false;
+
+                    if (state.CurrentTokenType != JsonParserToken.String)
+                        return true; // let the caller handle that
+
+                    if (_readingMetadataObject == false)
+                    {
+                        if (state.StringSize == 9 && state.StringBuffer[0] == (byte)'@' &&
+                            *(long*)(state.StringBuffer + 1) == 7022344802737087853)
+                        {
+                            _readingMetadataObject = true;
+                        }
+                        return true;
+                    }
+                    switch (state.StringSize)
+                    {
+                        case 3:// @id
+                            if (state.StringBuffer[0] == (byte)'@' && 
+                                *(short*)(state.StringBuffer + 1) == 25705)
+                            {
+                                if (reader.Read() == false)
+                                {
+                                    _state = State.ReadingId;
+                                    return false;
+                                }
+                                if(state.CurrentTokenType!=JsonParserToken.String)
+                                    ThrowInvalidIdType(state);
+                                Id = CreateLazyStringValueFromParserState(state);
+                            }
+                            break;
+                        case 5:// @etag
+                            if (state.StringBuffer[0] == (byte)'@' && 
+                                *(int*)(state.StringBuffer + 1) == 1734440037)
+                            {
+                                if (reader.Read() == false)
+                                {
+                                    _state = State.IgnorePropertyEtag;
+                                    return false;
+                                }
+                                if (state.CurrentTokenType != JsonParserToken.String && 
+                                    state.CurrentTokenType != JsonParserToken.Integer)
+                                    ThrowInvalidEtagType(state);
+                            }
+                            break;
+                        case 13: //Last-Modified
+                            if (*(long*)state.StringBuffer == 7237087983830262092 &&
+                              *(int*)(state.StringBuffer + sizeof(long)) == 1701406313 && 
+                              state.StringBuffer[12] == (byte)'d')
+                            {
+                                if (reader.Read() == false)
+                                {
+                                    _state = State.IgnorePropertyEtag;
+                                    return false;
+                                }
+                                if (state.CurrentTokenType == JsonParserToken.StartArray ||
+                                    state.CurrentTokenType == JsonParserToken.StartObject)
+                                    ThrowInvalidMetadataProperty(state);
+                            }
+                            break;
+
+                        case 17: //Raven-Entity-Name --> @collection
+                            if (*(long*)state.StringBuffer == 7945807069737017682 &&
+                               *(long*)(state.StringBuffer + sizeof(long)) == 7881666780093245812)
+                            {
+                                var collection = _ctx.GetLazyStringForFieldWithCaching(Constants.Metadata.Collection);
+                                state.StringBuffer = collection.AllocatedMemoryData.Address;
+                                state.StringSize = collection.Size;
+                            }
+                            return true;
+                        case 19: //Raven-Last-Modified
+                            if (*(long*)state.StringBuffer == 7011028672080929106 &&
+                               *(long*)(state.StringBuffer + sizeof(long)) == 7379539893622240371 &&
+                               *(short*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 25961 &&
+                              state.StringBuffer[18] == (byte)'d')
+                            {
+                                if (reader.Read() == false)
+                                {
+                                    _state = State.IgnorePropertyEtag;
+                                    return false;
+                                }
+                                if (state.CurrentTokenType == JsonParserToken.StartArray ||
+                                    state.CurrentTokenType == JsonParserToken.StartObject)
+                                    ThrowInvalidMetadataProperty(state);
+                            }
+                            break;
+                        default:// accept this property
+                            return true;
+                    }
+                }
+            }
+
+            private static void ThrowInvalidMetadataProperty(JsonParserState state)
+            {
+                throw new InvalidDataException("Expected property @metadata to be a simpel type, but was " +
+                                               state.CurrentTokenType);
+            }
+
+            private static void ThrowInvalidIdType(JsonParserState state)
+            {
+                throw new InvalidDataException(
+                    $"Expected property @metadata.@id to have string type, but was: {state.CurrentTokenType}");
+            }
+
+            private static void ThrowInvalidEtagType(JsonParserState state)
+            {
+                throw new InvalidDataException("Expected property @metadata.@etag to have string or long type, but was: " +
+                                               state.CurrentTokenType);
+            }
+
+
+            public void Dispose()
+            {
+                for (int i = _allocations.Count - 1; i >= 0; i--)
+                {
+                    _ctx.ReturnMemory(_allocations[i]);
+                }
+                _allocations.Clear();
+            }
+
+            public void Reset()
+            {
+                Dispose();
+            }
+        }
+
         public IEnumerable<Document> GetDocuments(List<string> collectionsToExport, INewDocumentActions actions)
         {
-            foreach (var data in ReadArray(actions))
-            {
-                BlittableJsonReaderObject metadata;
-                if (data.TryGet(Constants.Metadata.Key, out metadata) == false || metadata == null)
-                    ThrowInvalidJson();
-
-                LazyStringValue id;
-                Debug.Assert(metadata != null, "metadata != null");
-                if (metadata.TryGet(Constants.Metadata.Id, out id) == false)
-                    ThrowInvalidJson();
-
-                yield return new Document
-                {
-                    Data = data,
-                    Key = id
-                };
-            }
+           return ReadDocuments(actions);
         }
 
         public IEnumerable<Document> GetRevisionDocuments(List<string> collectionsToExport, INewDocumentActions actions, int limit)
         {
-            foreach (var data in ReadArray(actions))
-            {
-                BlittableJsonReaderObject metadata;
-                if (data.TryGet(Constants.Metadata.Key, out metadata) == false || metadata == null)
-                    ThrowInvalidJson();
-                Debug.Assert(metadata != null);
-                LazyStringValue id;
-                if (metadata.TryGet(Constants.Metadata.Id, out id) == false)
-                    ThrowInvalidJson();
-
-                yield return new Document
-                {
-                    Data = data,
-                    Key = id
-                };
-            }
+            return ReadDocuments(actions);
         }
 
         public IEnumerable<IndexDefinitionAndType> GetIndexes()
@@ -309,6 +496,45 @@ namespace Raven.Server.Smuggler.Documents
                     ReadObject(builder);
 
                     yield return builder.CreateReader();
+                }
+
+            }
+        }
+
+        private IEnumerable<Document> ReadDocuments(INewDocumentActions actions = null)
+        {
+            if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
+                ThrowInvalidJson();
+
+            if (_state.CurrentTokenType != JsonParserToken.StartArray)
+                ThrowInvalidJson();
+
+            var modifier = new BlittableMetadataModifier(_context);
+            while (true)
+            {
+                MaybeResetContextAndParser();
+
+                if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
+                    ThrowInvalidJson();
+
+                if (_state.CurrentTokenType == JsonParserToken.EndArray)
+                    break;
+
+                var context = actions == null ? _context : actions.GetContextForNewDocument();
+                using (
+                    var builder = new BlittableJsonDocumentBuilder(context,
+                        BlittableJsonDocumentBuilder.UsageMode.ToDisk, "import/object", _parser, _state,
+                        modifier: modifier))
+                {
+
+                    ReadObject(builder);
+
+                    var blittableJsonReaderObject = builder.CreateReader();
+                    yield return new Document
+                    {
+                        Data = blittableJsonReaderObject,
+                        Key = modifier.Id,
+                    };
                 }
 
             }

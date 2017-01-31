@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using Sparrow.Global;
 using Sparrow.Json.Parsing;
 
 namespace Sparrow.Json
@@ -12,27 +14,36 @@ namespace Sparrow.Json
         protected readonly JsonOperationContext _context;
         private UsageMode _mode;
         private readonly IJsonParser _reader;
+        private readonly IBlittableDocumentModifier _modifier;
         private readonly BlittableWriter<UnmanagedWriteBuffer> _writer;
         private readonly JsonParserState _state;
-        
-        protected WriteToken _writeToken;
-        private  string _debugTag;
-        
 
-        public BlittableJsonDocumentBuilder(JsonOperationContext context, JsonParserState state, IJsonParser reader, BlittableWriter<UnmanagedWriteBuffer> writer =null)
+        protected WriteToken _writeToken;
+        private string _debugTag;
+
+
+        public BlittableJsonDocumentBuilder(JsonOperationContext context, JsonParserState state, IJsonParser reader,
+            BlittableWriter<UnmanagedWriteBuffer> writer = null,
+            IBlittableDocumentModifier modifier = null)
         {
             _context = context;
             _state = state;
             _reader = reader;
+            _modifier = modifier;
             _writer = writer ?? new BlittableWriter<UnmanagedWriteBuffer>(context);
         }
 
-        public BlittableJsonDocumentBuilder(JsonOperationContext context, UsageMode mode, string debugTag, IJsonParser reader, JsonParserState state, BlittableWriter<UnmanagedWriteBuffer> writer = null) : this(context, state, reader, writer)
+        public BlittableJsonDocumentBuilder(
+            JsonOperationContext context, 
+            UsageMode mode, string debugTag, 
+            IJsonParser reader, JsonParserState state, 
+            BlittableWriter<UnmanagedWriteBuffer> writer = null,
+            IBlittableDocumentModifier modifier = null) : this(context, state, reader, writer, modifier)
         {
             Renew(debugTag, mode);
         }
 
-        public BlittableJsonDocumentBuilder(JsonOperationContext context, JsonParserState state, UsageMode mode,  string debugTag, IJsonParser reader, BlittableWriter<UnmanagedWriteBuffer> writer = null):this(context,state,reader,writer)
+        public BlittableJsonDocumentBuilder(JsonOperationContext context, JsonParserState state, UsageMode mode, string debugTag, IJsonParser reader, BlittableWriter<UnmanagedWriteBuffer> writer = null) : this(context, state, reader, writer)
         {
             Renew(debugTag, mode);
         }
@@ -79,7 +90,7 @@ namespace Sparrow.Json
         }
 
         public int SizeInBytes => _writer.SizeInBytes;
-        
+
 
         public void Dispose()
         {
@@ -140,14 +151,14 @@ namespace Sparrow.Json
                         return true;
                     case ContinuationState.ReadObject:
                         if (_state.CurrentTokenType != JsonParserToken.StartObject)
-                            throw new InvalidDataException("Expected start of object, but got " + _state.CurrentTokenType);
+                            ThrowExpectedStartOfObject();
                         currentState.State = ContinuationState.ReadPropertyName;
                         currentState.Properties = new List<PropertyTag>();
                         currentState.FirstWrite = _writer.Position;
                         continue;
                     case ContinuationState.ReadArray:
                         if (_state.CurrentTokenType != JsonParserToken.StartArray)
-                            throw new InvalidDataException("Expected start of array, but got " + _state.CurrentTokenType);
+                            ThrowExpectedStartOfArray();
                         currentState.Types = new List<BlittableJsonToken>();
                         currentState.Positions = new List<int>();
                         currentState.State = ContinuationState.ReadArrayValue;
@@ -176,7 +187,7 @@ namespace Sparrow.Json
                         currentState.State = ContinuationState.ReadArrayValue;
                         continue;
                     case ContinuationState.CompleteArray:
-                        
+
                         var arrayToken = BlittableJsonToken.StartArray;
                         var arrayInfoStart = _writer.WriteArrayMetadata(currentState.Positions, currentState.Types,
                             ref arrayToken);
@@ -186,11 +197,11 @@ namespace Sparrow.Json
                             ValuePos = arrayInfoStart,
                             WrittenToken = arrayToken
                         };
-                        
+
                         currentState = _continuationState.Pop();
                         continue;
                     case ContinuationState.ReadPropertyName:
-                        if (_reader.Read() == false)
+                        if (ReadMaybeModifiedPropertyName() == false)
                         {
                             _continuationState.Push(currentState);
                             return false;
@@ -198,6 +209,7 @@ namespace Sparrow.Json
 
                         if (_state.CurrentTokenType == JsonParserToken.EndObject)
                         {
+                            _modifier?.EndOBject();
                             _writeToken = _writer.WriteObjectMetadata(currentState.Properties, currentState.FirstWrite,
                                 currentState.MaxPropertyId);
                             if (_continuationState.Count == 0)
@@ -207,8 +219,7 @@ namespace Sparrow.Json
                         }
 
                         if (_state.CurrentTokenType != JsonParserToken.String)
-                            throw new InvalidDataException("Expected property, but got " + _state.CurrentTokenType);
-
+                            ThrowExpectedProperty();
 
                         var property = CreateLazyStringValueFromParserState();
 
@@ -247,12 +258,37 @@ namespace Sparrow.Json
             }
         }
 
+        private bool ReadMaybeModifiedPropertyName()
+        {
+            if (_modifier != null)
+            {
+                return _modifier.AboutToReadPropertyName(_reader, _state);
+            }
+            return _reader.Read();
+        }
+
+        private void ThrowExpectedProperty()
+        {
+            throw new InvalidDataException("Expected property, but got " + _state.CurrentTokenType);
+        }
+
+        private void ThrowExpectedStartOfArray()
+        {
+            throw new InvalidDataException("Expected start of array, but got " + _state.CurrentTokenType);
+        }
+
+        private void ThrowExpectedStartOfObject()
+        {
+            throw new InvalidDataException("Expected start of object, but got " + _state.CurrentTokenType);
+        }
+
         private unsafe void ReadJsonValue()
         {
             int start;
             switch (_state.CurrentTokenType)
             {
                 case JsonParserToken.StartObject:
+                    _modifier?.StartObject();
                     _continuationState.Push(new BuildingState
                     {
                         State = ContinuationState.ReadObject
@@ -305,7 +341,7 @@ namespace Sparrow.Json
                     };
                     return;
                 case JsonParserToken.Null:
-                    start = _writer.WriteValue((byte) 0);
+                    start = _writer.WriteValue((byte)0);
                     _writeToken = new WriteToken // nothing to do here, we handle that with the token
                     {
                         WrittenToken = BlittableJsonToken.Null,
@@ -433,4 +469,12 @@ namespace Sparrow.Json
             return "Building json for " + _debugTag;
         }
     }
+
+    public interface IBlittableDocumentModifier
+    {
+        void StartObject();
+        void EndOBject();
+        bool AboutToReadPropertyName(IJsonParser reader, JsonParserState state);
+    }
+
 }

@@ -63,6 +63,12 @@ namespace Sparrow.Json
 
         public void WritePropertyName(string propertyName)
         {
+            var property = _context.GetLazyStringForFieldWithCaching(propertyName);
+            WritePropertyName(property);
+        }
+
+        public void WritePropertyName(LazyStringValue property)
+        {
             var currentState = _continuationState.Pop();
 
             if (currentState.State != ContinuationState.ReadPropertyName)
@@ -70,7 +76,6 @@ namespace Sparrow.Json
                 ThrowIllegalStateException(currentState.State, "WritePropertyName");
             }
 
-            var property = _context.GetLazyStringForFieldWithCaching(propertyName);
 
             int newPropertyId = _context.CachedProperties.GetPropertyId(property);
             currentState.CurrentPropertyId = newPropertyId;
