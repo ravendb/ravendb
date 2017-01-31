@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.SqlReplication
                     AlertRaised.Create(SqlReplication.AlertTitle,
                         $"Last SQL replication operation for {simulateSqlReplication.Configuration.Name} was failed",
                         AlertType.SqlReplication_Error,
-                        AlertSeverity.Error,
+                        NotificationSeverity.Error,
                         key: simulateSqlReplication.Configuration.Name,
                         details: new ExceptionDetails(e)).ToJson()
                 };

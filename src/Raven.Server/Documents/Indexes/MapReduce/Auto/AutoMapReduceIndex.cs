@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             DocumentDatabase documentDatabase)
         {
             var instance = new AutoMapReduceIndex(indexId, definition);
-            instance.Initialize(documentDatabase, documentDatabase.Configuration.Indexing);
+            instance.Initialize(documentDatabase, documentDatabase.Configuration.Indexing, documentDatabase.Configuration.PerformanceHints);
 
             return instance;
         }
@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         {
             var definition = AutoMapReduceIndexDefinition.Load(environment);
             var instance = new AutoMapReduceIndex(indexId, definition);
-            instance.Initialize(environment, documentDatabase, documentDatabase.Configuration.Indexing);
+            instance.Initialize(environment, documentDatabase, documentDatabase.Configuration.Indexing, documentDatabase.Configuration.PerformanceHints);
 
             return instance;
         }

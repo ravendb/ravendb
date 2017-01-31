@@ -8,6 +8,6 @@
         ResourceChanged,
         NotificationUpdated,
         RecentError, // used in studio
-        // performance, hints?
+        PerformanceHint,
     }
 }

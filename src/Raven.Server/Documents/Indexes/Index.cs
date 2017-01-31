@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
@@ -32,9 +33,8 @@ using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Sorting;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.Exceptions;
-using Raven.Server.NotificationCenter.Actions;
-using Raven.Server.NotificationCenter.Actions.Details;
 using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.LowMemoryNotification;
@@ -132,6 +132,8 @@ namespace Raven.Server.Documents.Indexes
 
         protected internal IndexingConfiguration Configuration;
 
+        protected PerformanceHintsConfiguration PerformanceHints;
+
         private bool _allocationCleanupNeeded;
         private Size _currentMaximumAllowedMemory = new Size(32, SizeUnit.Megabytes);
         private NativeMemory.ThreadStats _threadAllocations;
@@ -140,11 +142,12 @@ namespace Raven.Server.Documents.Indexes
         private readonly ReaderWriterLockSlim _currentlyRunningQueriesLock = new ReaderWriterLockSlim();
         private volatile bool _priorityChanged;
         private volatile bool _hadRealIndexingWorkToDo;
-
-        private long _numberOfExceedingIndexOutputsPerDocument;
-        private DateTime? _lastWarningExceedingIndexOutputsPerDocument;
-        private int _maxExceedingIndexOutputsPerDocument = int.MinValue;
-        private string _maxExceedingIndexOutputsPerDocumentId;
+        
+        private readonly WarnIndexOutputsPerDocument _highFanoutRatioWarning = new WarnIndexOutputsPerDocument
+        {
+            MaxProducedOutputsForDocument = int.MinValue,
+            Suggestion = "Please verify this index definition and consider a re-design of your entities or index for better indexing performance"
+        };
 
         protected Index(int indexId, IndexType type, IndexDefinitionBase definition)
         {
@@ -265,7 +268,7 @@ namespace Raven.Server.Documents.Indexes
             throw new ObjectDisposedException("index");
         }
 
-        protected void Initialize(DocumentDatabase documentDatabase, IndexingConfiguration configuration)
+        protected void Initialize(DocumentDatabase documentDatabase, IndexingConfiguration configuration, PerformanceHintsConfiguration performanceHints)
         {
             _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
             using (DrainRunningQueries())
@@ -292,7 +295,7 @@ namespace Raven.Server.Documents.Indexes
                 options.SchemaVersion = 1;
                 try
                 {
-                    Initialize(new StorageEnvironment(options), documentDatabase, configuration);
+                    Initialize(new StorageEnvironment(options), documentDatabase, configuration, performanceHints);
                 }
                 catch (Exception)
                 {
@@ -341,7 +344,7 @@ namespace Raven.Server.Documents.Indexes
             return $"{IndexId:0000}-{name.Substring(0, 64)}";
         }
 
-        protected void Initialize(StorageEnvironment environment, DocumentDatabase documentDatabase, IndexingConfiguration configuration)
+        protected void Initialize(StorageEnvironment environment, DocumentDatabase documentDatabase, IndexingConfiguration configuration, PerformanceHintsConfiguration performanceHints)
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({IndexId})' was already disposed.");
@@ -357,6 +360,7 @@ namespace Raven.Server.Documents.Indexes
 
                     DocumentDatabase = documentDatabase;
                     Configuration = configuration;
+                    PerformanceHints = performanceHints;
 
                     _environment = environment;
                     _unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling($"Indexes//{IndexId}");
@@ -1987,40 +1991,34 @@ namespace Raven.Server.Documents.Indexes
 
         protected void WarnExceedingIndexOutputsPerDocument(string documentKey, int numberOfAlreadyProducedOutputs)
         {
-            if (Configuration.MaxWarnIndexOutputsPerDocument <= 0 || numberOfAlreadyProducedOutputs <= Configuration.MaxWarnIndexOutputsPerDocument)
+            if (PerformanceHints.MaxWarnIndexOutputsPerDocument <= 0 || numberOfAlreadyProducedOutputs <= PerformanceHints.MaxWarnIndexOutputsPerDocument)
                 return;
 
-            _numberOfExceedingIndexOutputsPerDocument++;
-            if (_maxExceedingIndexOutputsPerDocument < numberOfAlreadyProducedOutputs)
+            _highFanoutRatioWarning.NumberOfExceedingDocuments++;
+            
+            if (_highFanoutRatioWarning.MaxProducedOutputsForDocument < numberOfAlreadyProducedOutputs)
             {
-                _maxExceedingIndexOutputsPerDocument = numberOfAlreadyProducedOutputs;
-                _maxExceedingIndexOutputsPerDocumentId = documentKey;
+                _highFanoutRatioWarning.MaxProducedOutputsForDocument = numberOfAlreadyProducedOutputs;
+                _highFanoutRatioWarning.SampleDocumentId = documentKey;
             }
-                
-            if (_lastWarningExceedingIndexOutputsPerDocument != null &&
-                (DateTime.UtcNow - _lastWarningExceedingIndexOutputsPerDocument.Value).Minutes <= 5)
+              
+            if (_highFanoutRatioWarning.LastWarnedAt != null &&
+                (SystemTime.UtcNow - _highFanoutRatioWarning.LastWarnedAt.Value).Minutes <= 5)
             {
-                // save the alert every 5 minutes (at worst case)
+                // save the hint every 5 minutes (at worst case)
                 return;
             }
 
-            _lastWarningExceedingIndexOutputsPerDocument = DateTime.UtcNow;
+            _highFanoutRatioWarning.LastWarnedAt = SystemTime.UtcNow;
 
-            var alert = AlertRaised.Create(
-                "Max index outputs warning",
-                $"Max index outputs per document exceeded {Configuration.MaxWarnIndexOutputsPerDocument}",
-                AlertType.WarnIndexOutputsPerDocument,
-                AlertSeverity.Warning,
-                details: new WarnIndexOutputsPerDocument
-                {
-                    Warning = $"Index '{Name}' has already produced more than {Configuration.MaxWarnIndexOutputsPerDocument} map results",
-                    NumberOfExceedingDocuments = _numberOfExceedingIndexOutputsPerDocument,
-                    SampleDocumentId = _maxExceedingIndexOutputsPerDocumentId,
-                    MaxProducedOutputsForDocument = _maxExceedingIndexOutputsPerDocument,
-                    Suggestion = "Please verify this index definition and consider a re-design of your entities or index"
-                });
+            var hint = PerformanceHint.Create("High indexing fanout ratio",
+                $"Index '{Name}' has produced more than {PerformanceHints.MaxWarnIndexOutputsPerDocument} map results from a single document",
+                PerformanceHintType.Indexing,
+                NotificationSeverity.Warning, 
+                source: Name,
+                details: _highFanoutRatioWarning);
 
-            DocumentDatabase.NotificationCenter.Add(alert);
+            DocumentDatabase.NotificationCenter.Add(hint);
         }
 
         public virtual Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()
@@ -2107,7 +2105,7 @@ namespace Raven.Server.Documents.Indexes
                     _initialized = false;
                     _disposed = false;
 
-                    Initialize(DocumentDatabase, Configuration);
+                    Initialize(DocumentDatabase, Configuration, DocumentDatabase.Configuration.PerformanceHints);
 
                     if (wasRunning)
                         Start();

@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.Transformers
                         _documentDatabase.NotificationCenter.Add(AlertRaised.Create("Transformers store initialization error",
                             message,
                             AlertType.TransformerStore_TransformerCouldNotBeOpened,
-                            AlertSeverity.Error,
+                            NotificationSeverity.Error,
                             key: fakeTransformer.Name,
                             details: new ExceptionDetails(e)));
 

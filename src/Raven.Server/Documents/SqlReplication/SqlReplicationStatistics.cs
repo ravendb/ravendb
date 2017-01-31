@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.SqlReplication
             LastAlert = AlertRaised.Create(SqlReplication.AlertTitle, 
                 $"[{_name}] Write error: {e.Message}",
                 AlertType.SqlReplication_Error, 
-                AlertSeverity.Error,
+                NotificationSeverity.Error,
                 key: _name, details: new ExceptionDetails(e));
 
             if (WriteErrorCount < 100)
@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.SqlReplication
             LastAlert = AlertRaised.Create(SqlReplication.AlertTitle,
                 $"[{_name}] Write error hit ratio too high. Could not tolerate write error ratio and stopped current replication cycle",
                 AlertType.SqlReplication_WriteErrorRatio,
-                AlertSeverity.Error,
+                NotificationSeverity.Error,
                 key: _name, 
                 details: new ExceptionDetails(e));
 
@@ -97,7 +97,7 @@ namespace Raven.Server.Documents.SqlReplication
             LastAlert = AlertRaised.Create(SqlReplication.AlertTitle,
                 $"[{_name}] Could not parse script",
                 AlertType.SqlReplication_ScriptError,
-                AlertSeverity.Error,
+                NotificationSeverity.Error,
                 key: _name, 
                 details: new MessageDetails
                 {
@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.SqlReplication
             LastAlert = AlertRaised.Create(SqlReplication.AlertTitle,
                 $"[{_name}] Replication script failed",
                 AlertType.SqlReplication_Error, 
-                AlertSeverity.Error,
+                NotificationSeverity.Error,
                 key: _name, 
                 details: new ExceptionDetails(e));
 
@@ -132,7 +132,7 @@ namespace Raven.Server.Documents.SqlReplication
             LastAlert = AlertRaised.Create(SqlReplication.AlertTitle,
                 $"[{_name}] Script error hit ratio too high. Could not tolerate script error ratio and stopped current replication cycle",
                 AlertType.SqlReplication_ScriptErrorRatio,
-                AlertSeverity.Error,
+                NotificationSeverity.Error,
                 key: _name, 
                 details: new ExceptionDetails(e));
 
