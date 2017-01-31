@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Data;
-using Raven.Server.Documents;
+using Raven.Server.Documents.Operations;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;

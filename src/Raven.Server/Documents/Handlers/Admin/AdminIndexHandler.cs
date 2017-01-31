@@ -1,13 +1,10 @@
 ﻿using System;
-using System.Net;
 using System.Threading.Tasks;
 using Raven.Abstractions.Exceptions;
-using Raven.Client.Data.Indexes;
+using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
