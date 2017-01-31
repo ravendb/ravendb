@@ -65,12 +65,7 @@ class changesContext {
         }
 
         if (currentChanges) {
-            this.globalResourceSubscriptions.forEach(x => x.off());
-            this.globalResourceSubscriptions = [];
-
-            this.disconnectFromResourceChangesApi("ChangingResource");
-            this.disconnectFromResourceNotificationCenter();
-            notificationCenter.instance.resourceDisconnected();
+            this.disconnect("ChangingResource");
         }
 
         if (rs.disabled()) { //TODO: or not licensed
@@ -130,16 +125,22 @@ class changesContext {
         }
     }
 
-    //TODO: should it dispose global resource subscriptions?
     disconnectIfCurrent(rs: resource, cause: resourceDisconnectionCause) {
         const currentChanges = this.resourceChangesApi();
 
         if (currentChanges && currentChanges.getResource().qualifiedName === rs.qualifiedName) {
-            this.disconnectFromResourceChangesApi(cause);
-            this.disconnectFromResourceNotificationCenter();
+            this.disconnect(cause);
         }
     }
 
+    private disconnect(cause: resourceDisconnectionCause) {
+        this.globalResourceSubscriptions.forEach(x => x.off());
+        this.globalResourceSubscriptions = [];
+
+        this.disconnectFromResourceChangesApi(cause);
+        this.disconnectFromResourceNotificationCenter();
+        notificationCenter.instance.resourceDisconnected();
+    }
 }
 
 export = changesContext;
