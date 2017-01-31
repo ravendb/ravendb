@@ -334,37 +334,58 @@ namespace Raven.Server.Documents.Replication
             InitializeResolvers();
         }
 
-        private const int ResolutionBatchSize = 128;
-
         private void ResolveConflictsInBackground()
         {
             DocumentsOperationContext context;
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
-                int resolvedDocs = 1;
+                Slice lastKey;
+                Slice.From(context.Allocator, string.Empty, out lastKey);
 
-                while (resolvedDocs > 0 && !_cts.IsCancellationRequested)
+                bool hasConflicts = true;
+                while (hasConflicts && !_cts.IsCancellationRequested)
                 {
-                    resolvedDocs = 0;
-
-                    Slice lastKey;
-                    Slice.From(context.Allocator, string.Empty, out lastKey);
                     try
                     {
-                        using (var tx = context.OpenWriteTransaction())
+                        var sp = Stopwatch.StartNew();
+                        DocumentsTransaction tx = null;
+                        try
                         {
-                            while (resolvedDocs < ResolutionBatchSize && !_cts.IsCancellationRequested)
+                            try
                             {
-                                var conflicts = _database.DocumentsStorage.GetFConflictsBySameKeyAfter(context,
+                                tx = context.OpenWriteTransaction();
+                            }
+                            catch (TimeoutException)
+                            {
+                                continue;
+                            }
+                            hasConflicts = false;
+                            while (!_cts.IsCancellationRequested)
+                            {
+                                if (sp.ElapsedMilliseconds > 150)
+                                {
+                                    // we must release the write transaction to avoid
+                                    // completely blocking all other operations.
+                                    // This is a background task that we can leave later
+                                    hasConflicts = true;
+                                    break;
+                                }
+
+                                var conflicts = _database.DocumentsStorage.GetAllConflictsBySameKeyAfter(context,
                                     ref lastKey);
                                 if (conflicts.Count == 0)
                                     break;
                                 if (TryResolveConflict(context, conflicts) == false)
                                     continue;
-                                resolvedDocs += conflicts.Count;
+
+                                hasConflicts = true;
                             }
 
                             tx.Commit();
+                        }
+                        finally
+                        {
+                            tx?.Dispose();
                         }
                     }
                     finally

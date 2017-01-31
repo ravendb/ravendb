@@ -581,7 +581,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public List<DocumentConflict> GetFConflictsBySameKeyAfter(DocumentsOperationContext context, ref Slice lastKey)
+        public List<DocumentConflict> GetAllConflictsBySameKeyAfter(DocumentsOperationContext context, ref Slice lastKey)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, "Conflicts");
             var list = new List<DocumentConflict>();
@@ -1464,7 +1464,7 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        public void PutConflictBackToStorage(
+        public void PutResolvedDocumentBackToStorage(
             DocumentsOperationContext ctx,
             DocumentConflict conflict,
             bool hasLocalTombstone)
@@ -1518,7 +1518,7 @@ namespace Raven.Server.Documents
             updatedConflict.Doc = resolved;
             updatedConflict.Collection = collection;
             updatedConflict.ChangeVector = ReplicationUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
-            PutConflictBackToStorage(context, updatedConflict, hasLocalTombstone);
+            PutResolvedDocumentBackToStorage(context, updatedConflict, hasLocalTombstone);
             return true;
         }
 
@@ -1561,7 +1561,7 @@ namespace Raven.Server.Documents
                 return false;
            
             resolved.ChangeVector = ReplicationUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
-            PutConflictBackToStorage(context, resolved, hasTombstoneInStorage);
+            PutResolvedDocumentBackToStorage(context, resolved, hasTombstoneInStorage);
             return true;
         }
 
@@ -1583,7 +1583,7 @@ namespace Raven.Server.Documents
             }
 
             latestDoc.ChangeVector = ReplicationUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
-            PutConflictBackToStorage(context, latestDoc, hasLocalTombstone);
+            PutResolvedDocumentBackToStorage(context, latestDoc, hasLocalTombstone);
         }
 
         public void AddConflict(
