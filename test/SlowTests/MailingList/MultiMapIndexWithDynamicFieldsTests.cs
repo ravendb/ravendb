@@ -46,15 +46,16 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var result = session.Advanced.DocumentQuery<DynamicMultiMapDataSetIndex.Result, DynamicMultiMapDataSetIndex>()
-                          .WaitForNonStaleResults()
-                          .AddOrder("N1_Range", true, typeof(double))
-                          .ToList();
+                        .WaitForNonStaleResults()
+                        .AddOrder("N1_Range", true, typeof(double))
+                        .Take(128)
+                        .ToList();
                     Assert.Equal(50, result.Count); //FAIL(:
                     Assert.Equal(49.50m, result.First().Attributes.First(x => x.Name == "N1").Value);
-
                 }
             }
         }
+
         private class Song
         {
             public string Id { get; set; }

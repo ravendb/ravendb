@@ -43,6 +43,7 @@ namespace SlowTests.SlowTests.Queries
                                     .OrderBy(o => o.Id)
                                     .Intersect()
                                     .Where(o => o.Attributes.Any(t => t.Key == "Nullam" && t.Value == N))
+                                    .Take(128)
                                     .ToList();
 
                         Assert.Equal(100, result.Count);

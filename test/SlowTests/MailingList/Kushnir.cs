@@ -43,14 +43,16 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var ascending = session.Query<Foo, Foos_ByNameDateCreated>()
-                           .Where(a => a.Name.StartsWith(string.Empty))
-                           .OrderBy(a => a.DateCreated)
-                           .ToList();
-                    var descending = session.Query<Foo, Foos_ByNameDateCreated>()
-                           .Where(a => a.Name.StartsWith(string.Empty))
-                           .OrderByDescending(a => a.DateCreated)
-                           .ToList();
+                        .Where(a => a.Name.StartsWith(string.Empty))
+                        .OrderBy(a => a.DateCreated)
+                        .Take(128)
 
+                        .ToList();
+                    var descending = session.Query<Foo, Foos_ByNameDateCreated>()
+                        .Where(a => a.Name.StartsWith(string.Empty))
+                        .OrderByDescending(a => a.DateCreated)
+                        .Take(128)
+                        .ToList();
 
                     Assert.Equal(Alphabet, ascending.Select(a => a.Name).Aggregate((a, b) => a + b));
                     Assert.Equal(new string(Alphabet.Reverse().ToArray()), @descending.Select(a => a.Name).Aggregate((a, b) => a + b));
