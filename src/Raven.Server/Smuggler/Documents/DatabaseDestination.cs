@@ -204,22 +204,19 @@ namespace Raven.Server.Smuggler.Documents
                 if (_command.Context.AllocatedMemory < _enqueueThreshold.GetValue(SizeUnit.Bytes))
                     return;
 
-                var prevCmd = _prevCommand;
-                var prevCmdTask = _prevCommandTask;
-
-                _prevCommand = _command;
-                _prevCommandTask = _database.TxMerger.Enqueue(_command);
-
-                if (prevCmd != null)
+                if (_prevCommand != null)
                 {
-                    using (prevCmd)
+                    using (_prevCommand)
                     {
 
-                        AsyncHelpers.RunSync(() => prevCmdTask);
-                        Debug.Assert(prevCmd.IsDisposed == false,
+                        _prevCommandTask.Wait();
+                        Debug.Assert(_prevCommand.IsDisposed == false,
                             "we rely on reusing this context on the next batch, so it has to be disposed here");
                     }
                 }
+
+                _prevCommand = _command;
+                _prevCommandTask = _database.TxMerger.Enqueue(_command);
 
                 _command = new MergedBatchPutCommand(_database, _buildVersion, _log)
                 {
