@@ -23,6 +23,7 @@ using Raven.NewClient.Client.Exceptions.Database;
 using Raven.Server.Exceptions;
 using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow;
 
 namespace Raven.Server.Documents.Replication
@@ -172,18 +173,18 @@ namespace Raven.Server.Documents.Replication
                                 _log.Info(msg, e);
                             }
 
-                            AddAlertOnFailureToReachOtherSide(msg);
+                            AddAlertOnFailureToReachOtherSide(msg, e);
 
                             throw;
                         }
                         catch (Exception e)
                         {
                             var msg =
-                                $"Failed to parse initial server response. This is definitely not supposed to happen. Exception thrown: {e}";
+                                $"Failed to parse initial server response. This is definitely not supposed to happen.";
                             if (_log.IsInfoEnabled)
                                 _log.Info(msg, e);
 
-                            AddAlertOnFailureToReachOtherSide(msg);
+                            AddAlertOnFailureToReachOtherSide(msg, e);
 
                             throw;
                         }
@@ -262,14 +263,14 @@ namespace Raven.Server.Documents.Replication
             return currentEtag;
         }
 
-        private void AddAlertOnFailureToReachOtherSide(string msg)
+        private void AddAlertOnFailureToReachOtherSide(string msg, Exception e)
         {
             TransactionOperationContext configurationContext;
             using (_database.ConfigurationStorage.ContextPool.AllocateOperationContext(out configurationContext))
             using (var txw = configurationContext.OpenWriteTransaction())
             {
                 _database.NotificationCenter.AddAfterTransactionCommit(
-                    AlertRaised.Create(AlertTitle, msg, AlertType.Replication, AlertSeverity.Warning, key: FromToString),
+                    AlertRaised.Create(AlertTitle, msg, AlertType.Replication, AlertSeverity.Warning, key: FromToString, details: new ExceptionDetails(e)),
                     txw);
                 
                 txw.Commit();

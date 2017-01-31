@@ -126,7 +126,11 @@ class importDatabase extends viewModelBase {
 
         $.when<any>(this.getNextOperationId(db), this.getAuthToken(db))
             .then(([operationId]: [number], [token]: [singleAuthToken]) => {
+
+                notificationCenter.instance.openDetailsForOperationById(db, operationId);
+
                 notificationCenter.instance.monitorOperation(db, operationId);
+
                 new importDatabaseCommand(db, operationId, token, fileInput.files[0], this.model)
                     .execute()
                     .always(() => this.isUploading(false));

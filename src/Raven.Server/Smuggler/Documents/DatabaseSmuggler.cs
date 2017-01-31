@@ -99,6 +99,7 @@ namespace Raven.Server.Smuggler.Documents
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
 
+            counts.Processed = true;
             result.AddInfo($"Finished processing {type}. {counts}");
             _onProgress.Invoke(result.Progress);
         }
@@ -133,6 +134,7 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             counts.Skipped = true;
+            counts.Processed = true;
 
             if (numberOfItemsSkipped > 0)
             {

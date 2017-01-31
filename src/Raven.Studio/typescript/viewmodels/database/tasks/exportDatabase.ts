@@ -191,6 +191,8 @@ class exportDatabase extends viewModelBase {
                 $downloadOptions.val(JSON.stringify(args));
                 $form.submit();
 
+                notificationCenter.instance.openDetailsForOperationById(db, operationId);
+
                 notificationCenter.instance.monitorOperation(db, operationId)
                     .fail((exception: Raven.Client.Data.OperationExceptionResult) => {
                         messagePublisher.reportError("Could not export database: " + exception.Message, exception.Error, null, false);

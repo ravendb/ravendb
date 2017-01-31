@@ -9,8 +9,6 @@ class evalByCollectionCommand extends commandBase {
     }
 
     execute(): JQueryPromise<operationIdDto> {
-        this.reportInfo("Patching documents...");
-
         const url = endpoints.databases.collections.collectionsDocs;
         const args = {
             name: this.collectionName
