@@ -135,16 +135,22 @@ namespace Raven.Server.Web
 
             if (pageSize.Value > maxPageSize)
             {
-                var message = $"Your page size ({pageSize}) is more than the max page size which is {maxPageSize}.";
-                if (RouteMatch.Url.StartsWith("/admin/", StringComparison.OrdinalIgnoreCase) == false)
-                {
-                    message += $"{Environment.NewLine}You can use the streaming feature in order to get all of the results of a query in a performant way. " +
-                               $"See the use of session.Advanced.Stream(query) in the client API for more details.";
-                }
-                throw new InvalidOperationException(message);
+                ThrowInvalidPageSize(maxPageSize, pageSize);
             }
 
             return pageSize.Value;
+        }
+
+        private void ThrowInvalidPageSize(int maxPageSize, int? pageSize)
+        {
+            var message = $"Your page size ({pageSize}) is more than the max page size which is {maxPageSize}.";
+            if (RouteMatch.Url.StartsWith("/admin/", StringComparison.OrdinalIgnoreCase) == false)
+            {
+                message +=
+                    $"{Environment.NewLine}You can use the streaming feature in order to get all of the results of a query in a performant way. " +
+                    $"See the use of session.Advanced.Stream(query) in the client API for more details.";
+            }
+            throw new InvalidOperationException(message);
         }
 
         protected int? GetIntValueQueryString(string name, bool required = true)

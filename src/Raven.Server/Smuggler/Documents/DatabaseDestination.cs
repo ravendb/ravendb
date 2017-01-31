@@ -212,7 +212,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 _prevCommandTask = _database.TxMerger.Enqueue(_command);
                 _prevCommand = _command;
-                _command = new MergedBatchPutCommand(_database, _buildVersion)
+                _command = new MergedBatchPutCommand(_database, _buildVersion, _log) 
                 {
                     IsRevision = _isRevision
                 };
@@ -315,6 +315,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     var key = document.Key;
                     var metadata = document.Data.GetMetadata();
+                    var etag = metadata.GetEtag();
 
                     if (metadata.Modifications == null)
                         metadata.Modifications = new DynamicJsonValue(metadata);
@@ -327,7 +328,6 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (IsRevision)
                     {
-                      
                         _database.BundleLoader.VersioningStorage.PutDirect(context, key, etag, document.Data);
                     }
                     else if (_buildVersion < 40000 && key.Contains("/revisions/"))
