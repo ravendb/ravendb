@@ -239,7 +239,8 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
                     var company = session.Load<Company>("companies/1");
                     Assert.NotNull(company);
                     var uri = new Uri(session.Advanced.GetDocumentUrl(company));
-                    Assert.Equal("/databases/" + store.DefaultDatabase + "/docs/companies/1", uri.AbsolutePath);
+                    Assert.Equal("/databases/" + store.DefaultDatabase + "/docs", uri.AbsolutePath);
+                    Assert.Equal("?id=companies/1", uri.Query);
                 }
             }
         }
