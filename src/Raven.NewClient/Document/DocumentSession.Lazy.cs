@@ -84,60 +84,7 @@ namespace Raven.NewClient.Client.Document
 
             return lazyValue;
         }
-
-        /// <summary>
-        /// Loads the specified entities with the specified id after applying
-        /// conventions on the provided id to get the real document id.
-        /// </summary>
-        /// <remarks>
-        /// This method allows you to call:
-        /// Load{Post}(1)
-        /// And that call will internally be translated to 
-        /// Load{Post}("posts/1");
-        /// 
-        /// Or whatever your conventions specify.
-        /// </remarks>
-        Lazy<T> ILazySessionOperations.Load<T>(ValueType id)
-        {
-            return Lazily.Load(id, (Action<T>)null);
-        }
-
-        /// <summary>
-        /// Loads the specified entities with the specified id after applying
-        /// conventions on the provided id to get the real document id.
-        /// </summary>
-        /// <remarks>
-        /// This method allows you to call:
-        /// Load{Post}(1)
-        /// And that call will internally be translated to 
-        /// Load{Post}("posts/1");
-        /// 
-        /// Or whatever your conventions specify.
-        /// </remarks>
-        Lazy<T> ILazySessionOperations.Load<T>(ValueType id, Action<T> onEval)
-        {
-            var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
-            return Lazily.Load(documentKey, onEval);
-        }
-
-        Lazy<Dictionary<string, T>> ILazySessionOperations.Load<T>(params ValueType[] ids)
-        {
-            var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-            return Lazily.Load<T>(documentKeys);
-        }
-
-        Lazy<Dictionary<string, T>> ILazySessionOperations.Load<T>(IEnumerable<ValueType> ids)
-        {
-            var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-            return Lazily.Load<T>(documentKeys);
-        }
-
-        Lazy<Dictionary<string, T>> ILazySessionOperations.Load<T>(IEnumerable<ValueType> ids, Action<IDictionary<string, T>> onEval)
-        {
-            var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-            return LazyLoadInternal(documentKeys.ToArray(), new string[0], onEval);
-        }
-
+ 
         Lazy<TResult> ILazySessionOperations.Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure,
             Action<TResult> onEval)
         {
@@ -250,6 +197,5 @@ namespace Raven.NewClient.Client.Document
 
             return lazyValue;
         }
-
     }
 }

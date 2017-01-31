@@ -67,61 +67,7 @@ namespace Raven.NewClient.Client.Document.Batches
             var results = session.LazyLoadInternal<T>(new[] { id }, includes.ToArray(), null);
             return new Lazy<T>(() => results.Value.Values.First());
         }
-
-        /// <summary>
-        /// Loads the specified entity with the specified id after applying
-        /// conventions on the provided id to get the real document id.
-        /// </summary>
-        /// <remarks>
-        /// This method allows you to call:
-        /// Load{Post}(1)
-        /// And that call will internally be translated to 
-        /// Load{Post}("posts/1");
-        /// 
-        /// Or whatever your conventions specify.
-        /// </remarks>
-        public Lazy<T> Load(ValueType id)
-        {
-            var documentKey = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
-            return Load(documentKey);
-        }
-
-        /// <summary>
-        /// Loads the specified entities with the specified id after applying
-        /// conventions on the provided id to get the real document id.
-        /// </summary>
-        /// <remarks>
-        /// This method allows you to call:
-        /// Load{Post}(1,2,3)
-        /// And that call will internally be translated to 
-        /// Load{Post}("posts/1","posts/2","posts/3");
-        /// 
-        /// Or whatever your conventions specify.
-        /// </remarks>
-        public Lazy<Dictionary<string, T>> Load(params ValueType[] ids)
-        {
-            var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-            return Load(documentKeys);
-        }
-
-        /// <summary>
-        /// Loads the specified entities with the specified id after applying
-        /// conventions on the provided id to get the real document id.
-        /// </summary>
-        /// <remarks>
-        /// This method allows you to call:
-        /// Load{Post}(new List&lt;int&gt;(){1,2,3})
-        /// And that call will internally be translated to 
-        /// Load{Post}("posts/1","posts/2","posts/3");
-        /// 
-        /// Or whatever your conventions specify.
-        /// </remarks>
-        public Lazy<Dictionary<string, T>> Load(IEnumerable<ValueType> ids)
-        {
-            var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-            return Load(documentKeys);
-        }
-
+        
         /// <summary>
         /// Loads the specified ids.
         /// </summary>
@@ -151,36 +97,6 @@ namespace Raven.NewClient.Client.Document.Batches
         {
             var lazy = Load<TResult>(new[] { id });
             return new Lazy<TResult>(() => lazy.Value.Values.FirstOrDefault());
-        }
-
-        /// <summary>
-        /// Loads the specified entity with the specified id after applying
-        /// conventions on the provided id to get the real document id.
-        /// </summary>
-        /// <remarks>
-        /// This method allows you to call:
-        /// Load{Post}(1)
-        /// And that call will internally be translated to 
-        /// Load{Post}("posts/1");
-        /// 
-        /// Or whatever your conventions specify.
-        /// </remarks>
-        public Lazy<TResult> Load<TResult>(ValueType id)
-        {
-            var documentKey = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
-            return Load<TResult>(documentKey);
-        }
-
-        public Lazy<Dictionary<string, TResult>> Load<TResult>(params ValueType[] ids)
-        {
-            var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-            return Load<TResult>(documentKeys);
-        }
-
-        public Lazy<Dictionary<string, TResult>> Load<TResult>(IEnumerable<ValueType> ids)
-        {
-            var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-            return Load<TResult>(documentKeys);
         }
     }
 
@@ -247,61 +163,6 @@ namespace Raven.NewClient.Client.Document.Batches
         }
 
         /// <summary>
-        /// Loads the specified entity with the specified id after applying
-        /// conventions on the provided id to get the real document id.
-        /// </summary>
-        /// <remarks>
-        /// This method allows you to call:
-        /// Load{Post}(1)
-        /// And that call will internally be translated to 
-        /// Load{Post}("posts/1");
-        /// 
-        /// Or whatever your conventions specify.
-        /// </remarks>
-        public Lazy<Task<T>> LoadAsync(ValueType id)
-        {
-            var documentKey = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
-            return LoadAsync(documentKey);
-        }
-
-        /// <summary>
-        /// Loads the specified entities with the specified id after applying
-        /// conventions on the provided id to get the real document id.
-        /// </summary>
-        /// <remarks>
-        /// This method allows you to call:
-        /// Load{Post}(1,2,3)
-        /// And that call will internally be translated to 
-        /// Load{Post}("posts/1","posts/2","posts/3");
-        /// 
-        /// Or whatever your conventions specify.
-        /// </remarks>
-        public Lazy<Task<Dictionary<string, T>>> LoadAsync(params ValueType[] ids)
-        {
-            var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-            return LoadAsync(documentKeys);
-        }
-
-        /// <summary>
-        /// Loads the specified entities with the specified id after applying
-        /// conventions on the provided id to get the real document id.
-        /// </summary>
-        /// <remarks>
-        /// This method allows you to call:
-        /// Load{Post}(new List&lt;int&gt;(){1,2,3})
-        /// And that call will internally be translated to 
-        /// Load{Post}("posts/1","posts/2","posts/3");
-        /// 
-        /// Or whatever your conventions specify.
-        /// </remarks>
-        public Lazy<Task<Dictionary<string, T>>> LoadAsync(IEnumerable<ValueType> ids)
-        {
-            var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-            return LoadAsync(documentKeys);
-        }
-
-
-        /// <summary>
         /// Loads the specified ids.
         /// </summary>
         /// <typeparam name="TResult"></typeparam>
@@ -321,8 +182,6 @@ namespace Raven.NewClient.Client.Document.Batches
             return session.LazyAsyncLoadInternal<TResult>(ids.ToArray(), includes.ToArray(), null);
         }
 
-      
-
         /// <summary>
         /// Loads the specified id.
         /// </summary>
@@ -332,36 +191,6 @@ namespace Raven.NewClient.Client.Document.Batches
         {
             var lazy = LoadAsync<TResult>(new[] { id });
             return new Lazy<Task<TResult>>(() => lazy.Value.ContinueWith(x => x.Result.Values.First()));
-        }
-
-        /// <summary>
-        /// Loads the specified entity with the specified id after applying
-        /// conventions on the provided id to get the real document id.
-        /// </summary>
-        /// <remarks>
-        /// This method allows you to call:
-        /// Load{Post}(1)
-        /// And that call will internally be translated to 
-        /// Load{Post}("posts/1");
-        /// 
-        /// Or whatever your conventions specify.
-        /// </remarks>
-        public Lazy<Task<TResult>> LoadAsync<TResult>(ValueType id)
-        {
-            var documentKey = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
-            return LoadAsync<TResult>(documentKey);
-        }
-
-        public Lazy<Task<Dictionary<string, TResult>>> LoadAsync<TResult>(params ValueType[] ids)
-        {
-            var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-            return LoadAsync<TResult>(documentKeys);
-        }
-
-        public Lazy<Task<Dictionary<string, TResult>>> LoadAsync<TResult>(IEnumerable<ValueType> ids)
-        {
-            var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-            return LoadAsync<TResult>(documentKeys);
         }
     }
 }

@@ -122,7 +122,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
 
                     session.Delete(entity1);
                     session.Delete("users/2");
-                    session.Delete<User>(3);
+                    session.Delete("users/3");
 
                     await session.SaveChangesAsync();
 
@@ -203,7 +203,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
                 using (var session = store.OpenSession())
                 {
                     session.Delete("users/1");
-                    session.Delete<User>(2);
+                    session.Delete("users/2");
                     session.SaveChanges();
                 }
 

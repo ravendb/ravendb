@@ -147,7 +147,7 @@ namespace NewClientTests.NewClient
                     foreach (var exp in expressions)
                     {
                         var oldRequests = s.Advanced.NumberOfRequests;
-                        var load = s.Advanced.Lazily.Load<Camera>(oldRequests);
+                        var load = s.Advanced.Lazily.Load<Camera>($"cameras/{oldRequests}");
                         var facetResults = s.Query<Camera>("CameraCost")
                             .Customize(x => x.WaitForNonStaleResults())
                             .Where(exp)

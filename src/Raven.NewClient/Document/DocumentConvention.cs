@@ -90,7 +90,6 @@ namespace Raven.NewClient.Client.Document
 
             FindClrTypeName = ReflectionUtil.GetFullNameWithoutVersionInformation;
             TransformTypeTagNameToDocumentKeyPrefix = DefaultTransformTypeTagNameToDocumentKeyPrefix;
-            FindFullDocumentKeyFromNonStringIdentifier = DefaultFindFullDocumentKeyFromNonStringIdentifier;
             FindIdentityPropertyNameFromEntityName = entityName => "Id";
             FindTypeTagName = DefaultTypeTagName;
             FindPropertyNameForIndex = (indexedType, indexedName, path, prop) => (path + prop).Replace(",", "_").Replace(".", "_");
@@ -186,63 +185,6 @@ namespace Raven.NewClient.Client.Document
 
             // multiple capital letters, so probably something that we want to preserve caps on.
             return typeTagName;
-        }
-
-        ///<summary>
-        /// Find the full document name assuming that we are using the standard conventions
-        /// for generating a document key
-        ///</summary>
-        ///<returns></returns>
-        public string DefaultFindFullDocumentKeyFromNonStringIdentifier(object id, Type type, bool allowNull)
-        {
-            var valueTypeId = id as ValueType;
-            if (valueTypeId != null)
-            {
-                var outputId = TryGetDocumentIdFromRegisteredIdLoadConventions(valueTypeId, type);
-                if (outputId != null)
-                    return outputId;
-            }
-
-
-            var converter = IdentityTypeConvertors.FirstOrDefault(x => x.CanConvertFrom(id.GetType()));
-            var tag = GetTypeTagName(type);
-            if (tag != null)
-            {
-                tag = TransformTypeTagNameToDocumentKeyPrefix(tag);
-                tag += IdentityPartsSeparator;
-            }
-            if (converter != null)
-            {
-                return converter.ConvertFrom(tag, id, allowNull);
-            }
-            return tag + id;
-        }
-
-        /// <summary>
-        /// Tries to get the full document id/key from a "simple" id to the full id.
-        /// </summary>
-        /// <param name="id">Simple id.</param>
-        /// <returns>The full document id, null if no registered id load conventions found</returns>
-        public string TryGetDocumentIdFromRegisteredIdLoadConventions<TEntity>(ValueType id)
-        {
-            return TryGetDocumentIdFromRegisteredIdLoadConventions(id, typeof(TEntity));
-        }
-
-        /// <summary>
-        /// Tries to get the full document id/key from a "simple" id to the full id.
-        /// </summary>
-        /// <param name="id">Simple id.</param>
-        /// <param name="type">Document type</param>
-        /// <returns>Full document id, null if no registered id load conventions found</returns>
-        public string TryGetDocumentIdFromRegisteredIdLoadConventions(ValueType id, Type type)
-        {
-            foreach (var typeToRegisteredIdLoadConvention in listOfRegisteredIdLoadConventions
-                .Where(typeToRegisteredIdConvention => typeToRegisteredIdConvention.Item1.IsAssignableFrom(type)))
-            {
-                return typeToRegisteredIdLoadConvention.Item2(id);
-            }
-
-            return null;
         }
 
         /// <summary>
@@ -408,12 +350,6 @@ namespace Raven.NewClient.Client.Document
         /// Gets or sets the function to find the clr type name from a clr type
         /// </summary>
         public Func<Type, string> FindClrTypeName { get; set; }
-
-        /// <summary>
-        /// Gets or sets the function to find the full document key based on the type of a document
-        /// and the value type identifier (just the numeric part of the id).
-        /// </summary>
-        public Func<object, Type, bool, string> FindFullDocumentKeyFromNonStringIdentifier { get; set; }
 
         /// <summary>
         /// Gets or sets the json contract resolver.

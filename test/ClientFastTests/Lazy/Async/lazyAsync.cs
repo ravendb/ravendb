@@ -55,12 +55,12 @@ namespace NewClientTests.NewClient
                     Assert.Equal(COMPANY1_ID,company1.Id);
                     Assert.Equal(COMPANY2_ID, company2.Id);
 
-                    lazyOrder = session.Advanced.Lazily.LoadAsync<Company>(3);
+                    lazyOrder = session.Advanced.Lazily.LoadAsync<Company>("companies/3");
                     Assert.False(lazyOrder.IsValueCreated);
                     order = await lazyOrder.Value;
                     Assert.Equal(COMPANY3_ID, order.Id);
 
-                    lazyOrders = session.Advanced.Lazily.LoadAsync<Company>(new string[] { "4", "5" });
+                    lazyOrders = session.Advanced.Lazily.LoadAsync<Company>(new [] { "4", "5" });
                     Assert.False(lazyOrders.IsValueCreated);
                     orders = await lazyOrders.Value;
                     Assert.Equal(2, orders.Count);

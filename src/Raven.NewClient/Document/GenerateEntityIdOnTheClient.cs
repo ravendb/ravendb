@@ -36,20 +36,12 @@ namespace Raven.NewClient.Client.Document
             if (identityProperty != null)
             {
                 var value = identityProperty.GetValue(entity);
-                return GetIdAsString(entity, value, out id);
+                id = value as string;
+                return id != null;
             }
            
-         id = null;
+            id = null;
             return false;
-        }
-
-        private bool GetIdAsString(object entity, object value, out string id)
-        {
-            id = value as string;
-            if (id == null && value != null) // need conversion
-                id = conventions.FindFullDocumentKeyFromNonStringIdentifier(value, entity.GetType(), true);
-
-            return id != null;
         }
 
         /// <summary>
@@ -98,7 +90,8 @@ namespace Raven.NewClient.Client.Document
             try
             {
                 object value = entity.Id;
-               return GetIdAsString(entity, value, out id);
+                id = value as string;
+                return value != null;
             }
             catch (RuntimeBinderException)
             {

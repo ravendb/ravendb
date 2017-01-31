@@ -52,59 +52,6 @@ namespace Raven.NewClient.Client.Document
             return LoadInternal<T>(ids.ToArray());
         }
 
-        /// <summary>
-        /// Loads the specified entity with the specified id after applying
-        /// conventions on the provided id to get the real document id.
-        /// </summary>
-        /// <remarks>
-        /// This method allows you to call:
-        /// Load{Post}(1)
-        /// And that call will internally be translated to 
-        /// Load{Post}("posts/1");
-        /// 
-        /// Or whatever your conventions specify.
-        /// </remarks>
-        public T Load<T>(ValueType id)
-        {
-            var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
-            return Load<T>(documentKey);
-        }
-
-        /// <summary>
-        /// Loads the specified entities with the specified id after applying
-        /// conventions on the provided id to get the real document id.
-        /// </summary>
-        /// <remarks>
-        /// This method allows you to call:
-        /// Load{Post}(1,2,3)
-        /// And that call will internally be translated to 
-        /// Load{Post}("posts/1","posts/2","posts/3");
-        /// 
-        /// Or whatever your conventions specify.
-        /// </remarks>
-        public Dictionary<string, T> Load<T>(params ValueType[] ids)
-        {
-            var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-            return Load<T>(documentKeys);
-        }
-
-        /// <summary>
-        /// Loads the specified entities with the specified id after applying
-        /// conventions on the provided id to get the real document id.
-        /// </summary>
-        /// <remarks>
-        /// This method allows you to call:
-        /// Load{Post}(new List&lt;int&gt;(){1,2,3})
-        /// And that call will internally be translated to 
-        /// Load{Post}("posts/1","posts/2","posts/3");
-        /// 
-        /// Or whatever your conventions specify.
-        /// </remarks>
-        public Dictionary<string, T> Load<T>(IEnumerable<ValueType> ids)
-        {
-            var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-            return Load<T>(documentKeys);
-        }
 
         public TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
         {

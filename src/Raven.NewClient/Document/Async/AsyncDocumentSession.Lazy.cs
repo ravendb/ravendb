@@ -163,53 +163,7 @@ namespace Raven.NewClient.Client.Document.Async
         {
             return Lazily.LoadAsync(id, (Action<T>)null, token);
         }
-
-        /// <summary>
-        /// Loads the specified entities with the specified id after applying
-        /// conventions on the provided id to get the real document id.
-        /// </summary>
-        /// <remarks>
-        /// This method allows you to call:
-        /// Load{Post}(1)
-        /// And that call will internally be translated to 
-        /// Load{Post}("posts/1");
-        /// 
-        /// Or whatever your conventions specify.
-        /// </remarks>
-        Lazy<Task<T>> IAsyncLazySessionOperations.LoadAsync<T>(ValueType id, Action<T> onEval, CancellationToken token)
-        {
-            var documentKey = Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
-            return Lazily.LoadAsync(documentKey, onEval, token);
-        }
-
-        Lazy<Task<Dictionary<string, T>>> IAsyncLazySessionOperations.LoadAsync<T>(CancellationToken token, params ValueType[] ids)
-        {
-            var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-            return Lazily.LoadAsync<T>(documentKeys, null, token);
-        }
-
-        /// <summary>
-        /// Loads the specified ids.
-        /// </summary>
-        /// <param name="token">The cancellation token.</param>
-        /// <param name="ids">The ids of the documents to load.</param>
-        Lazy<Task<Dictionary<string, T>>> IAsyncLazySessionOperations.LoadAsync<T>(IEnumerable<ValueType> ids, CancellationToken token)
-        {
-            var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-            return Lazily.LoadAsync<T>(documentKeys, null, token);
-        }
-
-        Lazy<Task<Dictionary<string, T>>> IAsyncLazySessionOperations.LoadAsync<T>(IEnumerable<ValueType> ids, Action<Dictionary<string, T>> onEval, CancellationToken token)
-        {
-            var documentKeys = ids.Select(id => Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-            return LazyAsyncLoadInternal(documentKeys.ToArray(), new string[0], onEval, token);
-        }
-
-        Lazy<Task<T>> IAsyncLazySessionOperations.LoadAsync<T>(ValueType id, CancellationToken token)
-        {
-            return Lazily.LoadAsync(id, (Action<T>)null, token);
-        }
-
+        
         /// <summary>
         /// Loads the specified ids and a function to call when it is evaluated
         /// </summary>
