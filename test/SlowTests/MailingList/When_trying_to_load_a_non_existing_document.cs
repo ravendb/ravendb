@@ -13,7 +13,7 @@ namespace SlowTests.MailingList
         [Fact]
         public async Task Then_null_should_be_returned()
         {
-            var id = new Guid("803C807A-ADD5-49F2-A00A-E5891B343CF7");
+            var id = "students/1";
 
             using (var store = GetDocumentStore())
             {
@@ -27,14 +27,10 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    string key = session.Advanced.DocumentStore.Conventions
-                                        .FindFullDocumentKeyFromNonStringIdentifier(id, typeof(Student), false);
-
-                    StudentViewModel studentVm = session.Load<StudentViewModelTransformer, StudentViewModel>(key);
+                    StudentViewModel studentVm = session.Load<StudentViewModelTransformer, StudentViewModel>(id);
                     Assert.NotNull(studentVm);
 
-                    var nonExistingKey = session.Advanced.DocumentStore.Conventions
-                                        .FindFullDocumentKeyFromNonStringIdentifier(Guid.NewGuid(), typeof(Student), false);
+                    var nonExistingKey = "students/2";
 
                     studentVm = session.Load<StudentViewModelTransformer, StudentViewModel>(nonExistingKey);
                     Assert.Null(studentVm);
@@ -42,16 +38,11 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    string key = session.Advanced.DocumentStore.Conventions
-                                        .FindFullDocumentKeyFromNonStringIdentifier(id, typeof(Student), false);
 
-                    StudentViewModel studentVm = await session.LoadAsync<StudentViewModelTransformer, StudentViewModel>(key);
+                    StudentViewModel studentVm = await session.LoadAsync<StudentViewModelTransformer, StudentViewModel>(id);
                     Assert.NotNull(studentVm);
 
-                    var nonExistingKey = session.Advanced.DocumentStore.Conventions
-                                        .FindFullDocumentKeyFromNonStringIdentifier(Guid.NewGuid(), typeof(Student), false);
-
-                    studentVm = await session.LoadAsync<StudentViewModelTransformer, StudentViewModel>(nonExistingKey);
+                    studentVm = await session.LoadAsync<StudentViewModelTransformer, StudentViewModel>("students/2");
                     Assert.Null(studentVm);
                 }
             }
@@ -59,13 +50,13 @@ namespace SlowTests.MailingList
 
         private class Student
         {
-            public Guid Id { get; set; }
+            public string Id { get; set; }
             public string Email { get; set; }
         }
 
         private class StudentViewModel
         {
-            public Guid StudentId { get; set; }
+            public string StudentId { get; set; }
         }
 
         private class StudentViewModelTransformer : AbstractTransformerCreationTask<Student>

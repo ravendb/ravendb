@@ -53,62 +53,7 @@ namespace Raven.NewClient.Client.Document.Batches
         /// <param name="id">Identifier of a entity that will be loaded.</param>
         /// <param name="onEval">Action to be executed on evaluation.</param>
         Lazy<TResult> Load<TResult>(string id, Action<TResult> onEval);
-
-        /// <summary>
-        ///     Loads the specified entity with the specified id after applying
-        ///     conventions on the provided id to get the real document id.
-        ///     <para>This method allows you to call:</para>
-        ///     <para>Load&lt;Post&gt;(1)</para>
-        ///     <para>And that call will internally be translated to </para>
-        ///     <para>Load&lt;Post&gt;("posts/1");</para>
-        ///     <para>Or whatever your conventions specify.</para>
-        /// </summary>
-        Lazy<TResult> Load<TResult>(ValueType id);
-
-        /// <summary>
-        ///     Loads the specified entity with the specified id after applying
-        ///     conventions on the provided id to get the real document id.
-        ///     <para>This method allows you to call:</para>
-        ///     <para>Load&lt;Post&gt;(1)</para>
-        ///     <para>And that call will internally be translated to </para>
-        ///     <para>Load&lt;Post&gt;("posts/1");</para>
-        ///     <para>Or whatever your conventions specify.</para>
-        /// </summary>
-        Lazy<TResult> Load<TResult>(ValueType id, Action<TResult> onEval);
-
-        /// <summary>
-        ///     Loads the specified entities with the specified ids after applying
-        ///     conventions on the provided id to get the real document id.
-        ///     <para>This method allows you to call:</para>
-        ///     <para>Load&lt;Post&gt;(1, 2, 3)</para>
-        ///     <para>And that call will internally be translated to </para>
-        ///     <para>Load&lt;Post&gt;("posts/1", "posts/2", "posts/3");</para>
-        ///     <para>Or whatever your conventions specify.</para>
-        /// </summary>
-        Lazy<Dictionary<string, TResult>> Load<TResult>(params ValueType[] ids);
-
-        /// <summary>
-        ///     Loads the specified entities with the specified ids after applying
-        ///     conventions on the provided id to get the real document id.
-        ///     <para>This method allows you to call:</para>
-        ///     <para>Load&lt;Post&gt;(1, 2, 3)</para>
-        ///     <para>And that call will internally be translated to </para>
-        ///     <para>Load&lt;Post&gt;("posts/1", "posts/2", "posts/3");</para>
-        ///     <para>Or whatever your conventions specify.</para>
-        /// </summary>
-        Lazy<Dictionary<string, TResult>> Load<TResult>(IEnumerable<ValueType> ids);
-
-        /// <summary>
-        ///     Loads the specified entities with the specified ids after applying
-        ///     conventions on the provided id to get the real document id.
-        ///     <para>This method allows you to call:</para>
-        ///     <para>Load&lt;Post&gt;(1, 2, 3)</para>
-        ///     <para>And that call will internally be translated to </para>
-        ///     <para>Load&lt;Post&gt;("posts/1", "posts/2", "posts/3");</para>
-        ///     <para>Or whatever your conventions specify.</para>
-        /// </summary>
-        Lazy<Dictionary<string, TResult>> Load<TResult>(IEnumerable<ValueType> ids, Action<IDictionary<string, TResult>> onEval);
-
+        
         /// <summary>
         ///     Performs a load that will use the specified results transformer against the specified id
         /// </summary>
@@ -219,62 +164,7 @@ namespace Raven.NewClient.Client.Document.Batches
         /// <param name="onEval">Action to be called on evalution.</param>
         /// <param name="token">The cancellation token.</param>
         Lazy<Task<TResult>> LoadAsync<TResult>(string id, Action<TResult> onEval, CancellationToken token = default (CancellationToken));
-
-        /// <summary>
-        ///     Loads the specified entity with the specified id after applying
-        ///     conventions on the provided id to get the real document id.
-        ///     <para>This method allows you to call:</para>
-        ///     <para>LoadAsync&lt;Post&gt;(1)</para>
-        ///     <para>And that call will internally be translated to </para>
-        ///     <para>LoadAsync&lt;Post&gt;("posts/1");</para>
-        ///     <para>Or whatever your conventions specify.</para>
-        /// </summary>
-        Lazy<Task<TResult>> LoadAsync<TResult>(ValueType id, CancellationToken token = default (CancellationToken));
-
-        /// <summary>
-        ///     Loads the specified entity with the specified id after applying
-        ///     conventions on the provided id to get the real document id.
-        ///     <para>This method allows you to call:</para>
-        ///     <para>LoadAsync&lt;Post&gt;(1)</para>
-        ///     <para>And that call will internally be translated to </para>
-        ///     <para>LoadAsync&lt;Post&gt;("posts/1");</para>
-        ///     <para>Or whatever your conventions specify.</para>
-        /// </summary>
-        Lazy<Task<TResult>> LoadAsync<TResult>(ValueType id, Action<TResult> onEval, CancellationToken token = default (CancellationToken));
-
-        /// <summary>
-        ///     Loads the specified entity with the specified ids after applying
-        ///     conventions on the provided id to get the real document id.
-        ///     <para>This method allows you to call:</para>
-        ///     <para>LoadAsync&lt;Post&gt;(1)</para>
-        ///     <para>And that call will internally be translated to </para>
-        ///     <para>LoadAsync&lt;Post&gt;("posts/1");</para>
-        ///     <para>Or whatever your conventions specify.</para>
-        /// </summary>
-        Lazy<Task<Dictionary<string, TResult>>> LoadAsync<TResult>(CancellationToken token = default(CancellationToken), params ValueType[] ids);
-
-        /// <summary>
-        ///     Loads the specified entity with the specified ids after applying
-        ///     conventions on the provided id to get the real document id.
-        ///     <para>This method allows you to call:</para>
-        ///     <para>LoadAsync&lt;Post&gt;(1)</para>
-        ///     <para>And that call will internally be translated to </para>
-        ///     <para>LoadAsync&lt;Post&gt;("posts/1");</para>
-        ///     <para>Or whatever your conventions specify.</para>
-        /// </summary>
-        Lazy<Task<Dictionary<string, TResult>>> LoadAsync<TResult>(IEnumerable<ValueType> ids, CancellationToken token = default (CancellationToken));
-
-        /// <summary>
-        ///     Loads the specified entity with the specified ids after applying
-        ///     conventions on the provided id to get the real document id.
-        ///     <para>This method allows you to call:</para>
-        ///     <para>LoadAsync&lt;Post&gt;(1)</para>
-        ///     <para>And that call will internally be translated to </para>
-        ///     <para>LoadAsync&lt;Post&gt;("posts/1");</para>
-        ///     <para>Or whatever your conventions specify.</para>
-        /// </summary>
-        Lazy<Task<Dictionary<string, TResult>>> LoadAsync<TResult>(IEnumerable<ValueType> ids, Action<Dictionary<string, TResult>> onEval, CancellationToken token = default (CancellationToken));
-
+        
         /// <summary>
         ///     Performs a load that will use the specified results transformer against the specified id
         /// </summary>

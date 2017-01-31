@@ -449,17 +449,6 @@ more responsive application.
         /// Marks the specified entity for deletion. The entity will be deleted when <see cref="IDocumentSession.SaveChanges"/> is called.
         /// WARNING: This method will not call beforeDelete listener!
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="id">The entity.</param>
-        public void Delete<T>(ValueType id)
-        {
-            Delete(Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-        }
-
-        /// <summary>
-        /// Marks the specified entity for deletion. The entity will be deleted when <see cref="IDocumentSession.SaveChanges"/> is called.
-        /// WARNING: This method will not call beforeDelete listener!
-        /// </summary>
         /// <param name="id"></param>
         public void Delete(string id)
         {

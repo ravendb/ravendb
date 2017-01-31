@@ -52,19 +52,7 @@ namespace Raven.NewClient.Client.Document
         /// <param name="path">The path.</param>
         public AsyncMultiLoaderWithInclude<T> Include<TInclude>(Expression<Func<T, object>> path)
         {
-            var type = path.ExtractTypeFromPath();
-            var fullId = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(-1, typeof(TInclude), false);
-
-            var id = path.ToPropertyPath();
-
-            if (type != typeof(string))
-            {
-                var idPrefix = fullId.Replace("-1", string.Empty);
-
-                id += "(" + idPrefix + ")";
-            }
-
-            return Include(id, typeof(TInclude));
+            return Include(path.ToPropertyPath(), typeof(TInclude));
         }
 
         /// <summary>
@@ -95,60 +83,6 @@ namespace Raven.NewClient.Client.Document
         public Task<T> LoadAsync(string id)
         {
             return session.LoadAsyncInternal<T>(new[] { id }, includes.ToArray()).ContinueWith(x => x.Result.Values.FirstOrDefault());
-        }
-
-        /// <summary>
-        /// Begins the async load operation, with the specified id after applying
-        /// conventions on the provided id to get the real document id.
-        /// </summary>
-        /// <remarks>
-        /// This method allows you to call:
-        /// LoadAsync{Post}(1)
-        /// And that call will internally be translated to 
-        /// LoadAsync{Post}("posts/1");
-        /// 
-        /// Or whatever your conventions specify.
-        /// </remarks>
-        public Task<T> LoadAsync(ValueType id)
-        {
-            var documentKey = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
-            return LoadAsync(documentKey);
-        }
-
-        /// <summary>
-        /// Begins the async multi-load operation, with the specified ids after applying
-        /// conventions on the provided ids to get the real document ids.
-        /// </summary>
-        /// <remarks>
-        /// This method allows you to call:
-        /// LoadAsync{Post}(1,2,3)
-        /// And that call will internally be translated to 
-        /// LoadAsync{Post}("posts/1","posts/2","posts/3");
-        /// 
-        /// Or whatever your conventions specify.
-        /// </remarks>
-        public Task<Dictionary<string, T>> LoadAsync(params ValueType[] ids)
-        {
-            var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-            return LoadAsync(documentKeys);
-        }
-
-        /// <summary>
-        /// Begins the async multi-load operation, with the specified ids after applying
-        /// conventions on the provided ids to get the real document ids.
-        /// </summary>
-        /// <remarks>
-        /// This method allows you to call:
-        /// LoadAsync{Post}(new List&lt;int&gt;(){1,2,3})
-        /// And that call will internally be translated to 
-        /// LoadAsync{Post}("posts/1","posts/2","posts/3");
-        /// 
-        /// Or whatever your conventions specify.
-        /// </remarks>
-        public Task<Dictionary<string, T>> LoadAsync(IEnumerable<ValueType> ids)
-        {
-            var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-            return LoadAsync(documentKeys);
         }
 
         /// <summary>
@@ -187,61 +121,7 @@ namespace Raven.NewClient.Client.Document
         /// <param name="id">The id.</param>
         public Task<TResult> LoadAsync<TResult>(string id)
         {
-            return LoadAsync<TResult>(new[] { id }).ContinueWith(x => x.Result.Values.FirstOrDefault());
-        }
-
-        /// <summary>
-        /// Begins the async load operation, with the specified id after applying
-        /// conventions on the provided id to get the real document id.
-        /// </summary>
-        /// <remarks>
-        /// This method allows you to call:
-        /// LoadAsync{Post}(1)
-        /// And that call will internally be translated to 
-        /// LoadAsync{Post}("posts/1");
-        /// 
-        /// Or whatever your conventions specify.
-        /// </remarks>
-        public Task<TResult> LoadAsync<TResult>(ValueType id)
-        {
-            var documentKey = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
-            return LoadAsync<TResult>(documentKey);
-        }
-
-        /// <summary>
-        /// Begins the async multi-load operation, with the specified ids after applying
-        /// conventions on the provided ids to get the real document ids.
-        /// </summary>
-        /// <remarks>
-        /// This method allows you to call:
-        /// LoadAsync{Post}(1,2,3)
-        /// And that call will internally be translated to 
-        /// LoadAsync{Post}("posts/1","posts/2","posts/3");
-        /// 
-        /// Or whatever your conventions specify.
-        /// </remarks>
-        public Task<Dictionary<string, TResult>> LoadAsync<TResult>(params ValueType[] ids)
-        {
-            var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-            return LoadAsync<TResult>(documentKeys);
-        }
-
-        /// <summary>
-        /// Begins the async multi-load operation, with the specified ids after applying
-        /// conventions on the provided ids to get the real document ids.
-        /// </summary>
-        /// <remarks>
-        /// This method allows you to call:
-        /// LoadAsync{Post}(new List&lt;int&gt;(){1,2,3})
-        /// And that call will internally be translated to 
-        /// LoadAsync{Post}("posts/1","posts/2","posts/3");
-        /// 
-        /// Or whatever your conventions specify.
-        /// </remarks>
-        public Task<Dictionary<string, TResult>> LoadAsync<TResult>(IEnumerable<ValueType> ids)
-        {
-            var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-            return LoadAsync<TResult>(documentKeys);
+            return LoadAsync<TResult>(new[] {id}).ContinueWith(x => x.Result.Values.FirstOrDefault());
         }
     }
 }

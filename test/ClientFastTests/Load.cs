@@ -35,77 +35,15 @@ namespace NewClientTests.NewClient
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User { Name = "RavenDB" }, "users/1");
-                    session.Store(new User { Name = "Hibernating Rhinos" }, "users/2");
+                    session.Store(new User {Name = "RavenDB"}, "users/1");
+                    session.Store(new User {Name = "Hibernating Rhinos"}, "users/2");
                     session.SaveChanges();
                 }
 
                 using (var newSession = store.OpenSession())
                 {
-                    var user = newSession.Load<User>(new[] { "users/1", "users/2" });
+                    var user = newSession.Load<User>(new[] {"users/1", "users/2"});
                     Assert.Equal(user.Count, 2);
-                }
-            }
-        }
-
-        [Fact]
-        public void Load_Document_By_ValueType_id()
-        {
-            using (var store = GetDocumentStore())
-            {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new User { Name = "RavenDB" }, "users/1");
-                    session.Store(new User { Name = "Hibernating Rhinos" }, "users/2");
-                    session.SaveChanges();
-                }
-
-                using (var newSession = store.OpenSession())
-                {
-                    var user = newSession.Load<User>(2);
-                    Assert.NotNull(user);
-                    Assert.Equal(user.Name, "Hibernating Rhinos");
-                }
-            }
-        }
-
-        [Fact]
-        public void Load_Documents_By_ValueType_ids()
-        {
-            using (var store = GetDocumentStore())
-            {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new User { Name = "RavenDB" }, "users/1");
-                    session.Store(new User { Name = "Hibernating Rhinos" }, "users/2");
-                    session.SaveChanges();
-                }
-
-                using (var newSession = store.OpenSession())
-                {
-                    var users = newSession.Load<User>(1, 2);
-                    Assert.Equal(users.Count, 2);
-                }
-            }
-        }
-
-        [Fact]
-        public void Load_Documents_By_IEnumerable_ValueType_ids()
-        {
-            using (var store = GetDocumentStore())
-            {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new User { Name = "RavenDB" }, "users/1");
-                    session.Store(new User { Name = "Hibernating Rhinos" }, "users/2");
-                    session.SaveChanges();
-                }
-
-                using (var newSession = store.OpenSession())
-                {
-                    var users = newSession.Load<User>(new List<System.ValueType> { 1, 2 });
-                    Assert.Equal(users.Count, 2);
-
                 }
             }
         }

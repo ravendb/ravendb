@@ -38,21 +38,7 @@ namespace Raven.NewClient.Client.Document
         /// <typeparam name="T"></typeparam>
         /// <param name="entity">instance of entity to delete</param>
         void Delete<T>(T entity);
-
-        /// <summary>
-        ///     Marks the specified entity for deletion. The entity will be deleted when
-        ///     <see cref="IDocumentSession.SaveChanges" /> is called.
-        ///     <para>WARNING: This method will not call beforeDelete listener!</para>
-        ///     <para>This method allows you to call:</para>
-        ///     <para>Delete&lt;Post&gt;(1)</para>
-        ///     <para>And that call will internally be translated to </para>
-        ///     <para>Delete&lt;Post&gt;("posts/1");</para>
-        ///     <para>Or whatever your conventions specify.</para>
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="id">entity Id</param>
-        void Delete<T>(ValueType id);
-
+        
         /// <summary>
         ///     Marks the specified entity for deletion. The entity will be deleted when
         ///     <see cref="IDocumentSession.SaveChanges" /> is called.
@@ -92,48 +78,7 @@ namespace Raven.NewClient.Client.Document
         /// <param name="ids">Enumerable of Ids that should be loaded</param>
         /// <param name="token">The cancellation token.</param>
         Task<Dictionary<string, T>> LoadAsync<T>(IEnumerable<string> ids, CancellationToken token = default (CancellationToken));
-
-        /// <summary>
-        ///     Loads the specified entity with the specified id after applying
-        ///     conventions on the provided id to get the real document id.
-        ///     <para>This method allows you to call:</para>
-        ///     <para>LoadAsync&lt;Post&gt;(1)</para>
-        ///     <para>And that call will internally be translated to </para>
-        ///     <para>LoadAsync&lt;Post&gt;("posts/1");</para>
-        ///     <para>Or whatever your conventions specify.</para>
-        /// </summary>
-        /// <param name="id">The id of the document to load.</param>
-        /// <param name="token">The cancellation token.</param>
-        Task<T> LoadAsync<T>(ValueType id, CancellationToken token = default (CancellationToken));
-
-        /// <summary>
-        ///     Loads the specified entities with the specified id after applying
-        ///     conventions on the provided id to get the real document id.
-        ///     <para>This method allows you to call:</para>
-        ///     <para>LoadAsync&lt;Post&gt;(1, 2, 3)</para>
-        ///     <para>And that call will internally be translated to </para>
-        ///     <para>LoadAsync&lt;Post&gt;("posts/1", "posts/2", "posts/3");</para>
-        ///     <para>Or whatever your conventions specify.</para>
-        /// </summary>
-        /// <param name="token">The cancellation token.</param>
-        /// <param name="ids">The ids of the documents to load.</param>
-        Task<Dictionary<string, T>> LoadAsync<T>(CancellationToken token = default (CancellationToken),params ValueType[] ids);
-
-        /// <summary>
-        ///     Loads the specified entities with the specified id after applying
-        ///     conventions on the provided id to get the real document id.
-        /// </summary>
-        /// <remarks>
-        ///     <para>This method allows you to call:</para>
-        ///     <para>LoadAsync&lt;Post&gt;(new List&lt;int&gt;(){1,2,3})</para>
-        ///     <para>And that call will internally be translated to </para>
-        ///     <para>LoadAsync&lt;Post&gt;("posts/1", "posts/2", "posts/3");</para>
-        ///     <para>Or whatever your conventions specify.</para>
-        /// </remarks>
-        /// <param name="token">The cancellation token.</param>
-        /// <param name="ids">The ids of the documents to load.</param>
-        Task<Dictionary<string, T>> LoadAsync<T>(IEnumerable<ValueType> ids, CancellationToken token = default (CancellationToken));
-
+        
         /// <summary>
         ///     Performs a load that will use the specified results transformer against the specified id
         /// </summary>

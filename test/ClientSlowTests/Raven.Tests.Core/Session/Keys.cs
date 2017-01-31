@@ -94,7 +94,7 @@ namespace NewClientTests.NewClient.Raven.Tests.Core.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var shirt = session.Load<TShirt>(1999);
+                    var shirt = session.Load<TShirt>("ts/1999");
                     Assert.Equal(shirt.Manufacturer, "Test1");
                     Assert.Equal(shirt.ReleaseYear, 1999);
                 }

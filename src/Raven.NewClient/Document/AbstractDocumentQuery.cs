@@ -522,11 +522,7 @@ namespace Raven.NewClient.Client.Document
 
         public IDocumentQueryCustomization Include<TResult, TInclude>(Expression<Func<TResult, object>> path)
         {
-            var fullId = DocumentConvention.FindFullDocumentKeyFromNonStringIdentifier(-1, typeof(TInclude), false);
-            var idPrefix = fullId.Replace("-1", string.Empty);
-
-            var id = path.ToPropertyPath() + "(" + idPrefix + ")";
-            Include(id);
+            Include(path.ToPropertyPath());
             return this;
         }
 
@@ -1911,11 +1907,7 @@ If you really want to do in memory filtering on the data returned from the query
             {
                 return RavenQuery.Escape(((double)(whereParams.Value)).ToString("r", CultureInfo.InvariantCulture), false, false);
             }
-            if (whereParams.FieldName == Constants.Indexing.Fields.DocumentIdFieldName && whereParams.Value is string == false)
-            {
-                return theSession.Conventions.FindFullDocumentKeyFromNonStringIdentifier(whereParams.Value,
-                    originalType ?? whereParams.FieldTypeForIdentifier ?? typeof(T), false);
-            }
+
             var strValue = whereParams.Value as string;
             if (strValue != null)
             {
@@ -2013,10 +2005,6 @@ If you really want to do in memory filtering on the data returned from the query
             if (whereParams.Value is DateTimeOffset)
                 return ((DateTimeOffset)whereParams.Value).UtcDateTime.GetDefaultRavenFormat(true);
 
-            if (whereParams.FieldName == Constants.Indexing.Fields.DocumentIdFieldName && whereParams.Value is string == false)
-            {
-                return theSession.Conventions.FindFullDocumentKeyFromNonStringIdentifier(whereParams.Value, typeof(T), false);
-            }
             if (whereParams.Value is int)
                 return NumberUtil.NumberToString((int)whereParams.Value);
             if (whereParams.Value is long)

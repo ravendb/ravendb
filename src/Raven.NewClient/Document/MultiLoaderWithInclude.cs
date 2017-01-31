@@ -52,13 +52,7 @@ namespace Raven.NewClient.Client.Document
         /// <param name="path">The path.</param>
         public ILoaderWithInclude<T> Include<TInclude>(Expression<Func<T, object>> path)
         {
-            var fullId = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(-1, typeof(TInclude), false);
-            var id = path.ToPropertyPath();
-            var idPrefix = fullId.Replace("-1", string.Empty);
-
-            id += "(" + idPrefix + ")";
-
-            return Include(id, typeof(TInclude));
+            return Include(path.ToPropertyPath(), typeof(TInclude));
         }
 
         /// <summary>
@@ -88,60 +82,6 @@ namespace Raven.NewClient.Client.Document
         public T Load(string id)
         {
             return session.LoadInternal<T>(new[] { id }, includes.ToArray()).Values.FirstOrDefault();
-        }
-
-        /// <summary>
-        /// Loads the specified entity with the specified id after applying
-        /// conventions on the provided id to get the real document id.
-        /// </summary>
-        /// <remarks>
-        /// This method allows you to call:
-        /// Load{Post}(1)
-        /// And that call will internally be translated to 
-        /// Load{Post}("posts/1");
-        /// 
-        /// Or whatever your conventions specify.
-        /// </remarks>
-        public T Load(ValueType id)
-        {
-            var documentKey = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false);
-            return Load(documentKey);
-        }
-
-        /// <summary>
-        /// Loads the specified entities with the specified id after applying
-        /// conventions on the provided id to get the real document id.
-        /// </summary>
-        /// <remarks>
-        /// This method allows you to call:
-        /// Load{Post}(1,2,3)
-        /// And that call will internally be translated to 
-        /// Load{Post}("posts/1","posts/2","posts/3");
-        /// 
-        /// Or whatever your conventions specify.
-        /// </remarks>
-        public Dictionary<string, T> Load(params ValueType[] ids)
-        {
-            var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-            return Load(documentKeys);
-        }
-
-        /// <summary>
-        /// Loads the specified entities with the specified id after applying
-        /// conventions on the provided id to get the real document id.
-        /// </summary>
-        /// <remarks>
-        /// This method allows you to call:
-        /// Load{Post}(new List&lt;int&gt;(){1,2,3})
-        /// And that call will internally be translated to 
-        /// Load{Post}("posts/1","posts/2","posts/3");
-        /// 
-        /// Or whatever your conventions specify.
-        /// </remarks>
-        public Dictionary<string, T> Load(IEnumerable<ValueType> ids)
-        {
-            var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-            return Load(documentKeys);
         }
 
         /// <summary>
@@ -181,36 +121,6 @@ namespace Raven.NewClient.Client.Document
         public TResult Load<TResult>(string id)
         {
             return Load<TResult>(new[] { id }).Values.FirstOrDefault();
-        }
-
-        /// <summary>
-        /// Loads the specified entities with the specified id after applying
-        /// conventions on the provided id to get the real document id.
-        /// </summary>
-        /// <remarks>
-        /// This method allows you to call:
-        /// Load{Post}(1)
-        /// And that call will internally be translated to 
-        /// Load{Post}("posts/1");
-        /// 
-        /// Or whatever your conventions specify.
-        /// </remarks>
-        public TResult Load<TResult>(ValueType id)
-        {
-            var documentKey = session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(TResult), false);
-            return Load<TResult>(documentKey);
-        }
-
-        public Dictionary<string, TResult> Load<TResult>(params ValueType[] ids)
-        {
-            var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-            return Load<TResult>(documentKeys);
-        }
-
-        public Dictionary<string, TResult> Load<TResult>(IEnumerable<ValueType> ids)
-        {
-            var documentKeys = ids.Select(id => session.Conventions.FindFullDocumentKeyFromNonStringIdentifier(id, typeof(T), false));
-            return Load<TResult>(documentKeys);
         }
 
         public TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure = null)
