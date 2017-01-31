@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -185,9 +186,10 @@ namespace Raven.Server.Documents
 
             public void Dispose()
             {
-                long currentUsagesCount = 0;
+               
                 if (_skipUsagesCount == false)
-                    currentUsagesCount = Interlocked.Decrement(ref _parent._usages);
+                    return;
+                var  currentUsagesCount = Interlocked.Decrement(ref _parent._usages);
 
                 if (_parent._databaseShutdown.IsCancellationRequested && currentUsagesCount == 0)
                     _parent._waitForUsagesOnDisposal.Set();
@@ -244,14 +246,16 @@ namespace Raven.Server.Documents
             _databaseShutdown.Cancel();
             // we'll wait for 1 minute to drain all the requests
             // from the database
-            for (int i = 0; i < 60; i++)
+
+            var sp = Stopwatch.StartNew();
+            while (sp.ElapsedMilliseconds < 60 * 1000)
             {
                 if (Interlocked.Read(ref _usages) == 0)
                     break;
-
-                if (_waitForUsagesOnDisposal.Wait(1000))
-                    _waitForUsagesOnDisposal.Reset();
+             
+                _waitForUsagesOnDisposal.Wait(1000);
             }
+
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentDatabase)}");
 
             foreach (var connection in RunningTcpConnections)
