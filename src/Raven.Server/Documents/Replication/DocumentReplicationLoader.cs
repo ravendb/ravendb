@@ -25,7 +25,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Replication
 {
-    public class DocumentReplicationLoader : IDisposable
+    public class DocumentReplicationLoader : IDisposable, IDocumentTombstoneAware
     {
         public event Action<string, Exception> ReplicationFailed;
 
@@ -332,6 +332,8 @@ namespace Raven.Server.Documents.Replication
 
             InitializeOutgoingReplications();
             InitializeResolvers();
+
+            _database.DocumentTombstoneCleaner.Subscribe(this);
         }
 
         private void ResolveConflictsInBackground()
@@ -728,9 +730,44 @@ namespace Raven.Server.Documents.Replication
             foreach (var outgoing in _outgoing)
                 ea.Execute(outgoing.Dispose);
 
+            _database.DocumentTombstoneCleaner?.Unsubscribe(this);
+
             ea.ThrowIfNeeded();
         }
 
+       
+        public Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
+        {
+            var result = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+            if (_outgoing.Count == 0)
+            {
+                return result;
+            }
+            // last know etag from source
+            var minEtag = _outgoing.Select(o => o._lastSentDocumentEtag).Min();
+            DocumentsOperationContext context;
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))               
+            using (context.OpenReadTransaction())
+            {
+                foreach (var tombstoneCollection in _database
+                        .DocumentsStorage
+                        .GetTombstoneCollections(context.Transaction.InnerTransaction))
+                {
+                    result[tombstoneCollection] = 0;
+                }
+
+                foreach (var tombstone in _database.DocumentsStorage.GetTombstonesBefore(context, minEtag, 0, 1000))
+                {
+                    if (tombstone.Etag <= minEtag) // strange tree search, we can get values bigger than minEtag
+                    {
+                        result[tombstone.Collection] = tombstone.Etag;
+                    }
+                }
+            }
+                
+            return result;
+        }
+    
         public class IncomingConnectionRejectionInfo
         {
             public string Reason { get; set; }
