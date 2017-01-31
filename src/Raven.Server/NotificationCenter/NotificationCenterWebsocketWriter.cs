@@ -41,26 +41,32 @@ namespace Raven.Server.NotificationCenter
 
             var asyncQueue = new AsyncQueue<Notification>();
 
-            using (_notificationCenter.TrackActions(asyncQueue, this))
+            try
             {
-                while (_resourceShutdown.IsCancellationRequested == false)
+                using (_notificationCenter.TrackActions(asyncQueue, this))
                 {
-                    // we use this to detect client-initialized closure
-                    if (receive.IsCompleted)
+                    while (_resourceShutdown.IsCancellationRequested == false)
                     {
-                        if (_webSocket.CloseStatus == WebSocketCloseStatus.NormalClosure)
-                            break;
-                    }
+                        // we use this to detect client-initialized closure
+                        if (receive.IsCompleted)
+                        {
+                            if (_webSocket.CloseStatus == WebSocketCloseStatus.NormalClosure)
+                                break;
+                        }
 
-                    var tuple = await asyncQueue.TryDequeueAsync(TimeSpan.FromSeconds(5));
-                    if (tuple.Item1 == false)
-                    {
-                        await _webSocket.SendAsync(Heartbeat, WebSocketMessageType.Text, true, _resourceShutdown);
-                        continue;
-                    }
+                        var tuple = await asyncQueue.TryDequeueAsync(TimeSpan.FromSeconds(5));
+                        if (tuple.Item1 == false)
+                        {
+                            await _webSocket.SendAsync(Heartbeat, WebSocketMessageType.Text, true, _resourceShutdown);
+                            continue;
+                        }
 
-                    await WriteToWebSocket(tuple.Item2.ToJson());
+                        await WriteToWebSocket(tuple.Item2.ToJson());
+                    }
                 }
+            }
+            catch (OperationCanceledException)
+            {
             }
         }
 
