@@ -52,7 +52,16 @@ namespace Voron
                 if (millisecondsTimeout <= 0 || 
                     _flushWriterEvent.Wait(millisecondsTimeout) == false)
                 {
-                    // sync after 5 seconds if no flushing occured
+                    if(_maybeNeedToSync.Count == 0)
+                        continue;
+                    
+                    if (_log.IsInfoEnabled)
+                    {
+                        _log.Info($"Starting desired sync with {_maybeNeedToSync.Count:#,#} items to sync");
+                    }
+
+                    // sync after 5 seconds if no flushing occured, or if there has been a LOT of
+                    // writes that we would like to run
                     SyncDesiredEnvironments();
                     continue;
                 }
@@ -95,16 +104,6 @@ namespace Voron
 
             foreach (var mountPoint in _mountPoints)
             {
-                var lastSyncTicks = DateTime.MaxValue.Ticks;
-                foreach (var env in mountPoint.Value.StorageEnvironments)
-                {
-                    var lastEnvSync = Volatile.Read(ref env.LastSyncTimeInTicks);
-                    lastSyncTicks = Math.Min(lastSyncTicks, lastEnvSync);
-                }
-                var lastSync = new DateTime(lastSyncTicks);
-                if (DateTime.UtcNow - lastSync < TimeSpan.FromMinutes(1))
-                    continue;
-
                 int parallelSyncsPerIo = 3;
                 parallelSyncsPerIo = Math.Min(parallelSyncsPerIo, mountPoint.Value.StorageEnvironments.Count);
 
@@ -162,11 +161,7 @@ namespace Voron
                 return;
             try
             {
-                if(_log.IsInfoEnabled)
-                    _log.Info($"Starting sync of {env.Options.BasePath}");
                 env.Journal.Applicator.SyncDataFile();
-                if(_log.IsInfoEnabled)
-                    _log.Info($"Finished sync of {env.Options.BasePath}");
             }
             catch (Exception e)
             {
@@ -226,13 +221,8 @@ namespace Voron
                     {
                         if (storageEnvironment.Disposed)
                             return;
-                        if (_log.IsInfoEnabled)
-                            _log.Info($"Starting flush of {storageEnvironment.Options.BasePath}");
 
                         storageEnvironment.BackgroundFlushWritesToDataFile();
-
-                        if (_log.IsInfoEnabled)
-                            _log.Info($"Completed flush of {storageEnvironment.Options.BasePath}");
 
                     }
                     catch (Exception e)

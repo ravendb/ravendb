@@ -901,7 +901,7 @@ namespace Voron
 
         public void Cleanup()
         {
-            Journal.Cleanup();
+            Journal.TryReduceSizeOfCompressionBufferIfNeeded();
             ScratchBufferPool.Cleanup();
             DecompressionBuffers.Cleanup();
         }

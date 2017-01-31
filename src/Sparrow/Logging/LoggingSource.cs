@@ -360,7 +360,6 @@ namespace Sparrow.Logging
                                 LocalThreadWriterState threadState;
                                 if (threadStateWeakRef.TryGetTarget(out threadState) == false)
                                 {
-                                    Console.WriteLine("Removing!");
                                     threadStates.Remove(threadStateWeakRef);
                                     break; // so we won't try to iterate over the mutated collection
                                 }

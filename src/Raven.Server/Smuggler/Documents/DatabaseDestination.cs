@@ -210,6 +210,7 @@ namespace Raven.Server.Smuggler.Documents
                     return;
 
                 var prevCmd = _prevCommand;
+                var prevCmdTask = _prevCommandTask;
 
                 _prevCommand = _command;
                 _prevCommandTask = _database.TxMerger.Enqueue(_command);
@@ -218,7 +219,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     using (prevCmd)
                     {
-                        AsyncHelpers.RunSync(() => _prevCommandTask);
+                        AsyncHelpers.RunSync(() => prevCmdTask);
                         Debug.Assert(prevCmd.IsDisposed == false,
                             "we rely on reusing this context on the next batch, so it has to be disposed here");
                     }
