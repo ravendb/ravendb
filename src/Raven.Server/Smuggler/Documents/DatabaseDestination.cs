@@ -159,7 +159,7 @@ namespace Raven.Server.Smuggler.Documents
 
             private void ModifyDocumentIfNecessary(Document document)
             {
-             
+            
                 BlittableJsonReaderObject metadata;
                 if (document.Data.TryGet(Constants.Metadata.Key, out metadata) == false)
                     return;
@@ -201,20 +201,29 @@ namespace Raven.Server.Smuggler.Documents
 
             private void HandleBatchOfDocumentsIfNecessary()
             {
-                if (_command.TotalSize < _enqueueThreshold)
+                if (_command.Context.AllocatedMemory < _enqueueThreshold.GetValue(SizeUnit.Bytes))
                     return;
 
-                if (_prevCommand != null)
+                var prevCmd = _prevCommand;
+                var prevCmdTask = _prevCommandTask;
+
+                _prevCommand = _command;
+                _prevCommandTask = _database.TxMerger.Enqueue(_command);
+
+                if (prevCmd != null)
                 {
-                    using (_prevCommand)
-                        AsyncHelpers.RunSync(() => _prevCommandTask);
+                    using (prevCmd)
+                    {
+
+                        AsyncHelpers.RunSync(() => prevCmdTask);
+                        Debug.Assert(prevCmd.IsDisposed == false,
+                            "we rely on reusing this context on the next batch, so it has to be disposed here");
+                    }
                 }
 
-                _prevCommandTask = _database.TxMerger.Enqueue(_command);
-                _prevCommand = _command;
-                _command = new MergedBatchPutCommand(_database, _buildVersion, _log) 
+                _command = new MergedBatchPutCommand(_database, _buildVersion, _log)
                 {
-                    IsRevision = _isRevision
+                    IsRevision = _isRevision,
                 };
             }
 
@@ -317,6 +326,7 @@ namespace Raven.Server.Smuggler.Documents
                     var metadata = document.Data.GetMetadata();
                     var etag = metadata.GetEtag();
 
+              
                     if (metadata.Modifications == null)
                         metadata.Modifications = new DynamicJsonValue(metadata);
 
@@ -332,7 +342,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     else if (_buildVersion < 40000 && key.Contains("/revisions/"))
                     {
-                     
+                  
                         var endIndex = key.IndexOf("/revisions/", StringComparison.OrdinalIgnoreCase);
                         var newKey = key.Substring(0, endIndex);
 

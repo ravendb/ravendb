@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using Sparrow;
+using Sparrow.Logging;
 using Voron.Global;
 using Voron.Impl.Paging;
 
@@ -13,15 +14,16 @@ namespace Voron.Impl.Journal
 
         private LowLevelTransaction _readTransaction;
         private long? _firstPositionInJournalFile;
-        private int _lastUsedKbs;
+        private int _lastUsed4Kbs;
         private readonly AbstractPager _lazyTransactionPager;
         private readonly TransactionPersistentContext _transactionPersistentContext;
         public int NumberOfPages { get; set; }
-
+        private readonly Logger _log;
         public LazyTransactionBuffer(StorageEnvironmentOptions options)
         {
             _lazyTransactionPager = options.CreateScratchPager("lazy-transactions.buffer", options.InitialFileSize ?? options.InitialLogFileSize);
             _transactionPersistentContext = new TransactionPersistentContext(true);
+            _log = LoggingSource.Instance.GetLogger<LazyTransactionBuffer>(options.BasePath);
         }
 
         public void EnsureSize(int sizeInPages)
@@ -38,12 +40,12 @@ namespace Voron.Impl.Journal
             }
             using (var writer = _lazyTransactionPager.BatchWriter())
             {
-                writer.Write(_lastUsedKbs,
+                writer.Write(_lastUsed4Kbs,
                     pages.NumberOf4Kbs,
                     pages.Base);
             }
 
-            _lastUsedKbs += pages.NumberOf4Kbs;
+            _lastUsed4Kbs += pages.NumberOf4Kbs;
         }
 
         public void EnsureHasExistingReadTransaction(LowLevelTransaction tx)
@@ -62,13 +64,18 @@ namespace Voron.Impl.Journal
             {
                 using (var tempTx = new TempPagerTransaction())
                 {
-                    var numberOfPages = _lastUsedKbs / (Constants.Storage.PageSize/ (4 * Constants.Size.Kilobyte));
-                    if ((_lastUsedKbs%(Constants.Storage.PageSize/(4*Constants.Size.Kilobyte))) != 0)
+                    var numberOfPages = _lastUsed4Kbs / (Constants.Storage.PageSize/ (4 * Constants.Size.Kilobyte));
+                    if ((_lastUsed4Kbs%(Constants.Storage.PageSize/(4*Constants.Size.Kilobyte))) != 0)
                         numberOfPages++;
 
                     _lazyTransactionPager.EnsureMapped(tempTx, 0, numberOfPages);
                     var src = _lazyTransactionPager.AcquirePagePointer(tempTx, 0);
-                    journalFile.JournalWriter.Write(_firstPositionInJournalFile.Value, src, _lastUsedKbs);
+                    var sp = Stopwatch.StartNew();
+                    journalFile.JournalWriter.Write(_firstPositionInJournalFile.Value, src, _lastUsed4Kbs);
+                    if (_log.IsInfoEnabled)
+                    {
+                        _log.Info($"Writing lazy transaction buffer with {_lastUsed4Kbs/4:#,#} kb took {sp.Elapsed}");
+                    }
                 }
             }
 
@@ -77,7 +84,7 @@ namespace Voron.Impl.Journal
 
             _readTransaction?.Dispose();
             _firstPositionInJournalFile = null;
-            _lastUsedKbs = 0;
+            _lastUsed4Kbs = 0;
             _readTransaction = null;
             NumberOfPages = 0;
         }

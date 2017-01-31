@@ -55,8 +55,7 @@ namespace Voron.Impl.Journal
         public bool HasDataInLazyTxBuffer() => _lazyTransactionBuffer?.HasDataInBuffer() ?? false;
 
         private readonly object _writeLock = new object();
-        const int NumberOfLastCompressionPagesRequiredTracked = 16;
-        private readonly int[] _lastNumberOfPagesRequiredForCompressionBuffer = new int[NumberOfLastCompressionPagesRequiredTracked];
+        private int _maxNumberOfPagesRequiredForCompressionBuffer;
 
         public WriteAheadJournal(StorageEnvironment env)
         {
@@ -646,18 +645,17 @@ namespace Voron.Impl.Journal
 
             private void QueueDataFileSync()
             {
-                if (_waj.CurrentFile != null && _waj.CurrentFile.Number != _lastSyncJournalId)
+                if (_totalWrittenButUnsyncedBytes > 32*Constants.Size.Megabyte)
                 {
-                    // if we aren't on the same journal, we have to force the sync, to avoid having lots of journals around
+                    if (_waj._logger.IsInfoEnabled)
+                        _waj._logger.Info(
+                            $"Asking for required sync on {_waj._dataPager.FileName} because there are {_totalWrittenButUnsyncedBytes/1024:#,#} kb writtern & unsynced");
                     _waj._env.ForceSyncDataFile();
-                    return;
                 }
-
-                if (_totalWrittenButUnsyncedBytes > 512 * Constants.Size.Megabyte)
+                else
+                {
                     _waj._env.QueueForSyncDataFile();
-
-                if (DateTime.UtcNow - _lastSyncTime > TimeSpan.FromMinutes(3))
-                    _waj._env.QueueForSyncDataFile();
+                }                
             }
 
             public void WaitForSyncToCompleteOnDispose()
@@ -732,6 +730,9 @@ namespace Voron.Impl.Journal
                         {
                             // can't get the lock, we'll try again later, this time we are running
                             // as forced, because we have higher priority
+                            if (_waj._logger.IsInfoEnabled)
+                                _waj._logger.Info(
+                                    $"Asking for required sync on {_waj._dataPager.FileName} because started a sync and aborted because we couldn't get the flushing lock");
                             _waj._env.ForceSyncDataFile();
                             return;
                         }
@@ -1045,7 +1046,12 @@ namespace Voron.Impl.Journal
         {
             lock (_writeLock)
             {
+                var sp = Stopwatch.StartNew();
                 var journalEntry = PrepareToWriteToJournal(tx, pageCount);
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info($"Preparing to write tx {tx.Id} to jouranl with {journalEntry.NumberOfUncompressedPages:#,#} pages ({(journalEntry.NumberOfUncompressedPages * Constants.Storage.PageSize)/Constants.Size.Kilobyte:#,#} kb) in {sp.Elapsed} with {journalEntry.NumberOf4Kbs/4:#,#} kb compressed.");
+                }
 
                 if (tx.IsLazyTransaction && _lazyTransactionBuffer == null)
                 {
@@ -1056,9 +1062,16 @@ namespace Voron.Impl.Journal
                 {
                     _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, tx);
                     CurrentFile = NextFile(journalEntry.NumberOf4Kbs);
+                    if(_logger.IsInfoEnabled)
+                        _logger.Info($"New journal file created {CurrentFile.Number:D19}");
                 }
 
+                sp.Restart();
                 CurrentFile.Write(tx, journalEntry, _lazyTransactionBuffer, pageCount);
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Writing {journalEntry.NumberOf4Kbs/4:#,#} kb to journal {CurrentFile.Number:D19} took {sp.Elapsed}");
+
 
                 if (CurrentFile.Available4Kbs == 0)
                 {
@@ -1066,21 +1079,7 @@ namespace Voron.Impl.Journal
                     CurrentFile = null;
                 }
 
-                if (ShouldReduceSizeOfCompressionPager())
-                {
-                    // the compression pager is too large, we probably had a big transaction and now can
-                    // free all of that and come back to more reasonable values.
-                    if (_logger.IsOperationsEnabled)
-                    {
-                        _logger.Operations(
-                            $"Compression buffer: {_compressionPager} has reached size {(_compressionPager.NumberOfAllocatedPages * Constants.Storage.PageSize)/ Constants.Size.Kilobyte:#,#} kb which is more than the limit " +
-                            $"of {_env.Options.MaxScratchBufferSize/1024:#,#} kb. Will trim it now to the max size allowed. If this is happen on a regular basis," +
-                            " consider raising the limit (MaxScratchBufferSize option control it), since it can cause performance issues");
-                    }
-
-                    _compressionPager.Dispose();
-                    _compressionPager = CreateCompressionPager(_env.Options.MaxScratchBufferSize);
-                }
+                ReduceSizeOfCompressionBufferIfNeeded();
 
                 return journalEntry.NumberOfUncompressedPages;
             }
@@ -1104,7 +1103,7 @@ namespace Voron.Impl.Journal
             // The pages required includes the intermediate pages and the required output pages. 
             const int transactionHeaderPageOverhead = 1;
             var pagesRequired = (transactionHeaderPageOverhead + pageCountIncludingAllOverflowPages + diffOverheadInPages + outputBufferInPages);
-            _lastNumberOfPagesRequiredForCompressionBuffer[tx.Id % NumberOfLastCompressionPagesRequiredTracked] = pagesRequired;
+            _maxNumberOfPagesRequiredForCompressionBuffer = Math.Max(pagesRequired, _maxNumberOfPagesRequiredForCompressionBuffer);
             var pagerState = _compressionPager.EnsureContinuous(0, pagesRequired);
             tx.EnsurePagerStateReference(pagerState);
 
@@ -1207,33 +1206,64 @@ namespace Voron.Impl.Journal
             return _env.Options.CreateScratchPager($"compression.{_compressionPagerCounter++:D10}.buffers", initialSize);
         }
 
-        public void Cleanup()
+        private DateTime _lastCompressionBufferReduceCheck = DateTime.UtcNow;
+
+        public void ReduceSizeOfCompressionBufferIfNeeded()
         {
-            if (ShouldReduceSizeOfCompressionPager())
+            if (!ShouldReduceSizeOfCompressionPager())
                 return;
 
-            lock (_writeLock)
+            // the compression pager is too large, we probably had a big transaction and now can
+            // free all of that and come back to more reasonable values.
+            if (_logger.IsOperationsEnabled)
             {
-                if (ShouldReduceSizeOfCompressionPager())
-                    return;
-
-                _compressionPager.Dispose();
-                _compressionPager = CreateCompressionPager(_env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize);
+                _logger.Operations(
+                    $"Compression buffer: {_compressionPager} has reached size {(_compressionPager.NumberOfAllocatedPages*Constants.Storage.PageSize)/Constants.Size.Kilobyte:#,#} kb which is more than the limit " +
+                    $"of {_env.Options.MaxScratchBufferSize/1024:#,#} kb. Will trim it now to the max size allowed. If this is happen on a regular basis," +
+                    " consider raising the limit (MaxScratchBufferSize option control it), since it can cause performance issues");
             }
+
+            _lastCompressionBufferReduceCheck = DateTime.UtcNow;
+
+            _compressionPager.Dispose();
+            _compressionPager = CreateCompressionPager(_env.Options.MaxScratchBufferSize);
         }
 
         private bool ShouldReduceSizeOfCompressionPager()
         {
-            const int bufferSizeLimitBeforeCleanup = 32*1024*1024;
             var compressionBufferSize = _compressionPager.NumberOfAllocatedPages*Constants.Storage.PageSize;
-            if (compressionBufferSize <= bufferSizeLimitBeforeCleanup)
+            if (compressionBufferSize <= _env.Options.MaxScratchBufferSize)
                 return false;
 
-            var maxRecentPagesRequired = _lastNumberOfPagesRequiredForCompressionBuffer.Max();
+            if ((DateTime.UtcNow - _lastCompressionBufferReduceCheck).TotalMinutes < 5)
+                return false;
+
 
             // while we are above the limit, we still recently used at least half of it, no point
             // in reducing size yet, we'll be called again
-            return maxRecentPagesRequired < _compressionPager.NumberOfAllocatedPages/2;
+            var shouldReduceSizeOfCompressionPager = _maxNumberOfPagesRequiredForCompressionBuffer < _compressionPager.NumberOfAllocatedPages/2;
+            if (shouldReduceSizeOfCompressionPager)
+            {
+                return true;
+            }
+            _maxNumberOfPagesRequiredForCompressionBuffer = 0;
+            _lastCompressionBufferReduceCheck = DateTime.UtcNow;
+            return true;
+        }
+
+        public void TryReduceSizeOfCompressionBufferIfNeeded()
+        {
+            if (Monitor.TryEnter(_writeLock) == false)
+                return;
+            // if we can't get it, we are active, so it doesn't matter
+            try
+            {
+                ReduceSizeOfCompressionBufferIfNeeded();
+            }
+            finally
+            {
+                Monitor.Exit(_writeLock);
+            }
         }
     }
 
