@@ -893,7 +893,8 @@ namespace Voron.Data.Tables
             return deleted;
         }
 
-        public long DeleteForwardFrom(TableSchema.SchemaIndexDef index, Slice value, long numberOfEntriesToDelete)
+        public long DeleteForwardFrom(TableSchema.SchemaIndexDef index, Slice value, long numberOfEntriesToDelete,
+            Action<TableValueReader> beforeDelete = null)
         {
             if (numberOfEntriesToDelete < 0)
                 ThrowNonNegativeNumberOfEntriesToDelete();
@@ -902,7 +903,7 @@ namespace Voron.Data.Tables
             var tree = GetTree(index);
             while (deleted < numberOfEntriesToDelete)
             {
-                // deleteing from a table can shift things around, so we delete 
+                // deleting from a table can shift things around, so we delete 
                 // them one at a time
                 using (var it = tree.Iterate(false))
                 {
@@ -913,6 +914,13 @@ namespace Voron.Data.Tables
                     {
                         if (fstIt.Seek(long.MinValue) == false)
                             break;
+
+                        if (beforeDelete != null)
+                        {
+                            int size;
+                            var ptr = DirectRead(fstIt.CurrentKey, out size);
+                            beforeDelete(new TableValueReader(fstIt.CurrentKey, ptr, size));
+                        }
 
                         Delete(fstIt.CurrentKey);
                         deleted++;

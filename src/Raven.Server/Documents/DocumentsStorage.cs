@@ -12,6 +12,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Versioning;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -328,56 +329,36 @@ namespace Raven.Server.Documents
 
         public static long ReadLastDocumentEtag(Transaction tx)
         {
-            using (var fst = new FixedSizeTree(tx.LowLevelTransaction,
-                tx.LowLevelTransaction.RootObjects,
-                AllDocsEtagsSlice, sizeof(long),
-                clone: false))
-            {
-
-                using (var it = fst.Iterate())
-                {
-                    if (it.SeekToLast())
-                        return it.CurrentKey;
-                }
-
-            }
-
-            return 0;
+            return ReadLastEtagFrom(tx, AllDocsEtagsSlice);
         }
 
         public static long ReadLastTombstoneEtag(Transaction tx)
         {
-            using (var fst = new FixedSizeTree(tx.LowLevelTransaction,
-                tx.LowLevelTransaction.RootObjects,
-                AllTombstonesEtagsSlice, sizeof(long),
-                clone: false))
-            {
-
-                using (var it = fst.Iterate())
-                {
-                    if (it.SeekToLast())
-                        return it.CurrentKey;
-                }
-
-            }
-
-            return 0;
+            return ReadLastEtagFrom(tx, AllTombstonesEtagsSlice);
         }
 
         public static long ReadLastCoflictsEtag(Transaction tx)
         {
+            return ReadLastEtagFrom(tx, AllConflictedDocsEtags);
+        }
+
+        public static long ReadLastRevisionsEtag(Transaction tx)
+        {
+            return ReadLastEtagFrom(tx, VersioningStorage.RevisionsEtags);
+        }
+
+        private static long ReadLastEtagFrom(Transaction tx, Slice name)
+        {
             using (var fst = new FixedSizeTree(tx.LowLevelTransaction,
                 tx.LowLevelTransaction.RootObjects,
-                AllConflictedDocsEtags, sizeof(long),
+                name, sizeof(long),
                 clone: false))
             {
-
                 using (var it = fst.Iterate())
                 {
                     if (it.SeekToLast())
                         return it.CurrentKey;
                 }
-
             }
 
             return 0;
@@ -402,6 +383,10 @@ namespace Raven.Server.Documents
             var lastConflictEtag = ReadLastCoflictsEtag(tx);
             if (lastConflictEtag > lastEtag)
                 lastEtag = lastConflictEtag;
+
+            var lastRevisionsEtag = ReadLastRevisionsEtag(tx);
+            if (lastRevisionsEtag > lastEtag)
+                lastEtag = lastRevisionsEtag;
 
             return lastEtag;
         }
@@ -1062,7 +1047,12 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void EnsureLastEtagIsPersisted(DocumentsOperationContext context, long docEtag)
+        public long GenerateNextEtag()
+        {
+            return ++_lastEtag;
+        }
+
+        public void EnsureLastEtagIsPersisted(DocumentsOperationContext context, long docEtag)
         {
             if (docEtag != _lastEtag)
                 return;
@@ -1102,7 +1092,7 @@ namespace Raven.Server.Documents
                 else
                 {
                     var doc = result.Item1;
-                    var newEtag = ++_lastEtag;
+                    var newEtag = GenerateNextEtag();
 
                     if (changeVector == null)
                     {
@@ -1144,7 +1134,7 @@ namespace Raven.Server.Documents
                     context.Transaction.AddAfterCommitNotification(new DocumentChange
                     {
                         Type = DocumentChangeTypes.DeleteOnTombstoneReplication,
-                        Etag = _lastEtag,
+                        Etag = newEtag,
                         CollectionName = collectionName.Name,
                         IsSystemDocument = false, //tombstone is not a system document...
                     });
@@ -1164,7 +1154,7 @@ namespace Raven.Server.Documents
             tombstone.ChangeVector = changeVector;
             var tombstoneTables = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
                 collectionName.GetTableName(CollectionTableType.Tombstones));
-            var newEtag = ++_lastEtag;
+            var newEtag = GenerateNextEtag();
             var newEtagBigEndian = Bits.SwapBytes(newEtag);
             var documentEtag = tombstone.DeletedEtag;
             var documentEtagBigEndian = Bits.SwapBytes(documentEtag);
@@ -1195,7 +1185,7 @@ namespace Raven.Server.Documents
             long? lastModifiedTicks,
             ChangeVectorEntry[] changeVector)
         {
-            var newEtag = ++_lastEtag;
+            var newEtag = GenerateNextEtag();
             var newEtagBigEndian = Bits.SwapBytes(newEtag);
             var documentEtagBigEndian = Bits.SwapBytes(etag);
 
@@ -1621,7 +1611,7 @@ namespace Raven.Server.Documents
                         {(byte*) pChangeVector, existingDoc.ChangeVector.Length*sizeof(ChangeVectorEntry)},
                         {keyPtr, keySize},
                         {existingDoc.Data.BasePointer, existingDoc.Data.Size},
-                        Bits.SwapBytes(++_lastEtag),
+                        Bits.SwapBytes(GenerateNextEtag()),
                         {lazyCollectionName.Buffer, lazyCollectionName.Size},
                         existingDoc.LastModified.Ticks
                     });
@@ -1649,7 +1639,7 @@ namespace Raven.Server.Documents
                         {(byte*) pChangeVector, existingTombstone.ChangeVector.Length*sizeof(ChangeVectorEntry)},
                         {keyPtr, keySize},
                         {null, 0},
-                        Bits.SwapBytes(++_lastEtag),
+                        Bits.SwapBytes(GenerateNextEtag()),
                         {existingTombstone.Collection.Buffer, existingTombstone.Collection.Size},
                         existingTombstone.LastModified.Ticks
                     });
@@ -1717,7 +1707,7 @@ namespace Raven.Server.Documents
                         {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*incomingChangeVector.Length},
                         {keyPtr, keySize},
                         {doc, docSize},
-                        Bits.SwapBytes(++_lastEtag),
+                        Bits.SwapBytes(GenerateNextEtag()),
                         {lazyCollectioName.Buffer, lazyCollectioName.Size},
                         docPositions.LastModifiedTicks
                     };
@@ -1778,14 +1768,14 @@ namespace Raven.Server.Documents
             AssertNoModifications(document, key);
 
             var collectionName = ExtractCollectionName(context, key, document);
-            var newEtag = ++_lastEtag;
+            var newEtag = GenerateNextEtag();
             var newEtagBigEndian = Bits.SwapBytes(newEtag);
             int flags = 0;
             if (collectionName.IsSystem == false)
             {
                 bool hasVersion =
                     _documentDatabase.BundleLoader.VersioningStorage?.PutFromDocument(context, collectionName,
-                        key, newEtagBigEndian, document) ?? false;
+                    key, document) ?? false;
                 if (hasVersion)
                 {
                     flags = (int)DocumentFlags.Versioned;

@@ -324,7 +324,6 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     var key = document.Key;
                     var metadata = document.Data.GetMetadata();
-                    var etag = metadata.GetEtag();
 
               
                     if (metadata.Modifications == null)
@@ -334,23 +333,26 @@ namespace Raven.Server.Smuggler.Documents
                     metadata.Modifications.Remove(Constants.Metadata.Etag);
 
                     using (document.Data)
-                        document.Data = _context.ReadObject(document.Data, document.Key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                    {
+                        document.Data = _context.ReadObject(document.Data, document.Key,
+                            BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
-                    if (IsRevision)
-                    {
-                        _database.BundleLoader.VersioningStorage.PutDirect(context, key, etag, document.Data);
-                    }
-                    else if (_buildVersion < 40000 && key.Contains("/revisions/"))
-                    {
-                  
-                        var endIndex = key.IndexOf("/revisions/", StringComparison.OrdinalIgnoreCase);
-                        var newKey = key.Substring(0, endIndex);
+                        if (IsRevision)
+                        {
+                            _database.BundleLoader.VersioningStorage.PutDirect(context, key,  document.Data);
+                        }
+                        else if (_buildVersion < 40000 && key.Contains("/revisions/"))
+                        {
 
-                        _database.BundleLoader.VersioningStorage.PutDirect(context, newKey, etag, document.Data);
-                    }
-                    else
-                    {
-                        _database.DocumentsStorage.Put(context, key, null, document.Data);
+                            var endIndex = key.IndexOf("/revisions/", StringComparison.OrdinalIgnoreCase);
+                            var newKey = key.Substring(0, endIndex);
+
+                            _database.BundleLoader.VersioningStorage.PutDirect(context, newKey, document.Data);
+                        }
+                        else
+                        {
+                            _database.DocumentsStorage.Put(context, key, null, document.Data);
+                        }
                     }
                 }
             }
