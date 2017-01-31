@@ -207,7 +207,7 @@ namespace Sparrow.Json
                         }
 
                         if (_state.CurrentTokenType != JsonParserToken.String)
-                            throw new InvalidDataException("Expected property, but got " + _state.CurrentTokenType);
+                             throw new InvalidDataException("Expected property, but got " + _state.CurrentTokenType);
 
 
                         var property = CreateLazyStringValueFromParserState();

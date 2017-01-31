@@ -293,7 +293,6 @@ namespace Raven.Server.Smuggler.Documents
             while (true)
             {
                 MaybeResetContextAndParser();
-
                 if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
                     ThrowInvalidJson();
 
@@ -321,7 +320,6 @@ namespace Raven.Server.Smuggler.Documents
 
             _totalObjectsRead = new Size(0, SizeUnit.Bytes);
             _parser.ResetStream();
-            _context.ResetAndRenew();
             _parser.SetStream();
         }
 

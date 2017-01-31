@@ -126,7 +126,8 @@ namespace Raven.Server.Smuggler.Documents
                 _isRevision = isRevision;
                 _command = new MergedBatchPutCommand(database, buildVersion)
                 {
-                    IsRevision = isRevision
+                    IsRevision = isRevision,
+                    ShouldDisposeAfterCommit = false
                 };
             }
 
@@ -207,7 +208,8 @@ namespace Raven.Server.Smuggler.Documents
                 _prevCommand = _command;
                 _command = new MergedBatchPutCommand(_database, _buildVersion)
                 {
-                    IsRevision = _isRevision
+                    IsRevision = _isRevision,
+                    ShouldDisposeAfterCommit = false
                 };
             }
 

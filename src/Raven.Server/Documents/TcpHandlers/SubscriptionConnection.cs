@@ -13,6 +13,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using static Raven.Server.Json.BlittableJsonTextWriterExtensions;
 
 namespace Raven.Server.Documents.TcpHandlers
 {
@@ -298,26 +299,26 @@ namespace Raven.Server.Documents.TcpHandlers
             }
 
             DocumentsOperationContext dbContext;
-            
+
             using (DisposeOnDisconnect)
             using (TcpConnection.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out dbContext))
             {
                 long startEtag;
                 SubscriptionCriteria criteria;
+
+
                 TcpConnection.DocumentDatabase.SubscriptionStorage.GetCriteriaAndEtag(_options.SubscriptionId, dbContext,
                     out criteria, out startEtag);
 
-                
+
                 var replyFromClientTask = GetReplyFromClient();
                 var registrenNotificationDisposable = RegisterForNotificationOnNewDocuments(criteria);
                 try
                 {
                     var patch = SetupFilterScript(criteria);
-
+                    
                     while (CancellationTokenSource.IsCancellationRequested == false)
                     {
-                        dbContext.ResetAndRenew();
-
                         bool anyDocumentsSentInCurrentIteration = false;
                         using (dbContext.OpenReadTransaction())
                         {
@@ -335,43 +336,53 @@ namespace Raven.Server.Documents.TcpHandlers
                             {
                                 foreach (var doc in documents)
                                 {
-                                    anyDocumentsSentInCurrentIteration = true;
-                                    startEtag = doc.Etag;
-                                    if (DocumentMatchCriteriaScript(patch, dbContext, doc) == false)
+                                    using (doc.Data)
                                     {
-                                        // make sure that if we read a lot of irrelevant documents, we send keep alive over the network
+                                        anyDocumentsSentInCurrentIteration = true;
+                                        startEtag = doc.Etag;
+                                        if (DocumentMatchCriteriaScript(patch, dbContext, doc) == false)
+                                        {
+                                            // make sure that if we read a lot of irrelevant documents, we send keep alive over the network
+                                            if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
+                                            {
+                                                await SendHeartBeat();
+                                                sendingCurrentBatchStopwatch.Reset();
+                                            }
+                                            continue;
+                                        }
+                                        doc.EnsureMetadata();
+                                        
+                                        writer.WriteStartObject();
+                                        writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Type"));
+                                        writer.WriteValue(BlittableJsonToken.String, context.GetLazyStringForFieldWithCaching("Data"));
+                                        writer.WriteComma();
+                                        writer.WritePropertyName(context.GetLazyStringForFieldWithCaching("Data"));
+                                        writer.WriteDocument(dbContext,doc);
+                                        //context.Write(writer, new DynamicJsonValue
+                                        //{
+                                        //    ["Type"] = "Data",
+                                        //    ["Data"] = doc.Data
+                                        //});
+                                        writer.WriteEndObject();
+                                        docsToFlush++;
+
+                                        // perform flush for current batch after 1000ms of running
                                         if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
                                         {
-                                            await SendHeartBeat();
-                                            sendingCurrentBatchStopwatch.Reset();
-                                        }
-                                        continue;
-                                    }
-                                    doc.EnsureMetadata();
-
-                                    context.Write(writer, new DynamicJsonValue
-                                    {
-                                        ["Type"] = "Data",
-                                        ["Data"] = doc.Data
-                                    });
-                                    docsToFlush++;
-
-                                    // perform flush for current batch after 1000ms of running
-                                    if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
-                                    {
-                                        if (docsToFlush > 0)
-                                        {
-                                            await FlushDocsToClient(writer,docsToFlush);
-                                            docsToFlush = 0;
-                                            sendingCurrentBatchStopwatch.Reset();
-                                        }
-                                        else
-                                        {
-                                            await SendHeartBeat();
+                                            if (docsToFlush > 0)
+                                            {
+                                                await FlushDocsToClient(writer, docsToFlush);
+                                                docsToFlush = 0;
+                                                sendingCurrentBatchStopwatch.Reset();
+                                            }
+                                            else
+                                            {
+                                                await SendHeartBeat();
+                                            }
                                         }
                                     }
                                 }
-
+                                
                                 if (anyDocumentsSentInCurrentIteration)
                                 {
                                     context.Write(writer, new DynamicJsonValue
@@ -379,7 +390,12 @@ namespace Raven.Server.Documents.TcpHandlers
                                         ["Type"] = "EndOfBatch"
                                     });
 
-                                    await FlushDocsToClient(writer,docsToFlush, true);
+                                    await FlushDocsToClient(writer, docsToFlush, true);
+                                }
+
+                                foreach (var document in documents)
+                                {
+                                    document.Data.Dispose();
                                 }
                             }
 
