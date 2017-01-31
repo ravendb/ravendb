@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide.Context;
@@ -18,6 +19,8 @@ namespace Raven.Server.Documents
 
         public NotificationsStorage NotificationsStorage { get; }
 
+        public OperationsStorage OperationsStorage { get; }
+
         public StorageEnvironment Environment { get; }
 
         public ConfigurationStorage(DocumentDatabase db)
@@ -34,17 +37,20 @@ namespace Raven.Server.Documents
             
             IndexesEtagsStorage = new IndexesEtagsStorage(db.Name);
 
+            OperationsStorage = new OperationsStorage();
+
             _contextPool = new TransactionContextPool(Environment);
         }
 
-        public void InitializeActionsStorage()
+        public void InitializeNotificationsStorage()
         {
             NotificationsStorage.Initialize(Environment, _contextPool);
         }
 
-        public void InitializeIndexesEtagsStorage(IndexStore indexStore, TransformerStore transformerStore)
+        public void Initialize(IndexStore indexStore, TransformerStore transformerStore)
         {
             IndexesEtagsStorage.Initialize(Environment, _contextPool, indexStore, transformerStore);
+            OperationsStorage.Initialize(Environment, _contextPool);
         }
 
         public void Dispose()

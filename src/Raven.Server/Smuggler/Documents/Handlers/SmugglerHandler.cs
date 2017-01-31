@@ -23,6 +23,7 @@ using Raven.Abstractions;
 using Raven.Client.Data;
 using Raven.Client.Smuggler;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;

@@ -9,6 +9,7 @@ using Raven.Abstractions.Data;
 using Raven.Client.Data;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.SqlReplication;
@@ -200,7 +201,7 @@ namespace Raven.Server.Documents
         {
             TxMerger.Start();
 
-            ConfigurationStorage.InitializeActionsStorage();
+            ConfigurationStorage.InitializeNotificationsStorage();
 
             _indexStoreTask = IndexStore.InitializeAsync();
             _transformerStoreTask = TransformerStore.InitializeAsync();
@@ -231,7 +232,8 @@ namespace Raven.Server.Documents
 
             //Index Metadata Store shares Voron env and context pool with documents storage, 
             //so replication of both documents and indexes/transformers can be made within one transaction
-            ConfigurationStorage.InitializeIndexesEtagsStorage(IndexStore, TransformerStore);
+            ConfigurationStorage.Initialize(IndexStore, TransformerStore);
+
             DocumentReplicationLoader.Initialize();
             NotificationCenter.Initialize();
         }

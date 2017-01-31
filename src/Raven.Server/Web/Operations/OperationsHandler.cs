@@ -2,6 +2,7 @@
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
