@@ -37,7 +37,7 @@ namespace Raven.Client.Shard
                 Query = indexQuery
             }, (commands, i) =>
             {
-                var query = FacetQuery.Create(IndexQueried, indexQuery, facetSetupDoc, null, start, pageSize);
+                var query = FacetQuery.Create(IndexQueried, indexQuery, facetSetupDoc, null, start, pageSize, shardStrategy.Conventions);
                 return commands.GetFacets(query);
             });
 
@@ -54,7 +54,7 @@ namespace Raven.Client.Shard
                 Query = indexQuery
             }, (commands, i) =>
             {
-                var query = FacetQuery.Create(IndexQueried, indexQuery, null, facets, start, pageSize);
+                var query = FacetQuery.Create(IndexQueried, indexQuery, null, facets, start, pageSize, shardStrategy.Conventions);
                 return commands.GetFacets(query);
             });
 
@@ -71,7 +71,7 @@ namespace Raven.Client.Shard
                 Query = indexQuery
             }, (commands, i) =>
             {
-                var query = FacetQuery.Create(AsyncIndexQueried, indexQuery, null, facets, start, pageSize);
+                var query = FacetQuery.Create(AsyncIndexQueried, indexQuery, null, facets, start, pageSize, shardStrategy.Conventions);
                 return commands.GetFacetsAsync(query, token);
             }).ConfigureAwait(false);
         
@@ -88,7 +88,7 @@ namespace Raven.Client.Shard
                 Query = indexQuery
             }, (commands, i) =>
             {
-                var query = FacetQuery.Create(AsyncIndexQueried, indexQuery, facetSetupDoc, null, start, pageSize);
+                var query = FacetQuery.Create(AsyncIndexQueried, indexQuery, facetSetupDoc, null, start, pageSize, shardStrategy.Conventions);
                 return commands.GetFacetsAsync(query, token);
             }).ConfigureAwait(false);
 

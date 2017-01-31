@@ -268,6 +268,12 @@ namespace Raven.Client.Document
         public int MaxNumberOfRequestsPerSession { get; set; }
 
         /// <summary>
+        /// Gets or sets the implicit take amount (page size) that will be used for .Queries() without explicit .Take().
+        /// </summary>
+        /// <value>The max number of requests per session.</value>
+        public int ImplicitTakeAmount { get; set; } = 25;
+
+        /// <summary>
         /// Gets or sets the default max length of a query using the GET method against a server.
         /// </summary>
         public int MaxLengthOfQueryUsingGetUrl { get; set; }

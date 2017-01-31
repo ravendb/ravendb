@@ -27,7 +27,7 @@ namespace Raven.NewClient.Client.Document.Batches
         {
             var uri = _query.GetRequestUri();
             var separator = uri.IndexOf('?');
-            return new GetRequest()
+            return new GetRequest
             {
                 Url = uri.Substring(0, separator),
                 Query = uri.Substring(separator, uri.Length - separator - 1)

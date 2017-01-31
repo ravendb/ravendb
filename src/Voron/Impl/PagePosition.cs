@@ -20,7 +20,7 @@ namespace Voron.Impl
             if (x == y) return true;
             if (x == null || y == null) return false;
 
-            return x.ScratchPos == y.ScratchPos && x.TransactionId == y.TransactionId && x.JournalNumber == y.JournalNumber && x.IsFreedPageMarker == y.IsFreedPageMarker && x.ScratchNumber == y.ScratchNumber; ;
+            return x.ScratchPos == y.ScratchPos && x.TransactionId == y.TransactionId && x.JournalNumber == y.JournalNumber && x.IsFreedPageMarker == y.IsFreedPageMarker && x.ScratchNumber == y.ScratchNumber;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

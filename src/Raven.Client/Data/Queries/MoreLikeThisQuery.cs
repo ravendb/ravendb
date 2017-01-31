@@ -3,12 +3,17 @@ using System.Collections.Generic;
 using System.Text;
 
 using Raven.Abstractions.Data;
+using Raven.Client.Document;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Data.Queries
 {
     public class MoreLikeThisQuery : MoreLikeThisQuery<Dictionary<string, RavenJToken>>
     {
+        public MoreLikeThisQuery(DocumentConvention conventions) : base(conventions)
+        {
+        }
+
         protected override void CreateRequestUri(StringBuilder uri)
         {
             base.CreateRequestUri(uri);
@@ -20,15 +25,15 @@ namespace Raven.Client.Data.Queries
     public abstract class MoreLikeThisQuery<T> : IIndexQuery
         where T : class
     {
+        public DocumentConvention Conventions { get; }
         private int _pageSize;
 
         private bool _pageSizeSet;
 
-        protected MoreLikeThisQuery()
+        protected MoreLikeThisQuery(DocumentConvention conventions)
         {
-            _pageSize = IndexQuery.DefaultPageSize;
-            _pageSizeSet = false;
-
+            Conventions = conventions;
+            _pageSize = Conventions?.ImplicitTakeAmount ?? 25;
             MapGroupFields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
 

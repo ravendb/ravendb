@@ -51,7 +51,7 @@ namespace SlowTests.MailingList
 
                 var operation = store.DatabaseCommands.UpdateByIndex(
                     new Index1().IndexName,
-                    new IndexQuery { Query = string.Empty },
+                    new IndexQuery(store.Conventions) { Query = string.Empty },
                     new PatchRequest { Script = script },
                     new QueryOperationOptions { AllowStale = false, StaleTimeout = TimeSpan.MaxValue, RetrieveDetails = true });
 

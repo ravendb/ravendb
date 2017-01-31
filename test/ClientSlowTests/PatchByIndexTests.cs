@@ -97,7 +97,7 @@ namespace NewClientTests.NewClient.FastTests.Patching
 
                     var operation = await store
                         .Operations
-                        .SendAsync(new PatchByIndexOperation("TestIndex", new IndexQuery { Query = "Owner:bob" }, new PatchRequest { Script = sampleScript }));
+                        .SendAsync(new PatchByIndexOperation("TestIndex", new IndexQuery(store.Conventions) { Query = "Owner:bob" }, new PatchRequest { Script = sampleScript }));
 
                     await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
@@ -179,7 +179,7 @@ namespace NewClientTests.NewClient.FastTests.Patching
 
                     var operation = await store
                         .Operations
-                        .SendAsync(new PatchByIndexOperation("TestIndex", new IndexQuery { Query = "Value:1" }, new PatchRequest { Script = @"PutDocument('NewItem/3', {'CopiedValue': this.Value });" }));
+                        .SendAsync(new PatchByIndexOperation("TestIndex", new IndexQuery(store.Conventions) { Query = "Value:1" }, new PatchRequest { Script = @"PutDocument('NewItem/3', {'CopiedValue': this.Value });" }));
 
                     await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
@@ -244,7 +244,7 @@ namespace NewClientTests.NewClient.FastTests.Patching
 
                 var operation = await store
                     .Operations
-                    .SendAsync(new PatchByIndexOperation(stats.IndexName, new IndexQuery { Query = string.Empty }, new PatchRequest { Script = "this.FullName = this.FirstName + ' ' + this.LastName;" }));
+                    .SendAsync(new PatchByIndexOperation(stats.IndexName, new IndexQuery(store.Conventions) { Query = string.Empty }, new PatchRequest { Script = "this.FullName = this.FirstName + ' ' + this.LastName;" }));
 
                 await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 

@@ -82,7 +82,7 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public void WhenElementcontainsCommasInMiddleOfList()
+        public void WhenElementContainsCommasInMiddleOfList()
         {
             using (var store = GetDocumentStore())
             {

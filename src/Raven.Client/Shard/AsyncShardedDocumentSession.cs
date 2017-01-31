@@ -845,7 +845,7 @@ namespace Raven.Client.Shard
             }, (dbCmd, i) =>
             {
                 var query = QueryInternal<T>(dbCmd, indexName).Where(expression);
-                var indexQuery = new IndexQuery()
+                var indexQuery = new IndexQuery(Conventions)
                 {
                     Query = query.ToString()
                 };

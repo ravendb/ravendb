@@ -36,7 +36,7 @@ namespace SlowTests.MailingList
                     s.SaveChanges();
                 }
 
-                store.DatabaseCommands.GetFacets(new FacetQuery
+                store.DatabaseCommands.GetFacets(new FacetQuery(store.Conventions)
                 {
                     IndexName = "test",
                     Query = "(IsActive:true)  AND (BookVendor:\"stroheim & romann\")",

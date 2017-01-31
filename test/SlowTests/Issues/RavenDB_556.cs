@@ -60,7 +60,7 @@ namespace SlowTests.Issues
                             .Advanced
                             .DocumentStore
                             .DatabaseCommands
-                            .Query(newIndex, new IndexQuery(), false, true);
+                            .Query(newIndex, new IndexQuery(docStore.Conventions), false, true);
 
                         foreach (var result in queryResult.Results)
                         {

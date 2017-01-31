@@ -220,7 +220,7 @@ namespace Raven.NewClient.Client.Linq
         public virtual FacetedQueryResult GetFacets(string facetSetupDoc, int start, int? pageSize)
         {
             var q = GetIndexQuery(false);
-            var query = FacetQuery.Create(indexName, q, facetSetupDoc, null, start, pageSize);
+            var query = FacetQuery.Create(indexName, q, facetSetupDoc, null, start, pageSize, q.Conventions);
 
             var command = new GetFacetsCommand()
             {
@@ -233,7 +233,7 @@ namespace Raven.NewClient.Client.Linq
         public virtual FacetedQueryResult GetFacets(List<Facet> facets, int start, int? pageSize)
         {
             var q = GetIndexQuery(false);
-            var query = FacetQuery.Create(indexName, q, null, facets, start, pageSize);
+            var query = FacetQuery.Create(indexName, q, null, facets, start, pageSize, q.Conventions);
             var command = new GetFacetsCommand()
             {
                 Query = query,
@@ -246,7 +246,7 @@ namespace Raven.NewClient.Client.Linq
         public virtual async Task<FacetedQueryResult> GetFacetsAsync(string facetSetupDoc, int start, int? pageSize, CancellationToken token = default (CancellationToken))
         {
             var q = GetIndexQuery();
-            var query = FacetQuery.Create(indexName, q, facetSetupDoc, null, start, pageSize);
+            var query = FacetQuery.Create(indexName, q, facetSetupDoc, null, start, pageSize, q.Conventions);
 
             var command = new GetFacetsCommand()
             {
@@ -260,7 +260,7 @@ namespace Raven.NewClient.Client.Linq
         public virtual async Task<FacetedQueryResult> GetFacetsAsync(List<Facet> facets, int start, int? pageSize, CancellationToken token = default (CancellationToken))
         {
             var q = GetIndexQuery();
-            var query = FacetQuery.Create(indexName, q, null, facets, start, pageSize);
+            var query = FacetQuery.Create(indexName, q, null, facets, start, pageSize, q.Conventions);
 
             var command = new GetFacetsCommand()
             {

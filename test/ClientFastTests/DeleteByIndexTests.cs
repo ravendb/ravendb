@@ -43,7 +43,7 @@ namespace NewClientTests.NewClient.Client.Indexing
                 JsonOperationContext context;
                 store.GetRequestExecuter(store.DefaultDatabase).ContextPool.AllocateOperationContext(out context);
 
-                var operation = store.Operations.Send(new DeleteByIndexOperation(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }));
+                var operation = store.Operations.Send(new DeleteByIndexOperation(indexName, new IndexQuery(store.Conventions), new QueryOperationOptions { AllowStale = false }));
 
                 operation.WaitForCompletion(TimeSpan.FromSeconds(60));
 
@@ -81,7 +81,7 @@ namespace NewClientTests.NewClient.Client.Indexing
                 JsonOperationContext context;
                 store.GetRequestExecuter(store.DefaultDatabase).ContextPool.AllocateOperationContext(out context);
 
-                var operation = await store.Operations.SendAsync(new DeleteByIndexOperation(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }));
+                var operation = await store.Operations.SendAsync(new DeleteByIndexOperation(indexName, new IndexQuery(store.Conventions), new QueryOperationOptions { AllowStale = false }));
 
                 await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 

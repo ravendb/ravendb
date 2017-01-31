@@ -48,7 +48,7 @@ namespace SlowTests.MailingList
             {
                 store.DatabaseCommands.Put("FOO", null, new RavenJObject { { "Name", "Ayende" } }, new RavenJObject { { Constants.Metadata.Collection, "Foos" } });
 
-                var result = store.DatabaseCommands.Query("dynamic", new IndexQuery
+                var result = store.DatabaseCommands.Query("dynamic", new IndexQuery(store.Conventions)
                 {
                     FieldsToFetch = new[] { "Name" },
                     Query = "Name:Ayende"
@@ -61,7 +61,7 @@ namespace SlowTests.MailingList
                 new Index1().Execute(store);
                 WaitForIndexing(store);
 
-                result = store.DatabaseCommands.Query("Index1", new IndexQuery
+                result = store.DatabaseCommands.Query("Index1", new IndexQuery(store.Conventions)
                 {
                     FieldsToFetch = new[] { "Name" },
                     Query = "Name:Ayende"

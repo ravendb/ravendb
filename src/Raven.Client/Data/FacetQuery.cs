@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Util;
+using Raven.Client.Document;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -22,6 +23,10 @@ namespace Raven.Client.Data
     {
         private IReadOnlyList<Facet> _facets;
         private string _facetsAsJson;
+
+        public FacetQuery(DocumentConvention conventions) : base(conventions)
+        {
+        }
 
         /// <summary>
         /// Index name to run facet query on.
@@ -106,9 +111,9 @@ namespace Raven.Client.Data
             return path.ToString();
         }
 
-        public static FacetQuery Parse(IQueryCollection query, int start, int pageSize)
+        public static FacetQuery Parse(IQueryCollection query, int start, int pageSize, DocumentConvention conventions)
         {
-            var result = new FacetQuery
+            var result = new FacetQuery(conventions)
             {
                 Start = start,
                 PageSize = pageSize
@@ -145,9 +150,9 @@ namespace Raven.Client.Data
             return result;
         }
 
-        public static FacetQuery Create(string indexName, IndexQueryBase query, string facetSetupDoc, List<Facet> facets,  int start, int? pageSize)
+        public static FacetQuery Create(string indexName, IndexQueryBase query, string facetSetupDoc, List<Facet> facets,  int start, int? pageSize, DocumentConvention conventions)
         {
-            var result = new FacetQuery
+            var result = new FacetQuery(conventions)
             {
                 IndexName = indexName,
                 CutoffEtag = query.CutoffEtag,

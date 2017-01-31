@@ -130,7 +130,7 @@ namespace SlowTests.MailingList
 
                         var wods = query.ToList();
 
-                        var facets = session.Advanced.DocumentStore.DatabaseCommands.GetFacets(new FacetQuery
+                        var facets = session.Advanced.DocumentStore.DatabaseCommands.GetFacets(new FacetQuery(store.Conventions)
                         {
                             IndexName = "Wod/Search",
                             Query = query.ToString(),

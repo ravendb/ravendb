@@ -151,7 +151,7 @@ namespace SlowTests.Core.Commands
 
                 using (var commands = store.Commands())
                 {
-                    var metadataOnly = commands.Query("test", new IndexQuery(), metadataOnly: true).Results;
+                    var metadataOnly = commands.Query("test", new IndexQuery(store.Conventions), metadataOnly: true).Results;
 
                     foreach (BlittableJsonReaderObject item in metadataOnly)
                     {
@@ -160,7 +160,7 @@ namespace SlowTests.Core.Commands
                         Assert.True(item.TryGet(Constants.Metadata.Key, out _));
                     }
 
-                    var entriesOnly = commands.Query("test", new IndexQuery
+                    var entriesOnly = commands.Query("test", new IndexQuery(store.Conventions)
                     {
                         SortedFields = new[] { new SortedField("Name") }
                     }, indexEntriesOnly: true).Results;

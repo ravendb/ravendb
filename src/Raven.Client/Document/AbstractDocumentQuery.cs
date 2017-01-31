@@ -265,6 +265,11 @@ namespace Raven.Client.Document
             get { return theSession; }
         }
 
+        public DocumentConvention Conventions
+        {
+            get { return conventions; }
+        }
+
         public bool IsDynamicMapReduce => dynamicMapReduceFields.Length > 0;
 
         protected Action<QueryResult> afterQueryExecutedCallback;
@@ -624,7 +629,7 @@ namespace Raven.Client.Document
         public FacetedQueryResult GetFacets(string facetSetupDoc, int facetStart, int? facetPageSize)
         {
             var q = GetIndexQuery(false);
-            var query = FacetQuery.Create(indexName, q, facetSetupDoc, null, facetStart, facetPageSize);
+            var query = FacetQuery.Create(indexName, q, facetSetupDoc, null, facetStart, facetPageSize, conventions);
 
             return DatabaseCommands.GetFacets(query);
         }
@@ -632,7 +637,7 @@ namespace Raven.Client.Document
         public FacetedQueryResult GetFacets(List<Facet> facets, int facetStart, int? facetPageSize)
         {
             var q = GetIndexQuery(false);
-            var query = FacetQuery.Create(indexName, q, null, facets, facetStart, facetPageSize);
+            var query = FacetQuery.Create(indexName, q, null, facets, facetStart, facetPageSize, conventions);
 
             return DatabaseCommands.GetFacets(query);
         }
@@ -640,7 +645,7 @@ namespace Raven.Client.Document
         public Task<FacetedQueryResult> GetFacetsAsync(string facetSetupDoc, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
         {
             var q = GetIndexQuery(true);
-            var query = FacetQuery.Create(indexName, q, facetSetupDoc, null, facetStart, facetPageSize);
+            var query = FacetQuery.Create(indexName, q, facetSetupDoc, null, facetStart, facetPageSize, conventions);
 
             return AsyncDatabaseCommands.GetFacetsAsync(query, token);
         }
@@ -648,7 +653,7 @@ namespace Raven.Client.Document
         public Task<FacetedQueryResult> GetFacetsAsync(List<Facet> facets, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
         {
             var q = GetIndexQuery(true);
-            var query = FacetQuery.Create(indexName, q, null, facets, facetStart, facetPageSize);
+            var query = FacetQuery.Create(indexName, q, null, facets, facetStart, facetPageSize, conventions);
 
             return AsyncDatabaseCommands.GetFacetsAsync(query, token);
         }
@@ -1857,7 +1862,7 @@ If you really want to do in memory filtering on the data returned from the query
                 if (indexName == "dynamic" || indexName.StartsWith("dynamic/"))
                     throw new NotSupportedException("Dynamic indexes do not support spatial queries. A static index, with spatial field(s), must be defined.");
 
-                var spatialQuery = new SpatialIndexQuery
+                var spatialQuery = new SpatialIndexQuery(conventions)
                 {
                     IsDistinct = isDistinct,
                     Query = query,
@@ -1895,7 +1900,7 @@ If you really want to do in memory filtering on the data returned from the query
                 return spatialQuery;
             }
 
-            var indexQuery = new IndexQuery
+            var indexQuery = new IndexQuery(conventions)
             {
                 IsDistinct = isDistinct,
                 Query = query,

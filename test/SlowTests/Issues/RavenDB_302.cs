@@ -132,8 +132,8 @@ namespace SlowTests.Issues
 
                     GC.KeepAlive(x.ToList());// wait for the index to complete
 
-                    var indexQuery = new IndexQuery {Query = x.ToString(), DefaultField = "Query"};
-                    var facet = FacetQuery.Create("Index", indexQuery,"Raven/Facets/LastName",null,0,null);
+                    var indexQuery = new IndexQuery(s.Conventions) {Query = x.ToString(), DefaultField = "Query"};
+                    var facet = FacetQuery.Create("Index", indexQuery, "Raven/Facets/LastName", null, 0, null, s.Conventions);
 
                     var ravenfacets = s.DatabaseCommands.GetFacets(facet);
 

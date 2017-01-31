@@ -63,7 +63,7 @@ namespace SlowTests.Tests.Querying
 
                     WaitForIndexing(store);
 
-                    var result = store.DatabaseCommands.Query("BlogPosts/PostsCountByTag", new IndexQuery { SkipDuplicateChecking = true });
+                    var result = store.DatabaseCommands.Query("BlogPosts/PostsCountByTag", new IndexQuery(store.Conventions) { SkipDuplicateChecking = true });
                     Assert.Equal(2, result.Results.Count);
                 }
             }

@@ -17,7 +17,7 @@ namespace Raven.Client.Connection.Async
                 .ContinueWith(task =>
                 {
                     terms = task.Result;
-                    var termRequests = terms.Select(term => new IndexQuery
+                    var termRequests = terms.Select(term => new IndexQuery(cmds.Conventions)
                     {
                         Query = field + ":" + RavenQuery.Escape(term),
                         PageSize = 0,

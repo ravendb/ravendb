@@ -81,7 +81,7 @@ namespace NewClientTests.NewClient
             {
                 var oldRequests = session.Advanced.NumberOfRequests;
 
-                var moreLikeThisLazy = session.Advanced.Lazily.MoreLikeThis<Article>(new MoreLikeThisQuery()
+                var moreLikeThisLazy = session.Advanced.Lazily.MoreLikeThis<Article>(new MoreLikeThisQuery(store.Conventions)
                 {
                     IndexName = index.IndexName,
                     DocumentId = "articles/0",

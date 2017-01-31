@@ -72,7 +72,7 @@ namespace Raven.NewClient.Client.Document
         public Operation DeleteByIndex<T>(string indexName, Expression<Func<T, bool>> expression)
         {
             var query = Query<T>(indexName).Where(expression);
-            var indexQuery = new IndexQuery
+            var indexQuery = new IndexQuery(Conventions)
             {
                 Query = query.ToString()
             };

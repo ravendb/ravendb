@@ -34,7 +34,7 @@ namespace SlowTests.MailingList
                 {
                     var list = session
                         .Advanced
-                        .MoreLikeThis<Movie, MovieIndex>(new MoreLikeThisQuery
+                        .MoreLikeThis<Movie, MovieIndex>(new MoreLikeThisQuery(store.Conventions)
                         {
                             DocumentId = id,
                             Fields = new[] { "Cast" },

@@ -223,7 +223,7 @@ namespace Raven.Client.Linq
         public virtual FacetedQueryResult GetFacets(string facetSetupDoc, int start, int? pageSize)
         {
             var q = GetIndexQuery(false);
-            var query = FacetQuery.Create(indexName, q, facetSetupDoc, null, start, pageSize);
+            var query = FacetQuery.Create(indexName, q, facetSetupDoc, null, start, pageSize, q.Conventions);
 
             return databaseCommands.GetFacets(query);
         }
@@ -231,7 +231,7 @@ namespace Raven.Client.Linq
         public virtual FacetedQueryResult GetFacets(List<Facet> facets, int start, int? pageSize)
         {
             var q = GetIndexQuery(false);
-            var query = FacetQuery.Create(indexName, q, null, facets, start, pageSize);
+            var query = FacetQuery.Create(indexName, q, null, facets, start, pageSize, q.Conventions);
 
             return databaseCommands.GetFacets(query);
         }
@@ -239,7 +239,7 @@ namespace Raven.Client.Linq
         public virtual Task<FacetedQueryResult> GetFacetsAsync(string facetSetupDoc, int start, int? pageSize, CancellationToken token = default (CancellationToken))
         {
             var q = GetIndexQuery();
-            var query = FacetQuery.Create(indexName, q, facetSetupDoc, null, start, pageSize);
+            var query = FacetQuery.Create(indexName, q, facetSetupDoc, null, start, pageSize, q.Conventions);
 
             return asyncDatabaseCommands.GetFacetsAsync(query, token);
         }
@@ -247,7 +247,7 @@ namespace Raven.Client.Linq
         public virtual Task<FacetedQueryResult> GetFacetsAsync(List<Facet> facets, int start, int? pageSize, CancellationToken token = default (CancellationToken))
         {
             var q = GetIndexQuery();
-            var query = FacetQuery.Create(indexName, q, null, facets, start, pageSize);
+            var query = FacetQuery.Create(indexName, q, null, facets, start, pageSize, q.Conventions);
 
             return asyncDatabaseCommands.GetFacetsAsync(query, token);
         }
@@ -320,6 +320,8 @@ namespace Raven.Client.Linq
                 return session;
             }
         }
+
+        public DocumentConvention Conventions => session.Conventions;
 
         ///<summary>
         /// Get the last equality term for the query

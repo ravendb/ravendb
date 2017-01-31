@@ -7,6 +7,7 @@ using Raven.Abstractions.Data;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
 using Raven.Client.Data;
+using Raven.Client.Document;
 using Raven.Client.Indexing;
 using Raven.Server.Web;
 using Sparrow.Json;
@@ -18,6 +19,10 @@ namespace Raven.Server.Documents.Queries
 {
     public class IndexQueryServerSide : IndexQuery<BlittableJsonReaderObject>
     {
+        public IndexQueryServerSide() : base(null)
+        {
+        }
+
         public static IndexQueryServerSide Create(HttpContext httpContext, int start, int pageSize, JsonOperationContext context)
         {
             var result = new IndexQueryServerSide

@@ -112,12 +112,12 @@ namespace SlowTests.Core.Commands
                 });
                 WaitForIndexing(store);
 
-                store.DatabaseCommands.UpdateByIndex("MyIndex", new IndexQuery { Query = "" }, new PatchRequest { Script = "this.NewName = 'NewValue';" }, null).WaitForCompletion(TimeSpan.FromSeconds(15));
+                store.DatabaseCommands.UpdateByIndex("MyIndex", new IndexQuery(store.Conventions) { Query = "" }, new PatchRequest { Script = "this.NewName = 'NewValue';" }, null).WaitForCompletion(TimeSpan.FromSeconds(15));
 
                 var document = await store.AsyncDatabaseCommands.GetAsync("items/1");
                 Assert.Equal("NewValue", document.DataAsJson.Value<string>("NewName"));
                 WaitForIndexing(store);
-                store.DatabaseCommands.DeleteByIndex("MyIndex", new IndexQuery { Query = "" }, null).WaitForCompletion(TimeSpan.FromSeconds(15));
+                store.DatabaseCommands.DeleteByIndex("MyIndex", new IndexQuery(store.Conventions) { Query = "" }, null).WaitForCompletion(TimeSpan.FromSeconds(15));
                 var documents = store.DatabaseCommands.GetDocuments(0, 25);
                 Assert.Equal(0, documents.Length);
             }

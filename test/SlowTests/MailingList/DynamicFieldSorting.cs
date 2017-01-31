@@ -104,6 +104,7 @@ namespace SlowTests.MailingList
                         .WaitForNonStaleResults()
                         .OrderBy("+TixP|N1_Range")
                         .SelectFields<WithDynamicIndex.ProjectionItem>("SongId", "NumericAttributes")
+                        .Take(128)
                         .ToList();
                     Assert.Equal(50, items.Count);
                     var counter = 1;
@@ -146,6 +147,7 @@ namespace SlowTests.MailingList
                         .WaitForNonStaleResults()
                         .AddOrder("N1_Range", true, typeof(double))
                         .SelectFields<WithDynamicIndex.ProjectionItem>("SongId", "NumericAttributes")
+                        .Take(128)
                         .ToList();
                     Assert.Equal(50, items.Count);
                     Assert.Equal("songs/50", items.First().SongId);

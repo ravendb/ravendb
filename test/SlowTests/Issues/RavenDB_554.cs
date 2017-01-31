@@ -48,7 +48,7 @@ namespace SlowTests.Issues
                         .Customize(x => x.WaitForNonStaleResults())
                         .ToList();
 
-                    var queryResult = docStore.DatabaseCommands.Query(IndexName, new IndexQuery(), false, true);
+                    var queryResult = docStore.DatabaseCommands.Query(IndexName, new IndexQuery(docStore.Conventions), false, true);
                     foreach (var result in queryResult.Results)
                     {
                         RavenJToken q;

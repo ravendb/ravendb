@@ -2289,5 +2289,7 @@ namespace Raven.Client.Connection.Async
                 }
             }
         }
+
+        public DocumentConvention Conventions => convention;
     }
 }

@@ -17,6 +17,7 @@ using Raven.Abstractions.Util;
 using Raven.Client.Connection;
 using Raven.Client.Data;
 using Raven.Client.Data.Queries;
+using Raven.Client.Document;
 using Raven.Client.Document.Batches;
 using Raven.Client.Indexes;
 using Raven.Json.Linq;
@@ -37,6 +38,8 @@ namespace Raven.Client
         ///     Access the lazy operations
         /// </summary>
         IAsyncLazySessionOperations Lazily { get; }
+
+        DocumentConvention Conventions { get; }
 
         /// <summary>
         ///     Queries the index specified by <typeparamref name="TIndexCreator" /> using lucene syntax.
