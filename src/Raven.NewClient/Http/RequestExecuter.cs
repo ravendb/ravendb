@@ -329,7 +329,7 @@ namespace Raven.NewClient.Client.Http
         public string UrlFor(string documentKey)
         {
             var node = _topology.LeaderNode;
-            return $"{node.Url}/databases/{node.Database}/docs/{documentKey}";
+            return $"{node.Url}/databases/{node.Database}/docs?id={documentKey}";
         }
 
         public class ChoosenNode

@@ -1,13 +1,9 @@
 using System;
-using System.Threading.Tasks;
-
+using System.Collections.Generic;
 using FastTests;
-
-using Raven.Abstractions.Commands;
-using Raven.Abstractions.Data;
-using Raven.Client.Exceptions;
-using Raven.Json.Linq;
-
+using Raven.NewClient.Client.Data.Commands;
+using Raven.NewClient.Client.Exceptions;
+using Sparrow.Json.Parsing;
 using Xunit;
 
 using Company = SlowTests.Core.Utils.Entities.Company;
@@ -15,7 +11,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Session
 {
-    public class Advanced : RavenTestBase
+    public class Advanced : RavenNewTestBase
     {
         [Fact]
         public void CanGetChangesInformation()
@@ -42,9 +38,9 @@ namespace SlowTests.Core.Session
                     Assert.True(session.Advanced.HasChanges);
 
                     var whatChanged = session.Advanced.WhatChanged();
-                    Assert.Equal("AddressId", ((DocumentsChanges[])whatChanged["users/1"])[0].FieldName);
-                    Assert.Equal("", ((DocumentsChanges[])whatChanged["users/1"])[0].FieldOldValue);
-                    Assert.Equal("addresses/1", ((DocumentsChanges[])whatChanged["users/1"])[0].FieldNewValue);
+                    Assert.Equal("AddressId", whatChanged["users/1"][0].FieldName);
+                    Assert.Equal(null, whatChanged["users/1"][0].FieldOldValue);
+                    Assert.True(whatChanged["users/1"][0].FieldNewValue.Equals("addresses/1"));
 
                     session.Advanced.Clear();
                     Assert.False(session.Advanced.HasChanges);
@@ -176,9 +172,19 @@ namespace SlowTests.Core.Session
                     Assert.NotNull(user);
                     Assert.Equal("John", user.Name);
 
-                    var u = store.DatabaseCommands.Get("users/1");
-                    u.DataAsJson["Name"] = "Jonathan";
-                    store.DatabaseCommands.Put("users/1", u.Etag, u.DataAsJson, u.Metadata);
+                    using (var otherSession = store.OpenSession())
+                    {
+                        var u = otherSession.Load<User>("users/1");
+                        u.Name = "Jonathan";
+
+                        otherSession.SaveChanges();
+                    }
+
+                    using (var otherSession = store.OpenSession())
+                    {
+                        var u = otherSession.Load<User>("users/1");
+                        Assert.Equal("Jonathan", u.Name);
+                    }
 
                     user = session.Load<User>("users/1");
 
@@ -252,19 +258,17 @@ namespace SlowTests.Core.Session
 
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.Put(
-                    companyId,
-                    null,
-                    RavenJObject.FromObject(new Company { Id = companyId }),
-                    new RavenJObject { { attrKey, attrVal } }
-                    );
+                using (var commands = store.Commands())
+                {
+                    commands.Put(companyId, null, new Company { Id = companyId }, new Dictionary<string, string> { { attrKey, attrVal } });
+                }
 
                 using (var session = store.OpenSession())
                 {
                     var company = session.Load<Company>(companyId);
-                    var result = session.Advanced.GetMetadataFor<Company>(company);
+                    var result = session.Advanced.GetMetadataFor(company);
                     Assert.NotNull(result);
-                    Assert.Equal(attrVal, result.Value<string>(attrKey));
+                    Assert.Equal(attrVal, result[attrKey]);
                 }
             }
         }
@@ -328,45 +332,14 @@ namespace SlowTests.Core.Session
         }
 
         [Fact]
-        public void CanMarkReadOnly()
-        {
-            const string categoryName = "MarkReadOnlyTest";
-
-            using (var store = GetDocumentStore())
-            {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Company { Id = "companies/1" });
-                    session.SaveChanges();
-
-                    var company = session.Load<Company>("companies/1");
-                    session.Advanced.MarkReadOnly(company);
-                    company.Name = categoryName;
-                    Assert.True(session.Advanced.HasChanges);
-
-                    session.Store(company);
-                    session.SaveChanges();
-                }
-
-                using (var session = store.OpenSession())
-                {
-                    var company = session.Load<Company>("companies/1");
-                    Assert.True(session.Advanced.GetMetadataFor<Company>(company).Value<bool>("Raven-Read-Only"));
-                }
-            }
-        }
-
-        [Fact]
         public void CanGetEtagFor()
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.Put(
-                    "companies/1",
-                    null,
-                    RavenJObject.FromObject(new Company { Id = "companies/1" }),
-                    new RavenJObject()
-                    );
+                using (var commands = store.Commands())
+                {
+                    commands.Put("companies/1", null, new Company { Id = "companies/1" }, null);
+                }
 
                 using (var session = store.OpenSession())
                 {
@@ -384,18 +357,11 @@ namespace SlowTests.Core.Session
 
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.Put(
-                    COMPANY1_ID,
-                    null,
-                    RavenJObject.FromObject(new Company { Id = COMPANY1_ID }),
-                    new RavenJObject()
-                    );
-                store.DatabaseCommands.Put(
-                    COMPANY2_ID,
-                    null,
-                    RavenJObject.FromObject(new Company { Id = COMPANY2_ID }),
-                    new RavenJObject()
-                    );
+                using (var commands = store.Commands())
+                {
+                    commands.Put(COMPANY1_ID, null, new Company { Id = COMPANY1_ID }, null);
+                    commands.Put(COMPANY2_ID, null, new Company { Id = COMPANY2_ID }, null);
+                }
 
                 using (var session = store.OpenSession())
                 {
@@ -404,12 +370,12 @@ namespace SlowTests.Core.Session
                     var order = lazyOrder.Value;
                     Assert.Equal(COMPANY1_ID, order.Id);
 
-                    Lazy<Company[]> lazyOrders = session.Advanced.Lazily.Load<Company>(new String[] { COMPANY1_ID, COMPANY2_ID });
+                    var lazyOrders = session.Advanced.Lazily.Load<Company>(new[] { COMPANY1_ID, COMPANY2_ID });
                     Assert.False(lazyOrders.IsValueCreated);
-                    Company[] orders = lazyOrders.Value;
-                    Assert.Equal(2, orders.Length);
-                    Assert.Equal(COMPANY1_ID, orders[0].Id);
-                    Assert.Equal(COMPANY2_ID, orders[1].Id);
+                    var orders = lazyOrders.Value;
+                    Assert.Equal(2, orders.Count);
+                    Assert.Equal(COMPANY1_ID, orders[COMPANY1_ID].Id);
+                    Assert.Equal(COMPANY2_ID, orders[COMPANY2_ID].Id);
                 }
             }
         }
@@ -422,18 +388,11 @@ namespace SlowTests.Core.Session
 
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.Put(
-                    COMPANY1_ID,
-                    null,
-                    RavenJObject.FromObject(new Company { Id = COMPANY1_ID }),
-                    new RavenJObject()
-                    );
-                store.DatabaseCommands.Put(
-                    COMPANY2_ID,
-                    null,
-                    RavenJObject.FromObject(new Company { Id = COMPANY2_ID }),
-                    new RavenJObject()
-                    );
+                using (var commands = store.Commands())
+                {
+                    commands.Put(COMPANY1_ID, null, new Company { Id = COMPANY1_ID }, null);
+                    commands.Put(COMPANY2_ID, null, new Company { Id = COMPANY2_ID }, null);
+                }
 
                 using (var session = store.OpenSession())
                 {
@@ -463,24 +422,12 @@ namespace SlowTests.Core.Session
                 {
                     var commands = new ICommandData[]
                     {
-                        new PutCommandData
-                        {
-                            Document =
-                                RavenJObject.FromObject(new Company {Name = "company 1"}),
-                            Etag = null,
-                            Id = "company1"
-                        },
-                        new PutCommandData
-                        {
-                            Document =
-                                RavenJObject.FromObject(new Company {Name = "company 2"}),
-                            Etag = null,
-                            Id = "company2"
-                        }
+                        new PutCommandData("company1", null, new DynamicJsonValue { ["Name"] = "company 1" }),
+                        new PutCommandData("company2", null, new DynamicJsonValue { ["Name"] = "company 2" })
                     };
 
                     session.Advanced.Defer(commands);
-                    session.Advanced.Defer(new DeleteCommandData { Id = "company1" });
+                    session.Advanced.Defer(new DeleteCommandData("company1", null));
 
                     session.SaveChanges();
 
@@ -490,7 +437,7 @@ namespace SlowTests.Core.Session
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6244")]
         public void CanAggressivelyCacheFor()
         {
             using (var store = GetDocumentStore())
@@ -505,14 +452,14 @@ namespace SlowTests.Core.Session
                 {
                     Assert.Equal(0, session.Advanced.NumberOfRequests);
                     session.Load<User>("users/1");
-                    Assert.Equal(0, store.JsonRequestFactory.NumberOfCachedRequests);
+                    Assert.Equal(1, session.Advanced.RequestExecuter.Cache.NumberOfItems);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
 
                 using (var session = store.OpenSession())
                 {
                     session.Load<User>("users/1");
-                    Assert.Equal(1, store.JsonRequestFactory.NumberOfCachedRequests);
+                    Assert.Equal(1, session.Advanced.RequestExecuter.Cache.NumberOfItems);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
                     for (var i = 0; i <= 20; i++)
