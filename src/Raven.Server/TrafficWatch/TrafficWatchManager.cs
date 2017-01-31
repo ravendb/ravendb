@@ -21,7 +21,7 @@ namespace Raven.Server.TrafficWatch
             connection.Dispose();
         }
 
-        public static void DispatchMessage(TrafficWatchNotification trafficWatchData)
+        public static void DispatchMessage(TrafficWatchChange trafficWatchData)
         {
             foreach (var connection in ServerHttpTrace)
             {

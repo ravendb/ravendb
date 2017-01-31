@@ -20,20 +20,20 @@ namespace Raven.Client.TimeSeries.Changes
             return ensureConnection(this);
         }
 
-        public event Action<KeyChangeNotification> OnChangeNotification = (x) => { };
-        public void Send(KeyChangeNotification keyNotification)
+        public event Action<KeyChange> OnChangeNotification = (x) => { };
+        public void Send(KeyChange keyChange)
         {
             var onTimeSeriesChangeNotification = OnChangeNotification;
             if (onTimeSeriesChangeNotification != null)
-                onTimeSeriesChangeNotification(keyNotification);
+                onTimeSeriesChangeNotification(keyChange);
         }
 
-        public event Action<BulkOperationNotification> OnBulkOperationNotification = (x) => { };
-        public void Send(BulkOperationNotification bulkOperationNotification)
+        public event Action<BulkOperationChange> OnBulkOperationNotification = (x) => { };
+        public void Send(BulkOperationChange bulkOperationChange)
         {
             var onBulkOperationNotification = OnBulkOperationNotification;
             if (onBulkOperationNotification != null)
-                onBulkOperationNotification(bulkOperationNotification);
+                onBulkOperationNotification(bulkOperationChange);
         }
     }
 }

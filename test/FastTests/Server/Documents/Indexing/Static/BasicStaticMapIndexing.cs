@@ -137,11 +137,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 indexDefinition2 = new IndexDefinition
                 {
                     Name = "Users_ByAge",
-                    Maps = { "from user in docs.Users select new { CustomAge = user.Age }" },
-                    Configuration =
-                    {
-                        MaxIndexOutputsPerDocument = 10
-                    }
+                    Maps = { "from user in docs.Users select new { CustomAge = user.Age }" }
                 };
                 Assert.Equal(2, database.IndexStore.CreateIndex(indexDefinition2));
             }
@@ -191,7 +187,6 @@ namespace FastTests.Server.Documents.Indexing.Static
                 "a",
                 "b"
             };
-            indexDefinition.Configuration.MaxIndexOutputsPerDocument = 5;
             indexDefinition.Name = "n1";
             indexDefinition.Reduce = "c";
             indexDefinition.Type = IndexType.MapReduce;

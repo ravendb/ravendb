@@ -35,15 +35,5 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Raven/Databases/FrequencyToCheckForIdleDatabasesInSec")]
         [LegacyConfigurationEntry("Raven/Databases/FrequencyToCheckForIdleDatabases")]
         public TimeSetting FrequencyToCheckForIdle { get; set; }
-
-        [Description("The maximum document size after which it will get into the huge documents collection")]
-        [DefaultValue(5 * 1024 * 1024)]
-        [ConfigurationEntry("Raven/Databases/MaxWarnSizeHugeDocuments")]
-        public int MaxWarnSizeHugeDocuments { get; set; }
-
-        [Description("The maximum size of the huge documents collection")]
-        [DefaultValue(100)]
-        [ConfigurationEntry("Raven/Databases/MaxCollectionSizeHugeDocuments")]
-        public int MaxCollectionSizeHugeDocuments { get; set; }
     }
 }

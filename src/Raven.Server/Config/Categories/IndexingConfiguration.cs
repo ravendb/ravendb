@@ -24,11 +24,16 @@ namespace Raven.Server.Config.Categories
         private string _journalsStoragePath;
         private string[] _additionalStoragePaths;
 
-        public IndexingConfiguration(Func<string> databaseName, Func<bool> runInMemory, Func<string> dataDirectory) // TODO arek - maybe use Lazy instead
+        public int MaxWarnIndexOutputsPerDocument { get; }
+
+        // TODO arek - maybe use Lazy instead
+        public IndexingConfiguration(Func<string> databaseName, Func<bool> runInMemory, Func<string> dataDirectory, int maxWarnIndexOutputsPerDocument) 
         {
             _databaseName = databaseName;
             _databaseRunInMemory = runInMemory;
             _dataDirectory = dataDirectory;
+
+            MaxWarnIndexOutputsPerDocument = maxWarnIndexOutputsPerDocument;
         }
 
         [Description("Whatever the indexes should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost. This is mostly useful for testing.")]
@@ -164,18 +169,6 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.None)]
         [ConfigurationEntry("Raven/Indexing/TimeToWaitBeforeDeletingAutoIndexMarkedAsIdleInHrs")]
         public TimeSetting TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle { get; protected set; }
-
-        [Description("Limits the number of map outputs that a map index is allowed to create for a one source document. If a map operation applied to the one document produces more outputs than this number then an index definition will be considered as a suspicious, the indexing of this document will be skipped and the appropriate error message will be added to the indexing errors. Default value: 15. In order to disable this check set value to -1.")]
-        [DefaultValue(15)]
-        [IndexUpdateType(IndexUpdateType.Reset)]
-        [ConfigurationEntry(Constants.Configuration.Indexing.MaxMapIndexOutputsPerDocument)]
-        public int MaxMapIndexOutputsPerDocument { get; protected set; }
-
-        [Description("Limits the number of map outputs that a map-reduce index is allowed to create for a one source document. If a map operation applied to the one document produces more outputs than this number then an index definition will be considered as a suspicious, the indexing of this document will be skipped and the appropriate error message will be added to the indexing errors. Default value: 50. In order to disable this check set value to -1.")]
-        [DefaultValue(50)]
-        [IndexUpdateType(IndexUpdateType.Reset)]
-        [ConfigurationEntry(Constants.Configuration.Indexing.MaxMapReduceIndexOutputsPerDocument)]
-        public int MaxMapReduceIndexOutputsPerDocument { get; protected set; }
 
         [Description("EXPERT ONLY")]
         [DefaultValue(16)]

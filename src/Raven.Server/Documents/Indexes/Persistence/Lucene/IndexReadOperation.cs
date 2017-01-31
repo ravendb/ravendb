@@ -38,8 +38,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private static readonly CompareInfo InvariantCompare = CultureInfo.InvariantCulture.CompareInfo;
 
         private readonly IndexType _indexType;
-        private readonly int? _actualMaxIndexOutputsPerDocument;
-        private readonly int _maxIndexOutputsPerDocument;
         private readonly bool _indexHasBoostedFields;
 
         private readonly IndexSearcher _searcher;
@@ -62,8 +60,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             _indexType = index.Type;
             _indexHasBoostedFields = index.HasBoostedFields;
-            _actualMaxIndexOutputsPerDocument = index.ActualMaxNumberOfIndexOutputs;
-            _maxIndexOutputsPerDocument = index.MaxNumberOfIndexOutputs;
             _releaseReadTransaction = directory.SetTransaction(readTransaction);
             _releaseSearcher = searcherHolder.GetSearcher(readTransaction, out _searcher);
         }
@@ -82,7 +78,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var sort = GetSort(query.SortedFields);
             var returnedResults = 0;
 
-            using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _maxIndexOutputsPerDocument, _actualMaxIndexOutputsPerDocument))
+            using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever))
             {
                 while (true)
                 {
@@ -122,10 +118,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             yield break;
                     }
 
-                    if (scope.HasMultipleIndexOutputs)
-                        docsToGet += (query.PageSize - returnedResults) * scope.MaxNumberOfIndexOutputs;
-                    else
-                        docsToGet += query.PageSize - returnedResults;
+                    docsToGet += query.PageSize - returnedResults;
 
                     if (search.TotalHits == search.ScoreDocs.Length)
                         break;
@@ -151,7 +144,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var firstSubDocumentQuery = GetLuceneQuery(subQueries[0], query.DefaultOperator, query.DefaultField, _analyzer);
             var sort = GetSort(query.SortedFields);
 
-            using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _maxIndexOutputsPerDocument, _actualMaxIndexOutputsPerDocument))
+            using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever))
             {
                 //Do the first sub-query in the normal way, so that sorting, filtering etc is accounted for
                 var search = ExecuteQuery(firstSubDocumentQuery, 0, pageSizeBestGuess, sort);

@@ -36,11 +36,11 @@ namespace Tryouts
         {
             for (int i = 0; i < 100; i++)
             {
-                Console.WriteLine(i);
-                using (var a = new FastTests.Server.Replication.ReplicationTopologyDiscoveryTests())
+                using (var a = new FastTests.Server.Replication.ReplicationResolveConflictsOnConfigurationChange())
                 {
-                    a.Master_with_offline_slaves_should_be_properly_detected_in_full_topology();
+                    a.ResolveWhenChangeToLatest();
                 }
+                Console.WriteLine($"{i} finished");
             }
         }
     }

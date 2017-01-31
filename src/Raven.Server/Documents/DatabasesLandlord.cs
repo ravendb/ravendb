@@ -12,7 +12,7 @@ using Raven.Client.Json;
 using Raven.NewClient.Client.Exceptions.Database;
 using Raven.Server.Config;
 using Raven.Server.Exceptions;
-using Raven.Server.NotificationCenter.Actions.Server;
+using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;

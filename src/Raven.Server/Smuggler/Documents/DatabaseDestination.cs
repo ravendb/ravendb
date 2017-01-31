@@ -8,6 +8,7 @@ using Raven.Abstractions.Util;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
 using Raven.Client.Smuggler;
+using Raven.NewClient.Extensions;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
@@ -158,7 +159,7 @@ namespace Raven.Server.Smuggler.Documents
 
             private void ModifyDocumentIfNecessary(Document document)
             {
-            
+             
                 BlittableJsonReaderObject metadata;
                 if (document.Data.TryGet(Constants.Metadata.Key, out metadata) == false)
                     return;
@@ -166,12 +167,6 @@ namespace Raven.Server.Smuggler.Documents
                 // apply all the metadata conversions here
                 ConvertRavenEntityName(metadata);
                 RemoveOldProperties(metadata);
-
-                if (metadata.Modifications == null)
-                    return;
-
-                using (document.Data)
-                    document.Data = _command.Context.ReadObject(document.Data, document.Key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
             }
 
             private static void RemoveOldProperties(BlittableJsonReaderObject metadata)
@@ -206,27 +201,20 @@ namespace Raven.Server.Smuggler.Documents
 
             private void HandleBatchOfDocumentsIfNecessary()
             {
-                if (_command.Context.AllocatedMemory < _enqueueThreshold.GetValue(SizeUnit.Bytes))
+                if (_command.TotalSize < _enqueueThreshold)
                     return;
 
-                var prevCmd = _prevCommand;
-
-                _prevCommand = _command;
-                _prevCommandTask = _database.TxMerger.Enqueue(_command);
-
-                if (prevCmd != null)
+                if (_prevCommand != null)
                 {
-                    using (prevCmd)
-                    {
+                    using (_prevCommand)
                         AsyncHelpers.RunSync(() => _prevCommandTask);
-                        Debug.Assert(prevCmd.IsDisposed == false,
-                            "we rely on reusing this context on the next batch, so it has to be disposed here");
-                    }
                 }
 
-                _command = new MergedBatchPutCommand(_database, _buildVersion, _log)
+                _prevCommandTask = _database.TxMerger.Enqueue(_command);
+                _prevCommand = _command;
+                _command = new MergedBatchPutCommand(_database, _buildVersion)
                 {
-                    IsRevision = _isRevision,
+                    IsRevision = _isRevision
                 };
             }
 
@@ -326,10 +314,7 @@ namespace Raven.Server.Smuggler.Documents
                 foreach (var document in Documents)
                 {
                     var key = document.Key;
-
-                    BlittableJsonReaderObject metadata;
-                    if (document.Data.TryGet(Constants.Metadata.Key, out metadata) == false)
-                        ThrowDocumentMustHaveMetadata();
+                    var metadata = document.Data.GetMetadata();
 
                     if (metadata.Modifications == null)
                         metadata.Modifications = new DynamicJsonValue(metadata);
@@ -337,20 +322,17 @@ namespace Raven.Server.Smuggler.Documents
                     metadata.Modifications.Remove(Constants.Metadata.Id);
                     metadata.Modifications.Remove(Constants.Metadata.Etag);
 
+                    using (document.Data)
+                        document.Data = _context.ReadObject(document.Data, document.Key, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+
                     if (IsRevision)
                     {
-                        long etag;
-                        if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
-                            throw new InvalidOperationException("Document's metadata must include the document's key.");
-
+                      
                         _database.BundleLoader.VersioningStorage.PutDirect(context, key, etag, document.Data);
                     }
                     else if (_buildVersion < 40000 && key.Contains("/revisions/"))
                     {
-                        long etag;
-                        if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
-                            throw new InvalidOperationException("Document's metadata must include the document's key.");
-
+                     
                         var endIndex = key.IndexOf("/revisions/", StringComparison.OrdinalIgnoreCase);
                         var newKey = key.Substring(0, endIndex);
 

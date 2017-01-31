@@ -8,33 +8,33 @@ import getResourceCommand = require("commands/resources/getResourceCommand");
 abstract class resourceInfo {
 
     name: string;
-    bundles = ko.observableArray<string>();
-    isAdmin = ko.observable<boolean>();
-    isCurrentlyActiveResource: KnockoutComputed<boolean>;
-    disabled = ko.observable<boolean>();
+
+    uptime = ko.observable<string>();  
     totalSize = ko.observable<string>();
-
-    errors = ko.observable<number>();
-    alerts = ko.observable<number>();
-
-    hasErrors: KnockoutComputed<boolean>;
-    hasAlerts: KnockoutComputed<boolean>;
-
-    licensed = ko.observable<boolean>(true); //TODO: bind this value
-
-    uptime = ko.observable<string>();
+    bundles = ko.observableArray<string>();     
+    backupStatus = ko.observable<string>();   
     lastFullOrIncrementalBackup = ko.observable<string>();
-    backupStatus = ko.observable<string>();
+
+    isAdmin = ko.observable<boolean>();   
+    disabled = ko.observable<boolean>();
     backupEnabled = ko.observable<boolean>();
 
+    licensed = ko.observable<boolean>(true); //TODO: bind this value  
     filteredOut = ko.observable<boolean>(false);
+    isBeingDeleted = ko.observable<boolean>(false);
 
-    badgeClass: KnockoutComputed<string>;
+    errors = ko.observable<number>();
+    alerts = ko.observable<number>();    
+
     badgeText: KnockoutComputed<string>;
+    badgeClass: KnockoutComputed<string>;   
+
     online: KnockoutComputed<boolean>;
     isLoading: KnockoutComputed<boolean>;
-
-    canNavigateToResource: KnockoutComputed<boolean>;
+    hasErrors: KnockoutComputed<boolean>;
+    hasAlerts: KnockoutComputed<boolean>;      
+    canNavigateToResource: KnockoutComputed<boolean>;   
+    isCurrentlyActiveResource: KnockoutComputed<boolean>;
 
     static extractQualifierAndNameFromNotification(input: string): { qualifier: string, name: string } {
         return { qualifier: input.substr(0, 2), name: input.substr(3) };

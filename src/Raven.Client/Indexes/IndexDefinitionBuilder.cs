@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 
-using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Indexing;
 using Raven.Abstractions.Util;
@@ -126,11 +125,6 @@ namespace Raven.Client.Indexes
         public IndexLockMode LockMode { get; set; }
 
         /// <summary>
-        /// Max number of allowed indexing outputs per one source document
-        /// </summary>
-        public int? MaxIndexOutputsPerDocument { get; set; }
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="IndexDefinitionBuilder{TDocument,TReduceResult}"/> class.
         /// </summary>
         public IndexDefinitionBuilder(string indexName = null)
@@ -172,9 +166,6 @@ namespace Raven.Client.Indexes
                     Reduce = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(Reduce, convention, "results", translateIdentityProperty: false),
                     LockMode = LockMode
                 };
-
-                if (MaxIndexOutputsPerDocument.HasValue)
-                    indexDefinition.Configuration.MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument;
 
                 var indexes = ConvertToStringDictionary(Indexes);
                 var stores = ConvertToStringDictionary(Stores);

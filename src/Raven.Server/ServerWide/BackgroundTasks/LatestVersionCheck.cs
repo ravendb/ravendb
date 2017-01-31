@@ -6,9 +6,8 @@ using Raven.Abstractions;
 using Sparrow.Logging;
 using Raven.Abstractions.Util;
 using Raven.Server.Json;
-using Raven.Server.NotificationCenter.Actions;
-using Raven.Server.NotificationCenter.Actions.Details;
-using Raven.Server.NotificationCenter.Alerts;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 

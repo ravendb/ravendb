@@ -20,32 +20,32 @@ namespace Raven.Client.Counters.Changes
             return ensureConnection(this);
         }
 
-        public event Action<ChangeNotification> OnChangeNotification = (x) => { };
-        public void Send(ChangeNotification changeNotification)
+        public event Action<CounterChange> OnChangeNotification = (x) => { };
+        public void Send(CounterChange changeChange)
         {
             var onCounterChangeNotification = OnChangeNotification;
-            onCounterChangeNotification?.Invoke(changeNotification);
+            onCounterChangeNotification?.Invoke(changeChange);
         }
 
-        public event Action<StartingWithNotification> OnCountersStartingWithNotification = (x) => { };
-        public void Send(StartingWithNotification changeNotification)
+        public event Action<StartingWithChange> OnCountersStartingWithNotification = (x) => { };
+        public void Send(StartingWithChange changeChange)
         {
             var onCounterChangeNotification = OnCountersStartingWithNotification;
-            onCounterChangeNotification?.Invoke(changeNotification);
+            onCounterChangeNotification?.Invoke(changeChange);
         }
 
-        public event Action<InGroupNotification> OnCountersInGroupNotification = (x) => { };
-        public void Send(InGroupNotification changeNotification)
+        public event Action<InGroupChange> OnCountersInGroupNotification = (x) => { };
+        public void Send(InGroupChange changeChange)
         {
             var onCounterChangeNotification = OnCountersInGroupNotification;
-            onCounterChangeNotification?.Invoke(changeNotification);
+            onCounterChangeNotification?.Invoke(changeChange);
         }
 
-        public event Action<BulkOperationNotification> OnBulkOperationNotification = (x) => { };
-        public void Send(BulkOperationNotification bulkOperationNotification)
+        public event Action<BulkOperationChange> OnBulkOperationNotification = (x) => { };
+        public void Send(BulkOperationChange bulkOperationChange)
         {
             var onBulkOperationNotification = OnBulkOperationNotification;
-            onBulkOperationNotification?.Invoke(bulkOperationNotification);
+            onBulkOperationNotification?.Invoke(bulkOperationChange);
         }
     }
 }

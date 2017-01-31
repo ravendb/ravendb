@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Abstractions.Data;
 using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
 using Raven.NewClient.Client.Commands;
@@ -16,6 +17,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
@@ -341,19 +343,26 @@ namespace Raven.Server.Utils
             }).ToArray();
         }
 
-        private static bool TryFindEtagByDbId(this ChangeVectorEntry[] changeVector, Guid dbId, out long etag)
+        public static void EnsureCollectionTag(BlittableJsonReaderObject obj, string collection)
         {
-            etag = 0;
-            for (int i = 0; i < changeVector.Length; i++)
+            string actualCollection;
+            BlittableJsonReaderObject metadata;
+            if (obj.TryGet(Constants.Metadata.Key, out metadata) == false ||
+                metadata.TryGet(Constants.Metadata.Collection, out actualCollection) == false ||
+                actualCollection != collection)
             {
-                if (changeVector[i].DbId == dbId)
-                {
-                    etag = changeVector[i].Etag;
-                    return true;
-                }
-            }
+                if (collection == CollectionName.EmptyCollection)
+                    return;
 
-            return false;
+                ThrowInvalidCollectionAfterResolve(collection, null);
+            }
+        }
+
+        private static void ThrowInvalidCollectionAfterResolve(string collection, string actual)
+        {
+            throw new InvalidOperationException(
+                "Resolving script did not setup the appropriate '@collection'. Expeted " + collection + " but got " +
+                actual);
         }
     }
 }

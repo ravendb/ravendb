@@ -630,7 +630,16 @@ namespace Sparrow.Json
         {
             var mem = context.GetMemory(Size);
             CopyTo(mem.Address);
-            return new BlittableJsonReaderObject(mem.Address, Size,context);    
+            var cloned = new BlittableJsonReaderObject(mem.Address, Size, context);
+            if (Modifications != null)
+            {
+                cloned.Modifications = new DynamicJsonValue(cloned);
+                foreach (var property in Modifications.Properties)
+                {
+                    cloned.Modifications.Properties.Enqueue(property);
+                }
+            }
+            return cloned;    
         }
 
         public void BlittableValidation()

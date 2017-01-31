@@ -5,12 +5,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
-using Raven.Server.NotificationCenter.Actions;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Logging;
-using Action = Raven.Server.NotificationCenter.Actions.Action;
 
 namespace Raven.Server.NotificationCenter
 {
@@ -20,16 +19,16 @@ namespace Raven.Server.NotificationCenter
 
         private readonly Logger Logger;
 
-        private readonly ActionsStorage _actionsStorage;
+        private readonly NotificationsStorage _notificationsStorage;
         private readonly CancellationToken _shutdown;
         private readonly ConcurrentSet<ConnectedWatcher> _watchers = new ConcurrentSet<ConnectedWatcher>();
         private readonly AsyncManualResetEvent _postponedNotificationEvent;
         
-        public NotificationCenter(ActionsStorage actionsStorage, string resourceName, CancellationToken shutdown)
+        public NotificationCenter(NotificationsStorage notificationsStorage, string resourceName, CancellationToken shutdown)
         {
-            _actionsStorage = actionsStorage;
+            _notificationsStorage = notificationsStorage;
             _shutdown = shutdown;
-            Logger = LoggingSource.Instance.GetLogger<ActionsStorage>(resourceName);
+            Logger = LoggingSource.Instance.GetLogger<NotificationsStorage>(resourceName);
             _postponedNotificationEvent = new AsyncManualResetEvent(shutdown);
         }
 
@@ -38,11 +37,11 @@ namespace Raven.Server.NotificationCenter
             Task.Run(PostponedNotificationsSender);
         }
 
-        public IDisposable TrackActions(AsyncQueue<Action> actionsQueue, IWebsocketWriter webSockerWriter)
+        public IDisposable TrackActions(AsyncQueue<Notification> notificationsQueue, IWebsocketWriter webSockerWriter)
         {
             var watcher = new ConnectedWatcher
             {
-                ActionsQueue = actionsQueue,
+                NotificationsQueue = notificationsQueue,
                 Writer = webSockerWriter
             };
 
@@ -51,18 +50,18 @@ namespace Raven.Server.NotificationCenter
             return new DisposableAction(() => _watchers.TryRemove(watcher));
         }
 
-        public void Add(Action action)
+        public void Add(Notification notification)
         {
-            if (action.IsPersistent)
+            if (notification.IsPersistent)
             {
-                _actionsStorage.Store(action);
+                _notificationsStorage.Store(notification);
             }
 
             if (_watchers.Count == 0)
                 return;
 
-            ActionTableValue existing;
-            using (_actionsStorage.Read(action.Id, out existing))
+            NotificationTableValue existing;
+            using (_notificationsStorage.Read(notification.Id, out existing))
             {
                 if (existing?.PostponedUntil > SystemTime.UtcNow)
                     return;
@@ -70,11 +69,11 @@ namespace Raven.Server.NotificationCenter
 
             foreach (var watcher in _watchers)
             {
-                watcher.ActionsQueue.Enqueue(action);
+                watcher.NotificationsQueue.Enqueue(notification);
             }
         }
 
-        public void AddAfterTransactionCommit(Action action, RavenTransaction tx)
+        public void AddAfterTransactionCommit(Notification notification, RavenTransaction tx)
         {
             var llt = tx.InnerTransaction.LowLevelTransaction;
 
@@ -83,13 +82,13 @@ namespace Raven.Server.NotificationCenter
                 if (llt.Committed == false)
                     return;
 
-                Add(action);
+                Add(notification);
             };
         }
 
-        public IDisposable GetStored(out IEnumerable<ActionTableValue> actions, bool postponed = true)
+        public IDisposable GetStored(out IEnumerable<NotificationTableValue> actions, bool postponed = true)
         {
-            var scope = _actionsStorage.ReadActionsOrderedByCreationDate(out actions);
+            var scope = _notificationsStorage.ReadActionsOrderedByCreationDate(out actions);
 
             if (postponed)
                 return scope;
@@ -103,12 +102,12 @@ namespace Raven.Server.NotificationCenter
 
         public long GetAlertCount()
         {
-            return _actionsStorage.GetAlertCount();
+            return _notificationsStorage.GetAlertCount();
         }
 
         public void Dismiss(string id)
         {
-            var deleted = _actionsStorage.Delete(id);
+            var deleted = _notificationsStorage.Delete(id);
 
             if (deleted == false)
                 return;
@@ -118,7 +117,7 @@ namespace Raven.Server.NotificationCenter
 
         public void Postpone(string id, DateTime until)
         {
-            _actionsStorage.ChangePostponeDate(id, until);
+            _notificationsStorage.ChangePostponeDate(id, until);
 
             Add(NotificationUpdated.Create(id, NotificationUpdateType.Postponed));
 
@@ -147,22 +146,22 @@ namespace Raven.Server.NotificationCenter
                     {
                         var next = notifications.Dequeue();
 
-                        ActionTableValue action;
-                        using (_actionsStorage.Read(next.Id, out action))
+                        NotificationTableValue notification;
+                        using (_notificationsStorage.Read(next.Id, out notification))
                         {
-                            if (action == null) // could be deleted meanwhile
+                            if (notification == null) // could be deleted meanwhile
                                 continue;
 
                             try
                             {
                                 foreach (var watcher in _watchers)
                                 {
-                                    await watcher.Writer.WriteToWebSocket(action.Json);
+                                    await watcher.Writer.WriteToWebSocket(notification.Json);
                                 }
                             }
                             finally
                             {
-                                _actionsStorage.ChangePostponeDate(next.Id, null);
+                                _notificationsStorage.ChangePostponeDate(next.Id, null);
                             }
                         }
                     }
@@ -184,14 +183,14 @@ namespace Raven.Server.NotificationCenter
         {
             var next = new Queue<PostponedNotification>();
 
-            IEnumerable<ActionTableValue> actions;
-            using (_actionsStorage.ReadPostponedActions(out actions, SystemTime.UtcNow))
+            IEnumerable<NotificationTableValue> actions;
+            using (_notificationsStorage.ReadPostponedActions(out actions, SystemTime.UtcNow))
             {
                 foreach (var action in actions)
                 {
                     next.Enqueue(new PostponedNotification
                     {
-                        Id = action.Json[nameof(Action.Id)].ToString(),
+                        Id = action.Json[nameof(Notification.Id)].ToString(),
                         PostponedUntil = action.PostponedUntil.Value
                     });
                 }
@@ -209,7 +208,7 @@ namespace Raven.Server.NotificationCenter
 
         private class ConnectedWatcher
         {
-            public AsyncQueue<Action> ActionsQueue;
+            public AsyncQueue<Notification> NotificationsQueue;
 
             public IWebsocketWriter Writer;
         }

@@ -226,7 +226,6 @@ class editIndex extends viewModelBase {
                 checkedFieldsArray.push(configItem.value);
             });
         }
-        checkedFieldsArray.push(indexDef.maxIndexOutputsPerDocument);
 
         indexDef.fields().forEach(field => {
             checkedFieldsArray.push(field.name);

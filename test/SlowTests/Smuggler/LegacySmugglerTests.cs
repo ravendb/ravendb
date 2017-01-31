@@ -78,8 +78,8 @@ namespace SlowTests.Smuggler
                     // not everything can be imported
                     // LoadDocument(key)
                     // Spatial
-                    Assert.True(stats.CountOfIndexes >= 589);
-                    Assert.True(stats.CountOfIndexes <= 658);
+                    Assert.True(stats.CountOfIndexes >= 589, $"{stats.CountOfIndexes} >= 589");
+                    Assert.True(stats.CountOfIndexes <= 658, $"{stats.CountOfIndexes} <= 658");
 
                     // not everything can be imported
                     // LoadDocument(key)

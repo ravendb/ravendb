@@ -10,14 +10,17 @@ using Raven.Client.Data.Queries;
 using Raven.Client.Indexing;
 using Raven.Client.Smuggler;
 using Raven.Json.Linq;
+using Raven.NewClient.Client.Data.Collections;
 using Raven.Server.Commercial;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Versioning;
 using Raven.Server.Documents.SqlReplication;
 using Raven.Server.Documents.PeriodicExport;
+using Raven.Server.Web.System;
 using Raven.Server.NotificationCenter.Actions;
-using Raven.Server.NotificationCenter.Actions.Server;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Server;
 using Sparrow.Json;
 using TypeScripter;
 using TypeScripter.TypeScript;
@@ -68,9 +71,9 @@ namespace TypingsGenerator
                 typeof(IEquatable<>)
             };
 
-
             scripter.UsingTypeFilter(type => ignoredTypes.Contains(type) == false);
             scripter.UsingTypeReader(new TypeReaderWithIgnoreMethods());
+            scripter.AddType(typeof(CollectionStatistics));
 
             scripter.AddType(typeof(DatabaseDocument));
             scripter.AddType(typeof(DatabaseStatistics));
@@ -82,14 +85,14 @@ namespace TypingsGenerator
             scripter.AddType(typeof(OperationChanged));
             scripter.AddType(typeof(ResourceChanged));
 
-            // notifications
-            scripter.AddType(typeof(OperationStatusChangeNotification));
+            // changes
+            scripter.AddType(typeof(OperationStatusChanged));
             scripter.AddType(typeof(DeterminateProgress));
             scripter.AddType(typeof(IndeterminateProgress));
             scripter.AddType(typeof(OperationExceptionResult));
-            scripter.AddType(typeof(DocumentChangeNotification));
-            scripter.AddType(typeof(IndexChangeNotification));
-            scripter.AddType(typeof(TransformerChangeNotification));
+            scripter.AddType(typeof(DocumentChange));
+            scripter.AddType(typeof(IndexChange));
+            scripter.AddType(typeof(TransformerChange));
             scripter.AddType(typeof(DatabaseOperations.Operation));
             
             // indexes
@@ -105,12 +108,10 @@ namespace TypingsGenerator
             // transformers
             scripter.AddType(typeof(TransformerDefinition));
 
-
             // patch
             scripter.AddType(typeof(PatchRequest));
 
             scripter.AddType(typeof(ResourcesInfo));
-
 
             // smuggler
             scripter.AddType(typeof(DatabaseSmugglerOptions));
@@ -127,7 +128,6 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SqlReplicationStatistics));
             scripter.AddType(typeof(SimulateSqlReplication));
 
-
             // periodic export
             scripter.AddType(typeof(PeriodicExportConfiguration));
 
@@ -142,6 +142,9 @@ namespace TypingsGenerator
             scripter.AddType(typeof(License));
             scripter.AddType(typeof(UserRegistrationInfo));
             scripter.AddType(typeof(LicenseStatus));
+
+            // database admin
+            scripter.AddType(typeof(ResourceDeleteResult));
 
             return scripter;
         }

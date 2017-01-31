@@ -137,9 +137,17 @@ namespace Raven.Server.Documents.Patch
                 return;
             }
             writer.StartWriteObject();
+            WriteRawObjectPropertiesToBlittable(writer, jsObject, propertyKey, recursiveCall);
+            writer.WriteObjectEnd();
+        }
+
+        public void WriteRawObjectPropertiesToBlittable(ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer> writer, ObjectInstance jsObject, string propertyKey = null,
+            bool recursiveCall = false)
+        {
             foreach (var property in jsObject.GetOwnProperties())
             {
-                if (property.Key == Constants.Indexing.Fields.ReduceKeyFieldName || property.Key == Constants.Indexing.Fields.DocumentIdFieldName)
+                if (property.Key == Constants.Indexing.Fields.ReduceKeyFieldName ||
+                    property.Key == Constants.Indexing.Fields.DocumentIdFieldName)
                     continue;
 
                 var value = property.Value.Value;
@@ -158,7 +166,6 @@ namespace Raven.Server.Documents.Patch
                     ToBlittableJsonReaderValue(writer, value, CreatePropertyKey(property.Key, propertyKey), recursive);
                 }
             }
-            writer.WriteObjectEnd();
         }
 
         private void ToBlittableJsonReaderValue(ManualBlittalbeJsonDocumentBuilder<UnmanagedWriteBuffer> writer, JsValue v, string propertyKey, bool recursiveCall)

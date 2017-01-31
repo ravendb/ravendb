@@ -22,8 +22,7 @@ using Raven.Json.Linq;
 using Raven.NewClient.Client.Exceptions.Database;
 using Raven.Server.Exceptions;
 using Raven.Server.Extensions;
-using Raven.Server.NotificationCenter.Actions;
-using Raven.Server.NotificationCenter.Alerts;
+using Raven.Server.NotificationCenter.Notifications;
 using Sparrow;
 
 namespace Raven.Server.Documents.Replication
@@ -80,9 +79,9 @@ namespace Raven.Server.Documents.Replication
             _database = database;
             _destination = destination;
             _log = LoggingSource.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
-            _database.Notifications.OnDocumentChange += OnDocumentChange;
-            _database.Notifications.OnIndexChange += OnIndexChange;
-            _database.Notifications.OnTransformerChange += OnTransformerChange;
+            _database.Changes.OnDocumentChange += OnDocumentChange;
+            _database.Changes.OnIndexChange += OnIndexChange;
+            _database.Changes.OnTransformerChange += OnTransformerChange;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
         }
 
@@ -569,37 +568,37 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void OnDocumentChange(DocumentChangeNotification notification)
+        private void OnDocumentChange(DocumentChange change)
         {
-            if (notification.TriggeredByReplicationThread)
+            if (change.TriggeredByReplicationThread)
                 return;
             _waitForChanges.Set();
         }
 
-        private void OnIndexChange(IndexChangeNotification notification)
+        private void OnIndexChange(IndexChange change)
         {
-            if (notification.Type != IndexChangeTypes.IndexAdded &&
-                notification.Type != IndexChangeTypes.IndexRemoved)
+            if (change.Type != IndexChangeTypes.IndexAdded &&
+                change.Type != IndexChangeTypes.IndexRemoved)
                 return;
 
             if (_log.IsInfoEnabled)
                 _log.Info(
-                    $"Received index {notification.Type} event, index name = {notification.Name}, etag = {notification.Etag}");
+                    $"Received index {change.Type} event, index name = {change.Name}, etag = {change.Etag}");
 
             if (IncomingReplicationHandler.IsIncomingReplicationThread)
                 return;
             _waitForChanges.Set();
         }
 
-        private void OnTransformerChange(TransformerChangeNotification notification)
+        private void OnTransformerChange(TransformerChange change)
         {
-            if (notification.Type != TransformerChangeTypes.TransformerAdded &&
-                notification.Type != TransformerChangeTypes.TransformerRemoved)
+            if (change.Type != TransformerChangeTypes.TransformerAdded &&
+                change.Type != TransformerChangeTypes.TransformerRemoved)
                 return;
 
             if (_log.IsInfoEnabled)
                 _log.Info(
-                    $"Received transformer {notification.Type} event, transformer name = {notification.Name}, etag = {notification.Etag}");
+                    $"Received transformer {change.Type} event, transformer name = {change.Name}, etag = {change.Etag}");
 
             if (IncomingReplicationHandler.IsIncomingReplicationThread)
                 return;
@@ -611,9 +610,9 @@ namespace Raven.Server.Documents.Replication
             if (_log.IsInfoEnabled)
                 _log.Info($"Disposing OutgoingReplicationHandler ({FromToString})");
 
-            _database.Notifications.OnDocumentChange -= OnDocumentChange;
-            _database.Notifications.OnIndexChange -= OnIndexChange;
-            _database.Notifications.OnTransformerChange -= OnTransformerChange;
+            _database.Changes.OnDocumentChange -= OnDocumentChange;
+            _database.Changes.OnIndexChange -= OnIndexChange;
+            _database.Changes.OnTransformerChange -= OnTransformerChange;
 
             _cts.Cancel();
           

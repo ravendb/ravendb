@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Sparrow.Json;
 
@@ -8,40 +6,8 @@ namespace Raven.Client.Indexing
 {
     public class IndexConfiguration : Dictionary<string, string>, IFillFromBlittableJson
     {
-        /// <summary>
-        /// Index specific setting that limits the number of map outputs that an index is allowed to create for a one source document. If a map operation applied to
-        /// the one document produces more outputs than this number then an index definition will be considered as a suspicious, the indexing of this document 
-        /// will be skipped and the appropriate error message will be added to the indexing errors.
-        /// <para>Default value: null means that the global value from Raven configuration will be taken to detect if number of outputs was exceeded.</para>
-        /// </summary>
-        [JsonIgnore]
-        public int? MaxIndexOutputsPerDocument
-        {
-            get
-            {
-                var value = GetValue(Constants.Configuration.Indexing.MaxIndexOutputsPerDocument);
-                if (value == null)
-                    return null;
-
-                int valueAsInt;
-                if (int.TryParse(value, out valueAsInt) == false)
-                    return null;
-
-                return valueAsInt;
-            }
-
-            set
-            {
-                Add(Constants.Configuration.Indexing.MaxIndexOutputsPerDocument, value?.ToInvariantString());
-            }
-        }
-
         public new void Add(string key, string value)
         {
-            if (string.Equals(key, Constants.Configuration.Indexing.MaxMapReduceIndexOutputsPerDocument, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(key, Constants.Configuration.Indexing.MaxMapReduceIndexOutputsPerDocument, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException($"Cannot set '{key}' key. Use '{Constants.Configuration.Indexing.MaxIndexOutputsPerDocument}' instead.");
-
             base[key] = value;
         }
 

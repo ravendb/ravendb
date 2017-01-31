@@ -208,7 +208,7 @@ class resourcesManager {
         });
     }
 
-    private onIndexNofitication(db: database, notification: Raven.Abstractions.Data.IndexChangeNotification) {
+    private onIndexNofitication(db: database, notification: Raven.Abstractions.Data.IndexChange) {
         if (notification.Type === "IndexRemoved") {
             this.onIndexDeletedCallback.forEach(callback => {
                 callback(db.name, notification.Name);
@@ -319,7 +319,7 @@ class resourcesManager {
         ];
     }
 
-    private onResourceUpdateReceivedViaChangesApi(event: Raven.Server.NotificationCenter.Actions.Server.ResourceChanged) {
+    private onResourceUpdateReceivedViaChangesApi(event: Raven.Server.NotificationCenter.Notifications.Server.ResourceChanged) {
         let resource = this.getResourceByQualifiedName(event.ResourceName);
         if (event.ChangeType === "Delete" && resource) {
             

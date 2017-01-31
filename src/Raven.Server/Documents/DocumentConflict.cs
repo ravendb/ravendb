@@ -15,7 +15,7 @@ namespace Raven.Server.Documents
         public DateTime LastModified;
         public long Etag; // the etag of the current db when this conflict was added
 
-        public static DocumentConflict From(Document doc)
+        public static DocumentConflict From(JsonOperationContext ctx,Document doc)
         {
             if (doc == null)
             {
@@ -29,7 +29,8 @@ namespace Raven.Server.Documents
                 Doc = doc.Data,
                 StorageId = doc.StorageId,
                 ChangeVector = doc.ChangeVector,
-                LastModified = doc.LastModified
+                LastModified = doc.LastModified,
+                Collection = ctx.GetLazyStringForFieldWithCaching(CollectionName.GetCollectionName(doc.Key, doc.Data))
             };
         }
 

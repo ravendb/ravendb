@@ -104,8 +104,6 @@ namespace Raven.Server.Smuggler.Documents.Data
             set { _spatialIndexes = value; }
         }
 
-        public int? MaxIndexOutputsPerDocument { get; set; }
-
         [JsonIgnore]
         private HashSet<string> _maps;
         [JsonIgnore]

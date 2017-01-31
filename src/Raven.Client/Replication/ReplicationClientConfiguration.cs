@@ -3,10 +3,21 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+
+using Sparrow.Json.Parsing;
+
 namespace Raven.Abstractions.Replication
 {
     public class ReplicationClientConfiguration
     {
         public FailoverBehavior? FailoverBehavior { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(FailoverBehavior)] = FailoverBehavior
+            };
+        }
     }
 }

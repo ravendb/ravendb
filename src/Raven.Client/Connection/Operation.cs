@@ -10,7 +10,7 @@ using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
 {
-    public class Operation : IObserver<OperationStatusChangeNotification>
+    public class Operation : IObserver<OperationStatusChanged>
     {
         private readonly AsyncServerClient _asyncServerClient;
         private readonly long _id;
@@ -64,32 +64,32 @@ namespace Raven.Client.Connection
                     .Deserialize<OperationState>(new RavenJTokenReader(operationStatusJson));
             // using deserializer from Conventions to properly handle $type mapping
 
-            OnNext(new OperationStatusChangeNotification
+            OnNext(new OperationStatusChanged
             {
                 OperationId = _id,
                 State = operationStatus
             });
         }
 
-        public void OnNext(OperationStatusChangeNotification notification)
+        public void OnNext(OperationStatusChanged change)
         {
             var onProgress = OnProgressChanged;
 
-            switch (notification.State.Status)
+            switch (change.State.Status)
             {
                 case OperationStatus.InProgress:
-                    if (onProgress != null && notification.State.Progress != null)
+                    if (onProgress != null && change.State.Progress != null)
                     {
-                        onProgress(notification.State.Progress);
+                        onProgress(change.State.Progress);
                     }
                     break;
                 case OperationStatus.Completed:
                     _subscription.Dispose();
-                    _result.TrySetResult(notification.State.Result);
+                    _result.TrySetResult(change.State.Result);
                     break;
                 case OperationStatus.Faulted:
                     _subscription.Dispose();
-                    var exceptionResult = notification.State.Result as OperationExceptionResult;
+                    var exceptionResult = change.State.Result as OperationExceptionResult;
                     if (exceptionResult?.StatusCode == HttpStatusCode.Conflict)
                         _result.TrySetException(new ConflictException(exceptionResult.Message));
                     else

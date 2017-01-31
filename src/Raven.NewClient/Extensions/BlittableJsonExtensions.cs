@@ -28,5 +28,37 @@ namespace Raven.NewClient.Extensions
         {
             return metadata.TryGet(Constants.Metadata.Id, out id) && id != null;
         }
+
+        public static long GetEtag(this BlittableJsonReaderObject metadata)
+        {
+            long etag;
+            if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
+                InvalidMissingEtag();
+
+            return etag;
+        }
+
+        private static void InvalidMissingEtag()
+        {
+            throw new InvalidOperationException($"Metadata does not contain '{Constants.Metadata.Etag}' field.");
+        }
+
+        public static bool TryGetEtag(this BlittableJsonReaderObject metadata, out long etag)
+        {
+            object etagAsObject;
+            if (metadata.TryGetMember(Constants.Metadata.Etag, out etagAsObject) == false)
+            {
+                etag = 0;
+                return false;
+            }
+
+            if (etagAsObject is long)
+            {
+                etag = (long)etagAsObject;
+                return true;
+            }
+
+            return long.TryParse(etagAsObject.ToString(), out etag);
+        }
     }
 }

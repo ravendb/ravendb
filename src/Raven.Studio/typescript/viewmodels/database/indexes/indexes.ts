@@ -213,7 +213,7 @@ class indexes extends viewModelBase {
         this.resetsInProgress.delete(i.name);
     }
 
-    private processIndexEvent(e: Raven.Abstractions.Data.IndexChangeNotification) {
+    private processIndexEvent(e: Raven.Abstractions.Data.IndexChange) {
         const indexRemovedEvent = "IndexRemoved" as Raven.Abstractions.Data.IndexChangeTypes;
         if (e.Type === indexRemovedEvent) {
             if (!this.resetsInProgress.has(e.Name)) {

@@ -11,6 +11,7 @@ using Jint.Parser;
 using Jint.Parser.Ast;
 using Jint.Runtime;
 using Jint.Runtime.Descriptors;
+using Raven.Abstractions.Data;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
@@ -105,6 +106,10 @@ namespace Raven.Server.Documents.Patch
             if (scope.ActualPatchResult == JsValue.Undefined || scope.ActualPatchResult == JsValue.Undefined)
             {
                 val = null;
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info($"Conflict resolution script for {_docs[0].Collection} collection declined to resolve the conflict for {_docs[0].LoweredKey}");
+                }
                 return false;
             }
 
@@ -118,7 +123,65 @@ namespace Raven.Server.Documents.Patch
             {
                 writer.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
                 writer.StartWriteObjectDocument();
-                scope.ToBlittableJsonReaderObject(writer, obj);
+                writer.StartWriteObject();
+                var resolvedMetadata = obj.Get(Constants.Metadata.Key);
+                if (resolvedMetadata == null ||
+                    resolvedMetadata == JsValue.Undefined)
+                {
+                    // if user didn't specify it, we'll take it from the first doc
+                    foreach (var doc in _docs)
+                    {
+                        BlittableJsonReaderObject metadata;
+                        if (doc.Doc.TryGet(Constants.Metadata.Key, out metadata) == false)
+                        {
+                            continue;
+                        }
+
+                        writer.WritePropertyName(Constants.Metadata.Key);
+                        writer.StartWriteObject();
+
+                        var prop = new BlittableJsonReaderObject.PropertyDetails();
+                        for (int i = 0; i < metadata.Count; i++)
+                        {
+                            metadata.GetPropertyByIndex(i, ref prop);
+                            writer.WritePropertyName(prop.Name.ToString());
+                            switch (prop.Token & BlittableJsonReaderBase.TypesMask)
+                            {
+                                case BlittableJsonToken.StartObject:
+                                case BlittableJsonToken.StartArray:
+                                case BlittableJsonToken.EmbeddedBlittable:
+                                    // explicitly ignoring those, if user have
+                                    // such objects in metadata, they need to 
+                                    // manually merge it
+                                    break;
+
+                                case BlittableJsonToken.Integer:
+                                    writer.WriteValue((long) prop.Value);
+                                    break;
+                                case BlittableJsonToken.Float:
+                                    writer.WriteValue((double)prop.Value);
+                                    break;
+                                case BlittableJsonToken.CompressedString:
+                                case BlittableJsonToken.String:
+                                    writer.WriteValue(prop.Value.ToString());
+                                    break;
+                                case BlittableJsonToken.Boolean:
+                                    writer.WriteValue((bool)prop.Value);
+                                    break;
+                                case BlittableJsonToken.Null:
+                                    writer.WriteValueNull();
+                                    break;
+                            }
+                        }
+                        
+                        writer.WriteObjectEnd();
+
+                        break;
+                    }
+                }
+
+                scope.WriteRawObjectPropertiesToBlittable(writer, obj);
+                writer.WriteObjectEnd();
                 writer.FinalizeDocument();
                 val = writer.CreateReader();
                 return true;

@@ -15,7 +15,7 @@ using Raven.Abstractions.Data;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Json;
-using Raven.Server.NotificationCenter.Actions.Server;
+using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -188,23 +188,35 @@ namespace Raven.Server.Web.System
                     var configuration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(name, ignoreDisabledDatabase: true);
                     if (configuration == null)
                     {
-                        results.Add(new DynamicJsonValue
+                        results.Add(new ResourceDeleteResult
                         {
-                            ["Name"] = name,
-                            ["Deleted"] = false,
-                            ["Reason"] = "database not found",
-                        });
+                            QualifiedName = "db/" + name,
+                            Deleted = false,
+                            Reason = "database not found"
+                        }.ToJson());
 
                         continue;
                     }
 
-                    DeleteDatabase(name, context, isHardDelete, configuration);
-
-                    results.Add(new DynamicJsonValue
+                    try
                     {
-                        ["Name"] = name,
-                        ["Deleted"] = true,
-                    });
+                        DeleteDatabase(name, context, isHardDelete, configuration);
+
+                        results.Add(new ResourceDeleteResult
+                        {
+                            QualifiedName = "db/" + name,
+                            Deleted = true
+                        }.ToJson());
+                    }
+                    catch (Exception ex)
+                    {
+                        results.Add(new ResourceDeleteResult
+                        {
+                            QualifiedName = "db/" + name,
+                            Deleted = false,
+                            Reason = ex.Message
+                        }.ToJson());
+                    }
                 }
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

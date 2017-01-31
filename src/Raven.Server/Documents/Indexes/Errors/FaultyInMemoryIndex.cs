@@ -74,22 +74,6 @@ namespace Raven.Server.Documents.Indexes.Errors
             };
         }
 
-        public override int? ActualMaxNumberOfIndexOutputs
-        {
-            get
-            {
-                throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index", _e);
-            }
-        }
-
-        public override int MaxNumberOfIndexOutputs
-        {
-            get
-            {
-                throw new NotSupportedException($"Index with id {IndexId} is in-memory implementation of a faulty index", _e);
-            }
-        }
-
         public override IndexProgress GetProgress(DocumentsOperationContext documentsContext)
         {
             return new IndexProgress

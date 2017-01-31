@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Raven.Abstractions.Data;
@@ -137,7 +136,7 @@ namespace Raven.Server.Documents
             return GetCollectionName(document.BlittableJson);
         }
 
-        public static LazyStringValue GetLazyCollectionNameFrom(JsonOperationContext context,BlittableJsonReaderObject document)
+        public static LazyStringValue GetLazyCollectionNameFrom(JsonOperationContext context, BlittableJsonReaderObject document)
         {
             BlittableJsonReaderObject metadata;
             LazyStringValue collectionName;
@@ -153,12 +152,14 @@ namespace Raven.Server.Documents
         {
             string collectionName;
             BlittableJsonReaderObject metadata;
-            if (document == null || 
+
+            if (document == null ||
                 document.TryGet(Constants.Metadata.Key, out metadata) == false ||
                 metadata.TryGet(Constants.Metadata.Collection, out collectionName) == false)
             {
                 collectionName = EmptyCollection;
             }
+
             return collectionName;
         }
 

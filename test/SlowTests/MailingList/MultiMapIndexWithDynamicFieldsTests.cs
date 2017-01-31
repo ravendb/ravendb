@@ -3,8 +3,6 @@ using System.Linq;
 using FastTests;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Indexes;
-using Raven.Server.Config;
-using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -14,7 +12,7 @@ namespace SlowTests.MailingList
         [Fact]
         public void CanSortDynamically()
         {
-            using (var store = GetDocumentStore(modifyDatabaseDocument: document => document.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxMapIndexOutputsPerDocument)] = "100"))
+            using (var store = GetDocumentStore())
             {
                 new DynamicMultiMapDataSetIndex().Execute(store);
                 using (var session = store.OpenSession())

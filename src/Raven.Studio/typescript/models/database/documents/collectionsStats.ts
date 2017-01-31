@@ -6,8 +6,8 @@ class collectionsStats  {
     numberOfDocuments = ko.observable<number>();
     collections: collection[];
     
-    constructor(statsDto: collectionsStatsDto, ownerDatabase: database) {
-        this.numberOfDocuments(statsDto.NumberOfDocuments);
+    constructor(statsDto: Raven.NewClient.Client.Data.Collections.CollectionStatistics, ownerDatabase: database) {
+        this.numberOfDocuments(statsDto.CountOfDocuments);
         this.collections = [];
 
         for (var key in statsDto.Collections) {

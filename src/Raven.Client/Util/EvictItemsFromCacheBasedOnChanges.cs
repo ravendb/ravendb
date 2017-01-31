@@ -10,7 +10,7 @@ using Raven.Client.Changes;
 
 namespace Raven.Client.Util
 {
-    public class EvictItemsFromCacheBasedOnChanges : IObserver<DocumentChangeNotification>, IObserver<IndexChangeNotification>, IDisposable
+    public class EvictItemsFromCacheBasedOnChanges : IObserver<DocumentChange>, IObserver<IndexChange>, IDisposable
     {
         private readonly string databaseName;
         private readonly IDatabaseChanges changes;
@@ -37,7 +37,7 @@ namespace Raven.Client.Util
             get { return connectionTask; }
         }
 
-        public void OnNext(DocumentChangeNotification change)
+        public void OnNext(DocumentChange change)
         {
             if (change.Type == DocumentChangeTypes.Put || change.Type == DocumentChangeTypes.Delete)
             {
@@ -45,7 +45,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public void OnNext(IndexChangeNotification change)
+        public void OnNext(IndexChange change)
         {
             if (change.Type == IndexChangeTypes.BatchCompleted || change.Type == IndexChangeTypes.IndexRemoved)
             {

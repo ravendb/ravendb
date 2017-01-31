@@ -52,6 +52,8 @@ namespace Raven.Server.Config
 
         public DatabaseConfiguration Databases { get; }
 
+        public PerformanceHintsConfiguration PerformanceHints { get; }
+
         public LicenseConfiguration Licensing { get; }
 
         public QuotasBundleConfiguration Quotas { get; }
@@ -74,7 +76,8 @@ namespace Raven.Server.Config
             SqlReplication = new SqlReplicationConfiguration();
             Storage = new StorageConfiguration();
             Encryption = new EncryptionConfiguration();
-            Indexing = new IndexingConfiguration(() => DatabaseName, () => Core.RunInMemory, () => Core.DataDirectory);
+            PerformanceHints = new PerformanceHintsConfiguration();
+            Indexing = new IndexingConfiguration(() => DatabaseName, () => Core.RunInMemory, () => Core.DataDirectory, PerformanceHints.MaxWarnIndexOutputsPerDocument);
             WebSockets = new WebSocketsConfiguration();
             Monitoring = new MonitoringConfiguration();
             Queries = new QueryConfiguration();
@@ -82,10 +85,10 @@ namespace Raven.Server.Config
             DebugLog = new DebugLoggingConfiguration();
             BulkInsert = new BulkInsertConfiguration();
             Server = new ServerConfiguration();
+            Databases = new DatabaseConfiguration();
             Memory = new MemoryConfiguration(this);
             Expiration = new ExpirationBundleConfiguration();
             Studio = new StudioConfiguration();
-            Databases = new DatabaseConfiguration();
             Licensing = new LicenseConfiguration();
             Quotas = new QuotasBundleConfiguration();
             Tombstones = new TombstoneConfiguration();
@@ -136,6 +139,7 @@ namespace Raven.Server.Config
             Expiration.Initialize(Settings);
             Studio.Initialize(Settings);
             Databases.Initialize(Settings);
+            PerformanceHints.Initialize(Settings);
             Licensing.Initialize(Settings);
             Quotas.Initialize(Settings);
             Tombstones.Initialize(Settings);

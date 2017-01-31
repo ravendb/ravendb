@@ -15,6 +15,36 @@ namespace Raven.Server.Documents.Queries.Parse
     {
         private static readonly Analyzer QueryAnalyzer = new RavenPerFieldAnalyzerWrapper(new KeywordAnalyzer());
 
+        public static IEnumerable<string> GetTermValuesForField(IndexQueryServerSide query, string fieldName)
+        {
+            if (string.IsNullOrWhiteSpace(query.Query))
+                yield break;
+
+            var q = QueryBuilder.BuildQuery(query.Query, query.DefaultOperator, query.DefaultField, QueryAnalyzer);
+            var termQuery = q as TermQuery;
+            if (termQuery != null)
+            {
+                if (termQuery.Term.Field != fieldName)
+                    yield break;
+
+                yield return termQuery.Term.Text;
+                yield break;
+            }
+
+            var termsMatchQuery = q as TermsMatchQuery;
+            if (termsMatchQuery != null)
+            {
+                if (termsMatchQuery.Field != fieldName)
+                    yield break;
+
+                var hashSet = new HashSet<string>(termsMatchQuery.Matches);
+                foreach (var match in hashSet)
+                    yield return match;
+
+                yield break;
+            }
+        }
+
         public static HashSet<string> GetFields(IndexQueryServerSide query)
         {
             return GetFields(query.Query, query.DefaultOperator, query.DefaultField);
@@ -59,7 +89,7 @@ namespace Raven.Server.Documents.Queries.Parse
                 fields.Add(sq.Field);
                 return;
             }
-            
+
             var rl = query as IRavenLuceneMethodQuery;
             if (rl != null)
             {

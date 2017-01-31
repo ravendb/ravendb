@@ -80,8 +80,7 @@ namespace Raven.NewClient.Client.Indexes
                 IndexesStrings = IndexesStrings,
                 StoresStrings = StoresStrings,
                 TermVectorsStrings = TermVectorsStrings,
-                SpatialIndexesStrings = SpatialIndexesStrings,
-                MaxIndexOutputsPerDocument = MaxIndexOutputsPerDocument
+                SpatialIndexesStrings = SpatialIndexesStrings
             }.ToIndexDefinition(Conventions, validateMap: false);
             foreach (var map in maps.Select(generateMap => generateMap()))
             {
@@ -92,14 +91,6 @@ namespace Raven.NewClient.Client.Indexes
             }
             return indexDefinition;
         }
-
-        /// <summary>
-        /// Index specific setting that limits the number of map outputs that an index is allowed to create for a one source document. If a map operation applied to
-        /// the one document produces more outputs than this number then an index definition will be considered as a suspicious, the indexing of this document 
-        /// will be skipped and the appropriate error message will be added to the indexing errors.
-        /// <para>Default value: null means that the global value from Raven configuration will be taken to detect if number of outputs was exceeded.</para>
-        /// </summary>
-        public int? MaxIndexOutputsPerDocument { get; set; }
     }
 
     /// <summary>
