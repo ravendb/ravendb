@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
+using Lucene.Net.Util;
 using Sparrow.Logging;
 using Raven.Abstractions.Logging;
 
 using Sparrow.Collections;
+using Constants = Raven.Abstractions.Data.Constants;
 
 namespace Raven.Server.Documents
 {
@@ -74,6 +77,11 @@ namespace Raven.Server.Documents
                 {
                     foreach (var tombstone in subscription.GetLastProcessedDocumentTombstonesPerCollection())
                     {
+                        if (IsAllDocsCollection(tombstones, tombstone))
+                        {
+                            break;
+                        }
+
                         long v;
                         if (tombstones.TryGetValue(tombstone.Key, out v) == false)
                             tombstones[tombstone.Key] = tombstone.Value;
@@ -118,6 +126,22 @@ namespace Raven.Server.Documents
             {
                 Monitor.Exit(_locker);
             }
+        }
+
+        private static bool IsAllDocsCollection(Dictionary<string, long> tombstones, KeyValuePair<string,long> tombstone)
+        {
+            if (!tombstone.Key.Equals(Constants.Replication.AllDocumentsCollection))
+                return false;
+
+            foreach (var tomb in tombstones.ToList())
+            {
+                long val;
+                if (tombstones.TryGetValue(tomb.Key, out val) == false)
+                    tombstones[tomb.Key] = tombstone.Value;
+                else
+                    tombstones[tomb.Key] = Math.Min(tombstone.Value, val);
+            }
+            return true;
         }
 
         public void Dispose()

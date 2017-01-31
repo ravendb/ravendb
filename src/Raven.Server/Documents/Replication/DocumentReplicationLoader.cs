@@ -25,7 +25,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Replication
 {
-    public class DocumentReplicationLoader : IDisposable
+    public class DocumentReplicationLoader : IDisposable, IDocumentTombstoneAware
     {
         public event Action<string, Exception> ReplicationFailed;
 
@@ -54,6 +54,10 @@ namespace Raven.Server.Documents.Replication
 
         private readonly ConcurrentSet<ConnectionShutdownInfo> _reconnectQueue =
             new ConcurrentSet<ConnectionShutdownInfo>();
+
+        private readonly ConcurrentDictionary<ReplicationDestination,long> _lastSendEtagPerDestination = new ConcurrentDictionary<ReplicationDestination, long>();
+        public long MinimalEtagForReplication => _lastSendEtagPerDestination.Count > 0 ?
+            _lastSendEtagPerDestination.Min(d => d.Value) : 0;
 
         internal Dictionary<string, ScriptResolver> ScriptConflictResolversCache =
             new Dictionary<string, ScriptResolver>();
@@ -332,6 +336,7 @@ namespace Raven.Server.Documents.Replication
 
             InitializeOutgoingReplications();
             InitializeResolvers();
+            
         }
 
         private void ResolveConflictsInBackground()
@@ -478,9 +483,12 @@ namespace Raven.Server.Documents.Replication
                     _log.Info("Tried to initialize outgoing replications, but there is no replication document or destinations are empty. Nothing to do...");
 
                 _numberOfSiblings = 0;
+                _database.DocumentTombstoneCleaner.Unsubscribe(this);
 
                 return;
             }
+
+            _database.DocumentTombstoneCleaner.Subscribe(this);
 
             if (_log.IsInfoEnabled)
                 _log.Info($"Initializing {ReplicationDocument.Destinations.Count:#,#} outgoing replications..");
@@ -499,7 +507,7 @@ namespace Raven.Server.Documents.Replication
             }
 
             _numberOfSiblings = countOfDestinations;
-
+            
             if (_log.IsInfoEnabled)
                 _log.Info("Finished initialization of outgoing replications..");
         }
@@ -542,10 +550,12 @@ namespace Raven.Server.Documents.Replication
                 instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
 
                 _outgoing.TryRemove(instance);
-
+                
                 ConnectionShutdownInfo failureInfo;
                 if (_outgoingFailureInfo.TryGetValue(instance.Destination, out failureInfo) == false)
                     return;
+
+                UpdateEtagVector(instance);
 
                 failureInfo.OnError(e);
                 failureInfo.DestinationDbId = instance.DestinationDbId;
@@ -565,6 +575,8 @@ namespace Raven.Server.Documents.Replication
 
         private void OnOutgoingSendingSucceeded(OutgoingReplicationHandler instance)
         {
+            UpdateEtagVector(instance);
+
             ConnectionShutdownInfo failureInfo;
             if (_outgoingFailureInfo.TryGetValue(instance.Destination, out failureInfo))
                 failureInfo.Reset();
@@ -583,6 +595,17 @@ namespace Raven.Server.Documents.Replication
             {
                 if (handler != instance)
                     handler.OnReplicationFromAnotherSource();
+            }
+        }
+
+        private void UpdateEtagVector(OutgoingReplicationHandler instance)
+        {
+            long val;
+            _lastSendEtagPerDestination.TryGetValue(instance.Destination, out val);
+            if (val < instance._lastSentDocumentEtag)
+            {
+                _lastSendEtagPerDestination.AddOrUpdate(
+                    instance.Destination, instance._lastSentDocumentEtag, (_, __) => instance._lastSentDocumentEtag);
             }
         }
 
@@ -606,6 +629,7 @@ namespace Raven.Server.Documents.Replication
 
             _outgoing.Clear();
             _outgoingFailureInfo.Clear();
+            _lastSendEtagPerDestination.Clear();
 
             InitializeOutgoingReplications();
 
@@ -728,9 +752,45 @@ namespace Raven.Server.Documents.Replication
             foreach (var outgoing in _outgoing)
                 ea.Execute(outgoing.Dispose);
 
+            _database.DocumentTombstoneCleaner?.Unsubscribe(this);
+
             ea.ThrowIfNeeded();
         }
 
+       
+        public Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
+        {
+            var minEtag = MinimalEtagForReplication;
+            const int maxTombstones = 1024;
+            var result = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase)
+            {
+                {Constants.Replication.AllDocumentsCollection, minEtag}
+            };
+
+            var numOfTombstones = 0;
+            DocumentsOperationContext context;
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (context.OpenReadTransaction())
+            {
+               numOfTombstones = _database.DocumentsStorage.GetTombstonesFrom(context, minEtag, 0, maxTombstones).Count();
+
+            }
+
+            if (numOfTombstones >= maxTombstones)
+            {   
+                var disabledDestination = ReplicationDocument.Destinations.Where(d => d.Disabled);
+                foreach (var replicationDestination in disabledDestination)
+                {
+                    long etag;
+                    _lastSendEtagPerDestination.TryGetValue(replicationDestination, out etag);
+                    if (_log.IsInfoEnabled && etag == minEtag)
+                        _log.Info($"Warning: The disabled database {replicationDestination.Database} on {replicationDestination.Url} prevents from cleaning tombstones.");
+                }               
+            }
+            
+            return result;
+        }
+    
         public class IncomingConnectionRejectionInfo
         {
             public string Reason { get; set; }
