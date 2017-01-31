@@ -83,7 +83,7 @@ namespace Raven.Server.Routing
 
             if (reqCtx.Database != null)
             {
-                using (reqCtx.Database.DatabaseInUse())
+                using (reqCtx.Database.DatabaseInUse(tryMatch.Value.SkipUsagesCount))
                     await handler(reqCtx);
             }
             else

@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class ChangesHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/changes", "GET", "/databases/{databaseName:string}/changes")]
+        [RavenAction("/databases/*/changes", "GET", "/databases/{databaseName:string}/changes", SkipUsagesCount = true)]
         public async Task GetChanges()
         {
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())

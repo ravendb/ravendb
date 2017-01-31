@@ -153,19 +153,24 @@ namespace Raven.Server.Documents
             }
         }
 
-        public DatabaseUsage DatabaseInUse()
+        public DatabaseUsage DatabaseInUse(bool skipUsagesCount)
         {
-            return new DatabaseUsage(this);
+            return new DatabaseUsage(this, skipUsagesCount);
         }
 
         public struct DatabaseUsage : IDisposable
         {
             private readonly DocumentDatabase _parent;
+            private bool _skipUsagesCount;
 
-            public DatabaseUsage(DocumentDatabase parent)
+            public DatabaseUsage(DocumentDatabase parent, bool skipUsagesCount)
             {
                 _parent = parent;
-                Interlocked.Increment(ref _parent._usages);
+                _skipUsagesCount = skipUsagesCount;
+
+                if (_skipUsagesCount == false)
+                    Interlocked.Increment(ref _parent._usages);
+
                 if (_parent._databaseShutdown.IsCancellationRequested)
                 {
                     Dispose();
@@ -178,13 +183,14 @@ namespace Raven.Server.Documents
                 throw new OperationCanceledException("The database " + _parent.Name + " is shutting down");
             }
 
-
             public void Dispose()
             {
-                Interlocked.Decrement(ref _parent._usages);
-                if (_parent._databaseShutdown.IsCancellationRequested)
-                    _parent._waitForUsagesOnDisposal.Set();
+                long currentUsagesCount = 0;
+                if (_skipUsagesCount == false)
+                    currentUsagesCount = Interlocked.Decrement(ref _parent._usages);
 
+                if (_parent._databaseShutdown.IsCancellationRequested && currentUsagesCount == 0)
+                    _parent._waitForUsagesOnDisposal.Set();
             }
         }
 

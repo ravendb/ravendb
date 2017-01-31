@@ -11,7 +11,7 @@ namespace Raven.Server.NotificationCenter.Handlers
 {
     public class DatabaseNotificationCenterHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/notification-center/watch", "GET")]
+        [RavenAction("/databases/*/notification-center/watch", "GET", SkipUsagesCount = true)]
         public async Task Get()
         {
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
