@@ -242,7 +242,9 @@ namespace Raven.Server.Documents
             {
                 if (Interlocked.Read(ref _usages) == 0)
                     break;
-                _waitForUsagesOnDisposal.Wait(1000);
+
+                if (_waitForUsagesOnDisposal.Wait(1000))
+                    _waitForUsagesOnDisposal.Reset();
             }
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentDatabase)}");
 
