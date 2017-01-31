@@ -112,21 +112,17 @@ namespace Raven.Server.Smuggler.Documents
 
             public LazyStringValue Id;
 
-            private readonly JsonOperationContext _ctx;
+            private JsonOperationContext _ctx;
 
             private readonly List<AllocatedMemoryData> _allocations = new List<AllocatedMemoryData>();
 
-            public BlittableMetadataModifier(JsonOperationContext ctx)
-            {
-                _ctx = ctx;
-            }
             private unsafe LazyStringValue CreateLazyStringValueFromParserState(JsonParserState state)
             {
                 var maxSizeOfEscapePos = state.EscapePositions.Count * 5 // max size of var int
                                          + JsonParserState.VariableSizeIntSize(state.EscapePositions.Count);
 
                 var mem = _ctx.GetMemory(maxSizeOfEscapePos + state.StringSize);
-
+                _allocations.Add(mem);
                 Memory.Copy(mem.Address, state.StringBuffer, state.StringSize);
                 var lazyStringValueFromParserState = new LazyStringValue(null, mem.Address, state.StringSize, _ctx);
                 if (state.EscapePositions.Count > 0)
@@ -308,16 +304,27 @@ namespace Raven.Server.Smuggler.Documents
 
             public void Dispose()
             {
+                Reset(null);
+            }
+
+            public void Reset(JsonOperationContext ctx)
+            {
+                if (_ctx == null)
+                {
+                    _ctx = ctx;
+                    return;
+                }
                 for (int i = _allocations.Count - 1; i >= 0; i--)
                 {
                     _ctx.ReturnMemory(_allocations[i]);
                 }
                 _allocations.Clear();
-            }
+                Id = null;
+                _depth = 0;
+                _state=State.None;
+                _readingMetadataObject = false;
+                _ctx = ctx;
 
-            public void Reset()
-            {
-                Dispose();
             }
         }
 
@@ -479,8 +486,6 @@ namespace Raven.Server.Smuggler.Documents
 
             while (true)
             {
-                MaybeResetContextAndParser();
-
                 if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
                     ThrowInvalidJson();
 
@@ -509,11 +514,9 @@ namespace Raven.Server.Smuggler.Documents
             if (_state.CurrentTokenType != JsonParserToken.StartArray)
                 ThrowInvalidJson();
 
-            var modifier = new BlittableMetadataModifier(_context);
+            var modifier = new BlittableMetadataModifier();
             while (true)
             {
-                MaybeResetContextAndParser();
-
                 if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
                     ThrowInvalidJson();
 
@@ -521,6 +524,7 @@ namespace Raven.Server.Smuggler.Documents
                     break;
 
                 var context = actions == null ? _context : actions.GetContextForNewDocument();
+                modifier.Reset(context);
                 using (
                     var builder = new BlittableJsonDocumentBuilder(context,
                         BlittableJsonDocumentBuilder.UsageMode.ToDisk, "import/object", _parser, _state,
@@ -538,17 +542,6 @@ namespace Raven.Server.Smuggler.Documents
                 }
 
             }
-        }
-
-        private void MaybeResetContextAndParser()
-        {
-            if (_totalObjectsRead < _resetThreshold)
-                return;
-
-            _totalObjectsRead = new Size(0, SizeUnit.Bytes);
-            _parser.ResetStream();
-            _context.ResetAndRenew();
-            _parser.SetStream();
         }
 
         private static DatabaseItemType GetType(string type)

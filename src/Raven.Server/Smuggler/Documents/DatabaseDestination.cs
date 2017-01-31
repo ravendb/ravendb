@@ -109,12 +109,6 @@ namespace Raven.Server.Smuggler.Documents
 
         private class DatabaseDocumentActions : IDocumentActions
         {
-            private const string RavenEntityName = "Raven-Entity-Name";
-
-            private const string LastModified = "Last-Modified";
-
-            private const string RavenLastModified = "Raven-Last-Modified";
-
             private readonly DocumentDatabase _database;
             private readonly long _buildVersion;
             private readonly bool _isRevision;
@@ -279,14 +273,12 @@ namespace Raven.Server.Smuggler.Documents
              
                     using (document.Data)
                     {
-                  
                         if (IsRevision)
                         {
                             _database.BundleLoader.VersioningStorage.PutDirect(context, key,  document.Data);
                         }
                         else if (_buildVersion < 40000 && key.Contains("/revisions/"))
                         {
-
                             var endIndex = key.IndexOf("/revisions/", StringComparison.OrdinalIgnoreCase);
                             var newKey = key.Substring(0, endIndex);
 
