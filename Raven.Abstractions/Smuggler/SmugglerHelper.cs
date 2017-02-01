@@ -9,6 +9,7 @@ using System.IO.Compression;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Json;
+using Raven.Abstractions.Smuggler.Data;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
 
@@ -16,6 +17,39 @@ namespace Raven.Abstractions.Smuggler
 {
     public static class SmugglerHelper
     {
+        private class Metadata
+        {
+            public const string Collection = "@collection";
+
+            public const string Etag = "@etag";
+
+            public const string IndexScore = "@index-score";
+
+            public const string LastModified = "@last-modified";
+        }
+
+        internal static RavenJToken HandleMetadataChanges(RavenJObject metadata, SmugglerDataFormat format)
+        {
+            if (metadata == null)
+                return null;
+
+            if (format != SmugglerDataFormat.V4)
+                return metadata;
+
+            metadata.Remove(Metadata.Etag);
+            metadata.Remove(Metadata.LastModified);
+            metadata.Remove(Metadata.IndexScore);
+
+            RavenJToken collection;
+            if (metadata.TryGetValue(Metadata.Collection, out collection))
+            {
+                metadata.Remove(Metadata.Collection);
+                metadata.Add(Constants.RavenEntityName, collection);
+            }
+
+            return metadata;
+        }
+
         public static RavenJToken HandleConflictDocuments(RavenJObject metadata)
         {
             if (metadata == null)
