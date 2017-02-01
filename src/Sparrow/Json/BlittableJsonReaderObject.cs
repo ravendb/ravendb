@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Sparrow.Binary;
 using Sparrow.Json.Parsing;
 
@@ -11,6 +12,7 @@ namespace Sparrow.Json
 {
     public unsafe class BlittableJsonReaderObject : BlittableJsonReaderBase, IDisposable
     {
+        private AllocatedMemoryData _allocatedMemory;
         private UnmanagedWriteBuffer _buffer;
         private byte* _metadataPtr;
         private readonly int _size;
@@ -43,6 +45,14 @@ namespace Sparrow.Json
             _context.Write(stream, this);
         }
 
+        public BlittableJsonReaderObject(
+            AllocatedMemoryData allocatedMemory, JsonOperationContext context)
+            : this(allocatedMemory.Address, allocatedMemory.SizeInBytes, context)
+        {
+            _allocatedMemory = allocatedMemory;
+        }
+
+        
         public BlittableJsonReaderObject(byte* mem, int size, JsonOperationContext context,
             UnmanagedWriteBuffer buffer = default(UnmanagedWriteBuffer))
         {
@@ -545,6 +555,7 @@ namespace Sparrow.Json
                 buffers.Properties = new int[size];
                 buffers.Offsets = new int[size];
             }
+
             var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
             for (int i = 0; i < _propCount; i++)
             {
@@ -571,7 +582,6 @@ namespace Sparrow.Json
             Array.Sort(offsets, props, NumericDescendingComparer.Instance);
             return props;
         }
-
 
         internal object GetObject(BlittableJsonToken type, int position)
         {
@@ -604,9 +614,18 @@ namespace Sparrow.Json
 
         public void Dispose()
         {
+            if (_mem == null) //double dispose will do nothing
+                return;
+            if (_allocatedMemory != null && _buffer.IsDisposed == false)
+            {
+                _context.ReturnMemory(_allocatedMemory);
+                _allocatedMemory = null;
+            }
+
             _mem = null;
             _metadataPtr = null;
             _objStart = null;
+
             if (_objectsPathCache != null)
             {
                 foreach (var property in _objectsPathCache)
@@ -630,7 +649,7 @@ namespace Sparrow.Json
         {
             var mem = context.GetMemory(Size);
             CopyTo(mem.Address);
-            var cloned = new BlittableJsonReaderObject(mem.Address, Size, context);
+            var cloned =  new BlittableJsonReaderObject(mem, context);    
             if (Modifications != null)
             {
                 cloned.Modifications = new DynamicJsonValue(cloned);

@@ -31,12 +31,15 @@ namespace Sparrow.Json
             byte* ptr;
             int size;
             _unmanagedWriteBuffer.EnsureSingleChunk(out ptr, out size);
-            var reader = new BlittableJsonReaderObject(ptr, size, _context, (UnmanagedWriteBuffer)(object)_unmanagedWriteBuffer);
+            var reader = new BlittableJsonReaderObject(
+                ptr, 
+                size, 
+                _context, 
+                (UnmanagedWriteBuffer)(object)_unmanagedWriteBuffer);
 
-            //Make sure to dispose the writer later, otherwise we might leave "hanging" reference.
-            //We do not dispose this immediately since the blittable json returned from this method
-            //depends on the memory allocated inside of _unmanagedWriteBuffer.
-            _context.RegisterForDispose(_unmanagedWriteBuffer);
+            //we don't care to lose instance of write buffer,
+            //since when context is reset, the allocated memory is "reclaimed"
+
             _unmanagedWriteBuffer = default(TWriter);
             return reader;
         }
@@ -129,7 +132,6 @@ namespace Sparrow.Json
 
         public void ResetAndRenew()
         {
-            //don't dispose immediately the write buffer, since some object may depend on it
             _context.RegisterForDispose(_unmanagedWriteBuffer);
             _unmanagedWriteBuffer = (TWriter)(object)_context.GetStream();
             _position = 0;
@@ -408,12 +410,21 @@ namespace Sparrow.Json
             int size = Encoding.UTF8.GetMaxByteCount(str.Length)
                        + escapePositionsMaxSize;
 
-            var buffer = _context.GetNativeTempBuffer(size);
-            fixed (char* pChars = str)
+            AllocatedMemoryData buffer = null;
+            try
             {
-                var stringSize = Utf8Encoding.GetBytes(pChars, str.Length, buffer, size);
-                JsonParserState.FindEscapePositionsIn(_intBuffer, buffer, stringSize, escapePositionsMaxSize);
-                return WriteValue(buffer, stringSize, _intBuffer, out token, mode, null);
+                buffer = _context.GetMemory(size);
+                fixed (char* pChars = str)
+                {
+                    var stringSize = Utf8Encoding.GetBytes(pChars, str.Length, buffer.Address, size);
+                    JsonParserState.FindEscapePositionsIn(_intBuffer, buffer.Address, stringSize, escapePositionsMaxSize);
+                    return WriteValue(buffer.Address, stringSize, _intBuffer, out token, mode, null);
+                }
+            }
+            finally
+            {
+                if(buffer != null)
+                    _context.ReturnMemory(buffer);
             }
         }
 

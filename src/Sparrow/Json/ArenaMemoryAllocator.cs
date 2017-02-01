@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Sparrow.Binary;
 using Sparrow.Collections;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Sparrow.Utils;
 
 namespace Sparrow.Json
@@ -79,7 +81,7 @@ namespace Sparrow.Json
             if (_isDisposed)
                 ThrowAlreadyDisposedException();
 #if MEM_GUARD
-            return new AllocatedMemoryData
+            var allocation = new AllocatedMemoryData
             {
                 Address = ElectricFencedMemory.Allocate(size),
                 SizeInBytes = size
@@ -98,8 +100,13 @@ namespace Sparrow.Json
             _used += size;
             TotalUsed += size;
 
-            return allocation;
+            //prevent reused address from throwing an exception at ReturnMemory()
+            AllocatedMemoryData _;
+            if(_fragements?.TryGetValue((long)allocation.Address, out _) ?? false)
+                _fragements.Remove((long)allocation.Address);
 #endif
+            
+            return allocation;
         }
 
         private void ThrowAlreadyDisposedException()
@@ -243,22 +250,30 @@ namespace Sparrow.Json
 
         public void Return(AllocatedMemoryData allocation)
         {
+#if RELEASE
+            var address = allocation.Address;
+#else
+            var address = allocation._address; //essentially bypass object disposed checks
+#endif
+            allocation.IsReturned = true;
 #if MEM_GUARD
 #if MEM_GUARD_STACK
-            allocation.FreedBy = Environment.StackTrace;
+            if(allocation.FreedBy == null)
+                allocation.FreedBy = Environment.StackTrace;
 #endif
-            GC.SuppressFinalize(allocation);
-            ElectricFencedMemory.Free(allocation.Address);
+            ElectricFencedMemory.Free(address);
 #else
-            if (allocation.Address != _ptrCurrent - allocation.SizeInBytes ||
-                allocation.Address < _ptrStart)
+
+            if (address != _ptrCurrent - allocation.SizeInBytes ||
+                address < _ptrStart)
             {
                 if (_fragements == null)
                 {
                     _fragements = new SortedList<long, AllocatedMemoryData>();
                 }
+
                 // we have fragmentation, let us try to heal it 
-                _fragements.Add((long)allocation.Address, allocation);
+                _fragements.Add((long)address, allocation);
                 return;
             }
             // since the returned allocation is at the end of the arena, we can just move
@@ -274,10 +289,16 @@ namespace Sparrow.Json
             while (_fragements.Count > 0)
             {
                 var highest = _fragements.Values[_fragements.Count - 1];
-                if (highest.Address != _ptrCurrent - allocation.SizeInBytes)
+#if RELEASE
+                var highestAddress = highest.Address;
+#else
+                var highestAddress = highest._address;
+#endif
+                if (highestAddress != _ptrCurrent - allocation.SizeInBytes)
                     break;
+                
                 _fragements.RemoveAt(_fragements.Count - 1);
-                if (highest.Address < _ptrStart)
+                if (highestAddress < _ptrStart)
                 {
                     // this is from another segment, probably, currently we'll just ignore it,
                     // we might want to track if all the memory from a previous segment has been
@@ -289,30 +310,58 @@ namespace Sparrow.Json
                 _ptrCurrent -= highest.SizeInBytes;
             }
 #endif
-        }
+            }
     }
 
-    public unsafe class AllocatedMemoryData
+    public unsafe class AllocatedMemoryData 
     {
-        public byte* Address;
         public int SizeInBytes;
         public int ContextGeneration;
+
+        public bool IsReturned;
+
+        public bool IsLongLived;
+        public JsonOperationContext Parent;
+
         public NativeMemory.ThreadStats AllocatingThread;
-#if MEM_GUARD
-        ~AllocatedMemoryData(){
-            System.Console.WriteLine("Memory was not freed and was leaked " + 
 #if MEM_GUARD_STACK
-            AllocatedBy
-#else
-    ""
+        public string AllocatedBy = Environment.StackTrace;
+        public string FreedBy;
 #endif
-            );
+
+#if RELEASE
+        public byte* Addess;
+#else
+        internal byte* _address;
+        public byte* Address
+        {
+            get
+            {
+                if (IsLongLived == false &&
+                    Parent != null &&
+                    ContextGeneration != Parent.Generation ||
+                    IsReturned)
+                    ThrowObjectDisposedException();
+
+                return _address;
+            }
+            set
+            {
+                if (IsLongLived == false &&
+                    Parent != null &&
+                    ContextGeneration != Parent.Generation ||
+                    IsReturned)
+                    ThrowObjectDisposedException();
+
+                _address = value;
+            }
+        }
+
+        private void ThrowObjectDisposedException()
+        {
+           throw new ObjectDisposedException(nameof(AllocatedMemoryData));
         }
 #endif
 
-#if MEM_GUARD_STACK
-        public string AllocatedBy = Environment.StackTrace;
-        public string FreedBy ;
-#endif
     }
 }

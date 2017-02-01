@@ -87,7 +87,7 @@ namespace Raven.Server.ServerWide.Context
             PersistentContext = null;
         }
 
-        public override void ResetAndRenew()
+        protected override void InternalResetAndRenew()
         {
             base.Reset();
             CloseTransaction();

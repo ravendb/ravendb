@@ -161,7 +161,7 @@ namespace Raven.Server.Smuggler.Documents
                         _prevCommandTask.Wait();
                         Debug.Assert(_prevCommand.IsDisposed == false,
                             "we rely on reusing this context on the next batch, so it has to be disposed here");
-                    }
+                }
                 }
 
                 _prevCommand = _command;
@@ -269,26 +269,26 @@ namespace Raven.Server.Smuggler.Documents
                 foreach (var document in Documents)
                 {
                     var key = document.Key;
-             
+              
                     using (document.Data)
                     {
-                        if (IsRevision)
-                        {
+                    if (IsRevision)
+                    {
                             _database.BundleLoader.VersioningStorage.PutDirect(context, key,  document.Data);
-                        }
-                        else if (_buildVersion < 40000 && key.Contains("/revisions/"))
-                        {
-                            var endIndex = key.IndexOf("/revisions/", StringComparison.OrdinalIgnoreCase);
-                            var newKey = key.Substring(0, endIndex);
+                    }
+                    else if (_buildVersion < 40000 && key.Contains("/revisions/"))
+                    {
+                        var endIndex = key.IndexOf("/revisions/", StringComparison.OrdinalIgnoreCase);
+                        var newKey = key.Substring(0, endIndex);
 
                             _database.BundleLoader.VersioningStorage.PutDirect(context, newKey, document.Data);
-                        }
-                        else
-                        {
-                            _database.DocumentsStorage.Put(context, key, null, document.Data);
-                        }
+                    }
+                    else
+                    {
+                        _database.DocumentsStorage.Put(context, key, null, document.Data);
                     }
                 }
+            }
             }
 
             private static void ThrowDocumentMustHaveMetadata()

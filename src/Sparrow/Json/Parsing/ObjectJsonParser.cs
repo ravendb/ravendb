@@ -122,11 +122,21 @@ namespace Sparrow.Json.Parsing
         private readonly JsonOperationContext _ctx;
         private readonly Stack<object> _elements = new Stack<object>();
         private static readonly Encoding Utf8Encoding = Encoding.UTF8;
+        private bool _disposed;
+        private AllocatedMemoryData _currentStateBuffer = null;
 
         public void Reset(object root)
         {
-            _elements.Clear();
-            _elements.Push(root);
+            if (_currentStateBuffer != null)
+            {
+                _ctx.ReturnMemory(_currentStateBuffer);
+                _currentStateBuffer = null;
+            }
+
+            _elements.Clear();   
+            
+            if(root != null)         
+                _elements.Push(root);
         }
 
         public ObjectJsonParser(JsonParserState state, JsonOperationContext ctx)
@@ -139,7 +149,11 @@ namespace Sparrow.Json.Parsing
 
         public void Dispose()
         {
-
+            if (_disposed)
+                return;
+            _disposed = true;
+            if(_currentStateBuffer != null)
+                _ctx.ReturnMemory(_currentStateBuffer);
         }
 
         public bool Read()
@@ -150,6 +164,9 @@ namespace Sparrow.Json.Parsing
 
         private void ReadInternal()
         {
+            if (_disposed)
+                ThrowOnDisposed();
+
             if (_elements.Count == 0)
                 throw new EndOfStreamException();
 
@@ -431,6 +448,11 @@ namespace Sparrow.Json.Parsing
             }
         }
 
+        private void ThrowOnDisposed()
+        {
+            throw new ObjectDisposedException(nameof(ObjectJsonParser));
+        }
+
         private void SetStringBuffer(string str)
         {
             // max possible size - we avoid using GetByteCount because profiling showed it to take 2% of runtime
@@ -442,7 +464,11 @@ namespace Sparrow.Json.Parsing
 
             var size = byteCount + escapePositionsSize;
 
-            _state.StringBuffer = _ctx.GetNativeTempBuffer(size);
+            if (_currentStateBuffer != null)
+                _ctx.ReturnMemory(_currentStateBuffer);
+
+            _currentStateBuffer = _ctx.GetMemory(size);
+            _state.StringBuffer = _currentStateBuffer.Address;
 
             fixed (char* pChars = str)
             {

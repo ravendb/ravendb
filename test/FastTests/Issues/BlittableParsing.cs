@@ -22,7 +22,6 @@ namespace FastTests.Issues
                         blittableJsonReaderObject.TryGet("Type", out s);
                         Assert.Equal("Acknowledge", s);
                     }
-                    context.ResetAndRenew();
                 }   
             }
         }
