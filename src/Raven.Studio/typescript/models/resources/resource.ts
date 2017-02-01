@@ -7,6 +7,7 @@ abstract class resource {
 
     activeBundles = ko.observableArray<string>();   
     disabled = ko.observable<boolean>(false);
+    errored = ko.observable<boolean>(false);
     isAdminCurrentTenant = ko.observable<boolean>(false);
 
     protected constructor(rsInfo: Raven.Client.Data.ResourceInfo) {
@@ -32,6 +33,7 @@ abstract class resource {
         this.activeBundles(incomingCopy.Bundles);
         this.name = incomingCopy.Name;
         this.disabled(incomingCopy.Disabled);
+        this.errored(!!incomingCopy.LoadError);
     }
 
     get qualifiedName() {
