@@ -27,7 +27,7 @@ class recentQueriesStorage {
         return task;
     }
 
-    private static getRecentQueries(db: database): storedQueryDto[] {
+    static getRecentQueries(db: database): storedQueryDto[] {
         const localStorageName = recentQueriesStorage.getLocalStorageKey(db.name);
         let recentQueriesFromLocalStorage: storedQueryDto[] = this.getRecentQueriesFromLocalStorage(localStorageName);
 
