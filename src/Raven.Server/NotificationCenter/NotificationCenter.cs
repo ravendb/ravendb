@@ -142,6 +142,9 @@ namespace Raven.Server.NotificationCenter
                     if (wait == Infinity || wait > TimeSpan.Zero)
                         await _postponedNotificationEvent.WaitAsync(wait);
 
+                    if (_shutdown.IsCancellationRequested)
+                        break;
+
                     _postponedNotificationEvent.Reset(true);
                     notifications = GetPostponedNotifications(int.MaxValue, SystemTime.UtcNow);
 
@@ -192,6 +195,9 @@ namespace Raven.Server.NotificationCenter
             {
                 foreach (var action in actions)
                 {
+                    if (_shutdown.IsCancellationRequested)
+                        break;
+
                     next.Enqueue(new PostponedNotification
                     {
                         Id = action.Json[nameof(Notification.Id)].ToString(),
