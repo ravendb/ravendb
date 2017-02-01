@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Indexes
                 numberOfOutputs++;
             }
 
-            WarnExceedingIndexOutputsPerDocument(key, numberOfOutputs);
+            HandleIndexOutputsPerDocument(key, numberOfOutputs, stats);
 
             DocumentDatabase.Metrics.IndexedPerSecond.Mark();
             return numberOfOutputs;

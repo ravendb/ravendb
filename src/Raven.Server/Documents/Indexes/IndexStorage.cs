@@ -261,6 +261,8 @@ namespace Raven.Server.Documents.Indexes
                 stats.MapAttempts = statsTree.Read(IndexSchema.MapAttemptsSlice).Reader.ReadLittleEndianInt32();
                 stats.MapErrors = statsTree.Read(IndexSchema.MapErrorsSlice).Reader.ReadLittleEndianInt32();
                 stats.MapSuccesses = statsTree.Read(IndexSchema.MapAttemptsSlice).Reader.ReadLittleEndianInt32();
+                stats.MaxNumberOfOutputsPerDocument =
+                    statsTree.Read(IndexSchema.MaxNumberOfOutputsPerDocument).Reader.ReadLittleEndianInt32();
 
                 if (_index.Type.IsMapReduce())
                 {
@@ -409,6 +411,13 @@ namespace Raven.Server.Documents.Indexes
                 result.MapAttempts = statsTree.Increment(IndexSchema.MapAttemptsSlice, stats.MapAttempts);
                 result.MapSuccesses = statsTree.Increment(IndexSchema.MapSuccessesSlice, stats.MapSuccesses);
                 result.MapErrors = statsTree.Increment(IndexSchema.MapErrorsSlice, stats.MapErrors);
+
+                var currentMaxNumberOfOutputs = statsTree.Read(IndexSchema.MaxNumberOfOutputsPerDocument)?.Reader.ReadLittleEndianInt32();
+
+                *(int*) statsTree.DirectAdd(IndexSchema.MaxNumberOfOutputsPerDocument, sizeof(int)) =
+                    currentMaxNumberOfOutputs > stats.MaxNumberOfOutputsPerDocument
+                        ? currentMaxNumberOfOutputs.Value
+                        : stats.MaxNumberOfOutputsPerDocument;
 
                 if (_index.Type.IsMapReduce())
                 {
@@ -643,6 +652,8 @@ namespace Raven.Server.Documents.Indexes
 
             public static readonly Slice ErrorTimestampsSlice;
 
+            public static readonly Slice MaxNumberOfOutputsPerDocument;
+
             static IndexSchema()
             {
                 Slice.From(StorageEnvironment.LabelsContext, "Type", ByteStringType.Immutable, out TypeSlice);
@@ -657,6 +668,7 @@ namespace Raven.Server.Documents.Indexes
                 Slice.From(StorageEnvironment.LabelsContext, "Priority", ByteStringType.Immutable, out PrioritySlice);
                 Slice.From(StorageEnvironment.LabelsContext, "State", ByteStringType.Immutable, out StateSlice);
                 Slice.From(StorageEnvironment.LabelsContext, "ErrorTimestamps", ByteStringType.Immutable, out ErrorTimestampsSlice);
+                Slice.From(StorageEnvironment.LabelsContext, "MaxNumberOfOutputsPerDocument", ByteStringType.Immutable, out MaxNumberOfOutputsPerDocument);
             }
         }
 

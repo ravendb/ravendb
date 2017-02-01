@@ -321,5 +321,11 @@ namespace Raven.Server.Documents.Indexes
             _stats.CommitDetails.NumberOfModifiedPages = numberOfModifiedPages;
             _stats.CommitDetails.NumberOfPagesWrittenToDisk = numberOfPagesWrittenToDisk;
         }
+
+        public void RecordNumberOfProducedOutputs(int numberOfOutputs)
+        {
+            if (numberOfOutputs > _stats.MaxNumberOfOutputsPerDocument)
+                _stats.MaxNumberOfOutputsPerDocument = numberOfOutputs;
+        }
     }
 }

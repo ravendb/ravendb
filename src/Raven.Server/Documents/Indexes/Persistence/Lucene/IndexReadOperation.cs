@@ -44,6 +44,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly RavenPerFieldAnalyzerWrapper _analyzer;
         private readonly IDisposable _releaseSearcher;
         private readonly IDisposable _releaseReadTransaction;
+        private readonly int _maxNumberOfOutputsPerDocument;
 
         public IndexReadOperation(Index index, LuceneVoronDirectory directory,
             IndexSearcherHolder searcherHolder, Transaction readTransaction)
@@ -58,6 +59,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 throw new IndexAnalyzerException(e);
             }
 
+            _maxNumberOfOutputsPerDocument = index.MaxNumberOfOutputsPerDocument;
             _indexType = index.Type;
             _indexHasBoostedFields = index.HasBoostedFields;
             _releaseReadTransaction = directory.SetTransaction(readTransaction);
@@ -118,8 +120,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             yield break;
                     }
 
-                    docsToGet += query.PageSize - returnedResults;
-
+                    docsToGet += (query.PageSize - returnedResults) * _maxNumberOfOutputsPerDocument;
                     if (search.TotalHits == search.ScoreDocs.Length)
                         break;
 

@@ -28,6 +28,8 @@ namespace Raven.Server.Documents.Indexes
 
         public List<IndexingError> Errors;
 
+        public int MaxNumberOfOutputsPerDocument;
+
         public override string ToString()
         {
             return $"Map - attempts: {MapAttempts}, successes: {MapSuccesses}, errors: {MapErrors} / " +

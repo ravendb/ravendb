@@ -63,6 +63,10 @@ namespace Raven.NewClient.Data.Indexes
         /// </summary>
         public double ReducedPerSecondRate { get; set; }
 
+        /// <summary>
+        /// Indicates the maximum number of produced indexing outputs from a single document
+        /// </summary>
+        public int MaxNumberOfOutputsPerDocument { get; set; }
 
         public Dictionary<string, CollectionStats> Collections { get; set; }
 

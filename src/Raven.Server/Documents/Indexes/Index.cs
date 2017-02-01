@@ -143,9 +143,9 @@ namespace Raven.Server.Documents.Indexes
         private volatile bool _priorityChanged;
         private volatile bool _hadRealIndexingWorkToDo;
         
-        private readonly WarnIndexOutputsPerDocument _highFanoutRatioWarning = new WarnIndexOutputsPerDocument
+        private readonly WarnIndexOutputsPerDocument _indexOutputsPerDocumentWarning = new WarnIndexOutputsPerDocument
         {
-            MaxProducedOutputsForDocument = int.MinValue,
+            MaxNumberOutputsPerDocument = int.MinValue,
             Suggestion = "Please verify this index definition and consider a re-design of your entities or index for better indexing performance"
         };
 
@@ -237,6 +237,8 @@ namespace Raven.Server.Documents.Indexes
 
         public string Name => Definition?.Name;
 
+        public int MaxNumberOfOutputsPerDocument { get; private set; }
+
         public virtual IndexRunningStatus Status
         {
             get
@@ -254,6 +256,7 @@ namespace Raven.Server.Documents.Indexes
         public virtual bool HasBoostedFields => false;
 
         public virtual bool IsMultiMap => false;
+
 
         public AsyncManualResetEvent.FrozenAwaiter GetIndexingBatchAwaiter()
         {
@@ -404,6 +407,7 @@ namespace Raven.Server.Documents.Indexes
                 State = _indexStorage.ReadState(tx);
                 _lastQueryingTime = DocumentDatabase.Time.GetUtcNow();
                 LastIndexingTime = _indexStorage.ReadLastIndexingTime(tx);
+                MaxNumberOfOutputsPerDocument = _indexStorage.ReadStats(tx).MaxNumberOfOutputsPerDocument;
             }
         }
 
@@ -1989,34 +1993,39 @@ namespace Raven.Server.Documents.Indexes
 
         public abstract IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch);
 
-        protected void WarnExceedingIndexOutputsPerDocument(string documentKey, int numberOfAlreadyProducedOutputs)
+        protected void HandleIndexOutputsPerDocument(string documentKey, int numberOfOutputs, IndexingStatsScope stats)
         {
-            if (PerformanceHints.MaxWarnIndexOutputsPerDocument <= 0 || numberOfAlreadyProducedOutputs <= PerformanceHints.MaxWarnIndexOutputsPerDocument)
+            stats.RecordNumberOfProducedOutputs(numberOfOutputs);
+
+            if (numberOfOutputs > MaxNumberOfOutputsPerDocument)
+                MaxNumberOfOutputsPerDocument = numberOfOutputs;
+
+            if (PerformanceHints.MaxWarnIndexOutputsPerDocument <= 0 || numberOfOutputs <= PerformanceHints.MaxWarnIndexOutputsPerDocument)
                 return;
 
-            _highFanoutRatioWarning.NumberOfExceedingDocuments++;
+            _indexOutputsPerDocumentWarning.NumberOfExceedingDocuments++;
             
-            if (_highFanoutRatioWarning.MaxProducedOutputsForDocument < numberOfAlreadyProducedOutputs)
+            if (_indexOutputsPerDocumentWarning.MaxNumberOutputsPerDocument < numberOfOutputs)
             {
-                _highFanoutRatioWarning.MaxProducedOutputsForDocument = numberOfAlreadyProducedOutputs;
-                _highFanoutRatioWarning.SampleDocumentId = documentKey;
+                _indexOutputsPerDocumentWarning.MaxNumberOutputsPerDocument = numberOfOutputs;
+                _indexOutputsPerDocumentWarning.SampleDocumentId = documentKey;
             }
               
-            if (_highFanoutRatioWarning.LastWarnedAt != null &&
-                (SystemTime.UtcNow - _highFanoutRatioWarning.LastWarnedAt.Value).Minutes <= 5)
+            if (_indexOutputsPerDocumentWarning.LastWarnedAt != null &&
+                (SystemTime.UtcNow - _indexOutputsPerDocumentWarning.LastWarnedAt.Value).Minutes <= 5)
             {
                 // save the hint every 5 minutes (at worst case)
                 return;
             }
 
-            _highFanoutRatioWarning.LastWarnedAt = SystemTime.UtcNow;
+            _indexOutputsPerDocumentWarning.LastWarnedAt = SystemTime.UtcNow;
 
             var hint = PerformanceHint.Create("High indexing fanout ratio",
                 $"Index '{Name}' has produced more than {PerformanceHints.MaxWarnIndexOutputsPerDocument} map results from a single document",
                 PerformanceHintType.Indexing,
                 NotificationSeverity.Warning, 
                 source: Name,
-                details: _highFanoutRatioWarning);
+                details: _indexOutputsPerDocumentWarning);
 
             DocumentDatabase.NotificationCenter.Add(hint);
         }

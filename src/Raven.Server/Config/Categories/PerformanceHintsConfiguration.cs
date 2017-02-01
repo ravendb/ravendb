@@ -9,7 +9,7 @@ namespace Raven.Server.Config.Categories
         [Description("The size of a document after which it will get into the huge documents collection")]
         [DefaultValue(5)]
         [SizeUnit(SizeUnit.Megabytes)]
-        [ConfigurationEntry("Raven/PerformanceHints/Documents/HugeDocumentSize")]
+        [ConfigurationEntry("Raven/PerformanceHints/Documents/HugeDocumentSizeInMb")]
         public Size HugeDocumentSize { get; set; }
 
         [Description("The maximum size of the huge documents collection")]

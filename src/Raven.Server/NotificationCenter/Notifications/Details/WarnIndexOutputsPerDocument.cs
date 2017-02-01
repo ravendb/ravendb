@@ -9,7 +9,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
 
         public string SampleDocumentId { get; set; }
 
-        public int MaxProducedOutputsForDocument { get; set; }
+        public int MaxNumberOutputsPerDocument { get; set; }
 
         public string Suggestion { get; set; }
 
@@ -21,7 +21,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
             {
                 [nameof(NumberOfExceedingDocuments)] = NumberOfExceedingDocuments,
                 [nameof(SampleDocumentId)] = SampleDocumentId,
-                [nameof(MaxProducedOutputsForDocument)] = MaxProducedOutputsForDocument,
+                [nameof(MaxNumberOutputsPerDocument)] = MaxNumberOutputsPerDocument,
                 [nameof(Suggestion)] = Suggestion
             };
         }

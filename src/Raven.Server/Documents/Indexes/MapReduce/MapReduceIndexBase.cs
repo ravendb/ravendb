@@ -176,7 +176,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     }
                 }
 
-                WarnExceedingIndexOutputsPerDocument(documentKey, resultsCount);
+                HandleIndexOutputsPerDocument(documentKey, resultsCount, stats);
 
                 DocumentDatabase.Metrics.MapReduceMappedPerSecond.Mark(resultsCount);
 
