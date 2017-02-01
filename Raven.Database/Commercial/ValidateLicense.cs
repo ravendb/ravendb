@@ -246,20 +246,11 @@ namespace Raven.Database.Commercial
             return false;
         }
 
-        private string AssertLicenseAttributes(IDictionary<string, string> licenseAttributes, LicenseType licenseType)
+        private static string AssertLicenseAttributes(IDictionary<string, string> licenseAttributes, LicenseType licenseType)
         {
-            string version;
             var errorMessage = string.Empty;
 
-            licenseAttributes.TryGetValue("version", out version); // note that a 1.0 license might not have version
-
-            if (version != "3.0")
-            {
-                if (licenseType != LicenseType.Subscription)
-                {
-                    throw new LicenseExpiredException("This is not a license for RavenDB 3.0");
-                }
-            }
+            ThrowIfStandardLicenseExpired(licenseAttributes, licenseType);
 
             string maxRam;
             if (licenseAttributes.TryGetValue("maxRamUtilization", out maxRam))
@@ -278,24 +269,45 @@ namespace Raven.Database.Commercial
                     MemoryStatistics.MaxParallelism = Math.Max(2, (int.Parse(maxParallel) * 2));
                 }
             }
-            var clasterInspector = new ClusterInspecter();
 
-            string claster;
-            if (licenseAttributes.TryGetValue("allowWindowsClustering", out claster))
-            {
-                if (bool.Parse(claster) == false)
-                {
-                    if (clasterInspector.IsRavenRunningAsClusterGenericService())
-                        throw new LicenseExpiredException("Your license does not allow clustering, but RavenDB is running in clustered mode");
-                }
-            }
-            else
+            var clasterInspector = new ClusterInspecter();
+            string cluster;
+            if (licenseAttributes.TryGetValue("allowWindowsClustering", out cluster) == false || 
+                bool.Parse(cluster) == false)
             {
                 if (clasterInspector.IsRavenRunningAsClusterGenericService())
                     throw new LicenseExpiredException("Your license does not allow clustering, but RavenDB is running in clustered mode");
             }
 
             return errorMessage;
+        }
+
+        private static void ThrowIfStandardLicenseExpired(IDictionary<string, string> licenseAttributes, LicenseType licenseType)
+        {
+            if (licenseType == LicenseType.Subscription)
+            {
+                // we can use subscription with any version
+                return;
+            }
+
+            string version;
+            licenseAttributes.TryGetValue("version", out version); // note that a 1.0 license might not have version
+            if (version == "3.5")
+                return;
+
+            string updatesExpiration;
+            licenseAttributes.TryGetValue("updatesExpiration", out updatesExpiration);
+            if (updatesExpiration == null)
+                return;
+
+            DateTime result;
+            if (DateTime.TryParse(updatesExpiration, out result) == false)
+                return;
+
+            if ((result - DateTime.UtcNow).Days < 0)
+            {
+                throw new LicenseExpiredException("This is not a license for RavenDB 3.5");
+            }
         }
 
         private string GetLicenseText(InMemoryRavenConfiguration config)
