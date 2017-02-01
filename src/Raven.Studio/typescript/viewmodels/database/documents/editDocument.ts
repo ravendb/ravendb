@@ -296,7 +296,7 @@ class editDocument extends viewModelBase {
         const documentTask = $.Deferred<document>();
 
         if (collectionForNewDocument) {
-            this.userSpecifiedId(collectionForNewDocument + "/");
+            this.userSpecifiedId(this.defaultNameForNewDocument(collectionForNewDocument));
             new getDocumentsFromCollectionCommand(new collection(collectionForNewDocument, this.activeDatabase()), 0, 3)
                 .execute()
                 .done((documents: pagedResultSet<document>) => {
@@ -312,6 +312,26 @@ class editDocument extends viewModelBase {
         }
 
         return documentTask;
+    }
+
+    private defaultNameForNewDocument(collectionForNewDocument: string) {
+        //count how much capital letters we have in the string
+        let count = 0;
+        for (var i = 0, len = collectionForNewDocument.length; i < len; i++) {
+            const letter = collectionForNewDocument.charAt(i);
+            if (letter === letter.toLocaleUpperCase()) {
+                count++;
+                if (count >= 2) {
+                    // multiple capital letters, so probably something that we want to preserve caps on.
+                    return collectionForNewDocument + "/";
+                }
+            }
+        }
+
+        // simple name, just lower case it
+        return collectionForNewDocument.toLocaleLowerCase() + "/";
+
+       
     }
 
     toClipboard() {
