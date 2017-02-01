@@ -2,9 +2,32 @@
 
 import database = require("models/resources/database");
 import storageKeyProvider = require("common/storage/storageKeyProvider");
+import getIndexNamesCommand = require("commands/database/index/getIndexNamesCommand");
 
 class recentQueriesStorage {
-    static getRecentQueries(db: database): storedQueryDto[] {
+
+    static getRecentQueriesWithIndexNameCheck(db: database): JQueryPromise<storedQueryDto[]> {
+        const recentQueries = this.getRecentQueries(db);
+
+        const task = $.Deferred<storedQueryDto[]>();
+
+        new getIndexNamesCommand(db)
+            .execute()
+            .done((indexNames: string[]) => {
+                const filteredQueries = recentQueries.filter(x => x.indexName.startsWith("dynamic") || _.includes(indexNames, x.indexName));
+
+                if (filteredQueries.length !== recentQueries.length) {
+                    this.saveRecentQueries(db, filteredQueries);
+                }
+
+                task.resolve(filteredQueries);
+            })
+            .fail(response => task.reject());
+
+        return task;
+    }
+
+    private static getRecentQueries(db: database): storedQueryDto[] {
         const localStorageName = recentQueriesStorage.getLocalStorageKey(db.name);
         let recentQueriesFromLocalStorage: storedQueryDto[] = this.getRecentQueriesFromLocalStorage(localStorageName);
 
@@ -89,11 +112,6 @@ class recentQueriesStorage {
             localStorage.removeItem(localStorageName);
         }
     }
-
-    static onIndexDeleted(dbName: string, indexName: string) {
-        recentQueriesStorage.removeIndexFromRecentQueriesByName(dbName, indexName);
-    }
-
 
 }
 

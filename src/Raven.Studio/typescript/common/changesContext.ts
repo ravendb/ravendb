@@ -56,8 +56,7 @@ class changesContext {
         return serverClient.connectToWebSocketTask;
     }
 
-    changeResource(rs: resource, globalResourceChangesApiSubscriptions?: (changes: changesApi) => changeSubscription[],
-        globalResourceNotificationCenterSubscriptions?: (resourceNotificationCenterClient: resourceNotificationCenterClient) => changeSubscription[]): void {
+    changeResource(rs: resource): void {
         const currentChanges = this.resourceChangesApi();
         if (currentChanges && currentChanges.getResource().qualifiedName === rs.qualifiedName) {
             // nothing to do - already connected to requested changes api
@@ -77,18 +76,9 @@ class changesContext {
 
         this.globalResourceSubscriptions.push(...notificationCenter.instance.configureForResource(notificationsClient));
 
-        if (globalResourceNotificationCenterSubscriptions) {
-            this.globalResourceSubscriptions.push(...globalResourceNotificationCenterSubscriptions(notificationsClient));
-        }
-
         const newChanges = new changesApi(rs);
         newChanges.connectToWebSocketTask.done(() => {
             this.resourceChangesApi(newChanges);
-
-            if (globalResourceChangesApiSubscriptions) {
-                this.globalResourceSubscriptions.push(...globalResourceChangesApiSubscriptions(newChanges));
-            }
-
             this.navigateToResourceSpecificPage(rs);
         });
 

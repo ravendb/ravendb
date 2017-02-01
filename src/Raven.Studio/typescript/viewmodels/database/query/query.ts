@@ -330,7 +330,8 @@ class query extends viewModelBase {
     }
 
     private loadRecentQueries() {
-        this.recentQueries(recentQueriesStorage.getRecentQueries(this.activeDatabase()));
+        recentQueriesStorage.getRecentQueriesWithIndexNameCheck(this.activeDatabase())
+            .done(queries => this.recentQueries(queries));
     }
 
     private fetchAllTransformers(db: database): JQueryPromise<Array<Raven.Abstractions.Indexing.TransformerDefinition>> {

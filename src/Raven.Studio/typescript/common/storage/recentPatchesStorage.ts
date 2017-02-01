@@ -1,8 +1,35 @@
 import database = require("models/resources/database");
 import storageKeyProvider = require("common/storage/storageKeyProvider");
+import getIndexNamesComamnd = require("commands/database/index/getIndexNamesCommand");
 
 class recentPatchesStorage {
-    static getRecentPatches(db: database): storedPatchDto[] {
+    static getRecentPatchesWithIndexNamesCheck(db: database): JQueryPromise<storedPatchDto[]> {
+        const recentPatches = this.getRecentPatches(db);
+
+        const task = $.Deferred<storedPatchDto[]>();
+
+        new getIndexNamesComamnd(db)
+            .execute()
+            .done((indexNames: string[]) => {
+                const filteredPatches = recentPatches.filter(x => x.PatchOnOption !== "Index" || _.includes(indexNames, x.SelectedItem));
+
+                if (filteredPatches.length !== recentPatches.length) {
+                    this.saveRecentPatches(db, filteredPatches);
+                }
+
+                task.resolve(filteredPatches);
+            })
+            .fail((response) => task.reject());
+
+        return task;
+    }
+
+    static saveRecentPatches(db: database, recentPatches: storedPatchDto[]) {
+        const localStorageName = recentPatchesStorage.getLocalStorageKey(db.name);
+        localStorage.setObject(localStorageName, recentPatches);
+    }
+
+    private static getRecentPatches(db: database): storedPatchDto[] {
         const localStorageName = recentPatchesStorage.getLocalStorageKey(db.name);
         let recentPatchesFromLocalStorage: storedPatchDto[] = this.getRecentPatchesFromLocalStorage(localStorageName);
 
@@ -14,12 +41,7 @@ class recentPatchesStorage {
         return recentPatchesFromLocalStorage;
     }
 
-    static saveRecentPatches(db: database, recentPatches: storedPatchDto[]) {
-        const localStorageName = recentPatchesStorage.getLocalStorageKey(db.name);
-        localStorage.setObject(localStorageName, recentPatches);
-    }
-
-    static removeIndexFromRecentPatches(db: database, indexName: string) {
+    private static removeIndexFromRecentPatches(db: database, indexName: string) {
         recentPatchesStorage.removeIndexFromRecentPatchesByName(db.name, indexName);
     }
 
@@ -58,9 +80,6 @@ class recentPatchesStorage {
         }
     }
 
-    static onIndexDeleted(dbName: string, indexName: string) {
-        recentPatchesStorage.removeIndexFromRecentPatchesByName(dbName, indexName);
-    }
 }
 
 export = recentPatchesStorage;

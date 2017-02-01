@@ -40,11 +40,6 @@ class resourcesManager {
         (q, n) => starredDocumentsStorage.onResourceDeleted(q, n)
     ] as Array<(qualifier: string, name: string) => void>;
 
-    onIndexDeletedCallback = [
-        (db, indexName) => recentPatchesStorage.onIndexDeleted(db, indexName),
-        (db, indexName) => recentQueriesStorage.onIndexDeleted(db, indexName)
-    ] as Array<(dbName: string, indexName: string) => void>;
-
     databases = ko.computed<database[]>(() => this.resources().filter(x => x instanceof database) as database[]);
     fileSystems = ko.computed<filesystem[]>(() => this.resources().filter(x => x instanceof filesystem) as filesystem[]);
     counterStorages = ko.computed<counterStorage[]>(() => this.resources().filter(x => x instanceof counterStorage) as counterStorage[]);
@@ -187,33 +182,13 @@ class resourcesManager {
     private activateDatabase(db: database) {
         //TODO: this.fecthStudioConfigForDatabase(db);
 
-        this.changesContext.changeResource(db, (changes: changesApi) => {
-            /* TODO
-            changes.watchAllDocs(() => this.refreshResources()); //TODO: use cooldown - and move to footer?
-            changes.watchAllIndexes(() => this.fetchDbStats(db)),
-            changes.watchBulks(() => this.fetchDbStats(db))*/
-
-            return [
-                changes.watchAllIndexes(e => this.onIndexNofitication(db, e))
-            ] as changeSubscription[];
-        });
+        this.changesContext.changeResource(db);
     }
 
     private activateFileSystem(fs: filesystem) {
         //TODO: ???? this.fecthStudioConfigForDatabase(new database(fs.name));
 
-        this.changesContext.changeResource(fs, (changes: changesApi) => {
-            //TODO: watchFsFolders("", () => this.fetchFsStats(fs))
-            return [] as changeSubscription[];
-        });
-    }
-
-    private onIndexNofitication(db: database, notification: Raven.Abstractions.Data.IndexChange) {
-        if (notification.Type === "IndexRemoved") {
-            this.onIndexDeletedCallback.forEach(callback => {
-                callback(db.name, notification.Name);
-            });
-        }
+        this.changesContext.changeResource(fs);
     }
 
     private reloadDataAfterReconnection(rs: resource) {
