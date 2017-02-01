@@ -13,6 +13,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Jint;
@@ -143,17 +144,14 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
         private IOperationResult ExportDatabaseInternal(DatabaseSmugglerOptions options, Action<IOperationProgress> onProgress, JsonOperationContext context, OperationCancelToken token)
         {
-            try
+            using (token)
             {
                 var source = new DatabaseSource(Database, 0, 0);
                 var destination = new StreamDestination(ResponseBodyStream(), context);
-                var smuggler = new DatabaseSmuggler(source, destination, Database.Time, options, onProgress: onProgress);
+                var smuggler = new DatabaseSmuggler(source, destination, Database.Time, options, onProgress: onProgress, token: token.Token);
                 return smuggler.Execute();
             }
-            finally
-            {
-                token.Dispose();
-            }
+           
         }
 
         [RavenAction("/databases/*/smuggler/import-s3-dir", "GET")]
@@ -301,15 +299,17 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out context))
             {
                 var options = DatabaseSmugglerOptionsServerSide.Create(HttpContext, context);
+                var token = CreateOperationToken();
 
                 var tuple = await GetImportStream();
                 using (tuple.Item2)
                 using (var stream = new GZipStream(tuple.Item1, CompressionMode.Decompress))
+                using (token)
                 {
                     var source = new StreamSource(stream, context);
                     var destination = new DatabaseDestination(Database);
 
-                    var smuggler = new DatabaseSmuggler(source, destination, Database.Time, options);
+                    var smuggler = new DatabaseSmuggler(source, destination, Database.Time, options, token: token.Token);
 
                     var result = smuggler.Execute();
 
@@ -384,7 +384,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                         continue;
 
                                     var stream = new GZipStream(section.Body, CompressionMode.Decompress);
-                                    DoImportInternal(context, stream, options, result, onProgress);
+                                    DoImportInternal(context, stream, options, result, onProgress, token);
                                 }
                             }
                             catch (Exception e)
@@ -401,19 +401,16 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        private void DoImportInternal(JsonOperationContext context, Stream stream, DatabaseSmugglerOptions options, SmugglerResult result, Action<IOperationProgress> onProgress)
+        private void DoImportInternal(JsonOperationContext context, Stream stream, DatabaseSmugglerOptions options, SmugglerResult result, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            try
+            using (stream)
+            using (token)
             {
                 var source = new StreamSource(stream, context);
                 var destination = new DatabaseDestination(Database);
-                var smuggler = new DatabaseSmuggler(source, destination, Database.Time, options, result, onProgress);
+                var smuggler = new DatabaseSmuggler(source, destination, Database.Time, options, result, onProgress, token.Token);
 
                 smuggler.Execute();
-            }
-            finally
-            {
-                stream.Dispose();
             }
         }
 

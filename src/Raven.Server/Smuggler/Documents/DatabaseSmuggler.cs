@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client.Data;
@@ -25,6 +26,7 @@ namespace Raven.Server.Smuggler.Documents
         private readonly SystemTime _time;
         private readonly Action<IOperationProgress> _onProgress;
         private readonly SmugglerPatcher _patcher;
+        private CancellationToken _token;
 
         public DatabaseSmuggler(
             ISmugglerSource source,
@@ -32,12 +34,14 @@ namespace Raven.Server.Smuggler.Documents
             SystemTime time,
             DatabaseSmugglerOptions options = null,
             SmugglerResult result = null,
-            Action<IOperationProgress> onProgress = null)
+            Action<IOperationProgress> onProgress = null,
+            CancellationToken token = default(CancellationToken))
         {
             _source = source;
             _destination = destination;
             _options = options ?? new DatabaseSmugglerOptions();
             _result = result;
+            _token = token;
 
             if (string.IsNullOrWhiteSpace(_options.TransformScript) == false)
                 _patcher = new SmugglerPatcher(_options);
@@ -153,6 +157,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 foreach (var kvp in _source.GetIdentities())
                 {
+                    _token.ThrowIfCancellationRequested();
                     result.Identities.ReadCount++;
 
                     if (kvp.Equals(default(KeyValuePair<string, long>)))
@@ -182,6 +187,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 foreach (var transformer in _source.GetTransformers())
                 {
+                    _token.ThrowIfCancellationRequested();
                     result.Transformers.ReadCount++;
 
                     if (transformer == null)
@@ -211,6 +217,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 foreach (var index in _source.GetIndexes())
                 {
+                    _token.ThrowIfCancellationRequested();
                     result.Indexes.ReadCount++;
 
                     if (index == null)
@@ -288,6 +295,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 foreach (var document in _source.GetRevisionDocuments(_options.CollectionsToExport, actions, _options.RevisionDocumentsLimit ?? int.MaxValue))
                 {
+                    _token.ThrowIfCancellationRequested();
                     result.RevisionDocuments.ReadCount++;
 
                     if (result.RevisionDocuments.ReadCount % 1000 == 0)
@@ -319,6 +327,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 foreach (var doc in _source.GetDocuments(_options.CollectionsToExport, actions))
                 {
+                    _token.ThrowIfCancellationRequested();
                     result.Documents.ReadCount++;
 
                     if (result.Documents.ReadCount % 1000 == 0)
