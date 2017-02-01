@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Util;
@@ -51,7 +52,7 @@ namespace FastTests
                 return AsyncHelpers.RunSync(() => PutAsync(id, etag, data, metadata));
             }
 
-            public async Task<PutResult> PutAsync(string id, long? etag, object data, Dictionary<string, string> metadata)
+            public async Task<PutResult> PutAsync(string id, long? etag, object data, Dictionary<string, string> metadata, CancellationToken cancellationToken = default(CancellationToken))
             {
                 if (id == null)
                     throw new ArgumentNullException(nameof(id));
@@ -82,7 +83,7 @@ namespace FastTests
                         Document = document
                     };
 
-                    await RequestExecuter.ExecuteAsync(command, Context);
+                    await RequestExecuter.ExecuteAsync(command, Context, cancellationToken);
 
                     return command.Result;
                 }
@@ -103,19 +104,37 @@ namespace FastTests
                 await RequestExecuter.ExecuteAsync(command, Context);
             }
 
-            public DynamicBlittableJson Get(string id)
+            public long? Head(string id)
             {
-                return AsyncHelpers.RunSync(() => GetAsync(id));
+                return AsyncHelpers.RunSync(() => HeadAsync(id));
             }
 
-            public async Task<DynamicBlittableJson> GetAsync(string id)
+            public async Task<long?> HeadAsync(string id)
+            {
+                if (id == null)
+                    throw new ArgumentNullException(nameof(id));
+
+                var command = new HeadDocumentCommand(id, null);
+
+                await RequestExecuter.ExecuteAsync(command, Context);
+
+                return command.Result;
+            }
+
+            public DynamicBlittableJson Get(string id, bool metadataOnly = false)
+            {
+                return AsyncHelpers.RunSync(() => GetAsync(id, metadataOnly));
+            }
+
+            public async Task<DynamicBlittableJson> GetAsync(string id, bool metadataOnly = false)
             {
                 if (id == null)
                     throw new ArgumentNullException(nameof(id));
 
                 var command = new GetDocumentCommand
                 {
-                    Id = id
+                    Id = id,
+                    MetadataOnly = metadataOnly
                 };
 
                 await RequestExecuter.ExecuteAsync(command, Context);

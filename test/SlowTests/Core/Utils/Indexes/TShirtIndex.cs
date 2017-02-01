@@ -5,9 +5,7 @@
 // ----------------------------------------------------------------------
 
 using System.Linq;
-
-using Raven.Client.Indexes;
-
+using Raven.NewClient.Client.Indexes;
 using TShirt = SlowTests.Core.Utils.Entities.TShirt;
 
 namespace SlowTests.Core.Utils.Indexes

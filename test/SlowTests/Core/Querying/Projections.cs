@@ -5,7 +5,6 @@
 // ----------------------------------------------------------------------
 
 using System.Linq;
-using System.Threading.Tasks;
 
 using FastTests;
 
@@ -15,7 +14,7 @@ using Company = SlowTests.Core.Utils.Entities.Company;
 
 namespace SlowTests.Core.Querying
 {
-    public class Projections : RavenTestBase
+    public class Projections : RavenNewTestBase
     {
         [Fact]
         public void BasicProjections()

@@ -52,6 +52,9 @@ namespace Raven.NewClient.Client.Commands
 
         public virtual async Task ProcessResponse(JsonOperationContext context, HttpCache cache, RequestExecuterOptions options, HttpResponseMessage response, string url)
         {
+            if (response.Content.Headers.ContentLength.HasValue && response.Content.Headers.ContentLength == 0)
+                return;
+
             using (response)
             using (var stream = await response.Content.ReadAsStreamAsync())
             {

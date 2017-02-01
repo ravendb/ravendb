@@ -2,7 +2,9 @@
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Data.Indexes;
 using Raven.NewClient.Client.Data.Queries;
+using Raven.NewClient.Client.Data.Transformers;
 using Raven.NewClient.Client.Exceptions;
 using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Replication.Messages;

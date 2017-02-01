@@ -1,11 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 using FastTests;
-
-using Raven.Client;
-
+using Raven.NewClient.Client;
 using SlowTests.Core.Utils.Indexes;
 
 using Xunit;
@@ -15,7 +12,7 @@ using TShirtType = SlowTests.Core.Utils.Entities.TShirtType;
 
 namespace SlowTests.Core.Querying
 {
-    public class Intersection : RavenTestBase
+    public class Intersection : RavenNewTestBase
     {
         [Fact]
         public void CanPerformIntersectQuery()

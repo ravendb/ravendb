@@ -5,19 +5,16 @@
 // -----------------------------------------------------------------------
 
 using System.Linq;
-using System.Threading.Tasks;
 
 using FastTests;
-
-using Raven.Client;
-
+using Raven.NewClient.Client;
 using Xunit;
 
 using Company = SlowTests.Core.Utils.Entities.Company;
 
 namespace SlowTests.Core.Querying
 {
-    public class Paging : RavenTestBase
+    public class Paging : RavenNewTestBase
     {
         [Fact]
         public void BasicPaging()

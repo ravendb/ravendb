@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 
 using System.Linq;
-using System.Threading.Tasks;
 
 using FastTests;
 
@@ -16,7 +15,7 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Querying
 {
-    public class Linq : RavenTestBase
+    public class Linq : RavenNewTestBase
     {
         [Fact]
         public void CanQueryUsingLinq()
