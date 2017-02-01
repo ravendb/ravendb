@@ -153,6 +153,13 @@ namespace Voron.Impl
 
             _pagerStates = new HashSet<PagerState>(ReferenceEqualityComparer<PagerState>.Default);
 
+            JournalFiles = previous.JournalFiles;
+
+            foreach (var journalFile in JournalFiles)
+            {
+                journalFile.AddRef();
+            }
+
             foreach (var scratchPagerState in previous._pagerStates)
             {
                 scratchPagerState.AddRef();
@@ -219,7 +226,14 @@ namespace Voron.Impl
             }
 
             EnsureNoDuplicateTransactionId(id);
-
+            // we keep this copy to make sure that if we use async commit, we have a stable copy of the jounrals
+            // as they were at the time we started the original transaction, this is required because async commit
+            // may modify the list of files we have available
+            JournalFiles = _journal.Files;
+            foreach (var journalFile in JournalFiles)
+            {
+                journalFile.AddRef();
+            }
             _env.WriteTransactionPool.Reset();
             _dirtyOverflowPages = _env.WriteTransactionPool.DirtyOverflowPagesPool;
             _scratchPagesTable = _env.WriteTransactionPool.ScratchPagesTablePool;
@@ -607,6 +621,13 @@ namespace Voron.Impl
             {
                 pagerState.Release();
             }
+            if (JournalFiles != null)
+            {
+                foreach (var journalFile in JournalFiles)
+                {
+                    journalFile.Release();
+                }
+            }
 
             _root?.Dispose();
             _freeSpaceTree?.Dispose();
@@ -877,6 +898,7 @@ namespace Voron.Impl
         internal ActiveTransactions.Node ActiveTransactionNode;
         internal bool FlushInProgressLockTaken;
         private ByteString _txHeaderMemory;
+        internal ImmutableAppendOnlyList<JournalFile> JournalFiles;
 
         public void EnsurePagerStateReference(PagerState state)
         {

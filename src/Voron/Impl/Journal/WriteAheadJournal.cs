@@ -287,8 +287,8 @@ namespace Voron.Impl.Journal
                 return null;
             }
 
-            // write transactions can read directly from journals
-            var files = _files;
+            // write transactions can read directly from journals that they got when they started up
+            var files = tx.JournalFiles;
             for (var i = files.Count - 1; i >= 0; i--)
             {
                 PagePosition value;
