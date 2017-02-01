@@ -553,21 +553,6 @@ class documents extends viewModelBase {
         }
     }
 
-    generateDocCode() {
-        var grid = this.getDocumentsGrid();
-        if (grid) {
-            var selectedItem = <Document>grid.getSelectedItems(1)[0];
-
-            var metadata = (<any>selectedItem)["__metadata"];
-            var id = metadata["id"]; 
-            var generate = new generateClassCommand(this.activeDatabase(), id, "csharp");
-            var deffered = generate.execute();
-            deffered.done((code: any) => {
-                app.showBootstrapDialog(new showDataDialog("Generated Class", code["Code"]));
-            });
-        }
-    }
-
     private getDocumentsGrid(): virtualTable {
         var gridContents = $(documents.gridSelector).children()[0];
         if (gridContents) {
@@ -602,6 +587,24 @@ class documents extends viewModelBase {
             $(element).slideUp(1000, () => { $(element).remove(); });
         }
     }
+
+
+    /* TODO 
+    generateDocCode() {
+        var grid = this.getDocumentsGrid();
+        if (grid) {
+            var selectedItem = <Document>grid.getSelectedItems(1)[0];
+
+            var metadata = (<any>selectedItem)["__metadata"];
+            var id = metadata["id"];
+            var generate = new generateClassCommand(this.activeDatabase(), id, "csharp");
+            var deffered = generate.execute();
+            deffered.done((code: any) => {
+                app.showBootstrapDialog(new showDataDialog("Generated Class", code["Code"]));
+            });
+        }
+    }
+    */
 }
 
 export = documents;
