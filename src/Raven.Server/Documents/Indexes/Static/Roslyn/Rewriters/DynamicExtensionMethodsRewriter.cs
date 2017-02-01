@@ -14,11 +14,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             .Select(x => x.Name)
             .ToArray();
 
-        public static DynamicExtensionMethodsRewriter Instance = new DynamicExtensionMethodsRewriter();
-
-        private DynamicExtensionMethodsRewriter()
-        {
-        }
+        public static readonly DynamicExtensionMethodsRewriter Instance = new DynamicExtensionMethodsRewriter();
 
         public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
         {
