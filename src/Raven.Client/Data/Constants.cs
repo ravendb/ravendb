@@ -351,6 +351,8 @@ namespace Raven.Abstractions.Data
                 public const string LastSentEtag = "LastSentEtag";
             }
 
+            public const string AllDocumentsCollection = "@all_docs";
+
             public const string DocumentChangeVector = "Raven-Document-Change-Vector";
 
             public const string DocumentReplicationTenantChangeVector = "Raven/DocumentReplication/TenantData";

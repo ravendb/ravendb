@@ -191,6 +191,27 @@ namespace FastTests.Server.Replication
             return false;
         }
 
+        protected T WaitForValue<T>(DocumentStore store, Func<T> act, T expectedVal)
+        {
+            int timeout = 5000;
+            if (Debugger.IsAttached)
+                timeout *= 100;
+            var sw = Stopwatch.StartNew();
+            do
+            {
+                var currentVal = act();
+                if (expectedVal.Equals(currentVal))
+                {
+                    return currentVal;
+                }
+                if (sw.ElapsedMilliseconds > timeout)
+                {
+                    return currentVal;
+                }
+
+            } while (true);
+        }
+
         protected List<string> WaitUntilHasTombstones(
                 DocumentStore store,
                 int count = 1)

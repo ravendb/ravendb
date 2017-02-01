@@ -479,7 +479,6 @@ namespace Raven.Server.Documents.Replication
                                         getFullResponse;
 
                     return Tuple.Create(replicationBatchReply.Type, sendFullReply ? replicationBatchReply : null);
-                   
                 }
             }
         }
