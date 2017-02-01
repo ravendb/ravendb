@@ -426,13 +426,13 @@ namespace Sparrow.Json
             _pos += len;
         }
 
-        public unsafe void WriteDouble(LazyDoubleValue val)
+        public void WriteDouble(LazyDoubleValue val)
         {
             var lazyStringValue = val.Inner;
             WriteRawString(lazyStringValue.Buffer, lazyStringValue.Size);
         }
 
-        public unsafe void WriteDouble(double val)
+        public void WriteDouble(double val)
         {
             using (var lazyStr = _context.GetLazyString(val.ToString(CultureInfo.InvariantCulture)))
             {
@@ -442,8 +442,18 @@ namespace Sparrow.Json
 
         public void Dispose()
         {
-            Flush();
-            _returnBuffer.Dispose();
+            try
+            {
+                Flush();
+            }
+            catch (ObjectDisposedException)
+            {
+                //we are disposing, so this exception doesn't matter
+            }
+            finally
+            {
+                _returnBuffer.Dispose();
+            }
         }
 
         public void WriteNewLine()

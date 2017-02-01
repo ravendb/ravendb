@@ -1,10 +1,6 @@
 ﻿using System.IO;
 using System.Text;
-using System.Threading.Tasks;
 using Raven.Server.Documents.Indexes.Static;
-using Raven.Server.Json;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Xunit;
 
@@ -29,7 +25,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         }
 
 
-        [Theory(Skip = "Temporary skip for debugging")]
+        [Theory]
         [InlineData(byte.MaxValue)]
         [InlineData(short.MaxValue)]
         [InlineData(short.MaxValue + 1)]
@@ -53,13 +49,12 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-        [Theory(Skip = "Temporary skip for debugging")]
+        [Theory]
         [InlineData(byte.MaxValue)]
         [InlineData(short.MaxValue)]
         [InlineData(short.MaxValue + 1)]
         public void FlatBoundarySizeFieldsAmountStreamRead(int maxValue)
         {
-
             var str = GetJsonString(maxValue);
 
             using (var blittableContext = JsonOperationContext.ShortTermSingleUse())

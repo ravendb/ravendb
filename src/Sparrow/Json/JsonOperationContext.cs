@@ -29,6 +29,7 @@ namespace Sparrow.Json
         private ArenaMemoryAllocator _arenaAllocatorForLongLivedValues;
         private AllocatedMemoryData _tempBuffer;
         private List<GCHandle> _pinnedObjects;
+
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
         private readonly List<AllocatedMemoryData> _disposableAllocatedMemory = new List<AllocatedMemoryData>();
         private readonly Dictionary<string, LazyStringValue> _fieldNames =
@@ -147,7 +148,6 @@ namespace Sparrow.Json
         {
             if (disposable == null) //precaution
                 return;
-
             _disposables.Add(disposable);
         }
 
@@ -587,6 +587,7 @@ namespace Sparrow.Json
                 var disposable = _disposables[i];
                 disposable.Dispose();
             }
+            _disposables.Clear();
 
             //note: this setup does not prevent "double" returns            
             for (var i = _disposableAllocatedMemory.Count - 1; i >= 0; i--)
@@ -605,9 +606,8 @@ namespace Sparrow.Json
             {
                 builder.DisposeTrackingReference = null;
                 builder.Dispose();
-            }      
+            }
 
-            _disposables.Clear();
             _disposableAllocatedMemory.Clear();
             _liveReaders.Clear();
 

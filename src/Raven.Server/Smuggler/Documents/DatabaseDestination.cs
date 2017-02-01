@@ -127,8 +127,7 @@ namespace Raven.Server.Smuggler.Documents
                 _log = log;
                 _command = new MergedBatchPutCommand(database, buildVersion, log)
                 {
-                    IsRevision = isRevision,
-                    ShouldDisposeAfterCommit = false
+                    IsRevision = isRevision
                 };
             }
 

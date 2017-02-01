@@ -226,7 +226,7 @@ namespace Raven.Server.Documents.Replication
             catch (OperationCanceledException e)
             {
                 if (_log.IsInfoEnabled)
-                    _log.Info($"Operation canceled on replication thread ({FromToString}). Stopped the thread.");
+                    _log.Info($"Operation canceled on replication thread ({FromToString}). This is not necessary due to an issue. Stopped the thread.");
                 Failed?.Invoke(this, e);
             }
             catch (IOException e)
@@ -490,7 +490,6 @@ namespace Raven.Server.Documents.Replication
                                        TimeSpan.FromMilliseconds(timeout));
         }
 
-
         private static void ThrowConnectionClosed()
         {
             throw new OperationCanceledException("The connection has been closed by the Dispose method");
@@ -549,6 +548,7 @@ namespace Raven.Server.Documents.Replication
             var uri = new Uri(connection.Url);
             var host = uri.Host;
             var port = uri.Port;
+
             try
             {
                 tcpClient.ConnectAsync(host, port).Wait(CancellationToken);
@@ -558,6 +558,16 @@ namespace Raven.Server.Documents.Replication
                 if (_log.IsInfoEnabled)
                     _log.Info(
                         $"Failed to connect to remote replication destination {connection.Url}. Socket Error Code = {e.SocketErrorCode}",
+                        e);
+                throw;
+            }
+            catch (OperationCanceledException e)
+            {
+                if (_log.IsInfoEnabled)
+                    _log.Info(
+                        $@"Tried to connect to remote replication destination {connection.Url}, but the operation was aborted. 
+                            This is not necessarily an issue, it might be that replication destination document has changed at 
+                            the same time we tried to connect. We will try to reconnect later.",
                         e);
                 throw;
             }
