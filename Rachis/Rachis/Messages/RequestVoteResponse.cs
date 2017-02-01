@@ -5,9 +5,9 @@ using System.Threading.Tasks;
 
 namespace Rachis.Messages
 {
-    public class RequestVoteResponse : MessageBase
+    public class RequestVoteResponse 
     {
-        public override MessageType GetMessageType()
+        public MessageType GetMessageType()
         {
             return MessageType.RequestVoteResponse;
         }

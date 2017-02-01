@@ -9,9 +9,9 @@ namespace Rachis.Storage
     public class Topology
     {
         private readonly Dictionary<string, NodeConnectionInfo> _allNodes;
-        private Dictionary<string,NodeConnectionInfo> _allVotingNodes;
-        private Dictionary<string, NodeConnectionInfo> _nonVotingNodes;
-        private Dictionary<string, NodeConnectionInfo> _promotableNodes;
+        private readonly Dictionary<string,NodeConnectionInfo> _allVotingNodes;
+        private readonly Dictionary<string, NodeConnectionInfo> _nonVotingNodes;
+        private readonly Dictionary<string, NodeConnectionInfo> _promotableNodes;
 
         public Guid TopologyId { get; private set; }
         public Topology()
@@ -46,6 +46,12 @@ namespace Rachis.Storage
             }
             CreateTopologyString();
         }
+
+        public IEnumerable<NodeConnectionInfo> AllNodes
+        {
+            get { return _allNodes.Values; }
+        }
+
         public IEnumerable<NodeConnectionInfo> AllVotingNodes
         {
             get { return _allVotingNodes.Values; }

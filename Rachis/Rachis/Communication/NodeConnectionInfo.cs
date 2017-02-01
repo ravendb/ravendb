@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace Rachis.Communication
 {
@@ -32,7 +34,8 @@ namespace Rachis.Communication
             if (obj.GetType() != GetType()) return false;
             return Equals((NodeConnectionInfo)obj);
         }
-
+        [JsonIgnore]
+        public Func<string,Stream> ConnectFunc { get; set; }
 
         public static bool operator ==(NodeConnectionInfo left, NodeConnectionInfo right)
         {

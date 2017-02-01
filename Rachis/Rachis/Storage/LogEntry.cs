@@ -11,8 +11,8 @@ namespace Rachis.Storage
         public long Index { get; set; }
         public long Term { get; set; }
         public bool? IsTopologyChange { get; set; }
-        //public byte[] Data { get; set; }
+        public byte[] Data { get; set; }
         //TODO:Replace the command with a serialized version. 
-        public Command Command { get; set; }
+        //public Command Command { get; set; }
     }
 }

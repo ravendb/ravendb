@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Rachis.Behaviors;
 using Rachis.Commands;
 using Rachis.Communication;
 using Rachis.Interfaces;
+using Rachis.Messages;
 using Rachis.Storage;
 using Sparrow.Collections.LockFree;
 
@@ -14,15 +17,17 @@ namespace Rachis
 {
     public class RaftEngine
     {
-        public RaftEngine(RaftEngineOptions options)
+        public RaftEngine(RaftEngineOptions options,Topology bootstrap = null)
         {
             Options = options;
             Name = options.Name;
             CancellationTokenSource = new CancellationTokenSource();
-            PersistentState = new PersistentState(Name,options.ElectionTimeout);
-            CurrentTopology =    PersistentState.GetCurrentTopology();
+            PersistentState = new PersistentState(Name,options.ElectionTimeout,options.HeartbeatTimeout);
+            //CurrentTopology = bootstrap??PersistentState.GetCurrentTopology();
+            PersistentState.SetCurrentTopology(bootstrap);
             var thereAreOthersInTheCluster = CurrentTopology.QuorumSize > 1;
-            if (thereAreOthersInTheCluster == false && CurrentTopology.IsVoter(Name))
+            //if (thereAreOthersInTheCluster == false && CurrentTopology.IsVoter(Name))
+            if(bootstrap != null)
             {
                 PersistentState.UpdateTermTo(PersistentState.CurrentTerm + 1);// restart means new term
                 SetState(RaftEngineState.Leader);
@@ -33,29 +38,19 @@ namespace Rachis
             }
         }
 
-        public void HandleNewConnection(ITransportBus connection)
+        /// <summary>
+        /// This method is intended for a leader that has to re-establish communication to its topology but is already a confirmed leader.
+        /// </summary>
+        internal void ReestablsihCommunicationWithTopologyAsLeader()
         {
-            //StateBehavior.HandleNewConnection(connection);            
-            var nodeId = connection.GetNodeId();
-            // We don't allow two connections from the same source at the same time, here I'm assuming
-            // that if a node is connecting to us again then the old connection should be closed.
-            _incomingCommunicationThreads.AddOrUpdate(nodeId, sourceId =>
-            {
-                var thread = new IncomingCommunicationThread(nodeId, Name, connection, this); //CommunicationDone
-                thread.CommunicationDone += OnCommunicationEnded;
-                return thread;
-            }, (sourceId, oldThread) =>
-            {
-                oldThread.Dispose();
-                if (oldThread.Joined == false)
-                    return oldThread; //we didn't join the old thread will have to try again next time...
-                var thread = new IncomingCommunicationThread(nodeId, Name, connection, this); //CommunicationDone
-                thread.CommunicationDone += OnCommunicationEnded;
-                return thread;
-            });
+            StateBehavior?.Dispose();
+            var leaderState = new LeaderStateBehavior(this, false);
+            leaderState.StartCommunicationWithPeers();
+            StateBehavior = leaderState;
         }
 
-        internal void SetState(RaftEngineState state)
+        //TODO:Break this method into multiple methods 
+        internal void SetState(RaftEngineState state,Stream stream = null)
         {
             var oldState = State;
             if (oldState == state)
@@ -67,10 +62,12 @@ namespace Rachis
                     StateBehavior = new FollowerStateBehavior(this); 
                     break;
                 case RaftEngineState.FollowerAfterSteppingDown:
-                    StateBehavior = new FollowerStateBehavior(this,true); 
+                    StateBehavior = new FollowerStateBehavior(this, true); 
                     break;
                 case RaftEngineState.Leader:
-                    StateBehavior = new LeaderStateBehavior(this);
+                    var leaderState = new LeaderStateBehavior(this);
+                    leaderState.StartCommunicationWithPeers();
+                    StateBehavior = leaderState;
                     break;
                 case RaftEngineState.Candidate:
                     StateBehavior = new CandidateStateBehavior(this);
@@ -83,8 +80,7 @@ namespace Rachis
 
         public RaftEngineOptions Options { get; }
         public IRaftStateMachine StateMachine => Options.StateMachine;
-        public ITransportHub Transport => Options.TransportHub;
-        public Topology CurrentTopology { get; }
+        public Topology CurrentTopology => PersistentState.GetCurrentTopology();
 
         public string Name { get; set; }
         public PersistentState PersistentState;
@@ -114,19 +110,124 @@ namespace Rachis
 
         public void StartTopologyChange(TopologyChangeCommand topologyCommand)
         {
-            throw new NotImplementedException();
+            
         }
 
-        public Task CommitEntries(LogEntry[] entries, long nextCommitIndex)
+        public void CommitEntries(long nextCommitIndex)
         {
-            throw new NotImplementedException();
+            //TODO: this should be a background task
+            foreach (var entry in PersistentState.LogEntriesAfter(CommitIndex, nextCommitIndex))
+            {
+                StateMachine.Apply(entry);                
+            }
         }
 
-        private void OnCommunicationEnded(IncomingCommunicationThread incomingCommunicationThread, Exception exception)
+        public void HandleNewConnection(Stream stream)
         {
-            //TODO: log exception
-            _incomingCommunicationThreads.Remove(incomingCommunicationThread.SourceId);
+            var messageHandler = new MessageHandler(stream);
+            var header = messageHandler.ReadHeader();
+            switch (header.Type)
+            {
+                case MessageType.AppendEntries:
+                    var append = messageHandler.ReadMessageBody<AppendEntries>(header);
+                    // todo: validate if we can accept it at all
+                    var follower = (StateBehavior as FollowerStateBehavior);
+                    if (follower == null)
+                        return;
+                    follower.Start(append, stream);
+                    break;
+                case MessageType.RequestVote:
+                    var vote = messageHandler.ReadMessageBody<RequestVote>(header);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
         }
-        private readonly ConcurrentDictionary<string, IncomingCommunicationThread> _incomingCommunicationThreads = new ConcurrentDictionary<string, IncomingCommunicationThread>();
+
+        public void CommitEntries(long prevCommitIndex, long nextCommitIndex)
+        {
+            //TODO: this should be a background task
+            if (prevCommitIndex == nextCommitIndex)
+                return;
+            if (nextCommitIndex < prevCommitIndex)
+                //Something is very wrong
+                return;
+            foreach (var entry in PersistentState.LogEntriesAfter(prevCommitIndex).Take((int)nextCommitIndex- (int)prevCommitIndex))
+            {
+                StateMachine.Apply(entry);
+                if (entry.IsTopologyChange != null && entry.IsTopologyChange.Value)
+                {
+                    var topologychange = Command.FromBytes<TopologyChangeCommand>(entry.Data);
+                    CommitTopologyChange(topologychange);
+                }
+            }
+        }
+
+        private void CommitTopologyChange(TopologyChangeCommand topologychange)
+        {
+            //TODO: handle removed from topology and such
+        }
+
+        public void AddToCluster(NodeConnectionInfo node)
+        {
+            if (CurrentTopology.Contains(node.Name))
+                throw new InvalidOperationException("Node " + node.Name + " is already in the cluster");
+
+            var requestedTopology = new Topology(
+                CurrentTopology.TopologyId,
+                CurrentTopology.AllVotingNodes,
+                node.IsNoneVoter ? CurrentTopology.NonVotingNodes.Union(new[] { node }) : CurrentTopology.NonVotingNodes,
+                node.IsNoneVoter ? CurrentTopology.PromotableNodes : CurrentTopology.PromotableNodes.Union(new[] { node })
+                );
+
+            ModifyTopology(requestedTopology);
+        }
+
+        internal void ModifyTopology(Topology requested)
+        {
+            if (State != RaftEngineState.Leader)
+                throw new NotLeadingException("Cannot modify topology from a non leader node, current leader is: " +
+                                                    (CurrentLeader ?? "no leader"));
+
+            var logEntry = PersistentState.GetLogEntry(CommitIndex);
+            if (logEntry == null)
+                throw new InvalidOperationException("No log entry for committed for index " + CommitIndex + ", this is probably a brand new cluster with no committed entries or a serious problem");
+
+            if (logEntry.Term != PersistentState.CurrentTerm)
+                throw new InvalidOperationException("Cannot modify the cluster topology when the committed index " + CommitIndex + " is in term " + logEntry.Term + " but the current term is " +
+                                                    PersistentState.CurrentTerm + ". Wait until the leader finishes committing entries from the current term and try again");
+
+            var tcc = new TopologyChangeCommand
+            {
+                Requested = requested,
+                Previous = CurrentTopology,
+            };
+
+            StartTopologyChange(tcc);
+            AppendCommand(tcc);
+            ReestablsihCommunicationWithTopologyAsLeader();
+        }
+
+        public void AppendCommand(Command command)
+        {
+            if (command == null) throw new ArgumentNullException("command");
+
+            var leaderStateBehavior = StateBehavior as LeaderStateBehavior;
+            if (leaderStateBehavior == null || leaderStateBehavior.State != RaftEngineState.Leader)
+                throw new NotLeadingException("Command can be appended only on leader node. This node behavior type is " +
+                                                    StateBehavior.GetType().Name)
+                {
+                    CurrentLeader = CurrentLeader
+                };
+
+
+            leaderStateBehavior.AppendCommand(command);
+        }
+
+        public bool CurrentlyChangingTopology()
+        {
+            return false;
+        }
+
     }
 }
