@@ -120,7 +120,7 @@ namespace Voron.Impl
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public Table OpenTable(TableSchema schema, string name, bool throwIfDoesNotExist = true)
+        public Table OpenTable(TableSchema schema, string name)
         {
             if (_tables == null)
                 _tables = new Dictionary<string, Table>(StringComparer.Ordinal);
@@ -132,14 +132,17 @@ namespace Voron.Impl
             Slice nameSlice;
             Slice.From(Allocator, name, ByteStringType.Immutable, out nameSlice);
             // intentionally not disposing the name here, it is valid for the lifetime of the table
-            openTable = OpenTable(schema, nameSlice, throwIfDoesNotExist);
+            openTable = OpenTable(schema, nameSlice);
 
             _tables.Add(name, openTable);
+            
+            if (LowLevelTransaction.Environment.PrefetchedTables.AlreadyAccessed.Add(name))
+                openTable.PrefetchIndexesData();
 
             return openTable;
         }
 
-        public Table OpenTable(TableSchema schema, Slice name, bool throwIfDoesNotExist = true)
+        internal Table OpenTable(TableSchema schema, Slice name)
         {
             var tableTree = ReadTree(name, RootObjectType.Table);
 

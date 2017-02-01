@@ -90,6 +90,8 @@ namespace Voron
         private readonly Logger _log;
         public static int MaxConcurrentFlushes = 10; // RavenDB-5221
 
+        internal readonly PrefetchedTables PrefetchedTables = new PrefetchedTables();
+
         public Guid DbId { get; set; }
 
         public StorageEnvironmentState State { get; private set; }
