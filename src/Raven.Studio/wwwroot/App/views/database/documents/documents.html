@@ -66,19 +66,22 @@
                     <li><a href="#" data-bind="click: selectCsvColumns">Choose columns and export CSV...</a></li>
                 </ul>
             </div>
+            <!--TODO
             <div class="btn-group" data-bind="visible: hasAnyDocumentsSelected">
                 <button type="button" class="btn btn-default" data-bind="click: editSelectedDoc, enable: selectedDocumentIndices().length == 1" title="Edit selected document (F2)">
                     <i class="fa fa-pencil"></i>
                 </button>
-                <button type="button" class="btn btn-default" data-bind="click: generateDocCode, enable: selectedDocumentIndices().length == 1" title="Generate Class" style="display: none"> <!-- TODO: hidden for prerelease -->
+                <button type="button" class="btn btn-default" data-bind="click: generateDocCode, enable: selectedDocumentIndices().length == 1" title="Generate Class" style="display: none">  TODO: hidden for prerelease 
                     <i class="fa">C#</i>
                 </button>
             </div>
+                -->
             <div class="btn-group" data-bind="visible: hasAnyDocumentsSelected">
                 <button type="button" class="btn btn-danger" data-bind="click: deleteSelectedDocs" title="Delete selected documents (DEL)">
-                    <i class="fa fa-trash-o"></i>
+                    <i class="icon-trash"></i>
                 </button>
             </div>
+            <!--TODO
             <div class="btn-group" data-bind="visible: hasAnyDocumentsSelected() && canCopyAllSelected()">
                 <button type="button" class="btn btn-default" data-bind="click: copySelectedDocs" title="Copy selected documents (Ctrl+C, D)">
                     <i class="fa fa-copy"></i>
@@ -87,6 +90,7 @@
                     <i class="fa fa-clipboard"></i>
                 </button>
             </div>
+                -->
             <div class="btn-group">
                 <div id="loadingIndicator" data-bind="visible: showLoadingIndicatorThrottled">
                     <i class="fa fa-spinner fa-spin fa-2x"></i>
