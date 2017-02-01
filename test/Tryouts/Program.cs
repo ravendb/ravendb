@@ -12,7 +12,9 @@ using System.Linq;
 using System.Text;
 using FastTests.Blittable;
 using FastTests.Issues;
+using FastTests.Server.Basic;
 using FastTests.Server.Documents;
+using FastTests.Server.Documents.Expiration;
 using FastTests.Server.Documents.Queries;
 using FastTests.Server.Replication;
 using FastTests.Voron.FixedSize;
@@ -34,13 +36,21 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            for (int i = 0; i < 100; i++)
+//            for (int i = 0; i < 1000; i++)
+//            {
+//                Console.WriteLine(i);
+//                using (var a = new ReplicationIndexesAndTransformers())
+//                {
+//                    a.Can_replicate_multiple_indexes();
+//                }
+//            }
+            for (int i = 0; i < 1000; i++)
             {
-                using (var a = new FastTests.Smuggler.SmugglerApiTests())
+                Console.WriteLine(i);
+                using (var a = new MultiGetOperations())
                 {
-                    a.CanExportAndImportWithVersioingRevisionDocuments().Wait();
+                    a.WithPaging();
                 }
-                Console.WriteLine($"{i} finished");
             }
         }
     }
