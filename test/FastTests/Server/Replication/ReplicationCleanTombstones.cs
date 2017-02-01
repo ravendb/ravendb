@@ -57,7 +57,7 @@ namespace FastTests.Server.Replication
             }
 
             Assert.Equal(1, WaitUntilHasTombstones(store2).Count);
-            Assert.Equal(3, WaitForValue<long>(store1, () => storage1.DocumentReplicationLoader.MinimalEtagForReplication, 3));
+            Assert.Equal(3, WaitForValue(() => storage1.DocumentReplicationLoader.MinimalEtagForReplication, 3));
             storage1.DocumentTombstoneCleaner.ExecuteCleanup(null);
             Assert.Equal(0, WaitUntilHasTombstones(store1,0).Count);
         }

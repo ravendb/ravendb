@@ -694,6 +694,23 @@ namespace Raven.Server.Documents
             return doc;
         }
 
+        public bool HasMoreOfTombstonesAfter(
+            DocumentsOperationContext context,
+            long etag,
+            int maxAllowed)
+        {
+            var table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
+
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (
+                var _ in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag))
+            {
+                if (maxAllowed-- < 0)
+                    return true;
+            }
+            return false;
+        }
+
         public IEnumerable<DocumentTombstone> GetTombstonesFrom(
             DocumentsOperationContext context,
             long etag,

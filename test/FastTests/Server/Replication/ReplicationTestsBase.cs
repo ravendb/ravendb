@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using Raven.Client.Connection;
 using Raven.Json.Linq;
 using Raven.NewClient.Abstractions.Connection;
@@ -191,7 +192,7 @@ namespace FastTests.Server.Replication
             return false;
         }
 
-        protected T WaitForValue<T>(DocumentStore store, Func<T> act, T expectedVal)
+        protected T WaitForValue<T>(Func<T> act, T expectedVal)
         {
             int timeout = 5000;
             if (Debugger.IsAttached)
@@ -208,7 +209,7 @@ namespace FastTests.Server.Replication
                 {
                     return currentVal;
                 }
-
+                Thread.Sleep(16);
             } while (true);
         }
 

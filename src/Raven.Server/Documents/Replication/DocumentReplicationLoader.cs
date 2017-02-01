@@ -10,17 +10,15 @@ using Raven.Abstractions.Replication;
 using Raven.Client.Replication.Messages;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-
-using Raven.NewClient.Client.Blittable;
-using Raven.NewClient.Client.Document;
 using Raven.Server.Utils;
-using Sparrow;
 using Voron;
+using Voron.Data.BTrees;
 
 
 namespace Raven.Server.Documents.Replication
@@ -55,9 +53,38 @@ namespace Raven.Server.Documents.Replication
         private readonly ConcurrentSet<ConnectionShutdownInfo> _reconnectQueue =
             new ConcurrentSet<ConnectionShutdownInfo>();
 
-        private readonly ConcurrentDictionary<ReplicationDestination,long> _lastSendEtagPerDestination = new ConcurrentDictionary<ReplicationDestination, long>();
-        public long MinimalEtagForReplication => _lastSendEtagPerDestination.Count > 0 ?
-            _lastSendEtagPerDestination.Min(d => d.Value) : 0;
+        private class LastEtagPerDestination
+        {
+            public long LastEtag;
+        }
+
+        private readonly ConcurrentDictionary<ReplicationDestination, LastEtagPerDestination> _lastSendEtagPerDestination = 
+            new ConcurrentDictionary<ReplicationDestination, LastEtagPerDestination>();
+
+        public long MinimalEtagForReplication
+        {
+            get
+            {
+                var replicationDocument = ReplicationDocument;// thread safe copy
+
+                if(replicationDocument?.Destinations == null || replicationDocument.Destinations.Count == 0)
+                    return long.MaxValue;
+
+                if (replicationDocument.Destinations.Count != _lastSendEtagPerDestination.Count)
+                    // if we don't have information from all our destinations, we don't know what tombstones
+                    // we can remove. Note that this explicitly _includes_ disabled destinations, which prevents
+                    // us from doing any tombstone cleanup.
+                    return 0;
+
+                long minEtag = long.MaxValue;
+                foreach (var lastEtagPerDestination in _lastSendEtagPerDestination)
+                {
+                    minEtag = Math.Min(lastEtagPerDestination.Value.LastEtag, minEtag);
+                }
+
+                return minEtag;
+            }
+        }
 
         internal Dictionary<string, ScriptResolver> ScriptConflictResolversCache =
             new Dictionary<string, ScriptResolver>();
@@ -556,7 +583,7 @@ namespace Raven.Server.Documents.Replication
                 if (_outgoingFailureInfo.TryGetValue(instance.Destination, out failureInfo) == false)
                     return;
 
-                UpdateEtagVector(instance);
+                UpdateLastEtag(instance);
 
                 failureInfo.OnError(e);
                 failureInfo.DestinationDbId = instance.DestinationDbId;
@@ -574,9 +601,21 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
+        private void UpdateLastEtag(OutgoingReplicationHandler instance)
+        {
+            var etagPerDestination = _lastSendEtagPerDestination.GetOrAdd(
+                instance.Destination,
+                _ => new LastEtagPerDestination());
+
+            if (etagPerDestination.LastEtag == instance._lastSentDocumentEtag)
+                return;
+
+            Interlocked.Exchange(ref etagPerDestination.LastEtag, instance._lastSentDocumentEtag);
+        }
+
         private void OnOutgoingSendingSucceeded(OutgoingReplicationHandler instance)
         {
-            UpdateEtagVector(instance);
+            UpdateLastEtag(instance);
 
             ConnectionShutdownInfo failureInfo;
             if (_outgoingFailureInfo.TryGetValue(instance.Destination, out failureInfo))
@@ -596,17 +635,6 @@ namespace Raven.Server.Documents.Replication
             {
                 if (handler != instance)
                     handler.OnReplicationFromAnotherSource();
-            }
-        }
-
-        private void UpdateEtagVector(OutgoingReplicationHandler instance)
-        {
-            long val;
-            _lastSendEtagPerDestination.TryGetValue(instance.Destination, out val);
-            if (val < instance._lastSentDocumentEtag)
-            {
-                _lastSendEtagPerDestination.AddOrUpdate(
-                    instance.Destination, instance._lastSentDocumentEtag, (_, __) => instance._lastSentDocumentEtag);
             }
         }
 
@@ -762,33 +790,54 @@ namespace Raven.Server.Documents.Replication
         public Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
         {
             var minEtag = MinimalEtagForReplication;
-            const int maxTombstones = 1024;
             var result = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase)
             {
                 {Constants.Replication.AllDocumentsCollection, minEtag}
             };
 
-            var numOfTombstones = 0;
+            var replicationDocument = ReplicationDocument;//thread safe copy
+            if (replicationDocument?.Destinations == null)
+                return result;
+            ReplicationDestination disabledReplicationDestination = null;
+            bool hasDisabled = false;
+            foreach (var replicationDocumentDestination in replicationDocument.Destinations)
+            {
+                if (replicationDocumentDestination.Disabled)
+                {
+                    disabledReplicationDestination = replicationDocumentDestination;
+                    hasDisabled = true;
+                    break;
+                }
+            }
+
+            if (hasDisabled == false)
+                return result;
+
+            const int maxTombstones = 16 * 1024;
+
+            bool tooManyTombstones;
             DocumentsOperationContext context;
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-               numOfTombstones = _database.DocumentsStorage.GetTombstonesFrom(context, minEtag, 0, maxTombstones).Count();
-
+               tooManyTombstones = _database.DocumentsStorage.HasMoreOfTombstonesAfter(context, minEtag, maxTombstones);
             }
 
-            if (numOfTombstones >= maxTombstones)
-            {   
-                var disabledDestination = ReplicationDocument.Destinations.Where(d => d.Disabled);
-                foreach (var replicationDestination in disabledDestination)
-                {
-                    long etag;
-                    _lastSendEtagPerDestination.TryGetValue(replicationDestination, out etag);
-                    if (_log.IsInfoEnabled && etag == minEtag)
-                        _log.Info($"Warning: The disabled database {replicationDestination.Database} on {replicationDestination.Url} prevents from cleaning tombstones.");
-                }               
-            }
-            
+            if (!tooManyTombstones)
+                return result;
+
+            _database.NotificationCenter.Add(
+                PerformanceHint.Create(
+                    title: "Large number of tombstones because of disabled replication destination",
+                    msg:
+                        $"The disabled replication destination {disabledReplicationDestination.Database} on " +
+                        $"{disabledReplicationDestination.Url} prevents from cleaning large number of tombstones.",
+
+                    type: PerformanceHintType.Replication,
+                    notificationSeverity: NotificationSeverity.Warning,
+                    source: $"{disabledReplicationDestination.Database} on {disabledReplicationDestination.Url}"
+                ));
+
             return result;
         }
     

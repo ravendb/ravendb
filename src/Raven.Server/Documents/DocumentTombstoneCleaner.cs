@@ -73,12 +73,15 @@ namespace Raven.Server.Documents
                 if (tombstones.Count == 0)
                     return;
 
+                long minAllDocsEtag = long.MaxValue;
+
                 foreach (var subscription in _subscriptions)
                 {
                     foreach (var tombstone in subscription.GetLastProcessedDocumentTombstonesPerCollection())
                     {
-                        if (IsAllDocsCollection(tombstones, tombstone))
+                        if (tombstone.Key == Constants.Replication.AllDocumentsCollection)
                         {
+                            minAllDocsEtag = Math.Min(tombstone.Value, minAllDocsEtag);
                             break;
                         }
 
@@ -92,18 +95,18 @@ namespace Raven.Server.Documents
 
                 foreach (var tombstone in tombstones)
                 {
-                    if (tombstone.Value <= 0)
+                    var minTombstoneValue = Math.Min(tombstone.Value, minAllDocsEtag);
+                    if (minTombstoneValue <= 0)
                         continue;
 
                     try
                     {
-
                         using (var tx = storageEnvironment.WriteTransaction())
                         {
                             if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
                                 return;
 
-                            _documentDatabase.DocumentsStorage.DeleteTombstonesBefore(tombstone.Key, tombstone.Value, tx);
+                            _documentDatabase.DocumentsStorage.DeleteTombstonesBefore(tombstone.Key, minTombstoneValue, tx);
 
                             tx.Commit();
                         }
@@ -112,7 +115,7 @@ namespace Raven.Server.Documents
                     {
                         if (_logger.IsInfoEnabled)
                             _logger.Info(
-                                $"Could not delete tombstones for '{tombstone.Key}' collection and '{tombstone.Value}' etag.",
+                                $"Could not delete tombstones for '{tombstone.Key}' collection and '{minTombstoneValue}' etag.",
                                 e);
                     }
                 }
@@ -126,22 +129,6 @@ namespace Raven.Server.Documents
             {
                 Monitor.Exit(_locker);
             }
-        }
-
-        private static bool IsAllDocsCollection(Dictionary<string, long> tombstones, KeyValuePair<string,long> tombstone)
-        {
-            if (!tombstone.Key.Equals(Constants.Replication.AllDocumentsCollection))
-                return false;
-
-            foreach (var tomb in tombstones.ToList())
-            {
-                long val;
-                if (tombstones.TryGetValue(tomb.Key, out val) == false)
-                    tombstones[tomb.Key] = tombstone.Value;
-                else
-                    tombstones[tomb.Key] = Math.Min(tombstone.Value, val);
-            }
-            return true;
         }
 
         public void Dispose()
