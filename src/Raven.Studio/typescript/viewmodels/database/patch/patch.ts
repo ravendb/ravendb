@@ -264,9 +264,8 @@ class patch extends viewModelBase {
             rowCreatedEvent.off();
         });
 
-        var self = this;
-        $(window).bind('storage', () => {
-            self.fetchRecentPatches();
+        this.registerDisposableHandler($(window), 'storage', () => {
+            this.fetchRecentPatches();
         });
     }
 
@@ -300,7 +299,10 @@ class patch extends viewModelBase {
     }
 
     private fetchRecentPatches() {
-        this.recentPatches(recentPatchesStorage.getRecentPatches(this.activeDatabase()));
+        recentPatchesStorage.getRecentPatchesWithIndexNamesCheck(this.activeDatabase())
+            .done(result => {
+                this.recentPatches(result);
+            });
     }
 
     detached() {
@@ -429,8 +431,7 @@ class patch extends viewModelBase {
                 criteria.queryText(queryText);
 
                 var command = new queryIndexCommand(database, skip, take, criteria);
-                return command.execute()
-                    .fail(() => recentPatchesStorage.removeIndexFromRecentPatches(database, selectedIndex));
+                return command.execute();
             };
             var resultsList = new pagedList(resultsFetcher);
             this.currentCollectionPagedItems(resultsList);
@@ -796,9 +797,6 @@ class patch extends viewModelBase {
                     .done((result) => {
                         self.isTestIndex(result.IsTestIndex);
                         self.indexFields(Object.keys(result.Fields));
-                    })
-                    .fail(() => {
-                        recentPatchesStorage.removeIndexFromRecentPatches(this.activeDatabase(), indexName);
                     });
             }
         }

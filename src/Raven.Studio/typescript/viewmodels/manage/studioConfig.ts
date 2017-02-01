@@ -92,7 +92,8 @@ class studioConfig extends viewModelBase {
     attached() {
         super.attached();
         var self = this;
-        $(window).bind('storage', (e: any) => {
+
+        this.registerDisposableHandler($(window), 'storage', (e: any) => {
             if (e.originalEvent.key === serverBuildReminder.localStorageName) {
                 self.timeUntilRemindToUpgrade(serverBuildReminder.get());
             }

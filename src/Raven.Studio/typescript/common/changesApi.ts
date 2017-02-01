@@ -45,7 +45,7 @@ class changesApi extends abstractWebSocketClient<changesApiEventDto> {
     }
 
     protected webSocketUrlFactory(token: singleAuthToken) {
-        const connectionString = "singleUseAuthToken=" + token.Token + "&throttleConnection=true";
+        const connectionString = "singleUseAuthToken=" + token.Token;
         return "/changes?" + connectionString;
     }
 
