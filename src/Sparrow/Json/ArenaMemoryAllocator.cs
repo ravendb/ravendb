@@ -250,19 +250,19 @@ namespace Sparrow.Json
 
         public void Return(AllocatedMemoryData allocation)
         {
+#if RELEASE
+            var address = allocation.Address;
+#else
+            var address = allocation._address; //essentially bypass object disposed checks
+#endif
             allocation.IsReturned = true;
 #if MEM_GUARD
 #if MEM_GUARD_STACK
             if(allocation.FreedBy == null)
                 allocation.FreedBy = Environment.StackTrace;
 #endif
-            ElectricFencedMemory.Free(allocation.Address);
+            ElectricFencedMemory.Free(address);
 #else
-#if RELEASE
-            var address = allocation.Address;
-#else
-            var address = allocation._address; //essentially bypass object disposed checks
-#endif
 
             if (address != _ptrCurrent - allocation.SizeInBytes ||
                 address < _ptrStart)
