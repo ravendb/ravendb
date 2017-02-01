@@ -694,6 +694,30 @@ namespace Raven.Server.Documents
             return doc;
         }
 
+        public IEnumerable<DocumentTombstone> GetTombstonesBefore(
+            DocumentsOperationContext context,
+            long etag,
+            int start,
+            int take)
+        {
+            var table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
+
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var result in table.SeekBackwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag))
+            {
+                if (start > 0)
+                {
+                    start--;
+                    continue;
+                }
+
+                if (take-- <= 0)
+                    yield break;
+
+                yield return TableValueToTombstone(context, ref result.Reader);
+            }
+        }
+
         public IEnumerable<DocumentTombstone> GetTombstonesFrom(
             DocumentsOperationContext context,
             long etag,
