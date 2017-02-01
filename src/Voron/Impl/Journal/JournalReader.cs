@@ -246,9 +246,7 @@ namespace Voron.Impl.Journal
 
         private TransactionHeader* EnsureTransactionMapped(TransactionHeader* current, long pageNumber, long positionInsidePage)
         {
-            // we need to translate the 4kb position to the position by page size
-
-            var numberOfPages = GetNumberOfPagesFor(sizeof(TransactionHeader) + current->CompressedSize);
+            var numberOfPages = GetNumberOfPagesFor(positionInsidePage + sizeof(TransactionHeader) + current->CompressedSize);
             _journalPager.EnsureMapped(this, pageNumber, numberOfPages);
 
             var pageHeader = _journalPager.AcquirePagePointer(this, pageNumber)
@@ -256,8 +254,7 @@ namespace Voron.Impl.Journal
 
             return (TransactionHeader*)pageHeader;
         }
-
-
+        
         private bool ValidatePagesHash(StorageEnvironmentOptions options, TransactionHeader* current)
         {
             byte* dataPtr = (byte*)current + sizeof(TransactionHeader);

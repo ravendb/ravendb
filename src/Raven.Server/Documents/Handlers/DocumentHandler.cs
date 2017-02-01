@@ -454,64 +454,80 @@ namespace Raven.Server.Documents.Handlers
                 // TODO: an object that we'll apply, otherwise we'll slow down a lot the transactions
                 // TODO: just by doing the javascript parsing and preparing the engine
 
-                PatchResult patchResult;
-                using (context.OpenWriteTransaction())
+                BlittableJsonReaderObject origin = null;
+                try
                 {
-                    patchResult = Database.Patch.Apply(context, id, etag, patch, patchIfMissing, skipPatchIfEtagMismatch, debugMode: isDebugOnly);
-
-                    if (isTestOnly == false)
-                        context.Transaction.Commit();
-                }
-
-                switch (patchResult.Status)
-                {
-                    case PatchStatus.DocumentDoesNotExist:
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        return Task.CompletedTask;
-                    case PatchStatus.Created:
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-                        break;
-                    case PatchStatus.Skipped:
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                        return Task.CompletedTask;
-                    case PatchStatus.Patched:
-                    case PatchStatus.NotModified:
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-
-                    writer.WritePropertyName(nameof(patchResult.Status));
-                    writer.WriteString(patchResult.Status.ToString());
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(nameof(patchResult.ModifiedDocument));
-                    writer.WriteObject(patchResult.ModifiedDocument);
-
-                    if (isDebugOnly)
+                    PatchResult patchResult;
+                    using (context.OpenWriteTransaction())
                     {
-                        writer.WriteComma();
+                        patchResult = Database.Patch.Apply(context, id, etag, patch, patchIfMissing, skipPatchIfEtagMismatch, debugMode: isDebugOnly);
 
-                        writer.WritePropertyName(nameof(patchResult.OriginalDocument));
-                        if (patchResult.OriginalDocument != null)
-                            writer.WriteObject(patchResult.OriginalDocument);
+                        if (isTestOnly == false)
+                        {
+                            context.Transaction.Commit();
+                        }
                         else
-                            writer.WriteNull();
-
-                        writer.WritePropertyName(nameof(patchResult.Debug));
-                        if (patchResult.Debug != null)
-                            writer.WriteObject(patchResult.Debug);
-                        else
-                            writer.WriteNull();
-                        writer.WriteComma();
+                        {
+                            // origin document is only accessible from the transaction, and we are closing it
+                            // so we have hold on to a copy of it
+                            origin = patchResult.OriginalDocument.Clone(context);
+                        }
                     }
 
-                    writer.WriteEndObject();
+                    switch (patchResult.Status)
+                    {
+                        case PatchStatus.DocumentDoesNotExist:
+                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                            return Task.CompletedTask;
+                        case PatchStatus.Created:
+                            HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+                            break;
+                        case PatchStatus.Skipped:
+                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                            return Task.CompletedTask;
+                        case PatchStatus.Patched:
+                        case PatchStatus.NotModified:
+                            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        writer.WriteStartObject();
+
+                        writer.WritePropertyName(nameof(patchResult.Status));
+                        writer.WriteString(patchResult.Status.ToString());
+                        writer.WriteComma();
+
+                        writer.WritePropertyName(nameof(patchResult.ModifiedDocument));
+                        writer.WriteObject(patchResult.ModifiedDocument);
+
+                        if (isDebugOnly)
+                        {
+                            writer.WriteComma();
+
+                            writer.WritePropertyName(nameof(patchResult.OriginalDocument));
+                            if (origin != null)
+                                writer.WriteObject(origin);
+                            else
+                                writer.WriteNull();
+
+                            writer.WritePropertyName(nameof(patchResult.Debug));
+                            if (patchResult.Debug != null)
+                                writer.WriteObject(patchResult.Debug);
+                            else
+                                writer.WriteNull();
+                            writer.WriteComma();
+                        }
+
+                        writer.WriteEndObject();
+                    }
+                }
+                finally
+                {
+                    origin?.Dispose();
                 }
             }
 

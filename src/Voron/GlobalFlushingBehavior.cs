@@ -247,6 +247,9 @@ namespace Voron
 
         public void MaybeFlushEnvironment(StorageEnvironment env)
         {
+            if (env.Options.ManualFlushing)
+                return;
+
             _maybeNeedToFlush.Enqueue(env);
             _flushWriterEvent.Set();
         }

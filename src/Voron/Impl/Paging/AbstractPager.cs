@@ -327,9 +327,11 @@ namespace Voron.Impl.Paging
 
         public void Write(long posBy4Kbs, int numberOf4Kbs, byte* source)
         {
-            var pageNumber = posBy4Kbs / (Constants.Storage.PageSize / (4 * Constants.Size.Kilobyte));
-            var numberOfPages = numberOf4Kbs / (Constants.Storage.PageSize / (4 * Constants.Size.Kilobyte));
-            if (numberOf4Kbs % (Constants.Storage.PageSize / (4 * Constants.Size.Kilobyte)) != 0)
+            const int pageSizeTo4KbRatio = (Constants.Storage.PageSize / (4 * Constants.Size.Kilobyte));
+            var pageNumber = posBy4Kbs / pageSizeTo4KbRatio;
+            var offsetBy4Kb = posBy4Kbs % pageSizeTo4KbRatio;
+            var numberOfPages = numberOf4Kbs / pageSizeTo4KbRatio;
+            if (numberOf4Kbs % pageSizeTo4KbRatio != 0)
                 numberOfPages++;
 
             var newPagerState = _abstractPager.EnsureContinuous(pageNumber, numberOfPages);
@@ -340,9 +342,9 @@ namespace Voron.Impl.Paging
                 _pagerState = newPagerState;
             }
 
-            var toWrite = numberOf4Kbs*4*Constants.Size.Kilobyte;
+            var toWrite = numberOf4Kbs * 4 * Constants.Size.Kilobyte;
             byte* destination = _abstractPager.AcquirePagePointer(null, pageNumber, _pagerState)
-                                + (posBy4Kbs % (Constants.Storage.PageSize / (4 * Constants.Size.Kilobyte))*4*Constants.Size.Kilobyte);
+                                + (offsetBy4Kb * 4 * Constants.Size.Kilobyte);
 
             _abstractPager.UnprotectPageRange(destination, (ulong)toWrite);
 

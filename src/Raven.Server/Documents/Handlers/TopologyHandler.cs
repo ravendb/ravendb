@@ -22,27 +22,37 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/topology", "GET")]
         public Task GetTopology()
         {
-            DocumentsOperationContext context;
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
-            using ( var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            BlittableJsonReaderObject configurationDocumentData = null;
+            try
             {
-                Document configurationDocument;
-                using (context.OpenReadTransaction())
+                DocumentsOperationContext context;
+                using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    configurationDocument = Database.DocumentsStorage.Get(context, Constants.Replication.DocumentReplicationConfiguration);
-                }                
-                //This is the case where we don't have real replication topology.
-                if (configurationDocument == null)
-                {
-                    GenerateTopology(context, writer);
-                    return Task.CompletedTask;
+                    Document configurationDocument;
+                    using (context.OpenReadTransaction())
+                    {
+                        configurationDocument = Database.DocumentsStorage.Get(context,
+                            Constants.Replication.DocumentReplicationConfiguration);
+                        configurationDocumentData = configurationDocument?.Data.Clone(context);
+                    }
+                    //This is the case where we don't have real replication topology.
+                    if (configurationDocument == null)
+                    {
+                        GenerateTopology(context, writer);
+                        return Task.CompletedTask;
+                    }
+                    //here we need to construct the topology from the replication document 
+                    var replicationDocument = JsonDeserializationServer.ReplicationDocument(configurationDocumentData);
+                    var nodes = GenerateNodesFromReplicationDocument(replicationDocument);
+                    GenerateTopology(context, writer, nodes, configurationDocument.Etag);
                 }
-                //here we need to construct the topology from the replication document 
-                var replicationDocument = JsonDeserializationServer.ReplicationDocument(configurationDocument.Data);
-                var nodes = GenerateNodesFromReplicationDocument(replicationDocument);
-                GenerateTopology(context, writer, nodes, configurationDocument.Etag);
+                return Task.CompletedTask;
             }
-            return Task.CompletedTask;
+            finally
+            {
+                configurationDocumentData?.Dispose();
+            }
         }
 
         [RavenAction("/databases/*/topology/full", "GET")]
