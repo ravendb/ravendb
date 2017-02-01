@@ -225,7 +225,6 @@ namespace Voron.Data.Compression
 
         private class DecompressionBuffer : IDisposable
         {
-            private readonly byte* _ptr;
             private readonly AbstractPager _pager;
             private readonly long _position;
             private readonly int _size;
@@ -240,9 +239,9 @@ namespace Voron.Data.Compression
                 _pool = pool;
                 _index = index;
                 _pager.EnsureMapped(tx, _position, _size / Constants.Storage.PageSize);
-                _ptr = _pager.AcquirePagePointer(tx, position);
+                var ptr = _pager.AcquirePagePointer(tx, position);
 
-                TempPage = new TemporaryPage(_ptr, size) { ReturnTemporaryPageToPool = this };
+                TempPage = new TemporaryPage(ptr, size) { ReturnTemporaryPageToPool = this };
             }
             
             public readonly TemporaryPage TempPage;
@@ -251,9 +250,6 @@ namespace Voron.Data.Compression
             {
                 _pager.EnsureMapped(tx, _position, _size / Constants.Storage.PageSize);
                 var p = _pager.AcquirePagePointer(tx, _position);
-
-                if (_ptr == p)
-                    return;
 
                 TempPage.SetPointer(p);
             }
