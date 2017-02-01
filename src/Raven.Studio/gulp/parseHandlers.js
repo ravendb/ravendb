@@ -53,10 +53,19 @@ function findHandlerName(input) {
 
 function extractRavenActions(contents) {
     // line format: [RavenAction("/databases/*/docs", "DELETE", "/databases/{databaseName:string}/docs?id={documentId:string}")]
-    var annotationRegexp = /\[RavenAction\(\"([^"]+)\", \"([^"]+)\"(,(\s*) \"([^"]+)\")?\)]/g;
+    // or : [RavenAction("/databases/*/notification-center/watch", "GET", SkipUsagesCount = true)]
+    var annotationRegexpWoSkipUsagesCount = /\[RavenAction\(\"([^"]+)\", \"([^"]+)\"(,(\s*) \"([^"]+)\")?\)]/g;
     var match;
     var matches = new Set();
-    while ((match = annotationRegexp.exec(contents))) {
+    while ((match = annotationRegexpWoSkipUsagesCount.exec(contents))) {
+        var url = match[1];
+        if (url !== "/") {
+            matches.add(url);
+        }
+    }
+    
+    var annotationRegexpWithSkipUsagesCount = /\[RavenAction\(\"([^"]+)\", \"([^"]+)\",(\s*)SkipUsagesCount(\s*)=(\s*)true\)]/g;
+    while ((match = annotationRegexpWithSkipUsagesCount.exec(contents))) {
         var url = match[1];
         if (url !== "/") {
             matches.add(url);
