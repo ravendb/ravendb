@@ -290,24 +290,35 @@ namespace FastTests.Server.NotificationCenter
         {
             using (var database = CreateDocumentDatabase())
             {
-                var alert = GetSampleAlert();
-                database.NotificationCenter.Add(alert);
+                var alert1 = GetSampleAlert(customKey: "alert-1");
+                database.NotificationCenter.Add(alert1);
+
+                var alert2 = GetSampleAlert(customKey: "alert-2");
+                database.NotificationCenter.Add(alert2);
+
+                var alert3 = GetSampleAlert(customKey: "alert-3");
+                database.NotificationCenter.Add(alert3);
 
                 var actions = new AsyncQueue<Notification>();
                 var writer = new TestWebSockerWriter();
 
                 using (database.NotificationCenter.TrackActions(actions, writer))
                 {
-                    database.NotificationCenter.Postpone(alert.Id, SystemTime.UtcNow.AddMilliseconds(100));
+                    database.NotificationCenter.Postpone(alert1.Id, SystemTime.UtcNow.AddDays(1));
+                    database.NotificationCenter.Postpone(alert2.Id, SystemTime.UtcNow.AddMilliseconds(100));
+                    database.NotificationCenter.Postpone(alert3.Id, SystemTime.UtcNow.AddDays(1));
 
-                    var posponed = actions.DequeueAsync().Result as NotificationUpdated;
+                    for (int i = 0; i < 2; i++)
+                    {
+                        var posponed = actions.DequeueAsync().Result as NotificationUpdated;
 
-                    Assert.NotNull(posponed);
-                    Assert.Equal(NotificationUpdateType.Postponed, posponed.UpdateType);
+                        Assert.NotNull(posponed);
+                        Assert.Equal(NotificationUpdateType.Postponed, posponed.UpdateType);
+                    }
 
-                    Assert.True(SpinWait.SpinUntil(() => writer.SentNotifications.Count == 1, TimeSpan.FromSeconds(1)));
+                    Assert.True(SpinWait.SpinUntil(() => writer.SentNotifications.Count == 1, TimeSpan.FromSeconds(3)), $"Got: {writer.SentNotifications.Count}");
 
-                    Assert.Equal(alert.Id, writer.SentNotifications[0]);
+                    Assert.Equal(alert2.Id, writer.SentNotifications[0]);
                 }
             }
         }
@@ -350,6 +361,29 @@ namespace FastTests.Server.NotificationCenter
                 using (database.NotificationCenter.GetStored(out actions))
                 {
                     Assert.Equal(1, actions.Count());
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_postpone_notification_forever_then_next_notifictions_wont_be_sent()
+        {
+            using (var database = CreateDocumentDatabase())
+            {
+                var alert = GetSampleAlert();
+
+                database.NotificationCenter.Add(alert);
+
+                var notifications = new AsyncQueue<Notification>();
+                var writer = new TestWebSockerWriter();
+
+                database.NotificationCenter.Postpone(alert.Id, DateTime.MaxValue);
+
+                using (database.NotificationCenter.TrackActions(notifications, writer))
+                {
+                    database.NotificationCenter.Add(alert);
+
+                    Assert.Equal(0, notifications.Count);
                 }
             }
         }

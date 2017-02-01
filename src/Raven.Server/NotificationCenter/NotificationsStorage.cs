@@ -72,7 +72,7 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
-        public void Store(Notification notification)
+        public bool Store(Notification notification)
         {
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Saving notification '{notification.Id}'.");
@@ -86,6 +86,9 @@ namespace Raven.Server.NotificationCenter
 
                 DateTime? postponeUntil = null;
 
+                if (existing?.PostponedUntil == DateTime.MaxValue) // postponed until forever
+                    return false;
+
                 if (existing?.PostponedUntil != null && existing.PostponedUntil.Value > SystemTime.UtcNow)
                     postponeUntil= existing.PostponedUntil;
 
@@ -96,6 +99,8 @@ namespace Raven.Server.NotificationCenter
 
                 tx.Commit();
             }
+
+            return true;
         }
 
         private readonly long _postponeDateNotSpecified = Bits.SwapBytes(long.MaxValue);
@@ -219,6 +224,9 @@ namespace Raven.Server.NotificationCenter
                         continue;
 
                     if (action.PostponedUntil > cutoff)
+                        break;
+
+                    if (action.PostponedUntil == DateTime.MaxValue)
                         break;
 
                     yield return action;

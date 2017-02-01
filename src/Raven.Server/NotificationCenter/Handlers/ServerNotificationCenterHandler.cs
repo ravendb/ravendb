@@ -34,9 +34,14 @@ namespace Raven.Server.NotificationCenter.Handlers
         [RavenAction("/notification-center/dismiss", "POST")]
         public Task DismissPost()
         {
-            var actionId = GetStringQueryString("id");
+            var id = GetStringQueryString("id");
 
-            ServerStore.NotificationCenter.Dismiss(actionId);
+            var forever = GetBoolValueQueryString("forever", required: false);
+
+            if (forever == true)
+                ServerStore.NotificationCenter.Postpone(id, DateTime.MaxValue);
+            else
+                ServerStore.NotificationCenter.Dismiss(id);
 
             return NoContent();
         }
@@ -44,10 +49,10 @@ namespace Raven.Server.NotificationCenter.Handlers
         [RavenAction("/notification-center/postpone", "POST")]
         public Task PostponePost()
         {
-            var actionId = GetStringQueryString("id");
+            var id = GetStringQueryString("id");
             var timeInSec = GetLongQueryString("timeInSec");
 
-            ServerStore.NotificationCenter.Postpone(actionId, SystemTime.UtcNow.Add(TimeSpan.FromSeconds(timeInSec.Value)));
+            ServerStore.NotificationCenter.Postpone(id, SystemTime.UtcNow.Add(TimeSpan.FromSeconds(timeInSec.Value)));
             
             return NoContent();
         }

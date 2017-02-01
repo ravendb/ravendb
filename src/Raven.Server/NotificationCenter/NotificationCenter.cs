@@ -54,7 +54,8 @@ namespace Raven.Server.NotificationCenter
         {
             if (notification.IsPersistent)
             {
-                _notificationsStorage.Store(notification);
+                if (_notificationsStorage.Store(notification) == false)
+                    return;
             }
 
             if (_watchers.Count == 0)
@@ -126,14 +127,13 @@ namespace Raven.Server.NotificationCenter
 
         private async Task PostponedNotificationsSender()
         {
+            TimeSpan wait;
             while (_shutdown.IsCancellationRequested == false)
             {
                 try
                 {
-                    var notifications = GetPostponedNotifications();
-
-                    TimeSpan wait;
-
+                    var notifications = GetPostponedNotifications(1, DateTime.MaxValue);
+                    
                     if (notifications.Count == 0)
                         wait = Infinity;
                     else
@@ -141,6 +141,9 @@ namespace Raven.Server.NotificationCenter
 
                     if (wait == Infinity || wait > TimeSpan.Zero)
                         await _postponedNotificationEvent.WaitAsync(wait);
+
+                    _postponedNotificationEvent.Reset(true);
+                    notifications = GetPostponedNotifications(int.MaxValue, SystemTime.UtcNow);
 
                     while (notifications.Count > 0)
                     {
@@ -165,6 +168,7 @@ namespace Raven.Server.NotificationCenter
                             }
                         }
                     }
+
                 }
                 catch (OperationCanceledException)
                 {
@@ -179,12 +183,12 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
-        private Queue<PostponedNotification> GetPostponedNotifications()
+        private Queue<PostponedNotification> GetPostponedNotifications(int take, DateTime cutoff)
         {
             var next = new Queue<PostponedNotification>();
 
             IEnumerable<NotificationTableValue> actions;
-            using (_notificationsStorage.ReadPostponedActions(out actions, SystemTime.UtcNow))
+            using (_notificationsStorage.ReadPostponedActions(out actions, cutoff))
             {
                 foreach (var action in actions)
                 {
@@ -193,6 +197,9 @@ namespace Raven.Server.NotificationCenter
                         Id = action.Json[nameof(Notification.Id)].ToString(),
                         PostponedUntil = action.PostponedUntil.Value
                     });
+
+                    if (next.Count == take)
+                        break;
                 }
             }
 
