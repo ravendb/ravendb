@@ -37,10 +37,9 @@ namespace Sparrow.Json
                 _context, 
                 (UnmanagedWriteBuffer)(object)_unmanagedWriteBuffer);
 
-            //Make sure to dispose the writer later, otherwise we might leave "hanging" reference.
-            //We do not dispose this immediately since the blittable json returned from this method
-            //depends on the memory allocated inside of _unmanagedWriteBuffer.
-            _context.RegisterForDispose(_unmanagedWriteBuffer);
+            //we don't care to lose instance of write buffer,
+            //since when context is reset, the allocated memory is "reclaimed"
+
             _unmanagedWriteBuffer = default(TWriter);
             return reader;
         }
@@ -133,7 +132,6 @@ namespace Sparrow.Json
 
         public void ResetAndRenew()
         {
-            //don't dispose immediately the write buffer, since some object may depend on it
             _context.RegisterForDispose(_unmanagedWriteBuffer);
             _unmanagedWriteBuffer = (TWriter)(object)_context.GetStream();
             _position = 0;

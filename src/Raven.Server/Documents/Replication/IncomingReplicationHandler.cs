@@ -117,7 +117,7 @@ namespace Raven.Server.Documents.Replication
                                 "IncomingReplication/read-message",
                                 Timeout.Infinite,
                                 _connectionOptions.PinnedBuffer,
-                                CancellationToken.None))
+                                _database.DatabaseShutdown))
                             {
                                 TransactionOperationContext configurationContext;
                                 if (msg.Document != null)

@@ -182,7 +182,7 @@ namespace Sparrow.Json
                 Previous = null
             };
 
-#if MEM_GUARD_STACK
+#if MEM_GUARD
             AllocatedBy = Environment.StackTrace;
             FreedBy = null;
 #endif
@@ -334,7 +334,12 @@ namespace Sparrow.Json
         }
 
         public void Dispose()
-        {            
+        {
+#if MEM_GUARD
+            if (FreedBy == null) //if already disposed, keep the "FreedBy"
+                FreedBy = Environment.StackTrace;
+#endif
+
             var start = _current;
             while (_current != null &&
                 _current.Address != null) //prevent double dispose
@@ -345,13 +350,9 @@ namespace Sparrow.Json
             }
             GC.KeepAlive(start);
 
-#if MEM_GUARD_STACK
-            if(FreedBy == null) //if already disposed, keep the "FreedBy"
-                FreedBy = Environment.StackTrace;
-#endif
         }
 
-#if MEM_GUARD_STACK
+#if MEM_GUARD
         public string AllocatedBy;
         public string FreedBy;
 #endif
