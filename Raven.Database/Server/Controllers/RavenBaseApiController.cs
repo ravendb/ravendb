@@ -292,7 +292,7 @@ namespace Raven.Database.Server.Controllers
                 if(originalQuery != null)
                     nvc["query"] = originalQuery.Replace("+", "%2B");
                 foreach (var queryKey in nvc.AllKeys)
-                    nvc[queryKey] = UnescapeStringIfNeeded(nvc[queryKey]);
+                    nvc[queryKey] = UnescapeStringIfNeeded(nvc[queryKey],true, queryKey=="query");
             }
             req.Properties["Raven.QueryString"] = nvc;
             return nvc[key];
@@ -453,12 +453,15 @@ namespace Raven.Database.Server.Controllers
             return obj.ToString();
         }
 
-        private static string UnescapeStringIfNeeded(string str, bool shouldDecodeUrl = true)
+        private static string UnescapeStringIfNeeded(string str, bool shouldDecodeUrl = true,bool isQueryKey = false)
         {
             if (str.StartsWith("\"") && str.EndsWith("\""))
                 str = Regex.Unescape(str.Substring(1, str.Length - 2));
             if (str.Any(ch => ch > 127))
             {
+                //We can't do any escaping, unicode chars with special chars like '+' wouldn't work in the studio
+                if (isQueryKey)
+                    return str;
                 // contains non ASCII chars, needs encoding
                 return Uri.EscapeDataString(str);
             }
