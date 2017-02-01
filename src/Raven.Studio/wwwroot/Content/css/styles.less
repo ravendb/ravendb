@@ -97,25 +97,26 @@ h3 {
 }
 
 kbd {
-    color:@gray-darker;
+    color: @gray-darker;
     background-color: @gray-lighter;
-    border:1px solid @gray-lighter;
+    border: 1px solid @gray-lighter;
     box-shadow: 0px 0px 0px 1px @brand-primary inset;
     border-radius: 2px;
 }
 
 .btn kbd {
     padding: 1px 4px;
-    color:@gray-lighter;
+    color: @gray-lighter;
     background-color: transparent;
     box-shadow: none;
 }
 
 .kbd {
     position: relative;
+
     strong {
         position: relative;
-        top:1px;
+        top: 1px;
         font-size: 10px;
     }
 }
@@ -139,13 +140,15 @@ h6 {
 
 .hr-title {
     padding: 2px;
-    h1, h2, h3, h4, h5  {
+
+    h1, h2, h3, h4, h5 {
         margin: 6px;
         float: left;
-        color:@brand-info;
+        color: @brand-info;
     }
+
     hr {
-        border-color:@brand-info;
+        border-color: @brand-info;
     }
 }
 
@@ -223,7 +226,7 @@ a {
 
     &.pull-right, &.dropdown-right {
         .dropdown-menu {
-            left:auto;
+            left: auto;
             right: 0;
         }
     }
@@ -231,7 +234,7 @@ a {
     &.pull-right-sm, .dropdown-right-sm {
         @media (min-width:@screen-sm) {
             .dropdown-menu {
-                left:auto;
+                left: auto;
                 right: 0;
             }
         }
@@ -240,7 +243,7 @@ a {
     &.pull-right-md, .dropdown-right-md {
         @media (min-width:@screen-md) {
             .dropdown-menu {
-                left:auto;
+                left: auto;
                 right: 0;
             }
         }
@@ -249,7 +252,7 @@ a {
     &.pull-right-lg, .dropdown-right-lg {
         @media (min-width:@screen-lg) {
             .dropdown-menu {
-                left:auto;
+                left: auto;
                 right: 0;
             }
         }
@@ -258,7 +261,7 @@ a {
     &.pull-right-xl, .dropdown-right-xl {
         @media (min-width:@screen-xl) {
             .dropdown-menu {
-                left:auto;
+                left: auto;
                 right: 0;
             }
         }
@@ -266,9 +269,10 @@ a {
 
     .dropdown-menu {
         &.settings-menu {
-            width:400px;
+            width: 400px;
             max-width: 100vw;
-            &>.setting-item {
+
+            & > .setting-item {
                 padding: 5px @grid-gutter-width;
             }
 
@@ -281,13 +285,13 @@ a {
         }
 
         .has-badge {
-            position:relative;
+            position: relative;
             padding-right: 40px;
 
             .badge {
-                position:absolute;
-                right:10px;
-                top:5px;
+                position: absolute;
+                right: 10px;
+                top: 5px;
             }
         }
     }
@@ -296,6 +300,7 @@ a {
 .row.row-sm {
     margin-left: -5px;
     margin-right: -5px;
+
     .col-xs-1, .col-sm-1, .col-md-1, .col-lg-1, .col-xl-1, .col-xs-2, .col-sm-2, .col-md-2, .col-lg-2, .col-xl-2, .col-xs-3, .col-sm-3, .col-md-3, .col-lg-3, .col-xl-3, .col-xs-4, .col-sm-4, .col-md-4, .col-lg-4, .col-xl-4, .col-xs-5, .col-sm-5, .col-md-5, .col-lg-5, .col-xl-5, .col-xs-6, .col-sm-6, .col-md-6, .col-lg-6, .col-xl-6, .col-xs-7, .col-sm-7, .col-md-7, .col-lg-7, .col-xl-7, .col-xs-8, .col-sm-8, .col-md-8, .col-lg-8, .col-xl-8, .col-xs-9, .col-sm-9, .col-md-9, .col-lg-9, .col-xl-9, .col-xs-10, .col-sm-10, .col-md-10, .col-lg-10, .col-xl-10, .col-xs-11, .col-sm-11, .col-md-11, .col-lg-11, .col-xl-11, .col-xs-12, .col-sm-12, .col-md-12, .col-lg-12, .col-xl-12 {
         padding-left: 5px;
         padding-right: 5px;
@@ -541,6 +546,44 @@ hr {
     }
 }
 
+.btn, .btn-group {
+    & + .btn-group-label {
+        margin-left: @grid-gutter-width / 2;
+    }
+}
+
+.btn-group-label {
+    margin-top: -5px;
+    padding-top: 4px;
+    border-top: 1px solid @gray-dark;
+    display: inline-block;
+    position: relative;
+
+    & + .btn, & + .btn-group {
+        margin-left: @grid-gutter-width / 2;
+    }
+
+
+    &:before {
+        color: @gray;
+        position: absolute;
+        left: 0;
+        top: -14px;
+        line-height: 10px;
+        font-size: 10px;
+        text-transform: uppercase;
+        content: attr(data-label);
+    }
+
+    &.active {
+        border-color: @gray-light;
+
+        &:before {
+            color: @gray-light;
+        }
+    }
+}
+
 .btn-group-justified.btn-tabs {
     .btn {
         box-shadow: none;
@@ -605,12 +648,12 @@ input[type=file] + .form-control {
     position: absolute;
     width: 100%;
     top: 0;
-    bottom:0;
-    left:0;
-    right:0;
+    bottom: 0;
+    left: 0;
+    right: 0;
     overflow: auto;
-
 }
+
 .vcenter-container {
     position: absolute;
     top: 0;
@@ -638,6 +681,7 @@ input[type=file] + .form-control {
 .margin-none {
     margin: 0;
 }
+
 .margin-bottom {
     margin-bottom: @line-height-computed / 2;
 }
@@ -749,6 +793,7 @@ input[type=file] + .form-control {
     .form-control {
         border-color: #4b545f;
     }
+
     a.btn-spinner {
         .global-spinner;
         pointer-events: none;
@@ -993,13 +1038,14 @@ pre {
 
         label {
             display: block;
+
             &:before {
-                left:45px;
-                top:13px;
+                left: 45px;
+                top: 13px;
             }
 
             &:after {
-                top:7px;
+                top: 7px;
                 left: 7px;
             }
         }
@@ -1007,7 +1053,7 @@ pre {
         input[type=checkbox] {
             position: absolute;
 
-            &:checked+label:after {
+            &:checked + label:after {
                 left: 24px;
                 //right: -2px;
             }
@@ -1017,13 +1063,14 @@ pre {
             label {
                 padding-left: 10px !important;
                 display: block;
+
                 &:before {
-                    left:150px;
-                    top:13px;
+                    left: 150px;
+                    top: 13px;
                 }
 
                 &:after {
-                    top:7px;
+                    top: 7px;
                     left: 112px;
                 }
             }
@@ -1031,7 +1078,7 @@ pre {
             input[type=checkbox] {
                 position: absolute;
 
-                &:checked+label:after {
+                &:checked + label:after {
                     left: 130px;
                 }
             }
@@ -1043,7 +1090,7 @@ pre {
         margin-top: 2px;
         margin-bottom: 2px;
         display: flex;
-        position:relative;
+        position: relative;
         height: 36px;
         flex-wrap: nowrap;
         width: 100%;
@@ -1054,7 +1101,7 @@ pre {
             width: 49%;
 
             &.grow-2 {
-                flex-grow:2;
+                flex-grow: 2;
                 width: 100%;
                 max-width: 600px;
                 min-width: 200px;
@@ -1063,6 +1110,7 @@ pre {
 
         @media (min-width: @screen-lg) {
             width: 32%;
+
             &.grow-2 {
                 width: 64%;
             }
@@ -1104,7 +1152,7 @@ pre {
 
             .form-control {
                 font-size: 13px;
-                color:@text-color;
+                color: @text-color;
 
                 &:hover {
                     color: #FFF;
@@ -1303,11 +1351,13 @@ pre {
     .checkbox {
         height: 12px;
         top: -9px;
+
         label {
             vertical-align: top;
             height: @line-height-computed;
             min-height: 0;
             line-height: @line-height-computed;
+
             &::before {
             }
         }
@@ -1315,22 +1365,22 @@ pre {
 }
 
 .input-group {
-   &.has-error {
-       padding-bottom: 22px;
+    &.has-error {
+        padding-bottom: 22px;
 
-       .input-group-addon {
-           color: inherit;
-           background-color: inherit;
-       }
+        .input-group-addon {
+            color: inherit;
+            background-color: inherit;
+        }
 
-       .help-block {
-           position: absolute;
-           bottom: 0;
-           left: 0;
-           width: 100%;
-           margin-bottom: 0;
-       }
-   }
+        .help-block {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            margin-bottom: 0;
+        }
+    }
 }
 
 

@@ -24,68 +24,79 @@
                         <i class="icon-plus"></i>
                         <span>New index</span>
                     </a>
-                    <button class="btn btn-danger" data-bind="click: deleteSelectedIndexes, enable: selectedIndexesName().length"><i class="icon-trash"></i><span>Delete selected</span></button>
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-default dropdown-toggle" title="Change the options of selected indexes"
-                                data-bind="enable: $root.globalIndexingStatus() === 'Running' && selectedIndexesName().length && !spinners.globalLockChanges(), css: { 'btn-spinner': spinners.globalLockChanges() }" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            <i class="icon-list"></i><span>Options...</span>
-                            <span class="caret"></span>
-                            <span class="sr-only">Toggle Dropdown</span>
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li data-bind="click: unlockSelectedIndexes">
-                                <a href="#" title="Unlock selected indexes">
-                                    <i class="icon-unlock"></i>
-                                    <span>Unlock</span>
-                                </a>
-                            </li>
-                            <li data-bind="click: lockSelectedIndexes">
-                                <a href="#" title="Lock selected indexes">
-                                    <i class="icon-lock"></i>
-                                    <span>Lock</span>
-                                </a>
-                            </li>
-                            <li data-bind="click: lockSideBySideSelectedIndexes">
-                                <a href="#" title="Lock (Side by Side) selected indexes">
-                                    <i class="icon-lock-sidebyside"></i>
-                                    <span>Lock (Side by Side)</span>
-                                </a>
-                            </li>
-                            <li data-bind="click: lockErrorSelectedIndexes">
-                                <a href="#" title="Lock (Error) selected indexes">
-                                    <i class="icon-lock-error"></i>
-                                    <span>Lock (Error)</span>
-                                </a>
-                            </li>
-                            <li class="divider"></li>
-                            <li data-bind="click: enableSelectedIndexes">
-                                <a href="#" title="Enable disabled indexes">
-                                    <i class="icon-play"></i>
-                                    <span>Enable disabled indexes</span>
-                                </a>
-                            </li>
-                            <li data-bind="click: disableSelectedIndexes">
-                                <a href="#" title="Disable selected indexes">
-                                    <i class="icon-lock"></i>
-                                    <span>Disable indexes</span>
-                                </a>
-                            </li>
-                            <li class="divider"></li>
-                            <li data-bind="click: resumeSelectedIndexes">
-                                <a href="#" title="Resume selected indexes">
-                                    <i class="icon-play"></i>
-                                    <span>Resume paused indexes</span>
-                                </a>
-                            </li>
-                            <li data-bind="click: pauseSelectedIndexes">
-                                <a href="#" title="Pause selected indexes">
-                                    <i class="icon-pause"></i>
-                                    <span>Pause indexes</span>
-                                </a>
-                            </li>
-                        </ul>
+                    <div class="btn-group-label" data-bind="css: { active: selectedIndexesName().length }" data-label="Selection" role="group">
+                        <button class="btn btn-danger" data-bind="click: deleteSelectedIndexes, enable: selectedIndexesName().length"><i class="icon-trash"></i><span>Delete</span></button>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-default dropdown-toggle" title="Change the options of selected indexes"
+                                    data-bind="enable: $root.globalIndexingStatus() === 'Running' && selectedIndexesName().length && !spinners.globalLockChanges(), css: { 'btn-spinner': spinners.globalLockChanges() }" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="icon-play"></i><span>Set state...</span>
+                                <span class="caret"></span>
+                                <span class="sr-only">Toggle Dropdown</span>
+                            </button>
+                            <ul class="dropdown-menu">                                
+                                <li data-bind="click: enableSelectedIndexes">
+                                    <a href="#" title="Enable">
+                                        <i class="icon-play"></i>
+                                        <span>Enable</span>
+                                    </a>
+                                </li>
+                                <li data-bind="click: disableSelectedIndexes">
+                                    <a href="#" title="Disable">
+                                        <i class="icon-lock"></i>
+                                        <span>Disable</span>
+                                    </a>
+                                </li>
+                                <li class="divider"></li>
+                                <li data-bind="click: resumeSelectedIndexes">
+                                    <a href="#" title="Resume">
+                                        <i class="icon-play"></i>
+                                        <span>Resume</span>
+                                    </a>
+                                </li>
+                                <li data-bind="click: pauseSelectedIndexes">
+                                    <a href="#" title="Pause">
+                                        <i class="icon-pause"></i>
+                                        <span>Pause</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-default dropdown-toggle" title="Change the options of selected indexes"
+                                    data-bind="enable: $root.globalIndexingStatus() === 'Running' && selectedIndexesName().length && !spinners.globalLockChanges(), css: { 'btn-spinner': spinners.globalLockChanges() }" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="icon-lock"></i><span>Set lock mode...</span>
+                                <span class="caret"></span>
+                                <span class="sr-only">Toggle Dropdown</span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li data-bind="click: unlockSelectedIndexes">
+                                    <a href="#" title="Unlock selected indexes">
+                                        <i class="icon-unlock"></i>
+                                        <span>Unlock</span>
+                                    </a>
+                                </li>
+                                <li data-bind="click: lockSelectedIndexes">
+                                    <a href="#" title="Lock selected indexes">
+                                        <i class="icon-lock"></i>
+                                        <span>Lock</span>
+                                    </a>
+                                </li>
+                                <li data-bind="click: lockSideBySideSelectedIndexes">
+                                    <a href="#" title="Lock (Side by Side) selected indexes">
+                                        <i class="icon-lock-sidebyside"></i>
+                                        <span>Lock (Side by Side)</span>
+                                    </a>
+                                </li>
+                                <li data-bind="click: lockErrorSelectedIndexes">
+                                    <a href="#" title="Lock (Error) selected indexes">
+                                        <i class="icon-lock-error"></i>
+                                        <span>Lock (Error)</span>
+                                    </a>
+                                </li>                               
+                            </ul>
+                        </div>
                     </div>
-                </div>
+                 </div>
             </div>
         </div>
         <div class="pull-right" id="toggleIndexing">
