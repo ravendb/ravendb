@@ -6,6 +6,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client.Data;
 using Raven.Server.Documents;
+using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -91,6 +92,13 @@ namespace Raven.Server.Web.System
             var online =
                 ServerStore.DatabasesLandlord.ResourcesStoresCache.TryGetValue(databaseName, out dbTask) &&
                 dbTask != null && dbTask.IsCompleted;
+
+            if (dbTask != null && dbTask.IsFaulted)
+            {
+                WriteFaultedDatabaseInfo(context, writer, dbTask, databaseName);
+                return;
+            }
+
             var db = online ? dbTask.Result : null;
 
             var indexingStatus = db != null
@@ -144,6 +152,19 @@ namespace Raven.Server.Web.System
                 [nameof(DatabaseInfo.IndexesCount)] = online ? db.IndexStore.GetIndexes().Count() : 0,
                 [nameof(DatabaseInfo.RejectClients)] = false, //TODO: implement me!
                 [nameof(DatabaseInfo.IndexingStatus)] = indexingStatus
+            };
+
+            context.Write(writer, doc);
+        }
+
+        private void WriteFaultedDatabaseInfo(TransactionOperationContext context, BlittableJsonTextWriter writer, Task<DocumentDatabase> dbTask, string databaseName)
+        {
+            var exception = dbTask.Exception;
+
+            var doc = new DynamicJsonValue
+            {
+                [nameof(ResourceInfo.Name)] = databaseName,
+                [nameof(ResourceInfo.LoadError)] = exception.ExtractSingleInnerException().Message
             };
 
             context.Write(writer, doc);

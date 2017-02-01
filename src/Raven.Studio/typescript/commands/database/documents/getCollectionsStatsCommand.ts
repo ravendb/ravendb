@@ -22,7 +22,7 @@ class getCollectionsStatsCommand extends commandBase {
                 finalResult.resolve(stats);
             })
             .fail((response) => {
-                this.reportError("Can't fetch collection stats");
+                this.reportError("Can't fetch collection stats", response.responseText, response.statusText);
                 finalResult.reject(response.responseText);
             });
 

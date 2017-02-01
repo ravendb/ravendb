@@ -21,6 +21,8 @@ namespace Raven.Client.Data
         public string Name { get; set; }
         public bool Disabled { get; set; }
 
+        public string LoadError { get; set; }
+
         public Size TotalSize { get; set; }
 
         public bool IsAdmin { get; set; }

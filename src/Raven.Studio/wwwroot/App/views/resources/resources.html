@@ -100,8 +100,9 @@
                             <a data-bind="attr: { title: name, href: $root.resourceUrl($data) }, text: name, visible: canNavigateToResource()" href="#"></a>
                         </h3>
                     </div>
-                    <div class="col-xs-12 col-sm-12 col-xl-5 vertical-divider properties-container" data-bind="template: { name: 'properties-template' }">
-                  
+
+                    <div class="col-xs-12 col-sm-12 col-xl-5 vertical-divider properties-container" 
+                         data-bind="template: { name: hasLoadError() ? 'invalid-resource-properties-template': 'valid-resource-properties-template' }">
                     </div>
                     <div class="col-xs-12 col-sm-6 col-xl-3 actions-container">
                         <span data-bind="visible: isLoading">
@@ -151,7 +152,7 @@
                                         </li>
                                         <li>
                                             <!--<a href="#" class="btn-prerelease" data-bind="click: $root.toggleRejectDatabaseClients.bind($root, $data)"> -->
-                                            <a href="#" class="btn-prerelease" data-bind="">
+                                            <a href="#" class="btn-prerelease">
                                                 <i class="icon-umbrella"></i> Reject clients mode
                                             </a>
                                         </li>
@@ -170,7 +171,14 @@
     </div>
 </div>
 
-<script type="text/html" id="properties-template">
+<script type="text/html" id="invalid-resource-properties-template">
+    <div class="text-danger">
+        <i class="icon-exclamation"></i>
+        <span data-bind="text: loadError"></span>
+    </div>
+</script>
+
+<script type="text/html" id="valid-resource-properties-template">
     <div class="properties-item" data-bind="visible: totalSize">
         <div class="properties-value value-only">
             <div class="set-size">
@@ -251,7 +259,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="properties-item" data-bind="visible: indexingDisabled()">
         <div class="properties-value value-only text-warning">
             <div class="set-size">
@@ -269,4 +277,5 @@
             </div>
         </div>
     </div>
+    
 </script>
