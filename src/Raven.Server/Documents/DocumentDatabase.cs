@@ -162,7 +162,7 @@ namespace Raven.Server.Documents
         public struct DatabaseUsage : IDisposable
         {
             private readonly DocumentDatabase _parent;
-            private bool _skipUsagesCount;
+            private readonly bool _skipUsagesCount;
 
             public DatabaseUsage(DocumentDatabase parent, bool skipUsagesCount)
             {
@@ -186,9 +186,9 @@ namespace Raven.Server.Documents
 
             public void Dispose()
             {
-               
-                if (_skipUsagesCount == false)
+                if (_skipUsagesCount)
                     return;
+
                 var  currentUsagesCount = Interlocked.Decrement(ref _parent._usages);
 
                 if (_parent._databaseShutdown.IsCancellationRequested && currentUsagesCount == 0)

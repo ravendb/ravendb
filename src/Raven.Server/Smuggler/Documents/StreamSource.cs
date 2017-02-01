@@ -304,7 +304,11 @@ namespace Raven.Server.Smuggler.Documents
 
             public void Dispose()
             {
-                Reset(null);
+                for (int i = _allocations.Count - 1; i >= 0; i--)
+                {
+                    _ctx.ReturnMemory(_allocations[i]);
+                }
+                _allocations.Clear();
             }
 
             public void Reset(JsonOperationContext ctx)
@@ -314,11 +318,6 @@ namespace Raven.Server.Smuggler.Documents
                     _ctx = ctx;
                     return;
                 }
-                for (int i = _allocations.Count - 1; i >= 0; i--)
-                {
-                    _ctx.ReturnMemory(_allocations[i]);
-                }
-                _allocations.Clear();
                 Id = null;
                 _depth = 0;
                 _state=State.None;

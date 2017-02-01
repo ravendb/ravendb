@@ -390,7 +390,8 @@ namespace Raven.Server.Documents.Replication
                     }
                     finally
                     {
-                        lastKey.Release(context.Allocator);
+                        if (lastKey.HasValue)
+                            lastKey.Release(context.Allocator);
                     }
                 }
             }

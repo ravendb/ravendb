@@ -36,9 +36,9 @@ namespace Tryouts
         {
             for (int i = 0; i < 100; i++)
             {
-                using (var a = new SlowTests.Issues.RavenDB_5998())
+                using (var a = new FastTests.Smuggler.SmugglerApiTests())
                 {
-                    a.CanImportNorthwind(file: "SlowTests.Smuggler.Northwind_3.5.35168.ravendbdump");
+                    a.CanExportAndImportWithVersioingRevisionDocuments().Wait();
                 }
                 Console.WriteLine($"{i} finished");
             }
