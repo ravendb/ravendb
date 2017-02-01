@@ -1,11 +1,10 @@
 // -----------------------------------------------------------------------
-//  <copyright file="Includes.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="Sorting.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // ----------------------------------------------------------------------
 
 using System.Linq;
-using System.Threading.Tasks;
 
 using FastTests;
 
@@ -15,7 +14,7 @@ using Company = SlowTests.Core.Utils.Entities.Company;
 
 namespace SlowTests.Core.Querying
 {
-    public class Sorting : RavenTestBase
+    public class Sorting : RavenNewTestBase
     {
         [Fact]
         public void BasicSorting()

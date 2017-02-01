@@ -1,9 +1,5 @@
-using System.Net.Http;
-
 using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Abstractions.Util;
-using Raven.NewClient.Client.Connection;
-
 using Raven.NewClient.Client.Document;
 
 
@@ -13,8 +9,8 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Data.Transformers;
+using Raven.NewClient.Client.Operations.Databases.Transformers;
 using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Indexes
@@ -160,14 +156,7 @@ namespace Raven.NewClient.Client.Indexes
             JsonOperationContext jsonOperationContext;
             requestExecuter.ContextPool.AllocateOperationContext(out jsonOperationContext);
 
-            var putTransformerOperation = new PutTransformerOperation(jsonOperationContext);
-
-            var putTransformerCommand = putTransformerOperation.CreateRequest(documentConvention, TransformerName, transformerDefinition);
-            if (putTransformerCommand != null)
-            {
-                requestExecuter.Execute(putTransformerCommand, jsonOperationContext);
-                putTransformerOperation.SetResult(putTransformerCommand.Result);
-            }
+            documentStore.Admin.Send(new PutTransformerOperation(TransformerName, transformerDefinition));
 
             /*if (documentConvention.IndexAndTransformerReplicationMode.HasFlag(IndexAndTransformerReplicationMode.Transformers))
                 ReplicateTransformerIfNeeded(databaseCommands);*/
@@ -228,14 +217,7 @@ namespace Raven.NewClient.Client.Indexes
             JsonOperationContext jsonOperationContext;
             requestExecuter.ContextPool.AllocateOperationContext(out jsonOperationContext);
 
-            var putTransformerOperation = new PutTransformerOperation(jsonOperationContext);
-
-            var putTransformerCommand = putTransformerOperation.CreateRequest(documentConvention, TransformerName, transformerDefinition);
-            if (putTransformerCommand != null)
-            {
-                await requestExecuter.ExecuteAsync(putTransformerCommand, jsonOperationContext, token); 
-                putTransformerOperation.SetResult(putTransformerCommand.Result);
-            }
+            await documentStore.Admin.SendAsync(new PutTransformerOperation(TransformerName, transformerDefinition), token).ConfigureAwait(false);
 
             //await ReplicateTransformerIfNeededAsync(asyncDatabaseCommands).ConfigureAwait(false);
         }

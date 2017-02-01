@@ -6,11 +6,10 @@
 
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 using FastTests;
 
-using Raven.Client.Linq;
+using Raven.NewClient.Client.Linq;
 
 using Xunit;
 
@@ -19,7 +18,7 @@ using Contact = SlowTests.Core.Utils.Entities.Contact;
 
 namespace SlowTests.Core.Querying
 {
-    public class Filtering : RavenTestBase
+    public class Filtering : RavenNewTestBase
     {
         [Fact]
         public void BasicFiltering()

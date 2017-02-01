@@ -4,18 +4,18 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-namespace Raven.NewClient.Client.Commands
+namespace Raven.NewClient.Client.Data.Transformers
 {
-    public class PutIndexResult
+    public class PutTransformerResult
     {
         /// <summary>
         /// Gets or sets the total results for this query
         /// </summary>
-        public string Index { get; set; }
+        public string Transformer { get; set; }
 
         /// <summary>
         /// Gets or sets the total results for this query
         /// </summary>
-        public int IndexId { get; set; }
+        public int TransformerId { get; set; }
     }
 }

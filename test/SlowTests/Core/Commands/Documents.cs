@@ -10,13 +10,12 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Client.Data;
-using Raven.Client.Indexing;
-using Raven.Json.Linq;
-
-using SlowTests.Core.Utils.Indexes;
-
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Extensions;
+using Raven.NewClient.Operations.Databases.Documents;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 using Company = SlowTests.Core.Utils.Entities.Company;
@@ -25,25 +24,24 @@ using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Core.Commands
 {
-    public class Documents : RavenTestBase
+    public class Documents : RavenNewTestBase
     {
         [Fact]
         public void CanCancelPutDocument()
         {
-            var random = new Random();
-            var largeArray = new byte[1024 * 1024 * 2];
-            //2mb - document large enough for PUT to take a while, so
-            //we will be able to cancel the operation BEFORE the PUT completes
-            random.NextBytes(largeArray);
-            var largeDocument = new { Data = largeArray };
+            var document = new { Name = "John" };
 
             var cts = new CancellationTokenSource();
             using (var store = GetDocumentStore())
             {
-                var ravenJObject = RavenJObject.FromObject(largeDocument);
-                cts.Cancel();
-                var putTask = store.AsyncDatabaseCommands.PutAsync("test/1", null, ravenJObject, new RavenJObject(), cts.Token);
-                Assert.True(putTask.IsCanceled);
+                using (var commands = store.Commands())
+                {
+                    cts.Cancel();
+                    var putTask = commands.PutAsync("test/1", null, document, null, cts.Token);
+
+                    Assert.True(SpinWait.SpinUntil(() => putTask.IsCanceled, TimeSpan.FromSeconds(5)));
+                    Assert.True(putTask.IsCanceled);
+                }
             }
         }
 
@@ -52,44 +50,50 @@ namespace SlowTests.Core.Commands
         {
             using (var store = GetDocumentStore())
             {
-                var putResult = await store.AsyncDatabaseCommands.PutAsync(
-                    "companies/1",
-                    null,
-                    RavenJObject.FromObject(new Company
-                    {
-                        Name = "testname",
-                        Phone = 1,
-                        Contacts = new List<Contact> { new Contact { }, new Contact { } },
-                        Address1 = "To be removed.",
-                        Address2 = "Address2"
-                    }),
-                    RavenJObject.FromObject(new
-                    {
-                        SomeMetadataKey = "SomeMetadataValue"
-                    }));
-                Assert.NotNull(await store.AsyncDatabaseCommands.GetAsync("companies/1"));
+                using (var commands = store.Commands())
+                {
+                    var putResult = await commands.PutAsync(
+                        "companies/1",
+                        null,
+                        new Company
+                        {
+                            Name = "testname",
+                            Phone = 1,
+                            Contacts = new List<Contact> { new Contact { }, new Contact { } },
+                            Address1 = "To be removed.",
+                            Address2 = "Address2"
+                        },
+                        new Dictionary<string, string>
+                        {
+                            {"SomeMetadataKey", "SomeMetadataValue"}
+                        });
 
-                await store.AsyncDatabaseCommands.PutAsync("users/2", null, RavenJObject.FromObject(new User { Name = "testname2" }), new RavenJObject());
-                Assert.NotNull(await store.AsyncDatabaseCommands.GetAsync("users/2"));
+                    Assert.NotNull(await commands.GetAsync("companies/1"));
 
-                var documents = await store.AsyncDatabaseCommands.GetDocumentsAsync(0, 25);
-                Assert.Equal(2, documents.Length);
+                    await commands.PutAsync("users/2", null, new User { Name = "testname2" }, null);
 
-                var etag = await store.AsyncDatabaseCommands.HeadAsync("companies/1");
-                RavenJToken value = null;
-                Assert.NotNull(etag);
+                    Assert.NotNull(await commands.GetAsync("users/2"));
 
-                var document = await store.AsyncDatabaseCommands.GetAsync("companies/1", metadataOnly: true);
-                Assert.NotNull(document.DataAsJson);
-                Assert.Equal(0, document.DataAsJson.Count);
-                Assert.True(document.Metadata.TryGetValue("SomeMetadataKey", out value));
-                Assert.Equal("SomeMetadataValue", value);
+                    var documents = await commands.GetAsync(0, 25);
+                    Assert.Equal(2, documents.Length);
 
-                await store.AsyncDatabaseCommands.DeleteAsync("companies/1", putResult.ETag);
-                Assert.Null(await store.AsyncDatabaseCommands.GetAsync("companies/1"));
+                    var etag = await commands.HeadAsync("companies/1");
+                    Assert.NotNull(etag);
 
-                await store.AsyncDatabaseCommands.DeleteAsync("users/2", null);
-                Assert.Null(await store.AsyncDatabaseCommands.GetAsync("users/2"));
+                    var document = await commands.GetAsync("companies/1", metadataOnly: true);
+                    Assert.Equal(1, document.BlittableJson.Count);
+
+                    var metadata = document.BlittableJson.GetMetadata();
+                    string someMetadataValue;
+                    Assert.True(metadata.TryGet("SomeMetadataKey", out someMetadataValue));
+                    Assert.Equal("SomeMetadataValue", someMetadataValue);
+
+                    await commands.DeleteAsync("companies/1", putResult.ETag);
+                    Assert.Null(await commands.GetAsync("companies/1"));
+
+                    await commands.DeleteAsync("users/2", null);
+                    Assert.Null(await commands.GetAsync("users/2"));
+                }
             }
         }
 
@@ -98,28 +102,33 @@ namespace SlowTests.Core.Commands
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.PutIndex("MyIndex", new IndexDefinition
+                store.Admin.Send(new PutIndexOperation("MyIndex", new IndexDefinition
                 {
                     Maps = { "from doc in docs.Items select new { doc.Name }" }
-                });
+                }));
 
-                store.DatabaseCommands.Put("items/1", null, RavenJObject.FromObject(new
+                using (var commands = store.Commands())
                 {
-                    Name = "testname"
-                }), new RavenJObject
-                {
-                    {"@collection",  "Items"}
-                });
-                WaitForIndexing(store);
+                    await commands.PutAsync("items/1", null, new { Name = "testname" }, new Dictionary<string, string>
+                    {
+                        {Constants.Metadata.Collection, "Items"}
+                    });
 
-                store.DatabaseCommands.UpdateByIndex("MyIndex", new IndexQuery(store.Conventions) { Query = "" }, new PatchRequest { Script = "this.NewName = 'NewValue';" }, null).WaitForCompletion(TimeSpan.FromSeconds(15));
+                    WaitForIndexing(store);
 
-                var document = await store.AsyncDatabaseCommands.GetAsync("items/1");
-                Assert.Equal("NewValue", document.DataAsJson.Value<string>("NewName"));
-                WaitForIndexing(store);
-                store.DatabaseCommands.DeleteByIndex("MyIndex", new IndexQuery(store.Conventions) { Query = "" }, null).WaitForCompletion(TimeSpan.FromSeconds(15));
-                var documents = store.DatabaseCommands.GetDocuments(0, 25);
-                Assert.Equal(0, documents.Length);
+                    var operation = store.Operations.Send(new PatchByIndexOperation("MyIndex", new IndexQuery(store.Conventions) { Query = "" }, new PatchRequest { Script = "this.NewName = 'NewValue';" }));
+                    operation.WaitForCompletion(TimeSpan.FromSeconds(15));
+
+                    dynamic document = await commands.GetAsync("items/1");
+                    Assert.Equal("NewValue", document.NewName.ToString());
+                    WaitForIndexing(store);
+
+                    operation = store.Operations.Send(new DeleteByIndexOperation("MyIndex", new IndexQuery(store.Conventions) { Query = "" }));
+                    operation.WaitForCompletion(TimeSpan.FromSeconds(15));
+
+                    var documents = await commands.GetAsync(0, 25);
+                    Assert.Equal(0, documents.Count);
+                }
             }
         }
 
@@ -135,8 +144,12 @@ namespace SlowTests.Core.Commands
                     await session.SaveChangesAsync();
                 }
 
-                var documents = await store.AsyncDatabaseCommands.StartsWithAsync("Companies", null, 0, 25);
-                Assert.Equal(1, documents.Length);
+
+                using (var session = store.OpenSession())
+                {
+                    var documents = session.Advanced.LoadStartingWith<dynamic>("Companies");
+                    Assert.Equal(1, documents.Length);
+                }
             }
         }
 
@@ -154,14 +167,18 @@ namespace SlowTests.Core.Commands
                     session.SaveChanges();
                 }
 
-                int count = 0;
-                using (var reader = store.DatabaseCommands.StreamDocs(startsWith: "users/"))
+                var count = 0;
+                using (var session = store.OpenSession())
                 {
-                    while (reader.MoveNext())
+                    using (var reader = session.Advanced.Stream<dynamic>(startsWith: "users/"))
                     {
-                        count++;
+                        while (reader.MoveNext())
+                        {
+                            count++;
+                        }
                     }
                 }
+
                 Assert.Equal(200, count);
             }
         }

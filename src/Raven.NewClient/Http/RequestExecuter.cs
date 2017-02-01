@@ -199,9 +199,6 @@ namespace Raven.NewClient.Client.Http
                         return;
                 }
 
-                if (response.Content.Headers.ContentLength.HasValue && response.Content.Headers.ContentLength == 0)
-                    return;
-
                 await command.ProcessResponse(context, Cache, _options, response, url).ConfigureAwait(false);
             }
         }

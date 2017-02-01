@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using Raven.NewClient.Abstractions.Data;
-using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Http;
 using Sparrow.Json;
 
@@ -34,7 +32,7 @@ namespace Raven.NewClient.Client.Commands
             };
 
             if (_etag.HasValue)
-                request.Headers.IfMatch.Add(new EntityTagHeaderValue(_etag.ToString()));
+                request.Headers.IfMatch.Add(new EntityTagHeaderValue($"\"{_etag}\""));
 
             return request;
         }

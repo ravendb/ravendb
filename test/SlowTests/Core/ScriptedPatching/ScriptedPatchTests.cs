@@ -1,15 +1,14 @@
-using System.Threading.Tasks;
-
 using FastTests;
-
 using Raven.Abstractions.Connection;
-using Raven.Client.Data;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Exceptions.Patching;
+using Raven.NewClient.Operations.Databases.Documents;
 using Raven.Server.Config;
 using Xunit;
 
 namespace SlowTests.Core.ScriptedPatching
 {
-    public class ScriptedPatchTests : RavenTestBase
+    public class ScriptedPatchTests : RavenNewTestBase
     {
         public class Foo
         {
@@ -56,18 +55,18 @@ namespace SlowTests.Core.ScriptedPatching
                     session.SaveChanges();
                 }
 
-                Assert.Throws<ErrorResponseException>(() =>
+                Assert.Throws<JavaScriptException>(() =>
                 {
-                    store.DatabaseCommands.Patch(foo.Id, new PatchRequest
+                    store.Operations.Send(new PatchOperation(foo.Id, null, new PatchRequest
                     {
                         Script = @"for(var i = 0;i < 7500;i++){}"
-                    });
+                    }));
                 });
 
-                store.DatabaseCommands.Patch(foo.Id, new PatchRequest
+                store.Operations.Send(new PatchOperation(foo.Id, null, new PatchRequest
                 {
                     Script = @"IncreaseNumberOfAllowedStepsBy(4500); for(var i = 0;i < 7500;i++){}"
-                });
+                }));
             }
         }
 
@@ -98,18 +97,18 @@ namespace SlowTests.Core.ScriptedPatching
                     session.SaveChanges();
                 }
 
-                Assert.Throws<ErrorResponseException>(() =>
+                Assert.Throws<JavaScriptException>(() =>
                 {
-                    store.DatabaseCommands.Patch(foo.Id, new PatchRequest
+                    store.Operations.Send(new PatchOperation(foo.Id, null, new PatchRequest
                     {
                         Script = @"for(var i = 0;i < 7500;i++){}"
-                    });
+                    }));
                 });
 
-                store.DatabaseCommands.Patch(foo.Id, new PatchRequest
+                store.Operations.Send(new PatchOperation(foo.Id, null, new PatchRequest
                 {
                     Script = @"LoadDocument('bar/1'); for(var i = 0;i < 7500;i++){}"
-                });
+                }));
             }
         }
     }
