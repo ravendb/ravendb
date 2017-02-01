@@ -20,7 +20,7 @@ namespace Raven.Server.NotificationCenter
         private readonly Logger Logger;
 
         private readonly NotificationsStorage _notificationsStorage;
-        private readonly CancellationToken _shutdown;
+        private CancellationToken _shutdown;
         private readonly ConcurrentSet<ConnectedWatcher> _watchers = new ConcurrentSet<ConnectedWatcher>();
         private readonly AsyncManualResetEvent _postponedNotificationEvent;
         
@@ -34,7 +34,7 @@ namespace Raven.Server.NotificationCenter
 
         public void Initialize()
         {
-            Task.Run(PostponedNotificationsSender);
+            Task.Run(PostponedNotificationsSender, _shutdown);
         }
 
         public IDisposable TrackActions(AsyncQueue<Notification> notificationsQueue, IWebsocketWriter webSockerWriter)
@@ -127,13 +127,17 @@ namespace Raven.Server.NotificationCenter
 
         private async Task PostponedNotificationsSender()
         {
-            TimeSpan wait;
+            _shutdown.Register(() =>
+            {
+                _postponedNotificationEvent.Set();
+            });
             while (_shutdown.IsCancellationRequested == false)
             {
                 try
                 {
                     var notifications = GetPostponedNotifications(1, DateTime.MaxValue);
-                    
+
+                    TimeSpan wait;
                     if (notifications.Count == 0)
                         wait = Infinity;
                     else
