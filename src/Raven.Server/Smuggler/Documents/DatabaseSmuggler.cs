@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client.Data;
@@ -25,6 +26,7 @@ namespace Raven.Server.Smuggler.Documents
         private readonly SystemTime _time;
         private readonly Action<IOperationProgress> _onProgress;
         private readonly SmugglerPatcher _patcher;
+        private CancellationToken _token;
 
         public DatabaseSmuggler(
             ISmugglerSource source,
@@ -32,12 +34,14 @@ namespace Raven.Server.Smuggler.Documents
             SystemTime time,
             DatabaseSmugglerOptions options = null,
             SmugglerResult result = null,
-            Action<IOperationProgress> onProgress = null)
+            Action<IOperationProgress> onProgress = null,
+            CancellationToken token = default(CancellationToken))
         {
             _source = source;
             _destination = destination;
             _options = options ?? new DatabaseSmugglerOptions();
             _result = result;
+            _token = token;
 
             if (string.IsNullOrWhiteSpace(_options.TransformScript) == false)
                 _patcher = new SmugglerPatcher(_options);
@@ -57,6 +61,7 @@ namespace Raven.Server.Smuggler.Documents
                 var currentType = _source.GetNextType();
                 while (currentType != DatabaseItemType.None)
                 {
+                    _token.ThrowIfCancellationRequested();
                     ProcessType(currentType, result);
 
                     currentType = _source.GetNextType();

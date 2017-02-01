@@ -310,7 +310,8 @@ namespace Raven.Server.Documents.PeriodicExport
                                 new DatabaseSmugglerOptions
                                 {
                                     RevisionDocumentsLimit = _exportLimit
-                                });
+                                },
+                                token: _cancellationToken.Token);
 
                             result = smuggler.Execute();
                         }
