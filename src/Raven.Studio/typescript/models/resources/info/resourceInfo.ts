@@ -15,6 +15,8 @@ abstract class resourceInfo {
     backupStatus = ko.observable<string>();   
     lastFullOrIncrementalBackup = ko.observable<string>();
 
+    loadError = ko.observable<string>();
+
     isAdmin = ko.observable<boolean>();   
     disabled = ko.observable<boolean>();
     backupEnabled = ko.observable<boolean>();
@@ -31,9 +33,8 @@ abstract class resourceInfo {
 
     online: KnockoutComputed<boolean>;
     isLoading: KnockoutComputed<boolean>;
-    hasErrors: KnockoutComputed<boolean>;
-    hasAlerts: KnockoutComputed<boolean>;      
-    canNavigateToResource: KnockoutComputed<boolean>;   
+    hasLoadError: KnockoutComputed<boolean>;
+    canNavigateToResource: KnockoutComputed<boolean>;
     isCurrentlyActiveResource: KnockoutComputed<boolean>;
 
     static extractQualifierAndNameFromNotification(input: string): { qualifier: string, name: string } {
@@ -73,6 +74,7 @@ abstract class resourceInfo {
         this.totalSize(dto.TotalSize ? dto.TotalSize.HumaneSize : null);
         this.errors(dto.Errors);
         this.alerts(dto.Alerts);
+        this.loadError(dto.LoadError);
         this.bundles(dto.Bundles);
         this.uptime(generalUtils.timeSpanAsAgo(dto.UpTime, false));
         this.backupEnabled(!!dto.BackupInfo);
@@ -101,11 +103,17 @@ abstract class resourceInfo {
     }
 
     private initializeObservables() {
+        this.hasLoadError = ko.pureComputed(() => !!this.loadError());
+
         this.online = ko.pureComputed(() => {
             return !!this.uptime();
         });
 
         this.badgeClass = ko.pureComputed(() => {
+            if (this.hasLoadError()) {
+                return "state-danger";
+            }
+
             if (!this.licensed()) {
                 return "state-danger";
             }
@@ -122,6 +130,10 @@ abstract class resourceInfo {
         });
 
         this.badgeText = ko.pureComputed(() => {
+            if (this.hasLoadError()) {
+                return "Error";
+            }
+            
             if (!this.licensed()) {
                 return "Unlicensed";
             }
@@ -138,7 +150,8 @@ abstract class resourceInfo {
         this.canNavigateToResource = ko.pureComputed(() => {
             const hasLicense = this.licensed();
             const enabled = !this.disabled();
-            return hasLicense && enabled;
+            const hasLoadError = this.hasLoadError();
+            return hasLicense && enabled && !hasLoadError;
         });
 
         this.isCurrentlyActiveResource = ko.pureComputed(() => {
