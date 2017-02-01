@@ -72,17 +72,17 @@ namespace Raven.Server.ServerWide.BackgroundTasks
             }
         }
 
-        private static AlertSeverity DetermineSeverity(VersionInfo latestVersionInfo)
+        private static NotificationSeverity DetermineSeverity(VersionInfo latestVersionInfo)
         {
             var diff = SystemTime.UtcNow - latestVersionInfo.PublishedAt;
-            var severityInfo = AlertSeverity.Info;
+            var severityInfo = NotificationSeverity.Info;
             if (diff.TotalDays > 21)
             {
-                severityInfo = AlertSeverity.Error;
+                severityInfo = NotificationSeverity.Error;
             }
             else if (diff.TotalDays > 7)
             {
-                severityInfo = AlertSeverity.Warning;
+                severityInfo = NotificationSeverity.Warning;
             }
             return severityInfo;
         }

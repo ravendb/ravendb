@@ -1,6 +1,7 @@
 ﻿import resource = require("models/resources/resource");
 import app = require("durandal/app");
 import EVENTS = require("common/constants/events");
+import database = require("models/resources/database");
 
 import abstractNotification = require("common/notifications/models/abstractNotification");
 import alert = require("common/notifications/models/alert");
@@ -15,6 +16,7 @@ import notificationCenterOperationsWatch = require("common/notifications/notific
 import postponeNotificationCommand = require("commands/operations/postponeNotificationCommand");
 import dismissNotificationCommand = require("commands/operations/dismissNotificationCommand");
 import tempStatDialog = require("viewmodels/database/status/indexing/tempStatDialog");
+import killOperationCommand = require("commands/operations/killOperationCommand");
 
 class notificationCenter {
     static instance = new notificationCenter();
@@ -140,6 +142,11 @@ class notificationCenter {
             notificationsContainer.push(operationChangedObject);
         }
 
+        if (operationDto.State.Status !== "InProgress") {
+            // since kill request doesn't wait for actual kill, let's remove completed items
+            this.spinners.kill.remove(operationDto.Id);
+        }
+
         this.getOperationsWatch(resource).onOperationChange(operationDto);
     }
 
@@ -198,17 +205,49 @@ class notificationCenter {
     }
 
     killOperation(operationToKill: operation) {
-        console.log("KILL: " + operation);
-        //TODO: send request  + spinners
+        const notificationId = operationToKill.id;
+
+        this.spinners.kill.push(notificationId);
+
+        new killOperationCommand(operationToKill.resource as database, operationToKill.operationId())
+            .execute()
+            .fail(() => {
+                // we don't call remove in always since killOperationCommand only delivers kill signal and doesn't wait for actual kill
+                this.spinners.kill.remove(notificationId)
+            });
     }
 
-    openDetails(notification: abstractNotification) {
+    openDetailsForOperationById(rs: resource, operationId: number): void {
+        const existingNotification = this.getOperationById(rs, operationId);
+        if (existingNotification) {
+            this.openDetails(existingNotification);
+        } else {
+            const showDialog = _.once(() => {
+                // at this point operation have to exist
+                this.openDetails(this.getOperationById(rs, operationId));
+            });
 
+            this.monitorOperation(rs, operationId, () => showDialog());
+        }
+    }
+
+    private getOperationById(rs: resource, operationId: number) {
+        const notificationsArray = rs ? this.resourceNotifications() : this.globalNotifications();
+        return notificationsArray.find(x => x instanceof operation && x.operationId() === operationId);
+    }
+
+
+    openDetails(notification: abstractNotification) {
         //TODO: it is only temporary solution to display progress/details as JSON in dialog 
+        const notificationCenterOpened = this.showNotifications();
+
 
         if (notification instanceof alert) {
             const currentAlert = notification as alert;
-            app.showBootstrapDialog(new tempStatDialog(currentAlert.details));
+            app.showBootstrapDialog(new tempStatDialog(currentAlert.details))
+                .done(() => {
+                    this.showNotifications(notificationCenterOpened);
+                });
         } else if (notification instanceof operation) {
             const op = notification as operation;
 
@@ -217,14 +256,20 @@ class notificationCenter {
 
                 return completed ? op.result() : op.progress();
             });
-            app.showBootstrapDialog(new tempStatDialog(dialogText));
+            app.showBootstrapDialog(new tempStatDialog(dialogText))
+                .done(() => {
+                    this.showNotifications(notificationCenterOpened);
+                });
         } else if (notification instanceof recentError) {
             const error = notification as recentError;
             const recentErrorDetails = {
                 httpStatus: error.httpStatus(),
                 details: error.details()
             };
-            app.showBootstrapDialog(new tempStatDialog(recentErrorDetails));
+            app.showBootstrapDialog(new tempStatDialog(recentErrorDetails))
+                .done(() => {
+                    this.showNotifications(notificationCenterOpened);
+                });
 
         } else {
             throw new Error("Unable to handle details for: " + notification);

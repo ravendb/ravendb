@@ -600,7 +600,7 @@ namespace Raven.Server.Documents.Indexes
                         _documentDatabase.NotificationCenter.Add(AlertRaised.Create("Indexes store initialization error", 
                             message,
                             AlertType.IndexStore_IndexCouldNotBeOpened, 
-                            AlertSeverity.Error,
+                            NotificationSeverity.Error,
                             key: fakeIndex.Name,
                             details: new ExceptionDetails(e)));
 

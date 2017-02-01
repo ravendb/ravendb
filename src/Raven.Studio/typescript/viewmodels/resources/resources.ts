@@ -12,6 +12,7 @@ import toggleDisableIndexingCommand = require("commands/database/index/toggleDis
 import deleteResourceCommand = require("commands/resources/deleteResourceCommand");
 import loadResourceCommand = require("commands/resources/loadResourceCommand");
 import resourcesManager = require("common/shell/resourcesManager");
+import changesContext = require("common/changesContext");
 
 import resourcesInfo = require("models/resources/info/resourcesInfo");
 import getResourcesCommand = require("commands/resources/getResourcesCommand");
@@ -216,11 +217,19 @@ class resources extends viewModelBase {
         confirmDeleteViewModel
             .result
             .done((confirmResult: deleteResourceConfirmResult) => {
-                if (confirmResult.can) {                   
-                    new deleteResourceCommand(toDelete.map((x) => {
-                                                    x.isBeingDeleted(true);                                                    
-                                                    return x.asResource();
-                                              }), !confirmResult.keepFiles)
+                if (confirmResult.can) {   
+
+                    const resourcesList = toDelete.map(x => {
+                        x.isBeingDeleted(true);
+                        const asResource = x.asResource();
+
+                        // disconnect here to avoid race condition between resource deleted message
+                        // and websocket disconnection
+                        changesContext.default.disconnectIfCurrent(asResource, "ResourceDeleted");
+                        return asResource;
+                    });
+                                    
+                    new deleteResourceCommand(resourcesList, !confirmResult.keepFiles)
                                              .execute()                                            
                                              .done((deletedResources: Array<Raven.Server.Web.System.ResourceDeleteResult>) => {
                                                     deletedResources.forEach(rs => this.onResourceDeleted(rs));                            

@@ -1,23 +1,25 @@
 using System.ComponentModel;
 using Raven.Server.Config.Attributes;
+using Raven.Server.Config.Settings;
 
 namespace Raven.Server.Config.Categories
 {
     public class PerformanceHintsConfiguration : ConfigurationCategory
     {
-        [Description("The maximum document size after which it will get into the huge documents collection")]
-        [DefaultValue(5 * 1024 * 1024)]
-        [ConfigurationEntry("Raven/Databases/MaxWarnSizeHugeDocuments")]
-        public int MaxWarnSizeHugeDocuments { get; set; }
+        [Description("The size of a document after which it will get into the huge documents collection")]
+        [DefaultValue(5)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [ConfigurationEntry("Raven/PerformanceHints/Documents/HugeDocumentSize")]
+        public Size HugeDocumentSize { get; set; }
 
         [Description("The maximum size of the huge documents collection")]
         [DefaultValue(100)]
-        [ConfigurationEntry("Raven/Databases/MaxCollectionSizeHugeDocuments")]
-        public int MaxCollectionSizeHugeDocuments { get; set; }
+        [ConfigurationEntry("Raven/PerformanceHints/Documents/HugeDocumentsCollectionSize")]
+        public int HugeDocumentsCollectionSize { get; set; }
 
-        [Description("The maximum amount of index outputs per document")]
+        [Description("The maximum amount of index outputs per document after which we send a performance hint")]
         [DefaultValue(1024)]
-        [ConfigurationEntry("Raven/Indexing/MaxWarnIndexOutputsPerDocument")]
+        [ConfigurationEntry("Raven/PerformanceHints/Indexing/MaxIndexOutputsPerDocument")]
         public int MaxWarnIndexOutputsPerDocument { get; set; }
     }
 }

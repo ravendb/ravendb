@@ -23,17 +23,11 @@ namespace Raven.Server.Config.Categories
         private string _tempPath;
         private string _journalsStoragePath;
         private string[] _additionalStoragePaths;
-
-        public int MaxWarnIndexOutputsPerDocument { get; }
-
-        // TODO arek - maybe use Lazy instead
-        public IndexingConfiguration(Func<string> databaseName, Func<bool> runInMemory, Func<string> dataDirectory, int maxWarnIndexOutputsPerDocument) 
+        public IndexingConfiguration(Func<string> databaseName, Func<bool> runInMemory, Func<string> dataDirectory) 
         {
             _databaseName = databaseName;
             _databaseRunInMemory = runInMemory;
             _dataDirectory = dataDirectory;
-
-            MaxWarnIndexOutputsPerDocument = maxWarnIndexOutputsPerDocument;
         }
 
         [Description("Whatever the indexes should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost. This is mostly useful for testing.")]

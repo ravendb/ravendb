@@ -23,6 +23,8 @@ namespace Raven.Server.NotificationCenter.Notifications
         public string Message { get; protected set; }
 
         public bool IsPersistent { get; protected set; }
+        
+        public NotificationSeverity Severity { get; protected set; } = NotificationSeverity.None;
 
         public virtual DynamicJsonValue ToJson()
         {
@@ -33,6 +35,7 @@ namespace Raven.Server.NotificationCenter.Notifications
                 [nameof(Type)] = Type.ToString(),
                 [nameof(Title)] = Title,
                 [nameof(Message)] = Message,
+                [nameof(Severity)] = Severity,
                 [nameof(IsPersistent)] = IsPersistent
             };
         }

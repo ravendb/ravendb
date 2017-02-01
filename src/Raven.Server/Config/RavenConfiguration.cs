@@ -77,7 +77,7 @@ namespace Raven.Server.Config
             Storage = new StorageConfiguration();
             Encryption = new EncryptionConfiguration();
             PerformanceHints = new PerformanceHintsConfiguration();
-            Indexing = new IndexingConfiguration(() => DatabaseName, () => Core.RunInMemory, () => Core.DataDirectory, PerformanceHints.MaxWarnIndexOutputsPerDocument);
+            Indexing = new IndexingConfiguration(() => DatabaseName, () => Core.RunInMemory, () => Core.DataDirectory);
             WebSockets = new WebSocketsConfiguration();
             Monitoring = new MonitoringConfiguration();
             Queries = new QueryConfiguration();

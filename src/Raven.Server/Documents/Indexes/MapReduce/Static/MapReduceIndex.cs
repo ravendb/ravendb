@@ -48,7 +48,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         public static MapReduceIndex CreateNew(int indexId, IndexDefinition definition, DocumentDatabase documentDatabase)
         {
             var instance = CreateIndexInstance(indexId, definition);
-            instance.Initialize(documentDatabase, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
+            instance.Initialize(documentDatabase,
+                new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration),
+                documentDatabase.Configuration.PerformanceHints);
 
             return instance;
         }
@@ -58,7 +60,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             var definition = MapIndexDefinition.Load(environment);
             var instance = CreateIndexInstance(indexId, definition);
 
-            instance.Initialize(environment, documentDatabase, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
+            instance.Initialize(environment, documentDatabase,
+                new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration),
+                documentDatabase.Configuration.PerformanceHints);
 
             return instance;
         }

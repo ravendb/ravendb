@@ -1,7 +1,8 @@
 ﻿namespace Raven.Server.NotificationCenter.Notifications
 {
-    public enum AlertSeverity
+    public enum NotificationSeverity
     {
+        None,
         Info, 
         Warning,
         Error

@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Net;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
 using Raven.Abstractions.Extensions;
@@ -17,7 +16,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
-namespace Raven.Server.Documents
+namespace Raven.Server.Documents.Operations
 {
     public class DatabaseOperations
     {
@@ -25,8 +24,6 @@ namespace Raven.Server.Documents
         private readonly DocumentDatabase _db;
         private readonly ConcurrentDictionary<long, Operation> _active = new ConcurrentDictionary<long, Operation>();
         private readonly ConcurrentDictionary<long, Operation> _completed = new ConcurrentDictionary<long, Operation>();
-
-        private long _pendingOperationsCounter;
 
         public DatabaseOperations(DocumentDatabase db)
         {
@@ -201,18 +198,18 @@ namespace Raven.Server.Documents
 
         public long GetNextOperationId()
         {
-            return Interlocked.Increment(ref _pendingOperationsCounter);
+            return _db.ConfigurationStorage.OperationsStorage.GetNextOperationId();
         }
 
         public void Dispose(ExceptionAggregator exceptionAggregator)
         {
-            foreach (var pendingTaskAndState in _active.Values)
+            foreach (var active in _active.Values)
             {
                 exceptionAggregator.Execute(() =>
                 {
                     try
                     {
-                        pendingTaskAndState.Task.Wait();
+                        active.Task.Wait();
                     }
                     catch (Exception)
                     {

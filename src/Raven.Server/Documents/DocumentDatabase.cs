@@ -8,7 +8,9 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Client.Data;
 using Raven.Server.Config;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.SqlReplication;
@@ -23,6 +25,7 @@ using Sparrow.Logging;
 using Voron;
 using Voron.Impl.Backup;
 using DatabaseInfo = Raven.Client.Data.DatabaseInfo;
+using Size = Raven.Client.Data.Size;
 
 namespace Raven.Server.Documents
 {
@@ -64,8 +67,8 @@ namespace Raven.Server.Documents
             IoMetrics = serverStore?.IoMetrics ?? new IoMetrics(256, 256);
             Patch = new PatchDocument(this);
             TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
-            HugeDocuments = new HugeDocuments(configuration.PerformanceHints.MaxCollectionSizeHugeDocuments,
-                configuration.PerformanceHints.MaxWarnSizeHugeDocuments);
+            HugeDocuments = new HugeDocuments(configuration.PerformanceHints.HugeDocumentsCollectionSize,
+                configuration.PerformanceHints.HugeDocumentSize.GetValue(SizeUnit.Bytes));
             ConfigurationStorage = new ConfigurationStorage(this);
             NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, _databaseShutdown.Token);
             DatabaseInfoCache = serverStore?.DatabaseInfoCache;
@@ -200,7 +203,7 @@ namespace Raven.Server.Documents
         {
             TxMerger.Start();
 
-            ConfigurationStorage.InitializeActionsStorage();
+            ConfigurationStorage.InitializeNotificationsStorage();
 
             _indexStoreTask = IndexStore.InitializeAsync();
             _transformerStoreTask = TransformerStore.InitializeAsync();
@@ -231,7 +234,8 @@ namespace Raven.Server.Documents
 
             //Index Metadata Store shares Voron env and context pool with documents storage, 
             //so replication of both documents and indexes/transformers can be made within one transaction
-            ConfigurationStorage.InitializeIndexesEtagsStorage(IndexStore, TransformerStore);
+            ConfigurationStorage.Initialize(IndexStore, TransformerStore);
+
             DocumentReplicationLoader.Initialize();
             NotificationCenter.Initialize();
         }
