@@ -44,7 +44,7 @@ namespace Raven.Server.NotificationCenter.Notifications
                     severity = NotificationSeverity.Warning;
                     break;
                 case OperationStatus.Completed:
-                    severity = NotificationSeverity.Info;
+                    severity = NotificationSeverity.Success;
                     break;
                 case OperationStatus.Faulted:
                     severity = NotificationSeverity.Error;

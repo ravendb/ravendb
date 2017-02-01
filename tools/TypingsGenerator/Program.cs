@@ -78,11 +78,12 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DatabaseStatistics));
             scripter.AddType(typeof(IndexDefinition));
 
-            // actions
+            // notifications
             scripter.AddType(typeof(AlertRaised));
             scripter.AddType(typeof(NotificationUpdated));
             scripter.AddType(typeof(OperationChanged));
             scripter.AddType(typeof(ResourceChanged));
+            scripter.AddType(typeof(PerformanceHint));
 
             // changes
             scripter.AddType(typeof(OperationStatusChanged));

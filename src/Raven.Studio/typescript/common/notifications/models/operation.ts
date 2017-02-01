@@ -11,9 +11,6 @@ class operation extends abstractNotification {
     status = ko.observable<Raven.Client.Data.OperationStatus>();
     killable = ko.observable<boolean>();
 
-    isSuccess: KnockoutComputed<boolean>;
-    isFailure: KnockoutComputed<boolean>;
-    isCancelled: KnockoutComputed<boolean>;
     isCompleted: KnockoutComputed<boolean>;
     isPercentageProgress: KnockoutComputed<boolean>;
 
@@ -42,9 +39,6 @@ class operation extends abstractNotification {
     }
 
     private initializeObservables() {
-        this.isSuccess = ko.pureComputed(() => this.status() === "Completed");
-        this.isCancelled = ko.pureComputed(() => this.status() === "Canceled");
-        this.isFailure = ko.pureComputed(() => this.status() === "Faulted");
         this.isCompleted = ko.pureComputed(() => this.status() !== "InProgress");
         this.hasDetails = ko.pureComputed(() => {
             const hasResult = !!this.result();

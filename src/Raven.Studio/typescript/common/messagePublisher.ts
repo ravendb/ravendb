@@ -32,7 +32,7 @@ class messagePublisher {
         this.reportProgress("Warning", title, details, httpStatusText);
     }
 
-    private static reportProgress(type: alertType, title: string, details?: string, httpStatusText?: string, displayInRecentErrors: boolean = false) {
+    private static reportProgress(type: Raven.Server.NotificationCenter.Notifications.NotificationSeverity, title: string, details?: string, httpStatusText?: string, displayInRecentErrors: boolean = false) {
         const toastrMethod = messagePublisher.getDisplayMethod(type);
 
         const messageAndOptionalException = recentError.tryExtractMessageAndException(details);
@@ -49,11 +49,11 @@ class messagePublisher {
         }
     }
 
-    private static getDisplayDuration(type: alertType): number {
+    private static getDisplayDuration(type: Raven.Server.NotificationCenter.Notifications.NotificationSeverity): number {
         return (type === "Error" || type === "Warning") ? 5000 : 2000;
     }
 
-    private static getDisplayMethod(type: alertType): ToastrDisplayMethod {
+    private static getDisplayMethod(type: Raven.Server.NotificationCenter.Notifications.NotificationSeverity): ToastrDisplayMethod {
         switch (type) {
             case "Success":
                 return toastr.success;
@@ -62,6 +62,7 @@ class messagePublisher {
             case "Error":
                 return toastr.error;
             case "Info":
+            case "None":
                 return toastr.info;
             default:
                 throw new Error("Unhandled alert type = " + type);

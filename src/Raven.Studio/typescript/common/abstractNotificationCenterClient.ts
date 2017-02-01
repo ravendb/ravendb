@@ -18,6 +18,7 @@ abstract class abstractNotificationCenterClient extends abstractWebSocketClient<
     protected allOperationsHandlers = ko.observableArray<changesCallback<Raven.Server.NotificationCenter.Notifications.OperationChanged>>();
     protected watchedOperationsChanged = new Map<number, KnockoutObservableArray<changesCallback<Raven.Server.NotificationCenter.Notifications.OperationChanged>>>();
     protected allNotificationUpdatedHandlers = ko.observableArray<changesCallback<Raven.Server.NotificationCenter.Notifications.NotificationUpdated>>();
+    protected allPerformanceHintsHandlers = ko.observableArray<changesCallback<Raven.Server.NotificationCenter.Notifications.PerformanceHint>>();
 
     protected onOpen() {
         super.onOpen();
@@ -30,6 +31,11 @@ abstract class abstractNotificationCenterClient extends abstractWebSocketClient<
         const actionType = actionDto.Type;
 
         switch (actionType) {
+            case "PerformanceHint":
+                const performanceHintDto = actionDto as Raven.Server.NotificationCenter.Notifications.PerformanceHint;
+                this.fireEvents<Raven.Server.NotificationCenter.Notifications.PerformanceHint>(this.allPerformanceHintsHandlers(), performanceHintDto, () => true);
+                break;
+
             case "AlertRaised":
                 const alertDto = actionDto as Raven.Server.NotificationCenter.Notifications.AlertRaised;
                 this.fireEvents<Raven.Server.NotificationCenter.Notifications.AlertRaised>(this.allAlertsHandlers(), alertDto, () => true);
@@ -61,6 +67,16 @@ abstract class abstractNotificationCenterClient extends abstractWebSocketClient<
 
         return new changeSubscription(() => {
             this.allReconnectHandlers.remove(callback);
+        });
+    }
+
+    watchAllPerformanceHints(onChange: (e: Raven.Server.NotificationCenter.Notifications.PerformanceHint) => void) {
+        const callback = new changesCallback<Raven.Server.NotificationCenter.Notifications.PerformanceHint>(onChange);
+
+        this.allPerformanceHintsHandlers.push(callback);
+
+        return new changeSubscription(() => {
+            this.allPerformanceHintsHandlers.remove(callback);
         });
     }
 

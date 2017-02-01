@@ -5,6 +5,7 @@ import database = require("models/resources/database");
 
 import abstractNotification = require("common/notifications/models/abstractNotification");
 import alert = require("common/notifications/models/alert");
+import performanceHint = require("common/notifications/models/performanceHint");
 import recentError = require("common/notifications/models/recentError");
 import operation = require("common/notifications/models/operation");
 
@@ -98,6 +99,7 @@ class notificationCenter {
     setupGlobalNotifications(serverWideClient: serverNotificationCenterClient) {
         this.globalOperationsWatch.configureFor(null);
         serverWideClient.watchAllAlerts(e => this.onAlertReceived(e, this.globalNotifications, null));
+        serverWideClient.watchAllPerformanceHints(e => this.onPerformanceHintReceived(e, this.globalNotifications, null));
         serverWideClient.watchAllOperations(e => this.onOperationChangeReceived(e, this.globalNotifications, null));
         serverWideClient.watchAllNotificationUpdated(e => this.onNotificationUpdated(e, this.globalNotifications, null));
     }
@@ -108,6 +110,7 @@ class notificationCenter {
 
         return [
             client.watchAllAlerts(e => this.onAlertReceived(e, this.resourceNotifications, rs)),
+            client.watchAllPerformanceHints(e => this.onPerformanceHintReceived(e, this.resourceNotifications, rs)),
             client.watchAllOperations(e => this.onOperationChangeReceived(e, this.resourceNotifications, rs)),
             client.watchAllNotificationUpdated(e => this.onNotificationUpdated(e, this.resourceNotifications, rs))
         ];
@@ -119,6 +122,17 @@ class notificationCenter {
 
     private onRecentError(error: recentError) {
         this.globalNotifications.push(error);
+    }
+
+    private onPerformanceHintReceived(performanceHintDto: Raven.Server.NotificationCenter.Notifications.PerformanceHint, notificationsContainer: KnockoutObservableArray<abstractNotification>,
+        resource: resource) {
+        const existingHint = notificationsContainer().find(x => x.id === performanceHintDto.Id) as performanceHint;
+        if (existingHint) {
+            existingHint.updateWith(performanceHintDto);
+        } else {
+            const hintObject = new performanceHint(resource, performanceHintDto);
+            notificationsContainer.push(hintObject);
+        }
     }
 
     private onAlertReceived(alertDto: Raven.Server.NotificationCenter.Notifications.AlertRaised, notificationsContainer: KnockoutObservableArray<abstractNotification>,
@@ -187,12 +201,14 @@ class notificationCenter {
             // local dismiss
             this.globalNotifications.remove(notification);
 
-        } else { // remove dismiss
+        } else { // remote dismiss
             const notificationId = notification.id;
+
+            const shouldDismissForever = notification instanceof performanceHint && notification.dontShowAgain();
 
             this.spinners.dismiss.push(notificationId);
 
-            new dismissNotificationCommand(notification.resource, notificationId)
+            new dismissNotificationCommand(notification.resource, notificationId, shouldDismissForever)
                 .execute()
                 .always(() => this.spinners.dismiss.remove(notificationId))
                 .done(() => this.removeNotificationFromNotificationCenter(notification));
@@ -236,15 +252,19 @@ class notificationCenter {
         return notificationsArray.find(x => x instanceof operation && x.operationId() === operationId);
     }
 
-
     openDetails(notification: abstractNotification) {
         //TODO: it is only temporary solution to display progress/details as JSON in dialog 
         const notificationCenterOpened = this.showNotifications();
 
-
         if (notification instanceof alert) {
             const currentAlert = notification as alert;
             app.showBootstrapDialog(new tempStatDialog(currentAlert.details))
+                .done(() => {
+                    this.showNotifications(notificationCenterOpened);
+                });
+        } else if (notification instanceof performanceHint) {
+            const currentHint = notification as performanceHint;
+            app.showBootstrapDialog(new tempStatDialog(currentHint.details))
                 .done(() => {
                     this.showNotifications(notificationCenterOpened);
                 });

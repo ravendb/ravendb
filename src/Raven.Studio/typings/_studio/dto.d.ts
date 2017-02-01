@@ -208,12 +208,9 @@ interface storedQueryDto extends queryDto {
 
 type resourceDisconnectionCause = "Error" | "ResourceDeleted" | "ResourceDisabled" | "ChangingResource";
 
-type alertType = "Info" | "Success" | "Error" | "Warning";
-
 type querySortType = "Ascending" | "Descending" | "Range Ascending" | "Range Descending";
 
 interface recentErrorDto extends Raven.Server.NotificationCenter.Notifications.Notification {
     Details: string;
     HttpStatus?: string;
-    Severity: alertType;
 }

@@ -208,9 +208,7 @@ class commandBase {
     reportWarning(title: string, details?: string, httpStatusText?: string) {
         messagePublisher.reportWarning(title, details, httpStatusText);
     }
-
 }
-
 
 class oauthHandler { //TODO: we use web socket now for doing this
     handleOAuth(task: JQueryDeferred<any>, request: JQueryXHR, retry: Function) {
