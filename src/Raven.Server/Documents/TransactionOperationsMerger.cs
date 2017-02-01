@@ -168,6 +168,12 @@ namespace Raven.Server.Documents
                     }
                     catch (Exception e)
                     {
+                        if (_log.IsInfoEnabled)
+                        {
+                            _log.Info(
+                                $"Failed to run merged transaction with {pendingOps.Count:#,#}, will retry independently",
+                                e);
+                        }
                         tx.Dispose();
                         NotifyTransactionFailureAndRerunIndependently(pendingOps, e);
                         return;
@@ -232,6 +238,12 @@ namespace Raven.Server.Documents
                         }
                         catch (Exception e)
                         {
+                            if (_log.IsInfoEnabled)
+                            {
+                                _log.Info(
+                                    $"Failed to run merged transaction with {currentPendingOps.Count:#,#} operations in async manner, will retry independently",
+                                    e);
+                            }
                             CompletePreviousTransction(previous, previousPendingOps,
                                 // if this previous threw, it won't throw again
                                 throwOnError: false);
@@ -350,18 +362,17 @@ namespace Raven.Server.Documents
 
         private  PendingOperations GetPendingOperationsStatus(DocumentsOperationContext context)
         {
-            //if(context.Transaction.ModifiedSystemDocuments)
-            //    // a transaction that modified system documents may cause us to 
-            //    // do certain actions (for example, initialize trees for versioning)
-            //    // which we can't realy do if we are starting another transaction
-            //    // immediately. This way, we skip this optimization for this
-            //    // kind of work
-            //    return PendingOperations.ModifiedsSystemDocuments;
+            if(context.Transaction.ModifiedSystemDocuments)
+                // a transaction that modified system documents may cause us to 
+                // do certain actions (for example, initialize trees for versioning)
+                // which we can't realy do if we are starting another transaction
+                // immediately. This way, we skip this optimization for this
+                // kind of work
+                return PendingOperations.ModifiedsSystemDocuments;
 
-            //return _operations.Count == 0
-            //    ? PendingOperations.CompletedAll
-            //    : PendingOperations.HasMore;
-            return PendingOperations.CompletedAll;
+            return _operations.Count == 0
+                ? PendingOperations.CompletedAll
+                : PendingOperations.HasMore;
         }
 
         private void NotifyOnThreadPool(MergedTransactionCommand cmd)

@@ -645,17 +645,17 @@ namespace Voron.Impl.Journal
 
             private void QueueDataFileSync()
             {
-                if (_totalWrittenButUnsyncedBytes > 32*Constants.Size.Megabyte)
+                if (_totalWrittenButUnsyncedBytes > 32 * Constants.Size.Megabyte)
                 {
                     if (_waj._logger.IsInfoEnabled)
                         _waj._logger.Info(
-                            $"Asking for required sync on {_waj._dataPager.FileName} because there are {_totalWrittenButUnsyncedBytes/1024:#,#} kb writtern & unsynced");
+                            $"Asking for required sync on {_waj._dataPager.FileName} because there are {_totalWrittenButUnsyncedBytes / 1024:#,#} kb writtern & unsynced");
                     _waj._env.ForceSyncDataFile();
                 }
                 else
                 {
                     _waj._env.QueueForSyncDataFile();
-                }                
+                }
             }
 
             public void WaitForSyncToCompleteOnDispose()
@@ -786,15 +786,21 @@ namespace Voron.Impl.Journal
                             Monitor.Exit(_flushingLock);
                     }
 
-                    var sp = Stopwatch.StartNew();
-                    // We do the sync _outside_ of the lock, letting the rest of the stuff proceed
-                    _waj._dataPager.Sync();
+                    // danger mode assumes that no OS crashes can happen, in order to get best performance
 
-                    if (_waj._logger.IsInfoEnabled)
+                    if (_waj._env.Options.TransactionsMode != TransactionsMode.Danger)
                     {
-                        var sizeInKb = (_waj._dataPager.NumberOfAllocatedPages * Constants.Storage.PageSize) / Constants.Size.Kilobyte;
-                        _waj._logger.Info($"Sync of {sizeInKb:#,#} kb with {currentTotalWrittenBytes / Constants.Size.Kilobyte:#,#} kb in {sp.Elapsed}");
+                        // We do the sync _outside_ of the lock, letting the rest of the stuff proceed
+                        var sp = Stopwatch.StartNew();
+                        _waj._dataPager.Sync();
+                        if (_waj._logger.IsInfoEnabled)
+                        {
+                            var sizeInKb = (_waj._dataPager.NumberOfAllocatedPages * Constants.Storage.PageSize) / Constants.Size.Kilobyte;
+                            _waj._logger.Info($"Sync of {sizeInKb:#,#} kb file with {currentTotalWrittenBytes / Constants.Size.Kilobyte:#,#} kb dirty in {sp.Elapsed}");
+                        }
+
                     }
+
 
                     lock (_flushingLock)
                     {
@@ -1050,7 +1056,7 @@ namespace Voron.Impl.Journal
                 var journalEntry = PrepareToWriteToJournal(tx, pageCount);
                 if (_logger.IsInfoEnabled)
                 {
-                    _logger.Info($"Preparing to write tx {tx.Id} to jouranl with {journalEntry.NumberOfUncompressedPages:#,#} pages ({(journalEntry.NumberOfUncompressedPages * Constants.Storage.PageSize)/Constants.Size.Kilobyte:#,#} kb) in {sp.Elapsed} with {journalEntry.NumberOf4Kbs/4:#,#} kb compressed.");
+                    _logger.Info($"Preparing to write tx {tx.Id} to jouranl with {journalEntry.NumberOfUncompressedPages:#,#} pages ({(journalEntry.NumberOfUncompressedPages * Constants.Storage.PageSize) / Constants.Size.Kilobyte:#,#} kb) in {sp.Elapsed} with {journalEntry.NumberOf4Kbs / 4:#,#} kb compressed.");
                 }
 
                 if (tx.IsLazyTransaction && _lazyTransactionBuffer == null)
@@ -1062,7 +1068,7 @@ namespace Voron.Impl.Journal
                 {
                     _lazyTransactionBuffer?.WriteBufferToFile(CurrentFile, tx);
                     CurrentFile = NextFile(journalEntry.NumberOf4Kbs);
-                    if(_logger.IsInfoEnabled)
+                    if (_logger.IsInfoEnabled)
                         _logger.Info($"New journal file created {CurrentFile.Number:D19}");
                 }
 
@@ -1070,7 +1076,7 @@ namespace Voron.Impl.Journal
                 CurrentFile.Write(tx, journalEntry, _lazyTransactionBuffer, pageCount);
 
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Writing {journalEntry.NumberOf4Kbs/4:#,#} kb to journal {CurrentFile.Number:D19} took {sp.Elapsed}");
+                    _logger.Info($"Writing {journalEntry.NumberOf4Kbs / 4:#,#} kb to journal {CurrentFile.Number:D19} took {sp.Elapsed}");
 
 
                 if (CurrentFile.Available4Kbs == 0)
@@ -1173,7 +1179,7 @@ namespace Voron.Impl.Journal
                 UnmanagedMemory.Set(compressionBuffer + totalLength, 0, 4 * Constants.Size.Kilobyte - remainder);
             }
 
-          
+
             var txHeader = tx.GetTransactionHeader();
             txHeader->CompressedSize = compressedLen;
             txHeader->UncompressedSize = totalSizeWritten;
@@ -1218,8 +1224,8 @@ namespace Voron.Impl.Journal
             if (_logger.IsOperationsEnabled)
             {
                 _logger.Operations(
-                    $"Compression buffer: {_compressionPager} has reached size {(_compressionPager.NumberOfAllocatedPages*Constants.Storage.PageSize)/Constants.Size.Kilobyte:#,#} kb which is more than the limit " +
-                    $"of {_env.Options.MaxScratchBufferSize/1024:#,#} kb. Will trim it now to the max size allowed. If this is happen on a regular basis," +
+                    $"Compression buffer: {_compressionPager} has reached size {(_compressionPager.NumberOfAllocatedPages * Constants.Storage.PageSize) / Constants.Size.Kilobyte:#,#} kb which is more than the limit " +
+                    $"of {_env.Options.MaxScratchBufferSize / 1024:#,#} kb. Will trim it now to the max size allowed. If this is happen on a regular basis," +
                     " consider raising the limit (MaxScratchBufferSize option control it), since it can cause performance issues");
             }
 
@@ -1231,7 +1237,7 @@ namespace Voron.Impl.Journal
 
         private bool ShouldReduceSizeOfCompressionPager()
         {
-            var compressionBufferSize = _compressionPager.NumberOfAllocatedPages*Constants.Storage.PageSize;
+            var compressionBufferSize = _compressionPager.NumberOfAllocatedPages * Constants.Storage.PageSize;
             if (compressionBufferSize <= _env.Options.MaxScratchBufferSize)
                 return false;
 
@@ -1241,7 +1247,7 @@ namespace Voron.Impl.Journal
 
             // while we are above the limit, we still recently used at least half of it, no point
             // in reducing size yet, we'll be called again
-            var shouldReduceSizeOfCompressionPager = _maxNumberOfPagesRequiredForCompressionBuffer < _compressionPager.NumberOfAllocatedPages/2;
+            var shouldReduceSizeOfCompressionPager = _maxNumberOfPagesRequiredForCompressionBuffer < _compressionPager.NumberOfAllocatedPages / 2;
             if (shouldReduceSizeOfCompressionPager)
             {
                 return true;

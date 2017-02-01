@@ -48,7 +48,7 @@ namespace Voron
             {
                 _avoidDuplicates.Clear();
                 var maybeNeedSync = _maybeNeedToSync.Count;
-                var millisecondsTimeout = 1000 - maybeNeedSync;
+                var millisecondsTimeout = 15000 - maybeNeedSync;
                 if (millisecondsTimeout <= 0 || 
                     _flushWriterEvent.Wait(millisecondsTimeout) == false)
                 {
@@ -57,7 +57,7 @@ namespace Voron
                     
                     if (_log.IsInfoEnabled)
                     {
-                        _log.Info($"Starting desired sync with {_maybeNeedToSync.Count:#,#} items to sync");
+                        _log.Info($"Starting desired sync with {_maybeNeedToSync.Count:#,#} items to sync after {millisecondsTimeout:#,#} ms with no activity");
                     }
 
                     // sync after 5 seconds if no flushing occured, or if there has been a LOT of

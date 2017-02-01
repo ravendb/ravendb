@@ -870,7 +870,10 @@ namespace Voron
                 }
 
                 if (oldMode == TransactionsMode.Danger)
+                {
                     Journal.TruncateJournal();
+                    _dataPager.Sync();
+                }
 
                 switch (mode)
                 {
