@@ -4,6 +4,7 @@
 @chart-subscriptions-color: #d1711b;
 @chart-configuration-color: #c73774;
 @chart-free-color: @gray-darker;
+@chart-buffers-color: #435d78;
 @chart-data-color: #8d6cab;
 @chart-tables-color: #7cb82f;
 @chart-table_data-color: #4dcb80;
@@ -107,6 +108,14 @@
 
             &:hover {
                 fill: lighten(@chart-free-color,5%);
+            }
+        }
+
+        &.buffers {
+            fill: @chart-buffers-color;
+
+            &:hover {
+                fill: lighten(@chart-buffers-color,5%);
             }
         }
 
@@ -274,6 +283,14 @@
 
                 &:hover {
                     background-color: lighten(@chart-free-color,5%);
+                }
+            }
+
+            &.buffers {
+                background-color: @chart-buffers-color;
+
+                &:hover {
+                    background-color: lighten(@chart-buffers-color,5%);
                 }
             }
 

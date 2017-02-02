@@ -142,8 +142,17 @@ class storageReport extends viewModelBase {
         const tables = this.mapTables(report.Tables);
         const trees = this.mapTrees(report.Trees, "Trees");
         const freeSpace = new storageReportItem("Free", "free", false, report.DataFile.FreeSpaceInBytes, []);
+        const preallocatedBuffers = this.mapPreAllocatedBuffers(report.PreAllocatedBuffers);
 
-        d.internalChildren = [tables, trees, freeSpace];
+        d.internalChildren = [tables, trees, freeSpace, preallocatedBuffers];
+    }
+
+    private mapPreAllocatedBuffers(buffersReport: Voron.Debugging.PreAllocatedBuffersReport): storageReportItem {
+        const allocationTree = this.mapTree(buffersReport.AllocationTree);
+        const buffersSpace = new storageReportItem("Pre Allocated Buffers Space", "buffers", false, buffersReport.PreAllocatedBuffersSpaceInBytes);
+        buffersSpace.pageCount = buffersReport.NumberOfPreAllocatedPages;
+
+        return new storageReportItem("Pre Allocated Buffers", "buffers", false, buffersReport.AllocatedSpaceInBytes, [allocationTree, buffersSpace]);
     }
 
     private mapTables(tables: Voron.Data.Tables.TableReport[]): storageReportItem {
@@ -158,12 +167,15 @@ class storageReport extends viewModelBase {
         const data = new storageReportItem("Table Data", "table_data", false, table.DataSizeInBytes, []);
         const indexes = this.mapTrees(table.Indexes, "Indexes");
 
-        const totalSize = structure.size + table.DataSizeInBytes + indexes.size;
+        const preallocatedBuffers = this.mapPreAllocatedBuffers(table.PreAllocatedBuffers);
+
+        const totalSize = table.AllocatedSpaceInBytes;
 
         const tableItem = new storageReportItem(table.Name, "table", true, totalSize, [
             structure,
             data,
-            indexes
+            indexes,
+            preallocatedBuffers
         ]);
 
         tableItem.numberOfEntries = table.NumberOfEntries;

@@ -65,17 +65,20 @@ class genUtils {
     }
 
     static formatBytesToSize(bytes: number) {
-        var sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-        if (bytes == 0) return 'n/a';
-        var i = Math.floor(Math.log(bytes) / Math.log(1024));
+        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+        if (bytes === 0) {
+            return "0 Bytes";
+        }
+        if (!bytes || bytes === -1) return 'n/a';
+        const i = Math.floor(Math.log(bytes) / Math.log(1024));
 
         if (i < 0) {
             // number < 1
             return genUtils.formatAsCommaSeperatedString(bytes, 4) + ' Bytes';
         }
 
-        var res = bytes / Math.pow(1024, i);
-        var newRes = genUtils.formatAsCommaSeperatedString(res, 2);
+        const res = bytes / Math.pow(1024, i);
+        const newRes = genUtils.formatAsCommaSeperatedString(res, 2);
 
         return newRes + ' ' + sizes[i];
     }
