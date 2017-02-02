@@ -12,6 +12,7 @@ using Raven.Client.Smuggler;
 using Raven.Json.Linq;
 using Raven.NewClient.Client.Data.Collections;
 using Raven.Server.Commercial;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Versioning;
@@ -20,6 +21,7 @@ using Raven.Server.Documents.PeriodicExport;
 using Raven.Server.Web.System;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Server;
+using Sparrow;
 using Sparrow.Json;
 using TypeScripter;
 using TypeScripter.TypeScript;
@@ -145,6 +147,15 @@ namespace TypingsGenerator
 
             // database admin
             scripter.AddType(typeof(ResourceDeleteResult));
+
+            // io metrics stats
+            scripter.AddType(typeof(IOMetricsHistoryStats));
+            scripter.AddType(typeof(IOMetricsRecentStats));
+            scripter.AddType(typeof(IOMetricsFileStats));
+            scripter.AddType(typeof(IOMetricsEnvironment));
+            scripter.AddType(typeof(IOMetricsResponse));
+            scripter.AddType(typeof(FileStatus));
+            scripter.AddType(typeof(IoMetrics.MeterType));
 
             return scripter;
         }
