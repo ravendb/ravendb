@@ -87,6 +87,14 @@ namespace Raven.Database.Tasks
                             continue;
                         }
 
+                        var ravenDeleteMarker = doc.Metadata.Value<string>("Raven-Delete-Marker");
+                        bool markerValue;
+                        if (ravenDeleteMarker != null && bool.TryParse(ravenDeleteMarker, out markerValue) && markerValue)
+                        {
+                            logger.Debug("Don't need to touch {0}, etag {1} is illegal, probably it's a missing document", kvp.Key, doc.Etag);
+                            continue;
+                        }
+
                         docsToTouch.Add(kvp.Key);
 
                         var entityName = doc.Metadata.Value<string>(Constants.RavenEntityName);

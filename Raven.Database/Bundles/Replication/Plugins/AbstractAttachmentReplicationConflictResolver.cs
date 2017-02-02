@@ -22,6 +22,15 @@ namespace Raven.Bundles.Replication.Plugins
             if (success == false)
                 return false;
 
+
+            // here we make sure that we keep a deleted attachment deleted, rather than "reviving" it.
+            var ravenDeleteMarker = existingAttachment.Metadata.Value<string>("Raven-Delete-Marker");
+            bool markerValue;
+            if (ravenDeleteMarker != null && bool.TryParse(ravenDeleteMarker, out markerValue) && markerValue)
+            {
+                existingAttachment.Metadata.Add("Raven-Remove-Document-Marker", true);
+            }
+
             var metaToSave = metadataToSave;
             log.Debug(() =>
             {
