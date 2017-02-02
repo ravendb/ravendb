@@ -4,44 +4,55 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
 using FastTests;
-using Raven.Client.Data;
-using Raven.Client.Data.Queries;
-using Raven.Client.Indexing;
-using Raven.Json.Linq;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Data.Queries;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
+using Sparrow.Json;
 using Xunit;
 
 namespace SlowTests.Tests.Indexes
 {
-    public class ComplexIndexOnNotAnalyzedField : RavenTestBase
+    public class ComplexIndexOnNotAnalyzedField : RavenNewTestBase
     {
         [Fact]
         public void CanQueryOnKey()
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.Put("companies/", null,
-                       RavenJObject.Parse("{'Name':'Hibernating Rhinos', 'Partners': ['companies/49', 'companies/50']}"),
-                       RavenJObject.Parse("{'@collection': 'Companies'}"));
-
-
-                store.DatabaseCommands.PutIndex("CompaniesByPartners", new IndexDefinition
+                using (var commands = store.Commands())
                 {
-                    Maps = { "from company in docs.Companies from partner in company.Partners select new { Partner = partner }" }
-                });
-
-                QueryResult queryResult;
-                do
-                {
-                    queryResult = store.DatabaseCommands.Query("CompaniesByPartners", new IndexQuery(store.Conventions)
+                    using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("{'Name':'Hibernating Rhinos', 'Partners': ['companies/49', 'companies/50']}")))
                     {
-                        Query = "Partner:companies/49",
-                        PageSize = 10
-                    });
-                } while (queryResult.IsStale);
+                        var json = commands.Context.ReadForMemory(stream, "doc");
+                        commands.Put("companies/", null, json, new Dictionary<string, string> { { Constants.Metadata.Collection, "Companies" } });
+                    }
 
-                Assert.Equal("Hibernating Rhinos", queryResult.Results[0].Value<string>("Name"));
+                    store.Admin.Send(new PutIndexOperation("CompaniesByPartners", new IndexDefinition
+                    {
+                        Maps = { "from company in docs.Companies from partner in company.Partners select new { Partner = partner }" }
+                    }));
+
+                    QueryResult queryResult;
+                    do
+                    {
+                        queryResult = commands.Query("CompaniesByPartners", new IndexQuery(store.Conventions)
+                        {
+                            Query = "Partner:companies/49",
+                            PageSize = 10
+                        });
+                    } while (queryResult.IsStale);
+
+                    var result = (BlittableJsonReaderObject)queryResult.Results[0];
+                    string name;
+                    Assert.True(result.TryGet("Name", out name));
+                    Assert.Equal("Hibernating Rhinos", name);
+                }
             }
         }
     }

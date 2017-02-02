@@ -1,13 +1,12 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Indexes;
-using SlowTests.Utils;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.Tests.Indexes
 {
-    public class CastingInIndexDefinition : RavenTestBase
+    public class CastingInIndexDefinition : RavenNewTestBase
     {
         [Fact]
         public void CanCastValuesToString()
@@ -56,7 +55,7 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        public class Employees_CurrentCount : AbstractIndexCreationTask<Employee, Employees_CurrentCount.Result>
+        private class Employees_CurrentCount : AbstractIndexCreationTask<Employee, Employees_CurrentCount.Result>
         {
             public class Result
             {
@@ -83,7 +82,7 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        public class Employee
+        private class Employee
         {
             public string Id { get; set; }
             public string Name { get; set; }

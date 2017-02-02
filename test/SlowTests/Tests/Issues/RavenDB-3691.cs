@@ -1,18 +1,21 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Json.Linq;
 using Xunit;
 
 namespace SlowTests.Tests.Issues
 {
-    public class RavenDB_3691 : RavenTestBase
+    public class RavenDB_3691 : RavenNewTestBase
     {
         [Fact]
         public void CanPutDocumentWithMetadataPropertyBeingNull()
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.Put("test", null, new RavenJObject(), RavenJObject.FromObject(new { Foo = (string)null }));
+                using (var commands = store.Commands())
+                {
+                    commands.Put("test", null, new { }, new Dictionary<string, string> { { "Foo", null } });
+                }
             }
         }
     }

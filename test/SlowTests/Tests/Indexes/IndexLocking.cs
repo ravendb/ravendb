@@ -1,14 +1,15 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.Tests.Indexes
 {
-    public class IndexLocking : RavenTestBase
+    public class IndexLocking : RavenNewTestBase
     {
         [Fact]
         public async Task LockingIndexesInMemoryWillNotFail()
@@ -21,18 +22,18 @@ namespace SlowTests.Tests.Indexes
                 };
                 index.Execute(store);
 
-                var indexDefinition = store.DatabaseCommands.GetIndex("IndexSample");
+                var indexDefinition = store.Admin.Send(new GetIndexOperation("IndexSample"));
                 Assert.Equal(indexDefinition.LockMode, IndexLockMode.Unlock);
 
                 var database = await GetDatabase(store.DefaultDatabase);
-                database.IndexStore.GetIndex("IndexSample").SetLock(IndexLockMode.LockedIgnore);
+                database.IndexStore.GetIndex("IndexSample").SetLock(Raven.Abstractions.Indexing.IndexLockMode.LockedIgnore);
 
-                indexDefinition = store.DatabaseCommands.GetIndex("IndexSample");
+                indexDefinition = store.Admin.Send(new GetIndexOperation("IndexSample"));
                 Assert.Equal(indexDefinition.LockMode, IndexLockMode.LockedIgnore);
             }
         }
 
-        public class IndexSample : AbstractIndexCreationTask<Contact>
+        private class IndexSample : AbstractIndexCreationTask<Contact>
         {
             public IndexSample()
             {
@@ -46,13 +47,13 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        public class Contact
+        private class Contact
         {
             public string FirstName { get; set; }
             public EmailAddress PrimaryEmail { get; set; }
         }
 
-        public class EmailAddress
+        private class EmailAddress
         {
             public string Email { get; set; }
         }

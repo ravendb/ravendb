@@ -1,15 +1,14 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
-using Raven.Client.Linq.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Linq.Indexing;
 using Xunit;
 
 namespace SlowTests.Tests.Indexes
 {
-    public class BoostingDuringIndexing : RavenTestBase
+    public class BoostingDuringIndexing : RavenNewTestBase
     {
         private class User
         {
@@ -55,7 +54,7 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6124")]
         public void CanBoostFullDocument()
         {
             using (var store = GetDocumentStore())
