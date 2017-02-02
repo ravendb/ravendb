@@ -61,6 +61,7 @@ namespace Raven.Server.Smuggler.Documents
                 var currentType = _source.GetNextType();
                 while (currentType != DatabaseItemType.None)
                 {
+                    _token.ThrowIfCancellationRequested();
                     ProcessType(currentType, result);
 
                     currentType = _source.GetNextType();
