@@ -31,15 +31,15 @@ namespace Raven.Server.Web.System
 
         private static Dictionary<string, FileInfo> _fileNamesCaseInsensitive = new Dictionary<string, FileInfo>(StringComparer.OrdinalIgnoreCase);
 
-        public static string[] LookupPaths = {
+        public static readonly string[] LookupPaths = {
             "src/Raven.Studio/wwwroot",
              "wwwroot",
             "../Raven.Studio/wwwroot",
             "../src/Raven.Studio/wwwroot",
-            "../../../../../Raven.Studio/wwwroot"
+            "../../../../../src/Raven.Studio/wwwroot"
         };
 
-        public static Dictionary<string, string> FileExtensionToContentTypeMapping = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        public static readonly Dictionary<string, string> FileExtensionToContentTypeMapping = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             {".html", "text/html"},
             {".htm", "text/html"},

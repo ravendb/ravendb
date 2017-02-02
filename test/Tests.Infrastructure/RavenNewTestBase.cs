@@ -176,22 +176,20 @@ namespace FastTests
 
         public static void WaitForUserToContinueTheTest(DocumentStore documentStore, bool debug = true, int port = 8079)
         {
-            throw new NotImplementedException();
-            /*if (debug && Debugger.IsAttached == false)
+            if (debug && Debugger.IsAttached == false)
                 return;
 
             string url = documentStore.Url;
 
             var databaseNameEncoded = Uri.EscapeDataString(documentStore.DefaultDatabase);
-            var documentsPage = url + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded +
-                                "&withStop=true";
+            var documentsPage = url + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
 
             OpenBrowser(documentsPage);// start the server
 
             do
             {
                 Thread.Sleep(100);
-            } while (documentStore.DatabaseCommands.Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));*/
+            } while (/*documentStore.DatabaseCommands.Head("Debug/Done") == null && (debug == false || Debugger.IsAttached)*/ true);
         }
 
         /// <summary>
