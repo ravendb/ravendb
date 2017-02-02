@@ -612,11 +612,9 @@ namespace Sparrow.Json
             }
         }
 
-        public string DisposeStack;
         
         public void Dispose()
         {
-            DisposeStack = Environment.StackTrace;
             if (_mem == null) //double dispose will do nothing
                 return;
             if (_allocatedMemory != null && _buffer.IsDisposed == false)

@@ -21,7 +21,7 @@ namespace Sparrow.Json
 
         private List<Tuple<IntPtr, long, NativeMemory.ThreadStats>> _olderBuffers;
 #if !MEM_GUARD
-        private SortedList<long, AllocatedMemoryData> _fragements;
+        private SortedList<IntPtr, int> _fragements;
 #endif
         private bool _isDisposed;
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ArenaMemoryAllocator>("ArenaMemoryAllocator");
@@ -80,6 +80,8 @@ namespace Sparrow.Json
         {
             if (_isDisposed)
                 ThrowAlreadyDisposedException();
+
+
 #if MEM_GUARD
             var allocation = new AllocatedMemoryData
             {
@@ -90,6 +92,13 @@ namespace Sparrow.Json
             if (_used + size > _allocated)
                 GrowArena(size);
 
+#if DEBUG
+            if (_fragements != null)
+            {
+                Debug.Assert(_fragements.ContainsKey((IntPtr)_ptrCurrent) == false);
+            }
+#endif
+
             var allocation = new AllocatedMemoryData()
             {
                 SizeInBytes = size,
@@ -99,11 +108,6 @@ namespace Sparrow.Json
             _ptrCurrent += size;
             _used += size;
             TotalUsed += size;
-
-            //prevent reused address from throwing an exception at ReturnMemory()
-            AllocatedMemoryData _;
-            if(_fragements?.TryGetValue((long)allocation.Address, out _) ?? false)
-                _fragements.Remove((long)allocation.Address);
 #endif
             
             return allocation;
@@ -250,12 +254,13 @@ namespace Sparrow.Json
 
         public void Return(AllocatedMemoryData allocation)
         {
-#if RELEASE
             var address = allocation.Address;
-#else
-            var address = allocation._address; //essentially bypass object disposed checks
-#endif
+#if DEBUG
+            Debug.Assert(address != _ptrCurrent);
+            Debug.Assert(allocation.IsReturned==false);
             allocation.IsReturned = true;
+#endif
+
 #if MEM_GUARD
 #if MEM_GUARD_STACK
             if(allocation.FreedBy == null)
@@ -269,11 +274,11 @@ namespace Sparrow.Json
             {
                 if (_fragements == null)
                 {
-                    _fragements = new SortedList<long, AllocatedMemoryData>();
+                    _fragements = new SortedList<IntPtr, int>(IntPtrComarer.Instance);
                 }
 
                 // we have fragmentation, let us try to heal it 
-                _fragements.Add((long)address, allocation);
+                _fragements.Add((IntPtr)address, allocation.SizeInBytes);
                 return;
             }
             // since the returned allocation is at the end of the arena, we can just move
@@ -288,15 +293,12 @@ namespace Sparrow.Json
             // let us try to heal fragmentation at this point
             while (_fragements.Count > 0)
             {
-                var highest = _fragements.Values[_fragements.Count - 1];
-#if RELEASE
-                var highestAddress = highest.Address;
-#else
-                var highestAddress = highest._address;
-#endif
+                var highestAddress = (byte*)(_fragements.Keys[_fragements.Count - 1]);
                 if (highestAddress != _ptrCurrent - allocation.SizeInBytes)
                     break;
-                
+
+                var sizeInBytes = _fragements.Values[_fragements.Count - 1];
+
                 _fragements.RemoveAt(_fragements.Count - 1);
                 if (highestAddress < _ptrStart)
                 {
@@ -305,12 +307,22 @@ namespace Sparrow.Json
                     // released, and then free it, but not for now
                     continue;
                 }
-                _used -= highest.SizeInBytes;
-                TotalUsed -= highest.SizeInBytes;
-                _ptrCurrent -= highest.SizeInBytes;
+                _used -= sizeInBytes;
+                TotalUsed -= sizeInBytes;
+                _ptrCurrent -= sizeInBytes;
             }
 #endif
             }
+
+        public class IntPtrComarer : IComparer<IntPtr>
+        {
+            public static IntPtrComarer Instance = new IntPtrComarer();
+
+            public int Compare(IntPtr x, IntPtr y)
+            {
+                return Math.Sign((x.ToInt64() - y.ToInt64()));
+            }
+        }
     }
 
     public unsafe class AllocatedMemoryData 
@@ -318,21 +330,20 @@ namespace Sparrow.Json
         public int SizeInBytes;
         public int ContextGeneration;
 
-        public bool IsReturned;
-
-        public bool IsLongLived;
         public JsonOperationContext Parent;
-
         public NativeMemory.ThreadStats AllocatingThread;
+
 #if MEM_GUARD_STACK
         public string AllocatedBy = Environment.StackTrace;
         public string FreedBy;
 #endif
 
-#if RELEASE
-        public byte* Addess;
+#if !DEBUG
+        public byte* Address;
 #else
-        internal byte* _address;
+        public bool IsLongLived;
+        public bool IsReturned;
+        private byte* _address;
         public byte* Address
         {
             get

@@ -217,8 +217,9 @@ namespace Sparrow.Json
 
             allocatedMemory.ContextGeneration = Generation;
             allocatedMemory.Parent = this;
+#if DEBUG
             allocatedMemory.IsLongLived = longLived;
-
+#endif
             return allocatedMemory;
         }
 
@@ -637,8 +638,8 @@ namespace Sparrow.Json
                 _fieldNames.Clear();
                 CachedProperties = null; // need to release this so can be collected
             }
-            _arenaAllocator.ResetArena();
             _objectJsonParser.Reset(null);
+            _arenaAllocator.ResetArena();
             _generation = _generation + 1;
         }
 
