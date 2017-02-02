@@ -21,6 +21,14 @@ namespace Raven.Bundles.Replication.Plugins
             if (success == false)
                 return false;
 
+            // here we make sure that we keep a deleted document deleted, rather than "reviving" it.
+            //var ravenDeleteMarker = existingDoc.Metadata.Value<string>("Raven-Delete-Marker");
+            //bool markerValue;
+            //if (ravenDeleteMarker != null && bool.TryParse(ravenDeleteMarker, out markerValue) && markerValue)
+            //{
+            //    existingDoc.Metadata.Add("Raven-Remove-Document-Marker", true);
+            //}
+
             var docToSave = documentToSave;
             var metaToSave = metadataToSave;
             log.Debug(() =>
