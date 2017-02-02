@@ -238,19 +238,18 @@ namespace Raven.Database.Commercial
             return false;
         }
 
-        private string AssertLicenseAttributes(IDictionary<string, string> licenseAttributes, LicenseType licenseType)
+        private static string AssertLicenseAttributes(IDictionary<string, string> licenseAttributes, LicenseType licenseType)
         {
-            string version;
             var errorMessage = string.Empty;
 
-            licenseAttributes.TryGetValue("version", out version); // note that a 1.0 license might not have version
+            ThrowIfStandardLicenseExpired(licenseAttributes, licenseType);
 
-            if (version != "3.0")
+            string hotSpare;
+            bool hotSpareValue;
+            if (licenseAttributes.TryGetValue("hotSpare", out hotSpare) &&
+                bool.TryParse(hotSpare, out hotSpareValue) && hotSpareValue)
             {
-                if (licenseType != LicenseType.Subscription)
-                {
-                    throw new LicenseExpiredException("This is not a license for RavenDB 3.0");
-                }
+                throw new LicenseExpiredException("You can use a Hot Spare license only in RavenDB v3.5 and above!");
             }
 
             string maxRam;
@@ -288,6 +287,34 @@ namespace Raven.Database.Commercial
             }
 
             return errorMessage;
+        }
+
+        private static void ThrowIfStandardLicenseExpired(IDictionary<string, string> licenseAttributes, LicenseType licenseType)
+        {
+            if (licenseType == LicenseType.Subscription)
+            {
+                // we can use subscription with any version
+                return;
+            }
+
+            string version;
+            licenseAttributes.TryGetValue("version", out version); // note that a 1.0 license might not have version
+            if (version == "3.0" || version == "3.5")
+                return;
+
+            string updatesExpiration;
+            licenseAttributes.TryGetValue("updatesExpiration", out updatesExpiration);
+            if (updatesExpiration == null)
+                return;
+
+            DateTime result;
+            if (DateTime.TryParse(updatesExpiration, out result) == false)
+                return;
+
+            if ((result - DateTime.UtcNow).Days < 0)
+            {
+                throw new LicenseExpiredException("This is not a license for RavenDB 3.0");
+            }
         }
 
         private string GetLicenseText(InMemoryRavenConfiguration config)
