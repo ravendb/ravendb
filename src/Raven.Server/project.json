@@ -48,7 +48,7 @@
     "Microsoft.Extensions.Configuration.EnvironmentVariables": "1.1.0",
     "Microsoft.Extensions.Configuration.Json": "1.1.0",
     "Microsoft.NETCore.App": "1.1.0",
-    "Npgsql": "3.1.9",
+    "Npgsql": "3.2.0",
     "Sparrow": "4.0.0-*",
     "Raven.Client": "4.0.0-*",
     "System.ComponentModel": "4.3.0",
