@@ -133,7 +133,7 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             private enum State
-            {
+                {
                 None,
                 ReadingId,
                 IgnorePropertyEtag,
@@ -145,10 +145,10 @@ namespace Raven.Server.Smuggler.Documents
                 if (_readingMetadataObject == false)
                     return;
                 _depth++;
-            }
+        }
 
             public void EndOBject()
-            {
+        {
                 if (_readingMetadataObject == false)
                     return;
                 _depth--;
@@ -203,9 +203,9 @@ namespace Raven.Server.Smuggler.Documents
                             *(long*)(state.StringBuffer + 1) == 7022344802737087853)
                         {
                             _readingMetadataObject = true;
-                        }
+            }
                         return true;
-                    }
+        }
                     switch (state.StringSize)
                     {
                         case 3:// @id
@@ -538,7 +538,7 @@ namespace Raven.Server.Smuggler.Documents
                         Data = blittableJsonReaderObject,
                         Key = modifier.Id,
                     };
-                }
+        }
 
             }
         }

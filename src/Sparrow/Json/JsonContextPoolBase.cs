@@ -5,7 +5,7 @@ using System.Threading;
 
 namespace Sparrow.Json
 {
-    public abstract class JsonContextPoolBase<T>
+    public abstract class JsonContextPoolBase<T>:IDisposable
         where T : JsonOperationContext
     {
         /// <summary>

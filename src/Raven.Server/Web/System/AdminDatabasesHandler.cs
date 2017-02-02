@@ -239,7 +239,8 @@ namespace Raven.Server.Web.System
                 using (var tx = context.OpenWriteTransaction())
                 {
                     ServerStore.Delete(context, dbId);
-                    ServerStore.NotificationCenter.AddAfterTransactionCommit(ResourceChanged.Create(dbId, ResourceChangeType.Delete), tx);
+                    ServerStore.NotificationCenter.AddAfterTransactionCommit(
+                        ResourceChanged.Create(dbId, ResourceChangeType.Delete), tx);
 
                     tx.Commit();
                 }
