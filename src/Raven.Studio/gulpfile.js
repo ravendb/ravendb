@@ -24,24 +24,24 @@ var PATHS = require('./gulp/paths');
 
 var tsProject = plugins.typescript.createProject('tsconfig.json');
 
-gulp.task('clean', ['clean:js'], function () {
+gulp.task('z_clean', ['z_clean:js'], function () {
     del.sync(PATHS.releaseTarget);
     del.sync(['./typings/*', '!./typings/_studio/**', '!./typings/tsd.d.ts']);
     del.sync([PATHS.bowerSource]);
 });
 
-gulp.task('clean:js', function() {
+gulp.task('z_clean:js', function() {
     del.sync(['./wwwroot/App/**/*.js']);
     del.sync(['./wwwroot/App/**/*.js.map']);
 });
 
-gulp.task('parse-handlers', function() {
+gulp.task('z_parse-handlers', function() {
     return gulp.src(PATHS.handlersToParse)
         .pipe(parseHandlers('endpoints.ts'))
         .pipe(gulp.dest(PATHS.constantsTargetDir));
 });
 
-gulp.task('parse-configuration', function() {
+gulp.task('z_parse-configuration', function() {
     return gulp.src(PATHS.configurationFilesToParse)
         .pipe(parseConfiguration('configuration.ts'))
         .pipe(gulp.dest(PATHS.constantsTargetDir));
@@ -57,7 +57,7 @@ gulp.task('less', function() {
         .pipe(gulp.dest(PATHS.lessTarget));
 });
 
-gulp.task('generate-typings', function (cb) {
+gulp.task('z_generate-typings', function (cb) {
     var possibleTypingsGenPaths = [
         '../../tools/TypingsGenerator/bin/Debug/netcoreapp1.1/TypingsGenerator.dll',
         '../../tools/TypingsGenerator/bin/Release/netcoreapp1.1/TypingsGenerator.dll' ];
@@ -79,7 +79,7 @@ gulp.task('generate-typings', function (cb) {
     });
 });
 
-gulp.task('compile:test', ['generate-ts'], function() {
+gulp.task('z_compile:test', ['z_generate-ts'], function() {
      return gulp.src([PATHS.test.tsSource])
         .pipe(plugins.sourcemaps.init())
         .pipe(tsProject())
@@ -88,7 +88,7 @@ gulp.task('compile:test', ['generate-ts'], function() {
         .pipe(gulp.dest(PATHS.test.tsOutput));
 });
 
-gulp.task('compile:app', ['generate-ts'], function () {
+gulp.task('z_compile:app', ['z_generate-ts'], function () {
     return gulp.src([PATHS.tsSource])
         .pipe(plugins.naturalSort())
         .pipe(plugins.sourcemaps.init())
@@ -98,7 +98,7 @@ gulp.task('compile:app', ['generate-ts'], function () {
         .pipe(gulp.dest(PATHS.tsOutput));
 });
 
-gulp.task('compile:app-changed', [], function () {
+gulp.task('z_compile:app-changed', [], function () {
     return gulp.src([PATHS.tsSource])
         .pipe(plugins.changed(PATHS.tsOutput, { extension: '.js' }))
         .pipe(plugins.sourcemaps.init())
@@ -108,42 +108,42 @@ gulp.task('compile:app-changed', [], function () {
         .pipe(gulp.dest(PATHS.tsOutput));
 });
 
-gulp.task('typings', function() {
+gulp.task('z_typings', function() {
     return gulp.src(PATHS.typingsConfig)
         .pipe(plugins.typings());
 });
 
-gulp.task('bower', function () {
+gulp.task('z_bower', function () {
     return plugins.bower();
 });
 
-gulp.task('release:favicon', function() {
+gulp.task('z_release:favicon', function() {
     return gulp.src("wwwroot/favicon.ico")
         .pipe(gulp.dest(PATHS.releaseTarget));
 });
 
-gulp.task('release:ace-workers', function () {
+gulp.task('z_release:ace-workers', function () {
     return gulp.src("wwwroot/Content/ace/worker*.js")
         .pipe(gulp.dest(PATHS.releaseTarget));
 });
 
-gulp.task('release:images', function() {
+gulp.task('z_release:images', function() {
     return gulp.src('wwwroot/Content/img/*', { base: 'wwwroot/Content' })
        .pipe(gulp.dest(PATHS.releaseTargetContent));
 });
 
-gulp.task('release:fonts', function() {
+gulp.task('z_release:fonts', function() {
     return gulp.src('wwwroot/Content/css/fonts/**/*')
        .pipe(gulp.dest(path.join(PATHS.releaseTargetContentCss, 'fonts')));
 });
 
-gulp.task('release:html', function() {
+gulp.task('z_release:html', function() {
     return gulp.src('wwwroot/index.html')
         .pipe(plugins.processhtml())
         .pipe(gulp.dest(PATHS.releaseTarget));
 });
 
-gulp.task('fix-jquery-ui', function() {
+gulp.task('z_fix-jquery-ui', function() {
     /*
     * Due to https://github.com/mariocasciaro/gulp-concat-css/issues/26 we have to process jquery and remove comments
     * to enable parsing
@@ -153,7 +153,7 @@ gulp.task('fix-jquery-ui', function() {
         .pipe(gulp.dest("./wwwroot/lib/jquery-ui/themes/base-wo-comments/"));
 });
 
-gulp.task('release:css', ['fix-jquery-ui'], function () {
+gulp.task('z_release:css', ['z_fix-jquery-ui'], function () {
     checkAllFilesExist(PATHS.cssToMerge);
     return gulp.src(PATHS.cssToMerge)
         .pipe(plugins.concatCss('styles.css', { rebaseUrls: false }))
@@ -161,7 +161,7 @@ gulp.task('release:css', ['fix-jquery-ui'], function () {
         .pipe(gulp.dest(PATHS.releaseTargetContentCss));
 });
 
-gulp.task('release:libs', function() {
+gulp.task('z_release:libs', function() {
     var externalLibs = PATHS.externalLibs.map(function (x) { return PATHS.bowerSource + x; });
     checkAllFilesExist(externalLibs);
 
@@ -171,18 +171,18 @@ gulp.task('release:libs', function() {
         .pipe(gulp.dest(PATHS.releaseTargetApp));
 });
 
-gulp.task('release:copy-version', function () {
+gulp.task('z_release:copy-version', function () {
     return gulp.src("./version.json")
         .pipe(gulp.dest(PATHS.releaseTarget));
 });
 
-gulp.task('release:package', function () {
+gulp.task('z_release:package', function () {
     return gulp.src(PATHS.releaseTarget + "/**/*.*")
     .pipe(plugins.zip("Raven.Studio.zip"))
     .pipe(gulp.dest(PATHS.releaseTarget));
 });
 
-gulp.task('release:durandal', function () {
+gulp.task('z_release:durandal', function () {
     var extraModules = [
         'transitions/fadeIn',
         'widgets/virtualTable/viewmodel'
@@ -212,7 +212,7 @@ gulp.task('release:durandal', function () {
    .pipe(gulp.dest(PATHS.releaseTargetApp));
 });
 
-gulp.task('generate-test-list', function () {
+gulp.task('z_generate-test-list', function () {
     var reduceFiles = plugins.reduceFile('tests.js',
         function (file, memo) {
             memo.push(file.relative.replace(/\\/g, '/'));
@@ -231,7 +231,7 @@ gulp.task('generate-test-list', function () {
     .pipe(gulp.dest(PATHS.test.setup));
 });
 
-gulp.task('mochaTests', function () {
+gulp.task('z_mochaTests', function () {
     var mocha = plugins.mochaPhantomjs({
         reporter: 'spec' //use json for debugging
     });
@@ -239,47 +239,54 @@ gulp.task('mochaTests', function () {
     return gulp.src(PATHS.test.html).pipe(mocha);
 });
 
-gulp.task('test', [ 'compile:test' ], function (cb) {
-    return runSequence('generate-test-list', 'mochaTests', cb);
+gulp.task('test', [ 'z_compile:test' ], function (cb) {
+    return runSequence('z_generate-test-list', 'z_mochaTests', cb);
 });
 
-gulp.task('watch:test', ['test'], function () {
-    gulp.watch(PATHS.tsSource, ['mochaTests']);
+gulp.task('z_watch:test', ['test'], function () {
+    gulp.watch(PATHS.tsSource, ['z_mochaTests']);
     gulp.watch(PATHS.test.tsSource, ['test']);
 });
 
-gulp.task('compile', ['less', 'compile:app'], function() { });
+gulp.task('compile', ['less', 'z_compile:app'], function() { });
 
 gulp.task('watch', ['compile'], function () {
-    gulp.watch(PATHS.tsSource, ['compile:app-changed']);
-    gulp.watch(PATHS.test.tsSource, ['compile:test']);
+    gulp.watch(PATHS.tsSource, ['z_compile:app-changed']);
+    gulp.watch(PATHS.test.tsSource, ['z_compile:test']);
     gulp.watch(PATHS.lessSourcesToWatch, ['less']);
 });
 
-gulp.task('generate-ts', ['parse-handlers', 'parse-configuration', 'generate-typings'], function() {});
+gulp.task('z_generate-ts', [
+    'z_parse-handlers',
+    'z_parse-configuration',
+    'z_generate-typings'],
+    function() {});
 
-gulp.task('restore', ['bower', 'typings']);
+gulp.task('restore', [
+    'z_bower',
+    'z_typings'
+]);
 
 gulp.task('release', function (cb) {
     return runSequence(
-        'clean',
-        'build',
+        'z_clean',
+        'restore+compile',
         [
-            'release:libs',
-            'release:copy-version',
-            'release:favicon',
-            'release:ace-workers',
-            'release:images',
-            'release:html',
-            'release:css',
-            'release:fonts',
-            'release:durandal'
+            'z_release:libs',
+            'z_release:copy-version',
+            'z_release:favicon',
+            'z_release:ace-workers',
+            'z_release:images',
+            'z_release:html',
+            'z_release:css',
+            'z_release:fonts',
+            'z_release:durandal'
         ],
-        'release:package',
+        'z_release:package',
         cb);
 });
 
-gulp.task('build', function (cb) {
+gulp.task('restore+compile', function (cb) {
     return runSequence(
         'restore',
         'compile',
