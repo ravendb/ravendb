@@ -222,6 +222,43 @@ namespace FastTests.Server.Replication
         }
 
         [Fact]
+        public void Conflict_insensitive_check()
+        {
+            using (var store1 = GetDocumentStore(dbSuffixIdentifier: "foo1"))
+            using (var store2 = GetDocumentStore(dbSuffixIdentifier: "foo2"))
+            {
+                using (var s1 = store1.OpenSession())
+                {
+                    s1.Store(new User { Name = "test" }, "users/1");
+                    s1.Store(new User { Name = "test" }, "users/2");
+                    s1.Store(new User { Name = "test" }, "users/3");
+                    s1.SaveChanges();
+                    s1.Delete("users/1");
+                    s1.SaveChanges();
+                }
+                using (var s2 = store2.OpenSession())
+                {
+                    s2.Store(new User { Name = "test2" }, "Users/1");
+                    s2.Store(new User { Name = "test2" }, "Users/2");
+                    s2.Store(new User { Name = "test2" }, "Users/3");
+                    s2.SaveChanges();
+                    s2.Delete("Users/1");
+                    s2.Delete("Users/2");
+                    s2.SaveChanges();
+                }
+
+                SetupReplication(store1, store2);
+
+                var conflicts = WaitUntilHasConflict(store2, "users/3");
+                Assert.Equal(2, conflicts["users/3"].Count);
+                conflicts = WaitUntilHasConflict(store2, "users/2");
+                Assert.Equal(2, conflicts["users/2"].Count);
+                // conflict between two tombstones, resolved automaticlly to tombstone.
+                Assert.Equal(2, WaitUntilHasTombstones(store2, 2).Count);
+            }
+        }
+
+        [Fact]
         public void Conflict_then_data_query_will_return_409_and_conflict_data()
         {
             using (var store1 = GetDocumentStore(dbSuffixIdentifier: "foo1"))
