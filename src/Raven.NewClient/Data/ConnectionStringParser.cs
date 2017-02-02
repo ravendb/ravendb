@@ -25,14 +25,11 @@ namespace Raven.NewClient.Abstractions.Data
 
         internal string CurrentOAuthToken { get; set; }
 
-        public ICredentials Credentials { get; set; }
-
         public string AuthenticationScheme { get; set; }
 
         public override string ToString()
         {
-            var user = Credentials == null ? "<none>" : ((NetworkCredential)Credentials).UserName;
-            return string.Format("Url: {0}, User: {1}, Api Key: {2}", Url, user, ApiKey);
+            return string.Format("Url: {0}, Api Key: {2}", Url, ApiKey);
         }
     }
 
@@ -54,8 +51,7 @@ namespace Raven.NewClient.Abstractions.Data
 
         public override string ToString()
         {
-            var user = Credentials == null ? "<none>" : ((NetworkCredential)Credentials).UserName;
-            return string.Format("Url: {2}, User: {0}, {1}DefaultDatabase: {2}, Api Key: {3}", user, DefaultDatabase, Url, ApiKey);
+            return string.Format("Url: {2}, {1}DefaultDatabase: {2}, Api Key: {3}", DefaultDatabase, Url, ApiKey);
         }
     }
 
@@ -277,7 +273,6 @@ namespace Raven.NewClient.Abstractions.Data
             if (setupUsernameInConnectionString == false || setupPasswordInConnectionString == false)
                 throw new ArgumentException(string.Format("User and Password must both be specified in the connection string: '{0}'", connectionStringName));
             
-            ConnectionStringOptions.Credentials = networkCredential;
         }
     }
 }

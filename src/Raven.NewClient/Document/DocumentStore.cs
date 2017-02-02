@@ -75,18 +75,11 @@ namespace Raven.NewClient.Client.Document
         public DocumentStore()
         {
             Replication = new ReplicationBehavior(this);
-            Credentials = CredentialCache.DefaultNetworkCredentials;
             SharedOperationsHeaders = new System.Collections.Specialized.NameValueCollection();
             Conventions = new DocumentConvention();
         }
 
         private string identifier;
-
-        /// <summary>
-        /// Gets or sets the credentials.
-        /// </summary>
-        /// <value>The credentials.</value>
-        public ICredentials Credentials { get; set; }
 
         /// <summary>
         /// Gets or sets the identifier for this store.
@@ -129,8 +122,6 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         protected virtual void SetConnectionStringSettings(RavenConnectionStringOptions options)
         {
-            if (options.Credentials != null)
-                Credentials = options.Credentials;
             if (string.IsNullOrEmpty(options.Url) == false)
                 Url = options.Url;
             if (string.IsNullOrEmpty(options.DefaultDatabase) == false)
@@ -268,10 +259,6 @@ namespace Raven.NewClient.Client.Document
 
             try
             {
-                if (string.IsNullOrEmpty(ApiKey) == false)
-                {
-                    Credentials = null;
-                }
                 // TODO iftah
                 //SecurityExtensions.InitializeSecurity(Conventions, jsonRequestFactory, Url, Credentials);
 
