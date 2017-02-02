@@ -72,7 +72,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             var staticMapIndex = (MapReduceIndex)index;
             var staticIndex = staticMapIndex._compiled;
 
-            var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToArray(), staticIndex.OutputFields, staticIndex.GroupByFields, staticIndex.HasDynamicFields);
+            var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToArray(), staticIndex.OutputFields, 
+                staticIndex.GroupByFields, staticIndex.HasDynamicFields, definition.OutputReduceResultsToCollectionName);
             staticMapIndex.Update(staticMapIndexDefinition, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
         }
 
@@ -80,7 +81,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         {
             var staticIndex = IndexAndTransformerCompilationCache.GetIndexInstance(definition);
 
-            var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToArray(), staticIndex.OutputFields, staticIndex.GroupByFields, staticIndex.HasDynamicFields);
+            var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToArray(), staticIndex.OutputFields, 
+                staticIndex.GroupByFields, staticIndex.HasDynamicFields, definition.OutputReduceResultsToCollectionName);
             var instance = new MapReduceIndex(indexId, staticMapIndexDefinition, staticIndex);
 
             return instance;

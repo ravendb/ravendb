@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 });
         }
 
-        public string Name => "Reduce";
+        public string Name { get; } = "Reduce";
 
         public bool Execute(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation,
                             IndexingStatsScope stats, CancellationToken token)

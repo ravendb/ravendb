@@ -13,6 +13,7 @@ namespace Raven.Server.Extensions
             result[nameof(IndexDefinition.IsSideBySideIndex)] = definition.IsSideBySideIndex;
             result[nameof(IndexDefinition.IsTestIndex)] = definition.IsTestIndex;
             result[nameof(IndexDefinition.LockMode)] = definition.LockMode.ToString();
+            result[nameof(IndexDefinition.OutputReduceResultsToCollectionName)] = definition.OutputReduceResultsToCollectionName;
             result[nameof(IndexDefinition.Name)] = definition.Name;
             result[nameof(IndexDefinition.Reduce)] = definition.Reduce;
             result[nameof(IndexDefinition.Type)] = definition.Type.ToString();

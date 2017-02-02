@@ -46,6 +46,12 @@ namespace Raven.NewClient.Client.Json
                     _manualBlittalbeJsonDocumentBuilder.WriteValue(prop.Item2.ToString());
                 }
 
+                if (_documentInfo.Collection != null)
+                {
+                    _manualBlittalbeJsonDocumentBuilder.WritePropertyName(Constants.Metadata.Collection);
+                    _manualBlittalbeJsonDocumentBuilder.WriteValue(_documentInfo.Collection);
+                }
+
                 _manualBlittalbeJsonDocumentBuilder.WriteObjectEnd();
                 _documentInfo.Metadata.Modifications = null;
             }
@@ -85,6 +91,16 @@ namespace Raven.NewClient.Client.Json
                             throw new NotSupportedException();
                     }
                 }
+                _manualBlittalbeJsonDocumentBuilder.WriteObjectEnd();
+            }
+            else if (_documentInfo.Collection != null)
+            {
+                _manualBlittalbeJsonDocumentBuilder.WritePropertyName(Constants.Metadata.Key);
+                _manualBlittalbeJsonDocumentBuilder.StartWriteObject();
+
+                _manualBlittalbeJsonDocumentBuilder.WritePropertyName(Constants.Metadata.Collection);
+                _manualBlittalbeJsonDocumentBuilder.WriteValue(_documentInfo.Collection);
+
                 _manualBlittalbeJsonDocumentBuilder.WriteObjectEnd();
             }
         }

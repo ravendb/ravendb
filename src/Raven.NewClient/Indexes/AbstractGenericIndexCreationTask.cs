@@ -119,6 +119,11 @@ namespace Raven.NewClient.Client.Indexes
         protected IDictionary<string, FieldIndexing> IndexesStrings { get; set; }
 
         /// <summary>
+        /// If not null than each reduce result will be created as a document in the specified collection name.
+        /// </summary>
+        protected string OutputReduceResultsToCollectionName { get; set; }
+
+        /// <summary>
         /// Register a field to be indexed
         /// </summary>
         protected void Index(Expression<Func<TReduceResult, object>> field, FieldIndexing indexing)

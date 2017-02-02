@@ -48,6 +48,7 @@ namespace Raven.Client.Data.Indexes
             public const string PutMapResult = "Storage/PutMapResult";
             public static string GetMapEntriesTree = "GetMapEntriesTree";
             public static string GetMapEntries = "GetMapEntries";
+            public static string SaveOutputDocuments = "SaveOutputDocuments";
         }
     }
 }

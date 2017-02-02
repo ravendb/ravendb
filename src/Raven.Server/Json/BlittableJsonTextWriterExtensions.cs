@@ -768,6 +768,10 @@ namespace Raven.Server.Json
             writer.WriteString((indexDefinition.LockMode.ToString()));
             writer.WriteComma();
 
+            writer.WritePropertyName((nameof(indexDefinition.OutputReduceResultsToCollectionName)));
+            writer.WriteString((indexDefinition.OutputReduceResultsToCollectionName));
+            writer.WriteComma();
+
             writer.WritePropertyName(nameof(indexDefinition.Configuration));
             writer.WriteStartObject();
             var isFirstInternal = true;

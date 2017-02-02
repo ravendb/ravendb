@@ -49,7 +49,7 @@ namespace Raven.Server.Documents
         public abstract class MergedTransactionCommand
         {
             public abstract void Execute(DocumentsOperationContext context);
-            public TaskCompletionSource<object> TaskCompletionSource = new TaskCompletionSource<object>();
+            public readonly TaskCompletionSource<object> TaskCompletionSource = new TaskCompletionSource<object>();
             public Exception Exception;
         }
 

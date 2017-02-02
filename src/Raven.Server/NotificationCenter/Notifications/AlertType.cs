@@ -17,6 +17,7 @@ namespace Raven.Server.NotificationCenter.Notifications
         LicenseManager_InitializationError,
         IndexStore_IndexCouldNotBeOpened,
         TransformerStore_TransformerCouldNotBeOpened,
-        WarnIndexOutputsPerDocument
+        WarnIndexOutputsPerDocument,
+        ErrorSavingReduceOutputDocuments 
     }
 }

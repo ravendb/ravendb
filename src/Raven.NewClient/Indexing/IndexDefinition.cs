@@ -117,6 +117,8 @@ namespace Raven.NewClient.Client.Indexing
             if (configurationEquals == false)
                 result |= IndexDefinitionCompareDifferences.Configuration;
 
+            // TODO: What should we do here with OutputReduceResultsToCollectionName?
+
             return result;
         }
 
@@ -220,6 +222,9 @@ namespace Raven.NewClient.Client.Indexing
                 result = (result * 397) ^ Maps.Count;
                 result = (result * 397) ^ (Reduce?.GetHashCode() ?? 0);
                 result = (result * 397) ^ DictionaryHashCode(Fields);
+
+                // TODO: also hhere
+
                 return result;
             }
         }
@@ -330,6 +335,11 @@ namespace Raven.NewClient.Client.Indexing
         /// Whatever this is a side by side index
         /// </summary>
         public bool IsSideBySideIndex { get; set; }
+
+        /// <summary>
+        /// If not null than each reduce result will be created as a document in the specified collection name.
+        /// </summary>
+        public string OutputReduceResultsToCollectionName { get; set; }
 
         public override string ToString()
         {

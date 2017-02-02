@@ -8,6 +8,7 @@ using Lucene.Net.Search;
 using Raven.Abstractions.Data;
 using Raven.Client.Data.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
+using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
@@ -114,7 +115,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             CheckDisposed();
             CheckInitialized();
 
-            return new IndexWriteOperation(_index.Definition.Name, _index.Definition.MapFields, _directory, _converter, writeTransaction, this, _index._indexStorage.DocumentDatabase); // TODO arek - 'this' :/
+            var mapReduceIndex = _index as MapReduceIndex;
+
+            return new IndexWriteOperation(
+                _index.Definition.Name,
+                _index.Definition.MapFields,
+                _directory,
+                _converter,
+                writeTransaction,
+                this, // TODO arek - 'this' :/
+                _index._indexStorage.DocumentDatabase,
+                mapReduceIndex?.Definition.OutputReduceResultsToCollectionName);
         }
 
         public IndexReadOperation OpenIndexReader(Transaction readTransaction)

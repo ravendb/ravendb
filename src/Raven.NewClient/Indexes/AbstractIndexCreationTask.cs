@@ -372,7 +372,8 @@ namespace Raven.NewClient.Client.Indexes
                 TermVectors = TermVectors,
                 TermVectorsStrings = TermVectorsStrings,
                 SpatialIndexes = SpatialIndexes,
-                SpatialIndexesStrings = SpatialIndexesStrings
+                SpatialIndexesStrings = SpatialIndexesStrings,
+                OutputReduceResultsToCollectionName = OutputReduceResultsToCollectionName,
             }.ToIndexDefinition(Conventions);
 
             var fields = Map.Body.Type.GenericTypeArguments.First().GetProperties();

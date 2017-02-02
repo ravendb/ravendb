@@ -156,6 +156,7 @@ class indexDefinition {
             Fields: this.fieldToDto(),
             IsSideBySideIndex: false, //TODO side by side
             IsTestIndex: false, //TODO: test indexes
+            OutputReduceResultsToCollectionName: null
         }
     }
 
@@ -208,7 +209,8 @@ class indexDefinition {
             Configuration: null,
             IsSideBySideIndex: false,
             IsTestIndex: false,
-            Type: "Map"
+            Type: "Map",
+            OutputReduceResultsToCollectionName: null
         });
     }
 }

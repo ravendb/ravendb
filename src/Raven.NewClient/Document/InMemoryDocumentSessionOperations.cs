@@ -1278,6 +1278,7 @@ more responsive application.
         public object Entity { get; set; }
 
         public bool IsNewDocument { get; set; }
+        public string Collection { get; set; }
 
         public static DocumentInfo GetNewDocumentInfo(BlittableJsonReaderObject document)
         {
