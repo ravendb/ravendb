@@ -118,7 +118,7 @@ namespace Raven.Server.Documents
             if (myMetadata == null || objMetadata == null)
                 return false;
 
-            return ComparePropertiesExceptionStartingWithAt(myMetadata, objMetadata);
+            return ComparePropertiesExceptionStartingWithAt(myMetadata, objMetadata, isMetadata: true);
         }
 
         public bool IsEqualTo(BlittableJsonReaderObject obj)
@@ -127,7 +127,7 @@ namespace Raven.Server.Documents
         }
 
         private static bool ComparePropertiesExceptionStartingWithAt(BlittableJsonReaderObject myMetadata,
-            BlittableJsonReaderObject objMetadata)
+            BlittableJsonReaderObject objMetadata, bool isMetadata = false)
         {
             var properties = new HashSet<string>(myMetadata.GetPropertyNames());
             foreach (var propertyName in objMetadata.GetPropertyNames())
@@ -137,7 +137,8 @@ namespace Raven.Server.Documents
 
             foreach (var property in properties)
             {
-                if (property[0] == '@')
+                if (isMetadata && property[0] == '@' && 
+                    property.Equals(Constants.Metadata.Collection, StringComparison.CurrentCultureIgnoreCase) == false)
                     continue;
 
                 object myProperty;
