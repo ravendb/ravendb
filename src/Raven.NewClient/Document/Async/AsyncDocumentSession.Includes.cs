@@ -48,7 +48,7 @@ namespace Raven.NewClient.Client.Document.Async
         /// Begin a load while including the specified path 
         /// </summary>
         /// <param name="path">The path.</param>
-        public IAsyncLoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path)
+        public IAsyncLoaderWithInclude<T> Include<T>(Expression<Func<T, string>> path)
         {
             return new AsyncMultiLoaderWithInclude<T>(this).Include(path);
         }
@@ -57,7 +57,25 @@ namespace Raven.NewClient.Client.Document.Async
         /// Begin a load while including the specified path 
         /// </summary>
         /// <param name="path">The path.</param>
-        public IAsyncLoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, object>> path)
+        public IAsyncLoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, string>> path)
+        {
+            return new AsyncMultiLoaderWithInclude<T>(this).Include<TInclude>(path);
+        }
+
+        /// <summary>
+        /// Begin a load while including the specified path 
+        /// </summary>
+        /// <param name="path">The path.</param>
+        public IAsyncLoaderWithInclude<T> Include<T>(Expression<Func<T, IEnumerable<string>>> path)
+        {
+            return new AsyncMultiLoaderWithInclude<T>(this).Include(path);
+        }
+
+        /// <summary>
+        /// Begin a load while including the specified path 
+        /// </summary>
+        /// <param name="path">The path.</param>
+        public IAsyncLoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, IEnumerable<string>>> path)
         {
             return new AsyncMultiLoaderWithInclude<T>(this).Include<TInclude>(path);
         }

@@ -28,14 +28,28 @@ namespace Raven.NewClient.Client.Document
         /// </summary>
         /// <param name="path">The path.</param>
         /// <returns></returns>
-        ILoaderWithInclude<T> Include(Expression<Func<T, object>> path);
+        ILoaderWithInclude<T> Include(Expression<Func<T, string>> path);
 
         /// <summary>
         /// Includes the specified path.
         /// </summary>
         /// <param name="path">The path.</param>
         /// <returns></returns>
-        ILoaderWithInclude<T> Include<TInclude>(Expression<Func<T, object>> path);
+        ILoaderWithInclude<T> Include<TInclude>(Expression<Func<T, string>> path);
+
+        /// <summary>
+        /// Includes the specified path.
+        /// </summary>
+        /// <param name="path">The path.</param>
+        /// <returns></returns>
+        ILoaderWithInclude<T> Include(Expression<Func<T, IEnumerable<string>>> path);
+
+        /// <summary>
+        /// Includes the specified path.
+        /// </summary>
+        /// <param name="path">The path.</param>
+        /// <returns></returns>
+        ILoaderWithInclude<T> Include<TInclude>(Expression<Func<T, IEnumerable<string>>> path);
 
         /// <summary>
         /// Loads the specified ids.

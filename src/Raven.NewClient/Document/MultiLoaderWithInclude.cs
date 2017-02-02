@@ -41,7 +41,7 @@ namespace Raven.NewClient.Client.Document
         /// Includes the specified path.
         /// </summary>
         /// <param name="path">The path.</param>
-        public ILoaderWithInclude<T> Include(Expression<Func<T, object>> path)
+        public ILoaderWithInclude<T> Include(Expression<Func<T, string>> path)
         {
             return Include(path.ToPropertyPath());
         }
@@ -50,7 +50,25 @@ namespace Raven.NewClient.Client.Document
         /// Includes the specified path.
         /// </summary>
         /// <param name="path">The path.</param>
-        public ILoaderWithInclude<T> Include<TInclude>(Expression<Func<T, object>> path)
+        public ILoaderWithInclude<T> Include<TInclude>(Expression<Func<T, string>> path)
+        {
+            return Include(path.ToPropertyPath(), typeof(TInclude));
+        }
+
+        /// <summary>
+        /// Includes the specified path.
+        /// </summary>
+        /// <param name="path">The path.</param>
+        public ILoaderWithInclude<T> Include(Expression<Func<T, IEnumerable<string>>> path)
+        {
+            return Include(path.ToPropertyPath());
+        }
+
+        /// <summary>
+        /// Includes the specified path.
+        /// </summary>
+        /// <param name="path">The path.</param>
+        public ILoaderWithInclude<T> Include<TInclude>(Expression<Func<T, IEnumerable<string>>> path)
         {
             return Include(path.ToPropertyPath(), typeof(TInclude));
         }
