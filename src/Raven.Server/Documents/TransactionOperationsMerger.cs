@@ -183,9 +183,15 @@ namespace Raven.Server.Documents
                     {
                         case PendingOperations.CompletedAll:
                         case PendingOperations.ModifiedsSystemDocuments:
-                            tx.Commit();
-                            tx.Dispose();
-                            NotifyOnThreadPool(pendingOps);
+                            try
+                            {
+                                tx.Commit();
+                                tx.Dispose();
+                            }
+                            finally
+                            {
+                                NotifyOnThreadPool(pendingOps);
+                            }
                             return;
                         case PendingOperations.HasMore:
                             MergeTransactionsWithAsycnCommit(context, pendingOps);
