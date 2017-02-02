@@ -693,6 +693,10 @@ namespace Voron
                             case RootObjectType.EmbeddedFixedSizeTree:
                                 break;
                             case RootObjectType.FixedSizeTree:
+
+                                if (SliceComparer.AreEqual(currentKey, NewPageAllocator.AllocationStorage)) // will be counted inside pre allocated buffers report
+                                    continue;
+
                                 fixedSizeTrees.Add(tx.FixedTreeFor(currentKey));
                                 break;
                             case RootObjectType.Table:

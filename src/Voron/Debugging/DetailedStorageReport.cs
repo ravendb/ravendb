@@ -23,6 +23,7 @@ namespace Voron.Debugging
         public List<JournalReport> Journals { get; set; }
         public List<TreeReport> Trees { get; set; }
         public List<TableReport> Tables { get; set; }
+        public PreAllocatedBuffersReport PreAllocatedBuffers { get; set; }
     }
 
     public class DataFileReport
@@ -63,5 +64,13 @@ namespace Voron.Debugging
         public long BranchPages { get; set; }
         public long LeafPages { get; set; }
         public long OverflowPages { get; set; }
+    }
+
+    public class PreAllocatedBuffersReport
+    {
+        public long AllocatedSpaceInBytes { get; set; }
+        public long PreAllocatedBuffersSpaceInBytes { get; set; }
+        public long NumberOfPreAllocatedPages { get; set; }
+        public TreeReport AllocationTree { get; set; }
     }
 }

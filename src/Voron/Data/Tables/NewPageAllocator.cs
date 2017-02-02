@@ -31,7 +31,7 @@ namespace Voron.Data.Tables
     {
         private readonly LowLevelTransaction _llt;
         private readonly Tree _parentTree;
-        private static readonly Slice AllocationStorage;
+        internal static readonly Slice AllocationStorage;
         private const byte BitmapSize = sizeof(long)*4;
         private const int NumberOfPagesInSection = BitmapSize*8;
         public const string AllocationStorageName = "Allocation-Storage";
@@ -213,6 +213,41 @@ namespace Voron.Data.Tables
                 page.PageNumber = pageNumber;
                 page.Flags = PageFlags.Single;
             }
+        }
+
+        public unsafe int GetNumberOfPreAllocatedFreePages()
+        {
+            var fst = _parentTree.FixedTreeFor(AllocationStorage, valSize: BitmapSize);
+
+            if (fst.NumberOfEntries == 0)
+                return 0;
+
+            var count = 0;
+
+            using (var it = fst.Iterate())
+            {
+                if (it.Seek(long.MinValue) == false)
+                    throw new InvalidOperationException($"Could not seek to the first element of {fst.Name} tree");
+
+                Slice slice;
+                using (it.Value(out slice))
+                {
+                    for (int i = 0; i < NumberOfPagesInSection; i++)
+                    {
+                        if (GetBitInBuffer(i, slice.Content.Ptr) == false)
+                        {
+                            count++;
+                        }
+                    }
+                }
+            }
+
+            return count;
+        }
+
+        internal FixedSizeTree GetAllocationStorageFst()
+        {
+            return _parentTree.FixedTreeFor(AllocationStorage, valSize: BitmapSize);
         }
 
         private static void ThrowInvalidPageReleased(long pageNumber)

@@ -1029,6 +1029,8 @@ namespace Voron.Data.Tables
 
             report.AddData(ActiveDataSmallSection, calculateExactSizes);
 
+            report.AddPreAllocatedBuffers(_tablePageAllocator, calculateExactSizes);
+
             return report;
         }
     }
