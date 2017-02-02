@@ -52,13 +52,25 @@ namespace Raven.NewClient.Client.Document
         ///     Begin a load while including the specified path
         /// </summary>
         /// <param name="path">Path in documents in which server should look for a 'referenced' documents.</param>
-        ILoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path);
+        ILoaderWithInclude<T> Include<T>(Expression<Func<T, string>> path);
 
         /// <summary>
         ///     Begin a load while including the specified path
         /// </summary>
         /// <param name="path">Path in documents in which server should look for a 'referenced' documents.</param>
-        ILoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, object>> path);
+        ILoaderWithInclude<T> Include<T>(Expression<Func<T, IEnumerable<string>>> path);
+
+        /// <summary>
+        ///     Begin a load while including the specified path
+        /// </summary>
+        /// <param name="path">Path in documents in which server should look for a 'referenced' documents.</param>
+        ILoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, string>> path);
+
+        /// <summary>
+        ///     Begin a load while including the specified path
+        /// </summary>
+        /// <param name="path">Path in documents in which server should look for a 'referenced' documents.</param>
+        ILoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, IEnumerable<string>>> path);
 
         /// <summary>
         ///     Loads the specified entity with the specified id.
