@@ -12,6 +12,7 @@ using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Http;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace FastTests
 {
@@ -67,20 +68,41 @@ namespace FastTests
 
                 using (var session = _store.OpenSession())
                 {
-                    if (metadata != null)
-                    {
-                        documentInfo.Metadata = session.Advanced.EntityToBlittable.ConvertEntityToBlittable(metadata, session.Advanced.DocumentStore.Conventions, session.Advanced.Context);
-                        documentInfo.MetadataInstance = metadata;
-                    }
+                    var documentJson = data as BlittableJsonReaderObject;
+                    var metadataJson = metadata != null
+                        ? session.Advanced.EntityToBlittable.ConvertEntityToBlittable(metadata, session.Advanced.DocumentStore.Conventions, session.Advanced.Context)
+                        : null;
 
-                    var document = session.Advanced.EntityToBlittable.ConvertEntityToBlittable(data, documentInfo);
+                    if (documentJson == null)
+                    {
+                        if (metadataJson != null)
+                        {
+                            documentInfo.Metadata = metadataJson;
+                            documentInfo.MetadataInstance = metadata;
+                        }
+
+                        documentJson = session.Advanced.EntityToBlittable.ConvertEntityToBlittable(data, documentInfo);
+                    }
+                    else
+                    {
+                        if (metadataJson != null)
+                        {
+                            documentJson.Modifications = new DynamicJsonValue(documentJson)
+                            {
+                                [Constants.Metadata.Key] = metadataJson
+                            };
+
+                            documentJson = session.Advanced.Context.ReadObject(documentJson, id);
+                        }
+                    }
+                    
 
                     var command = new PutDocumentCommand
                     {
                         Id = id,
                         Etag = etag,
                         Context = Context,
-                        Document = document
+                        Document = documentJson
                     };
 
                     await RequestExecuter.ExecuteAsync(command, Context, cancellationToken);

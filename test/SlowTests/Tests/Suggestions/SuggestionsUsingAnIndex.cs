@@ -8,13 +8,12 @@ using System.Linq;
 using FastTests;
 using Raven.Abstractions.Data;
 using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.Tests.Suggestions
 {
-    public class SuggestionsUsingAnIndex : RavenTestBase
+    public class SuggestionsUsingAnIndex : RavenNewTestBase
     {
         private class User
         {
@@ -63,12 +62,12 @@ namespace SlowTests.Tests.Suggestions
 
                 using (var session = documentStore.OpenSession())
                 {
-                    var suggestionQueryResult = documentStore.DatabaseCommands.Suggest("DefaultSuggestionIndex", new SuggestionQuery
-                    {
-                        Field = "Name",
-                        Term = "Owen",
-                        MaxSuggestions = 10,
-                    });
+                    var suggestionQueryResult = session.Query<User>("DefaultSuggestionIndex")
+                        .Where(x => x.Name == "Owen")
+                        .Suggest(new SuggestionQuery
+                        {
+                            MaxSuggestions = 10
+                        });
 
                     Assert.Equal(1, suggestionQueryResult.Suggestions.Length);
                     Assert.Equal("oren", suggestionQueryResult.Suggestions[0]);
@@ -208,14 +207,14 @@ namespace SlowTests.Tests.Suggestions
 
                 using (var session = documentStore.OpenSession())
                 {
-                    var suggestionQueryResult = documentStore.DatabaseCommands.Suggest("SuggestionIndex", new SuggestionQuery
-                    {
-                        Field = "Name",
-                        Term = "Oern", // intentional typo
-                        MaxSuggestions = 10,
-                        Accuracy = 0.1f,
-                        Distance = StringDistanceTypes.NGram
-                    });
+                    var suggestionQueryResult = session.Query<User>("SuggestionIndex")
+                        .Where(x => x.Name == "Oern") // intentional typo
+                        .Suggest(new SuggestionQuery
+                        {
+                            MaxSuggestions = 10,
+                            Accuracy = 0.1f,
+                            Distance = StringDistanceTypes.NGram
+                        });
 
                     Assert.Equal(1, suggestionQueryResult.Suggestions.Length);
                     Assert.Equal("oren", suggestionQueryResult.Suggestions[0]);

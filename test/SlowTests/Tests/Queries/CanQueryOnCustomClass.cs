@@ -6,24 +6,21 @@
 
 using System;
 using System.Linq;
-using System.Threading.Tasks;
 
 using FastTests;
-
-using Raven.Imports.Newtonsoft.Json;
-
+using Newtonsoft.Json;
 using Xunit;
 
 namespace SlowTests.Tests.Queries
 {
-    public class CanQueryOnCustomClass : RavenTestBase
+    public class CanQueryOnCustomClass : RavenNewTestBase
     {
-        [Fact]
+        [Fact(Skip = "RavenDB-6263")]
         public void UsingConverter()
         {
             using (var store = GetDocumentStore())
             {
-                store.Conventions.CustomizeJsonSerializer += x => x.Converters = new JsonConverterCollection(x.Converters) { new MoneyConverter() };
+                store.Conventions.CustomizeJsonSerializer += x => x.Converters.Add(new MoneyConverter());
 
                 using (var session = store.OpenSession())
                 {

@@ -8,15 +8,15 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Linq;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Linq;
 using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class WhereClause : RavenTestBase
+    public class WhereClause : RavenNewTestBase
     {
         private class Renamed
         {
@@ -31,8 +31,7 @@ namespace SlowTests.Tests.Linq
             {
                 using (var session = store.OpenSession())
                 {
-                    var q = session.Query<Renamed>()
-                        .Where(x => x.Name == "red")
+                    var q = Queryable.Where(session.Query<Renamed>(), x => x.Name == "red")
                         .ToString();
                     Assert.Equal("Yellow:red", q);
                 }
@@ -729,12 +728,12 @@ namespace SlowTests.Tests.Linq
             {
                 using (var session = store.OpenSession())
                 {
-                    var query = ((IDocumentQuery<object>)new DocumentQuery<object>(null, null, null, null, null, null, null, false)).Not
-                .OpenSubclause()
-                .WhereEquals("IsPublished", true)
-                .AndAlso()
-                .WhereEquals("Tags.Length", 0)
-                .CloseSubclause();
+                    var query = ((IDocumentQuery<object>) new DocumentQuery<object>(null, null, null, null, false)).Not
+                        .OpenSubclause()
+                        .WhereEquals("IsPublished", true)
+                        .AndAlso()
+                        .WhereEquals("Tags.Length", 0)
+                        .CloseSubclause();
                     Assert.Equal("-(IsPublished:true AND Tags.Length:0)", query.ToString());
                 }
             }

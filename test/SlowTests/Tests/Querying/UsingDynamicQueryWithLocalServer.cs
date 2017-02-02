@@ -7,16 +7,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexing;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.Tests.Querying
 {
-    public class UsingDynamicQueryWithLocalServer : RavenTestBase
+    public class UsingDynamicQueryWithLocalServer : RavenNewTestBase
     {
         [Fact]
         public void CanPerformDynamicQueryUsingClientLinqQueryWithNestedCollection()
@@ -299,7 +299,7 @@ namespace SlowTests.Tests.Querying
             using (var store = GetDocumentStore())
             {
                 const string indexName = "BlogsForHighlightingTests";
-                store.DatabaseCommands.PutIndex(indexName,
+                store.Admin.Send(new PutIndexOperation(indexName,
                     new IndexDefinition
                     {
                         Maps = { "from blog in docs.Blogs select new { blog.Title, blog.Category }" },
@@ -308,7 +308,7 @@ namespace SlowTests.Tests.Querying
                             {"Title", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Analyzed, TermVector = FieldTermVector.WithPositionsAndOffsets} },
                             {"Category", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Analyzed, TermVector = FieldTermVector.WithPositionsAndOffsets} }
                         }
-                    });
+                    }));
 
                 var blogOne = new Blog
                 {
@@ -372,7 +372,7 @@ namespace SlowTests.Tests.Querying
             using (var store = GetDocumentStore())
             {
                 const string indexName = "BlogsForHighlightingMRTests";
-                store.DatabaseCommands.PutIndex(indexName,
+                store.Admin.Send(new PutIndexOperation(indexName,
                     new IndexDefinition
                     {
                         Maps = { "from blog in docs.Blogs select new { blog.Title, blog.Category }" },
@@ -384,7 +384,7 @@ namespace SlowTests.Tests.Querying
                             {"Title", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Analyzed, TermVector = FieldTermVector.WithPositionsAndOffsets} },
                             {"Category", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Analyzed, TermVector = FieldTermVector.WithPositionsAndOffsets} }
                         }
-                    });
+                    }));
 
                 var blogOne = new Blog
                 {
@@ -442,7 +442,7 @@ namespace SlowTests.Tests.Querying
             using (var store = GetDocumentStore())
             {
                 const string indexName = "BlogsForHighlightingTests";
-                store.DatabaseCommands.PutIndex(indexName,
+                store.Admin.Send(new PutIndexOperation(indexName,
                     new IndexDefinition
                     {
                         Maps = { "from blog in docs.Blogs select new { blog.Title, blog.Category }" },
@@ -451,7 +451,7 @@ namespace SlowTests.Tests.Querying
                             {"Title", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Analyzed, TermVector = FieldTermVector.WithPositionsAndOffsets} },
                             {"Category", new IndexFieldOptions { Storage = FieldStorage.Yes, Indexing = FieldIndexing.Analyzed, TermVector = FieldTermVector.WithPositionsAndOffsets} }
                         }
-                    });
+                    }));
 
                 var blogOne = new Blog
                 {

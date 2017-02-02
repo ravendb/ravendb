@@ -1,13 +1,12 @@
 using System;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
+using Raven.NewClient.Client;
 using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class WhereStringEquals : RavenTestBase
+    public class WhereStringEquals : RavenNewTestBase
     {
         [Fact]
         public void QueryString_CaseSensitive_ShouldWork()

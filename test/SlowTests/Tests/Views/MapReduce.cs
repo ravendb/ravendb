@@ -5,23 +5,22 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
+using System.IO;
+using System.Text;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Data.Queries;
-using Raven.Client.Document;
-using Raven.Client.Indexing;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Json.Linq;
-using Raven.Server.Config;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Data.Queries;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Xunit;
 
 namespace SlowTests.Tests.Views
 {
-    public class MapReduce : RavenTestBase
+    public class MapReduce : RavenNewTestBase
     {
         private const string Map =
             @"from post in docs.Blogs
@@ -41,7 +40,7 @@ select new {
 
         private static void Fill(IDocumentStore store)
         {
-            store.DatabaseCommands.PutIndex("CommentsCountPerBlog", new IndexDefinition
+            store.Admin.Send(new PutIndexOperation("CommentsCountPerBlog", new IndexDefinition
             {
                 Maps = { Map },
                 Reduce = Reduce,
@@ -49,7 +48,7 @@ select new {
                 {
                     { "blog_id", new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed } }
                 }
-            });
+            }));
         }
 
         [Fact]
@@ -57,30 +56,37 @@ select new {
         {
             var values = new[]
             {
-                "{blog_id: 3, comments: [{},{},{}]}",
-                "{blog_id: 5, comments: [{},{},{},{}]}",
-                "{blog_id: 6, comments: [{},{},{},{},{},{}]}",
-                "{blog_id: 7, comments: [{}]}",
-                "{blog_id: 3, comments: [{},{},{}]}",
-                "{blog_id: 3, comments: [{},{},{},{},{}]}",
-                "{blog_id: 2, comments: [{},{},{},{},{},{},{},{}]}",
-                "{blog_id: 4, comments: [{},{},{}]}",
-                "{blog_id: 5, comments: [{},{}]}",
-                "{blog_id: 3, comments: [{},{},{}]}",
-                "{blog_id: 5, comments: [{}]}",
+                "{'blog_id': 3, 'comments': [{},{},{}]}",
+                "{'blog_id': 5, 'comments': [{},{},{},{}]}",
+                "{'blog_id': 6, 'comments': [{},{},{},{},{},{}]}",
+                "{'blog_id': 7, 'comments': [{}]}",
+                "{'blog_id': 3, 'comments': [{},{},{}]}",
+                "{'blog_id': 3, 'comments': [{},{},{},{},{}]}",
+                "{'blog_id': 2, 'comments': [{},{},{},{},{},{},{},{}]}",
+                "{'blog_id': 4, 'comments': [{},{},{}]}",
+                "{'blog_id': 5, 'comments': [{},{}]}",
+                "{'blog_id': 3, 'comments': [{},{},{}]}",
+                "{'blog_id': 5, 'comments': [{}]}",
             };
 
             using (var store = GetDocumentStore())
             {
                 Fill(store);
 
-                for (int i = 0; i < values.Length; i++)
+                using (var commands = store.Commands())
                 {
-                    store.DatabaseCommands.Put("blogs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject { { "@collection", "Blogs" } });
-                }
+                    for (int i = 0; i < values.Length; i++)
+                    {
+                        using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(values[i])))
+                        {
+                            var json = commands.Context.ReadForMemory(stream, "blog");
+                            commands.Put("blogs/" + i, null, json, new Dictionary<string, string> { { "@collection", "Blogs" } });
+                        }
+                    }
 
-                var q = GetUnstableQueryResult(store, "blog_id:3");
-                Assert.Equal(@"{""blog_id"":3,""comments_length"":14}", q.Results[0].ToString(Formatting.None));
+                    var q = GetUnstableQueryResult(store, commands, "blog_id:3");
+                    Assert.Equal(@"{""blog_id"":3,""comments_length"":14}", q.Results[0].ToString());
+                }
             }
         }
 
@@ -92,33 +98,55 @@ select new {
             {
                 Fill(store);
 
-                for (int i = 0; i < 1024; i++)
+                using (var commands = store.Commands())
                 {
-                    store.DatabaseCommands.Put("blogs/" + i, null, RavenJObject.Parse("{blog_id: " + i + ", comments: [{},{},{}]}"), new RavenJObject { { "@collection", "Blogs" } });
+                    for (int i = 0; i < 1024; i++)
+                    {
+                        using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("{'blog_id': " + i + ", 'comments': [{},{},{}]}")))
+                        {
+                            var json = commands.Context.ReadForMemory(stream, "blog");
+                            commands.Put("blogs/" + i, null, json, new Dictionary<string, string> { { "@collection", "Blogs" } });
+                        }
+                    }
+
+                    WaitForIndexing(store);
+
+                    var index = store.Admin.Send(new GetIndexStatisticsOperation("CommentsCountPerBlog"));
+                    // we add 100 because we might have reduces running in the middle of the operation
+                    Assert.True((1024 + 100) >= index.ReduceAttempts.Value,
+                        "1024 + 100 >= " + index.ReduceAttempts + " failed");
                 }
-
-                WaitForIndexing(store);
-
-                var index = store.DatabaseCommands.GetIndexStatistics("CommentsCountPerBlog");
-                // we add 100 because we might have reduces running in the middle of the operation
-                Assert.True((1024 + 100) >= index.ReduceAttempts.Value,
-                    "1024 + 100 >= " + index.ReduceAttempts + " failed");
             }
         }
 
-        private QueryResult GetUnstableQueryResult(IDocumentStore store, string query)
+        private QueryResult GetUnstableQueryResult(IDocumentStore store, DocumentStoreExtensions.DatabaseCommands commands, string query)
         {
             WaitForIndexing(store);
-            var q = store.DatabaseCommands.Query("CommentsCountPerBlog", new IndexQuery(store.Conventions)
+
+            var q = commands.Query("CommentsCountPerBlog", new IndexQuery(store.Conventions)
             {
                 Query = query,
                 Start = 0,
                 PageSize = 10
             });
-            foreach (var result in q.Results)
+
+            var array = new DynamicJsonArray();
+            foreach (BlittableJsonReaderObject result in q.Results)
             {
-                result.Remove("@metadata");
+                result.Modifications = new DynamicJsonValue(result);
+                result.Modifications.Remove("@metadata");
+
+                array.Add(commands.Context.ReadObject(result, "blog"));
             }
+
+            var djv = new DynamicJsonValue
+            {
+                ["_"] = array
+            };
+
+            var json = commands.Context.ReadObject(djv, "blog");
+
+            q.Results = (BlittableJsonReaderArray)json["_"];
             return q;
         }
 
@@ -127,37 +155,48 @@ select new {
         {
             var values = new[]
             {
-                "{blog_id: 3, comments: [{},{},{}]}",
-                "{blog_id: 5, comments: [{},{},{},{}]}",
-                "{blog_id: 6, comments: [{},{},{},{},{},{}]}",
-                "{blog_id: 7, comments: [{}]}",
-                "{blog_id: 3, comments: [{},{},{}]}",
-                "{blog_id: 3, comments: [{},{},{},{},{}]}",
-                "{blog_id: 2, comments: [{},{},{},{},{},{},{},{}]}",
-                "{blog_id: 4, comments: [{},{},{}]}",
-                "{blog_id: 5, comments: [{},{}]}",
-                "{blog_id: 3, comments: [{},{},{}]}",
-                "{blog_id: 5, comments: [{}]}",
+                "{'blog_id': 3, 'comments': [{},{},{}]}",
+                "{'blog_id': 5, 'comments': [{},{},{},{}]}",
+                "{'blog_id': 6, 'comments': [{},{},{},{},{},{}]}",
+                "{'blog_id': 7, 'comments': [{}]}",
+                "{'blog_id': 3, 'comments': [{},{},{}]}",
+                "{'blog_id': 3, 'comments': [{},{},{},{},{}]}",
+                "{'blog_id': 2, 'comments': [{},{},{},{},{},{},{},{}]}",
+                "{'blog_id': 4, 'comments': [{},{},{}]}",
+                "{'blog_id': 5, 'comments': [{},{}]}",
+                "{'blog_id': 3, 'comments': [{},{},{}]}",
+                "{'blog_id': 5, 'comments': [{}]}",
             };
 
             using (var store = GetDocumentStore())
             {
                 Fill(store);
 
-                for (int i = 0; i < values.Length; i++)
+                using (var commands = store.Commands())
                 {
-                    store.DatabaseCommands.Put("blogs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject { { "@collection", "Blogs" } });
+                    for (int i = 0; i < values.Length; i++)
+                    {
+                        using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(values[i])))
+                        {
+                            var json = commands.Context.ReadForMemory(stream, "blog");
+                            commands.Put("blogs/" + i, null, json, new Dictionary<string, string> { { "@collection", "Blogs" } });
+                        }
+                    }
+
+                    var q = GetUnstableQueryResult(store, commands, "blog_id:3");
+
+                    Assert.Equal(@"{""blog_id"":3,""comments_length"":14}", q.Results[0].ToString());
+
+                    using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("{'blog_id': 3, 'comments': [{}]}")))
+                    {
+                        var json = commands.Context.ReadForMemory(stream, "blog");
+                        commands.Put("blogs/0", null, json, new Dictionary<string, string> { { "@collection", "Blogs" } });
+                    }
+
+                    q = GetUnstableQueryResult(store, commands, "blog_id:3");
+
+                    Assert.Equal(@"{""blog_id"":3,""comments_length"":12}", q.Results[0].ToString());
                 }
-
-                var q = GetUnstableQueryResult(store, "blog_id:3");
-
-                Assert.Equal(@"{""blog_id"":3,""comments_length"":14}", q.Results[0].ToString(Formatting.None));
-
-                store.DatabaseCommands.Put("blogs/0", null, RavenJObject.Parse("{blog_id: 3, comments: [{}]}"), new RavenJObject { { "@collection", "Blogs" } });
-
-                q = GetUnstableQueryResult(store, "blog_id:3");
-
-                Assert.Equal(@"{""blog_id"":3,""comments_length"":12}", q.Results[0].ToString(Formatting.None));
             }
         }
 
@@ -167,35 +206,42 @@ select new {
         {
             var values = new[]
             {
-                "{blog_id: 3, comments: [{},{},{}]}",
-                "{blog_id: 5, comments: [{},{},{},{}]}",
-                "{blog_id: 6, comments: [{},{},{},{},{},{}]}",
-                "{blog_id: 7, comments: [{}]}",
-                "{blog_id: 3, comments: [{},{},{}]}",
-                "{blog_id: 3, comments: [{},{},{},{},{}]}",
-                "{blog_id: 2, comments: [{},{},{},{},{},{},{},{}]}",
-                "{blog_id: 4, comments: [{},{},{}]}",
-                "{blog_id: 5, comments: [{},{}]}",
-                "{blog_id: 3, comments: [{},{},{}]}",
-                "{blog_id: 5, comments: [{}]}",
+                "{'blog_id': 3, 'comments': [{},{},{}]}",
+                "{'blog_id': 5, 'comments': [{},{},{},{}]}",
+                "{'blog_id': 6, 'comments': [{},{},{},{},{},{}]}",
+                "{'blog_id': 7, 'comments': [{}]}",
+                "{'blog_id': 3, 'comments': [{},{},{}]}",
+                "{'blog_id': 3, 'comments': [{},{},{},{},{}]}",
+                "{'blog_id': 2, 'comments': [{},{},{},{},{},{},{},{}]}",
+                "{'blog_id': 4, 'comments': [{},{},{}]}",
+                "{'blog_id': 5, 'comments': [{},{}]}",
+                "{'blog_id': 3, 'comments': [{},{},{}]}",
+                "{'blog_id': 5, 'comments': [{}]}",
             };
 
             using (var store = GetDocumentStore())
             {
                 Fill(store);
 
-                for (int i = 0; i < values.Length; i++)
+                using (var commands = store.Commands())
                 {
-                    store.DatabaseCommands.Put("blogs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject { { "@collection", "Blogs" } });
+                    for (int i = 0; i < values.Length; i++)
+                    {
+                        using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(values[i])))
+                        {
+                            var json = commands.Context.ReadForMemory(stream, "blog");
+                            commands.Put("blogs/" + i, null, json, new Dictionary<string, string> { { "@collection", "Blogs" } });
+                        }
+                    }
+
+                    GetUnstableQueryResult(store, commands, "blog_id:3");
+
+                    commands.Delete("blogs/0", null);
+
+                    var q = GetUnstableQueryResult(store, commands, "blog_id:3");
+
+                    Assert.Equal(@"{""blog_id"":3,""comments_length"":11}", q.Results[0].ToString());
                 }
-
-                GetUnstableQueryResult(store, "blog_id:3");
-
-                store.DatabaseCommands.Delete("blogs/0", null);
-
-                var q = GetUnstableQueryResult(store, "blog_id:3");
-
-                Assert.Equal(@"{""blog_id"":3,""comments_length"":11}", q.Results[0].ToString(Formatting.None));
             }
         }
 
@@ -204,34 +250,45 @@ select new {
         {
             var values = new[]
             {
-                "{blog_id: 3, comments: [{},{},{}]}",
-                "{blog_id: 5, comments: [{},{},{},{}]}",
-                "{blog_id: 6, comments: [{},{},{},{},{},{}]}",
-                "{blog_id: 7, comments: [{}]}",
-                "{blog_id: 3, comments: [{},{},{}]}",
-                "{blog_id: 3, comments: [{},{},{},{},{}]}",
-                "{blog_id: 2, comments: [{},{},{},{},{},{},{},{}]}",
-                "{blog_id: 4, comments: [{},{},{}]}",
-                "{blog_id: 5, comments: [{},{}]}",
-                "{blog_id: 3, comments: [{},{},{}]}",
-                "{blog_id: 5, comments: [{}]}",
+                "{'blog_id': 3, 'comments': [{},{},{}]}",
+                "{'blog_id': 5, 'comments': [{},{},{},{}]}",
+                "{'blog_id': 6, 'comments': [{},{},{},{},{},{}]}",
+                "{'blog_id': 7, 'comments': [{}]}",
+                "{'blog_id': 3, 'comments': [{},{},{}]}",
+                "{'blog_id': 3, 'comments': [{},{},{},{},{}]}",
+                "{'blog_id': 2, 'comments': [{},{},{},{},{},{},{},{}]}",
+                "{'blog_id': 4, 'comments': [{},{},{}]}",
+                "{'blog_id': 5, 'comments': [{},{}]}",
+                "{'blog_id': 3, 'comments': [{},{},{}]}",
+                "{'blog_id': 5, 'comments': [{}]}",
             };
 
             using (var store = GetDocumentStore())
             {
                 Fill(store);
 
-                for (int i = 0; i < values.Length; i++)
+                using (var commands = store.Commands())
                 {
-                    store.DatabaseCommands.Put("blogs/" + i, null, RavenJObject.Parse(values[i]), new RavenJObject { { "@collection", "Blogs" } });
+                    for (int i = 0; i < values.Length; i++)
+                    {
+                        using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(values[i])))
+                        {
+                            var json = commands.Context.ReadForMemory(stream, "blog");
+                            commands.Put("blogs/" + i, null, json, new Dictionary<string, string> { { "@collection", "Blogs" } });
+                        }
+                    }
+
+                    GetUnstableQueryResult(store, commands, "blog_id:3");
+
+                    using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("{'blog_id': 7, 'comments': [{}]}")))
+                    {
+                        var json = commands.Context.ReadForMemory(stream, "blog");
+                        commands.Put("blogs/0", null, json, new Dictionary<string, string> { { "@collection", "Blogs" } });
+                    }
+
+                    var q = GetUnstableQueryResult(store, commands, "blog_id:3");
+                    Assert.Equal(@"{""blog_id"":3,""comments_length"":11}", q.Results[0].ToString());
                 }
-
-                GetUnstableQueryResult(store, "blog_id:3");
-
-                store.DatabaseCommands.Put("blogs/0", null, RavenJObject.Parse("{blog_id: 7, comments: [{}]}"), new RavenJObject { { "@collection", "Blogs" } });
-
-                var q = GetUnstableQueryResult(store, "blog_id:3");
-                Assert.Equal(@"{""blog_id"":3,""comments_length"":11}", q.Results[0].ToString(Formatting.None));
             }
         }
     }

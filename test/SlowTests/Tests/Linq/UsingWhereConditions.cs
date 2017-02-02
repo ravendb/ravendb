@@ -6,11 +6,11 @@
 
 using System;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions;
-using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 /*
@@ -18,7 +18,7 @@ using Xunit;
  */
 namespace SlowTests.Tests.Linq
 {
-    public class UsingWhereConditions : RavenTestBase
+    public class UsingWhereConditions : RavenNewTestBase
     {
         [Fact]
         public void Can_Use_Where()
@@ -30,12 +30,12 @@ namespace SlowTests.Tests.Linq
                 {
                     AddData(session);
 
-                    store.DatabaseCommands.PutIndex(indexName,
+                    store.Admin.Send(new PutIndexOperation(indexName,
                         new IndexDefinitionBuilder<CommitInfo, CommitInfo>
                         {
                             Map = docs => from doc in docs
                                           select new { doc.Revision },
-                        }, true);
+                        }.ToIndexDefinition(store.Conventions)));
 
                     WaitForIndexing(store);
 

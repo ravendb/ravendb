@@ -8,18 +8,18 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Document;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
 using Xunit;
 
 namespace SlowTests.Tests.Querying
 {
-    public class UsingDocumentQuery : RavenTestBase
+    public class UsingDocumentQuery : RavenNewTestBase
     {
         [Fact]
         public void CanUnderstandSimpleEquality()
         {
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
                 .WhereEquals("Name", "ayende", false);
 
             Assert.Equal("Name:[[ayende]]", q.ToString());
@@ -29,7 +29,7 @@ namespace SlowTests.Tests.Querying
         public void CanUnderstandSimpleEqualityWithVariable()
         {
             var ayende = "ayende" + 1;
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
                 .WhereEquals("Name", ayende, false);
             Assert.Equal("Name:[[ayende1]]", q.ToString());
         }
@@ -37,7 +37,7 @@ namespace SlowTests.Tests.Querying
         [Fact]
         public void CanUnderstandSimpleContains()
         {
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
                 .WhereIn("Name", new[] { "ayende" });
             Assert.Equal("@in<Name>:(ayende)", q.ToString());
         }
@@ -45,7 +45,7 @@ namespace SlowTests.Tests.Querying
         [Fact]
         public void CanUnderstandParamArrayContains()
         {
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
                 .WhereIn("Name", new[] { "ryan", "heath" });
             Assert.Equal("@in<Name>:(ryan , heath)", q.ToString());
         }
@@ -54,7 +54,7 @@ namespace SlowTests.Tests.Querying
         public void CanUnderstandArrayContains()
         {
             var array = new[] { "ryan", "heath" };
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
                 .WhereIn("Name", array);
             Assert.Equal("@in<Name>:(ryan , heath)", q.ToString());
         }
@@ -63,7 +63,7 @@ namespace SlowTests.Tests.Querying
         public void CanUnderstandArrayContainsWithPhrase()
         {
             var array = new[] { "ryan", "heath here" };
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
                 .WhereIn("Name", array);
             Assert.Equal("@in<Name>:(ryan , \"heath here\")", q.ToString());
         }
@@ -72,7 +72,7 @@ namespace SlowTests.Tests.Querying
         public void CanUnderstandArrayContainsWithOneElement()
         {
             var array = new[] { "ryan" };
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
                 .WhereIn("Name", array);
             Assert.Equal("@in<Name>:(ryan)", q.ToString());
         }
@@ -81,7 +81,7 @@ namespace SlowTests.Tests.Querying
         public void CanUnderstandArrayContainsWithZeroElements()
         {
             var array = new string[0];
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
                 .WhereIn("Name", array);
             Assert.Equal("@emptyIn<Name>:(no-results)", q.ToString());
         }
@@ -90,7 +90,7 @@ namespace SlowTests.Tests.Querying
         public void CanUnderstandEnumerableContains()
         {
             IEnumerable<string> list = new[] { "ryan", "heath" };
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
                 .WhereIn("Name", list);
             Assert.Equal("@in<Name>:(ryan , heath)", q.ToString());
         }
@@ -99,7 +99,7 @@ namespace SlowTests.Tests.Querying
         public void CanUnderstandSimpleContainsWithVariable()
         {
             var ayende = "ayende" + 1;
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
                 .WhereIn("Name", new[] { ayende });
             Assert.Equal("@in<Name>:(ayende1)", q.ToString());
         }
@@ -107,14 +107,14 @@ namespace SlowTests.Tests.Querying
         [Fact]
         public void NoOpShouldProduceEmptyString()
         {
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false));
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false));
             Assert.Equal("", q.ToString());
         }
 
         [Fact]
         public void CanUnderstandAnd()
         {
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
                 .WhereEquals("Name", "ayende")
                 .AndAlso()
                 .WhereEquals("Email", "ayende@ayende.com");
@@ -124,7 +124,7 @@ namespace SlowTests.Tests.Querying
         [Fact]
         public void CanUnderstandOr()
         {
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
                 .WhereEquals("Name", "ayende")
                 .OrElse()
                 .WhereEquals("Email", "ayende@ayende.com");
@@ -134,7 +134,7 @@ namespace SlowTests.Tests.Querying
         [Fact]
         public void CanUnderstandLessThan()
         {
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
                 .WhereLessThan("Birthday", new DateTime(2010, 05, 15));
             Assert.Equal("Birthday:{* TO 2010-05-15T00:00:00.0000000}", q.ToString());
         }
@@ -142,7 +142,7 @@ namespace SlowTests.Tests.Querying
         [Fact]
         public void CanUnderstandEqualOnDate()
         {
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
                 .WhereEquals("Birthday", new DateTime(2010, 05, 15));
             Assert.Equal("Birthday:2010-05-15T00:00:00.0000000", q.ToString());
         }
@@ -150,7 +150,7 @@ namespace SlowTests.Tests.Querying
         [Fact]
         public void CanUnderstandLessThanOrEqual()
         {
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
                 .WhereLessThanOrEqual("Birthday", new DateTime(2010, 05, 15));
             Assert.Equal("Birthday:[* TO 2010-05-15T00:00:00.0000000]", q.ToString());
         }
@@ -158,7 +158,7 @@ namespace SlowTests.Tests.Querying
         [Fact]
         public void CanUnderstandGreaterThan()
         {
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
                 .WhereGreaterThan("Birthday", new DateTime(2010, 05, 15));
             Assert.Equal("Birthday:{2010-05-15T00:00:00.0000000 TO NULL}", q.ToString());
         }
@@ -166,7 +166,7 @@ namespace SlowTests.Tests.Querying
         [Fact]
         public void CanUnderstandGreaterThanOrEqual()
         {
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
                 .WhereGreaterThanOrEqual("Birthday", new DateTime(2010, 05, 15));
             Assert.Equal("Birthday:[2010-05-15T00:00:00.0000000 TO NULL]", q.ToString());
         }
@@ -174,7 +174,7 @@ namespace SlowTests.Tests.Querying
         [Fact]
         public void CanUnderstandProjectionOfSingleField()
         {
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
                 .WhereGreaterThanOrEqual("Birthday", new DateTime(2010, 05, 15))
                 .SelectFields<IndexedUser>("Name") as DocumentQuery<IndexedUser>;
             string fields = q.GetProjectionFields().Any() ?
@@ -185,7 +185,7 @@ namespace SlowTests.Tests.Querying
         [Fact]
         public void CanUnderstandProjectionOfMultipleFields()
         {
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
                 .WhereGreaterThanOrEqual("Birthday", new DateTime(2010, 05, 15))
                 .SelectFields<IndexedUser>("Name", "Age") as DocumentQuery<IndexedUser>;
             string fields = q.GetProjectionFields().Any() ?
@@ -196,7 +196,7 @@ namespace SlowTests.Tests.Querying
         [Fact]
         public void CanUnderstandSimpleEqualityOnInt()
         {
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
                 .WhereEquals("Age", 3, false);
             Assert.Equal("Age:3", q.ToString());
         }
@@ -205,7 +205,7 @@ namespace SlowTests.Tests.Querying
         public void CanUnderstandGreaterThanOnInt()
         {
             // should DocumentQuery<T> understand how to generate range field names?
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
                 .WhereGreaterThan("Age_Range", 3);
             Assert.Equal("Age_Range:{Lx3 TO NULL}", q.ToString());
         }

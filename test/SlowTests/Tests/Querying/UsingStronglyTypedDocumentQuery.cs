@@ -1,16 +1,16 @@
 using System;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Document;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
 using Xunit;
 
 namespace SlowTests.Tests.Querying
 {
-    public class UsingStronglyTypedDocumentQuery : RavenTestBase
+    public class UsingStronglyTypedDocumentQuery : RavenNewTestBase
     {
         private static IDocumentQuery<IndexedUser> CreateUserQuery()
         {
-            return new DocumentQuery<IndexedUser>(null, null, null, "IndexName", null, null, null, false);
+            return new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false);
         }
 
         [Fact]

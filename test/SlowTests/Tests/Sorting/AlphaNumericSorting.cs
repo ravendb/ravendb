@@ -1,19 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-
 using FastTests;
-
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Indexes;
 using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
 using Xunit;
 
 namespace SlowTests.Tests.Sorting
 {
-    public class AlphaNumericSorting : RavenTestBase
+    public class AlphaNumericSorting : RavenNewTestBase
     {
         [Fact]
         public void basic_alphanumeric_sort()
@@ -427,7 +424,7 @@ namespace SlowTests.Tests.Sorting
                     }
                 }
 
-                await new TracksIndex().ExecuteAsync(store);
+                new TracksIndex().Execute(store);
                 WaitForIndexing(store);
 
                 using (var session = store.OpenAsyncSession())

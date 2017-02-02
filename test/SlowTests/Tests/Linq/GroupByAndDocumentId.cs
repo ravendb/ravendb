@@ -7,34 +7,29 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
-using Raven.Json.Linq;
-using Raven.Server.Documents.Indexes.Static.Linq;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 using SlowTests.Utils;
 
 namespace SlowTests.Tests.Linq
 {
-    public class GroupByAndDocumentId : RavenTestBase
+    public class GroupByAndDocumentId : RavenNewTestBase
     {
-        public class Client
+        private class Client
         {
             public int Id { get; set; }
             public string Name { get; set; }
             public IList<ImportStatusMessage> ImportStatuses { get; set; }
         }
 
-        public class ImportStatusMessage
+        private class ImportStatusMessage
         {
             public DateTime TimeStamp { get; set; }
             public ImportStatus Status { get; set; }
         }
 
-        public enum ImportStatus
+        private enum ImportStatus
         {
             Complete,
             Running,
@@ -177,10 +172,10 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        
+
 
         // Pass
-        public class Client_ImportSummaryByDate_1 : AbstractIndexCreationTask<Client, ImportSummary>
+        private class Client_ImportSummaryByDate_1 : AbstractIndexCreationTask<Client, ImportSummary>
         {
             public Client_ImportSummaryByDate_1()
             {
@@ -207,7 +202,7 @@ namespace SlowTests.Tests.Linq
         }
 
         // Fail
-        public class Client_ImportSummaryByDate_2 : AbstractIndexCreationTask<Client, ImportSummary>
+        private class Client_ImportSummaryByDate_2 : AbstractIndexCreationTask<Client, ImportSummary>
         {
             public Client_ImportSummaryByDate_2()
             {
@@ -234,7 +229,7 @@ namespace SlowTests.Tests.Linq
         }
 
         // Fail
-        public class Client_ImportSummaryByDate_3 : AbstractIndexCreationTask<Client, ImportSummary>
+        private class Client_ImportSummaryByDate_3 : AbstractIndexCreationTask<Client, ImportSummary>
         {
             public Client_ImportSummaryByDate_3()
             {
@@ -264,7 +259,7 @@ namespace SlowTests.Tests.Linq
         }
 
         // Fail
-        public class Client_ImportSummaryByDate_4 : AbstractIndexCreationTask<Client, ImportSummary>
+        private class Client_ImportSummaryByDate_4 : AbstractIndexCreationTask<Client, ImportSummary>
         {
             public Client_ImportSummaryByDate_4()
             {
@@ -292,7 +287,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        public class ImportSummary
+        private class ImportSummary
         {
             public ImportStatus Status { get; set; }
             public DateTime Date { get; set; }

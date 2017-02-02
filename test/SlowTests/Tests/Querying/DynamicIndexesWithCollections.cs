@@ -6,17 +6,17 @@
 
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using FastTests;
 using Xunit;
 using System.Linq;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexing;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
 
 namespace SlowTests.Tests.Querying
 {
-    public class DynamicIndexesWithCollections : RavenTestBase
+    public class DynamicIndexesWithCollections : RavenNewTestBase
     {
         [Fact]
         public void CanPerformDynamicQueryUsingClientLinqQueryWithNestedCollection()
@@ -58,7 +58,7 @@ namespace SlowTests.Tests.Querying
 
                 using (var s = store.OpenSession())
                 {
-                    var stats = new Raven.Client.RavenQueryStatistics();
+                    var stats = new RavenQueryStatistics();
                     var results = s.Query<Blog>()
                         .Statistics(out stats)
                         .Customize(x => x.WaitForNonStaleResultsAsOfNow(TimeSpan.FromSeconds(5)))
@@ -301,7 +301,7 @@ namespace SlowTests.Tests.Querying
             using (var store = GetDocumentStore())
             {
                 const string indexName = "BlogsForHighlightingTests";
-                store.DatabaseCommands.PutIndex(indexName,
+                store.Admin.Send(new PutIndexOperation(indexName,
                     new IndexDefinition
                     {
                         Maps = { "from blog in docs.Blogs select new { blog.Title, blog.Category }" },
@@ -326,7 +326,7 @@ namespace SlowTests.Tests.Querying
                                 }
                             }
                         }
-                    });
+                    }));
 
                 var blogOne = new Blog
                 {
@@ -390,7 +390,7 @@ namespace SlowTests.Tests.Querying
             using (var store = GetDocumentStore())
             {
                 const string indexName = "BlogsForHighlightingMRTests";
-                store.DatabaseCommands.PutIndex(indexName,
+                store.Admin.Send(new PutIndexOperation(indexName,
                     new IndexDefinition
                     {
                         Maps = { "from blog in docs.Blogs select new { blog.Title, blog.Category }" },
@@ -418,7 +418,7 @@ namespace SlowTests.Tests.Querying
                                 }
                             }
                         }
-                    });
+                    }));
 
                 var blogOne = new Blog
                 {
@@ -476,7 +476,7 @@ namespace SlowTests.Tests.Querying
             using (var store = GetDocumentStore())
             {
                 const string indexName = "BlogsForHighlightingTests";
-                store.DatabaseCommands.PutIndex(indexName,
+                store.Admin.Send(new PutIndexOperation(indexName,
                     new IndexDefinition
                     {
                         Maps = { "from blog in docs.Blogs select new { blog.Title, blog.Category }" },
@@ -501,7 +501,7 @@ namespace SlowTests.Tests.Querying
                                 }
                             }
                         }
-                    });
+                    }));
 
                 var blogOne = new Blog
                 {

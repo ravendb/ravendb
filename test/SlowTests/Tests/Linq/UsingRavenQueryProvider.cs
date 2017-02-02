@@ -7,21 +7,19 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Data.Queries;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
-using Raven.Client.Linq;
+using Raven.NewClient.Abstractions;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Client.Linq;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class UsingRavenQueryProvider : RavenTestBase
+    public class UsingRavenQueryProvider : RavenNewTestBase
     {
         private class User
         {
@@ -44,22 +42,22 @@ namespace SlowTests.Tests.Linq
         [Fact]
         public void Can_perform_Skip_Take_Query()
         {
-            using (var db = GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                db.Initialize();
+                store.Initialize();
 
                 string indexName = "UserIndex";
-                using (var session = db.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     AddData(session);
 
-                    db.DatabaseCommands.PutIndex<User, User>(indexName,
+                    store.Admin.Send(new PutIndexOperation(indexName,
                             new IndexDefinitionBuilder<User, User>()
                             {
                                 Map = docs => from doc in docs
                                               select new { doc.Name, doc.Age },
                                 SortOptions = { { x => x.Name, SortOptions.StringVal } }
-                            }, true);
+                            }.ToIndexDefinition(store.Conventions)));
 
                     WaitForQueryToComplete(session);
 
@@ -95,22 +93,22 @@ namespace SlowTests.Tests.Linq
         [Fact]
         public void Can_perform_First_and_FirstOrDefault_Query()
         {
-            using (var db = GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                db.Initialize();
+                store.Initialize();
 
                 string indexName = "UserIndex";
-                using (var session = db.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     AddData(session);
 
-                    var result = db.DatabaseCommands.PutIndex<User, User>(indexName,
-                            new IndexDefinitionBuilder<User, User>()
-                            {
-                                Map = docs => from doc in docs
-                                              select new { doc.Name, doc.Age },
-                                SortOptions = { { x => x.Name, SortOptions.StringVal } }
-                            }, true);
+                    store.Admin.Send(new PutIndexOperation(indexName,
+                        new IndexDefinitionBuilder<User, User>()
+                        {
+                            Map = docs => from doc in docs
+                                          select new { doc.Name, doc.Age },
+                            SortOptions = { { x => x.Name, SortOptions.StringVal } }
+                        }.ToIndexDefinition(store.Conventions)));
 
                     WaitForQueryToComplete(session);
 
@@ -134,22 +132,22 @@ namespace SlowTests.Tests.Linq
         [Fact]
         public void Can_perform_Single_and_SingleOrDefault_Query()
         {
-            using (var db = GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                db.Initialize();
+                store.Initialize();
 
                 string indexName = "UserIndex";
-                using (var session = db.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     AddData(session);
 
-                    var result = db.DatabaseCommands.PutIndex<User, User>(indexName,
-                            new IndexDefinitionBuilder<User, User>()
-                            {
-                                Map = docs => from doc in docs
-                                              select new { doc.Name, doc.Age },
-                                Indexes = { { x => x.Name, FieldIndexing.Analyzed } }
-                            }, true);
+                    store.Admin.Send(new PutIndexOperation(indexName,
+                        new IndexDefinitionBuilder<User, User>()
+                        {
+                            Map = docs => from doc in docs
+                                          select new { doc.Name, doc.Age },
+                            Indexes = { { x => x.Name, FieldIndexing.Analyzed } }
+                        }.ToIndexDefinition(store.Conventions)));
 
                     WaitForQueryToComplete(session);
 
@@ -187,7 +185,7 @@ namespace SlowTests.Tests.Linq
                     session.Store(new User() { Name = "Matt", Info = "Male Age 35", Active = false });
                     session.SaveChanges();
 
-                    store.DatabaseCommands.PutIndex<User, User>(indexName,
+                    store.Admin.Send(new PutIndexOperation(indexName,
                         new IndexDefinitionBuilder<User, User>()
                         {
                             Map = docs => from doc in docs
@@ -199,7 +197,7 @@ namespace SlowTests.Tests.Linq
                                               doc.Active
                                           },
                             Indexes = { { x => x.Name, FieldIndexing.Analyzed } }
-                        }, true);
+                        }.ToIndexDefinition(store.Conventions)));
 
                     WaitForIndexing(store);
 
@@ -235,7 +233,7 @@ namespace SlowTests.Tests.Linq
                     session.Store(new User { Name = "Third", Created = thirdTime });
                     session.SaveChanges();
 
-                    store.DatabaseCommands.PutIndex<User, User>(indexName,
+                    store.Admin.Send(new PutIndexOperation(indexName,
                         new IndexDefinitionBuilder<User, User>()
                         {
                             Map = docs => from doc in docs
@@ -244,7 +242,7 @@ namespace SlowTests.Tests.Linq
                                               doc.Name,
                                               doc.Created
                                           },
-                        }, true);
+                        }.ToIndexDefinition(store.Conventions)));
 
                     WaitForIndexing(store);
 
@@ -288,23 +286,23 @@ namespace SlowTests.Tests.Linq
         [Fact] // See issue #105 (http://github.com/ravendb/ravendb/issues/#issue/105)
         public void Does_Not_Ignore_Expressions_Before_Where()
         {
-            using (var db = GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                db.Initialize();
+                store.Initialize();
 
                 string indexName = "UserIndex";
-                using (var session = db.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new User() { Name = "Third", Age = 18 });
                     session.Store(new User() { Name = "First", Age = 10 });
                     session.Store(new User() { Name = "Second", Age = 20 });
                     session.SaveChanges();
 
-                    db.DatabaseCommands.PutIndex<User, User>(indexName,
+                    store.Admin.Send(new PutIndexOperation(indexName,
                             new IndexDefinitionBuilder<User, User>()
                             {
                                 Map = docs => from doc in docs select new { doc.Name, doc.Age },
-                            }, true);
+                            }.ToIndexDefinition(store.Conventions)));
 
                     WaitForQueryToComplete(session);
 
@@ -321,19 +319,19 @@ namespace SlowTests.Tests.Linq
         [Fact] // See issue #145 (http://github.com/ravendb/ravendb/issues/#issue/145)
         public void Can_Use_Static_Fields_In_Where_Clauses()
         {
-            using (var db = GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                db.Initialize();
+                store.Initialize();
 
-                db.DatabaseCommands.PutIndex("DateTime",
+                store.Admin.Send(new PutIndexOperation("DateTime",
                         new IndexDefinition
                         {
                             Maps = { @"from info in docs.DateTimeInfos                                    
                                     select new { info.TimeOfDay }" }
-                        });
+                        }));
 
                 var currentTime = SystemTime.UtcNow;
-                using (var s = db.OpenSession())
+                using (var s = store.OpenSession())
                 {
                     s.Store(new DateTimeInfo { TimeOfDay = currentTime + TimeSpan.FromHours(1) });
                     s.Store(new DateTimeInfo { TimeOfDay = currentTime + TimeSpan.FromHours(2) });
@@ -343,7 +341,7 @@ namespace SlowTests.Tests.Linq
                     s.SaveChanges();
                 }
 
-                using (var s = db.OpenSession())
+                using (var s = store.OpenSession())
                 {
                     //Just issue a blank query to make sure there are no stale results                    
                     var test = s.Query<DateTimeInfo>("DateTime")
@@ -365,18 +363,18 @@ namespace SlowTests.Tests.Linq
 
         public void Can_Use_Static_Properties_In_Where_Clauses()
         {
-            using (var db = GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                db.Initialize();
+                store.Initialize();
 
-                db.DatabaseCommands.PutIndex("DateTime",
-                        new IndexDefinition
-                        {
-                            Maps = { @"from info in docs.DateTimeInfos                                    
+                store.Admin.Send(new PutIndexOperation("DateTime",
+                    new IndexDefinition
+                    {
+                        Maps = { @"from info in docs.DateTimeInfos                                    
                                     select new { info.TimeOfDay }" }
-                        });
+                    }));
 
-                using (var s = db.OpenSession())
+                using (var s = store.OpenSession())
                 {
                     s.Store(new DateTimeInfo { TimeOfDay = SystemTime.UtcNow.AddDays(1) });
                     s.Store(new DateTimeInfo { TimeOfDay = SystemTime.UtcNow.AddDays(-1) });
@@ -384,7 +382,7 @@ namespace SlowTests.Tests.Linq
                     s.SaveChanges();
                 }
 
-                using (var s = db.OpenSession())
+                using (var s = store.OpenSession())
                 {
                     //Just issue a blank query to make sure there are no stale results                    
                     s.Query<DateTimeInfo>("DateTime")
@@ -399,19 +397,19 @@ namespace SlowTests.Tests.Linq
         [Fact] // See issue #145 (http://github.com/ravendb/ravendb/issues/#issue/145)
         public void Can_use_inequality_to_compare_dates()
         {
-            using (var db = GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                db.Initialize();
+                store.Initialize();
 
-                db.DatabaseCommands.PutIndex("DateTime",
-                        new IndexDefinition
-                        {
-                            Maps = { @"from info in docs.DateTimeInfos                                    
+                store.Admin.Send(new PutIndexOperation("DateTime",
+                    new IndexDefinition
+                    {
+                        Maps = { @"from info in docs.DateTimeInfos                                    
                                     select new { info.TimeOfDay }" }
-                        });
+                    }));
 
                 var currentTime = SystemTime.UtcNow;
-                using (var s = db.OpenSession())
+                using (var s = store.OpenSession())
                 {
                     s.Store(new DateTimeInfo { TimeOfDay = currentTime + TimeSpan.FromHours(1) });
                     s.Store(new DateTimeInfo { TimeOfDay = currentTime + TimeSpan.FromHours(2) });
@@ -421,7 +419,7 @@ namespace SlowTests.Tests.Linq
                     s.SaveChanges();
                 }
 
-                using (var s = db.OpenSession())
+                using (var s = store.OpenSession())
                 {
                     //Just issue a blank query to make sure there are no stale results                    
                     var test = s.Query<DateTimeInfo>("DateTime")
@@ -443,17 +441,17 @@ namespace SlowTests.Tests.Linq
             {
                 store.Initialize();
 
-                store.DatabaseCommands.PutIndex("ByLineCost",
-                        new IndexDefinition
-                        {
-                            Maps = { @"from order in docs.Orders
+                store.Admin.Send(new PutIndexOperation("ByLineCost",
+                    new IndexDefinition
+                    {
+                        Maps = { @"from order in docs.Orders
                                     from line in order.Lines
                                     select new { Cost = line.Cost }" },
-                            Fields = new Dictionary<string, IndexFieldOptions>
-                            {
-                                { "Cost", new IndexFieldOptions { Storage = FieldStorage.Yes } }
-                            }
-                        });
+                        Fields = new Dictionary<string, IndexFieldOptions>
+                        {
+                            {"Cost", new IndexFieldOptions {Storage = FieldStorage.Yes}}
+                        }
+                    }));
 
                 using (var s = store.OpenSession())
                 {
@@ -549,7 +547,7 @@ namespace SlowTests.Tests.Linq
 
         private class OrderItem
         {
-            public Guid Id { get; set; }
+            public string Id { get; set; }
             public Guid CustomerId { get; set; }
             public decimal Cost { get; set; }
             public decimal Quantity { get; set; }
@@ -818,19 +816,19 @@ namespace SlowTests.Tests.Linq
             using (var store = GetDocumentStore())
             {
                 store.Initialize();
-                var guid1 = Guid.NewGuid();
-                var guid2 = Guid.NewGuid();
+                var guid1 = Guid.NewGuid().ToString();
+                var guid2 = Guid.NewGuid().ToString();
                 var customerId = Guid.NewGuid();
                 using (var s = store.OpenSession())
                 {
-                    s.Store(new OrderItem { Id = Guid.NewGuid(), CustomerId = customerId, Cost = 1.59m, Quantity = 5 });
+                    s.Store(new OrderItem { Id = Guid.NewGuid().ToString(), CustomerId = customerId, Cost = 1.59m, Quantity = 5 });
                     s.Store(new OrderItem { Id = guid1, CustomerId = customerId, Cost = 7.59m, Quantity = 3 });
                     s.Store(new OrderItem { Id = guid2, CustomerId = customerId, Cost = 1.59m, Quantity = 4 });
-                    s.Store(new OrderItem { Id = Guid.NewGuid(), CustomerId = customerId, Cost = 1.39m, Quantity = 3 });
+                    s.Store(new OrderItem { Id = Guid.NewGuid().ToString(), CustomerId = customerId, Cost = 1.39m, Quantity = 3 });
                     s.SaveChanges();
                 }
 
-                var list = new List<Guid> { guid1 }; //, guid2 };
+                var list = new List<string> { guid1 }; //, guid2 };
 
                 using (var s = store.OpenSession())
                 {

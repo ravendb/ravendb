@@ -1,23 +1,16 @@
 using System;
-using System.IO;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Threading.Tasks;
-
 using FastTests;
-
-using Raven.Abstractions;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Extensions;
-using Raven.Client.Connection;
-using Raven.Client.Data;
-using Raven.Imports.Newtonsoft.Json;
-
+using Raven.NewClient.Client.Commands;
+using Raven.NewClient.Client.Data;
+using Sparrow.Json;
 using Xunit;
 
 namespace SlowTests.Tests.MultiGet
 {
-    public class MultiGetBasic : RavenTestBase
+    public class MultiGetBasic : RavenNewTestBase
     {
         private class User
         {
@@ -38,11 +31,11 @@ namespace SlowTests.Tests.MultiGet
         }
 
         [Fact]
-        public async Task CanUseMultiGetToBatchGetDocumentRequests()
+        public void CanUseMultiGetToBatchGetDocumentRequests()
         {
             using (var store = GetDocumentStore())
             {
-                var docs = $"/databases/{store.DefaultDatabase}/docs";
+                const string docs = "/docs";
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Ayende" });
@@ -50,12 +43,9 @@ namespace SlowTests.Tests.MultiGet
                     session.SaveChanges();
                 }
 
-                var request = (HttpWebRequest)WebRequest.Create(store.Url.ForDatabase(store.DefaultDatabase) + "/multi_get");
-                request.Method = "POST";
-                using (var stream = await request.GetRequestStreamAsync())
+                using (var commands = store.Commands())
                 {
-                    var streamWriter = new StreamWriter(stream);
-                    JsonExtensions.CreateDefaultJsonSerializer().Serialize(streamWriter, new[]
+                    var command = new MultiGetCommand(commands.Context, commands.RequestExecuter.Cache, new List<GetRequest>
                     {
                         new GetRequest
                         {
@@ -66,24 +56,29 @@ namespace SlowTests.Tests.MultiGet
                         {
                             Url = docs,
                             Query = "?id=users/2"
-                        },
+                        }
                     });
-                    streamWriter.Flush();
-                    stream.Flush();
-                }
 
-                using (var resp = await request.GetResponseAsync())
-                using (var stream = resp.GetResponseStream())
-                {
-                    var result = new StreamReader(stream).ReadToEnd();
-                    Assert.Contains("Ayende", result);
-                    Assert.Contains("Oren", result);
+                    commands.RequestExecuter.Execute(command, commands.Context);
+
+                    string name;
+                    var result = (BlittableJsonReaderObject)command.Result[0].Result;
+                    var results = (BlittableJsonReaderArray)result["Results"];
+                    result = (BlittableJsonReaderObject)results[0];
+                    Assert.True(result.TryGet("Name", out name));
+                    Assert.Equal("Ayende", name);
+
+                    result = (BlittableJsonReaderObject)command.Result[1].Result;
+                    results = (BlittableJsonReaderArray)result["Results"];
+                    result = (BlittableJsonReaderObject)results[0];
+                    Assert.True(result.TryGet("Name", out name));
+                    Assert.Equal("Oren", name);
                 }
             }
         }
 
         [Fact]
-        public async Task CanUseMultiQuery()
+        public void CanUseMultiQuery()
         {
             using (var store = GetDocumentStore())
             {
@@ -102,50 +97,46 @@ namespace SlowTests.Tests.MultiGet
                         .ToArray();
                 }
 
-
-                var request = (HttpWebRequest)WebRequest.Create(store.Url.ForDatabase(store.DefaultDatabase) + "/multi_get");
-                request.Method = "POST";
-                using (var stream = await request.GetRequestStreamAsync())
+                using (var commands = store.Commands())
                 {
-                    var streamWriter = new StreamWriter(stream);
-                    JsonExtensions.CreateDefaultJsonSerializer().Serialize(streamWriter, new[]
+                    var command = new MultiGetCommand(commands.Context, commands.RequestExecuter.Cache, new List<GetRequest>
                     {
                         new GetRequest
                         {
-                            Url = "/indexes/dynamic/Users",
-                            Query = "query=Name:Ayende"
+                            Url = "/queries/dynamic/Users",
+                            Query = "?query=Name:Ayende"
                         },
                         new GetRequest
                         {
-                            Url = "/indexes/dynamic/Users",
-                            Query = "query=Name:Oren"
-                        },
+                            Url = "/queries/dynamic/Users",
+                            Query = "?query=Name:Oren"
+                        }
                     });
-                    streamWriter.Flush();
-                    stream.Flush();
-                }
 
-                using (var resp = await request.GetResponseAsync())
-                using (var stream = resp.GetResponseStream())
-                {
-                    var result = new StreamReader(stream).ReadToEnd();
-                    Assert.Contains("Ayende", result);
-                    Assert.Contains("Oren", result);
+                    commands.RequestExecuter.Execute(command, commands.Context);
+
+                    string name;
+                    var result = (BlittableJsonReaderObject)command.Result[0].Result;
+                    var results = (BlittableJsonReaderArray)result["Results"];
+                    result = (BlittableJsonReaderObject)results[0];
+                    Assert.True(result.TryGet("Name", out name));
+                    Assert.Equal("Ayende", name);
+
+                    result = (BlittableJsonReaderObject)command.Result[1].Result;
+                    results = (BlittableJsonReaderArray)result["Results"];
+                    result = (BlittableJsonReaderObject)results[0];
+                    Assert.True(result.TryGet("Name", out name));
+                    Assert.Equal("Oren", name);
                 }
             }
         }
 
-        public class Results
-        {
-            public GetResponse[] results;
-        }
-
         [Fact]
-        public async Task CanHandleCaching()
+        public void CanHandleCaching()
         {
             using (var store = GetDocumentStore())
             {
-                var docs = $"/databases/{store.DefaultDatabase}/docs";
+                const string docs = "/docs";
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Ayende" });
@@ -153,12 +144,9 @@ namespace SlowTests.Tests.MultiGet
                     session.SaveChanges();
                 }
 
-                var request = (HttpWebRequest)WebRequest.Create(store.Url.ForDatabase(store.DefaultDatabase) + "/multi_get");
-                request.Method = "POST";
-                using (var stream = await request.GetRequestStreamAsync())
+                using (var commands = store.Commands())
                 {
-                    var streamWriter = new StreamWriter(stream);
-                    JsonExtensions.CreateDefaultJsonSerializer().Serialize(streamWriter, new[]
+                    var command = new MultiGetCommand(commands.Context, commands.RequestExecuter.Cache, new List<GetRequest>
                     {
                         new GetRequest
                         {
@@ -169,28 +157,15 @@ namespace SlowTests.Tests.MultiGet
                         {
                             Url = docs,
                             Query = "?id=users/2"
-                        },
+                        }
                     });
-                    streamWriter.Flush();
-                    stream.Flush();
-                }
 
-                Results results;
-                using (var resp = await request.GetResponseAsync())
-                using (var stream = resp.GetResponseStream())
-                {
-                    var result = new StreamReader(stream).ReadToEnd();
-                    results = JsonConvert.DeserializeObject<Results>(result, Default.Converters);
-                    Assert.True(results.results[0].Headers.ContainsKey("ETag"));
-                    Assert.True(results.results[1].Headers.ContainsKey("ETag"));
-                }
+                    commands.RequestExecuter.Execute(command, commands.Context);
 
-                request = (HttpWebRequest)WebRequest.Create(store.Url.ForDatabase(store.DefaultDatabase) + "/multi_get");
-                request.Method = "POST";
-                using (var stream = await request.GetRequestStreamAsync())
-                {
-                    var streamWriter = new StreamWriter(stream);
-                    JsonExtensions.CreateDefaultJsonSerializer().Serialize(streamWriter, new[]
+                    Assert.True(command.Result[0].Headers.ContainsKey("ETag"));
+                    Assert.True(command.Result[1].Headers.ContainsKey("ETag"));
+
+                    command = new MultiGetCommand(commands.Context, commands.RequestExecuter.Cache, new List<GetRequest>
                     {
                         new GetRequest
                         {
@@ -198,7 +173,7 @@ namespace SlowTests.Tests.MultiGet
                             Query = "?id=users/1",
                             Headers =
                             {
-                                {"If-None-Match", results.results[0].Headers["ETag"]}
+                                {"If-None-Match", command.Result[0].Headers["ETag"]}
                             }
                         },
                         new GetRequest
@@ -207,21 +182,15 @@ namespace SlowTests.Tests.MultiGet
                             Query = "?id=users/2",
                             Headers =
                             {
-                                {"If-None-Match", results.results[1].Headers["ETag"]}
+                                {"If-None-Match", command.Result[1].Headers["ETag"]}
                             }
-                        },
+                        }
                     });
-                    streamWriter.Flush();
-                    stream.Flush();
-                }
 
-                using (var resp = await request.GetResponseAsync())
-                using (var stream = resp.GetResponseStream())
-                {
-                    var result = new StreamReader(stream).ReadToEnd();
-                    results = JsonConvert.DeserializeObject<Results>(result, Default.Converters);
-                    Assert.Equal(304, results.results[0].StatusCode);
-                    Assert.Equal(304, results.results[1].StatusCode);
+                    commands.RequestExecuter.Execute(command, commands.Context);
+
+                    Assert.Equal(HttpStatusCode.NotModified, command.Result[0].StatusCode);
+                    Assert.Equal(HttpStatusCode.NotModified, command.Result[1].StatusCode);
                 }
             }
         }

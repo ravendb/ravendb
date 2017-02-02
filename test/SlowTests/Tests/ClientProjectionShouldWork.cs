@@ -5,15 +5,14 @@
 // -----------------------------------------------------------------------
 
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.Tests
 {
-    public class ClientProjectionShouldWork : RavenTestBase
+    public class ClientProjectionShouldWork : RavenNewTestBase
     {
         private class Employee
         {
