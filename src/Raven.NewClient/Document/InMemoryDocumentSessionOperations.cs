@@ -772,7 +772,7 @@ more responsive application.
             {
                 UpdateMetadataModifications(entity.Value);
                 var document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
-                if (entity.Value.IgnoreChanges || (!EntityChanged(document, entity.Value, null)))
+                if (entity.Value.IgnoreChanges || EntityChanged(document, entity.Value, null) == false)
                     continue;
 
                 var beforeStoreEventArgs = new BeforeStoreEventArgs(this, entity.Value.Id, entity.Key);

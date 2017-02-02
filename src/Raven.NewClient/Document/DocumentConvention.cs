@@ -104,7 +104,7 @@ namespace Raven.NewClient.Client.Document
             {
                 serializer.Binder = new ClientSerializationBinder();
             };
-            FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] {IdentityPartsSeparator}, StringSplitOptions.RemoveEmptyEntries).Last();
+            FindIdValuePartForValueTypeConversion = (entity, id) => id.Split(new[] { IdentityPartsSeparator }, StringSplitOptions.RemoveEmptyEntries).Last();
             ShouldAggressiveCacheTrackChanges = true;
             ShouldSaveChangesForceAggressiveCacheCheck = true;
             IndexAndTransformerReplicationMode = IndexAndTransformerReplicationMode.Indexes | IndexAndTransformerReplicationMode.Transformers;
@@ -495,7 +495,9 @@ namespace Raven.NewClient.Client.Document
 
             CustomizeJsonSerializer(jsonSerializer);
             //TODO - EFRAT
-            jsonSerializer.Converters.Add(new StringEnumConverter());
+            if (SaveEnumsAsIntegers == false)
+                jsonSerializer.Converters.Add(new StringEnumConverter());
+
             jsonSerializer.Converters.Add(new JsonDateTimeISO8601Converter());
             // TODO: Iftah
             //var convertersToUse = SaveEnumsAsIntegers ? DefaultConvertersEnumsAsIntegers : DefaultConverters;
