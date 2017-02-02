@@ -353,7 +353,7 @@ namespace Raven.Database.Queries
                     {
                         var instance = this.database.IndexStorage.GetIndexInstance(result.IndexName);
                         var stats = accessor.Indexing.GetIndexStats(instance.indexId);
-                        if (stats == null)
+                        if (stats == null || stats.IndexingSuccesses == 0)
                             return Etag.Empty;
 
                         return stats.LastIndexedEtag;
@@ -362,8 +362,11 @@ namespace Raven.Database.Queries
                         {
                             var abstractViewGenerator =
                                 database.IndexDefinitionStorage.GetViewGenerator(result.IndexName);
-                            if (abstractViewGenerator == null)
+                            if (abstractViewGenerator == null )
                                 return -1;
+
+
+
                             return abstractViewGenerator.CountOfFields;
                         })
                         .ToArray();
