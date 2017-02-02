@@ -132,7 +132,7 @@ namespace Sparrow.Json
 
         public void ResetAndRenew()
         {
-            _context.RegisterForDispose(_unmanagedWriteBuffer);
+            _unmanagedWriteBuffer.Dispose();
             _unmanagedWriteBuffer = (TWriter)(object)_context.GetStream();
             _position = 0;
         }

@@ -60,7 +60,7 @@ namespace Raven.Server.Commercial
             {
                 var table = tx.InnerTransaction.OpenTable(_licenseStorageSchema, LicenseInfoSchema.LicenseTree);
 
-                var id = context.GetDiscardableLazyString(FirstServerStartDateKey);
+                var id = context.GetLazyString(FirstServerStartDateKey);
                 using (var json = context.ReadObject(firstServerStartDate, "DatabaseInfo",
                     BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {

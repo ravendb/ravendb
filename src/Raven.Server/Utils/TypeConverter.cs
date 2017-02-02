@@ -190,7 +190,7 @@ namespace Raven.Server.Utils
             {
                 var lazyCompressedStringValue = value as LazyCompressedStringValue;
                 if (lazyCompressedStringValue != null)
-                    lazyString = lazyCompressedStringValue.ToDiscardableLazyStringValue();
+                    lazyString = lazyCompressedStringValue.ToLazyStringValue();
             }
 
             if (lazyString != null)

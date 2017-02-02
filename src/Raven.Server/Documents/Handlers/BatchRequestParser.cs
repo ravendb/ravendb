@@ -252,7 +252,6 @@ namespace Raven.Server.Documents.Handlers
                 }
                 builder.FinalizeDocument();
                 reader = builder.CreateReader();
-                ctx.RegisterLiveReader(reader);
                 reader.NoCache = true;
             }
             return reader;

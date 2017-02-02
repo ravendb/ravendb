@@ -94,7 +94,7 @@ namespace Raven.Server.NotificationCenter
 
                 using (var json = context.ReadObject(notification.ToJson(), "notification", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    Store(context.GetDiscardableLazyString(notification.Id), notification.CreatedAt, postponeUntil, json, tx);
+                    Store(context.GetLazyString(notification.Id), notification.CreatedAt, postponeUntil, json, tx);
                 }
 
                 tx.Commit();
@@ -331,7 +331,7 @@ namespace Raven.Server.NotificationCenter
                 if (item == null)
                     return;
 
-                Store(context.GetDiscardableLazyString(id), item.CreatedAt, postponeUntil, item.Json, tx);
+                Store(context.GetLazyString(id), item.CreatedAt, postponeUntil, item.Json, tx);
 
                 tx.Commit();
             }

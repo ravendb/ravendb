@@ -63,7 +63,6 @@ namespace FastTests.Blittable
                         newStream.Write((byte*)allocatedMemoryData.Address, allocatedMemoryData.SizeInBytes);
                     }
                     var buffer = ctx.GetMemory(newStream.SizeInBytes);
-                    ctx.RegisterForReturnMemory(buffer);
 
                     var copiedSize = newStream.CopyTo((byte*)buffer.Address);
                     Assert.Equal(copiedSize, newStream.SizeInBytes);
@@ -115,7 +114,6 @@ namespace FastTests.Blittable
                     }
 
                     var buffer = ctx.GetMemory(newStream.SizeInBytes);
-                    ctx.RegisterForReturnMemory(buffer);
 
                     var copiedSize = newStream.CopyTo((byte*)buffer.Address);
                     Assert.Equal(copiedSize, newStream.SizeInBytes);

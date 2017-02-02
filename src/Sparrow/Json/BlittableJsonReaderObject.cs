@@ -22,7 +22,6 @@ namespace Sparrow.Json
         private byte* _objStart;
 
         public DynamicJsonValue Modifications;
-        internal LinkedListNode<BlittableJsonReaderObject> DisposeTrackingReference;
 
         private Dictionary<StringSegment, object> _objectsPathCache;
         private Dictionary<int, object> _objectsPathCacheByIndex;
@@ -288,7 +287,7 @@ namespace Sparrow.Json
                             {
                                 if (typeof(T) == typeof(LazyStringValue))
                                 {
-                                    obj = (T) (object) lazyCompressStringValue.ToDiscardableLazyStringValue();
+                                    obj = (T) (object) lazyCompressStringValue.ToLazyStringValue();
                                 }
                                 obj = (T)Convert.ChangeType(lazyCompressStringValue.ToString(), type);
                             }
@@ -637,8 +636,6 @@ namespace Sparrow.Json
             }
 
             _buffer.Dispose();
-            if (DisposeTrackingReference != null)
-                _context.ReaderDisposed(DisposeTrackingReference);
         }
 
         public void CopyTo(byte* ptr)

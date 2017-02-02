@@ -13,10 +13,9 @@ namespace Sparrow.Json
 
         /// <summary>
         /// Returns uncompressed data in form of LazyStringValue
-        /// Use this overload only if you are certain that you are goint to dispose of the LazyStringValue by yourself
         /// </summary>
         /// <returns></returns>
-        private LazyStringValue ToLazyStringValue()
+        public LazyStringValue ToLazyStringValue()
         {
             var allocatedUncompressedData = DecompressToAllocatedMemoryData();
 
@@ -24,17 +23,6 @@ namespace Sparrow.Json
 
             lazyStringValue.AllocatedMemoryData = allocatedUncompressedData;
             return lazyStringValue;
-        }
-
-        /// <summary>
-        /// Returns uncompressed data in form of LazyStringValue
-        /// </summary>
-        /// <returns></returns>
-        public LazyStringValue ToDiscardableLazyStringValue()
-        {
-            var lazyString = ToLazyStringValue();
-            _context.RegisterForDispose(lazyString);
-            return lazyString;
         }
 
         public LazyCompressedStringValue(string str, byte* buffer, int uncompressedSize, int compressedSize, JsonOperationContext context)

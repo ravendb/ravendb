@@ -26,40 +26,38 @@ namespace Raven.NewClient.Client.Blittable
 
         public BlittableJsonReaderObject ConvertEntityToBlittable(object entity, DocumentInfo documentInfo)
         {
-            var writer = new BlittableJsonWriter(_session.Context, documentInfo);
+            using (var writer = new BlittableJsonWriter(_session.Context, documentInfo))
+            {
+                var serializer = _session.Conventions.CreateSerializer();
 
-            //writer should be disposed together with JsonOperationContext
-            _session.Context.RegisterForDispose(writer);
-            var serializer = _session.Conventions.CreateSerializer();
+                serializer.Serialize(writer, entity);
+                writer.FinalizeDocument();
+                var reader = writer.CreateReader();
+                var type = entity.GetType();
 
-            serializer.Serialize(writer, entity);
-            writer.FinalizeDocument();
-            var reader = writer.CreateReader();
-            var type = entity.GetType();
+                RemoveIdentityProperty(reader, type, _session.Conventions);
+                SimplifyJson(reader);
 
-            RemoveIdentityProperty(reader, type, _session.Conventions);
-            SimplifyJson(reader);
-
-            return reader;
+                return reader;
+            }
         }
 
         public BlittableJsonReaderObject ConvertEntityToBlittable(object entity, DocumentConvention documentConvention, JsonOperationContext jsonOperationContext, DocumentInfo documentInfo = null)
         {
-            var writer = new BlittableJsonWriter(jsonOperationContext, documentInfo);
+            using (var writer = new BlittableJsonWriter(jsonOperationContext, documentInfo))
+            {
+                var serializer = documentConvention.CreateSerializer();
 
-            //writer should be disposed together with JsonOperationContext
-            jsonOperationContext.RegisterForDispose(writer);
-            var serializer = documentConvention.CreateSerializer();
+                serializer.Serialize(writer, entity);
+                writer.FinalizeDocument();
+                var reader = writer.CreateReader();
+                var type = entity.GetType();
 
-            serializer.Serialize(writer, entity);
-            writer.FinalizeDocument();
-            var reader = writer.CreateReader();
-            var type = entity.GetType();
+                RemoveIdentityProperty(reader, type, documentConvention);
+                SimplifyJson(reader);
 
-            RemoveIdentityProperty(reader, type, documentConvention);
-            SimplifyJson(reader);
-
-            return reader;
+                return reader;
+            }
         }
 
         /// <summary>

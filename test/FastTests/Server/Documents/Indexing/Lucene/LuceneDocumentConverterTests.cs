@@ -455,8 +455,8 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             _docs.Add(data);
 
             //_lazyStrings.
-            var lazyStringValueRegular = _ctx.GetDiscardableLazyString(id);
-            var lazyStringValueLowerCase = _ctx.GetDiscardableLazyString(id.ToLowerInvariant());
+            var lazyStringValueRegular = _ctx.GetLazyString(id);
+            var lazyStringValueLowerCase = _ctx.GetLazyString(id.ToLowerInvariant());
 
             return new Document
             {

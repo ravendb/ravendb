@@ -30,8 +30,6 @@ namespace Sparrow.Json
         private AllocatedMemoryData _tempBuffer;
         private List<GCHandle> _pinnedObjects;
 
-        private readonly List<IDisposable> _disposables = new List<IDisposable>();
-        private readonly List<AllocatedMemoryData> _disposableAllocatedMemory = new List<AllocatedMemoryData>();
         private readonly Dictionary<string, LazyStringValue> _fieldNames =
             new Dictionary<string, LazyStringValue>(StringComparer.Ordinal);
 
@@ -101,9 +99,6 @@ namespace Sparrow.Json
 
         private Stack<ManagedPinnedBuffer> _managedBuffers;
 
-        private readonly LinkedList<BlittableJsonReaderObject> _liveReaders =
-            new LinkedList<BlittableJsonReaderObject>();
-
         public UTF8Encoding Encoding;
 
         public CachedProperties CachedProperties;
@@ -144,17 +139,6 @@ namespace Sparrow.Json
 
         }
 
-        public void RegisterForDispose(IDisposable disposable)
-        {
-            if (disposable == null) //precaution
-                return;
-            _disposables.Add(disposable);
-        }
-
-        public void RegisterForReturnMemory(AllocatedMemoryData allocatedMemory)
-        {
-            _disposableAllocatedMemory.Add(allocatedMemory);
-        }
 
         public ReturnBuffer GetManagedBuffer(out ManagedPinnedBuffer buffer)
         {
@@ -293,18 +277,6 @@ namespace Sparrow.Json
             return GetLazyString(field, longLived: false);
         }
 
-        //gets lazy string that is disposed together with a context
-        public LazyStringValue GetDiscardableLazyString(string field)
-        {
-            if (field == null)
-                return null;
-
-            var @string = GetLazyString(field, longLived: false);
-            RegisterForDispose(@string);
-            return @string;
-        }
-
-
         private unsafe LazyStringValue GetLazyString(StringSegment field, bool longLived)
         {
             var state = new JsonParserState();
@@ -379,7 +351,6 @@ namespace Sparrow.Json
                 throw new InvalidOperationException("Partial content in object json parser shouldn't happen");
             _documentBuilder.FinalizeDocument();
             var reader = _documentBuilder.CreateReader();
-            RegisterLiveReader(reader);
             return reader;
         }
 
@@ -472,14 +443,8 @@ namespace Sparrow.Json
                 builder.FinalizeDocument();
 
                 var reader = builder.CreateReader();
-                RegisterLiveReader(reader);
                 return reader;
             }
-        }
-
-        public void RegisterLiveReader(BlittableJsonReaderObject reader)
-        {
-            reader.DisposeTrackingReference = _liveReaders.AddFirst(reader);
         }
 
         private async Task<BlittableJsonReaderObject> ParseToMemoryAsync(Stream stream, string documentId, BlittableJsonDocumentBuilder.UsageMode mode)
@@ -516,7 +481,6 @@ namespace Sparrow.Json
                 builder.FinalizeDocument();
 
                 var reader = builder.CreateReader();
-                RegisterLiveReader(reader);
 
                 return reader;
             }
@@ -551,19 +515,11 @@ namespace Sparrow.Json
                         break;
                 }
                 builder.FinalizeDocument();
-                // here we "leak" the memory used by the array, in practice this is used
-                // in short scoped context, so we don't care
                 var arrayReader = builder.CreateArrayReader(noCache);
-                RegisterLiveReader(arrayReader.Parent);
                 return Tuple.Create(arrayReader, (IDisposable) arrayReader.Parent);
             }
         }
 
-        internal void ReaderDisposed(LinkedListNode<BlittableJsonReaderObject> disposedNode)
-        {
-            if (disposedNode.List == _liveReaders)
-                _liveReaders.Remove(disposedNode);
-        }
 
         protected virtual void InternalResetAndRenew()
         {
@@ -583,34 +539,11 @@ namespace Sparrow.Json
 
         protected internal virtual unsafe void Reset(bool forceReleaseLongLivedAllocator = false)
         {
-            for (var i = _disposables.Count - 1; i >= 0; i--)
-            {
-                var disposable = _disposables[i];
-                disposable.Dispose();
-            }
-            _disposables.Clear();
-
-            //note: this setup does not prevent "double" returns            
-            for (var i = _disposableAllocatedMemory.Count - 1; i >= 0; i--)
-            {
-                var memoryData = _disposableAllocatedMemory[i];
-                _arenaAllocator.Return(memoryData);
-            }
-
             if (_tempBuffer != null && _tempBuffer.Address != null)
             {
                 _arenaAllocator.Return(_tempBuffer);
                 _tempBuffer = null;
             }
-
-            foreach (var builder in _liveReaders)
-            {
-                builder.DisposeTrackingReference = null;
-                builder.Dispose();
-            }
-
-            _disposableAllocatedMemory.Clear();
-            _liveReaders.Clear();
 
             _documentBuilder.Reset();
 

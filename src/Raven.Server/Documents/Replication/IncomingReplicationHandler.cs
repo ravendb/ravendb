@@ -825,7 +825,7 @@ namespace Raven.Server.Documents.Replication
                 documentsContext,
                 scriptResolver,
                 conflictedDocs, 
-                documentsContext.GetDiscardableLazyString(collection), 
+                documentsContext.GetLazyString(collection), 
                 hasLocalTombstone: isTomstone);
         }
 

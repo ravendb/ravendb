@@ -70,10 +70,10 @@ namespace Raven.NewClient.Client.Http
                 using (var writer = new BlittableJsonTextWriter(context, stream))
                 {
                     writer.WriteStartObject();
-                    writer.WritePropertyName(context.GetDiscardableLazyString(nameof(Topology.LeaderNode)));
+                    writer.WritePropertyName(context.GetLazyString(nameof(Topology.LeaderNode)));
                     WriteNode(writer, topology.LeaderNode, context);
 
-                    writer.WritePropertyName(context.GetDiscardableLazyString(nameof(Topology.Nodes)));
+                    writer.WritePropertyName(context.GetLazyString(nameof(Topology.Nodes)));
                     writer.WriteStartArray();
                     foreach (var node in topology.Nodes)
                     {
@@ -81,11 +81,11 @@ namespace Raven.NewClient.Client.Http
                     }
                     writer.WriteEndArray();
 
-                    writer.WritePropertyName(context.GetDiscardableLazyString(nameof(Topology.ReadBehavior)));
-                    writer.WriteString(context.GetDiscardableLazyString(topology.ReadBehavior.ToString()));
+                    writer.WritePropertyName(context.GetLazyString(nameof(Topology.ReadBehavior)));
+                    writer.WriteString(context.GetLazyString(topology.ReadBehavior.ToString()));
 
-                    writer.WritePropertyName(context.GetDiscardableLazyString(nameof(Topology.WriteBehavior)));
-                    writer.WriteString(context.GetDiscardableLazyString(topology.WriteBehavior.ToString()));
+                    writer.WritePropertyName(context.GetLazyString(nameof(Topology.WriteBehavior)));
+                    writer.WriteString(context.GetLazyString(topology.WriteBehavior.ToString()));
                     writer.WriteEndObject();
                 }
             }
@@ -98,10 +98,10 @@ namespace Raven.NewClient.Client.Http
         private static void WriteNode(BlittableJsonTextWriter writer, ServerNode node, JsonOperationContext context)
         {
             writer.WriteStartObject();
-            writer.WritePropertyName(context.GetDiscardableLazyString(nameof(ServerNode.Url)));
-            writer.WriteString(context.GetDiscardableLazyString(node.Url));
-            writer.WritePropertyName(context.GetDiscardableLazyString(nameof(ServerNode.Database)));
-            writer.WriteString(context.GetDiscardableLazyString(node.Database));
+            writer.WritePropertyName(context.GetLazyString(nameof(ServerNode.Url)));
+            writer.WriteString(context.GetLazyString(node.Url));
+            writer.WritePropertyName(context.GetLazyString(nameof(ServerNode.Database)));
+            writer.WriteString(context.GetLazyString(node.Database));
             writer.WriteEndObject();
         }
     }

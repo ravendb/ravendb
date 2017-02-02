@@ -669,9 +669,6 @@ namespace Sparrow.Json.Parsing
 
         public void SetStream()
         {
-            //precaution: do not lose the previous instance
-            _ctx.RegisterForDispose(_unmanagedWriteBuffer);
-
             _unmanagedWriteBuffer = _ctx.GetStream();
         }
     }
