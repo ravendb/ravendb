@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Threading;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Voron.Data.RawData;
@@ -77,8 +79,25 @@ namespace Voron.Data.Tables
                 UsedSizeInBytes += (long)(allocatedSpaceInBytes * section.Density);
         }
 
+        public void AddPreAllocatedBuffers(NewPageAllocator tablePageAllocator, bool calculateExactSizes)
+        {
+            if (PreAllocatedBuffers != null)
+                throw new InvalidOperationException("Pre allocated buffers already defined");
+
+            PreAllocatedBuffers = StorageReportGenerator.GetReport(tablePageAllocator, calculateExactSizes);
+
+            AllocatedSpaceInBytes += PreAllocatedBuffers.AllocatedSpaceInBytes;
+
+            if (calculateExactSizes)
+            {
+                var allocationTree = PreAllocatedBuffers.AllocationTree;
+                UsedSizeInBytes += (long)(allocationTree.AllocatedSpaceInBytes * allocationTree.Density);
+            }
+        }
+
         public List<TreeReport> Structure { get; }
         public List<TreeReport> Indexes { get; }
+        public PreAllocatedBuffersReport PreAllocatedBuffers { get; set; }
         public string Name { get; set; }
         public long NumberOfEntries { get; set; }
         public long DataSizeInBytes { get; private set; }

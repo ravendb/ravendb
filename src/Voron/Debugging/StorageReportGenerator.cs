@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -100,18 +101,19 @@ namespace Voron.Debugging
                 DataFile = dataFile,
                 Trees = trees,
                 Tables = tables,
-                Journals = journals
+                Journals = journals,
+                PreAllocatedBuffers = GetReport(new NewPageAllocator(_tx, _tx.RootObjects), input.CalculateExactSizes)
             };
         }
 
         private DataFileReport GenerateDataFileReport(long numberOfAllocatedPages, long numberOfFreePages, long nextPageNumber)
         {
-            var unallocatedPagesAtEndOfFile = numberOfAllocatedPages - nextPageNumber;
+            var unallocatedPagesAtEndOfFile = numberOfAllocatedPages - (nextPageNumber - 1);
 
             return new DataFileReport
             {
                 AllocatedSpaceInBytes = PagesToBytes(numberOfAllocatedPages),
-                UsedSpaceInBytes = PagesToBytes(nextPageNumber - numberOfFreePages),
+                UsedSpaceInBytes = PagesToBytes((nextPageNumber - 1) - numberOfFreePages),
                 FreeSpaceInBytes = PagesToBytes(numberOfFreePages + unallocatedPagesAtEndOfFile)
             };
         }
@@ -238,6 +240,20 @@ namespace Voron.Debugging
                 }
             }
             return multiValues;
+        }
+
+        public static PreAllocatedBuffersReport GetReport(NewPageAllocator preAllocatedBuffers, bool calculateExactSizes)
+        {
+            var numberOfPreAllocatedPages = preAllocatedBuffers.GetNumberOfPreAllocatedFreePages();
+            var allocationTreeReport = GetReport(preAllocatedBuffers.GetAllocationStorageFst(), calculateExactSizes);
+
+            return new PreAllocatedBuffersReport
+            {
+                AllocatedSpaceInBytes = (numberOfPreAllocatedPages + allocationTreeReport.PageCount) * Constants.Storage.PageSize,
+                PreAllocatedBuffersSpaceInBytes = numberOfPreAllocatedPages * Constants.Storage.PageSize,
+                NumberOfPreAllocatedPages = numberOfPreAllocatedPages,
+                AllocationTree = allocationTreeReport,
+            };
         }
 
         public static List<double> GetPageDensities(Tree tree)
