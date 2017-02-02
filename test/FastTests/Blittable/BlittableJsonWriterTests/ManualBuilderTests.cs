@@ -840,6 +840,8 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     builder.FinalizeDocument();
 
                     var reader = builder.CreateReader();
+                    reader.BlittableValidation();
+
                     Assert.Equal(17, reader.Count);
                     Assert.Equal(float.MinValue, float.Parse(reader["FloatMin"].ToString(),CultureInfo.InvariantCulture));
                     Assert.Equal(float.MaxValue, float.Parse(reader["FloatMax"].ToString(), CultureInfo.InvariantCulture));

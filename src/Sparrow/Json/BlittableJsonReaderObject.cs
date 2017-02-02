@@ -776,20 +776,20 @@ namespace Sparrow.Json
             var current = objStartOffset + offset;
 
             if (numberOfProperties < 0)
-                throw new InvalidDataException("Number of properties not valid");
+                ThrowInvalidNumbeOfProperties();
 
             for (var i = 1; i <= numberOfProperties; i++)
             {
                 var propOffset = ReadNumber(_mem + current, mainPropOffsetSize);
                 if ((propOffset > objStartOffset) || (propOffset < 0))
-                    throw new InvalidDataException("Properties offset not valid");
+                    ThrowInvalidPropertiesOffest();
                 current += mainPropOffsetSize;
 
                 if (rootTokenTypen == BlittableJsonToken.StartObject)
                 {
                     var id = ReadNumber(_mem + current, mainPropIdSize);
                     if ((id > numberOfPropsNames) || (id < 0))
-                        throw new InvalidDataException("Properties id not valid");
+                        ThrowInvalidPropertiesId();
                     current += mainPropIdSize;
                 }
 
@@ -824,7 +824,7 @@ namespace Sparrow.Json
                         double _double;
                         var result = double.TryParse(floatStringBuffer,NumberStyles.Float,CultureInfo.InvariantCulture, out _double);
                         if (!(result))
-                            throw new InvalidDataException("Double not valid (" + floatStringBuffer + ")");
+                            ThrowInvalidDouble(floatStringBuffer);
                         break;
                     case BlittableJsonToken.String:
                         StringValidation(propValueOffset);
@@ -835,22 +835,70 @@ namespace Sparrow.Json
                         if ((compressedStringLength > stringLength) ||
                             (compressedStringLength < 0) ||
                             (stringLength < 0))
-                            throw new InvalidDataException("Compressed string not valid");
+                            ThrowInvalidCompressedString();
                         break;
                     case BlittableJsonToken.Boolean:
                         var boolProp = ReadNumber(_mem + propValueOffset, 1);
                         if ((boolProp != 0) && (boolProp != 1))
-                            throw new InvalidDataException("Bool not valid");
+                            ThrowInvalidBool();
                         break;
                     case BlittableJsonToken.Null:
                         if (ReadNumber(_mem + propValueOffset, 1) != 0)
-                            throw new InvalidDataException("Null not valid");
+                            ThrowInvalidNull();
+                        break;
+                    case BlittableJsonToken.EmbeddedBlittable:
+                        byte offsetLen;
+                        stringLength = ReadVariableSizeInt(propValueOffset, out offsetLen);
+                        var blittableJsonReaderObject = new BlittableJsonReaderObject(
+                            _mem + propValueOffset + offsetLen, stringLength, _context);
+                        blittableJsonReaderObject.BlittableValidation();
                         break;
                     default:
-                        throw new InvalidDataException("Token type not valid");
+                        ThrowInvalidTokenType();
+                        break;
                 }
             }
             return current;
+        }
+
+        private static void ThrowInvalidTokenType()
+        {
+            throw new InvalidDataException("Token type not valid");
+        }
+
+        private static void ThrowInvalidNull()
+        {
+            throw new InvalidDataException("Null not valid");
+        }
+
+        private static void ThrowInvalidBool()
+        {
+            throw new InvalidDataException("Bool not valid");
+        }
+
+        private static void ThrowInvalidCompressedString()
+        {
+            throw new InvalidDataException("Compressed string not valid");
+        }
+
+        private static void ThrowInvalidDouble(string floatStringBuffer)
+        {
+            throw new InvalidDataException("Double not valid (" + floatStringBuffer + ")");
+        }
+
+        private static void ThrowInvalidPropertiesId()
+        {
+            throw new InvalidDataException("Properties id not valid");
+        }
+
+        private static void ThrowInvalidPropertiesOffest()
+        {
+            throw new InvalidDataException("Properties offset not valid");
+        }
+
+        private static void ThrowInvalidNumbeOfProperties()
+        {
+            throw new InvalidDataException("Number of properties not valid");
         }
 
         public override bool Equals(object obj)

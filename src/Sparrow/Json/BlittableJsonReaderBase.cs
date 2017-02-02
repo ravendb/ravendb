@@ -82,6 +82,7 @@ namespace Sparrow.Json
                 case BlittableJsonToken.CompressedString:
                 case BlittableJsonToken.Boolean:
                 case BlittableJsonToken.Null:
+                case BlittableJsonToken.EmbeddedBlittable:
                     return currentType & TypesMask;
                 default:
                     ThrowInvalidType(currentType);
