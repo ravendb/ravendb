@@ -447,7 +447,10 @@ class editDocument extends viewModelBase {
         this.isSaving(true);
         saveCommand
             .execute()
-            .done((saveResult: saveDocumentResponseDto) => this.onDocumentSaved(saveResult));
+            .done((saveResult: saveDocumentResponseDto) => this.onDocumentSaved(saveResult))
+            .fail(() => {
+                this.isSaving(false)
+            });
     }
 
     private onDocumentSaved(saveResult: saveDocumentResponseDto) {
