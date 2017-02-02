@@ -23,13 +23,6 @@ namespace Raven.NewClient.Abstractions
         public string Domain { get; set; }
         public string ApiKey { get; set; }
 
-        public ICredentials Credentials
-        {
-            get
-            {
-                return string.IsNullOrEmpty(Username) == false ? new NetworkCredential(Username, Password, Domain ?? string.Empty) : null;
-            }
-        }
     }
 
     public class ServerSmugglingItem

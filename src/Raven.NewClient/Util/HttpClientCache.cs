@@ -76,14 +76,13 @@ namespace Raven.NewClient.Client.Util
             public HttpClientCacheKey(TimeSpan timeout, OperationCredentials credentials)
             {
                 Timeout = timeout;
-                Credentials = credentials != null ? credentials.Credentials : null;
                 ApiKey = credentials != null ? credentials.ApiKey : null;
                 AuthenticationDisabled = credentials == null;
             }
 
             private bool Equals(HttpClientCacheKey other)
             {
-                return string.Equals(ApiKey, other.ApiKey) && Equals(Credentials, other.Credentials) && Timeout.Equals(other.Timeout) && AuthenticationDisabled.Equals(other.AuthenticationDisabled);
+                return string.Equals(ApiKey, other.ApiKey) && Timeout.Equals(other.Timeout) && AuthenticationDisabled.Equals(other.AuthenticationDisabled);
             }
 
             public override bool Equals(object obj)
@@ -108,7 +107,7 @@ namespace Raven.NewClient.Client.Util
                 unchecked
                 {
                     int hashCode = (ApiKey != null ? ApiKey.GetHashCode() : 0);
-                    hashCode = (hashCode * 397) ^ (Credentials != null ? Credentials.GetHashCode() : 0);
+                    hashCode = (hashCode * 397) ^ 0;
                     hashCode = (hashCode * 397) ^ Timeout.GetHashCode();
                     hashCode = (hashCode * 397) ^ AuthenticationDisabled.GetHashCode();
                     return hashCode;
@@ -118,8 +117,6 @@ namespace Raven.NewClient.Client.Util
             private bool AuthenticationDisabled { get; set; }
 
             private TimeSpan Timeout { get; set; }
-
-            private ICredentials Credentials { get; set; }
 
             private string ApiKey { get; set; }
         }

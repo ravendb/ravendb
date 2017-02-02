@@ -15,31 +15,27 @@ namespace Raven.NewClient.Client.Connection
         {
             Url = url;
 
-            ICredentials credentials = null;
-            if (!string.IsNullOrEmpty(username))
-                credentials = new NetworkCredential(username, password ?? string.Empty, domain ?? string.Empty);
-
-            Credentials = new OperationCredentials(apiKey, credentials);
+            Credentials = new OperationCredentials(apiKey);
             ClusterInformation = clusterInformation != null ? new ClusterInformation(clusterInformation.IsInCluster, clusterInformation.IsLeader) : ClusterInformation.NotInCluster;
         }
 
-        public OperationMetadata(string url, ICredentials credentials, string apiKey = null)
+        public OperationMetadata(string url, string apiKey = null)
         {
             Url = url;
-            Credentials = new OperationCredentials(apiKey, credentials);
+            Credentials = new OperationCredentials(apiKey);
         }
 
         public OperationMetadata(string url, OperationCredentials credentials, ClusterInformation clusterInformation)
         {
             Url = url;
-            Credentials = credentials != null ? new OperationCredentials(credentials.ApiKey, credentials.Credentials) : new OperationCredentials(null,null);
+            Credentials = credentials != null ? new OperationCredentials(credentials.ApiKey) : new OperationCredentials(null);
             ClusterInformation = clusterInformation != null ? new ClusterInformation(clusterInformation.IsInCluster, clusterInformation.IsLeader) : ClusterInformation.NotInCluster;
         }
 
         public OperationMetadata(OperationMetadata operationMetadata)
         {
             Url = operationMetadata.Url;
-            Credentials = new OperationCredentials(operationMetadata.Credentials.ApiKey, operationMetadata.Credentials.Credentials);
+            Credentials = new OperationCredentials(operationMetadata.Credentials.ApiKey);
             ClusterInformation = new ClusterInformation(operationMetadata.ClusterInformation.IsInCluster, operationMetadata.ClusterInformation.IsLeader);
         }
 
