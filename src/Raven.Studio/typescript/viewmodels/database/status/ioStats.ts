@@ -7,7 +7,7 @@ import d3 = require("d3");
 
 class ioStats extends viewModelBase { 
 
-    private data: ioMetricsResponse;
+    private data: Raven.Server.Documents.Handlers.IOMetricsResponse;
 
     private static readonly barHeight = 16;
     private static readonly pixelsPerSecond = 8;
@@ -17,7 +17,7 @@ class ioStats extends viewModelBase {
     private static readonly legendWidth = 500;
 
     private isoParser = d3.time.format.iso;
-    private svg: d3.Selection<ioMetricsResponse>;
+    private svg: d3.Selection<Raven.Server.Documents.Handlers.IOMetricsResponse>;
 
     private xScale: d3.time.Scale<number, number>;
     private xAxis: d3.svg.Axis;
@@ -27,7 +27,7 @@ class ioStats extends viewModelBase {
 
     private xTickFormat = d3.time.format("%H:%M:%S");
 
-    private graphData: d3.Selection<ioMetricsResponse>;
+    private graphData: d3.Selection<Raven.Server.Documents.Handlers.IOMetricsResponse>;
 
     private commonPathsPrefix: string;
 
@@ -258,11 +258,11 @@ class ioStats extends viewModelBase {
         app.showBootstrapDialog(dialog);
     }
 
-    static calcBarHeight(type: ioMetricsType) {
+    static calcBarHeight(type: Sparrow.MeterType) {
         return type === "JournalWrite" ? ioStats.barHeight : ioStats.barHeight / 2;
     }
 
-    static calcOffset(type: ioMetricsType) {
+    static calcOffset(type: Sparrow.MeterType) {
         return type === "DataSync" ? ioStats.barHeight / 2 : 0;
     }
 
@@ -294,7 +294,7 @@ class ioStats extends viewModelBase {
 
     private dataImported(result: string) {
         const json = JSON.parse(result) as {
-            data: ioMetricsResponse;
+            data: Raven.Server.Documents.Handlers.IOMetricsResponse;
         };
 
         this.data = json.data;

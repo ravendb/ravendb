@@ -8,9 +8,9 @@ class getIOMetricsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<ioMetricsResponse> {
+    execute(): JQueryPromise<Raven.Server.Documents.Handlers.IOMetricsResponse> {
         const url = endpoints.databases.ioMetrics.debugIoMetrics;
-        return this.query<ioMetricsResponse>(url, null, this.db);
+        return this.query<Raven.Server.Documents.Handlers.IOMetricsResponse>(url, null, this.db);
     }
 }
 

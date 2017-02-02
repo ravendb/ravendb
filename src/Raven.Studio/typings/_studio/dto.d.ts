@@ -80,7 +80,6 @@ interface saveDocumentResponseItemDto {
     Deleted: boolean;
 }
 
-
 interface transformerParamInfo {
     name: string;
     hasDefault: boolean;
@@ -94,51 +93,12 @@ interface resourceCreatedEventArgs {
     name: string;
 }
 
-interface ioMetricsResponse {
-    Environments: Array<ioMetricsEnvironment>
-}
-
-interface ioMetricsEnvironment {
-    Path: string;
-    Files: Array<ioMetricsFileStats>;
-}
-
-interface ioMetricsFileStats {
-    File: string,
-    Status: "Closed" | "InUse",
-    Recent: Array<ioMetricsRecentStats>;
-    History: Array<ioMetricsHistoryStats>;
-}
-
-interface ioMetricsRecentStats {
-    Start: string;
-    Size: number;
-    HumaneSize: string; 
-    Duration: number;
-    Type: ioMetricsType;
-}
-
-interface ioMetricsHistoryStats {
-    Start: string;
-    End: string;
-    Size: number;
-    HumaneSize: string;
-    Duration: number;
-    ActiveDuration: number;
-    MaxDuration: number;
-    MinDuration: number;
-    Type: ioMetricsType;
-}
-
-type ioMetricsType = "JournalWrite" | "DataFlush" | "DataSync";
-
 interface availableBundle {
     displayName: string;
     name: string;
     hasAdvancedConfiguration: boolean;
     validationGroup?: KnockoutValidationGroup;
 }
-
 
 interface storageReportItemDto {
     Name: string;
