@@ -6,4 +6,4 @@ VOLUME /Databases
 WORKDIR /Server
 EXPOSE 8080
 
-ENTRYPOINT ["Raven.Server"]
+ENTRYPOINT ["./Raven.Server"]

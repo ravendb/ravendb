@@ -1,1 +1,1 @@
-docker build .\ravendb-linux -t ravendb-linux;
+docker build ./ravendb-linux -t ravendb-linux;
