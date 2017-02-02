@@ -20,7 +20,7 @@
   },
 
   "dependencies": {
-    "BenchmarkDotNet": "0.10.0",
+    "BenchmarkDotNet": "0.10.2",
     "Microsoft.NETCore.App": {
       "type": "build",
       "version": "1.1.0"

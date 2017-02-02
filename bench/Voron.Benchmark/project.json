@@ -20,7 +20,7 @@
   },
 
   "dependencies": {
-    "BenchmarkDotNet": "0.10.1",
+    "BenchmarkDotNet": "0.10.2",
     "Microsoft.CSharp": "4.3.0",
     "Microsoft.NETCore.App": {
       "type": "build",
