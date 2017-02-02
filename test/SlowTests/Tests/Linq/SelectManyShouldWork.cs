@@ -9,47 +9,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
+using SlowTests.Utils;
 using Xunit;
-
-
-//using System;
-//using System.Collections.Generic;
-//using System.Linq;
-//using Raven.Server.Documents.Indexes.Static;
-//using Raven.Server.Documents.Indexes.Static.Linq;
-//using Raven.Server.Documents.Indexes.Static.Extensions;
-
-//namespace Raven.Server.Documents.Indexes.Static.Generated
-//{
-//    public class Index_Creatives_ClickActions_1 : StaticIndexBase
-//    {
-//        public Index_Creatives_ClickActions_1()
-//        {
-//            this.AddMap("DroneStateSnapshoots", docs => docs.SelectMany(x => (IEnumerable<dynamic>)x.ClickActions, (snapshoot, x) => new
-//            {
-//                ClickedBy = new string[] { x.ContactId },
-//                CreativeId = x.CreativeId
-//            }
-
-//            ));
-//            this.Reduce = results => results.GroupBy(x => x.CreativeId).Select(x => new
-//            {
-//                ClickedBy = Enumerable.ToArray(x.SelectMany((Func<dynamic, IEnumerable<dynamic>>)(m => m.ClickedBy))),
-//                CreativeId = x.Key
-//            }
-
-//            );
-//            this.GroupByFields = new string[] { "CreativeId" };
-//            this.OutputFields = new string[] { "ClickedBy", "CreativeId" };
-//        }
-//    }
-//}
 
 namespace SlowTests.Tests.Linq
 {
-    public class SelectManyShouldWork : RavenTestBase
+    public class SelectManyShouldWork : RavenNewTestBase
     {
         private void Fill(DocumentStore store)
         {
@@ -122,12 +89,7 @@ namespace SlowTests.Tests.Linq
                         .Customize(customization => customization.WaitForNonStaleResults())
                         .ToList();
 
-                    var indexingErrors = store
-                        .DatabaseCommands
-                        .GetIndexErrors()
-                        .SelectMany(x => x.Errors)
-                        .ToList();
-                    Assert.Empty(indexingErrors);
+                    TestHelper.AssertNoIndexErrors(store);
 
                     Assert.Equal(2, result.Count);
                     Assert.Equal("creative/1", result.First().CreativeId);

@@ -1,13 +1,12 @@
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.Tests.Querying
 {
-    public class SearchOperator : RavenTestBase
+    public class SearchOperator : RavenNewTestBase
     {
         private class Something
         {
@@ -42,12 +41,13 @@ namespace SlowTests.Tests.Querying
 
                     // search for the keyword software
                     var results = session.Advanced.DocumentQuery<Something>("FTSIndex").Search("MyProp", "software")
-                        .WaitForNonStaleResultsAsOfLastWrite()
+                        .WaitForNonStaleResults()
                         .ToList();
                     Assert.Equal(1, results.Count);
 
                     results = session.Advanced.DocumentQuery<Something>("FTSIndex").Search("MyProp", "software~")
-                        .WaitForNonStaleResultsAsOfLastWrite().ToList();
+                        .WaitForNonStaleResults()
+                        .ToList();
                     Assert.Equal(2, results.Count);
                 }
             }

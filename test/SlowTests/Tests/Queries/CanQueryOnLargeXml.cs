@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using System.Threading.Tasks;
 
 using FastTests;
 
@@ -8,12 +7,14 @@ using Xunit;
 
 namespace SlowTests.Tests.Queries
 {
-    public class CanQueryOnLargeXml : RavenTestBase
+    public class CanQueryOnLargeXml : RavenNewTestBase
     {
-        public class Item
+        private class Item
         {
+#pragma warning disable 649
             public string SchemaFullName;
             public string ValueBlobString;
+#pragma warning restore 649
         }
 
         [Fact]

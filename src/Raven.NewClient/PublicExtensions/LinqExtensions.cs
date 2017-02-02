@@ -397,27 +397,29 @@ namespace Raven.NewClient.Client
             return ravenQueryInspector.DatabaseCommands.Suggest(ravenQueryInspector.IndexQueried, query);*/
         }
 
-        /*/// <summary>
+        /// <summary>
         /// Lazy Suggest alternative values for the queried term
         /// </summary>
         public static Lazy<SuggestionQueryResult> SuggestLazy(this IQueryable queryable)
         {
-            return SuggestLazy(queryable, new SuggestionQuery());
+            throw new NotImplementedException();
+            //return SuggestLazy(queryable, new SuggestionQuery());
         }
-
+        
         /// <summary>
         /// Lazy Suggest alternative values for the queried term
         /// </summary>
         public static Lazy<SuggestionQueryResult> SuggestLazy(this IQueryable queryable, SuggestionQuery query)
         {
-            var ravenQueryInspector = ((IRavenQueryInspector)queryable);
-            SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query);
+            throw new NotImplementedException();
+            //var ravenQueryInspector = ((IRavenQueryInspector)queryable);
+            //SetSuggestionQueryFieldAndTerm(ravenQueryInspector, query);
 
-            var lazyOperation = new LazySuggestOperation(ravenQueryInspector.IndexQueried, query);
+            //var lazyOperation = new LazySuggestOperation(ravenQueryInspector.IndexQueried, query);
 
-            var documentSession = ((DocumentSession)ravenQueryInspector.Session);
-            return documentSession.AddLazyOperation<SuggestionQueryResult>(lazyOperation, null);
-        }*/
+            //var documentSession = ((DocumentSession)ravenQueryInspector.Session);
+            //return documentSession.AddLazyOperation<SuggestionQueryResult>(lazyOperation, null);
+        }
 
         private static void SetSuggestionQueryFieldAndTerm(IRavenQueryInspector queryInspector, SuggestionQuery query, bool isAsync = false)
         {

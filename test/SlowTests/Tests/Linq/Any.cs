@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions;
+using Raven.NewClient.Abstractions;
+using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class Any : RavenTestBase
+    public class Any : RavenNewTestBase
     {
         private class TestDoc
         {
@@ -102,7 +102,7 @@ namespace SlowTests.Tests.Linq
                         .Customize(customization => customization.WaitForNonStaleResults())
                         .Count(p => p.StringList.Count > 0 && p.SomeProperty == "Value");
 
-                    var errors = store.DatabaseCommands.GetIndexErrors();
+                    TestHelper.AssertNoIndexErrors(store);
 
                     Assert.Equal(1, count);
                 }
@@ -121,7 +121,7 @@ namespace SlowTests.Tests.Linq
                     session.Store(new TestDoc { StringArray = new string[0] });
                     session.SaveChanges();
                 }
-                WaitForUserToContinueTheTest(store);
+
                 using (var session = store.OpenSession())
                 {
                     Assert.Equal(2, session.Query<TestDoc>().Customize(customization => customization.WaitForNonStaleResults()).Count(p => p.StringArray.Any() == false));
@@ -141,7 +141,7 @@ namespace SlowTests.Tests.Linq
                     session.Store(new TestDoc { SomeProperty = "Test", StringArray = new string[0] });
                     session.SaveChanges();
                 }
-                WaitForUserToContinueTheTest(store);
+
                 using (var session = store.OpenSession())
                 {
                     Assert.Equal(2, session.Query<TestDoc>().Customize(customization => customization.WaitForNonStaleResults()).Count(p => p.StringArray.Any() == false && p.SomeProperty == "Test"));

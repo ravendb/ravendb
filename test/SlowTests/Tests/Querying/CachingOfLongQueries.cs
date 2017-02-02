@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 
 using System.Linq;
-using System.Threading.Tasks;
 
 using FastTests;
 
@@ -13,7 +12,7 @@ using Xunit;
 
 namespace SlowTests.Tests.Querying
 {
-    public class CachingOfLongQueries : RavenTestBase
+    public class CachingOfLongQueries : RavenNewTestBase
     {
         [Fact]
         public void ShouldWork()
@@ -42,7 +41,7 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        public class Item
+        private class Item
         {
             public string Val;
         }

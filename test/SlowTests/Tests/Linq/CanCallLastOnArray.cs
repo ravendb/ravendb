@@ -1,14 +1,14 @@
 using System;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
+using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class CanCallLastOnArray : RavenTestBase
+    public class CanCallLastOnArray : RavenNewTestBase
     {
         private class Student
         {
@@ -63,8 +63,7 @@ namespace SlowTests.Tests.Linq
                         .Customize(customization => customization.WaitForNonStaleResults())
                         .ToList();
 
-                    var errors = store.DatabaseCommands.GetIndexErrors(new Students_ByEmailDomain().IndexName);
-                    Assert.Empty(errors.Errors);
+                    TestHelper.AssertNoIndexErrors(store);
                     Assert.Equal(1, results.Count);
                 }
             }

@@ -7,17 +7,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexing;
-using Raven.Client.Linq;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.Tests.Queries
 {
-    public class IntersectionQuery : RavenTestBase
+    public class IntersectionQuery : RavenNewTestBase
     {
         [Fact]
         public void CanPerformIntersectionQuery_Remotely()
@@ -121,7 +120,7 @@ namespace SlowTests.Tests.Queries
         {
             using (var s = store.OpenSession())
             {
-                store.DatabaseCommands.PutIndex("TShirtNested",
+                store.Admin.Send(new PutIndexOperation("TShirtNested",
                                                 new IndexDefinition
                                                 {
                                                     Maps =
@@ -134,7 +133,7 @@ namespace SlowTests.Tests.Queries
                                                     {
                                                         { "BarcodeNumber", new IndexFieldOptions { Sort = SortOptions.NumericDefault } }
                                                     }
-                                                });
+                                                }));
 
                 foreach (var sample in GetSampleData())
                 {

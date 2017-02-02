@@ -2,13 +2,14 @@
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Documents.Notifications;
-using Raven.Abstractions.Data;
-using Raven.Client.Document;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Operations.Databases;
 using Xunit;
 
 namespace SlowTests.Tests
 {
-    public class Subscriptions : RavenTestBase
+    public class Subscriptions : RavenNewTestBase
     {
         [Fact]
         public async Task BasicSusbscriptionTest()
@@ -17,7 +18,7 @@ namespace SlowTests.Tests
             {
                 await CreateDocuments(store, 1);
 
-                var lastEtag = store.GetLastWrittenEtag() ?? 0;
+                var lastEtag = store.Admin.Send(new GetStatisticsOperation()).LastDocEtag ?? 0;
                 await CreateDocuments(store, 5);
 
                 var subscriptionCriteria = new SubscriptionCriteria
@@ -60,10 +61,11 @@ namespace SlowTests.Tests
             }
         }
 
-        public class Thing
+        private class Thing
         {
             public string Name { get; set; }
         }
+
         private async Task CreateDocuments(DocumentStore store, int amount)
         {
             using (var session = store.OpenAsyncSession())

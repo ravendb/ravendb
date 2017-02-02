@@ -8,13 +8,13 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.Tests.ResultsTransformer
 {
-    public class AsyncTransformWith : RavenTestBase
+    public class AsyncTransformWith : RavenNewTestBase
     {
         [Fact] // Passes on build 2550
         public void CanRunTransformerOnSession()

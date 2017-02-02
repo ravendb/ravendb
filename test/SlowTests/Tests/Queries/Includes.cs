@@ -1,17 +1,13 @@
 using System;
-using System.Globalization;
 using System.Linq;
-using System.Threading.Tasks;
 
 using FastTests;
-
-using Raven.Client;
-
+using Raven.NewClient.Client;
 using Xunit;
 
 namespace SlowTests.Tests.Queries
 {
-    public class Includes : RavenTestBase
+    public class Includes : RavenNewTestBase
     {
         [Fact]
         public void Can_use_includes_within_multi_load()
@@ -34,7 +30,7 @@ namespace SlowTests.Tests.Queries
                 {
                     var orders =
                         session.Query<Order>()
-                            .Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
+                            .Customize(x => x.WaitForNonStaleResults())
                             .Include(x => x.CustomerId)
                             .ToList();
 
@@ -42,7 +38,7 @@ namespace SlowTests.Tests.Queries
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
                     var customers = session.Load<Customer>(orders.Select(x => x.CustomerId));
-                    Assert.Equal(3, customers.Length);
+                    Assert.Equal(2, customers.Count);
                     Assert.Equal(2, customers.Distinct().Count());
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
@@ -82,8 +78,8 @@ namespace SlowTests.Tests.Queries
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Customer2 { Id = 1 });
-                    session.Store(new Order2 { Customer2Id = 1 }, "orders/1234");
+                    session.Store(new Customer2 { Id = "customers/1" });
+                    session.Store(new Order2 { Customer2Id = "customers/1" }, "orders/1234");
 
                     session.SaveChanges();
                 }
@@ -108,8 +104,8 @@ namespace SlowTests.Tests.Queries
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Customer2 { Id = 1 });
-                    session.Store(new Order2 { Customer2Id = 1 }, "orders/1234");
+                    session.Store(new Customer2 { Id = "customers/1" });
+                    session.Store(new Order2 { Customer2Id = "customers/1" }, "orders/1234");
 
                     session.SaveChanges();
                 }
@@ -173,12 +169,12 @@ namespace SlowTests.Tests.Queries
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Customer2 { Id = 1, Name = "1" });
-                    session.Store(new Customer2 { Id = 2, Name = "2" });
-                    session.Store(new Customer2 { Id = 3, Name = "3" });
-                    session.Store(new Order2 { Customer2Id = 1, TotalPrice = 200D }, "orders/1234");
-                    session.Store(new Order2 { Customer2Id = 2, TotalPrice = 50D }, "orders/1235");
-                    session.Store(new Order2 { Customer2Id = 3, TotalPrice = 300D }, "orders/1236");
+                    session.Store(new Customer2 { Id = "customers/1", Name = "1" });
+                    session.Store(new Customer2 { Id = "customers/2", Name = "2" });
+                    session.Store(new Customer2 { Id = "customers/3", Name = "3" });
+                    session.Store(new Order2 { Customer2Id = "customers/1", TotalPrice = 200D }, "orders/1234");
+                    session.Store(new Order2 { Customer2Id = "customers/2", TotalPrice = 50D }, "orders/1235");
+                    session.Store(new Order2 { Customer2Id = "customers/3", TotalPrice = 300D }, "orders/1236");
 
                     session.SaveChanges();
                 }
@@ -247,9 +243,9 @@ namespace SlowTests.Tests.Queries
             {
                 using (var session = store.OpenSession())
                 {
-                    var guid1 = Guid.NewGuid();
-                    var guid2 = Guid.NewGuid();
-                    var guid3 = Guid.NewGuid();
+                    var guid1 = Guid.NewGuid().ToString();
+                    var guid2 = Guid.NewGuid().ToString();
+                    var guid3 = Guid.NewGuid().ToString();
                     session.Store(new Supplier2 { Id = guid1, Name = "1" });
                     session.Store(new Supplier2 { Id = guid2, Name = "2" });
                     session.Store(new Supplier2 { Id = guid3, Name = "3" });
@@ -309,8 +305,8 @@ namespace SlowTests.Tests.Queries
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Customer2 { Id = 1 });
-                    session.Store(new Order2 { Refferal2 = new Referral2 { Customer2Id = 1 } }, "orders/1234");
+                    session.Store(new Customer2 { Id = "customers/1" });
+                    session.Store(new Order2 { Refferal2 = new Referral2 { Customer2Id = "customers/1" } }, "orders/1234");
 
                     session.SaveChanges();
                 }
@@ -377,9 +373,9 @@ namespace SlowTests.Tests.Queries
             {
                 using (var session = store.OpenSession())
                 {
-                    var guid1 = Guid.NewGuid();
-                    var guid2 = Guid.NewGuid();
-                    var guid3 = Guid.NewGuid();
+                    var guid1 = Guid.NewGuid().ToString();
+                    var guid2 = Guid.NewGuid().ToString();
+                    var guid3 = Guid.NewGuid().ToString();
                     session.Store(new Product2 { Id = guid1, Name = "1" });
                     session.Store(new Product2 { Id = guid2, Name = "2" });
                     session.Store(new Product2 { Id = guid3, Name = "3" });
@@ -424,8 +420,8 @@ namespace SlowTests.Tests.Queries
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Customer2 { Id = 1 });
-                    session.Store(new Order3 { Customer = new DenormalizedCustomer { Id = 1 } }, "orders/1234");
+                    session.Store(new Customer2 { Id = "customers/1" });
+                    session.Store(new Order3 { Customer = new DenormalizedCustomer { Id = "customers/1" } }, "orders/1234");
 
                     session.SaveChanges();
                 }
@@ -443,7 +439,7 @@ namespace SlowTests.Tests.Queries
             }
         }
 
-        public class Order
+        private class Order
         {
             public string Number { get; set; }
             public string CustomerId { get; set; }
@@ -453,17 +449,17 @@ namespace SlowTests.Tests.Queries
             public double TotalPrice { get; set; }
         }
 
-        public class Order2
+        private class Order2
         {
-            public int Customer2Id { get; set; }
-            public string Customer2IdString { get { return Customer2Id.ToString(CultureInfo.InvariantCulture); } }
-            public Guid[] Supplier2Ids { get; set; }
+            public string Customer2Id { get; set; }
+            public string Customer2IdString => Customer2Id;
+            public string[] Supplier2Ids { get; set; }
             public Referral2 Refferal2 { get; set; }
             public LineItem2[] LineItem2s { get; set; }
             public double TotalPrice { get; set; }
         }
 
-        public class Order3
+        private class Order3
         {
             public DenormalizedCustomer Customer { get; set; }
             public string[] SupplierIds { get; set; }
@@ -472,7 +468,7 @@ namespace SlowTests.Tests.Queries
             public double TotalPrice { get; set; }
         }
 
-        public class Customer
+        private class Customer
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -481,48 +477,48 @@ namespace SlowTests.Tests.Queries
             public string HashedPassword { get; set; }
         }
 
-        public class Customer2
+        private class Customer2
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public string Name { get; set; }
             public string Address { get; set; }
             public short Age { get; set; }
             public string HashedPassword { get; set; }
         }
 
-        public class DenormalizedCustomer
+        private class DenormalizedCustomer
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public string Name { get; set; }
             public string Address { get; set; }
         }
 
-        public class Supplier
+        private class Supplier
         {
             public string Name { get; set; }
             public string Address { get; set; }
         }
 
-        public class Supplier2
+        private class Supplier2
         {
-            public Guid Id { get; set; }
+            public string Id { get; set; }
             public string Name { get; set; }
             public string Address { get; set; }
         }
 
-        public class Referral
+        private class Referral
         {
             public string CustomerId { get; set; }
             public double CommissionPercentage { get; set; }
         }
 
-        public class Referral2
+        private class Referral2
         {
-            public int Customer2Id { get; set; }
+            public string Customer2Id { get; set; }
             public double CommissionPercentage { get; set; }
         }
 
-        public class LineItem
+        private class LineItem
         {
             public string ProductId { get; set; }
             public string Name { get; set; }
@@ -530,24 +526,24 @@ namespace SlowTests.Tests.Queries
             public double Price { get; set; }
         }
 
-        public class LineItem2
+        private class LineItem2
         {
-            public Guid Product2Id { get; set; }
+            public string Product2Id { get; set; }
             public string Name { get; set; }
             public int Quantity { get; set; }
             public double Price { get; set; }
         }
 
-        public class Product
+        private class Product
         {
             public string Name { get; set; }
             public string[] Images { get; set; }
             public double Price { get; set; }
         }
 
-        public class Product2
+        private class Product2
         {
-            public Guid Id { get; set; }
+            public string Id { get; set; }
             public string Name { get; set; }
             public string[] Images { get; set; }
             public double Price { get; set; }

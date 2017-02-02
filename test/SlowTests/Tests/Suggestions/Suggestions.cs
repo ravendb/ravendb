@@ -7,15 +7,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Client;
-using Raven.Client.Indexing;
-using Raven.Client.Linq;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.Tests.Suggestions
 {
-    public class Suggestions : RavenTestBase
+    public class Suggestions : RavenNewTestBase
     {
         private class User
         {
@@ -26,7 +26,7 @@ namespace SlowTests.Tests.Suggestions
 
         public void Setup(IDocumentStore store)
         {
-            store.DatabaseCommands.PutIndex("Test", new IndexDefinition
+            store.Admin.Send(new PutIndexOperation("Test", new IndexDefinition
             {
                 Maps = { "from doc in docs.Users select new { doc.Name }" },
                 Fields = new Dictionary<string, IndexFieldOptions>
@@ -36,7 +36,8 @@ namespace SlowTests.Tests.Suggestions
                         new IndexFieldOptions { Suggestions = true }
                     }
                 }
-            });
+            }));
+
             using (var s = store.OpenSession())
             {
                 s.Store(new User { Name = "Ayende" });
@@ -54,12 +55,12 @@ namespace SlowTests.Tests.Suggestions
             {
                 using (var session = store.OpenSession())
                 {
-                    var suggestionQueryResult = store.DatabaseCommands.Suggest("Test", new SuggestionQuery
-                    {
-                        Field = "Name",
-                        Term = "Oren",
-                        MaxSuggestions = 10,
-                    });
+                    var suggestionQueryResult = session.Query<User>("Test")
+                        .Where(x => x.Name == "Oren")
+                        .Suggest(new SuggestionQuery
+                        {
+                            MaxSuggestions = 10
+                        });
 
                     Assert.Equal(0, suggestionQueryResult.Suggestions.Length);
                 }
@@ -141,13 +142,12 @@ namespace SlowTests.Tests.Suggestions
         {
             using (var store = GetDocumentStore())
             {
-                using (var s = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
-                    var suggestionQueryResult = store.DatabaseCommands.Suggest("Test",
-                        new SuggestionQuery
+                    var suggestionQueryResult = session.Query<User>("Test")
+                        .Where(x => x.Name == "Oern") // intentional typo
+                        .Suggest(new SuggestionQuery
                         {
-                            Field = "Name",
-                            Term = "Oern", // intentional typo
                             MaxSuggestions = 10,
                             Accuracy = 0.2f,
                             Distance = StringDistanceTypes.Levenshtein

@@ -6,36 +6,38 @@
 
 using System;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
+using SlowTests.Utils;
 using Xunit;
-using Raven.Client;
 
 namespace SlowTests.Tests.Linq
 {
-    public class FlagsEnum : RavenTestBase
+    public class FlagsEnum : RavenNewTestBase
     {
         [Flags]
-        public enum CustomEnum
+        private enum CustomEnum
         {
             None,
             One,
             Two,
         }
 
-        public class Entity
+        private class Entity
         {
             public string Id { set; get; }
             public string Name { set; get; }
             public CustomEnum[] Status { set; get; }
         }
 
-        public class MyIndex : AbstractIndexCreationTask<Entity, MyIndex.Result>
+        private class MyIndex : AbstractIndexCreationTask<Entity, MyIndex.Result>
         {
             public class Result
             {
+#pragma warning disable 649
                 public CustomEnum Status;
+#pragma warning restore 649
             }
 
             public MyIndex()
@@ -76,14 +78,12 @@ namespace SlowTests.Tests.Linq
                 using (var session = store.OpenSession())
                 {
                     var results = session.Query<MyIndex.Result, MyIndex>()
-                                         .Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
+                                         .Customize(x => x.WaitForNonStaleResults())
                                          .Where(x => x.Status == CustomEnum.Two)
                                          .As<Entity>()
                                          .ToList();
 
-                    var errors = store.DatabaseCommands.GetIndexErrors().SelectMany(x => x.Errors);
-
-                    Assert.Empty(errors);
+                    TestHelper.AssertNoIndexErrors(store);
                     Assert.NotEmpty(results);
                 }
             }

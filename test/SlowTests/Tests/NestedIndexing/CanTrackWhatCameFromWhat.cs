@@ -8,16 +8,16 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Document;
-using Raven.Client.Indexing;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Raven.Server.ServerWide.Context;
 using Xunit;
-using System.Linq;
 using Voron;
 
 namespace SlowTests.Tests.NestedIndexing
 {
-    public class CanTrackWhatCameFromWhat : RavenTestBase
+    public class CanTrackWhatCameFromWhat : RavenNewTestBase
     {
         private class Item
         {
@@ -28,7 +28,7 @@ namespace SlowTests.Tests.NestedIndexing
 
         public void CreateIndex(DocumentStore store)
         {
-            store.DatabaseCommands.PutIndex("test", new IndexDefinition
+            store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
             {
                 Maps = { @"
 from i in docs.Items
@@ -38,7 +38,7 @@ select new
     Name = i.Name
 }"
                 }
-            });
+            }));
         }
 
         [Fact]
@@ -96,12 +96,12 @@ select new
                     using (var tx = context.OpenReadTransaction())
                     {
                         var item = SingleKey(index._indexStorage.GetDocumentKeysFromCollectionThatReference("Items", context.GetLazyString("items/2"), tx));
-                        Assert.Equal("items/1", item.ToString());
+                        Assert.Equal("items/1", item);
                     }
 
                     using (var session = store.OpenSession())
                     {
-                        session.Load<Item>(1).Name = "other";
+                        session.Load<Item>("items/1").Name = "other";
                         session.SaveChanges();
                     }
 
@@ -147,7 +147,7 @@ select new
 
                     using (var session = store.OpenSession())
                     {
-                        session.Load<Item>(1).Ref = "items/3";
+                        session.Load<Item>("items/1").Ref = "items/3";
                         session.SaveChanges();
                     }
 
@@ -168,10 +168,10 @@ select new
         {
             using (var e = enumerable.GetEnumerator())
             {
-                if(e.MoveNext()==false)
+                if (e.MoveNext() == false)
                     throw new InvalidOperationException("Expected one result, had none");
                 var s = e.Current.ToString();
-                if(e.MoveNext())
+                if (e.MoveNext())
                     throw new InvalidOperationException("Expected one result, but got more than that");
 
                 return s;
@@ -283,7 +283,10 @@ select new
                         Assert.NotEmpty(index._indexStorage.GetDocumentKeysFromCollectionThatReference("Items", context.GetLazyString("items/2"), tx));
                     }
 
-                    store.DatabaseCommands.Delete("items/1", null);
+                    using (var commands = store.Commands())
+                    {
+                        commands.Delete("items/1", null);
+                    }
 
                     WaitForIndexing(store);
 

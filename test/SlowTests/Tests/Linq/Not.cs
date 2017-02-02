@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace SlowTests.Tests.Linq
 {
-    public class CanQueryWithSavedKeywords : RavenTestBase
+    public class CanQueryWithSavedKeywords : RavenNewTestBase
     {
         private class TestDoc
         {
@@ -40,8 +40,6 @@ namespace SlowTests.Tests.Linq
                     session.Store(new TestDoc { SomeProperty = "OR" });
                     session.SaveChanges();
                 }
-
-                WaitForUserToContinueTheTest(store);
 
                 using (var session = store.OpenSession())
                 {

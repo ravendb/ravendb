@@ -2,14 +2,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Linq;
-using Raven.Client.Listeners;
+
 using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class RavenDB14 : RavenTestBase
+    public class RavenDB14 : RavenNewTestBase
     {
         private readonly List<string> _queries = new List<string>();
 
@@ -20,12 +18,12 @@ namespace SlowTests.Tests.Linq
             public bool Active { get; set; }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6264")]
         public void WhereThenFirstHasAND()
         {
             using (var store = GetDocumentStore())
             {
-                store.RegisterListener(new RecordQueriesListener(_queries));
+                //store.RegisterListener(new RecordQueriesListener(_queries));
                 var documentSession = store.OpenSession();
                 var _ = documentSession.Query<User>().Where(x => x.Name == "ayende").FirstOrDefault(x => x.Active);
 
@@ -33,12 +31,12 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6264")]
         public void WhereThenSingleHasAND()
         {
             using (var store = GetDocumentStore())
             {
-                store.RegisterListener(new RecordQueriesListener(_queries));
+                //store.RegisterListener(new RecordQueriesListener(_queries));
                 var documentSession = store.OpenSession();
                 var _ = documentSession.Query<User>().Where(x => x.Name == "ayende").SingleOrDefault(x => x.Active);
 
@@ -46,19 +44,19 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        private class RecordQueriesListener : IDocumentQueryListener
-        {
-            private readonly List<string> _queries;
+        //private class RecordQueriesListener : IDocumentQueryListener
+        //{
+        //    private readonly List<string> _queries;
 
-            public RecordQueriesListener(List<string> queries)
-            {
-                _queries = queries;
-            }
+        //    public RecordQueriesListener(List<string> queries)
+        //    {
+        //        _queries = queries;
+        //    }
 
-            public void BeforeQueryExecuted(IDocumentQueryCustomization queryCustomization)
-            {
-                _queries.Add(queryCustomization.ToString());
-            }
-        }
+        //    public void BeforeQueryExecuted(IDocumentQueryCustomization queryCustomization)
+        //    {
+        //        _queries.Add(queryCustomization.ToString());
+        //    }
+        //}
     }
 }

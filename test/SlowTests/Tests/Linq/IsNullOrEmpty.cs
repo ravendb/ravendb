@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace SlowTests.Tests.Linq
 {
-    public class IsNullOrEmpty : RavenTestBase
+    public class IsNullOrEmpty : RavenNewTestBase
     {
         private class TestDoc
         {
@@ -29,8 +29,6 @@ namespace SlowTests.Tests.Linq
                 {
                     Assert.Equal(2, session.Query<TestDoc>().Count(p => string.IsNullOrEmpty(p.SomeProperty)));
                 }
-
-                WaitForUserToContinueTheTest(store);
             }
         }
 

@@ -1,27 +1,27 @@
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.Tests.Querying
 {
-    public class SkipDuplicates : RavenTestBase
+    public class SkipDuplicates : RavenNewTestBase
     {
         [Fact]
         public void WillSkipDuplicates()
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.PutIndex(
+                store.Admin.Send(new PutIndexOperation(
                     "BlogPosts/PostsCountByTag",
                     new IndexDefinitionBuilder<BlogPost>()
                     {
                         Map = posts => from post in posts
                                        from tag in post.Tags
                                        select new { Tag = tag }
-                    });
+                    }.ToIndexDefinition(store.Conventions)));
 
                 using (var session = store.OpenSession())
                 {
@@ -44,14 +44,14 @@ namespace SlowTests.Tests.Querying
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.PutIndex(
+                store.Admin.Send(new PutIndexOperation(
                     "BlogPosts/PostsCountByTag",
                     new IndexDefinitionBuilder<BlogPost>
                     {
                         Map = posts => from post in posts
                                        from tag in post.Tags
                                        select new { Tag = tag }
-                    });
+                    }.ToIndexDefinition(store.Conventions)));
 
                 using (var session = store.OpenSession())
                 {
@@ -63,8 +63,11 @@ namespace SlowTests.Tests.Querying
 
                     WaitForIndexing(store);
 
-                    var result = store.DatabaseCommands.Query("BlogPosts/PostsCountByTag", new IndexQuery(store.Conventions) { SkipDuplicateChecking = true });
-                    Assert.Equal(2, result.Results.Count);
+                    using (var commands = store.Commands())
+                    {
+                        var result = commands.Query("BlogPosts/PostsCountByTag", new IndexQuery(store.Conventions) { SkipDuplicateChecking = true });
+                        Assert.Equal(2, result.Results.Length);
+                    }
                 }
             }
         }

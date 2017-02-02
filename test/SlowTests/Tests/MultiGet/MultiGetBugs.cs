@@ -2,14 +2,12 @@ using System;
 using System.Threading.Tasks;
 
 using FastTests;
-
-using Raven.Client;
-
+using Raven.NewClient.Client;
 using Xunit;
 
 namespace SlowTests.Tests.MultiGet
 {
-    public class MultiGetBugs : RavenTestBase
+    public class MultiGetBugs : RavenNewTestBase
     {
         private class User
         {

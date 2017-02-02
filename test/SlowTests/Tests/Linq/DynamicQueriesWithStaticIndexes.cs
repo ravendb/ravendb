@@ -1,15 +1,15 @@
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexing;
-using Raven.Client.Linq;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Client.Linq;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class DynamicQueriesWithStaticIndexes : RavenTestBase
+    public class DynamicQueriesWithStaticIndexes : RavenNewTestBase
     {
         [Fact]
         public void DynamicQueryWillInterpretFieldNamesProperly()
@@ -62,7 +62,7 @@ namespace SlowTests.Tests.Linq
 
                     session.SaveChanges();
 
-                    store.DatabaseCommands.PutIndex("Foos/TestDynamicQueries", new IndexDefinition()
+                    store.Admin.Send(new PutIndexOperation("Foos/TestDynamicQueries", new IndexDefinition
                     {
                         Maps =
                         {
@@ -78,7 +78,7 @@ namespace SlowTests.Tests.Linq
                                     Bar = doc.Bar
                                 }"
                         }
-                    }, true);
+                    }));
 
                     RavenQueryStatistics stats;
 

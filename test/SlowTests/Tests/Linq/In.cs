@@ -7,15 +7,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Linq;
 using Xunit;
 
 namespace SlowTests.Tests.Linq
 {
-    public class In : RavenTestBase
+    public class In : RavenNewTestBase
     {
         private class Document
         {
