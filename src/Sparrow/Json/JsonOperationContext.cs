@@ -720,8 +720,7 @@ namespace Sparrow.Json
 
         public void ReturnMemory(AllocatedMemoryData allocation)
         {
-            if (allocation.IsLongLived == false && 
-                _generation != allocation.ContextGeneration)
+            if (_generation != allocation.ContextGeneration)
                 ThrowUseAfterFree();
 
             _arenaAllocator.Return(allocation);
