@@ -53,9 +53,8 @@ namespace Raven.NewClient.Client.Commands
                 Result = null;
                 return;
             }
-            Result = JsonDeserializationClient.FacetedQueryResult(response);
-            
 
+            Result = JsonDeserializationClient.FacetedQueryResult(response);
         }
 
         public override bool IsReadRequest => true;

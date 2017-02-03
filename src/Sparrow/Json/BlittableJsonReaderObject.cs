@@ -4,7 +4,6 @@ using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Threading;
 using Sparrow.Binary;
 using Sparrow.Json.Parsing;
 
@@ -51,7 +50,7 @@ namespace Sparrow.Json
             _allocatedMemory = allocatedMemory;
         }
 
-        
+
         public BlittableJsonReaderObject(byte* mem, int size, JsonOperationContext context,
             UnmanagedWriteBuffer buffer = default(UnmanagedWriteBuffer))
         {
@@ -91,9 +90,9 @@ namespace Sparrow.Json
 
         private static void ThrowOnZeroSize(int size)
         {
-                //otherwise SetupPropertiesAccess will throw because of the memory garbage
-                //(or won't throw, but this is actually worse!)
-                throw new ArgumentException("BlittableJsonReaderObject does not support objects with zero size", nameof(size));
+            //otherwise SetupPropertiesAccess will throw because of the memory garbage
+            //(or won't throw, but this is actually worse!)
+            throw new ArgumentException("BlittableJsonReaderObject does not support objects with zero size", nameof(size));
         }
 
         private void SetupPropertiesAccess(byte* mem, int propsOffset)
@@ -182,7 +181,7 @@ namespace Sparrow.Json
                 BlittableJsonToken token;
                 int position;
                 int id;
-                GetPropertyTypeAndPosition(i, metadataSize,out token, out position, out id);
+                GetPropertyTypeAndPosition(i, metadataSize, out token, out position, out id);
                 offsets[i] = position;
                 propertyNames[i] = GetPropertyName(id);
             }
@@ -195,13 +194,13 @@ namespace Sparrow.Json
 
         private LazyStringValue GetPropertyName(int propertyId)
         {
-            var propertyNameOffsetPtr = _propNames + sizeof(byte) + propertyId*_propNamesDataOffsetSize;
+            var propertyNameOffsetPtr = _propNames + sizeof(byte) + propertyId * _propNamesDataOffsetSize;
             var propertyNameOffset = ReadNumber(propertyNameOffsetPtr, _propNamesDataOffsetSize);
 
             // Get the relative "In Document" position of the property Name
             var propRelativePos = _propNames - propertyNameOffset - _mem;
 
-            var propertyName = ReadStringLazily((int) propRelativePos);
+            var propertyName = ReadStringLazily((int)propRelativePos);
             return propertyName;
         }
 
@@ -253,7 +252,7 @@ namespace Sparrow.Json
                     {
                         obj = (T)Enum.Parse(type, result.ToString());
                     }
-                    else if(type == typeof(DateTime))
+                    else if (type == typeof(DateTime))
                     {
                         string dateTimeString;
                         if (ChangeTypeToString(result, out dateTimeString) == false)
@@ -263,7 +262,7 @@ namespace Sparrow.Json
                             throw new FormatException($"Could not convert {result.GetType().FullName} ('{result}') to DateTime");
                         obj = (T)(object)time;
                     }
-                    else if (type == typeof (Guid))
+                    else if (type == typeof(Guid))
                     {
                         string guidString;
                         if (ChangeTypeToString(result, out guidString) == false)
@@ -287,7 +286,7 @@ namespace Sparrow.Json
                             {
                                 if (typeof(T) == typeof(LazyStringValue))
                                 {
-                                    obj = (T) (object) lazyCompressStringValue.ToLazyStringValue();
+                                    obj = (T)(object)lazyCompressStringValue.ToLazyStringValue();
                                 }
                                 obj = (T)Convert.ChangeType(lazyCompressStringValue.ToString(), type);
                             }
@@ -303,6 +302,24 @@ namespace Sparrow.Json
                     throw new FormatException($"Could not convert {result.GetType().FullName} to {type.FullName}", e);
                 }
             }
+        }
+
+        public bool TryGet(string name, out double? nullableDbl)
+        {
+            return TryGet(new StringSegment(name, 0, name.Length), out nullableDbl);
+        }
+
+        public bool TryGet(StringSegment name, out double? nullableDbl)
+        {
+            double dbl;
+            if (TryGet(name, out dbl) == false)
+            {
+                nullableDbl = null;
+                return false;
+            }
+
+            nullableDbl = dbl;
+            return true;
         }
 
         public bool TryGet(string name, out double dbl)
@@ -323,6 +340,12 @@ namespace Sparrow.Json
             if (lazyDouble != null)
             {
                 dbl = lazyDouble;
+                return true;
+            }
+
+            if (result is long)
+            {
+                dbl = (long)result;
                 return true;
             }
 
@@ -392,7 +415,7 @@ namespace Sparrow.Json
             BlittableJsonToken token;
             int position;
             int propertyId;
-            GetPropertyTypeAndPosition(index, metadataSize, out token, out position,out propertyId);
+            GetPropertyTypeAndPosition(index, metadataSize, out token, out position, out propertyId);
             result = GetObject(token, (int)(_objStart - _mem - position));
             if (NoCache == false && result is BlittableJsonReaderBase)
             {
@@ -416,9 +439,9 @@ namespace Sparrow.Json
         private void GetPropertyTypeAndPosition(int index, long metadataSize, out BlittableJsonToken token, out int position, out int propertyId)
         {
             var propPos = _metadataPtr + index * metadataSize;
-            position  = ReadNumber(propPos, _currentOffsetSize);
+            position = ReadNumber(propPos, _currentOffsetSize);
             propertyId = ReadNumber(propPos + _currentOffsetSize, _currentPropertyIdSize);
-            token = (BlittableJsonToken) (*(propPos + _currentOffsetSize + _currentPropertyIdSize));
+            token = (BlittableJsonToken)(*(propPos + _currentOffsetSize + _currentPropertyIdSize));
         }
 
 
@@ -438,7 +461,7 @@ namespace Sparrow.Json
             BlittableJsonToken token;
             int position;
             int propertyId;
-            GetPropertyTypeAndPosition(index, metadataSize, out token, out position,out propertyId);
+            GetPropertyTypeAndPosition(index, metadataSize, out token, out position, out propertyId);
 
             var stringValue = GetPropertyName(propertyId);
 
@@ -611,7 +634,7 @@ namespace Sparrow.Json
             }
         }
 
-        
+
         public void Dispose()
         {
             if (_mem == null) //double dispose will do nothing
@@ -647,7 +670,7 @@ namespace Sparrow.Json
         {
             var mem = context.GetMemory(Size);
             CopyTo(mem.Address);
-            var cloned =  new BlittableJsonReaderObject(mem, context);    
+            var cloned = new BlittableJsonReaderObject(mem, context);
             if (Modifications != null)
             {
                 cloned.Modifications = new DynamicJsonValue(cloned);
@@ -656,7 +679,7 @@ namespace Sparrow.Json
                     cloned.Modifications.Properties.Enqueue(property);
                 }
             }
-            return cloned;    
+            return cloned;
         }
 
         public void BlittableValidation()
@@ -717,7 +740,7 @@ namespace Sparrow.Json
                 var nameOffset = 0;
                 nameOffset = ReadNumber((_mem + propsOffsetList + 1 + i * propsNamesOffsetSize),
                     propsNamesOffsetSize);
-                if ((blittableSize < nameOffset ) || (nameOffset < 0))
+                if ((blittableSize < nameOffset) || (nameOffset < 0))
                     throw new InvalidDataException("Properties names offset not valid");
                 stringLength = StringValidation(propsOffsetList - nameOffset);
                 if (offsetCounter + stringLength != nameOffset)
@@ -839,7 +862,7 @@ namespace Sparrow.Json
                             }
                         }
                         double _double;
-                        var result = double.TryParse(floatStringBuffer,NumberStyles.Float,CultureInfo.InvariantCulture, out _double);
+                        var result = double.TryParse(floatStringBuffer, NumberStyles.Float, CultureInfo.InvariantCulture, out _double);
                         if (!(result))
                             ThrowInvalidDouble(floatStringBuffer);
                         break;

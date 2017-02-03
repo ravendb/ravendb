@@ -8,16 +8,16 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Linq;
 using SlowTests.Core.Utils.Entities.Faceted;
 using Xunit;
-using Raven.Client.Linq;
 
 namespace SlowTests.Tests.Faceted
 {
-    public class Aggregation : RavenTestBase
+    public class Aggregation : RavenNewTestBase
     {
         private class Orders_All : AbstractIndexCreationTask<Order>
         {

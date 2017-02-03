@@ -12,10 +12,10 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
-using Raven.Client.Indexing;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Indexing;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
@@ -25,21 +25,21 @@ using Xunit;
 
 namespace SlowTests.Tests.Indexes
 {
-    public class LinqIndexesFromClient : RavenTestBase
+    public class LinqIndexesFromClient : RavenNewTestBase
     {
         [Fact]
         public void Convert_select_many_will_keep_doc_id()
         {
-            IndexDefinition indexDefinition = new IndexDefinitionBuilder<Order>
+            var indexDefinition = new Raven.Client.Indexes.IndexDefinitionBuilder<Order>
             {
                 Map = orders => from order in orders
                                 from line in order.OrderLines
                                 select new { line.ProductId }
-            }.ToIndexDefinition(new DocumentConvention { PrettifyGeneratedLinqExpressions = false });
+            }.ToIndexDefinition(new Raven.Client.Document.DocumentConvention { PrettifyGeneratedLinqExpressions = false });
 
             indexDefinition.Name = "Index1";
             var index = IndexAndTransformerCompiler.Compile(indexDefinition);
-  
+
             var map = index.Maps.Values.First().First();
 
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -61,7 +61,7 @@ namespace SlowTests.Tests.Indexes
             }).Cast<object>().ToArray();
 
                 var fields = index.OutputFields
-                    .Select(x => IndexField.Create(x, new IndexFieldOptions(), null))
+                    .Select(x => IndexField.Create(x, new Raven.Client.Indexing.IndexFieldOptions(), null))
                     .ToList();
 
                 var converter = new AnonymousLuceneDocumentConverter(fields, false);
@@ -91,13 +91,13 @@ namespace SlowTests.Tests.Indexes
         [Fact]
         public void CanCompileComplexQuery()
         {
-            var indexDefinition = new IndexDefinitionBuilder<Person>()
+            var indexDefinition = new Raven.Client.Indexes.IndexDefinitionBuilder<Person>()
             {
                 Map = people => from person in people
                                 from role in person.Roles
                                 where role == "Student"
                                 select new { role }
-            }.ToIndexDefinition(new DocumentConvention { PrettifyGeneratedLinqExpressions = false });
+            }.ToIndexDefinition(new Raven.Client.Document.DocumentConvention { PrettifyGeneratedLinqExpressions = false });
 
             indexDefinition.Name = "Index1";
             IndexAndTransformerCompiler.Compile(indexDefinition);

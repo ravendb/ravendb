@@ -9,6 +9,7 @@ using Raven.NewClient.Abstractions.Indexing;
 using Raven.NewClient.Abstractions.Util;
 using Newtonsoft.Json;
 using Raven.NewClient.Client.Util;
+using Sparrow.Json.Parsing;
 
 namespace Raven.NewClient.Client.Data
 {
@@ -76,6 +77,35 @@ namespace Raven.NewClient.Client.Data
         {
             Ranges = new List<string>();
             TermSortMode = FacetTermSortMode.ValueAsc;
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            var json = new DynamicJsonValue
+            {
+                [nameof(Mode)] = Mode,
+                [nameof(Aggregation)] = Aggregation,
+                [nameof(AggregationField)] = AggregationField,
+                [nameof(AggregationType)] = AggregationType,
+                [nameof(Name)] = Name,
+                [nameof(MaxResults)] = MaxResults,
+                [nameof(TermSortMode)] = TermSortMode,
+                [nameof(IncludeRemainingTerms)] = IncludeRemainingTerms
+            };
+
+            if (string.IsNullOrWhiteSpace(_displayName) == false && string.Equals(Name, _displayName) == false)
+                json[nameof(DisplayName)] = DisplayName;
+
+            if (Ranges != null)
+            {
+                var list = new DynamicJsonArray();
+                foreach (var range in Ranges)
+                    list.Add(range);
+
+                json[nameof(Ranges)] = list;
+            }
+
+            return json;
         }
     }
 
