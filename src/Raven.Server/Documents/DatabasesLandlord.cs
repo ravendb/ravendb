@@ -11,7 +11,6 @@ using Raven.Abstractions.Exceptions;
 using Raven.Client.Json;
 using Raven.NewClient.Client.Exceptions.Database;
 using Raven.Server.Config;
-using Raven.Server.Exceptions;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -115,13 +114,13 @@ namespace Raven.Server.Documents
             try
             {
                 var sp = Stopwatch.StartNew();
-                var documentDatabase = new DocumentDatabase(config.DatabaseName, config, ServerStore);
+                var documentDatabase = new DocumentDatabase(config.ResourceName, config, ServerStore);
                 documentDatabase.Initialize();
                 DeleteDatabaseCachedInfo(documentDatabase, ServerStore);
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"Started database {config.DatabaseName} in {sp.ElapsedMilliseconds:#,#;;0}ms");
+                    Logger.Info($"Started database {config.ResourceName} in {sp.ElapsedMilliseconds:#,#;;0}ms");
 
-                OnDatabaseLoaded(config.DatabaseName);
+                OnDatabaseLoaded(config.ResourceName);
 
                 // if we have a very long init process, make sure that we reset the last idle time for this db.
                 LastRecentlyUsed.AddOrUpdate(databaseName, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
@@ -130,7 +129,7 @@ namespace Raven.Server.Documents
             catch (Exception e)
             {
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failed to start database {config.DatabaseName}", e);
+                    Logger.Info($"Failed to start database {config.ResourceName}", e);
                 throw;
             }
         }
@@ -157,7 +156,7 @@ namespace Raven.Server.Documents
 
         protected RavenConfiguration CreateConfiguration(StringSegment databaseName, DatabaseDocument document, string folderPropName)
         {
-            var config = RavenConfiguration.CreateFrom(ServerStore.Configuration);
+            var config = RavenConfiguration.CreateFrom(ServerStore.Configuration, databaseName, ResourceType.Database);
 
             foreach (var setting in document.Settings)
             {
@@ -169,12 +168,6 @@ namespace Raven.Server.Documents
             {
                 config.SetSetting(securedSetting.Key, securedSetting.Value);
             }
-            var dbsBaseDir = ServerStore.Configuration.Core.DataDirectory;
-
-            config.SetSetting(folderPropName, config.GetSetting(folderPropName).ToFullPath(dbsBaseDir));
-            config.SetSetting(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath), config.GetSetting(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath)).ToFullPath(dbsBaseDir));
-
-            config.DatabaseName = databaseName.ToString();
 
             config.Initialize();
             config.CopyParentSettings(ServerStore.Configuration);
@@ -223,12 +216,7 @@ namespace Raven.Server.Documents
                     return null;
 
                 var document = JsonDeserializationClient.DatabaseDocument(jsonReaderObject);
-
-                var dataDirectoryKey = RavenConfiguration.GetKey(x => x.Core.DataDirectory);
-                string dataDirectory;
-                if (document.Settings.TryGetValue(dataDirectoryKey, out dataDirectory) == false || dataDirectory == null)
-                    throw new DatabaseNotFoundException($"Could not find {dataDirectoryKey}");
-
+                
                 if (document.Disabled && !ignoreDisabledDatabase)
                     throw new DatabaseDisabledException("The database has been disabled.");
 

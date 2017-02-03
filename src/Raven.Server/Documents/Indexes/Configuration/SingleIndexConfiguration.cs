@@ -1,26 +1,31 @@
 ﻿using System;
 using System.Reflection;
-using Raven.Abstractions.Data;
 using Raven.Client.Indexing;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
-using Raven.Server.Utils;
+using Raven.Server.Config.Settings;
 
 namespace Raven.Server.Documents.Indexes.Configuration
 {
     public class SingleIndexConfiguration : IndexingConfiguration
     {
         private bool? _runInMemory;
-        private string _indexStoragePath;
+        private PathSetting _indexStoragePath;
 
         private readonly RavenConfiguration _databaseConfiguration;
 
         public SingleIndexConfiguration(IndexConfiguration clientConfiguration, RavenConfiguration databaseConfiguration)
-            : base(() => databaseConfiguration.DatabaseName, null, null)
+            : base(databaseConfiguration)
         {
             _databaseConfiguration = databaseConfiguration;
 
-            Initialize(key => clientConfiguration.GetValue(key) ?? databaseConfiguration.GetSetting(key), throwIfThereIsNoSetMethod: false);
+            Initialize(
+                key =>
+                    new SettingValue(clientConfiguration.GetValue(key) ?? databaseConfiguration.GetSetting(key),
+                        databaseConfiguration.GetServerWideSetting(key)),
+                databaseConfiguration.ResourceType, 
+                databaseConfiguration.ResourceName, 
+                throwIfThereIsNoSetMethod: false);
 
             Validate();
         }
@@ -39,7 +44,7 @@ namespace Raven.Server.Documents.Indexes.Configuration
                 }
             }
 
-            throw new InvalidOperationException($"Given index path ('{StoragePath}') is not defined in '{Constants.Configuration.Indexing.StoragePath}' or '{Constants.Configuration.Indexing.AdditionalStoragePaths}'");
+            throw new InvalidOperationException($"Given index path ('{StoragePath}') is not defined in '{RavenConfiguration.GetKey(x => x.Indexing.StoragePath)}' or '{RavenConfiguration.GetKey(x => x.Indexing.AdditionalStoragePaths)}'");
         }
 
         public override bool Disabled => _databaseConfiguration.Indexing.Disabled;
@@ -57,32 +62,26 @@ namespace Raven.Server.Documents.Indexes.Configuration
             protected set { _runInMemory = value; }
         }
 
-        public override string StoragePath
+        public override PathSetting StoragePath
         {
             get
             {
-                if (string.IsNullOrEmpty(_indexStoragePath))
+                if (_indexStoragePath == null)
                     _indexStoragePath = _databaseConfiguration.Indexing.StoragePath;
                 return _indexStoragePath;
             }
 
             protected set
             {
-                if (string.IsNullOrWhiteSpace(value))
-                {
-                    _indexStoragePath = null;
-                    return;
-                }
-
-                _indexStoragePath = AddDatabaseNameToPathIfNeeded(value.ToFullPath());
+                _indexStoragePath = value;
             }
         }
 
-        public override string TempPath => _databaseConfiguration.Indexing.TempPath;
+        public override PathSetting TempPath => _databaseConfiguration.Indexing.TempPath;
 
-        public override string JournalsStoragePath => _databaseConfiguration.Indexing.JournalsStoragePath;
+        public override PathSetting JournalsStoragePath => _databaseConfiguration.Indexing.JournalsStoragePath;
 
-        public override string[] AdditionalStoragePaths => _databaseConfiguration.Indexing.AdditionalStoragePaths;
+        public override PathSetting[] AdditionalStoragePaths => _databaseConfiguration.Indexing.AdditionalStoragePaths;
 
         public IndexUpdateType CalculateUpdateType(SingleIndexConfiguration newConfiguration)
         {

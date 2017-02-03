@@ -2,7 +2,9 @@
 using System.IO;
 using System.Linq;
 using Raven.Server.Config;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -19,11 +21,11 @@ namespace FastTests.Server.Documents
 
         public DocumentsCrud()
         {
-            _configuration = new RavenConfiguration();
+            _configuration = new RavenConfiguration("foo", ResourceType.Database);
             _configuration.Initialize();
 
             _configuration.Core.RunInMemory = true;
-            _configuration.Core.DataDirectory = Path.GetTempPath() + @"\crud";
+            _configuration.Core.DataDirectory = new PathSetting(Path.GetTempPath() + @"\crud");
 
             _documentDatabase = new DocumentDatabase("foo", _configuration, null);
             _documentDatabase.Initialize();
@@ -270,8 +272,8 @@ namespace FastTests.Server.Documents
             _documentDatabase.Dispose();
             options.OwnsPagers = true;
 
-            _configuration = new RavenConfiguration();
-            _configuration.Core.DataDirectory = Path.GetTempPath() + @"\crud";
+            _configuration = new RavenConfiguration("test", ResourceType.Database);
+            _configuration.Core.DataDirectory = new PathSetting(Path.GetTempPath() + @"\crud");
             _configuration.Initialize();
             _configuration.Core.RunInMemory = true;
 

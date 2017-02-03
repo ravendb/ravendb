@@ -18,10 +18,6 @@ namespace Raven.NewClient.Operations.Databases
         public CreateDatabaseOperation(DatabaseDocument databaseDocument)
         {
             MultiDatabase.AssertValidName(databaseDocument.Id);
-
-            if (databaseDocument.Settings.ContainsKey("Raven/DataDir") == false)
-                throw new InvalidOperationException("The Raven/DataDir setting is mandatory");
-
             _databaseDocument = databaseDocument;
         }
 

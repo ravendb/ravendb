@@ -5,14 +5,20 @@ using System.Text.RegularExpressions;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
-using Raven.Server.Utils;
 
 namespace Raven.Server.Config.Categories
 {
     public class CoreConfiguration : ConfigurationCategory
     {
         private string _workingDirectory;
-        private string _dataDirectory;
+        private PathSetting _dataDirectory;
+
+        private readonly RavenConfiguration _root;
+
+        public CoreConfiguration(RavenConfiguration root)
+        {
+            _root = root;
+        }
 
         [Description("The maximum allowed page size for queries")]
         [DefaultValue(1024)]
@@ -58,13 +64,16 @@ namespace Raven.Server.Config.Categories
             set { _workingDirectory = CalculateWorkingDirectory(value); }
         }
 
-        [Description("The directory for the RavenDB database. You can use the ~\\ prefix to refer to RavenDB's base directory.")]
-        [DefaultValue(@"~/Databases")]
+        [Description("The directory for the RavenDB resource. You can use the ~/ prefix to refer to RavenDB's base directory.")]
+        [DefaultValue(@"~/{pluralizedResourceType}/{name}")]
         [ConfigurationEntry("Raven/DataDir")]
-        public string DataDirectory
+        public PathSetting DataDirectory
         {
             get { return _dataDirectory; }
-            set { _dataDirectory = value == null ? null : FilePathTools.ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(WorkingDirectory, value); }
+            set
+            {
+                _dataDirectory = value.ApplyParentPath(_root.ServerDataDir).ApplyWorkingDirectory(new PathSetting(WorkingDirectory));
+            }
         }
 
         [Description("The time to wait before canceling a database operation such as load (many) or query")]
@@ -97,7 +106,7 @@ namespace Raven.Server.Config.Categories
                     workingDirectory = Regex.Replace(workingDirectory, "APPDRIVE:", rootPath.TrimEnd('\\'), RegexOptions.IgnoreCase);
             }
 
-            return FilePathTools.MakeSureEndsWithSlash(workingDirectory.ToFullPath());
+            return FilePathTools.MakeSureEndsWithSlash(workingDirectory/*.ToFullPath()*/);
         }
     }
 }

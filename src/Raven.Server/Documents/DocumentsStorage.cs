@@ -243,9 +243,11 @@ namespace Raven.Server.Documents
         public void Initialize()
         {
             if (_logger.IsInfoEnabled)
+            {
                 _logger.Info
                     ("Starting to open document storage for " + (_documentDatabase.Configuration.Core.RunInMemory ?
-                    "<memory>" : _documentDatabase.Configuration.Core.DataDirectory));
+                    "<memory>" : _documentDatabase.Configuration.Core.DataDirectory.FullPath));
+            }
 
             var options = _documentDatabase.Configuration.Core.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly(_documentDatabase.Configuration.Core.DataDirectory)

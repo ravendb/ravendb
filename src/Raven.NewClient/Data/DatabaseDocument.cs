@@ -13,7 +13,7 @@ namespace Raven.NewClient.Abstractions.Data
         /// <summary>
         /// The ID of a database. Can be either the database name ("Northwind") or the full document name ("Raven/Databases/Northwind").
         /// </summary>
-        public string Id { get; set; }
+        public string Id { get; private set; }
         
         /// <summary>
         /// Database settings (unsecured).
@@ -30,8 +30,9 @@ namespace Raven.NewClient.Abstractions.Data
         /// </summary>
         public bool Disabled { get; set; }
 
-        public DatabaseDocument()
+        public DatabaseDocument(string id)
         {
+            Id = id;
             Settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             SecuredSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }

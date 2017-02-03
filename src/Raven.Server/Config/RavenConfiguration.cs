@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.ComponentModel;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -7,6 +8,8 @@ using Microsoft.Extensions.Configuration;
 
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
+using Raven.Server.Config.Settings;
+using Raven.Server.ServerWide;
 using ExpressionExtensions = Raven.Server.Extensions.ExpressionExtensions;
 using Sparrow;
 using Sparrow.Logging;
@@ -60,24 +63,30 @@ namespace Raven.Server.Config
 
         public TombstoneConfiguration Tombstones { get; }
 
+        internal IConfigurationRoot ServerWideSettings { get; set; }
+
         protected IConfigurationRoot Settings { get; set; }
 
-        public RavenConfiguration()
+        internal PathSetting ServerDataDir { get; private set; }
+
+        public RavenConfiguration(string resoureName, ResourceType resourceType)
         {
-            
+            ResourceName = resoureName;
+            ResourceType = resourceType;
+
             _configBuilder = new ConfigurationBuilder();
             AddEnvironmentVariables(_configBuilder);
             AddJsonConfigurationVariables();
 
             Settings = _configBuilder.Build();
-            Core = new CoreConfiguration();
+            Core = new CoreConfiguration(this);
 
             Replication = new ReplicationConfiguration();
             SqlReplication = new SqlReplicationConfiguration();
             Storage = new StorageConfiguration();
             Encryption = new EncryptionConfiguration();
             PerformanceHints = new PerformanceHintsConfiguration();
-            Indexing = new IndexingConfiguration(() => DatabaseName, () => Core.RunInMemory, () => Core.DataDirectory);
+            Indexing = new IndexingConfiguration(this);
             WebSockets = new WebSocketsConfiguration();
             Monitoring = new MonitoringConfiguration();
             Queries = new QueryConfiguration();
@@ -119,30 +128,32 @@ namespace Raven.Server.Config
 
         public DebugLoggingConfiguration DebugLog { get; set; }
 
-        public string DatabaseName { get; set; }
+        public string ResourceName { get; }
+
+        public ResourceType ResourceType { get; }
 
         public RavenConfiguration Initialize()
         {
-            Core.Initialize(Settings);
-            Replication.Initialize(Settings);
-            SqlReplication.Initialize(Settings);
-            Queries.Initialize(Settings);
-            Patching.Initialize(Settings);
-            DebugLog.Initialize(Settings);
-            BulkInsert.Initialize(Settings);
-            Server.Initialize(Settings);
-            Memory.Initialize(Settings);
-            Storage.Initialize(Settings);
-            Encryption.Initialize(Settings);
-            Indexing.Initialize(Settings);
-            Monitoring.Initialize(Settings);
-            Expiration.Initialize(Settings);
-            Studio.Initialize(Settings);
-            Databases.Initialize(Settings);
-            PerformanceHints.Initialize(Settings);
-            Licensing.Initialize(Settings);
-            Quotas.Initialize(Settings);
-            Tombstones.Initialize(Settings);
+            Core.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Replication.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            SqlReplication.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Queries.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Patching.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            DebugLog.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            BulkInsert.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Server.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Memory.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Storage.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Encryption.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Indexing.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Monitoring.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Expiration.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Studio.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Databases.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            PerformanceHints.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Licensing.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Quotas.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Tombstones.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
 
             PostInit();
 
@@ -176,21 +187,35 @@ namespace Raven.Server.Config
             return Settings[key];
         }
 
+        public string GetServerWideSetting(string key)
+        {
+            return ServerWideSettings?[key];
+        }
+
         public static string GetKey<T>(Expression<Func<RavenConfiguration, T>> getKey)
         {
             var prop = ExpressionExtensions.ToProperty(getKey);
             return prop.GetCustomAttributes<ConfigurationEntryAttribute>().OrderBy(x => x.Order).First().Key;
         }
 
-        public static RavenConfiguration CreateFrom(RavenConfiguration parent)
+        public static object GetDefaultValue<T>(Expression<Func<RavenConfiguration, T>> getKey)
         {
-            var result = new RavenConfiguration
+            var prop = ExpressionExtensions.ToProperty(getKey);
+            return prop.GetCustomAttributes<DefaultValueAttribute>().FirstOrDefault()?.Value;
+        }
+
+        public static RavenConfiguration CreateFrom(RavenConfiguration parent, string name, ResourceType type)
+        {
+            var result = new RavenConfiguration(name, type)
             {
-                Settings = parent._configBuilder.Build()
+                ServerWideSettings = parent.Settings,
+                Settings =
+                {
+                    [GetKey(x => x.Core.RunInMemory)] = parent.Core.RunInMemory.ToString()
+                },
+                ServerDataDir = parent.Core.DataDirectory
             };
-
-            result.Settings[GetKey(x => x.Core.RunInMemory)] = parent.Core.RunInMemory.ToString();
-
+            
             return result;
         }
 

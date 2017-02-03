@@ -1,20 +1,21 @@
 ﻿using Raven.Server.Config;
 using Raven.Server.Config.Categories;
+using Raven.Server.Config.Settings;
 
 namespace Raven.Server.Documents.Indexes.Configuration
 {
     public class FaultyInMemoryIndexConfiguration : IndexingConfiguration
     {
-        private readonly string _storagePath;
+        private readonly PathSetting _storagePath;
 
         public FaultyInMemoryIndexConfiguration(string storagePath, RavenConfiguration databaseConfiguration)
-            : base(() => databaseConfiguration.DatabaseName, null, null)
+            : base(databaseConfiguration)
         {
-            _storagePath = storagePath;
+            _storagePath = new PathSetting(storagePath); // TODO arek - verify that
         }
 
         public override bool RunInMemory => false;
 
-        public override string StoragePath => _storagePath; 
+        public override PathSetting StoragePath => _storagePath; 
     }
 }

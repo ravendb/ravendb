@@ -170,9 +170,8 @@ namespace Raven.Server.Documents.Indexes
             var name = Path.GetDirectoryName(path);
             var indexPath = path;
 
-            var indexTempPath = documentDatabase.Configuration.Indexing.TempPath != null
-                ? Path.Combine(documentDatabase.Configuration.Indexing.TempPath, name)
-                : null;
+            var indexTempPath =
+                documentDatabase.Configuration.Indexing.TempPath?.Combine(name);
 
             var journalPath = documentDatabase.Configuration.Indexing.JournalsStoragePath != null
                 ? Path.Combine(documentDatabase.Configuration.Indexing.JournalsStoragePath, name)
