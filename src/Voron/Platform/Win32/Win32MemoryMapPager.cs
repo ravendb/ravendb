@@ -427,6 +427,12 @@ namespace Voron.Platform.Win32
             }
         }
 
+        public override void FillZeroLengthJournalWithZeros(ulong size)
+        {
+            Debug.Assert(_totalAllocationSize == 0);
+            Win32NativeFileMethods.SetFileLength(_handle, (long)size);
+        }
+
         public override void TryPrefetchingWholeFile()
         {
             if (PlatformDetails.CanPrefetch == false)

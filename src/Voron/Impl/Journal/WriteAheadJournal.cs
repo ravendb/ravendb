@@ -85,8 +85,7 @@ namespace Voron.Impl.Journal
 
         private JournalFile NextFile(int numberOf4kbs = 1)
         {
-            _journalIndex++;
-
+        
             var now = DateTime.UtcNow;
             if ((now - _lastFile).TotalSeconds < 90)
             {
@@ -99,10 +98,12 @@ namespace Voron.Impl.Journal
                 _currentJournalFileSize = Bits.NextPowerOf2(minRequiredSize);
                 actualLogSize = _currentJournalFileSize;
             }
+       
+            var journalPager = _env.Options.CreateJournalWriter(_journalIndex+1, actualLogSize);
+
+            _journalIndex++;
 
             _lastFile = now;
-
-            var journalPager = _env.Options.CreateJournalWriter(_journalIndex, actualLogSize);
 
             var journal = new JournalFile(_env, journalPager, _journalIndex);
             journal.AddRef(); // one reference added by a creator - write ahead log
@@ -156,6 +157,19 @@ namespace Voron.Impl.Journal
                 using (var pager = _env.Options.OpenJournalPager(journalNumber))
                 {
                     RecoverCurrentJournalSize(pager);
+
+                    if (pager.TotalAllocationSize == 0)
+                    {
+                        try
+                        {
+                            pager.FillZeroLengthJournalWithZeros(64 * 1024UL);
+                        }
+                        catch (Exception ex)
+                        {
+                            VoronUnrecoverableErrorException.Raise(_env,
+                                "Cannot recover journal with size 0 after trying to fill it with zeros", ex);
+                        }
+                    }
 
                     var transactionHeader = txHeader->TransactionId == 0 ? null : txHeader;
                     using (
@@ -287,8 +301,8 @@ namespace Voron.Impl.Journal
                 return null;
             }
 
-            // write transactions can read directly from journals that they got when they started up
-            var files = tx.JournalFiles;
+            // write transactions can read directly from journals
+            var files = _files;
             for (var i = files.Count - 1; i >= 0; i--)
             {
                 PagePosition value;

@@ -72,7 +72,19 @@ namespace Voron.Platform.Posix
                     result = Syscall.posix_fallocate(_fd, IntPtr.Zero, (UIntPtr) journalSize);
                 }
                 if (result != 0)
+                {
+                    Syscall.close(_fd);
+                    _fd = -1;
+                    try
+                    {
+                        File.Delete(filename);
+                    }
+                    catch (Exception)
+                    {
+                        // nothing we can do here
+                    }
                     PosixHelper.ThrowLastError(result, "when allocating " + filename);
+                }
             }
 
             if (PosixHelper.CheckSyncDirectoryAllowed(_filename) && PosixHelper.SyncDirectory(filename) == -1)
@@ -94,8 +106,11 @@ namespace Voron.Platform.Posix
                 Syscall.close(_fdReads);
                 _fdReads = -1;
             }
-            Syscall.close(_fd);
-            _fd = -1;
+            if (_fd != -1)
+            {
+                Syscall.close(_fd);
+                _fd = -1;
+            }
             if (DeleteOnClose)
             {
                 _options.TryStoreJournalForReuse(_filename);
