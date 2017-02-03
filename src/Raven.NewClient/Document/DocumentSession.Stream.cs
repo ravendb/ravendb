@@ -1,16 +1,14 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Connection;
-using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Linq;
+using Raven.NewClient.Extensions;
+using Raven.NewClient.Json.Utilities;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
-
 
 namespace Raven.NewClient.Client.Document
 {
@@ -32,44 +30,68 @@ namespace Raven.NewClient.Client.Document
             {
                 while (result.MoveNext())
                 {
-                    var res = result.Current;
-                    query.InvokeAfterStreamExecuted(res);
-                    var stremResult = CreateStreamResult<T>(ref res);
-                    yield return stremResult;
+                    var json = result.Current;
+                    query.InvokeAfterStreamExecuted(json);
+
+                    if (command.UsedTransformer)
+                    {
+                        foreach (var streamResult in CreateMultipleStreamResults<T>(json))
+                            yield return streamResult;
+
+                        continue;
+                    }
+
+                    yield return CreateStreamResult<T>(ref json);
                 }
             }
         }
 
-        private StreamResult<T> CreateStreamResult<T>(ref BlittableJsonReaderObject res)
+        private IEnumerable<StreamResult<T>> CreateMultipleStreamResults<T>(BlittableJsonReaderObject json)
         {
-            string key = null;
-            long? etag = null;
-            BlittableJsonReaderObject metadata;
-            if (res.TryGet(Constants.Metadata.Key, out metadata))
+            BlittableJsonReaderArray values;
+            if (json.TryGet(Constants.Json.Fields.Values, out values) == false)
+                throw new InvalidOperationException("Transformed document must have a $values property");
+
+            var metadata = json.GetMetadata();
+            var etag = metadata.GetEtag();
+            var id = metadata.GetId();
+
+            foreach (var value in TransformerHelpers.ParseValuesFromBlittableArray<T>(this, values))
             {
-                if (metadata.TryGet(Constants.Metadata.Id, out key) == false)
-                    throw new ArgumentException();
-                if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
-                    throw new ArgumentException();
+                yield return new StreamResult<T>
+                {
+                    Key = id,
+                    Etag = etag,
+                    Document = value,
+                    Metadata = new MetadataAsDictionary(metadata)
+                };
             }
+        }
+
+        private StreamResult<T> CreateStreamResult<T>(ref BlittableJsonReaderObject json)
+        {
+            var metadata = json.GetMetadata();
+            var etag = metadata.GetEtag();
+            var id = metadata.GetId();
+
             //TODO - Investagate why ConvertToEntity fails if we don't call ReadObject before
-            res = Context.ReadObject(res, key);
-            var entity = ConvertToEntity(typeof(T), key, res);
-            var stremResult = new StreamResult<T>
+            json = Context.ReadObject(json, id);
+            var entity = ConvertToEntity(typeof(T), id, json);
+            var streamResult = new StreamResult<T>
             {
-                Etag = etag.Value,
-                Key = key,
-                Document = (T) entity,
+                Etag = etag,
+                Key = id,
+                Document = (T)entity,
                 Metadata = new MetadataAsDictionary(metadata)
             };
-            return stremResult;
+            return streamResult;
         }
 
         public IEnumerator<StreamResult<T>> Stream<T>(long? fromEtag, int start = 0, int pageSize = Int32.MaxValue,
             RavenPagingInformation pagingInformation = null, string transformer = null,
             Dictionary<string, object> transformerParameters = null)
         {
-            return Stream<T>(fromEtag: fromEtag, startsWith: null, matches: null, start: start, pageSize: pageSize, pagingInformation: pagingInformation, 
+            return Stream<T>(fromEtag: fromEtag, startsWith: null, matches: null, start: start, pageSize: pageSize, pagingInformation: pagingInformation,
                 skipAfter: null, transformer: transformer, transformerParameters: transformerParameters);
         }
 
@@ -77,11 +99,11 @@ namespace Raven.NewClient.Client.Document
             RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null,
             Dictionary<string, object> transformerParameters = null)
         {
-            return Stream<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize, pagingInformation: pagingInformation, 
+            return Stream<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize, pagingInformation: pagingInformation,
                 skipAfter: skipAfter, transformer: transformer, transformerParameters: transformerParameters);
         }
 
-        private IEnumerator<StreamResult<T>> Stream<T>(long? fromEtag, string startsWith, string matches, int start, int pageSize, RavenPagingInformation pagingInformation, 
+        private IEnumerator<StreamResult<T>> Stream<T>(long? fromEtag, string startsWith, string matches, int start, int pageSize, RavenPagingInformation pagingInformation,
             string skipAfter, string transformer, Dictionary<string, object> transformerParameters)
         {
             var streamOperation = new StreamOperation(this);
@@ -92,9 +114,17 @@ namespace Raven.NewClient.Client.Document
             {
                 while (result.MoveNext())
                 {
-                    var res = result.Current;
-                    var stremResult = CreateStreamResult<T>(ref res);
-                    yield return stremResult;
+                    var json = result.Current;
+
+                    if (command.UsedTransformer)
+                    {
+                        foreach (var streamResult in CreateMultipleStreamResults<T>(json))
+                            yield return streamResult;
+
+                        continue;
+                    }
+
+                    yield return CreateStreamResult<T>(ref json);
                 }
             }
         }

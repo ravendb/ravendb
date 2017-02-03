@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Data.Queries;
 using Raven.NewClient.Client.Document;
@@ -130,7 +131,7 @@ namespace Raven.NewClient.Client.Commands
                 if (usedTransformer)
                 {
                     BlittableJsonReaderArray values;
-                    if (document.TryGet("$values", out values) == false)
+                    if (document.TryGet(Constants.Json.Fields.Values, out values) == false)
                         throw new InvalidOperationException("Transformed document must have a $values property");
 
                     list.AddRange(TransformerHelpers.ParseValuesFromBlittableArray<T>(_session, values));

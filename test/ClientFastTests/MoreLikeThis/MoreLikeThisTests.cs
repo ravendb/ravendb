@@ -302,16 +302,16 @@ namespace NewClientTests.NewClient
             {
                 new OtherDataIndex().Execute(_store);
 
-                var dataQueriedFor = new DataWithIntegerId { Id = 123, Body = "This is a test. Isn't it great? I hope I pass my test!" };
+                var dataQueriedFor = new DataWithIntegerId { Id = "123", Body = "This is a test. Isn't it great? I hope I pass my test!" };
 
                 var list = new List<DataWithIntegerId>
                 {
                     dataQueriedFor,
-                    new DataWithIntegerId {Id = 234, Body = "I have a test tomorrow. I hate having a test"},
-                    new DataWithIntegerId {Id = 3456, Body = "Cake is great."},
-                    new DataWithIntegerId {Id = 3457, Body = "This document has the word test only once"},
-                    new DataWithIntegerId {Id = 3458, Body = "test"},
-                    new DataWithIntegerId {Id = 3459, Body = "test"},
+                    new DataWithIntegerId {Id = "234", Body = "I have a test tomorrow. I hate having a test"},
+                    new DataWithIntegerId {Id = "3456", Body = "Cake is great."},
+                    new DataWithIntegerId {Id = "3457", Body = "This document has the word test only once"},
+                    new DataWithIntegerId {Id = "3458", Body = "test"},
+                    new DataWithIntegerId {Id = "3459", Body = "test"},
                 };
                 list.ForEach(session.Store);
                 session.SaveChanges();
@@ -715,7 +715,7 @@ namespace NewClientTests.NewClient
 
         public class DataWithIntegerId
         {
-            public long Id;
+            public string Id;
             public string Body { get; set; }
         }
 
