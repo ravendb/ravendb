@@ -44,7 +44,7 @@ namespace SlowTests.Tests.Linq
 
         private class Product
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public Dictionary<string, string> Properties { get; set; }
         }
     }

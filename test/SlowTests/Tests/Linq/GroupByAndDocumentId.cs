@@ -18,7 +18,7 @@ namespace SlowTests.Tests.Linq
     {
         private class Client
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public string Name { get; set; }
             public IList<ImportStatusMessage> ImportStatuses { get; set; }
         }

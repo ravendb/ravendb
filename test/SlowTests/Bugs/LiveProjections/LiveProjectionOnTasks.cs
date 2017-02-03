@@ -68,7 +68,7 @@ namespace SlowTests.Bugs.LiveProjections
 
         private class User
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
 
             public string Name { get; set; }
         }
@@ -134,7 +134,7 @@ namespace SlowTests.Bugs.LiveProjections
 
         private class Task
         {
-            public long Id { get; set; }
+            public string Id { get; set; }
 
             public string Description { get; set; }
 
@@ -151,7 +151,7 @@ namespace SlowTests.Bugs.LiveProjections
 
         private class Place
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
 
             public string Name { get; set; }
         }
