@@ -11,7 +11,7 @@ namespace SlowTests.Tests.Bugs.TransformResults
     }
     public class AnswerEntity2
     {
-        public Guid Id { get; set; }
+        public string Id { get; set; }
         public string UserId { get; set; }
         public Question2 Question { get; set; }
         public string Content { get; set; }

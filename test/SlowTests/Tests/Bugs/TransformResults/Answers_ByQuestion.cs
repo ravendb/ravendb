@@ -1,5 +1,6 @@
 using System.Linq;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Indexes;
 
 namespace SlowTests.Tests.Bugs.TransformResults
 {
@@ -30,7 +31,7 @@ namespace SlowTests.Tests.Bugs.TransformResults
                                    DecimalTotal = g.Sum(x => x.DecimalTotal)
                                };
 
-            this.IndexSortOptions.Add(x => x.VoteTotal, Raven.Abstractions.Indexing.SortOptions.NumericDefault);
+            IndexSortOptions.Add(x => x.VoteTotal, SortOptions.NumericDefault);
         }
     }
 

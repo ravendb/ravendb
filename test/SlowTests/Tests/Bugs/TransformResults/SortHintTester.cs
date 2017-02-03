@@ -1,13 +1,13 @@
 using System.Linq;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Linq;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Linq;
 using Xunit;
 
 namespace SlowTests.Tests.Bugs.TransformResults
 {
-    public class SortHintTester : RavenTestBase
+    public class SortHintTester : RavenNewTestBase
     {
         [Fact]
         public void will_fail_with_request_headers_too_long()
@@ -27,7 +27,7 @@ namespace SlowTests.Tests.Bugs.TransformResults
                     RavenQueryStatistics stats;
                     var answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
                            .Statistics(out stats)
-                           .Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
+                           .Customize(x => x.WaitForNonStaleResults())
                            .OrderBy(x => x.Content)
                            .Where(x => x.Content == (content))
                            .TransformWith<Answers_ByAnswerEntityTransformer, AnswerEntity>()
