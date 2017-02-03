@@ -172,7 +172,7 @@ gulp.task('z_release:libs', function() {
 });
 
 gulp.task('z_release:copy-version', function () {
-    return gulp.src("./version.json")
+    return gulp.src("./wwwroot/version.json")
         .pipe(gulp.dest(PATHS.releaseTarget));
 });
 
