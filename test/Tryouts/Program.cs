@@ -47,9 +47,9 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new FastTests.Server.Replication.ReplicationConflictsTests())
+                using (var a = new SlowTests.Bugs.Facets.FacetErrors())
                 {
-                    a.Conflict_then_patch_request_will_return_409_and_conflict_data();
+                    a.PrestonThinksFacetsShouldNotHideOtherErrors();
                 }
             }
         }
