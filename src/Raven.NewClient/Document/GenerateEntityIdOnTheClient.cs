@@ -1,28 +1,26 @@
 using System;
 using System.Dynamic;
-using System.Linq;
 using System.Reflection;
 using Microsoft.CSharp.RuntimeBinder;
 
 using Raven.NewClient.Abstractions.Extensions;
-using Newtonsoft.Json.Serialization;
 
 namespace Raven.NewClient.Client.Document
 {
     public class GenerateEntityIdOnTheClient
     {
-        private readonly DocumentConvention conventions;
-        private readonly Func<object, string> generateKey;
+        private readonly DocumentConvention _conventions;
+        private readonly Func<object, string> _generateKey;
 
         public GenerateEntityIdOnTheClient(DocumentConvention conventions, Func<object, string> generateKey)
         {
-            this.conventions = conventions;
-            this.generateKey = generateKey;
+            _conventions = conventions;
+            _generateKey = generateKey;
         }
 
         private MemberInfo GetIdentityProperty(Type entityType)
         {
-            return conventions.GetIdentityProperty(entityType);
+            return _conventions.GetIdentityProperty(entityType);
         }
 
         /// <summary>
@@ -31,7 +29,7 @@ namespace Raven.NewClient.Client.Document
         public bool TryGetIdFromInstance(object entity, out string id)
         {
             if (entity == null)
-                throw new ArgumentNullException("entity");
+                throw new ArgumentNullException(nameof(entity));
             var identityProperty = GetIdentityProperty(entity.GetType());
             if (identityProperty != null)
             {
@@ -39,7 +37,7 @@ namespace Raven.NewClient.Client.Document
                 id = value as string;
                 return id != null;
             }
-           
+
             id = null;
             return false;
         }
@@ -57,7 +55,7 @@ namespace Raven.NewClient.Client.Document
             if (id == null)
             {
                 // Generate the key up front
-                id = generateKey(entity);
+                id = _generateKey(entity);
             }
 
             if (id != null && id.StartsWith("/"))
@@ -72,7 +70,7 @@ namespace Raven.NewClient.Client.Document
             {
                 if (TryGetIdFromDynamic(entity, out id) == false || id == null)
                 {
-                    id = generateKey(entity);
+                    id = _generateKey(entity);
                     // If we generated a new id, store it back into the Id field so the client has access to to it                    
                     if (id != null)
                         TrySetIdOnDynamic(entity, id);
@@ -108,12 +106,12 @@ namespace Raven.NewClient.Client.Document
         protected internal void TrySetIdentity(object entity, string id)
         {
             var entityType = entity.GetType();
-            var identityProperty = conventions.GetIdentityProperty(entityType);
+            var identityProperty = _conventions.GetIdentityProperty(entityType);
             if (identityProperty == null)
             {
                 if (entity is IDynamicMetaObjectProvider)
                 {
-                    
+
                     TrySetIdOnDynamic(entity, id);
                 }
                 return;
@@ -121,7 +119,7 @@ namespace Raven.NewClient.Client.Document
 
             if (identityProperty.CanWrite())
             {
-                SetPropertyOrField(identityProperty.Type(), entity, val => identityProperty.SetValue(entity, val), id);
+                SetPropertyOrField(identityProperty, entity, val => identityProperty.SetValue(entity, val), id);
             }
             else
             {
@@ -132,7 +130,7 @@ namespace Raven.NewClient.Client.Document
                 if (fieldInfo == null)
                     return;
 
-                SetPropertyOrField(identityProperty.Type(), entity, val => fieldInfo.SetValue(entity, val), id);
+                SetPropertyOrField(identityProperty, entity, val => fieldInfo.SetValue(entity, val), id);
             }
         }
 
@@ -147,22 +145,16 @@ namespace Raven.NewClient.Client.Document
             }
         }
 
-        private void SetPropertyOrField(Type propertyOrFieldType, object entity, Action<object> setIdentifier, string id)
+        private static void SetPropertyOrField(MemberInfo memberInfo, object entity, Action<object> setIdentifier, string id)
         {
-            if (propertyOrFieldType == typeof(string))
+            if (memberInfo.Type() != typeof(string))
             {
-                setIdentifier(id);
+                var isProperty = memberInfo.IsProperty();
+                var name = isProperty ? "property" : "field";
+                throw new NotSupportedException($"Cannot set identity value '{id}' on {name} '{memberInfo.Name}' for type '{entity.GetType().FullName}' because {name} type is not a string.");
             }
-            else // need converting
-            {
-                var converter =
-                    conventions.IdentityTypeConvertors.FirstOrDefault(x => x.CanConvertFrom(propertyOrFieldType));
-                if (converter == null)
-                    throw new ArgumentException("Could not convert identity to type " + propertyOrFieldType +
-                                                " because there is not matching type converter registered in the conventions' IdentityTypeConvertors");
 
-                setIdentifier(converter.ConvertTo(conventions.FindIdValuePartForValueTypeConversion(entity, id)));
-            }
+            setIdentifier(id);
         }
     }
 }

@@ -6,15 +6,15 @@
 
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.Tests.DistinctFacets
 {
-    public class DistinctAndFacets : RavenTestBase
+    public class DistinctAndFacets : RavenNewTestBase
     {
         private class Book
         {
@@ -157,7 +157,7 @@ namespace SlowTests.Tests.DistinctFacets
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-6244")]
         public void CanGetDistinctResult_WithFacets_LazyAndCached()
         {
             using (var store = GetDocumentStore())

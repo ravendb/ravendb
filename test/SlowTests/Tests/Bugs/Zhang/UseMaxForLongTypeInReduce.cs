@@ -1,13 +1,14 @@
 using System.Linq;
 using FastTests;
-using Raven.Abstractions;
-using Raven.Client.Indexing;
+using Raven.NewClient.Abstractions;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
 using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.Tests.Bugs.Zhang
 {
-    public class UseMaxForLongTypeInReduce : RavenTestBase
+    public class UseMaxForLongTypeInReduce : RavenNewTestBase
     {
         private const string Map = @"
 from doc in docs.Items
@@ -52,12 +53,12 @@ select new {Name = g.Key, CreatedTimeTicks = createdTimeTicks}
                     session.SaveChanges();
                 }
 
-                store.DatabaseCommands.PutIndex("test",
-                                new IndexDefinition
-                                {
-                                    Maps = { Map },
-                                    Reduce = Reduce,
-                                });
+                store.Admin.Send(new PutIndexOperation("test",
+                    new IndexDefinition
+                    {
+                        Maps = { Map },
+                        Reduce = Reduce,
+                    }));
 
                 using (var session = store.OpenSession())
                 {
