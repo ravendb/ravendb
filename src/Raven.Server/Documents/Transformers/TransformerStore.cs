@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
+using Raven.Server.Config.Settings;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow;
@@ -27,7 +28,7 @@ namespace Raven.Server.Documents.Transformers
 
         private bool _initialized;
 
-        private string _path;
+        private PathSetting _path;
 
         public TransformerStore(DocumentDatabase documentDatabase)
         {
@@ -47,13 +48,10 @@ namespace Raven.Server.Documents.Transformers
 
                 if (_documentDatabase.Configuration.Indexing.RunInMemory == false)
                 {
-                    _path = Path.Combine(_documentDatabase.Configuration.Indexing.StoragePath, "Transformers");
+                    _path = _documentDatabase.Configuration.Indexing.StoragePath.Combine("Transformers");
 
-                    if (PlatformDetails.RunningOnPosix)
-                        _path = PosixHelper.FixLinuxPath(_path);
-
-                    if (Directory.Exists(_path) == false && _documentDatabase.Configuration.Indexing.RunInMemory == false)
-                        Directory.CreateDirectory(_path);
+                    if (Directory.Exists(_path.FullPath) == false && _documentDatabase.Configuration.Indexing.RunInMemory == false)
+                        Directory.CreateDirectory(_path.FullPath);
                 }
 
                 _initialized = true;
@@ -69,7 +67,7 @@ namespace Raven.Server.Documents.Transformers
 
             lock (_locker)
             {
-                foreach (var transformerFile in new DirectoryInfo(_path).GetFiles())
+                foreach (var transformerFile in new DirectoryInfo(_path.FullPath).GetFiles())
                 {
                     if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
                         return;

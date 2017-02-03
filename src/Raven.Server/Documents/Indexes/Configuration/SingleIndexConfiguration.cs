@@ -32,14 +32,14 @@ namespace Raven.Server.Documents.Indexes.Configuration
 
         private void Validate()
         {
-            if (string.Equals(StoragePath, _databaseConfiguration.Indexing.StoragePath, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(StoragePath.FullPath, _databaseConfiguration.Indexing.StoragePath.FullPath, StringComparison.OrdinalIgnoreCase))
                 return;
 
             if (_databaseConfiguration.Indexing.AdditionalStoragePaths != null)
             {
                 foreach (var path in _databaseConfiguration.Indexing.AdditionalStoragePaths)
                 {
-                    if (string.Equals(StoragePath, path, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(StoragePath.FullPath, path.FullPath, StringComparison.OrdinalIgnoreCase))
                         return;
                 }
             }

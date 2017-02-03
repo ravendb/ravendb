@@ -103,7 +103,7 @@ namespace SlowTests.Issues
                 store.Admin.Send(new PutIndexOperation(index.IndexName + "_2", indexDefinition2));
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
-                destPath = database.Configuration.Indexing.StoragePath;
+                destPath = database.Configuration.Indexing.StoragePath.FullPath;
             }
 
             var srcDirectories = Directory.GetDirectories(otherPath);
@@ -138,30 +138,30 @@ namespace SlowTests.Issues
             serverConfiguration.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.AdditionalStoragePaths), "C:\\temp\\1;C:\\temp\\2");
             serverConfiguration.Initialize();
 
-            Assert.Equal("C:\\temp\\0", serverConfiguration.Indexing.StoragePath);
+            Assert.Equal("C:\\temp\\0", serverConfiguration.Indexing.StoragePath.FullPath);
             Assert.Equal(2, serverConfiguration.Indexing.AdditionalStoragePaths.Length);
-            Assert.Equal("C:\\temp\\1", serverConfiguration.Indexing.AdditionalStoragePaths[0]);
-            Assert.Equal("C:\\temp\\2", serverConfiguration.Indexing.AdditionalStoragePaths[1]);
+            Assert.Equal("C:\\temp\\1", serverConfiguration.Indexing.AdditionalStoragePaths[0].FullPath);
+            Assert.Equal("C:\\temp\\2", serverConfiguration.Indexing.AdditionalStoragePaths[1].FullPath);
 
             var databaseExplicitConfiguration = new RavenConfiguration("DB", ResourceType.Database);
             databaseExplicitConfiguration.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.StoragePath), "C:\\temp\\0");
             databaseExplicitConfiguration.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.AdditionalStoragePaths), "C:\\temp\\1;C:\\temp\\2");
             databaseExplicitConfiguration.Initialize();
 
-            Assert.Equal("C:\\temp\\0", databaseExplicitConfiguration.Indexing.StoragePath);
+            Assert.Equal("C:\\temp\\0", databaseExplicitConfiguration.Indexing.StoragePath.FullPath);
             Assert.Equal(2, databaseExplicitConfiguration.Indexing.AdditionalStoragePaths.Length);
-            Assert.Equal("C:\\temp\\1", databaseExplicitConfiguration.Indexing.AdditionalStoragePaths[0]);
-            Assert.Equal("C:\\temp\\2", databaseExplicitConfiguration.Indexing.AdditionalStoragePaths[1]);
+            Assert.Equal("C:\\temp\\1", databaseExplicitConfiguration.Indexing.AdditionalStoragePaths[0].FullPath);
+            Assert.Equal("C:\\temp\\2", databaseExplicitConfiguration.Indexing.AdditionalStoragePaths[1].FullPath);
 
             var databaseInheritedConfiguration = RavenConfiguration.CreateFrom(serverConfiguration, "DB2",
                 ResourceType.Database);
             
             databaseInheritedConfiguration.Initialize();
 
-            Assert.Equal("C:\\temp\\0\\Databases\\DB2", databaseInheritedConfiguration.Indexing.StoragePath);
+            Assert.Equal("C:\\temp\\0\\Databases\\DB2", databaseInheritedConfiguration.Indexing.StoragePath.FullPath);
             Assert.Equal(2, databaseInheritedConfiguration.Indexing.AdditionalStoragePaths.Length);
-            Assert.Equal("C:\\temp\\1\\Databases\\DB2", databaseInheritedConfiguration.Indexing.AdditionalStoragePaths[0]);
-            Assert.Equal("C:\\temp\\2\\Databases\\DB2", databaseInheritedConfiguration.Indexing.AdditionalStoragePaths[1]);
+            Assert.Equal("C:\\temp\\1\\Databases\\DB2", databaseInheritedConfiguration.Indexing.AdditionalStoragePaths[0].FullPath);
+            Assert.Equal("C:\\temp\\2\\Databases\\DB2", databaseInheritedConfiguration.Indexing.AdditionalStoragePaths[1].FullPath);
         }
 
         [Fact]
@@ -184,7 +184,7 @@ namespace SlowTests.Issues
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
 
-                var directories = Directory.GetDirectories(database.Configuration.Indexing.StoragePath);
+                var directories = Directory.GetDirectories(database.Configuration.Indexing.StoragePath.FullPath);
 
                 Assert.Equal(2, directories.Length); // Transformers + 1 index
             }

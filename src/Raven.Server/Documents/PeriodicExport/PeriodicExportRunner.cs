@@ -10,6 +10,7 @@ using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Client.Smuggler;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents.PeriodicExport.Aws;
 using Raven.Server.Documents.PeriodicExport.Azure;
 using Raven.Server.Json;
@@ -225,9 +226,15 @@ namespace Raven.Server.Documents.PeriodicExport
                     var sp = Stopwatch.StartNew();
                     using (var tx = context.OpenReadTransaction())
                     {
-                        var exportDirectory = _configuration.LocalFolderName ?? Path.Combine(_database.Configuration.Core.DataDirectory, "PeriodicExport-Temp");
-                        if (Directory.Exists(exportDirectory) == false)
-                            Directory.CreateDirectory(exportDirectory);
+                        PathSetting exportDirectory;
+
+                        if (_configuration.LocalFolderName != null)
+                            exportDirectory = new PathSetting(_configuration.LocalFolderName);
+                        else
+                            exportDirectory = _database.Configuration.Core.DataDirectory.Combine("PeriodicExport-Temp");
+
+                        if (Directory.Exists(exportDirectory.FullPath) == false)
+                            Directory.CreateDirectory(exportDirectory.FullPath);
 
                         var now = SystemTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", CultureInfo.InvariantCulture);
 
@@ -236,7 +243,7 @@ namespace Raven.Server.Documents.PeriodicExport
                             fullExport)
                         {
                             fullExport = true;
-                            _status.LastFullExportDirectory = Path.Combine(exportDirectory, $"{now}.ravendb-{_database.Name}-backup");
+                            _status.LastFullExportDirectory = exportDirectory.Combine($"{now}.ravendb-{_database.Name}-backup").FullPath;
                             Directory.CreateDirectory(_status.LastFullExportDirectory);
                         }
 

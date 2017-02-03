@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using Raven.Server.ServerWide;
 using Sparrow.Platform;
 using Voron.Platform.Posix;
@@ -25,11 +26,6 @@ namespace Raven.Server.Config.Settings
         public PathSetting(PathSetting path)
         {
             _path = path._path;
-        }
-
-        public static implicit operator string(PathSetting path)
-        {
-            return path?.FullPath;
         }
 
         public string FullPath => _fullPath ?? (_fullPath =  ToFullPath(_path));

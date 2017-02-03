@@ -106,7 +106,7 @@ namespace Raven.Server.Config.Categories
                     workingDirectory = Regex.Replace(workingDirectory, "APPDRIVE:", rootPath.TrimEnd('\\'), RegexOptions.IgnoreCase);
             }
 
-            return FilePathTools.MakeSureEndsWithSlash(workingDirectory/*.ToFullPath()*/);
+            return workingDirectory;
         }
     }
 }

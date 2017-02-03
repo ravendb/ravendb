@@ -44,16 +44,16 @@ namespace SlowTests.Issues
                 index.Execute(store);
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
-                Assert.Equal(FilePathTools.MakeSureEndsWithSlash(path1), database.Configuration.Core.DataDirectory);
-                Assert.Equal(Path.Combine(path2, store.DefaultDatabase), database.Configuration.Indexing.StoragePath);
-                Assert.Equal(Path.Combine(path3, store.DefaultDatabase), database.Configuration.Indexing.TempPath);
-                Assert.Equal(Path.Combine(path4, store.DefaultDatabase), database.Configuration.Indexing.JournalsStoragePath);
+                Assert.Equal(path1, database.Configuration.Core.DataDirectory.FullPath);
+                Assert.Equal(path2, database.Configuration.Indexing.StoragePath.FullPath);
+                Assert.Equal(path3, database.Configuration.Indexing.TempPath.FullPath);
+                Assert.Equal(path4, database.Configuration.Indexing.JournalsStoragePath.FullPath);
 
                 var indexInstance = database.IndexStore.GetIndex(index.IndexName);
                 var safeName = indexInstance.GetIndexNameSafeForFileSystem();
-                var storagePath = Path.Combine(path2, store.DefaultDatabase, safeName);
-                var tempPath = Path.Combine(path3, store.DefaultDatabase, safeName);
-                var journalsStoragePath = Path.Combine(path4, store.DefaultDatabase, safeName);
+                var storagePath = Path.Combine(path2, safeName);
+                var tempPath = Path.Combine(path3, safeName);
+                var journalsStoragePath = Path.Combine(path4, safeName);
 
                 Assert.True(Directory.Exists(storagePath));
                 Assert.True(Directory.Exists(tempPath));
