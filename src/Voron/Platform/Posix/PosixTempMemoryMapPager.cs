@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using Sparrow.Platform.Posix;
@@ -155,12 +154,6 @@ namespace Voron.Platform.Posix
                 PosixHelper.ThrowLastError(err);
             }
             NativeMemory.UnregisterFileMapping(FileName, ptr, size);
-        }
-
-        public override void FillZeroLengthJournalWithZeros(ulong size)
-        {
-            Debug.Assert(_totalAllocationSize == 0);
-            PosixHelper.AllocateFileSpace(_fd, size, FileName);
         }
 
         public override void Dispose()

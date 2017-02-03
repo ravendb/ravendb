@@ -85,7 +85,6 @@ namespace Voron.Impl.Journal
 
         private JournalFile NextFile(int numberOf4kbs = 1)
         {
-        
             var now = DateTime.UtcNow;
             if ((now - _lastFile).TotalSeconds < 90)
             {
@@ -101,7 +100,9 @@ namespace Voron.Impl.Journal
        
             var journalPager = _env.Options.CreateJournalWriter(_journalIndex+1, actualLogSize);
 
-            _journalIndex++;
+            // we modify the in memory state _after_ we created the file, because we have to make sure that 
+            // we have created it successfully first. 
+            _journalIndex++; 
 
             _lastFile = now;
 
@@ -157,19 +158,6 @@ namespace Voron.Impl.Journal
                 using (var pager = _env.Options.OpenJournalPager(journalNumber))
                 {
                     RecoverCurrentJournalSize(pager);
-
-                    if (pager.TotalAllocationSize == 0)
-                    {
-                        try
-                        {
-                            pager.FillZeroLengthJournalWithZeros(64 * 1024UL);
-                        }
-                        catch (Exception ex)
-                        {
-                            VoronUnrecoverableErrorException.Raise(_env,
-                                "Cannot recover journal with size 0 after trying to fill it with zeros", ex);
-                        }
-                    }
 
                     var transactionHeader = txHeader->TransactionId == 0 ? null : txHeader;
                     using (
@@ -301,8 +289,8 @@ namespace Voron.Impl.Journal
                 return null;
             }
 
-            // write transactions can read directly from journals
-            var files = _files;
+            // write transactions can read directly from journals that they got when they started up
+            var files = tx.JournalFiles;
             for (var i = files.Count - 1; i >= 0; i--)
             {
                 PagePosition value;

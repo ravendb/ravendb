@@ -206,12 +206,6 @@ namespace Voron.Platform.Posix
             NativeMemory.UnregisterFileMapping(FileName, ptr, size);
         }
 
-        public override void FillZeroLengthJournalWithZeros(ulong size)
-        {
-            Debug.Assert(_totalAllocationSize == 0);
-            PosixHelper.AllocateFileSpace(_fd, size, FileName);
-        }
-
         internal override void ProtectPageRange(byte* start, ulong size, bool force = false)
         {
             if (size == 0)

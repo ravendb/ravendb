@@ -307,8 +307,6 @@ namespace Voron.Impl.Paging
         {
             return new Simple4KbBatchWrites(this);
         }
-
-        public abstract void FillZeroLengthJournalWithZeros(ulong size);
     }
 
     public interface I4KbBatchWrites : IDisposable

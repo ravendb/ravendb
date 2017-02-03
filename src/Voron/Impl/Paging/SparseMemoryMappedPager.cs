@@ -193,12 +193,6 @@ namespace Voron.Impl.Paging
             return new SparseI4KbBatchWrites(this);
         }
 
-        public override void FillZeroLengthJournalWithZeros(ulong size)
-        {
-            Debug.Assert(_totalAllocationSize == 0);
-            Win32NativeFileMethods.SetFileLength(_handle, (long)size);
-        }
-
         public override byte* AcquirePagePointer(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)
         {
             if (Disposed)
