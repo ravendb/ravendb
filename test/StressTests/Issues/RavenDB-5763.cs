@@ -5,7 +5,7 @@ using Xunit;
 
 namespace StressTests.Issues
 {
-    public class RavenDB_5763 : RavenTestBase
+    public class RavenDB_5763 : NoDisposalNeeded
     {
         [Fact]
         public void Should_not_throw_timeout_and_out_of_memory()

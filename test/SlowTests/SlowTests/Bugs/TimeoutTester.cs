@@ -1,17 +1,16 @@
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Linq;
 using Xunit;
 
 namespace SlowTests.SlowTests.Bugs
 {
-    public class TimeoutTester : RavenTestBase
+    public class TimeoutTester : RavenNewTestBase
     {
         private class AnswerVote
         {
@@ -113,7 +112,7 @@ namespace SlowTests.SlowTests.Bugs
                     RavenQueryStatistics stats;
                     AnswerEntity answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
                         .Statistics(out stats)
-                        .Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .OrderBy(x => x.Content)
                         .Where(x => x.Content == (content))
                         .TransformWith<Answers_ByAnswerEntityTransformer, AnswerEntity>()
@@ -161,7 +160,7 @@ namespace SlowTests.SlowTests.Bugs
             }
         }
 
-        public static string CreateEntities(IDocumentStore documentStore, int index)
+        private static string CreateEntities(IDocumentStore documentStore, int index)
         {
             string questionId = @"question/259" + index;
             string answerId = @"answer/540" + index;

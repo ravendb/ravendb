@@ -7,16 +7,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Client.Linq;
 using Xunit;
 
 namespace SlowTests.SlowTests.MailingList
 {
-    public class Jalchr : RavenTestBase
+    public class Jalchr : RavenNewTestBase
     {
         [Fact]
         public void CanGetIdWithCorrectCase()
@@ -25,7 +24,6 @@ namespace SlowTests.SlowTests.MailingList
             {
                 store.Conventions.CustomizeJsonSerializer = serializer =>
                                serializer.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
-                store.Conventions.FindFullDocumentKeyFromNonStringIdentifier = (id, type, allowNull) => id.ToString();
 
                 new Agency_Entity().Execute(store);
                 new Agency_EntityTransformer().Execute(store);
@@ -35,7 +33,7 @@ namespace SlowTests.SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var agency = new AgencyDb();
-                    agency.Id = Guid.NewGuid();
+                    agency.Id = Guid.NewGuid().ToString();
                     agency.Name = "my-name";
                     agency.Code = code;
                     var country = new AgencyCountryDb();
@@ -50,7 +48,7 @@ namespace SlowTests.SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Query<AgencyDb, Agency_Entity>().Customize(x => x.WaitForNonStaleResultsAsOfLastWrite());
+                    var query = session.Query<AgencyDb, Agency_Entity>().Customize(x => x.WaitForNonStaleResults());
                     var agency = (Queryable.Where(query, x => x.Code == code) as IRavenQueryable<AgencyDb>).TransformWith<Agency_EntityTransformer, Agency>().SingleOrDefault();
 
                     Assert.NotNull(agency);
@@ -66,7 +64,6 @@ namespace SlowTests.SlowTests.MailingList
             {
                 store.Conventions.CustomizeJsonSerializer = serializer =>
                                serializer.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
-                store.Conventions.FindFullDocumentKeyFromNonStringIdentifier = (id, type, allowNull) => id.ToString();
 
                 new Agency_Entity().Execute(store);
                 new AgencyTransformer().Execute(store);
@@ -76,7 +73,7 @@ namespace SlowTests.SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var agency = new AgencyDb();
-                    agency.Id = Guid.NewGuid();
+                    agency.Id = Guid.NewGuid().ToString();
                     agency.Name = "my-name";
                     agency.Code = code;
                     var country = new AgencyCountryDb();
@@ -93,7 +90,7 @@ namespace SlowTests.SlowTests.MailingList
                 {
                     var query = session.Query<AgencyDb, Agency_Entity>()
                         .TransformWith<AgencyTransformer, Agency>()
-                        .Customize(x => x.WaitForNonStaleResultsAsOfLastWrite());
+                        .Customize(x => x.WaitForNonStaleResults());
                     var agency = Queryable.Where(query, x => x.Code == code)
                         .SingleOrDefault();
 
@@ -104,25 +101,25 @@ namespace SlowTests.SlowTests.MailingList
             }
         }
 
-        class AgencyDb
+        private class AgencyDb
         {
-            public Guid Id { get; set; }
+            public string Id { get; set; }
             public string Name { get; set; }
             public string Code { get; set; }
             public AgencyCountryDb[] Countries { get; set; }
         }
 
-        class AgencyCountryDb
+        private class AgencyCountryDb
         {
             public string Country { get; set; }
-            public Guid AgencyId { get; set; }
+            public string AgencyId { get; set; }
         }
 
-        class Agency
+        private class Agency
         {
             private List<AgencyCountry> _countries;
 
-            public Guid Id { get; set; }
+            public string Id { get; set; }
             public string Name { get; set; }
             public string Code { get; set; }
 
@@ -142,13 +139,13 @@ namespace SlowTests.SlowTests.MailingList
             }
         }
 
-        class AgencyCountry
+        private class AgencyCountry
         {
             public string Country { get; set; }
             public Agency Agency { get; set; }
         }
 
-        class Agency_Entity : AbstractIndexCreationTask<AgencyDb>
+        private class Agency_Entity : AbstractIndexCreationTask<AgencyDb>
         {
             public Agency_Entity()
             {
@@ -160,7 +157,7 @@ namespace SlowTests.SlowTests.MailingList
             }
         }
 
-        class Agency_EntityTransformer : AbstractTransformerCreationTask<AgencyDb>
+        private class Agency_EntityTransformer : AbstractTransformerCreationTask<AgencyDb>
         {
             public Agency_EntityTransformer()
             {
@@ -180,7 +177,7 @@ namespace SlowTests.SlowTests.MailingList
             }
         }
 
-        class Agency_Entity2 : AbstractIndexCreationTask<AgencyDb>
+        private class Agency_Entity2 : AbstractIndexCreationTask<AgencyDb>
         {
             public Agency_Entity2()
             {
@@ -193,7 +190,7 @@ namespace SlowTests.SlowTests.MailingList
             }
         }
 
-        class AgencyTransformer : AbstractTransformerCreationTask<AgencyDb>
+        private class AgencyTransformer : AbstractTransformerCreationTask<AgencyDb>
         {
             public AgencyTransformer()
             {

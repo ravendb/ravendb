@@ -5,34 +5,33 @@
 // -----------------------------------------------------------------------
 
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.SlowTests.Issues
 {
-    public class RavenDB_1411 : RavenTestBase
+    public class RavenDB_1411 : RavenNewTestBase
     {
-        public class Foo
+        private class Foo
         {
             public string Id { get; set; }
             public string Item { get; set; }
         }
 
-        public class Bar
+        private class Bar
         {
             public string Id { get; set; }
             public string Item { get; set; }
         }
 
-        public class Baz
+        private class Baz
         {
             public string Id { get; set; }
             public string Item { get; set; }
         }
 
-        public class SingleMapIndex : AbstractIndexCreationTask<Foo>
+        private class SingleMapIndex : AbstractIndexCreationTask<Foo>
         {
             public SingleMapIndex()
             {
@@ -40,7 +39,7 @@ namespace SlowTests.SlowTests.Issues
             }
         }
 
-        public class MultiMapIndex : AbstractMultiMapIndexCreationTask<MultiMapOutput>
+        private class MultiMapIndex : AbstractMultiMapIndexCreationTask<MultiMapOutput>
         {
             public MultiMapIndex()
             {
@@ -49,7 +48,7 @@ namespace SlowTests.SlowTests.Issues
             }
         }
 
-        public class FooMapReduceIndex : AbstractIndexCreationTask<Foo, FooMapReduceIndex.Result>
+        private class FooMapReduceIndex : AbstractIndexCreationTask<Foo, FooMapReduceIndex.Result>
         {
             public class Result
             {
@@ -69,7 +68,7 @@ namespace SlowTests.SlowTests.Issues
             }
         }
 
-        public class MultiMapOutput
+        private class MultiMapOutput
         {
             public string Item { get; set; }
         }
