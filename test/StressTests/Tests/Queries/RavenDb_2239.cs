@@ -2,13 +2,13 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace StressTests.Tests.Queries
 {
-    public class RavenDb_2239 : RavenTestBase
+    public class RavenDb_2239 : RavenNewTestBase
     {
         private class Document
         {
@@ -157,7 +157,7 @@ namespace StressTests.Tests.Queries
                             }
                         }
                     });
-                    Assert.True(cntr == 10);
+                    Assert.True(cntr == 10, $"{cntr} == 10");
 
                 }
 

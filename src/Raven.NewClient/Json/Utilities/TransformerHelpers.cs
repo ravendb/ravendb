@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Commands;
 using Raven.NewClient.Client.Document;
 using Sparrow.Json;
@@ -23,7 +24,7 @@ namespace Raven.NewClient.Json.Utilities
                 }
 
                 BlittableJsonReaderArray values;
-                if (result.TryGet("$values", out values) == false)
+                if (result.TryGet(Constants.Json.Fields.Values, out values) == false)
                     throw new InvalidOperationException("Transformed document must have a $values property");
 
                 foreach (var value in ParseValuesFromBlittableArray<T>(session, values))
@@ -74,7 +75,7 @@ namespace Raven.NewClient.Json.Utilities
                     return null;
 
                 BlittableJsonReaderArray values;
-                if (((BlittableJsonReaderObject)x).TryGet("$values", out values) == false)
+                if (((BlittableJsonReaderObject)x).TryGet(Constants.Json.Fields.Values, out values) == false)
                     throw new InvalidOperationException("Transformed document must have a $values property");
 
                 var elementType = typeof(T).GetElementType();
