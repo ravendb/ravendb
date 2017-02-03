@@ -250,11 +250,11 @@ namespace Raven.Server.Documents
             }
 
             var options = _documentDatabase.Configuration.Core.RunInMemory
-                ? StorageEnvironmentOptions.CreateMemoryOnly(_documentDatabase.Configuration.Core.DataDirectory)
+                ? StorageEnvironmentOptions.CreateMemoryOnly(_documentDatabase.Configuration.Core.DataDirectory.FullPath)
                 : StorageEnvironmentOptions.ForPath(
-                    _documentDatabase.Configuration.Core.DataDirectory,
-                    _documentDatabase.Configuration.Storage.TempPath,
-                    _documentDatabase.Configuration.Storage.JournalsStoragePath
+                    _documentDatabase.Configuration.Core.DataDirectory.FullPath,
+                    _documentDatabase.Configuration.Storage.TempPath?.FullPath,
+                    _documentDatabase.Configuration.Storage.JournalsStoragePath?.FullPath
                     );
 
             try

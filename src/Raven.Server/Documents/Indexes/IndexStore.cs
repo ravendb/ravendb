@@ -10,6 +10,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Indexing;
 using Raven.Client.Data.Indexes;
 using Raven.Client.Indexing;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Errors;
@@ -377,23 +378,19 @@ namespace Raven.Server.Documents.Indexes
 
                 var name = index.GetIndexNameSafeForFileSystem();
 
-                var indexPath = Path.Combine(index.Configuration.StoragePath, name);
+                var indexPath = index.Configuration.StoragePath.Combine(name);
 
-                var indexTempPath = index.Configuration.TempPath != null
-                    ? Path.Combine(index.Configuration.TempPath, name)
-                    : null;
+                var indexTempPath = index.Configuration.TempPath?.Combine(name);
 
-                var journalPath = index.Configuration.JournalsStoragePath != null
-                    ? Path.Combine(index.Configuration.JournalsStoragePath, name)
-                    : null;
+                var journalPath = index.Configuration.JournalsStoragePath?.Combine(name);
 
-                IOExtensions.DeleteDirectory(indexPath);
+                IOExtensions.DeleteDirectory(indexPath.FullPath);
 
                 if (indexTempPath != null)
-                    IOExtensions.DeleteDirectory(indexTempPath);
+                    IOExtensions.DeleteDirectory(indexTempPath.FullPath);
 
                 if (journalPath != null)
-                    IOExtensions.DeleteDirectory(journalPath);
+                    IOExtensions.DeleteDirectory(journalPath.FullPath);
             }
         }
 
@@ -526,16 +523,16 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void OpenIndexesFromDirectory(string path)
+        private void OpenIndexesFromDirectory(PathSetting path)
         {
-            if (Directory.Exists(path) == false)
+            if (Directory.Exists(path.FullPath) == false)
                 return;
 
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Starting to load indexes from {path}");
 
             var indexes = new SortedList<int, Tuple<string, string>>();
-            foreach (var indexDirectory in new DirectoryInfo(path).GetDirectories())
+            foreach (var indexDirectory in new DirectoryInfo(path.FullPath).GetDirectories())
             {
                 if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
                     return;
@@ -695,13 +692,10 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void InitializePath(string path)
+        private void InitializePath(PathSetting path)
         {
-            if (PlatformDetails.RunningOnPosix)
-                path = PosixHelper.FixLinuxPath(path);
-
-            if (Directory.Exists(path) == false && _documentDatabase.Configuration.Indexing.RunInMemory == false)
-                Directory.CreateDirectory(path);
+            if (Directory.Exists(path.FullPath) == false && _documentDatabase.Configuration.Indexing.RunInMemory == false)
+                Directory.CreateDirectory(path.FullPath);
         }
 
         private class UnusedIndexState

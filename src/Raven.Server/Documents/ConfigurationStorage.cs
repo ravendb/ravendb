@@ -28,8 +28,8 @@ namespace Raven.Server.Documents
             var path = db.Configuration.Core.DataDirectory.Combine("Configuration");
 
             var options = db.Configuration.Core.RunInMemory
-                ? StorageEnvironmentOptions.CreateMemoryOnly(path)
-                : StorageEnvironmentOptions.ForPath(path);
+                ? StorageEnvironmentOptions.CreateMemoryOnly(path.FullPath)
+                : StorageEnvironmentOptions.ForPath(path.FullPath);
 
             options.SchemaVersion = 1;
 

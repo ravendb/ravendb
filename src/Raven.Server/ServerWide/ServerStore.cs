@@ -113,8 +113,8 @@ namespace Raven.Server.ServerWide
             var path = Configuration.Core.DataDirectory.Combine("System");
 
             var options = Configuration.Core.RunInMemory
-                ? StorageEnvironmentOptions.CreateMemoryOnly(path)
-                : StorageEnvironmentOptions.ForPath(path);
+                ? StorageEnvironmentOptions.CreateMemoryOnly(path.FullPath)
+                : StorageEnvironmentOptions.ForPath(path.FullPath);
 
             options.SchemaVersion = 2;
 

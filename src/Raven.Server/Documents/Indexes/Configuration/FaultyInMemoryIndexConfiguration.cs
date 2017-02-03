@@ -8,10 +8,10 @@ namespace Raven.Server.Documents.Indexes.Configuration
     {
         private readonly PathSetting _storagePath;
 
-        public FaultyInMemoryIndexConfiguration(string storagePath, RavenConfiguration databaseConfiguration)
+        public FaultyInMemoryIndexConfiguration(PathSetting storagePath, RavenConfiguration databaseConfiguration)
             : base(databaseConfiguration)
         {
-            _storagePath = new PathSetting(storagePath); // TODO arek - verify that
+            _storagePath = storagePath;
         }
 
         public override bool RunInMemory => false;

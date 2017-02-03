@@ -20,6 +20,8 @@ namespace FastTests.Issues
             Assert.Null(config.Indexing.TempPath);
             Assert.Null(config.Indexing.JournalsStoragePath);
             Assert.Null(config.Indexing.AdditionalStoragePaths);
+
+            // TODO arek - add more tests, working directory etc..
         }
     }
 }

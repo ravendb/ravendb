@@ -83,7 +83,7 @@ namespace Raven.Server.Web.System
 
             string errorMessage;
             if (
-                ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory,
+                ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath,
                     out errorMessage) == false)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
