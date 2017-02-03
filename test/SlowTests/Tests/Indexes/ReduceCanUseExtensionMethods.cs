@@ -1,14 +1,15 @@
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Operations.Databases.Indexes;
+using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.Tests.Indexes
 {
-    public class ReduceCanUseExtensionMethods : RavenTestBase
+    public class ReduceCanUseExtensionMethods : RavenNewTestBase
     {
         private class InputData
         {
@@ -27,7 +28,7 @@ namespace SlowTests.Tests.Indexes
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.PutIndex("Hi", new IndexDefinitionBuilder<InputData, Result>()
+                store.Admin.Send(new PutIndexOperation("Hi", new IndexDefinitionBuilder<InputData, Result>()
                 {
                     Map = documents => from doc in documents
                                        let tags = ((string[])doc.Tags.Split(',')).Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s))
@@ -35,7 +36,7 @@ namespace SlowTests.Tests.Indexes
                                        {
                                            Tags = tags.ToArray()
                                        }
-                });
+                }.ToIndexDefinition(store.Conventions)));
 
                 using (var session = store.OpenSession())
                 {
@@ -46,8 +47,7 @@ namespace SlowTests.Tests.Indexes
 
                 WaitForIndexing(store);
 
-                var errors = store.DatabaseCommands.GetIndexErrors("Hi");
-                Assert.Empty(errors.Errors);
+                TestHelper.AssertNoIndexErrors(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -55,7 +55,6 @@ namespace SlowTests.Tests.Indexes
                         .Search(d => d.Tags, "only-one")
                         .As<InputData>()
                         .ToList();
-
 
                     Assert.Single(results);
                 }

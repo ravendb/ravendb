@@ -1,13 +1,13 @@
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Document;
-using Raven.Client.Indexes;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.Tests.Indexes
 {
-    public class IndexWithSubProperty : RavenTestBase
+    public class IndexWithSubProperty : RavenNewTestBase
     {
         [Fact]
         public void IndexWithSubPropertyReturnAs_Property_SubProperty()
@@ -33,7 +33,7 @@ namespace SlowTests.Tests.Indexes
             Assert.Equal("SnowballAnalyzer", indexDefinition.Fields["String_Analyzer"].Analyzer);
         }
 
-        public class ContactIndex : AbstractIndexCreationTask<Contact>
+        private class ContactIndex : AbstractIndexCreationTask<Contact>
         {
             public ContactIndex()
             {
@@ -53,7 +53,7 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        public class Contact
+        private class Contact
         {
             public string Id { get; set; }
             public string FirstName { get; set; }
@@ -61,7 +61,7 @@ namespace SlowTests.Tests.Indexes
             public EmailAddress PrimaryEmail { get; set; }
         }
 
-        public class EmailAddress
+        private class EmailAddress
         {
             public string Email { get; set; }
         }

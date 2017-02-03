@@ -7,16 +7,16 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexing;
+using Raven.NewClient.Abstractions.Indexing;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.Tests.Faceted
 {
-    public class AggregationFacet : RavenTestBase
+    public class AggregationFacet : RavenNewTestBase
     {
         private class Car
         {
@@ -211,7 +211,7 @@ namespace SlowTests.Tests.Faceted
                 session.SaveChanges();
             }
 
-            store.DatabaseCommands.PutIndex("Cars", new IndexDefinition
+            store.Admin.Send(new PutIndexOperation("Cars", new IndexDefinition
             {
                 Maps = { "from car in docs.Cars select new { car.Make, car.Year, car.Price}" },
                 Fields = new Dictionary<string, IndexFieldOptions>
@@ -224,7 +224,7 @@ namespace SlowTests.Tests.Faceted
                         }
                     }
                 }
-            });
+            }));
 
             WaitForIndexing(store);
         }

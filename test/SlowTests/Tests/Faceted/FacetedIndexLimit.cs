@@ -7,11 +7,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Abstractions.Data;
-using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexing;
-using Raven.Client.Linq;
+using Raven.NewClient.Abstractions.Data;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.Tests.Faceted
@@ -510,7 +510,7 @@ namespace SlowTests.Tests.Faceted
         {
             using (var s = store.OpenSession())
             {
-                store.DatabaseCommands.PutIndex("CameraCost",
+                store.Admin.Send(new PutIndexOperation("CameraCost",
                     new IndexDefinition
                     {
                         Maps =
@@ -525,7 +525,7 @@ namespace SlowTests.Tests.Faceted
                                 camera.Megapixels
                             }"
                         }
-                    });
+                    }));
 
                 var counter = 0;
                 foreach (var camera in _data)

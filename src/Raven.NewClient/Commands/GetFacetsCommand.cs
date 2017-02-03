@@ -1,13 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
-using System.Text;
-using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Data;
-using Raven.NewClient.Client.Data.Queries;
-using Raven.NewClient.Client.Document;
 using Raven.NewClient.Client.Http;
 using Raven.NewClient.Client.Json;
 using Sparrow.Json;
@@ -16,33 +10,44 @@ namespace Raven.NewClient.Client.Commands
 {
     public class GetFacetsCommand : RavenCommand<FacetedQueryResult>
     {
-        public FacetQuery Query;
-        public JsonOperationContext Context;
+        private readonly JsonOperationContext _context;
+        private readonly FacetQuery _query;
+
+        public GetFacetsCommand(JsonOperationContext context, FacetQuery query)
+        {
+            if (context == null)
+                throw new ArgumentNullException(nameof(context));
+            if (query == null)
+                throw new ArgumentNullException(nameof(query));
+
+            _context = context;
+            _query = query;
+        }
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            if (string.IsNullOrWhiteSpace(Query.FacetSetupDoc) == false && Query.Facets != null && Query.Facets.Count > 0)
+            if (string.IsNullOrWhiteSpace(_query.FacetSetupDoc) == false && _query.Facets != null && _query.Facets.Count > 0)
                 throw new InvalidOperationException($"You cannot specify both '{nameof(FacetQuery.FacetSetupDoc)}' and '{nameof(FacetQuery.Facets)}'.");
 
             //TODO - EFRAT
-            var method = Query.CalculateHttpMethod();
+            var method = _query.CalculateHttpMethod();
 
             var request = new HttpRequestMessage
             {
                 Method = method
             };
-            
+
             if (method == HttpMethod.Post)
             {
                 request.Content = new BlittableJsonContent(stream =>
                 {
-                    using (var writer = new BlittableJsonTextWriter(Context, stream))
+                    using (var writer = new BlittableJsonTextWriter(_context, stream))
                     {
-                        Context.Write(writer, Query.GetFacetsAsJson());
+                        _context.Write(writer, _query.GetFacetsAsJson());
                     }
                 });
             }
-            url = $"{node.Url}/databases/{node.Database}/queries/{Query.IndexName}?{Query.GetQueryString(method)}";
+            url = $"{node.Url}/databases/{node.Database}/queries/{_query.IndexName}?{_query.GetQueryString(method)}";
             return request;
         }
 
@@ -53,9 +58,8 @@ namespace Raven.NewClient.Client.Commands
                 Result = null;
                 return;
             }
-            Result = JsonDeserializationClient.FacetedQueryResult(response);
-            
 
+            Result = JsonDeserializationClient.FacetedQueryResult(response);
         }
 
         public override bool IsReadRequest => true;

@@ -3,12 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net;
-using Raven.Abstractions.Data;
-using Raven.Client;
-using Raven.Client.Connection;
-using Raven.Client.Data;
-using Raven.Client.Linq;
-using Raven.Imports.Newtonsoft.Json;
+using Newtonsoft.Json;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Commands;
+using Raven.NewClient.Client.Data;
 using Xunit;
 
 namespace SlowTests.Tests.Faceted
@@ -104,7 +102,7 @@ namespace SlowTests.Tests.Faceted
 
                 long? firstEtag;
 
-                var queryUrl = store.Url.ForDatabase(store.DefaultDatabase) + "/queries/CameraCost?query=Manufacturer%253A{0}&facetStart=0&facetPageSize=&op=facets";
+                const string queryUrl = "/queries/CameraCost?query=Manufacturer%253A{0}&facetStart=0&facetPageSize=&op=facets";
 
                 var requestUrl = string.Format(queryUrl, "canon");
 

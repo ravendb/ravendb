@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Newtonsoft.Json;
+using Raven.NewClient.Client.Data;
 
 namespace Raven.NewClient.Abstractions.Data
 {

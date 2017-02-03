@@ -7,14 +7,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Data;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.Tests.Faceted
 {
-    public class LazyFacets : RavenTestBase
+    public class LazyFacets : RavenNewTestBase
     {
         [Fact]
         public void Default_operator_not_honoured_remote_store_ToFacetsLazy()
