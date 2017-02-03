@@ -34,8 +34,6 @@ namespace Raven.Client.Connection
 
         public HttpJsonRequest CreateDatabase(DatabaseDocument databaseDocument, out RavenJObject doc)
         {
-            if (databaseDocument.Settings.ContainsKey("Raven/DataDir") == false)
-                throw new InvalidOperationException("The Raven/DataDir setting is mandatory");
             MultiDatabase.AssertValidName(databaseDocument.Id);
             doc = RavenJObject.FromObject(databaseDocument);
 
