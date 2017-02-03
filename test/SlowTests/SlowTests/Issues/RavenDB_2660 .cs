@@ -5,15 +5,14 @@
 // -----------------------------------------------------------------------
 
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Basic.Entities;
-using Raven.Client.Indexes;
+using Raven.NewClient.Client.Indexes;
 using Xunit;
 
 namespace SlowTests.SlowTests.Issues
 {
-    public class RavenDB_2660 : RavenTestBase
+    public class RavenDB_2660 : RavenNewTestBase
     {
         public class UsersByName : AbstractIndexCreationTask<User>
         {

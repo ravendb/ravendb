@@ -78,6 +78,8 @@ namespace Raven.NewClient.Client.Json
 
         public static readonly Func<BlittableJsonReaderObject, FullTopologyInfo> FullTopologyInfo = GenerateJsonDeserializationRoutine<FullTopologyInfo>();
 
+        public static readonly Func<BlittableJsonReaderObject, BuildNumber> BuildNumber = GenerateJsonDeserializationRoutine<BuildNumber>();
+
         internal static readonly Func<BlittableJsonReaderObject, ExceptionDispatcher.ExceptionSchema> ExceptionSchema = GenerateJsonDeserializationRoutine<ExceptionDispatcher.ExceptionSchema>();
     }
 }
