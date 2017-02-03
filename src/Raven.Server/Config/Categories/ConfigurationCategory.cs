@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Raven.Abstractions.Extensions;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
+using Raven.Server.ServerWide;
 
 namespace Raven.Server.Config.Categories
 {
@@ -16,14 +17,27 @@ namespace Raven.Server.Config.Categories
     {
         public const string DefaultValueSetInConstructor = "default-value-set-in-constructor";
 
-        protected internal bool Initialized { get; set; }
-
-        public virtual void Initialize(IConfigurationRoot settings)
+        public class SettingValue
         {
-            Initialize(key => settings[key], throwIfThereIsNoSetMethod: true);
+            public SettingValue(string current, string server)
+            {
+                CurrentValue = current;
+                ServerValue = server;
+            }
+
+            public readonly string ServerValue;
+
+            public readonly string CurrentValue;
         }
 
-        public void Initialize(Func<string, string> getSetting, bool throwIfThereIsNoSetMethod)
+        protected internal bool Initialized { get; set; }
+
+        public virtual void Initialize(IConfigurationRoot settings, IConfigurationRoot serverWideSettings, ResourceType type, string resourceName)
+        {
+            Initialize(key => new SettingValue(settings[key], serverWideSettings?[key]), type, resourceName, throwIfThereIsNoSetMethod: true);
+        }
+
+        public void Initialize(Func<string, SettingValue> getSetting, ResourceType type, string resourceName, bool throwIfThereIsNoSetMethod)
         {
             foreach (var property in GetConfigurationProperties())
             {
@@ -56,7 +70,8 @@ namespace Raven.Server.Config.Categories
 
                 foreach (var entry in property.GetCustomAttributes<ConfigurationEntryAttribute>())
                 {
-                    var value = getSetting(entry.Key);
+                    var settingValue = getSetting(entry.Key);
+                    var value = settingValue.CurrentValue ?? settingValue.ServerValue;
                     setDefaultValueOfNeeded &= entry.SetDefaultValueIfNeeded;
 
                     if (value == null)
@@ -89,9 +104,28 @@ namespace Raven.Server.Config.Categories
                             {
                                 var t = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
 
-                                var safeValue = (value == null) ? null : Convert.ChangeType(value, t);
+                                if (property.PropertyType == typeof(PathSetting))
+                                {
+                                    if (settingValue.CurrentValue != null)
+                                        property.SetValue(this, new PathSetting(Convert.ToString(value)));
+                                    else
+                                        property.SetValue(this, new PathSetting(Convert.ToString(value), type, resourceName));
+                                }
+                                else if (property.PropertyType == typeof(PathSetting[]))
+                                {
+                                    var paths = value.Split(';');
 
-                                property.SetValue(this, safeValue);
+                                    if (settingValue.CurrentValue != null)
+                                        property.SetValue(this, paths.Select(x => new PathSetting(Convert.ToString(x))).ToArray());
+                                    else
+                                        property.SetValue(this, paths.Select(x => new PathSetting(Convert.ToString(x), type, resourceName)).ToArray());
+                                }
+                                else
+                                {
+                                    var safeValue = (value == null) ? null : Convert.ChangeType(value, t);
+                                    property.SetValue(this, safeValue);
+                                }
+                                
                             }
                         }
                         else
@@ -144,7 +178,12 @@ namespace Raven.Server.Config.Categories
                 }
                 else
                 {
-                    property.SetValue(this, defaultValue);
+                    if (property.PropertyType == typeof(PathSetting) && defaultValue != null)
+                    {
+                        property.SetValue(this, new PathSetting(Convert.ToString(defaultValue), type, resourceName));
+                    }
+                    else
+                        property.SetValue(this, defaultValue);
                 }
             }
 

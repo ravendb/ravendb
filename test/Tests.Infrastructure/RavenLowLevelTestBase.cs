@@ -6,8 +6,10 @@ using System.Runtime.InteropServices;
 using System.Threading;
 
 using Raven.Server.Config;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Json;
@@ -37,7 +39,7 @@ namespace FastTests
 
             _pathsToDelete.Add(dataDirectory);
 
-            var configuration = new RavenConfiguration { DatabaseName = name };
+            var configuration = new RavenConfiguration(name, ResourceType.Database);
             configuration.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory), int.MaxValue.ToString());
             configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = true;
 
@@ -45,7 +47,7 @@ namespace FastTests
             configuration.Initialize();
 
             configuration.Core.RunInMemory = runInMemory;
-            configuration.Core.DataDirectory = dataDirectory;
+            configuration.Core.DataDirectory = new PathSetting(dataDirectory);
 
             var documentDatabase = new DocumentDatabase(name, configuration, null);
             documentDatabase.Initialize();

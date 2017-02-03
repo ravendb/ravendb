@@ -11,30 +11,6 @@ namespace Raven.Abstractions.Data
             InResourceKeyVerificationDocumentContents.EnsureCannotBeChangeAndEnableSnapshotting();
         }
 
-        public class Configuration
-        {
-            private Configuration()
-            {
-            }
-
-            public class Indexing
-            {
-                private Indexing()
-                {
-                }
-
-                public const string AdditionalStoragePaths = "Raven/Indexing/AdditionalStoragePaths";
-
-                public const string StoragePath = "Raven/Indexing/StoragePath";
-
-                public const string TempPath = "Raven/Indexing/TempPath";
-
-                public const string JournalsStoragePath = "Raven/Indexing/JournalsStoragePath";
-            }
-
-            public const string RavenIndexingDisable = "Raven/Indexing/Disable";
-        }
-
         public class Command
         {
             private Command()

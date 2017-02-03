@@ -21,29 +21,5 @@ namespace Raven.Server.Documents
                 return "\t\\" + dir.Substring(workDir.Length);
             return dir;
         }
-
-        public static string ApplyWorkingDirectoryToPathAndMakeSureThatItEndsWithSlash(string workingDirectory, string path)
-        {
-            if (string.IsNullOrEmpty(workingDirectory) || string.IsNullOrEmpty(path))
-                return path;
-
-            if (Path.IsPathRooted(path) == false)
-            {
-                if (path.StartsWith(@"~/") || path.StartsWith(@"~\"))
-                {
-                    path = path
-                        .Replace(@"~/", workingDirectory)
-                        .Replace(@"~\", workingDirectory);
-                }
-                else
-                {
-                    path = Path.Combine(workingDirectory, path);
-                }
-            }
-
-            
-
-            return MakeSureEndsWithSlash(path.ToFullPath());
-        }
     }
 }

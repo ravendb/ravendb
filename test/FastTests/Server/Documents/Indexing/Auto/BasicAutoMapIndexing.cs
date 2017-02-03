@@ -1123,15 +1123,11 @@ namespace FastTests.Server.Documents.Indexing.Auto
         [Fact]
         public void CanDeleteFaultyIndex()
         {
-            var name = Guid.NewGuid().ToString();
             var path = NewDataPath();
             string indexStoragePath;
             string indexSafeName;
 
-            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration =>
-            {
-                configuration.DatabaseName = name;
-            }))
+            using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path))
             {
                 var name1 = new IndexField
                 {
@@ -1155,7 +1151,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration =>
             {
-                configuration.DatabaseName = name;
                 configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = false;
             }))
             {
@@ -1183,7 +1178,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
         [Fact]
         public void CanDeleteFaultyIndexWithNonDefaultPath()
         {
-            var name = Guid.NewGuid().ToString();
             var path = NewDataPath();
             var additionalPath = NewDataPath();
             string indexStoragePath;
@@ -1191,7 +1185,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration =>
             {
-                configuration.DatabaseName = name;
                 configuration.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.AdditionalStoragePaths), additionalPath);
             }))
             {
@@ -1217,7 +1210,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
             using (var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: path, modifyConfiguration: configuration =>
             {
-                configuration.DatabaseName = name;
                 configuration.SetSetting(RavenConfiguration.GetKey(x => x.Indexing.AdditionalStoragePaths), additionalPath);
                 configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = false;
             }))
