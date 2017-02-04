@@ -1,1 +1,0 @@
-docker build .\ravendb-windows -t ravendb-windows;

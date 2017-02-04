@@ -1,0 +1,1 @@
+docker build .\ravendb-nanoserver -t ravendb-nanoserver;
