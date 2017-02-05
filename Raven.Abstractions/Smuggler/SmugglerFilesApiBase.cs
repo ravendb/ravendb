@@ -703,56 +703,14 @@ namespace Raven.Abstractions.Smuggler
                 {
                     using (var streamReader = new StreamReader(configurationsEntry.Open()))
                     {
-                        foreach (var json in streamReader.EnumerateJsonObjects())
-                        {
-                            var config = serializer.Deserialize<ConfigContainer>(new StringReader(json));
-
-                            if (Options.StripReplicationInformation)
-                            {
-                                if (config.Name.Equals(SynchronizationConstants.RavenSynchronizationVersionHiLo, StringComparison.OrdinalIgnoreCase))
-                                    continue;
-                            }
-
-                            await Operations.PutConfig(config.Name, config.Value).ConfigureAwait(false);
-
-                            configurationsCount++;
-
-                            if (configurationsCount % 100 == 0)
-                            {
-                                Operations.ShowProgress("Read {0:#,#;;0} configurations", configurationsCount);
-                            }
-                        }
+                        await ImportConfigs(streamReader, serializer, configurationsCount).ConfigureAwait(false);
                     }
                 }
-
-                var filesCount = 0;
-
-                ServerSupportedFeatures features;
-                try
-                {
-                    features = await DetectServerSupportedFeatures(importOptions.To).ConfigureAwait(false);
-                }
-                catch (WebException e)
-                {
-                    throw new SmugglerImportException("Failed to query server for supported features. Reason : " + e.Message)
-                    {
-                        LastEtag = Etag.Empty
-                    };
-                }
-
 
                 var metadataEntry = filesLookup[MetadataEntry];
                 using (var streamReader = new StreamReader(metadataEntry.Open()))
                 {
-                    if (features.IsFilesStreamingSupported)
-                    {
-                        filesCount = await ImportFilesWithStreaming(streamingBatchSize, streamReader, serializer, filesLookup).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        filesCount = await ImportFilesLegacy(streamReader, serializer, filesLookup).ConfigureAwait(false);
-                    }
-                    
+                    await ImportFiles(streamReader, serializer, filesLookup).ConfigureAwait(false);
 
                     Options.CancelToken.Token.ThrowIfCancellationRequested();
                 }
@@ -761,9 +719,37 @@ namespace Raven.Abstractions.Smuggler
             sw.Stop();
         }
 
-        private async Task<int> ImportFilesWithStreaming(int streamingBatchSize, StreamReader streamReader, JsonSerializer serializer, Dictionary<string, ZipArchiveEntry> filesLookup)
+        private async Task ImportConfigs(StreamReader streamReader, JsonSerializer serializer, int configurationsCount)
+        {
+            foreach (var json in streamReader.EnumerateJsonObjects())
+            {
+                var config = serializer.Deserialize<ConfigContainer>(new StringReader(json));
+
+                if (Options.StripReplicationInformation)
+                {
+                    if (config.Name.Equals(SynchronizationConstants.RavenSynchronizationVersionHiLo, StringComparison.OrdinalIgnoreCase))
+                        continue;
+                }
+
+                await Operations.PutConfig(config.Name, config.Value).ConfigureAwait(false);
+
+                configurationsCount++;
+
+                if (configurationsCount%100 == 0)
+                {
+                    Operations.ShowProgress("Read {0:#,#;;0} configurations", configurationsCount);
+                }
+            }
+        }
+
+        private async Task<int> ImportFilesWithStreaming_ForNowShouldNotBeUsed(SmugglerImportOptions<FilesConnectionStringOptions> importOptions, int streamingBatchSize, StreamReader streamReader, JsonSerializer serializer, Dictionary<string, ZipArchiveEntry> filesLookup)
         {
             int filesCount = 0;
+            var batchSizeFromConfig = 20;// shoudl be taken from config
+            int? filesLeftForCurrentBatch = batchSizeFromConfig; 
+            var readSP = Stopwatch.StartNew();
+            
+            Task previousTask = new CompletedTask();
             using (var filesMetadataEnumerator = streamReader.EnumerateJsonObjects().GetEnumerator())
             {
                 while (filesMetadataEnumerator.MoveNext())
@@ -772,6 +758,9 @@ namespace Raven.Abstractions.Smuggler
                     List<FileUploadUnitOfWork> filesAndHeaders = new List<FileUploadUnitOfWork>();
                     do
                     {
+                        if (filesAndHeaders != null)
+                            filesLeftForCurrentBatch--;
+
                         var jsonString = filesMetadataEnumerator.Current;
                         var container = serializer.Deserialize<FileContainer>(new StringReader(jsonString));
                         var header = new FileHeader(container.Key, container.Metadata);
@@ -791,13 +780,20 @@ namespace Raven.Abstractions.Smuggler
                         Options.CancelToken.Token.ThrowIfCancellationRequested();
                         filesCount++;
 
-                        if (filesCount%100 == 0)
+                        if (filesCount % 100 ==0)
                         {
-                            Operations.ShowProgress("Read {0:#,#;;0} files", filesCount);
+                            Operations.ShowProgress("Read {0:#,#;;0} files, It took {0:#,#;;0} ms", filesCount, readSP.ElapsedMilliseconds);
+                            readSP.Restart();
                         }
-                    } while (filesMetadataEnumerator.MoveNext() && totalSize <= streamingBatchSize);
+                        totalSize += entry.Length + jsonString.Length;
 
-                    await Operations.UploadFilesInStream(filesAndHeaders.ToArray()).ConfigureAwait(false);
+                    } while (totalSize <= streamingBatchSize && 
+                        (filesLeftForCurrentBatch.HasValue ==false || filesLeftForCurrentBatch > 0 ) 
+                        && filesMetadataEnumerator.MoveNext() );
+
+                    filesLeftForCurrentBatch = batchSizeFromConfig;
+                    await previousTask.ConfigureAwait(false);
+                    previousTask = Operations.UploadFilesInStream(filesAndHeaders.ToArray());
 
                     Options.CancelToken.Token.ThrowIfCancellationRequested();
                 }
@@ -805,7 +801,7 @@ namespace Raven.Abstractions.Smuggler
             return filesCount;
         }
 
-        private async Task<int> ImportFilesLegacy(StreamReader streamReader, JsonSerializer serializer, Dictionary<string,ZipArchiveEntry> filesLookup )
+        private async Task<int> ImportFiles(StreamReader streamReader, JsonSerializer serializer, Dictionary<string,ZipArchiveEntry> filesLookup )
         {
             int filesCount = 0;
             foreach (var json in streamReader.EnumerateJsonObjects())
