@@ -1855,7 +1855,8 @@ namespace Raven.Server.Documents
         public PutOperationResults Put(DocumentsOperationContext context, string key, long? expectedEtag,
             BlittableJsonReaderObject document,
             long? lastModifiedTicks = null,
-            ChangeVectorEntry[] changeVector = null)
+            ChangeVectorEntry[] changeVector = null,
+            DocumentFlags flags = DocumentFlags.None)
         {
             if (context.Transaction == null)
             {
@@ -1868,15 +1869,14 @@ namespace Raven.Server.Documents
             var collectionName = ExtractCollectionName(context, key, document);
             var newEtag = GenerateNextEtag();
             var newEtagBigEndian = Bits.SwapBytes(newEtag);
-            int flags = 0;
-            if (collectionName.IsSystem == false)
+            if (collectionName.IsSystem == false && flags.HasFlag(DocumentFlags.Artificial) == false)
             {
                 bool hasVersion =
                     _documentDatabase.BundleLoader.VersioningStorage?.PutFromDocument(context, collectionName,
                     key, document) ?? false;
                 if (hasVersion)
                 {
-                    flags = (int)DocumentFlags.Versioned;
+                    flags |= DocumentFlags.Versioned;
                 }
             }
 
@@ -1949,7 +1949,7 @@ namespace Raven.Server.Documents
                         {document.BasePointer, document.Size},
                         {(byte*) pChangeVector, sizeof(ChangeVectorEntry)*changeVector.Length},
                         modifiedTicks,
-                        flags,
+                        (int)flags,
                         transactionMarker
                     };
 

@@ -161,7 +161,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     };
                     using (var document = EntityToBlittable.ConvertEntityToBlittable(reduceDocument.Document, documentConvention, context, documentInfo))
                     {
-                        _database.DocumentsStorage.Put(context, id, null, document);
+                        _database.DocumentsStorage.Put(context, id, null, document, flags: DocumentFlags.Artificial);
                         context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(id, document.Size);
                     }
                 }

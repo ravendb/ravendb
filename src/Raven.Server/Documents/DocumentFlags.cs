@@ -7,5 +7,6 @@ namespace Raven.Server.Documents
     {
         None = 0,
         Versioned = 1,
+        Artificial = 2,
     }
 }
