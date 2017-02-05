@@ -6,10 +6,12 @@ import importDatabaseCommand = require("commands/database/studio/importDatabaseC
 import importDatabaseModel = require("models/database/tasks/importDatabaseModel");
 import notificationCenter = require("common/notifications/notificationCenter");
 import eventsCollector = require("common/eventsCollector");
+import appUrl = require("common/appUrl");
 import copyToClipboard = require("common/copyToClipboard");
 import getNextOperationId = require("commands/database/studio/getNextOperationId");
 import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import EVENTS = require("common/constants/events");
+import generalUtils = require("common/generalUtils");
 
 class importDatabase extends viewModelBase {
 
@@ -46,9 +48,65 @@ class importDatabase extends viewModelBase {
                 this.uploadStatus(0);
             }
         });
+        this.showTransformScript.subscribe(v => {
+            if (!v) {
+                this.model.transformScript("");
+            }
+        });
 
-        //TODO: implement this command
-        this.importCommand = ko.pureComputed(() => 'Raven.Smuggler out http://live-test.ravendb.net raven.dump --operate-on-types=Documents,Indexes,Transformers --database="Media" --batch-size=1024 --excludeexpired');
+        //TODO: change input file name to be full document path
+        
+        this.importCommand = ko.pureComputed(() =>
+            //TODO: review for smuggler.exe!
+        {
+            const targetServer = appUrl.forServer();
+            const model = this.model;
+            const inputFilename = this.importedFileName() ? generalUtils.escapeForShell(this.importedFileName()) : "";
+            const commandTokens = ["Raven.Smuggler", "in", targetServer, inputFilename];
+
+            const databaseName = this.activeDatabase().name;
+            commandTokens.push("--database=" + generalUtils.escapeForShell(databaseName));
+
+            const types: Array<string> = [];
+            if (model.includeDocuments()) {
+                types.push("Documents");
+            }
+            if (model.includeRevisionDocuments()) {
+                types.push("RevisionDocuments");
+            }
+            if (model.includeIndexes()) {
+                types.push("Indexes");
+            }
+            if (model.includeTransformers()) {
+                types.push("Transformers");
+            }
+            if (model.includeIdentities()) {
+                types.push("Identities");
+            }
+            if (types.length > 0) {
+                commandTokens.push("--operate-on-types=" + types.join(","));
+            } 
+
+            if (model.includeExpiredDocuments()) {
+                commandTokens.push("--include-expired");
+            }
+
+            if (model.shouldDisableVersioningBundle()) {
+                commandTokens.push("--disable-versioning-bundle")
+            }
+
+            if (model.removeAnalyzers()) {
+                commandTokens.push("--remove-analyzers");
+            }
+
+            if (model.transformScript() && this.showTransformScript()) {
+                commandTokens.push("--transform=" + generalUtils.escapeForShell(model.transformScript()));
+            }
+
+            return commandTokens.join(" ");
+        });
+        
+
         this.setupValidation();
     }
 
@@ -86,7 +144,7 @@ class importDatabase extends viewModelBase {
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
         return [
             ko.postbox.subscribe("UploadProgress", (percentComplete: number) => {
-                var db = this.activeDatabase();
+                const db = this.activeDatabase();
                 if (!db) {
                     return;
                 }
