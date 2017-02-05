@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using Raven.Client.Data;
+using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -47,7 +48,8 @@ namespace Raven.Server.Documents.Handlers
                         IndexId = index.IndexId,
                         LockMode = index.Definition.LockMode,
                         Type = index.Type,
-                        LastIndexingTime = index.LastIndexingTime
+                        LastIndexingTime = index.LastIndexingTime,
+                        OutputReduceResultsToCollectionName = (index.Definition as MapReduceIndexDefinition)?.OutputReduceResultsToCollectionName
                     };
 
                     if (stats.LastIndexingTime.HasValue)

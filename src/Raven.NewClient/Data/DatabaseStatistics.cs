@@ -76,6 +76,8 @@ namespace Raven.NewClient.Client.Data
         public IndexLockMode LockMode { get; set; }
 
         public IndexType Type { get; set; }
+
+        public string OutputReduceResultsToCollectionName { get; set; }
     }
 
     public class TriggerInfo

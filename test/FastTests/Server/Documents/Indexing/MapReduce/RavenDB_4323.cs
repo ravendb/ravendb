@@ -75,7 +75,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                 {
                     statistics = await store.Admin.ForDatabase(store.DefaultDatabase).SendAsync(new GetStatisticsOperation());
                     var index = statistics.Indexes
-                        .FirstOrDefault(x => x.Name == nameof(MonthlySelfReduceIndex));
+                        .FirstOrDefault(x => x.Name == nameof(MonthlySelfReduceIndex) && x.OutputReduceResultsToCollectionName == "DailyInvoices");
                     if (index.State == IndexState.Error)
                     {
                         var errors = await store.Admin.ForDatabase(store.DefaultDatabase).SendAsync(new GetIndexErrorsOperation(new [] {nameof(MonthlySelfReduceIndex)}));

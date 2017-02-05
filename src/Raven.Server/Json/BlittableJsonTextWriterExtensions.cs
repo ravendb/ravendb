@@ -709,6 +709,10 @@ namespace Raven.Server.Json
                 writer.WriteString(index.Type.ToString());
                 writer.WriteComma();
 
+                writer.WritePropertyName(nameof(index.OutputReduceResultsToCollectionName));
+                writer.WriteString(index.OutputReduceResultsToCollectionName);
+                writer.WriteComma();
+
                 writer.WritePropertyName(nameof(index.LastIndexingTime));
                 if (index.LastIndexingTime.HasValue)
                     writer.WriteString(index.LastIndexingTime.Value.GetDefaultRavenFormat(isUtc: true));
