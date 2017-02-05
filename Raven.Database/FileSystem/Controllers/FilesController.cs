@@ -22,6 +22,7 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using Raven.Database.Extensions;
 using Microsoft.Isam.Esent.Interop;
+using Raven.Abstractions.FileSystem.Notifications;
 using Raven.Database.FileSystem.Bundles.Versioning;
 using Raven.Json.Linq;
 
@@ -295,9 +296,34 @@ namespace Raven.Database.FileSystem.Controllers
                 };
 
                 accessor.SetConfig(RavenFileNameHelper.CopyOperationConfigNameForFile(name,targetFilename), JsonExtensions.ToJObject(operation));
-                accessor.PulseTransaction(); // commit rename operation config
+                var configName = RavenFileNameHelper.CopyOperationConfigNameForFile(operation.SourceFilename, operation.TargetFilename);
+                Files.AssertPutOperationNotVetoed(operation.TargetFilename, operation.MetadataAfterOperation);
 
-                Files.ExecuteCopyOperation(operation);
+                var targetTombstrone = accessor.ReadFile(operation.TargetFilename);
+
+                if (targetTombstrone != null &&
+                    targetTombstrone.Metadata[SynchronizationConstants.RavenDeleteMarker] != null)
+                {
+                    // if there is a tombstone delete it
+                    accessor.Delete(targetTombstrone.FullPath);
+                }
+
+                FileSystem.PutTriggers.Apply(trigger => trigger.OnPut(operation.TargetFilename, operation.MetadataAfterOperation));
+
+                accessor.CopyFile(operation.SourceFilename, operation.TargetFilename, true);
+                var putResult = accessor.UpdateFileMetadata(operation.TargetFilename, operation.MetadataAfterOperation, null);
+
+                FileSystem.PutTriggers.Apply(trigger => trigger.AfterPut(operation.TargetFilename, null, operation.MetadataAfterOperation));
+
+                accessor.DeleteConfig(configName);
+
+                Search.Index(operation.TargetFilename, operation.MetadataAfterOperation, putResult.Etag);
+              
+
+                Publisher.Publish(new ConfigurationChangeNotification { Name = configName, Action = ConfigurationChangeAction.Set });
+                Publisher.Publish(new FileChangeNotification { File = operation.TargetFilename, Action = FileChangeAction.Add });
+
+                
             });
 
             if (Log.IsDebugEnabled)
