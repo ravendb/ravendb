@@ -40,16 +40,16 @@ namespace SlowTests.SlowTests.Issues
                     }
                 }
 
-                WaitForIndexing(store,timeout: TimeSpan.FromMinutes(1));
+                WaitForIndexing(store,timeout: TimeSpan.FromMinutes(2));
                 var queryToDelete = new IndexQuery(store.Conventions)
                 {
                     Query = string.Empty
                 };
 
                 var operation = store.Operations.Send(new DeleteByIndexOperation(stats.IndexName, queryToDelete));
-                operation.WaitForCompletion(TimeSpan.FromMinutes(1));
+                operation.WaitForCompletion(TimeSpan.FromMinutes(2));
 
-                WaitForIndexing(store, timeout: TimeSpan.FromMinutes(1));
+                WaitForIndexing(store, timeout: TimeSpan.FromMinutes(2));
 
                 using (var session = store.OpenSession())
                 {

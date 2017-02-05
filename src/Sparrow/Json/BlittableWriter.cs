@@ -78,7 +78,9 @@ namespace Sparrow.Json
 
         public int WriteNull()
         {
-            return _position;
+            var startPos = _position++;
+            _unmanagedWriteBuffer.WriteByte(0);
+            return startPos;
         }
 
         public int WriteValue(double value)
