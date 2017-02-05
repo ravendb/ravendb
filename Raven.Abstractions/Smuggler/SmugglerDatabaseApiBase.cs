@@ -36,6 +36,8 @@ namespace Raven.Abstractions.Smuggler
 
         private const string IncrementalExportStateFile = "IncrementalExport.state.json";
 
+        private SmugglerDataFormat dataFormat = SmugglerDataFormat.V3;
+
         protected SmugglerDatabaseApiBase(SmugglerDatabaseOptions options)
         {
             Options = options;
@@ -967,7 +969,7 @@ namespace Raven.Abstractions.Smuggler
 
         public abstract Task Between(SmugglerBetweenOptions<RavenConnectionStringOptions> betweenOptions);
 
-        public async virtual Task ImportData(SmugglerImportOptions<RavenConnectionStringOptions> importOptions, Stream stream)
+        public virtual async Task ImportData(SmugglerImportOptions<RavenConnectionStringOptions> importOptions, Stream stream)
         {
             Operations.Configure(Options);
             Operations.Initialize(Options);
@@ -1013,11 +1015,23 @@ namespace Raven.Abstractions.Smuggler
             var exportSectionRegistar = new Dictionary<string, Func<Task<int>>>();
 
             Options.CancelToken.Token.ThrowIfCancellationRequested();
-            exportSectionRegistar.Add(Constants.BuildVersion, async () =>
+            exportSectionRegistar.Add(Constants.BuildVersion, () => // 4.0+
             {
                 Operations.ShowProgress("Importing 4.0 smuggler file, skipping import of indexes and transformers");
                 Options.OperateOnTypes &= ~(ItemType.Indexes | ItemType.Transformers);
-                return 0;
+                dataFormat = SmugglerDataFormat.V4;
+                return new CompletedTask<int>(0);
+            });
+
+            exportSectionRegistar.Add("RevisionDocuments", () => // 4.0+
+            {
+                Operations.ShowProgress("Importing 4.0 smuggler file, skipping import of document revisions");
+                while (jsonReader.Read() && jsonReader.TokenType != JsonToken.EndArray)
+                {
+                    var revision = (RavenJObject)RavenJToken.ReadFrom(jsonReader); // skipping
+                }
+
+                return new CompletedTask<int>(0);
             });
 
             exportSectionRegistar.Add("Indexes", async () =>
@@ -1109,8 +1123,7 @@ namespace Raven.Abstractions.Smuggler
                     continue;
                 }
 
-                if (jsonReader.TokenType != JsonToken.StartArray && 
-                    !currentSection.Equals(Constants.BuildVersion))
+                if (jsonReader.TokenType != JsonToken.StartArray && currentSection.Equals(Constants.BuildVersion) == false)
                 {
                     if (currentAction == null) // ignore this prop
                         continue;
@@ -1553,19 +1566,22 @@ namespace Raven.Abstractions.Smuggler
                     if (document == null)
                         continue;
 
-                    var metadata = document["@metadata"] as RavenJObject;
+                    var metadata = document[Constants.Metadata] as RavenJObject;
                     if (metadata != null)
                     {
                         if (Options.SkipConflicted && metadata.ContainsKey(Constants.RavenReplicationConflictDocument))
                             continue;
 
+                        if (dataFormat != SmugglerDataFormat.V3)
+                            document[Constants.Metadata] = SmugglerHelper.HandleMetadataChanges(metadata, dataFormat);
+
                         if (Options.StripReplicationInformation)
-                            document["@metadata"] = Operations.StripReplicationInformationFromMetadata(metadata);
+                            document[Constants.Metadata] = Operations.StripReplicationInformationFromMetadata(metadata);
 
                         if (Options.ShouldDisableVersioningBundle)
-                            document["@metadata"] = SmugglerHelper.DisableVersioning(metadata);
+                            document[Constants.Metadata] = SmugglerHelper.DisableVersioning(metadata);
 
-                        document["@metadata"] = SmugglerHelper.HandleConflictDocuments(metadata);
+                        document[Constants.Metadata] = SmugglerHelper.HandleConflictDocuments(metadata);
                     }
 
                     if (Options.UseContinuationFile)
@@ -1867,6 +1883,8 @@ namespace Raven.Abstractions.Smuggler
 
             public int NumberOfExportedItems { get; set; }
         }
+
+        
     }
 }
 

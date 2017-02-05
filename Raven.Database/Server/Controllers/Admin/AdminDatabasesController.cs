@@ -289,7 +289,7 @@ namespace Raven.Database.Server.Controllers.Admin
 
         [HttpGet]
         [RavenRoute("admin/test-hotspare")]
-        public HttpResponseMessage TestHotSpare()
+        public async Task<HttpResponseMessage> TestHotSpare()
         {
             //making sure this endpoint is not invoked on non hot spare license.
             var status = ValidateLicense.CurrentLicense;
@@ -302,9 +302,10 @@ namespace Raven.Database.Server.Controllers.Admin
                 };
             }
 
-            RequestManager.HotSpareValidator.EnableTestModeForHotSpareLicense();
+            await RequestManager.HotSpareValidator.EnableTestModeForHotSpareLicense().ConfigureAwait(false);
             return GetEmptyMessage();
         }
+
         [HttpGet]
         [RavenRoute("admin/get-hotspare-information")]
         public HttpResponseMessage GetHotSpareInformation()
@@ -319,10 +320,10 @@ namespace Raven.Database.Server.Controllers.Admin
                     Content = new MultiGetSafeStringContent("Can't test Hot Spare server, no valid license found")
                 };
             }
+
             var info = RequestManager.HotSpareValidator.GetOrCreateLicenseDocument(id, checkIfTesting: true);
             return GetMessageWithObject(info);
         }
-
 
         [HttpGet]
         [RavenRoute("admin/clear-hotspare-information")]
