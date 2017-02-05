@@ -241,6 +241,10 @@ namespace Raven.Client.Linq
                         return GetValueFromExpressionWithoutConversion(unaryExpression.Operand, out value);
                     value = Expression.Lambda(expression).Compile().DynamicInvoke();
                     return true;
+                case ExpressionType.NewArrayBounds:
+                    var arraySize = (int)((ConstantExpression)(((NewArrayExpression)expression).Expressions[0])).Value;
+                    value = new object[arraySize];
+                    return true;
                 case ExpressionType.NewArrayInit:
                     var expressions = ((NewArrayExpression)expression).Expressions;
                     var values = new object[expressions.Count];
