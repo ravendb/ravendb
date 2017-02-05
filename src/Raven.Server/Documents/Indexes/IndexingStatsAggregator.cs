@@ -177,6 +177,11 @@ namespace Raven.Server.Documents.Indexes
             _stats.AddCorruptionError(e);
         }
 
+        public void AddInvalidError(Exception e)
+        {
+            _stats.AddInvalidError(e);
+        }
+
         public void AddWriteError(IndexWriteException iwe)
         {
             _stats.AddWriteError(iwe);

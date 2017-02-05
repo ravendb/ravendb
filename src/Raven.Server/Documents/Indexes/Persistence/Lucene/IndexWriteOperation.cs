@@ -15,6 +15,7 @@ using Constants = Raven.Abstractions.Data.Constants;
 using Raven.Client.Data.Indexes;
 using Raven.NewClient.Client.Blittable;
 using Raven.NewClient.Client.Document;
+using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
@@ -35,18 +36,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private IndexingStatsScope _statsInstance;
         private IndexWriteOperationStats _stats = new IndexWriteOperationStats();
-        private OutputDocumntsFromReduceIndexCommand _outputDocumntsFromReduceIndexCommand;
+        private readonly OutputDocumntsFromReduceIndexCommand _outputDocumntsFromReduceIndexCommand;
 
-        public IndexWriteOperation(string indexName, Dictionary<string, IndexField> fields,
-            LuceneVoronDirectory directory, LuceneDocumentConverterBase converter,
-            Transaction writeTransaction, LuceneIndexPersistence persistence, DocumentDatabase documentDatabase, string outputReduceResultsToCollectionName)
-            : base(indexName, LoggingSource.Instance.GetLogger<IndexWriteOperation>(documentDatabase.Name))
+        public IndexWriteOperation(Index index, LuceneVoronDirectory directory, LuceneDocumentConverterBase converter, Transaction writeTransaction, LuceneIndexPersistence persistence)
+            : base(index.Definition.Name, LoggingSource.Instance.GetLogger<IndexWriteOperation>(index._indexStorage.DocumentDatabase.Name))
         {
+            var indexName = index.Definition.Name;
             _converter = converter;
-            _documentDatabase = documentDatabase;
+            _documentDatabase = index._indexStorage.DocumentDatabase;
+
             try
             {
-                _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), fields);
+                _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), index.Definition.MapFields);
             }
             catch (Exception e)
             {
@@ -63,13 +64,25 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 if (_locker.Obtain() == false)
                     throw new InvalidOperationException($"Could not obtain the 'writing-to-index' lock for '{_indexName}' index.");
-
-                if (string.IsNullOrWhiteSpace(outputReduceResultsToCollectionName) == false)
-                    _outputDocumntsFromReduceIndexCommand = new OutputDocumntsFromReduceIndexCommand(documentDatabase, outputReduceResultsToCollectionName);
             }
             catch (Exception e)
             {
                 throw new IndexWriteException(e);
+            }
+
+            var mapReduceIndex = index as MapReduceIndex;
+            var outputReduceResultsToCollectionName = mapReduceIndex?.Definition.OutputReduceResultsToCollectionName;
+            if (string.IsNullOrWhiteSpace(outputReduceResultsToCollectionName) == false)
+            {
+                _outputDocumntsFromReduceIndexCommand = new OutputDocumntsFromReduceIndexCommand(_documentDatabase, outputReduceResultsToCollectionName);
+                if (index.Collections.Contains(Constants.Indexing.AllDocumentsCollection))
+                {
+                    throw new IndexInvalidException($"Cannot output documents from {indexName} to the '{outputReduceResultsToCollectionName}' collection because this index consume all documents.");
+                }
+                if(index.Collections.Contains(outputReduceResultsToCollectionName))
+                {
+                    throw new IndexInvalidException($"Cannot output documents from {indexName} to the '{outputReduceResultsToCollectionName}' collection because we consume this collection in map of the index itself.");
+                }
             }
         }
 

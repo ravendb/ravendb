@@ -115,17 +115,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             CheckDisposed();
             CheckInitialized();
 
-            var mapReduceIndex = _index as MapReduceIndex;
-
             return new IndexWriteOperation(
-                _index.Definition.Name,
-                _index.Definition.MapFields,
+                _index,
                 _directory,
                 _converter,
                 writeTransaction,
-                this, // TODO arek - 'this' :/
-                _index._indexStorage.DocumentDatabase,
-                mapReduceIndex?.Definition.OutputReduceResultsToCollectionName);
+                this // TODO arek - 'this' :/
+                );
         }
 
         public IndexReadOperation OpenIndexReader(Transaction readTransaction)

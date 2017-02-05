@@ -51,6 +51,11 @@ namespace Raven.Server.Documents.Indexes
             AddError(null, $"Index corruption occurred: {exception}", "Corruption");
         }
 
+        public void AddInvalidError(Exception exception)
+        {
+            AddError(null, $"Index invalid: {exception}", "Invalid");
+        }
+
         public void AddWriteError(IndexWriteException exception)
         {
             AddError(null, $"Write exception occurred: {exception.Message}", "Write");

@@ -2,8 +2,13 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.NewClient.Client;
+using Raven.NewClient.Client.Data;
 using Raven.NewClient.Client.Indexes;
+using Raven.NewClient.Data.Indexes;
+using Raven.NewClient.Operations.Databases;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
+using Xunit.Sdk;
 
 namespace FastTests.Server.Documents.Indexing.MapReduce
 {
@@ -44,6 +49,44 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     Assert.Equal(31, await session.Query<MonthlyInvoice>().CountAsync());
                     Assert.Equal(4, await session.Query<YearlyInvoice>().CountAsync());
                 }
+            }
+        }
+
+        [Fact]
+        public async Task ShouldNotAllowOutputReduceDocumentsOnTheDocumentsWeMap()
+        {
+            var date = DateTime.Today;
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 0; i < 30; i++)
+                    {
+                        await session.StoreAsync(new DailyInvoice { Amount = 1, Date = date.AddHours(i * 6) });
+                    }
+                    await session.SaveChangesAsync();
+                }
+
+                store.ExecuteIndex(new MonthlySelfReduceIndex());
+                //TODO: Use await store.ExecuteIndexAsync(new DailyInvoices());
+
+                DatabaseStatistics statistics;
+                while (true)
+                {
+                    statistics = await store.Admin.ForDatabase(store.DefaultDatabase).SendAsync(new GetStatisticsOperation());
+                    var index = statistics.Indexes
+                        .FirstOrDefault(x => x.Name == nameof(MonthlySelfReduceIndex));
+                    if (index.State == IndexState.Error)
+                    {
+                        var errors = await store.Admin.ForDatabase(store.DefaultDatabase).SendAsync(new GetIndexErrorsOperation(new [] {nameof(MonthlySelfReduceIndex)}));
+                        Assert.Equal("Invalid", errors.Single().Errors.Single().Action);
+                        return;
+                    }
+                    if (index.IsStale == false)
+                        break;
+                }
+
+                Assert.True(false, "Index should be marked as invalid");
             }
         }
 
@@ -147,6 +190,32 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     };
 
                 OutputReduceResultsToCollectionName = "YearlyInvoices";
+            }
+        }
+
+        public class MonthlySelfReduceIndex : AbstractIndexCreationTask<DailyInvoice, DailyInvoice>
+        {
+            public MonthlySelfReduceIndex()
+            {
+                Map = invoices =>
+                    from invoice in invoices
+                    select new MonthlyInvoice
+                    {
+                        Date = new DateTime(invoice.Date.Year, invoice.Date.Month, 1),
+                        Amount = invoice.Amount
+                    };
+
+                Reduce = results =>
+                    from r in results
+                    group r by r.Date
+                    into g
+                    select new MonthlyInvoice
+                    {
+                        Date = g.Key,
+                        Amount = g.Sum(x => x.Amount)
+                    };
+
+                OutputReduceResultsToCollectionName = "DailyInvoices";
             }
         }
     }
