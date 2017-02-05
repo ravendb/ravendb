@@ -314,7 +314,14 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                 finally
                 {
                     if (threadTask.BatchStats != null)
-                        Interlocked.Increment(ref threadTask.BatchStats.Completed);
+                    {
+                        var itemsCompleted = Interlocked.Increment(ref threadTask.BatchStats.Completed);
+                        if (itemsCompleted == threadTask.BatchStats.Total)
+                        {
+                            threadTask.RunAfterCompletion?.Invoke();
+                        }
+                    }
+                        
                     threadTask.Duration.Stop();
                     object _;
                     _runningTasks.TryRemove(threadTask, out _);
@@ -546,19 +553,20 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
 
         }
 
-        public void ExecuteBatch<T>(IList<T> src, Action<T> action, DocumentDatabase database = null, string description = null,
-            bool allowPartialBatchResumption = false)
+        public bool ExecuteBatch<T>(IList<T> src, Action<T> action, DocumentDatabase database = null, string description = null,
+            bool allowPartialBatchResumption = false, Action runAfterCompletion = null)
         {
             //, int completedMultiplier = 2, int freeThreadsMultiplier = 2, int maxWaitMultiplier = 1
             switch (src.Count)
             {
                 case 0:
-                    return;
+                    return true;
                 case 1:
                     //if we have only one source to go through,
                     //we should execute it in the current thread, without using RTP threads
                     ExecuteSingleBatchSynchronously(src, action, description, database);
-                    return;
+                    runAfterCompletion?.Invoke();
+                    return true;
             }
 
             var now = DateTime.UtcNow;
@@ -613,31 +621,36 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                     EarlyBreak = allowPartialBatchResumption,
                     QueuedAt = now,
                     DoneEvent = countdownEvent,
-                    Proccessing = 0
+                    Proccessing = 0,
+                    RunAfterCompletion = runAfterCompletion
                 };
                 _tasks.Add(threadTask);
                 currentBatchTasks.Add(threadTask);
             }
 
+            var ranToCompletion = false;
             if (allowPartialBatchResumption == false)
             {
                 WaitForBatchToCompletion(countdownEvent, currentBatchTasks, database?.WorkContext.CancellationToken);
+                ranToCompletion = true;
             }
             else
             {
-                WaitForBatchAllowingPartialBatchResumption(countdownEvent, batch,currentBatchTasks, database);
+                ranToCompletion = WaitForBatchAllowingPartialBatchResumption(countdownEvent, batch,currentBatchTasks, database);
             }
 
             switch (exceptions.Count)
             {
                 case 0:
-                    return;
+                    return ranToCompletion;
                 case 1:
                     ExceptionDispatchInfo.Capture(exceptions.First()).Throw();
-                    break;
+                    return ranToCompletion; // won't happen
                 default:
                     throw new AggregateException(exceptions);
             }
+
+            
         }
 
         private void ExecuteSingleBatchSynchronously<T>(IList<T> src, Action<T> action, string description, DocumentDatabase database)
@@ -720,7 +733,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
             }
         }
 
-        private void WaitForBatchAllowingPartialBatchResumption(CountdownEvent completionEvent, BatchStatistics batch, List<ThreadTask> childTasks, DocumentDatabase database = null)
+        private bool WaitForBatchAllowingPartialBatchResumption(CountdownEvent completionEvent, BatchStatistics batch, List<ThreadTask> childTasks, DocumentDatabase database = null)
         {
             Interlocked.Increment(ref _hasPartialBatchResumption);
             var cancellationToken = database?.WorkContext.CancellationToken ?? _ct;
@@ -728,7 +741,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
             {
                 var waitHandles = new[] { completionEvent.WaitHandle, _threadHasNoWorkToDo };
                 var sp = Stopwatch.StartNew();
-                var batchLeftEarly = false;
+                var batchRanToCompletion = false;
                 var lastThreadIndexChecked = 0;
                 while (cancellationToken.IsCancellationRequested == false)
                 {
@@ -787,7 +800,6 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                 // updating the waiting time factor
                 if (batch.Completed != batch.Total)
                 {
-                    batchLeftEarly = true;
                     if (_partialMaxWaitChangeFlag > 0)
                     {
                         Interlocked.Exchange(ref _partialMaxWait, Math.Min(2500, (int)(Thread.VolatileRead(ref _partialMaxWait) * 1.25)));
@@ -795,6 +807,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
                 }
                 else if (_partialMaxWaitChangeFlag < 0)
                 {
+                    batchRanToCompletion = true;
                     Interlocked.Exchange(ref _partialMaxWait, Math.Max(Thread.VolatileRead(ref _partialMaxWait) / 2, 10));
                 }
 
@@ -806,8 +819,10 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
 
                 if (logger.IsDebugEnabled)
                 {
-                    logger.Debug($"Raven Thread Pool ended batch for database {database?.Name}. Done {batch.Completed} items out of {batch.Total}. Batch {(batchLeftEarly ? "was" : "was not")} left early");
+                    logger.Debug($"Raven Thread Pool ended batch for database {database?.Name}. Done {batch.Completed} items out of {batch.Total}. Batch {(batchRanToCompletion ? "was not" : "was")} left early");
                 }
+
+                return batchRanToCompletion;
             }
             finally
             {
@@ -828,6 +843,7 @@ namespace Raven.Database.Impl.BackgroundTaskExecuter
             public DateTime QueuedAt;
             public DocumentDatabase Database;
             public long Proccessing;
+            public Action RunAfterCompletion { get; set; }
         }
 
         public class ThreadsSummary

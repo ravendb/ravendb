@@ -693,7 +693,8 @@ namespace Raven.Database.Indexing
 
                 var oomeErrorsCount = indexesToWorkOn.Select(x => x.Index).Sum(x => x.OutOfMemoryErrorsCount);
 
-                context.Database.ThreadPool.ExecuteBatch(indexesToWorkOn, indexToWorkOn =>
+                var ranToCompletion = 
+                    context.Database.ThreadPool.ExecuteBatch(indexesToWorkOn, indexToWorkOn =>
                 {
                     if (currentlyProcessedIndexes.TryAdd(indexToWorkOn.IndexId, indexToWorkOn.Index) == false)
                     {
@@ -709,8 +710,6 @@ namespace Raven.Database.Indexing
                             reducingBatchInfo.PerformanceStats.TryAdd(indexToWorkOn.Index.PublicName, performanceStats);
 
                         indexToWorkOn.Index.DecrementReducingOutOfMemoryErrors();
-
-                        context.NotifyAboutWork();
                     }
                     finally
                     {
@@ -718,7 +717,12 @@ namespace Raven.Database.Indexing
                         currentlyProcessedIndexes.TryRemove(indexToWorkOn.IndexId, out _);
                     }
                 }, allowPartialBatchResumption: MemoryStatistics.AvailableMemoryInMb > 1.5 * context.Configuration.MemoryLimitForProcessingInMb, 
-                    description: $"Executing indexes reduction on {indexesToWorkOn.Count} indexes", database:context.Database);
+                    description: $"Executing indexes reduction on {indexesToWorkOn.Count} indexes", database:context.Database,runAfterCompletion: context.NotifyAboutWork);
+
+                if (ranToCompletion == false)
+                {
+                    context.NotifyAboutWork();
+                }
             }
             finally
             {

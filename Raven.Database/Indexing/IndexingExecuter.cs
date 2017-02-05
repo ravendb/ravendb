@@ -515,7 +515,8 @@ namespace Raven.Database.Indexing
                 if (context.Database.ThreadPool == null || context.RunIndexing==false)
                     throw new OperationCanceledException();
 
-                context.Database.ThreadPool.ExecuteBatch(indexBatchOperations.Keys.ToList(),
+                var ranToCompletion = 
+                    context.Database.ThreadPool.ExecuteBatch(indexBatchOperations.Keys.ToList(),
                     indexBatchOperation =>
                     {
                         context.CancellationToken.ThrowIfCancellationRequested();
@@ -525,11 +526,15 @@ namespace Raven.Database.Indexing
 
                             if (performance != null)
                                 indexBatchOperation.IndexingBatchInfo.PerformanceStats.TryAdd(indexBatchOperation.IndexingBatch.Index.PublicName, performance);
-
-                            context.NotifyAboutWork();
+                            
                         }
-                    }, allowPartialBatchResumption: MemoryStatistics.AvailableMemoryInMb > 1.5*context.Configuration.MemoryLimitForProcessingInMb,
-                    description: $"Performing indexing on index batches for a total of {indexBatchOperations.Count} indexes", database:context.Database);
+                    }, allowPartialBatchResumption:  MemoryStatistics.AvailableMemoryInMb > 1.5*context.Configuration.MemoryLimitForProcessingInMb,
+                    description: $"Performing indexing on index batches for a total of {indexBatchOperations.Count} indexes", database:context.Database, runAfterCompletion:context.NotifyAboutWork);
+
+                if (ranToCompletion == false)
+                {
+                    context.NotifyAboutWork();
+                }
             }
             catch (OperationCanceledException)
             {
