@@ -30,8 +30,11 @@ namespace Raven.Tests.Issues
             using (var store = NewRemoteDocumentStore())
             {
                 // we don't use using statement here becase dispose would throw OperationCanceledException and we want to assert this
-                var bulkInsert = store.BulkInsert(options: new BulkInsertOptions { BatchSize = 1 });
-
+                var bulkInsert = store.BulkInsert(options: new BulkInsertOptions
+                {
+                    BatchSize = 1,
+                });
+                
                 Task.Factory.StartNew(() =>
                 {
                     // first and kill first operation
@@ -44,11 +47,16 @@ namespace Raven.Tests.Issues
                             t => ((RavenJObject)t).Deserialize<TaskActions.PendingTaskDescriptionAndStatus>(store.Conventions)).ToList();
                         if (taskList.Count > 0)
                         {
-                            var operationId = taskList.First().Id;
-                            store.JsonRequestFactory.CreateHttpJsonRequest(
-                                new CreateHttpJsonRequestParams(null, store.Url.ForDatabase(store.DefaultDatabase) + "/operation/kill?id=" + operationId,
-                                    "GET", store.DatabaseCommands.PrimaryCredentials, store.Conventions)).ExecuteRequest();
-                            break;
+                            
+
+                            var operation = taskList.First(x=>x.TaskType==TaskActions.PendingTaskType.BulkInsert);
+                            if (operation != null)
+                            {
+                                store.JsonRequestFactory.CreateHttpJsonRequest(
+                                    new CreateHttpJsonRequestParams(null, store.Url.ForDatabase(store.DefaultDatabase) + "/operation/kill?id=" + operation.Id,
+                                        "GET", store.DatabaseCommands.PrimaryCredentials, store.Conventions)).ExecuteRequest();
+                                break;
+                            }
                         }
                     }
                 });
