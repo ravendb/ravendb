@@ -78,8 +78,6 @@ namespace Voron.Impl.Journal
 
         private JournalFile NextFile(int numberOfPages = 1)
         {
-            _journalIndex++;
-
             var now = DateTime.UtcNow;
             if ((now - _lastFile).TotalSeconds < 90)
             {
@@ -92,9 +90,9 @@ namespace Voron.Impl.Journal
                 actualLogSize = minRequiredSize;
             }
 
+            var journalPager = _env.Options.CreateJournalWriter(_journalIndex + 1, actualLogSize);
+            _journalIndex++;
             _lastFile = now;
-
-            var journalPager = _env.Options.CreateJournalWriter(_journalIndex, actualLogSize);
 
             var journal = new JournalFile(journalPager, _journalIndex);
             journal.AddRef(); // one reference added by a creator - write ahead log
