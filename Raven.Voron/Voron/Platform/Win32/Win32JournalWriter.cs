@@ -27,6 +27,8 @@ namespace Voron.Platform.Win32
         private int _segmentsSize;
         private NativeOverlapped* _nativeOverlapped;
 
+        public static int debugCount = 0;
+
         public Win32FileJournalWriter(string filename, long journalSize)
         {
             _filename = filename;
@@ -38,7 +40,24 @@ namespace Voron.Platform.Win32
             if (_handle.IsInvalid)
                 throw new Win32Exception();
 
-            Win32NativeFileMethods.SetFileLength(_handle, journalSize);
+            try
+            {
+                Win32NativeFileMethods.SetFileLength(_handle, journalSize);
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    _handle?.Dispose();
+                    _handle = null;
+                    File.Delete(_filename);
+                }
+                catch (Exception)
+                {
+                    // there's nothing we can do about it
+                }
+                throw new IOException("When SetFileLength file " + filename + " to " + journalSize, ex);
+            }
 
             NumberOfAllocatedPages = journalSize/AbstractPager.PageSize;
 
@@ -163,7 +182,9 @@ namespace Voron.Platform.Win32
             GC.SuppressFinalize(this);
             if (_readHandle != null)
                 _readHandle.Close();
-            _handle.Close();
+
+            if (_handle != null)
+                _handle.Close();
             if (_nativeOverlapped != null)
             {
                 Marshal.FreeHGlobal((IntPtr) _nativeOverlapped);
