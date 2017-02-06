@@ -70,18 +70,18 @@
                                 <div class="btn-group">
                                     <button class="btn btn-default"
                                             data-bind="click: $root.toggleResource, 
-                                                       css: { 'btn-spinner': _.includes($root.spinners.itemTakedowns(), qualifiedName) }, 
-                                                       disable: isBeingDeleted || _.includes($root.spinners.itemTakedowns(), qualifiedName)">
+                                                       css: { 'btn-spinner': inProgressAction }, 
+                                                       disable: isBeingDeleted() || inProgressAction()">
+                                        <span data-bind="visible: inProgressAction(), text: inProgressAction()"></span>
 
-                                        <i class="icon-unlock" data-bind="visible: disabled()"></i>
-                                        <span data-bind="visible: disabled()">Enable</span>
+                                        <i class="icon-unlock" data-bind="visible: !inProgressAction() && disabled()"></i>
+                                        <span data-bind="visible: !inProgressAction() && disabled()">Enable</span>
 
-                                        <i class="icon-lock" data-bind="visible: !disabled()"></i>
-                                        <span data-bind="visible: !disabled()">Disable</span>
-
+                                        <i class="icon-lock" data-bind="visible: !inProgressAction() && !disabled()"></i>
+                                        <span data-bind="visible: !inProgressAction() && !disabled()">Disable</span>
                                     </button>
                                     <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"  
-                                            data-bind="disable: isBeingDeleted || _.includes($root.spinners.itemTakedowns(), qualifiedName)">
+                                            data-bind="disable: isBeingDeleted() || inProgressAction()">
                                         <span class="caret"></span>
                                         <span class="sr-only">Toggle Dropdown</span>
                                     </button>
