@@ -175,14 +175,7 @@ namespace SlowTests.Issues
 
         private static void CreateDatabase(IDocumentStore store, string databaseName)
         {
-            store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument
-            {
-                Id = databaseName,
-                Settings =
-                {
-                    { "Raven/DataDir", "~/" + databaseName }
-                }
-            });
+            store.DatabaseCommands.GlobalAdmin.CreateDatabase(new DatabaseDocument(databaseName));
         }
 
         private class Profile

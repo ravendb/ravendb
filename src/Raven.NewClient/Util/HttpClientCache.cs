@@ -107,7 +107,6 @@ namespace Raven.NewClient.Client.Util
                 unchecked
                 {
                     int hashCode = (ApiKey != null ? ApiKey.GetHashCode() : 0);
-                    hashCode = (hashCode * 397) ^ 0;
                     hashCode = (hashCode * 397) ^ Timeout.GetHashCode();
                     hashCode = (hashCode * 397) ^ AuthenticationDisabled.GetHashCode();
                     return hashCode;

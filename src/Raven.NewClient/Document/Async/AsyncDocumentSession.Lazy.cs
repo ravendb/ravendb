@@ -135,7 +135,16 @@ namespace Raven.NewClient.Client.Document.Async
         /// Begin a load while including the specified path 
         /// </summary>
         /// <param name="path">The path.</param>
-        IAsyncLazyLoaderWithInclude<T> IAsyncLazySessionOperations.Include<T>(Expression<Func<T, object>> path)
+        IAsyncLazyLoaderWithInclude<T> IAsyncLazySessionOperations.Include<T>(Expression<Func<T, string>> path)
+        {
+            return new AsyncLazyMultiLoaderWithInclude<T>(this).Include(path);
+        }
+
+        /// <summary>
+        /// Begin a load while including the specified path 
+        /// </summary>
+        /// <param name="path">The path.</param>
+        IAsyncLazyLoaderWithInclude<T> IAsyncLazySessionOperations.Include<T>(Expression<Func<T, IEnumerable<string>>> path)
         {
             return new AsyncLazyMultiLoaderWithInclude<T>(this).Include(path);
         }

@@ -7,14 +7,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client;
-using Raven.Client.Indexing;
-using Raven.Client.Linq;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.SlowTests.Queries
 {
-    public class IntersectionQueryWithLargeDataset : RavenTestBase
+    public class IntersectionQueryWithLargeDataset : RavenNewTestBase
     {
         [Fact]
         public void CanPerformIntersectionQuery_Embedded()
@@ -56,7 +56,7 @@ namespace SlowTests.SlowTests.Queries
         {
             using (var s = store.OpenSession())
             {
-                store.DatabaseCommands.PutIndex("TestAttributesByAttributes",
+                store.Admin.Send(new PutIndexOperation("TestAttributesByAttributes",
                     new IndexDefinition
                     {
                         Maps =
@@ -65,7 +65,7 @@ namespace SlowTests.SlowTests.Queries
                             from r in e.Attributes
                             select new { Attributes_Key = r.Key, Attributes_Value = r.Value }"
                         }
-                    });
+                    }));
 
                 foreach (var sample in GetSampleData())
                 {

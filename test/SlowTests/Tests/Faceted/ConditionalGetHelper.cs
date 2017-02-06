@@ -1,10 +1,11 @@
-using System;
 using System.Net;
 using System.Net.Http;
-using Raven.Abstractions.Connection;
-using Raven.Abstractions.Util;
-using Raven.Client.Connection;
-using Raven.Client.Document;
+using System.Threading.Tasks;
+using Raven.NewClient.Client.Commands;
+using Raven.NewClient.Client.Connection;
+using Raven.NewClient.Client.Document;
+using Raven.NewClient.Client.Http;
+using Sparrow.Json;
 
 namespace SlowTests.Tests.Faceted
 {
@@ -12,60 +13,99 @@ namespace SlowTests.Tests.Faceted
     {
         public static HttpStatusCode PerformGet(DocumentStore store, string url, long? requestEtag, out long? responseEtag)
         {
-            var request = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, HttpMethod.Get, store.DatabaseCommands.PrimaryCredentials, store.Conventions));
+            var requestExecuter = store.GetRequestExecuter();
 
-            if (requestEtag != null)
-                request.AddHeader("If-None-Match", requestEtag.ToString());
+            JsonOperationContext context;
+            using (requestExecuter.ContextPool.AllocateOperationContext(out context))
+            {
+                var command = new Command(url, HttpMethod.Get, null, requestEtag);
 
-            try
-            {
-                AsyncHelpers.RunSync(() => request.ReadResponseJsonAsync());
-            }
-            catch (ErrorResponseException e)
-            {
-                if (e.StatusCode != HttpStatusCode.NotModified)
-                    throw;
-            }
+                requestExecuter.Execute(command, context);
 
-            try
-            {
-                responseEtag = request.ResponseHeaders.GetEtagHeader();
+                responseEtag = command.Result.Etag;
+                return command.Result.StatusCode;
             }
-            catch (Exception)
-            {
-                responseEtag = null;
-            }
-
-            return request.ResponseStatusCode;
         }
 
         public static HttpStatusCode PerformPost(DocumentStore store, string url, string payload, long? requestEtag, out long? responseEtag)
         {
-            var request = store.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, HttpMethod.Post, store.DatabaseCommands.PrimaryCredentials, store.Conventions));
+            var requestExecuter = store.GetRequestExecuter();
 
-            if (requestEtag != null)
-                request.AddHeader("If-None-Match", requestEtag.ToString());
+            JsonOperationContext context;
+            using (requestExecuter.ContextPool.AllocateOperationContext(out context))
+            {
+                var command = new Command(url, HttpMethod.Post, payload, requestEtag);
 
-            try
-            {
-                AsyncHelpers.RunSync(() => request.WriteAsync(payload));
+                requestExecuter.Execute(command, context);
+
+                responseEtag = command.Result.Etag;
+                return command.Result.StatusCode;
             }
-            catch (ErrorResponseException e)
+        }
+
+        internal class Command : RavenCommand<Command.StatusCodeAndEtag>
+        {
+            public class StatusCodeAndEtag
             {
-                if (e.StatusCode != HttpStatusCode.NotModified)
-                    throw;
+                public HttpStatusCode StatusCode { get; set; }
+
+                public long? Etag { get; set; }
             }
 
-            try
+            private readonly string _url;
+            private readonly HttpMethod _method;
+            private readonly string _payload;
+            private readonly long? _requestEtag;
+
+            public Command(string url, HttpMethod method, string payload, long? requestEtag)
             {
-                responseEtag = request.ResponseHeaders.GetEtagHeader();
-            }
-            catch (Exception)
-            {
-                responseEtag = null;
+                _url = url;
+                _method = method;
+                _payload = payload;
+                _requestEtag = requestEtag;
             }
 
-            return request.ResponseStatusCode;
+            public override bool IsReadRequest => false;
+
+            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            {
+                url = $"{node.Url}/databases/{node.Database}{_url}";
+
+                var request = new HttpRequestMessage
+                {
+                    Method = _method
+                };
+
+                if (_requestEtag.HasValue)
+                    request.Headers.TryAddWithoutValidation("If-None-Match", _requestEtag.ToString());
+
+                if (_method == HttpMethod.Post)
+                    request.Content = new StringContent(_payload);
+
+                return request;
+            }
+
+            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+            {
+                if (fromCache == false)
+                    ThrowInvalidResponse();
+
+                Result = new StatusCodeAndEtag
+                {
+                    StatusCode = HttpStatusCode.NotModified
+                };
+            }
+
+            public override Task ProcessResponse(JsonOperationContext context, HttpCache cache, RequestExecuterOptions options, HttpResponseMessage response, string url)
+            {
+                Result = new StatusCodeAndEtag
+                {
+                    StatusCode = response.StatusCode,
+                    Etag = response.GetEtagHeader()
+                };
+
+                return Task.CompletedTask;
+            }
         }
     }
 }

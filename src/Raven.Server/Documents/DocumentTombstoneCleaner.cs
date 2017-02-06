@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading;
 using Lucene.Net.Util;
 using Sparrow.Logging;
-using Raven.Abstractions.Logging;
 
 using Sparrow.Collections;
 using Constants = Raven.Abstractions.Data.Constants;

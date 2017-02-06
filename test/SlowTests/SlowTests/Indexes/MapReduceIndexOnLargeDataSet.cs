@@ -1,26 +1,27 @@
 using System;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Basic.Entities;
-using Raven.Client.Data.Indexes;
-using Raven.Client.Indexing;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Data.Indexes;
+using Raven.NewClient.Operations.Databases.Indexes;
+using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.SlowTests.Indexes
 {
-    public class MapReduceIndexOnLargeDataSet : RavenTestBase
+    public class MapReduceIndexOnLargeDataSet : RavenNewTestBase
     {
         [Fact]
         public void WillNotProduceAnyErrors()
         {
             using (var store = GetDocumentStore())
             {
-                store.DatabaseCommands.PutIndex("test", new IndexDefinition
+                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
                 {
                     Maps = { "from x in docs.Users select new { x.Name, Count = 1}" },
                     Reduce = "from r in results group r by r.Name into g select new { Name = g.Key, Count = g.Sum(x=>x.Count) }"
-                });
+                }));
 
                 for (int i = 0; i < 200; i++)
                 {
@@ -48,7 +49,7 @@ namespace SlowTests.SlowTests.Indexes
                         }
                         catch (Exception)
                         {
-                            PrintServerErrors(store.DatabaseCommands.GetIndexErrors());
+                            PrintServerErrors(store.Admin.Send(new GetIndexErrorsOperation()));
 
                             var missed = ret.Where(item => item.Count != 200)
                                 .Select(item => "Name: " + item.Name + ". Count: " + item.Count)
@@ -61,8 +62,7 @@ namespace SlowTests.SlowTests.Indexes
                     }
                 }
 
-                var indexErrors = store.DatabaseCommands.GetIndexErrors().SelectMany(x => x.Errors);
-                Assert.Empty(indexErrors);
+                TestHelper.AssertNoIndexErrors(store);
             }
         }
 

@@ -43,7 +43,10 @@ class databaseCreationModel extends resourceCreationModel {
         if (this.tempPath() && this.tempPath().trim()) {
             settings[configuration.storage.tempPath] = this.tempPath();
         }
-        settings[configuration.core.dataDirectory] = (this.dataPath() && this.dataPath().trim) ? this.dataPath() : "~/" + this.name();
+
+        if (this.dataPath() && this.dataPath().trim) {
+            settings[configuration.core.dataDirectory] = this.dataPath();
+        }
 
         if (this.indexesPath() && this.indexesPath().trim()) {
             settings[configuration.indexing.storagePath] = this.indexesPath();

@@ -222,6 +222,18 @@ namespace Raven.NewClient.Client.Http
             return new ReleaseCacheItem();
         }
 
+        public void Clear()
+        {
+            foreach (var key in _items.Keys)
+            {
+                HttpCacheItem value;
+                if (_items.TryRemove(key, out value) == false)
+                    continue;
+
+                value.Dispose();
+            }
+        }
+
         public void Dispose()
         {
             foreach (var item in _items.Values)

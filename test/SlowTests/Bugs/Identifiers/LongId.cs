@@ -7,7 +7,7 @@ namespace SlowTests.Bugs.Identifiers
     {
         private class Entity
         {
-            public long Id { get; set; }
+            public string Id { get; set; }
         }
 
         [Fact]
@@ -15,7 +15,7 @@ namespace SlowTests.Bugs.Identifiers
         {
             using (var store = GetDocumentStore())
             {
-                object id;
+                string id;
                 using (var session = store.OpenSession())
                 {
                     var entity = new Entity();
@@ -26,7 +26,7 @@ namespace SlowTests.Bugs.Identifiers
 
                 using (var session = store.OpenSession())
                 {
-                    var entity1 = session.Load<Entity>("entities/" + id);
+                    var entity1 = session.Load<Entity>(id);
                     Assert.NotNull(entity1);
                 }
             }

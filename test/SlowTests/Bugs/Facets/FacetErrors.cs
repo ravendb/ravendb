@@ -1,10 +1,11 @@
 using System;
 using System.Collections.Generic;
 using Raven.Abstractions.Connection;
-using Raven.Client.Data;
 using Xunit;
 using System.Linq;
-using Raven.Client;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Data;
+using Raven.NewClient.Client.Exceptions;
 
 namespace SlowTests.Bugs.Facets
 {
@@ -54,8 +55,8 @@ namespace SlowTests.Bugs.Facets
                 var session = store.OpenSession();
                 //CameraCostIndex does not include zoom, bad index specified.
                 var query = session.Query<Camera, CameraCostIndex>().Where(x => x.Zoom > 3);
-                Assert.Throws<System.InvalidOperationException>(() => query.ToList());
-                Assert.Throws<ErrorResponseException>(() => query.ToFacets(facets));
+                Assert.Throws<RavenException>(() => query.ToList());
+                Assert.Throws<RavenException>(() => query.ToFacets(facets));
             }
         }
     }

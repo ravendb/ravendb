@@ -13,17 +13,8 @@ namespace Raven.NewClient.Client.Extensions
         public static DatabaseDocument CreateDatabaseDocument(string name)
         {
             AssertValidName(name);
-            if (name.Equals(Constants.SystemDatabase, StringComparison.OrdinalIgnoreCase))
-                return new DatabaseDocument { Id = Constants.SystemDatabase };
 
-            return new DatabaseDocument
-            {
-                Id = name,
-                Settings =
-                {
-                    {"Raven/DataDir", Path.Combine("~", name)},
-                }
-            };
+            return new DatabaseDocument(name);
         }
 
 

@@ -10,7 +10,7 @@ namespace SlowTests.Tests.Querying
     {
         private class Something
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
             public string MyProp { get; set; }
         }
 
@@ -35,8 +35,8 @@ namespace SlowTests.Tests.Querying
                 using (var session = store.OpenSession())
                 {
                     // insert two test documents
-                    session.Store(new Something { Id = 23, MyProp = "the first string contains misspelled word sofware" });
-                    session.Store(new Something { Id = 34, MyProp = "the second string contains the word software" });
+                    session.Store(new Something { Id = "23", MyProp = "the first string contains misspelled word sofware" });
+                    session.Store(new Something { Id = "34", MyProp = "the second string contains the word software" });
                     session.SaveChanges();
 
                     // search for the keyword software

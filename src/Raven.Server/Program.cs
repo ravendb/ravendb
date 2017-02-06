@@ -5,6 +5,7 @@ using System.Runtime.Loader;
 using System.Threading;
 using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Debugging;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.LowMemoryNotification;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
@@ -20,7 +21,7 @@ namespace Raven.Server
         {
             WelcomeMessage.Print();
 
-            var configuration = new RavenConfiguration();
+            var configuration = new RavenConfiguration(null, ResourceType.Server);
             if (args != null)
             {
                 configuration.AddCommandLine(args);

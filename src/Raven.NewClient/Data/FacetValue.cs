@@ -1,11 +1,7 @@
-using System;
-using Raven.NewClient.Client.Data;
-
-namespace Raven.NewClient.Abstractions.Data
+namespace Raven.NewClient.Client.Data
 {
     public class FacetValue
     {
-        //TODO - Efrat - change back double to double?
         /// <summary>
         /// Name of range for which facet value applies.
         /// </summary>
@@ -24,22 +20,22 @@ namespace Raven.NewClient.Abstractions.Data
         /// <summary>
         /// Stores sum of all values if FacetAggregation.Sum was set.
         /// </summary>
-        public double Sum { get; set; }
+        public double? Sum { get; set; }
 
         /// <summary>
         /// Stores maximum value if FacetAggregation.Max was set.
         /// </summary>
-        public double Max { get; set; }
+        public double? Max { get; set; }
 
         /// <summary>
         /// Stores minimum value if FacetAggregation.Min was set.
         /// </summary>
-        public double Min { get; set; }
+        public double? Min { get; set; }
 
         /// <summary>
         /// Stores average value if FacetAggregation.Average was set.
         /// </summary>
-        public double Average { get; set; }
+        public double? Average { get; set; }
 
         public double? GetAggregation(FacetAggregation aggregation)
         {
@@ -67,7 +63,7 @@ namespace Raven.NewClient.Abstractions.Data
             var msg = Range + " -  Hits: " + Hits + ",";
             if (Count != null)
                 msg += "Count: " + Count + ",";
-            if(Sum != null)
+            if (Sum != null)
                 msg += "Sum: " + Sum + ",";
             if (Max != null)
                 msg += "Max: " + Max + ",";

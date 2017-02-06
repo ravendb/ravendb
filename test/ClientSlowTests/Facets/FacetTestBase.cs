@@ -128,7 +128,7 @@ namespace NewClientTests.NewClient
             {
                 cameraList.Add(new Camera
                 {
-                    Id = i,
+                    Id = i.ToString(),
                     DateOfListing = new DateTime(1980 + random.Next(1, 30), random.Next(1, 12), random.Next(1, 27)),
                     Manufacturer = Manufacturers[(int)(random.NextDouble() * Manufacturers.Count)],
                     Model = Models[(int)(random.NextDouble() * Models.Count)],
@@ -145,7 +145,7 @@ namespace NewClientTests.NewClient
 
         protected class Camera
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
 
             public DateTime DateOfListing { get; set; }
             public string Manufacturer { get; set; }
@@ -203,7 +203,7 @@ namespace NewClientTests.NewClient
 
             public override int GetHashCode()
             {
-                return (int)(Megapixels * 100) ^ (int)(Cost * 100) ^ (int)DateOfListing.Ticks ^ Id;
+                return (int)(Megapixels * 100) ^ (int)(Cost * 100) ^ (int)DateOfListing.Ticks ^ Id.Length;
             }
         }
     }

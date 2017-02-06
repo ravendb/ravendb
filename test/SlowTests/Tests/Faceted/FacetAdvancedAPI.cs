@@ -2,8 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Abstractions.Data;
-using Raven.Client.Data;
+using Raven.NewClient.Client.Data;
 using Xunit;
 
 namespace SlowTests.Tests.Faceted

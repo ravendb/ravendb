@@ -159,8 +159,23 @@ namespace Raven.Server.Documents
             DocumentsOperationContext context;
             using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             {
-                using (var tx = context.OpenWriteTransaction())
+                DocumentsTransaction tx = null; ;
+                try
                 {
+                    try
+                    {
+                        tx = context.OpenWriteTransaction();
+                    }
+                    catch (Exception e)
+                    {
+                        MergedTransactionCommand command;
+                        if (_operations.TryDequeue(out command))
+                        {
+                            command.Exception = e;
+                            DoCommandNotification(command);
+                        }
+                        return;
+                    }
                     PendingOperations result;
                     try
                     {
@@ -183,9 +198,22 @@ namespace Raven.Server.Documents
                     {
                         case PendingOperations.CompletedAll:
                         case PendingOperations.ModifiedsSystemDocuments:
-                            tx.Commit();
-                            tx.Dispose();
-                            NotifyOnThreadPool(pendingOps);
+                            try
+                            {
+                                tx.Commit();
+                                tx.Dispose();
+                            }
+                            catch (Exception e)
+                            {
+                                foreach (var op in pendingOps)
+                                {
+                                    op.Exception = e;
+                                }
+                            }
+                            finally
+                            {
+                                NotifyOnThreadPool(pendingOps);
+                            }
                             return;
                         case PendingOperations.HasMore:
                             MergeTransactionsWithAsycnCommit(context, pendingOps);
@@ -194,6 +222,10 @@ namespace Raven.Server.Documents
                             Debug.Assert(false, "Should never happen");
                             return;
                     }
+                }
+                finally
+                {
+                    tx?.Dispose();
                 }
             }
         }
@@ -224,7 +256,19 @@ namespace Raven.Server.Documents
                 {
                     if(_log.IsInfoEnabled)
                         _log.Info($"More pending operations than can handle quickly, started async commit and proceeding concurrently, has {_operations.Count} additional operations");
-                    context.Transaction = previous.BeginAsyncCommitAndStartNewTransaction();
+                    try
+                    {
+                        context.Transaction = previous.BeginAsyncCommitAndStartNewTransaction();
+                    }
+                    catch (Exception e)
+                    {
+                        foreach (var op in previousPendingOps)
+                        {
+                            op.Exception = e;
+                        }
+                        NotifyOnThreadPool(previousPendingOps);
+                        return;
+                    }
                     try
                     {
                         var currentPendingOps = GetBufferForPendingOps();
@@ -258,8 +302,18 @@ namespace Raven.Server.Documents
                         {
                             case PendingOperations.CompletedAll:
                             case PendingOperations.ModifiedsSystemDocuments:
-                                context.Transaction.Commit();
-                                context.Transaction.Dispose();
+                                try
+                                {
+                                    context.Transaction.Commit();
+                                    context.Transaction.Dispose();
+                                }
+                                catch (Exception e)
+                                {
+                                    foreach (var op in currentPendingOps)
+                                    {
+                                        op.Exception = e;
+                                    }
+                                }
                                 NotifyOnThreadPool(currentPendingOps);
                                 return;
                             case PendingOperations.HasMore:

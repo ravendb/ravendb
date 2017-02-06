@@ -9,13 +9,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Basic.Entities;
-using Raven.Client.Indexing;
-using Raven.Server.Config;
+using Raven.NewClient.Client.Indexing;
+using Raven.NewClient.Operations.Databases.Indexes;
 using Xunit;
 
 namespace SlowTests.Tests.Indexes
 {
-    public class OldIndexRunWhileNewIndexesAreRunning : RavenTestBase
+    public class OldIndexRunWhileNewIndexesAreRunning : RavenNewTestBase
     {
         [Fact]
         public void OneBigSave()
@@ -61,10 +61,10 @@ namespace SlowTests.Tests.Indexes
                     Assert.Equal(1024 * 6, usersCount);
                 }
 
-                store.DatabaseCommands.PutIndex("test", new IndexDefinition
+                store.Admin.Send(new PutIndexOperation("test", new IndexDefinition
                 {
                     Maps = { "from user in docs.Users select new { user.Name }" }
-                });
+                }));
 
                 using (var session = store.OpenSession())
                 {

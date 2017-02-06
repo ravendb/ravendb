@@ -348,6 +348,23 @@ namespace Sparrow.Json
             _continuationState.Push(currentState);
         }
 
+        public void WriteValue(decimal value)
+        {
+            var currentState = _continuationState.Pop();
+            var valuePos = _writer.WriteValue(value);
+            _writeToken = new WriteToken //todo: figure out if we really need those WriteTokens
+            {
+                ValuePos = valuePos,
+                WrittenToken = BlittableJsonToken.Float
+            };
+
+            if (currentState.FirstWrite == -1)
+                currentState.FirstWrite = valuePos;
+
+            currentState = FinishWritingScalarValue(currentState);
+            _continuationState.Push(currentState);
+        }
+
         public void WriteValue(LazyDoubleValue value)
         {
             var currentState = _continuationState.Pop();

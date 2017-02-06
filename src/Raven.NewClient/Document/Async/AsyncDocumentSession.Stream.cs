@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.NewClient.Abstractions.Data;
 using Raven.NewClient.Abstractions.Extensions;
 using Raven.NewClient.Abstractions.Util;
 using Raven.NewClient.Client.Commands;
@@ -11,6 +10,7 @@ using Raven.NewClient.Client.Connection;
 using Raven.NewClient.Client.Linq;
 using Sparrow.Json;
 using Raven.NewClient.Client.Blittable;
+using Raven.NewClient.Extensions;
 
 namespace Raven.NewClient.Client.Document.Async
 {
@@ -18,26 +18,27 @@ namespace Raven.NewClient.Client.Document.Async
     {
         public class YieldStream<T> : IAsyncEnumerator<StreamResult<T>>
         {
-            protected readonly AsyncDocumentSession Parent;
-            protected readonly IAsyncEnumerator<BlittableJsonReaderObject> Enumerator;
-            private IAsyncDocumentQuery<T> query;
-            protected CancellationToken token;
+            private readonly AsyncDocumentSession _parent;
+            private readonly IAsyncEnumerator<BlittableJsonReaderObject> _enumerator;
+            private readonly IAsyncDocumentQuery<T> _query;
+            private readonly CancellationToken _token;
 
             public YieldStream(AsyncDocumentSession parent, IAsyncDocumentQuery<T> query, IAsyncEnumerator<BlittableJsonReaderObject> enumerator, CancellationToken token)
             {
-                this.Parent = parent;
-                this.Enumerator = enumerator;
-                this.query = query;
+                _parent = parent;
+                _enumerator = enumerator;
+                _token = token;
+                _query = query;
             }
 
             public void Dispose()
             {
-                Enumerator.Dispose();
+                _enumerator.Dispose();
             }
 
             public async Task<bool> MoveNextAsync()
             {
-                if (await Enumerator.MoveNextAsync().WithCancellation(token).ConfigureAwait(false) == false)
+                if (await _enumerator.MoveNextAsync().WithCancellation(_token).ConfigureAwait(false) == false)
                 {
                     return false;
                 }
@@ -47,34 +48,27 @@ namespace Raven.NewClient.Client.Document.Async
 
             protected void SetCurrent()
             {
-                var x = Enumerator.Current;
-                query?.InvokeAfterStreamExecuted(x);
+                var x = _enumerator.Current;
+                _query?.InvokeAfterStreamExecuted(x);
                 Current = CreateStreamResult<T>(x);
             }
 
-            private StreamResult<T> CreateStreamResult<T>(BlittableJsonReaderObject res)
+            private StreamResult<T> CreateStreamResult<T>(BlittableJsonReaderObject json)
             {
-                string key = null;
-                long? etag = null;
-                BlittableJsonReaderObject metadata;
-                if (res.TryGet(Constants.Metadata.Key, out metadata))
+                var metadata = json.GetMetadata();
+                var etag = metadata.GetEtag();
+                var id = metadata.GetId();
+
+                json = _parent.Context.ReadObject(json, id);
+                var entity = _parent.ConvertToEntity(typeof(T), id, json);
+                var streamResult = new StreamResult<T>
                 {
-                    if (metadata.TryGet(Constants.Metadata.Id, out key) == false)
-                        throw new ArgumentException();
-                    if (metadata.TryGet(Constants.Metadata.Etag, out etag) == false)
-                        throw new ArgumentException();
-                }
-                //TODO - Investagate why ConvertToEntity fails if we don't call ReadObject before
-                res = Parent.Context.ReadObject(res, key);
-                var entity = Parent.ConvertToEntity(typeof(T), key, res);
-                var stremResult = new StreamResult<T>
-                {
-                    Etag = etag.Value,
-                    Key = key,
+                    Etag = etag,
+                    Key = id,
                     Document = (T)entity,
                     Metadata = new MetadataAsDictionary(metadata)
                 };
-                return stremResult;
+                return streamResult;
             }
 
             public StreamResult<T> Current { get; protected set; }
@@ -111,12 +105,12 @@ namespace Raven.NewClient.Client.Document.Async
             return StreamAsync<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize, pagingInformation: pagingInformation, skipAfter: skipAfter, transformer: transformer, transformerParameters: transformerParameters, token: token);
         }
 
-        private async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(long? fromEtag, string startsWith, string matches, 
-            int start, int pageSize, RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null, 
+        private async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(long? fromEtag, string startsWith, string matches,
+            int start, int pageSize, RavenPagingInformation pagingInformation = null, string skipAfter = null, string transformer = null,
             Dictionary<string, object> transformerParameters = null, CancellationToken token = default(CancellationToken))
         {
             var streamOperation = new StreamOperation(this);
-            var command = streamOperation.CreateRequest(fromEtag, startsWith, matches, start, pageSize, null, pagingInformation, skipAfter, transformer, 
+            var command = streamOperation.CreateRequest(fromEtag, startsWith, matches, start, pageSize, null, pagingInformation, skipAfter, transformer,
                 transformerParameters);
             await RequestExecuter.ExecuteAsync(command, Context, token).ConfigureAwait(false);
             var result = streamOperation.SetResultAsync(command.Result);

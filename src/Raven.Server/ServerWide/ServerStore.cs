@@ -108,11 +108,13 @@ namespace Raven.Server.ServerWide
             AbstractLowMemoryNotification.Initialize(ServerShutdown, Configuration);
 
             if (_logger.IsInfoEnabled)
-                _logger.Info("Starting to open server store for " + (Configuration.Core.RunInMemory ? "<memory>" : Configuration.Core.DataDirectory));
+                _logger.Info("Starting to open server store for " + (Configuration.Core.RunInMemory ? "<memory>" : Configuration.Core.DataDirectory.FullPath));
+
+            var path = Configuration.Core.DataDirectory.Combine("System");
 
             var options = Configuration.Core.RunInMemory
-                ? StorageEnvironmentOptions.CreateMemoryOnly(Configuration.Core.DataDirectory)
-                : StorageEnvironmentOptions.ForPath(System.IO.Path.Combine(Configuration.Core.DataDirectory,"System"));
+                ? StorageEnvironmentOptions.CreateMemoryOnly(path.FullPath)
+                : StorageEnvironmentOptions.ForPath(path.FullPath);
 
             options.SchemaVersion = 2;
 
@@ -145,7 +147,7 @@ namespace Raven.Server.ServerWide
             {
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations(
-                        "Could not open server store for " + (Configuration.Core.RunInMemory ? "<memory>" : Configuration.Core.DataDirectory), e);
+                        "Could not open server store for " + (Configuration.Core.RunInMemory ? "<memory>" : Configuration.Core.DataDirectory.FullPath), e);
                 options.Dispose();
                 throw;
             }

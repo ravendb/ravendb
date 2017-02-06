@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.NewClient.Abstractions.Data;
 using Sparrow.Json;
 
 namespace Raven.NewClient.Client.Document.Blittable
@@ -29,7 +30,7 @@ namespace Raven.NewClient.Client.Document.Blittable
             if (result is BlittableJsonReaderObject)
             {
                 var blitResult = result as BlittableJsonReaderObject;
-                blitResult.TryGetMember("$values", out result);
+                blitResult.TryGetMember(Constants.Json.Fields.Values, out result);
 
                 var prop = new BlittableJsonReaderObject.PropertyDetails();
 

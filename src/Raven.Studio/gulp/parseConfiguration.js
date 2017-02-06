@@ -10,46 +10,85 @@ var ravenConfigurations = new Map();
 var latestFile;
 
 var HANDLER_PATTERN = "Configuration.cs";
+var CONF_CONST_REGEX = /public const string (\w+) = \"([^\"]+)\";/g;
 
-function getConfigurationConstantsFields() {
-    var constantsContent =  fs.readFileSync(PATHS.configurationConstants, 'utf8');
-    var confClassStart = constantsContent.indexOf('public class Indexing');
-    if (confClassStart === -1) {
-        throw new Error('Could not find Configuration subclass in Constants.');
+
+var CLASS_REGEX = /public\s(static\s)?class\s([A-Za-z0-9]+)/g;
+var OPEN_CURLY_REGEX = /\{/g;
+var CLOSE_CURLY_REGEX = /\}/g;
+var CONST_FIELD_REGEX = /public const string ([A-Za-z0-9_]+) = "(.*)";/g;
+var CONSTANTS_TOKENS_REGEX =
+    new RegExp(`${CLASS_REGEX.source}|${CONST_FIELD_REGEX.source}|${OPEN_CURLY_REGEX.source}|${CLOSE_CURLY_REGEX.source}`, 'g');
+
+var CONFIGURATION_CONSTANTS_FIELDS = (function getConfigurationConstantsFields() {
+    var constantsContent = fs.readFileSync(PATHS.configurationConstants, 'utf8');
+    var match;
+    var classStack = [];
+    var classFields = {};
+    var result = classFields;
+    var curlyCounter = 0;
+    var previousMatch = null;
+    var classCurlyNumbers = {};
+    var currentClassName;
+
+    while (match = CONSTANTS_TOKENS_REGEX.exec(constantsContent)) {
+        var fullMatch = match[0];
+        if (fullMatch === '{') {
+            curlyCounter++;
+        } else if (fullMatch === '}') {
+            curlyCounter--;
+
+            if (curlyCounter === classCurlyNumbers[currentClassName]) {
+                classStack.pop();
+                currentClassName = classStack[classStack.length - 1];
+                classFields = loadOrCreateClassFields(result, classStack);
+            }
+
+        } else if (fullMatch.search(CLASS_REGEX) !== -1) {
+            currentClassName = match[2];
+            classStack.push(currentClassName);
+            classFields = loadOrCreateClassFields(result, classStack);
+            classCurlyNumbers[currentClassName] = curlyCounter;
+
+        } else if (fullMatch.search(CONST_FIELD_REGEX) !== -1) {
+            classFields[match[3]] = match[4];
+        }
+
+        previousMatch = match;
     }
 
-    var curlyRegex = /\}/g;
-    var confClassStartPlus = constantsContent.slice(confClassStart);
-    var closeCurlyMatch = curlyRegex.exec(confClassStartPlus); // we don't care about the first }
-    closeCurlyMatch = curlyRegex.exec(confClassStartPlus);
-    var confClassEnd = confClassStart + closeCurlyMatch.index;
-    var confClassContent = constantsContent.slice(confClassStart, confClassEnd);
-    var confConstRegex = /public const string (\w+) = \"([^\"]+)\";/g;
+    return result;
 
-    var fieldsMatches = [];
-    var fieldMatch;
-    while(fieldMatch = confConstRegex.exec(confClassContent)) {
-        fieldsMatches.push(fieldMatch);
+    function loadOrCreateClassFields(constants, classStack) {
+        return classStack.reduce(function (fields, clazz, i) {
+            if (!fields.hasOwnProperty(clazz)) {
+                fields[clazz] = {};
+            }
+
+            return fields[clazz];
+        }, constants);
     }
-
-    return Array.from(fieldsMatches).reduce((result, fieldMatch) => {
-        result[fieldMatch[1]] = fieldMatch[2];
-        return result;
-    }, {});
-}
-
-var CONFIGURATION_CONSTANTS_FIELDS = getConfigurationConstantsFields();
+})();
 
 function getConfigurationConstantValue(key) {
     var keyParts = key.split('.');
     var fieldName = keyParts[keyParts.length - 1];
-    if (!CONFIGURATION_CONSTANTS_FIELDS.hasOwnProperty(fieldName)){
-        throw new Error(`Field ${ fieldName } not found in Configuration constants.`);
+    var currentKey;
+    var result = CONFIGURATION_CONSTANTS_FIELDS;
+    while (keyParts.length) {
+        currentKey = keyParts.splice(0, 1)[0];
+
+        if (!result.hasOwnProperty(currentKey)) {
+            throw new Error(`Field ${key} not found in Configuration constants.`);
+        }
+
+        result = result[currentKey];
     }
-    return CONFIGURATION_CONSTANTS_FIELDS[fieldName];
+
+    return result;
 }
 
-module.exports = function parseConfigurations(outputFileName, constants) {
+function parseConfigurations(outputFileName, constants) {
     return through.obj(function (inputFile, encoding, callback) {
         latestFile = inputFile;
         callback(null, findConfigurationAnnotations(inputFile, ravenConfigurations));
@@ -73,7 +112,9 @@ function findConfigurationAnnotations(file, ravenConfigurations) {
     if (ravenConfigurations.has(configurationGroupName)) {
         throw new Error("Configuration name clush:" + configurationGroupName);
     }
+
     ravenConfigurations.set(configurationGroupName, configKeys);
+
     return null;
 }
 
@@ -86,9 +127,12 @@ function findGroupName(input) {
     return fileName.substring(0, fileName.length - 16);
 }
 
+var CONFIGURATION_ENTRY_REGEX = /\[ConfigurationEntry\(\"?([^"]+)\"?\)\]/;
+var VALUE_ENTRY_REGEX = /public\s(static\s)?(virtual\s)?([\w\]\[]+\s)?(\w+)/;
+
 function extractSettings(contents) {
     // line format: [ConfigurationEntry("Raven/Databases/ConcurrentResourceLoadTimeoutInSec")]
-    var annotationRegexp = /(\[ConfigurationEntry\(\"?([^"]+)\"?\)])|(public\s(static\s)?(virtual\s)?(\w+\??\s)?(\w+))/g;
+    var annotationRegexp = new RegExp("(" + CONFIGURATION_ENTRY_REGEX.source + ")|(" + VALUE_ENTRY_REGEX.source + ")", 'g');
     var match;
     var matches = new Map();
     var configurationEntry = null;
@@ -158,3 +202,5 @@ function createDefinitionFile(configurations, outputFileName) {
     outputFile.contents = new Buffer(typingSource);
     return outputFile;
 }
+
+module.exports = parseConfigurations;

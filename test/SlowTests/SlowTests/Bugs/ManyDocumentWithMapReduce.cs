@@ -2,18 +2,17 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
 using Raven.Server.Config;
 using Xunit;
 
 namespace SlowTests.SlowTests.Bugs
 {
-    public class ManyDocumentBeingIndexed : RavenTestBase
+    public class ManyDocumentBeingIndexed : RavenNewTestBase
     {
-        public class TestDocument
+        private class TestDocument
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
         }
 
         [Fact]
@@ -54,11 +53,9 @@ namespace SlowTests.SlowTests.Bugs
                     var missing = new List<int>();
                     for (int i = 1; i <= 5000; i++)
                     {
-                        if (items.Any(x => x.Id == i) == false)
+                        if (items.Any(x => x.Id == i.ToString()) == false)
                             missing.Add(i);
                     }
-
-                    WaitForUserToContinueTheTest(store);
 
                     try
                     {

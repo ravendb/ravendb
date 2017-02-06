@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using Raven.Abstractions.Data;
-using Raven.Client.Data;
-using Raven.Client;
+using Raven.NewClient.Client;
+using Raven.NewClient.Client.Commands;
+using Raven.NewClient.Client.Data;
 using Xunit;
 
 namespace SlowTests.Bugs.Facets

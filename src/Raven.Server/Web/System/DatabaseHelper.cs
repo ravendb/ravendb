@@ -30,28 +30,28 @@ namespace Raven.Server.Web.System
             if (configuration.Core.RunInMemory)
                 return;
 
-            IOExtensions.DeleteDirectory(configuration.Core.DataDirectory);
+            IOExtensions.DeleteDirectory(configuration.Core.DataDirectory.FullPath);
 
             if (configuration.Storage.TempPath != null)
-                IOExtensions.DeleteDirectory(configuration.Storage.TempPath);
+                IOExtensions.DeleteDirectory(configuration.Storage.TempPath.FullPath);
 
             if (configuration.Storage.JournalsStoragePath != null)
-                IOExtensions.DeleteDirectory(configuration.Storage.JournalsStoragePath);
+                IOExtensions.DeleteDirectory(configuration.Storage.JournalsStoragePath.FullPath);
 
             if (configuration.Indexing.StoragePath != null)
-                IOExtensions.DeleteDirectory(configuration.Indexing.StoragePath);
+                IOExtensions.DeleteDirectory(configuration.Indexing.StoragePath.FullPath);
 
             if (configuration.Indexing.AdditionalStoragePaths != null)
             {
                 foreach (var path in configuration.Indexing.AdditionalStoragePaths)
-                    IOExtensions.DeleteDirectory(path);
+                    IOExtensions.DeleteDirectory(path.FullPath);
             }
 
             if (configuration.Indexing.TempPath != null)
-                IOExtensions.DeleteDirectory(configuration.Indexing.TempPath);
+                IOExtensions.DeleteDirectory(configuration.Indexing.TempPath.FullPath);
 
             if (configuration.Indexing.JournalsStoragePath != null)
-                IOExtensions.DeleteDirectory(configuration.Indexing.JournalsStoragePath);
+                IOExtensions.DeleteDirectory(configuration.Indexing.JournalsStoragePath.FullPath);
         }
     }
 }

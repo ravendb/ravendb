@@ -12,6 +12,7 @@ using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Logging;
@@ -86,17 +87,17 @@ namespace FastTests
 
         protected static RavenServer GetNewServer()
         {
-            var configuration = new RavenConfiguration();
+            var configuration = new RavenConfiguration(null, ResourceType.Server);
             configuration.Initialize();
             configuration.DebugLog.LogMode = LogMode.None;
             configuration.Core.ServerUrl = "http://127.0.0.1:0";
             configuration.Server.Name = ServerName;
             configuration.Core.RunInMemory = true;
-            configuration.Core.DataDirectory = Path.Combine(configuration.Core.DataDirectory, $"Tests{Interlocked.Increment(ref _serverCounter)}");
+            configuration.Core.DataDirectory = configuration.Core.DataDirectory.Combine($"Tests{Interlocked.Increment(ref _serverCounter)}");
             configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(60, TimeUnit.Seconds);
             configuration.Storage.AllowOn32Bits = true;
 
-            IOExtensions.DeleteDirectory(configuration.Core.DataDirectory);
+            IOExtensions.DeleteDirectory(configuration.Core.DataDirectory.FullPath);
 
             var server = new RavenServer(configuration);
             server.Initialize();
