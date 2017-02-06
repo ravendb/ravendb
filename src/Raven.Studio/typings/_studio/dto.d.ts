@@ -174,3 +174,11 @@ interface recentErrorDto extends Raven.Server.NotificationCenter.Notifications.N
     Details: string;
     HttpStatus?: string;
 }
+
+declare module studio.settings {
+    type numberFormatting = "raw" | "formatted";
+    type dontShowAgain = "EditSystemDocument";
+    type usageEnvironment = "Default" | "Dev" | "Test" | "Prod";
+}
+
+
