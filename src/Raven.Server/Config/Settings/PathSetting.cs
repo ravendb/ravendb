@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Text.RegularExpressions;
 using Raven.Server.ServerWide;
 using Sparrow.Platform;
 using Voron.Platform.Posix;
@@ -14,12 +15,12 @@ namespace Raven.Server.Config.Settings
 
         public PathSetting(string path)
         {
-            _path = path;
+            _path = HandleAppDriveIfAbsolutePath(path);
         }
 
         public PathSetting(string path, ResourceType type, string resourceName)
         {
-            _path = EnsureResourceInfo(path, type, resourceName);
+            _path = HandleAppDriveIfAbsolutePath(EnsureResourceInfo(path, type, resourceName));
         }
 
         public PathSetting(PathSetting path)
@@ -54,24 +55,6 @@ namespace Raven.Server.Config.Settings
             return Path.GetFullPath(result); // it will unify directory separators
         }
 
-        public PathSetting ApplyWorkingDirectory(PathSetting workingDirectory)
-        {
-            if (string.IsNullOrEmpty(workingDirectory._path))
-                return this;
-
-            if (Path.IsPathRooted(_path))
-                return this;
-
-            if (_path.StartsWith(@"~/") || _path.StartsWith(@"~\"))
-            {
-                return new PathSetting(_path
-                    .Replace(@"~/", workingDirectory._path)
-                    .Replace(@"~\", workingDirectory._path));
-            }
-
-            return Combine(workingDirectory);
-        }
-
         private static string EnsureResourceInfo(string path, ResourceType type, string name)
         {
             if (path == (string)RavenConfiguration.GetDefaultValue(x => x.Core.DataDirectory))
@@ -86,6 +69,20 @@ namespace Raven.Server.Config.Settings
                 return path;
 
             return Path.Combine(path, $"{type}s", name);
+        }
+
+        private static string HandleAppDriveIfAbsolutePath(string path)
+        {
+            if (path.StartsWith("APPDRIVE:", StringComparison.OrdinalIgnoreCase))
+            {
+                var baseDirectory = AppContext.BaseDirectory;
+                var rootPath = Path.GetPathRoot(baseDirectory);
+
+                if (string.IsNullOrEmpty(rootPath) == false)
+                    return Regex.Replace(path, "APPDRIVE:", rootPath.TrimEnd('\\'), RegexOptions.IgnoreCase);
+            }
+
+            return path;
         }
 
         public override string ToString()

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -31,7 +32,14 @@ namespace FastTests
         private static readonly object ServerLocker = new object();
 
         private bool _doNotReuseServer;
-        public void DoNotReuseServer() => _doNotReuseServer = true;
+
+        private IDictionary<string, string> _customServerSettings = null;
+
+        public void DoNotReuseServer(IDictionary<string, string> customSettings = null)
+        {
+            _customServerSettings = customSettings;
+            _doNotReuseServer = true;
+        }
 
         private static int _serverCounter;
 
@@ -49,7 +57,7 @@ namespace FastTests
 
                 if (_doNotReuseServer)
                 {
-                    _localServer = GetNewServer();
+                    _localServer = GetNewServer(_customServerSettings);
                     return _localServer;
                 }
 
@@ -85,9 +93,18 @@ namespace FastTests
             }
         }
 
-        protected static RavenServer GetNewServer()
+        protected static RavenServer GetNewServer(IDictionary<string, string> customSettings = null)
         {
             var configuration = new RavenConfiguration(null, ResourceType.Server);
+
+            if (customSettings != null)
+            {
+                foreach (var setting in customSettings)
+                {
+                    configuration.SetSetting(setting.Key, setting.Value);
+                }
+            }
+
             configuration.Initialize();
             configuration.DebugLog.LogMode = LogMode.None;
             configuration.Core.ServerUrl = "http://127.0.0.1:0";

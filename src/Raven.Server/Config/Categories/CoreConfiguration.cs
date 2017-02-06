@@ -1,25 +1,11 @@
-using System;
 using System.ComponentModel;
-using System.IO;
-using System.Text.RegularExpressions;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
-using Raven.Server.Documents;
 
 namespace Raven.Server.Config.Categories
 {
     public class CoreConfiguration : ConfigurationCategory
     {
-        private string _workingDirectory;
-        private PathSetting _dataDirectory;
-
-        private readonly RavenConfiguration _root;
-
-        public CoreConfiguration(RavenConfiguration root)
-        {
-            _root = root;
-        }
-
         [Description("The maximum allowed page size for queries")]
         [DefaultValue(1024)]
         [MinValue(10)]
@@ -56,25 +42,10 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Raven/RunInMemory")]
         public bool RunInMemory { get; set; }
 
-        [DefaultValue(@"~\")]
-        [ConfigurationEntry("Raven/WorkingDir")]
-        public string WorkingDirectory
-        {
-            get { return _workingDirectory; }
-            set { _workingDirectory = CalculateWorkingDirectory(value); }
-        }
-
         [Description("The directory for the RavenDB resource. You can use the ~/ prefix to refer to RavenDB's base directory.")]
         [DefaultValue(@"~/{pluralizedResourceType}/{name}")]
         [ConfigurationEntry("Raven/DataDir")]
-        public PathSetting DataDirectory
-        {
-            get { return _dataDirectory; }
-            set
-            {
-                _dataDirectory = value.ApplyWorkingDirectory(new PathSetting(WorkingDirectory));
-            }
-        }
+        public PathSetting DataDirectory { get; set; }
 
         [Description("The time to wait before canceling a database operation such as load (many) or query")]
         [DefaultValue(5)]
@@ -92,21 +63,5 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(false)]
         [ConfigurationEntry("Raven/RunAsService")]
         public bool RunAsService { get; set; }
-
-        private static string CalculateWorkingDirectory(string workingDirectory)
-        {
-            if (string.IsNullOrEmpty(workingDirectory))
-                workingDirectory = @"~\";
-
-            if (workingDirectory.StartsWith("APPDRIVE:", StringComparison.OrdinalIgnoreCase))
-            {
-                var baseDirectory = AppContext.BaseDirectory;
-                var rootPath = Path.GetPathRoot(baseDirectory);
-                if (string.IsNullOrEmpty(rootPath) == false)
-                    workingDirectory = Regex.Replace(workingDirectory, "APPDRIVE:", rootPath.TrimEnd('\\'), RegexOptions.IgnoreCase);
-            }
-
-            return workingDirectory;
-        }
     }
 }
