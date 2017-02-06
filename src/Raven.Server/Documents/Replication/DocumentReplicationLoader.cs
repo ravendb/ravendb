@@ -374,57 +374,68 @@ namespace Raven.Server.Documents.Replication
                 Slice lastKey;
                 Slice.From(context.Allocator, string.Empty, out lastKey);
 
-                bool hasConflicts = true;
-                while (hasConflicts && !_cts.IsCancellationRequested)
+
+                try
                 {
-                    try
+                    bool hasConflicts = true;
+                    while (hasConflicts && !_cts.IsCancellationRequested)
                     {
-                        var sp = Stopwatch.StartNew();
-                        DocumentsTransaction tx = null;
                         try
                         {
+                            var sp = Stopwatch.StartNew();
+                            DocumentsTransaction tx = null;
                             try
                             {
-                                tx = context.OpenWriteTransaction();
-                            }
-                            catch (TimeoutException)
-                            {
-                                continue;
-                            }
-                            hasConflicts = false;
-                            while (!_cts.IsCancellationRequested)
-                            {
-                                if (sp.ElapsedMilliseconds > 150)
+                                try
                                 {
-                                    // we must release the write transaction to avoid
-                                    // completely blocking all other operations.
-                                    // This is a background task that we can leave later
+                                    tx = context.OpenWriteTransaction();
+                                }
+                                catch (TimeoutException)
+                                {
+                                    continue;
+                                }
+                                hasConflicts = false;
+                                while (!_cts.IsCancellationRequested)
+                                {
+                                    if (sp.ElapsedMilliseconds > 150)
+                                    {
+                                        // we must release the write transaction to avoid
+                                        // completely blocking all other operations.
+                                        // This is a background task that we can leave later
+                                        hasConflicts = true;
+                                        break;
+                                    }
+
+                                    var conflicts = _database.DocumentsStorage.GetAllConflictsBySameKeyAfter(context,
+                                        ref lastKey);
+                                    if (conflicts.Count == 0)
+                                        break;
+                                    if (TryResolveConflict(context, conflicts) == false)
+                                        continue;
+
                                     hasConflicts = true;
-                                    break;
                                 }
 
-                                var conflicts = _database.DocumentsStorage.GetAllConflictsBySameKeyAfter(context,
-                                    ref lastKey);
-                                if (conflicts.Count == 0)
-                                    break;
-                                if (TryResolveConflict(context, conflicts) == false)
-                                    continue;
-
-                                hasConflicts = true;
+                         //       tx.Commit();
                             }
-
-                            tx.Commit();
+                            finally
+                            {
+                                tx?.Dispose();
+                            }
                         }
                         finally
                         {
-                            tx?.Dispose();
+                            if (lastKey.HasValue)
+                                lastKey.Release(context.Allocator);
+
+                            Slice.From(context.Allocator, string.Empty, out lastKey);
                         }
                     }
-                    finally
-                    {
-                        if (lastKey.HasValue)
-                            lastKey.Release(context.Allocator);
-                    }
+                }
+                finally
+                {
+                    if (lastKey.HasValue)
+                        lastKey.Release(context.Allocator);
                 }
             }
         }
