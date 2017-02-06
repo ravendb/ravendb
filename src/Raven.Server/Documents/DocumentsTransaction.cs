@@ -53,8 +53,14 @@ namespace Raven.Server.Documents
             }
         }
 
+        private bool _isDisposed = false;
+
         public override void Dispose()
         {
+            if (_isDisposed)
+                return;
+            _isDisposed = true;
+
             if (_replaced == false)
             {
                 if (_context.Transaction != null && _context.Transaction != this)
