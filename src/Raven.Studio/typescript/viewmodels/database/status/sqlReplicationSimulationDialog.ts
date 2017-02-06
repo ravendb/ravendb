@@ -69,17 +69,18 @@ class sqlReplicationSimulationDialog extends dialogViewModelBase {
 
     fetchDocumentIdAutocompletes(query: string) {
         if (query.length >= 2) {
+            /* TODO
             new getDocumentsMetadataByIDPrefixCommand(query, 10, this.db)
                 .execute()
-                .done((results: queryResultDto<string>) => {
+                .done((results: documentsMetadataOnlyResponse[]) => {
                     if (this.documentId() === query) {
-                        if (results.Results.length == 1 && this.documentId() == results.Results[0]) {
+                        if (results.length === 1 && this.documentId() == results[0]) {
                             this.documentAutocompletes.removeAll();
                             return;
                         }
-                        this.documentAutocompletes(results.Results);
+                        this.documentAutocompletes(results);
                     }
-                });
+                });*/
         } else if (query.length == 0) {
             this.documentAutocompletes.removeAll();
         }

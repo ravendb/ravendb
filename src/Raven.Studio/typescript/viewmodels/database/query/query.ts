@@ -70,14 +70,14 @@ class query extends viewModelBase {
 
     filterSettings = {
         searchField: ko.observable<string>(),
-        type: ko.observable<filterType>("string"),
+        type: ko.observable<filterType>(),
         value: ko.observable<string>(),
-        searchType: ko.observable<stringSearchType>("Starts With"),
+        searchType: ko.observable<stringSearchType>(),
         rangeFrom: ko.observable<string>(),
         rangeTo: ko.observable<string>(),
         rangeDateFrom: ko.observable<moment.Moment>(),
         rangeDateTo: ko.observable<moment.Moment>(),
-        rangeSearchType: ko.observable<rangeSearchType>("Numeric Double"),
+        rangeSearchType: ko.observable<rangeSearchType>(),
         inValues: ko.observable<string>(),
         validationGroup: null as KnockoutValidationGroup,
     }
@@ -99,6 +99,7 @@ class query extends viewModelBase {
     hasEditableIndex: KnockoutComputed<boolean>;
     queryTextHasFocus = ko.observable<boolean>(false);
     addFilterVisible = ko.observable<boolean>(false);
+    addFilterEnabled: KnockoutComputed<boolean>;
 
     editIndexUrl: KnockoutComputed<string>;
     indexPerformanceUrl: KnockoutComputed<string>;
@@ -144,6 +145,7 @@ class query extends viewModelBase {
 
         this.initObservables();
         this.initValidation();
+        this.resetFilterSettings();
 
         this.bindToCurrentInstance("runRecentQuery", "selectTransformer", "addFilter", "removeSortBy");
     }
@@ -156,6 +158,8 @@ class query extends viewModelBase {
         });
 
         this.hasEditableIndex = ko.pureComputed(() => this.criteria().selectedIndex() ? !this.criteria().selectedIndex().startsWith("dynamic") : false);
+
+        this.addFilterEnabled = ko.pureComputed(() => this.indexFields().length > 0);
 
         this.editIndexUrl = ko.pureComputed(() => this.criteria().selectedIndex() ? appUrl.forEditIndex(this.criteria().selectedIndex(), this.activeDatabase()) : null);
         this.indexPerformanceUrl = ko.pureComputed(() => this.criteria().selectedIndex() ? appUrl.forIndexPerformance(this.activeDatabase(), this.criteria().selectedIndex()) : null);
@@ -385,6 +389,7 @@ class query extends viewModelBase {
 
     setSelectedIndex(indexName: string) {
         this.criteria().setSelectedIndex(indexName);
+        this.resetFilterSettings();
         this.uiTransformer(null);
         this.uiTransformerParameters([]);
         this.runQuery();
@@ -394,6 +399,20 @@ class query extends viewModelBase {
         this.updateUrl(url);
 
         this.fetchIndexFields(indexName);
+    }
+
+    private resetFilterSettings() {
+        this.filterSettings.searchField(undefined);
+        this.filterSettings.type("string");
+        this.filterSettings.value(undefined);
+        this.filterSettings.searchType("Starts With");
+        this.filterSettings.rangeFrom(undefined);
+        this.filterSettings.rangeTo(undefined);
+        this.filterSettings.rangeDateFrom(undefined);
+        this.filterSettings.rangeDateTo(undefined);
+        this.filterSettings.rangeSearchType("Numeric Double");
+        this.filterSettings.inValues(undefined);
+        this.filterSettings.validationGroup.errors.showAllMessages(false);
     }
 
     static getIndexUrlPartFromIndexName(indexNameOrCollectionName: string) {
@@ -416,7 +435,6 @@ class query extends viewModelBase {
     }
 
     runQuery(): pagedList {
-        //TODO: spinner
         eventsCollector.default.reportEvent("query", "run");
         this.queryTextHasFocus(false);
         this.closeAddFilter();
@@ -471,9 +489,10 @@ class query extends viewModelBase {
                             }
                         }*/
                     })
-                    .fail(() => {
-                        //TODO: remove only if index not found?
-                        recentQueriesStorage.removeIndexFromRecentQueries(database, selectedIndex);
+                    .fail((request: JQueryXHR) => {
+                        if (request.status === 404) {
+                            recentQueriesStorage.removeIndexFromRecentQueries(database, selectedIndex);
+                        }
                     });
             };
             const resultsList = new pagedList(resultsFetcher);
@@ -502,26 +521,21 @@ class query extends viewModelBase {
     fetchIndexFields(indexName: string) {
         this.indexFields([]);
 
-        //TODO: can we simplify this method?
-
         // Fetch the index definition so that we get an updated list of fields to be used as sort by options.
         // Fields don't show for All Documents.
-        var isAllDocumentsDynamicQuery = indexName === "All Documents";
+        const isAllDocumentsDynamicQuery = indexName === "All Documents";
         if (!isAllDocumentsDynamicQuery) {
-            //if index is dynamic, get columns using index definition, else get it using first index result
+
+            //if index is not dynamic, get columns using index definition, else get it using first index result
             if (indexName.startsWith(query.DynamicPrefix)) {
-                /* TODO - handle auto indexes as well!
-                var collectionName = indexName.substring(8);
-                new collection(collectionName, this.activeDatabase())
+                new collection(indexName.substr(query.DynamicPrefix.length), this.activeDatabase())
                     .fetchDocuments(0, 1)
-                    .done((result: pagedResultSet<any>) => {
-                        if (!!result && result.totalResultCount > 0 && result.items.length > 0) {
-                            var dynamicIndexPattern: document = new document(result.items[0]);
-                            if (!!dynamicIndexPattern) {
-                                this.indexFields(dynamicIndexPattern.getDocumentPropertyNames());
-                            }
+                    .done(result => {
+                        if (result && result.items.length > 0) {
+                            const propertyNames = new document(result.items[0]).getDocumentPropertyNames();
+                            this.indexFields(propertyNames);
                         }
-                    });*/
+                    });
             } else {
                 new getIndexEntriesFieldsCommand(indexName, this.activeDatabase())
                     .execute()
@@ -777,6 +791,10 @@ class query extends viewModelBase {
         return "";
     }
 
+    queryCompleter(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
+        queryUtil.queryCompleter(this.indexFields, this.criteria().selectedIndex, query.DynamicPrefix, this.activeDatabase, editor, session, pos, prefix, callback);
+    }
+
 
     /* TODO
 
@@ -827,8 +845,12 @@ class query extends viewModelBase {
         }
         return queryFields;
     }
+   
+*/
 
-    getIndexSuggestions(indexName: string, info: queryFieldInfo) {
+    /* TODO future:
+
+     getIndexSuggestions(indexName: string, info: queryFieldInfo) {
         if (_.includes(this.indexFields(), info.FieldName)) {
             var task = new getIndexSuggestionsCommand(this.activeDatabase(), indexName, info.FieldName, info.FieldValue).execute();
             task.done((result: suggestionsDto) => {
@@ -852,14 +874,6 @@ class query extends viewModelBase {
         this.indexSuggestions([]);
         this.runQuery();
     }
-
-   
-*/
-
-
-
-
-    /* TODO future:
 
       exportCsv() {
         eventsCollector.default.reportEvent("query", "export-csv");
@@ -885,10 +899,6 @@ class query extends viewModelBase {
 
             this.runQuery();
         });
-    }
-
-     queryCompleter(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
-        queryUtil.queryCompleter(this.indexFields, this.selectedIndex, this.dynamicPrefix, this.activeDatabase, editor, session, pos, prefix, callback);
     }
 
      private fetchCustomFunctions(db: database): JQueryPromise<any> {

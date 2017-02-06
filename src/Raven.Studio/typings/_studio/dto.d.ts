@@ -18,6 +18,20 @@ interface resultsDto<T> {
     Results: T[];
 }
 
+interface metadataAwareDto {
+    '@metadata'?: documentMetadataDto;
+}
+
+interface documentMetadataDto {
+    '@collection'?: string;
+    'Raven-Clr-Type'?: string;
+    'Non-Authoritative-Information'?: boolean;
+    '@id'?: string;
+    'Temp-Index-Score'?: number;
+    '@last-modified'?: string;
+    '@etag'?: number;
+}
+
 interface connectedDocument {
     id: string;
     href: string;
