@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Extensions.Configuration;
-
+using Microsoft.Extensions.Configuration.Memory;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
@@ -66,8 +67,6 @@ namespace Raven.Server.Config
         internal IConfigurationRoot ServerWideSettings { get; set; }
 
         protected IConfigurationRoot Settings { get; set; }
-
-        internal PathSetting ServerDataDir { get; private set; }
 
         public RavenConfiguration(string resoureName, ResourceType resourceType)
         {
@@ -209,13 +208,12 @@ namespace Raven.Server.Config
             var result = new RavenConfiguration(name, type)
             {
                 ServerWideSettings = parent.Settings,
-                Settings =
+                Settings = new ConfigurationRoot(new List<IConfigurationProvider> { new MemoryConfigurationProvider(new MemoryConfigurationSource()) })
                 {
                     [GetKey(x => x.Core.RunInMemory)] = parent.Core.RunInMemory.ToString()
-                },
-                ServerDataDir = parent.Core.DataDirectory
+                }
             };
-            
+
             return result;
         }
 

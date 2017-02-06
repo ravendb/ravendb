@@ -72,7 +72,7 @@ namespace Raven.Server.Config.Categories
             get { return _dataDirectory; }
             set
             {
-                _dataDirectory = value.ApplyParentPath(_root.ServerDataDir).ApplyWorkingDirectory(new PathSetting(WorkingDirectory));
+                _dataDirectory = value.ApplyWorkingDirectory(new PathSetting(WorkingDirectory));
             }
         }
 
