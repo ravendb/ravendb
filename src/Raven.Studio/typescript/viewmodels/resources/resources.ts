@@ -29,9 +29,7 @@ class resources extends viewModelBase {
     resources = ko.observable<resourcesInfo>();
 
     filters = {
-        searchText: ko.observable<string>(),
-        includeDatabases: ko.observable<boolean>(true),
-        includeFileSystems: ko.observable<boolean>(true)
+        searchText: ko.observable<string>()
     }
 
     selectionState: KnockoutComputed<checkbox>;
@@ -62,8 +60,6 @@ class resources extends viewModelBase {
         const filters = this.filters;
 
         filters.searchText.throttle(200).subscribe(() => this.filterResources());
-        filters.includeDatabases.subscribe(() => this.filterResources());
-        filters.includeFileSystems.subscribe(() => this.filterResources());
 
         this.selectionState = ko.pureComputed<checkbox>(() => {
             const resources = this.resources().sortedResources().filter(x => !x.filteredOut());
@@ -149,15 +145,7 @@ class resources extends viewModelBase {
             searchText = searchText.toLowerCase();
         }
 
-        const matchesFilters = (rs: resourceInfo) => {
-            if (rs instanceof databaseInfo && !filters.includeDatabases())
-                return false;
-
-            if (rs instanceof filesystemInfo && !filters.includeFileSystems())
-                return false;
-
-            return !hasSearchText || rs.name.toLowerCase().indexOf(searchText) >= 0;
-        }
+        const matchesFilters = (rs: resourceInfo) => !hasSearchText || rs.name.toLowerCase().indexOf(searchText) >= 0;
 
         const resources = this.resources();
         resources.sortedResources().forEach(resource => {
